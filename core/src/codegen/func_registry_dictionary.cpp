@@ -5,24 +5,24 @@
 #include "func_registry_dictionary.h"
 #include "functions/dictionaryfunctions.h"
 using namespace omniruntime;
-using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
-std::vector<Function> GetDictionaryFunctionRegistry()
+std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
 {
-    std::vector<DataType> paramTypes = {INT64D, INT32D};
-    static std::vector<Function> dictionaryFnRegistry = {
+    std::vector<VecTypeId> paramTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT};
+    std::vector<Function> dictionaryFnRegistry = {
         Function(reinterpret_cast<void*>(GetIntFromDictionaryVector), "DictionaryGetInt", {}, paramTypes,
-                 INT32D, false),
+                 OMNI_VEC_TYPE_INT),
         Function(reinterpret_cast<void*>(GetLongFromDictionaryVector), "DictionaryGetLong", {}, paramTypes,
-                 INT64D, false),
+                 OMNI_VEC_TYPE_LONG),
         Function(reinterpret_cast<void*>(GetDoubleFromDictionaryVector), "DictionaryGetDouble", {},
-                 paramTypes, DOUBLED, false),
+                 paramTypes, OMNI_VEC_TYPE_DOUBLE),
         Function(reinterpret_cast<void*>(GetBooleanFromDictionaryVector), "DictionaryGetBoolean", {},
-                 paramTypes, BOOLD, false),
+                 paramTypes, OMNI_VEC_TYPE_BOOLEAN),
         Function(reinterpret_cast<void*>(GetVarcharFromDictionaryVector),
-                 "DictionaryGetVarchar", {}, {INT64D, INT32D, INT32PTRD}, INT8PTRD, false),
+                 "DictionaryGetVarchar", {}, paramTypes, OMNI_VEC_TYPE_VARCHAR),
         Function(reinterpret_cast<void*>(GetDecimalFromDictionaryVector),
-                 "DictionaryGetDecimal", {}, {INT64D, INT32D}, DECIMAL128D, false, true)
+                 "DictionaryGetDecimal", {}, paramTypes, OMNI_VEC_TYPE_DECIMAL128, true)
     };
     return dictionaryFnRegistry;
 }

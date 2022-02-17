@@ -9,8 +9,8 @@
 #include <string>
 #include <map>
 #include <codegen/function.h>
-#include "datatype.h"
 #include "../vector/type/decimal128.h"
+#include "../vector/vector_type.h"
 
 class ExprVisitor;
 
@@ -44,7 +44,6 @@ enum Operator {
     INVALIDOP
 };
 
-
 enum OperatorType {
     COMPARISON,
     LOGICAL,
@@ -52,10 +51,9 @@ enum OperatorType {
     INVALIDOPTTYPE
 };
 
-
-
 enum ExprType {
-    DATA_E,
+    LITERAL_E,
+    FIELD_E,
     BINARY_E,
     UNARY_E,
     IN_E,
@@ -88,41 +86,49 @@ const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
 bool IsNullLiteral(const std::string& value);
 Operator StringToOperator(std::string opStr);
 
+typedef std::unique_ptr<omniruntime::vec::VecType> VecTypePtr;
 
 class Expr {
 public:
-        // TODO:: wrap width with the type
-        int32_t width = INT32_MAX;
-        DataType dataType; // dataType of returned value
-        DataType GetExprDataType() const;
-        virtual ExprType GetType() const;
-        virtual ~Expr() = default;
-        virtual void Accept(ExprVisitor &visitor) const = 0;
+    VecTypePtr dataType;   // dataType of returned value
+    omniruntime::vec::VecType &GetReturnType() const;
+    omniruntime::vec::VecTypeId GetReturnTypeId() const;
+    virtual ExprType GetType() const;
+    virtual ~Expr() = default;
+    virtual void Accept(ExprVisitor &visitor) const = 0;
+
 };
 
-
-class DataExpr : public Expr {
+class LiteralExpr : public Expr {
 public:
-    bool isColumn = false;
     bool isNull = false;
     bool boolVal = false;
     int32_t intVal = 0;
     int64_t longVal = 0;
     double doubleVal = 0;
     std::string* stringVal = nullptr;
-    int32_t colVal = 0;
     int64_t* dec128Val = nullptr;
 
-    DataExpr();
-    ~DataExpr() override;
-    explicit DataExpr(bool val);
-    explicit DataExpr(int32_t val);
-    explicit DataExpr(int64_t val);
-    explicit DataExpr(double val);
-    explicit DataExpr(std::string* val);
-    explicit DataExpr(int64_t* val);
-    DataExpr(int32_t colIdx, DataType colType);
-    DataExpr(int32_t colIdx, DataType colType, int32_t width);
+    LiteralExpr();
+    ~LiteralExpr() override;
+    explicit LiteralExpr(bool val, VecTypePtr colType);
+    explicit LiteralExpr(int32_t val, VecTypePtr colType);
+    explicit LiteralExpr(int64_t val, VecTypePtr colType);
+    explicit LiteralExpr(double val, VecTypePtr colType);
+    explicit LiteralExpr(std::string* val, VecTypePtr colType);
+    explicit LiteralExpr(int64_t* val, VecTypePtr colType);
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+};
+
+class FieldExpr : public Expr {
+public:
+    bool isNull = false;
+    int32_t colVal = 0;
+
+    FieldExpr();
+    ~FieldExpr() override;
+    FieldExpr(int32_t colIdx, VecTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
@@ -135,7 +141,7 @@ public:
     UnaryExpr();
     ~UnaryExpr() override;
     UnaryExpr(Operator logOp, Expr *bodyexp);
-    UnaryExpr(Operator uop, Expr *expr, DataType dt);
+    UnaryExpr(Operator uop, Expr *expr, VecTypePtr dt);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
@@ -151,7 +157,7 @@ public:
     BinaryExpr();
     ~BinaryExpr() override;
     BinaryExpr(Operator op, Expr *leftExpr, Expr *rightExpr);
-    BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt);
+    BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, VecTypePtr dt);
    
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
@@ -230,16 +236,13 @@ class FuncExpr : public Expr {
 public:
     std::string funcName;
     std::vector<Expr*> arguments;
-    omniruntime::Function *function;
+    const omniruntime::Function *function;
 
     FuncExpr();
     ~FuncExpr() override;
-    FuncExpr(std::string fnName, std::vector<Expr*> args);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, omniruntime::Function &function);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, omniruntime::Function &function);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width, omniruntime::Function &function);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType, const omniruntime::Function *function);
+
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };

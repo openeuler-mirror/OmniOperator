@@ -21,9 +21,10 @@ char* ArenaAllocatorMalloc(int64_t contextPtr, int32_t size)
     return reinterpret_cast<char *>(context->getArena()->Allocate(size));
 }
 
-void ArenaAllocatorReset(int64_t contextPtr)
+bool ArenaAllocatorReset(int64_t contextPtr)
 {
     auto context = reinterpret_cast<ExecutionContext*>(contextPtr);
-    return context->getArena()->Reset();
+    context->getArena()->Reset();
+    return true;
 }
 }

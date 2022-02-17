@@ -28,24 +28,24 @@ void DeleteJoinExprOperatorFactory(HashBuilderWithExprOperatorFactory *hashBuild
 
 std::vector<omniruntime::expressions::Expr *> CreateBuildHashKeys()
 {
-    omniruntime::expressions::DataExpr *addLeft =
-        new omniruntime::expressions::DataExpr(1, omniruntime::expressions::INT64D);
-    omniruntime::expressions::DataExpr *addRight = new omniruntime::expressions::DataExpr(50);
+    omniruntime::expressions::FieldExpr *addLeft =
+            new omniruntime::expressions::FieldExpr(1, LongType());
+omniruntime::expressions::LiteralExpr *addRight = new omniruntime::expressions::LiteralExpr(50, LongType());
     addRight->longVal = 50;
     omniruntime::expressions::BinaryExpr *addExpr = new omniruntime::expressions::BinaryExpr(
-        omniruntime::expressions::ADD, addLeft, addRight, omniruntime::expressions::INT64D);
+        omniruntime::expressions::ADD, addLeft, addRight, LongType());
     std::vector<omniruntime::expressions::Expr *> buildHashKeysExprs = { addExpr };
     return buildHashKeysExprs;
 }
 
 std::vector<omniruntime::expressions::Expr *> CreateProbeHashKeys()
 {
-    omniruntime::expressions::DataExpr *addLeftProbe = new omniruntime::expressions::DataExpr(50);
+        omniruntime::expressions::LiteralExpr *addLeftProbe = new omniruntime::expressions::LiteralExpr(50, LongType());
     addLeftProbe->longVal = 50;
-    omniruntime::expressions::DataExpr *addRightProbe =
-        new omniruntime::expressions::DataExpr(1, omniruntime::expressions::INT64D);
+    omniruntime::expressions::FieldExpr *addRightProbe =
+            new omniruntime::expressions::FieldExpr(1, LongType());
     omniruntime::expressions::BinaryExpr *addExprProbe = new omniruntime::expressions::BinaryExpr(
-        omniruntime::expressions::ADD, addLeftProbe, addRightProbe, omniruntime::expressions::INT64D);
+        omniruntime::expressions::ADD, addLeftProbe, addRightProbe, LongType());
     std::vector<omniruntime::expressions::Expr *> probeHashKeysExprs = { addExprProbe };
     return probeHashKeysExprs;
 }
@@ -72,7 +72,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
         hashKeysCount, filter, hashTableCount);
     JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys, hashTableCount); // here
     hashBuilderWithExprOperatorFactory->SetJitContext(buildContext);
-    Operator *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     std::vector<VectorBatch *> hashBuilderOutput;
     hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
@@ -116,8 +116,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatches(lookupJoinOutput);
-    Operator::DeleteOperator(hashBuilderWithExprOperator);
-    Operator::DeleteOperator(lookupJoinWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
     DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
 }
 
@@ -134,8 +134,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int32_t ids[] = {0, 1, 2, 3};
     buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
-    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::DataExpr(1,
-        omniruntime::expressions::INT64D) };
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
+                                                                         LongType()) };
     int32_t hashKeysCount = 1;
     std::string filter = "";
     int32_t hashTableCount = 1;
@@ -144,7 +144,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
         hashKeysCount, filter, hashTableCount);
     JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys, hashTableCount);
     hashBuilderWithExprOperatorFactory->SetJitContext(buildContext);
-    Operator *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     std::vector<VectorBatch *> hashBuilderOutput;
     hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
@@ -159,8 +159,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
-    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::DataExpr(1,
-        omniruntime::expressions::INT64D) };
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::FieldExpr(1,
+                                                                         LongType()) };
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
@@ -189,7 +189,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatches(lookupJoinOutput);
-    Operator::DeleteOperator(hashBuilderWithExprOperator);
-    Operator::DeleteOperator(lookupJoinWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
     DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
 }

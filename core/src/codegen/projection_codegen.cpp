@@ -60,31 +60,31 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr, i32* selected_array, i32 num_selected)
     */
     // Input table, array of addresses
-    args.push_back(Type::getInt64PtrTy(*context));
+    args.push_back(llvmTypes->I64PtrType());
     // Number of rows in input
-    args.push_back(Type::getInt32Ty(*context));
+    args.push_back(llvmTypes->I32Type());
     // Results column to write to
-    args.push_back(Type::getInt64Ty(*context));
+    args.push_back(llvmTypes->I64Type());
     // These two arguments will not be used if filter is disabled
     // Array of indices from input to select
-    args.push_back(Type::getInt32PtrTy(*context));
+    args.push_back(llvmTypes->I32PtrType());
     // Number of selected rows
-    args.push_back(Type::getInt32Ty(*context));
+    args.push_back(llvmTypes->I32Type());
     // bitmap is a 2d array of booleans
-    Type *bitmapArg = Type::getInt64PtrTy(*context);
+    Type *bitmapArg = llvmTypes->I64PtrType();
     args.push_back(bitmapArg);
     // Offsets for columns
-    args.push_back(Type::getInt64PtrTy(*context));
+    args.push_back(llvmTypes->I64PtrType());
     // bool array to return evaluated null status
-    args.push_back(Type::getInt1PtrTy(*context));
+    args.push_back(llvmTypes->I1PtrType());
     // int array to hold output values
-    args.push_back(Type::getInt32PtrTy(*context));
+    args.push_back(llvmTypes->I32PtrType());
     // execution context with allocator to allocate, free and track memory
-    args.push_back(Type::getInt64Ty(*context));
+    args.push_back(llvmTypes->I64Type());
     // dictionary vectors
-    args.push_back(Type::getInt64PtrTy(*context));
+    args.push_back(llvmTypes->I64PtrType());
 
-    FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
+    FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
         "PROJECT_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -128,8 +128,8 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
     dictionaryVectors->setName("DICTIONARY_VECTORS");
 
-    Value *zero = this->CreateConstantInt(0);
-    Value *one = this->CreateConstantInt(1);
+    Value *zero = llvmTypes->CreateConstantInt(0);
+    Value *one = llvmTypes->CreateConstantInt(1);
     Value *gep;
 
     CallInst *ret;
@@ -137,10 +137,10 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     builder->SetInsertPoint(preLoop);
     // Pointer to counter
     // i32* ptrToCounter
-    AllocaInst *indexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "INDEX_COUNTER");
+    AllocaInst *indexStore = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "INDEX_COUNTER");
     // Initialize row index to 0.
     builder->CreateStore(zero, indexStore);
-    AllocaInst *offsetStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "CURRENT_OFFSET");
+    AllocaInst *offsetStore = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "CURRENT_OFFSET");
     // Initialize offset to 0.
     builder->CreateStore(zero, offsetStore);
     // Counter variable value.
@@ -159,34 +159,35 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     // Type of output column
     Type *outPtrType = nullptr;
-    switch (this->expr->GetExprDataType()) {
-        case DataType::INT32D:
-            outPtrType = Type::getInt32PtrTy(*context);
+    switch (this->expr->GetReturnTypeId()) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
+            outPtrType = llvmTypes->I32PtrType();
             break;
-        case DataType::INT64D:
-            outPtrType = Type::getInt64PtrTy(*context);
+        case OMNI_VEC_TYPE_LONG:
+            outPtrType = llvmTypes->I64PtrType();
             break;
-        case DataType::DOUBLED:
-            outPtrType = Type::getDoublePtrTy(*context);
+        case OMNI_VEC_TYPE_DOUBLE:
+            outPtrType = llvmTypes->DoublePtrType();
             break;
-        case DataType::CHARD:
-        case DataType::VARCHARD:
-            outPtrType = Type::getInt8PtrTy(*context);
+        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VEC_TYPE_VARCHAR:
+            outPtrType = llvmTypes->I8PtrType();
             break;
-        case DataType::DECIMAL128D:
-            outPtrType = Type::getInt64PtrTy(*context);
+        case OMNI_VEC_TYPE_DECIMAL128:
+            outPtrType = llvmTypes->I64PtrType();
             break;
-        case DataType::BOOLD:
-            outPtrType = Type::getInt1PtrTy(*context);
+        case OMNI_VEC_TYPE_BOOLEAN:
+            outPtrType = llvmTypes->I1PtrType();
             break;
         default:
-            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetExprDataType());
+            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnType());
             break;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
     // Create a integer pointer to store output length value
-    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
-    auto isNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_NULL");
+    AllocaInst *outputLenPtr = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "OUTPUT_LENGTH");
+    auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), nullptr, "IS_NULL");
 
     builder->CreateBr(loopBody);
     // loop body
@@ -205,7 +206,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         rowIndexVal = curIndexVal;
     }
 
-    builder->CreateStore(this->CreateConstantBool(false), isNullPtr);
+    builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
 
     std::vector<Value*> projFuncArgs;
     // projFuncArgs contains the values of the arguments to the projection function
@@ -231,20 +232,20 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     // Add row index to results array
     builder->SetInsertPoint(addToOutput);
 
-    if (IsStringDataType(expr->GetExprDataType())) {
+    if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
         auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
         auto currOffset = builder->CreateLoad(offsetStore);
 
         // memcpy returned varchar to result vector
         gep = builder->CreateGEP(outColPtr, currOffset, "OUTPUT_ADDRESS");
-        auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
-        auto stringGEP = builder->CreateGEP(stringPtr, CreateConstantInt(0));
+        auto stringPtr = builder->CreateIntToPtr(ret, llvmTypes->I8PtrType());
+        auto stringGEP = builder->CreateGEP(stringPtr, llvmTypes->CreateConstantInt(0));
         builder->CreateMemCpy(gep, MaybeAlign(1), stringGEP, MaybeAlign(1), outputLen);
 
         // update offsets for varchar type
         Value *newOffset = builder->CreateAdd(currOffset, outputLen);
         gep = builder->CreateGEP(outputOffsetsAddress, builder->CreateAdd(
-            curIndexVal, CreateConstantInt(1)), "OUTPUT_OFFSETS_POINTER_ADDRESS");
+            curIndexVal, llvmTypes->CreateConstantInt(1)), "OUTPUT_OFFSETS_POINTER_ADDRESS");
         builder->CreateStore(newOffset, gep);
 
         // update offset counter
@@ -316,7 +317,7 @@ Takes the following arguments
 - A integer pointer to represent the length if the row expression output is a string
 
 In reality the function returns a pointer of appropriate type depending on the row expression
-and input types. For example if the expected output is an int32, the function will return int32_t*
+and input types-> For example if the expected output is an int32, the function will return int32_t*
 but since this type is not known at compile time it can be treated as void* or int64_t or any 8 byte
 datatype and casted appropriately.
 */
@@ -325,7 +326,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type*> args = GetSingleProjectArguments(*context);
     llvm::Function* baseFunc = this->CreateFunction();
-    FunctionType* funcSignature = FunctionType::get(ToPointerType(expr->GetExprDataType()), args, false);
+    FunctionType* funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
     llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
         "FUNC_WRAPPER", module.get());
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));

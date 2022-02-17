@@ -112,20 +112,16 @@ TEST(ProjectTest, Cast)
     int32_t *col2 = MakeInts(numRows);
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_INT) };
-    DataExpr *data1 = new DataExpr(0, INT64D);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    auto data1 = new FieldExpr(0, LongType());
     std::string castStr = "CAST";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    std::string funcID = ph.GetFnIdentifier(castStr, args1, INT32D);
-    FuncExpr *castExpr1 = new FuncExpr(castStr, args1, INT32D, *fr.LookupFunction(funcID));
+    auto castExpr1 = GetFuncExpr(castStr, args1, IntType());
 
-    DataExpr *data2 = new DataExpr(1, INT32D);
+    auto data2 = new FieldExpr(1, IntType());
     std::vector<Expr *> args2;
     args2.push_back(data2);
-    funcID = ph.GetFnIdentifier(castStr, args2, INT64D);
-    FuncExpr *castExpr2 = new FuncExpr(castStr, args2, INT64D, *fr.LookupFunction(funcID));
+    auto castExpr2 = GetFuncExpr(castStr, args2, LongType());
 
     std::vector<Expr *> exprs = { castExpr1, castExpr2 };
 
@@ -167,20 +163,16 @@ TEST(ProjectTest, CastDouble)
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE) };
 
-    DataExpr *data1 = new DataExpr(0, DOUBLED);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    auto data1 = new FieldExpr(0, DoubleType());
     std::string castStr = "CAST";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    std::string funcID = ph.GetFnIdentifier(castStr, args1, INT32D);
-    FuncExpr *castExpr1 = new FuncExpr(castStr, args1, INT32D, *fr.LookupFunction(funcID));
+    auto castExpr1 = GetFuncExpr(castStr, args1, IntType());
 
-    DataExpr *data2 = new DataExpr(1, DOUBLED);
+    auto data2 = new FieldExpr(1, DoubleType());
     std::vector<Expr *> args2;
     args2.push_back(data2);
-    funcID = ph.GetFnIdentifier(castStr, args2, INT64D);
-    FuncExpr *castExpr2 = new FuncExpr(castStr, args2, INT64D, *fr.LookupFunction(funcID));
+    auto castExpr2 = GetFuncExpr(castStr, args2, LongType());
 
     std::vector<Expr *> exprs = { castExpr1, castExpr2 };
 
@@ -218,14 +210,11 @@ TEST(ProjectTest, CastInt64ToDecimal128)
     int64_t *col1 = MakeLongs(numRows);
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
-    DataExpr *data1 = new DataExpr(0, INT64D);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    auto data1 = new FieldExpr(0, LongType());
     std::string castStr = "CAST";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    std::string funcID = ph.GetFnIdentifier(castStr, args1, DECIMAL128D);
-    FuncExpr *castExpr = new FuncExpr(castStr, args1, DECIMAL128D, *fr.LookupFunction(funcID));
+    auto castExpr = GetFuncExpr(castStr, args1, Decimal128Type(38, 0));
     std::vector<Expr*> exprs = {castExpr};
 
     VecTypes inputTypes(vecOfTypes);
@@ -260,9 +249,9 @@ TEST(ProjectTest, Simple)
     const int32_t numRows = 1000;
     int32_t *col = MakeInts(numRows);
     const int32_t numCols = 1;
-    DataExpr *addLeft = new DataExpr(0, INT32D);
-    DataExpr *addRight = new DataExpr(5);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
     std::vector<Expr *> exprs = { addExpr };
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes inputTypes(vecOfTypes);
@@ -309,21 +298,16 @@ TEST(ProjectTest, WithNullValues)
     int64_t *col2 = MakeLongs(numRows, -5);
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
-    DataExpr *data1 = new DataExpr(0, INT32D);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    auto data1 = new FieldExpr(0, IntType());
     std::string funcStr = "abs";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, INT32D);
-    FuncExpr *absExpr1 = new FuncExpr(funcStr, args1, INT32D, *fr.LookupFunction(funcID));
+    auto absExpr1 = GetFuncExpr(funcStr, args1, IntType());
 
-    DataExpr *data2 = new DataExpr(1, INT64D);
+    auto data2 = new FieldExpr(1, LongType());
     std::vector<Expr *> args2;
     args2.push_back(data2);
-    funcID = ph.GetFnIdentifier(funcStr, args2, INT64D);
-    FuncExpr *absExpr2 = new FuncExpr(funcStr, args2, INT64D, *fr.LookupFunction(funcID));
-
+    auto absExpr2 = GetFuncExpr(funcStr, args2, LongType());
 
     std::vector<Expr *> exprs = { absExpr1, absExpr2 };
 
@@ -369,9 +353,9 @@ TEST(ProjectTest, Negatives)
     const int32_t numRows = 1000;
     int32_t *col = MakeInts(numRows, -5);
     const int32_t numCols = 1;
-    DataExpr *subLeft = new DataExpr(0, INT32D);
-    DataExpr *subRight = new DataExpr(500);
-    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, INT32D);
+    FieldExpr *subLeft = new FieldExpr(0, IntType());
+    LiteralExpr *subRight = new LiteralExpr(500, IntType());
+    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, IntType());
     std::vector<Expr *> exprs = { subExpr };
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes inputTypes(vecOfTypes);
@@ -401,11 +385,11 @@ TEST(ProjectTest, Longs)
     const int32_t numRows = 10000;
     int64_t *col = MakeLongs(numRows, -5000);
     const int32_t numCols = 1;
-    DataExpr *mulLeft = new DataExpr(0, INT64D);
-    DataExpr *mulRight = new DataExpr(5000000);
+    FieldExpr *mulLeft = new FieldExpr(0, LongType());
+    LiteralExpr *mulRight = new LiteralExpr(5000000, LongType());
     mulRight->longVal = 5000000;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT64D);
-    std::vector<Expr *> exprs = { mulExpr };
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, LongType());
+    std::vector<Expr*> exprs = {mulExpr};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -435,11 +419,11 @@ TEST(ProjectTest, Doubles)
     double *col = MakeDoubles(numRows, -5000.5);
     const int32_t numCols = 1;
 
-    DataExpr *divLeft = new DataExpr(0, DOUBLED);
-    DataExpr *divRight = new DataExpr(2);
+    FieldExpr *divLeft = new FieldExpr(0, DoubleType());
+    LiteralExpr *divRight = new LiteralExpr(2, IntType());
     divRight->doubleVal = 2;
-    BinaryExpr *divExpr = new BinaryExpr(DIV, divLeft, divRight, DOUBLED);
-    std::vector<Expr *> exprs = { divExpr };
+    BinaryExpr *divExpr = new BinaryExpr(DIV, divLeft, divRight, DoubleType());
+    std::vector<Expr*> exprs= {divExpr};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -472,14 +456,14 @@ TEST(ProjectTest, MultipleColumns)
     int32_t *col2 = MakeInts(numRows, -100);
     int64_t *col3 = MakeLongs(numRows, -10);
     const int32_t numProject = 2;
-    DataExpr *subLeft = new DataExpr(0, INT32D);
-    DataExpr *subRight = new DataExpr(10);
-    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, INT32D);
+    FieldExpr *subLeft = new FieldExpr(0, IntType());
+    LiteralExpr *subRight = new LiteralExpr(10, IntType());
+    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, IntType());
 
-    DataExpr *addLeft = new DataExpr(2, INT64D);
-    DataExpr *addRight = new DataExpr(1);
+    FieldExpr *addLeft = new FieldExpr(2, LongType());
+    LiteralExpr *addRight = new LiteralExpr(1, LongType());
     addRight->longVal = 1;
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT64D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, LongType());
 
     std::vector<Expr *> exprs = { subExpr, addExpr };
 
@@ -535,19 +519,19 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     }
 
     const int32_t numProject = 2;
-    DataExpr *subLeft = new DataExpr(0, INT32D);
-    DataExpr *subRight = new DataExpr(10);
-    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, INT32D);
+    FieldExpr *subLeft = new FieldExpr(0, IntType());
+    LiteralExpr *subRight = new LiteralExpr(10, IntType());
+    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, IntType());
 
-    DataExpr *addLeft = new DataExpr(2, INT64D);
-    DataExpr *addRight = new DataExpr(1);
+    FieldExpr *addLeft = new FieldExpr(2, LongType());
+    LiteralExpr *addRight = new LiteralExpr(1, LongType());
     addRight->longVal = 1;
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT64D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, LongType());
 
     std::vector<Expr *> exprs = { subExpr, addExpr };
     const int32_t numCols = 4;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT),
-        VecType(OMNI_VEC_TYPE_LONG), VarcharVecType(1000) };
+                                        VecType(OMNI_VEC_TYPE_LONG), VarcharVecType(1000) };
     VecTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -557,7 +541,6 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     std::cout << "[BenchmarkMultipleColumns Project without varchar]\n\n";
     for (int i = 0; i < 10; i++) {
         auto start = std::chrono::system_clock::now();
-
         auto copy = DuplicateVectorBatch(t);
         op->AddInput(copy);
         vector<VectorBatch *> ret;
@@ -573,26 +556,22 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     delete factory;
 
     std::cout << "\n\n\n[BenchmarkMultipleColumns Project with varchar]\n\n";
-    DataExpr *subLeft2 = new DataExpr(0, INT32D);
-    DataExpr *subRight2 = new DataExpr(10);
-    BinaryExpr *subExpr2 = new BinaryExpr(SUB, subLeft2, subRight2, INT32D);
+    FieldExpr *subLeft2 = new FieldExpr(0, IntType());
+    LiteralExpr *subRight2 = new LiteralExpr(10, IntType());
+    BinaryExpr *subExpr2 = new BinaryExpr(SUB, subLeft2, subRight2, IntType());
 
-    DataExpr *substData = new DataExpr(3, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(3);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    FieldExpr *substData = new FieldExpr(3, VarcharType());
+    LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
+    LiteralExpr *substrLen = new LiteralExpr(3, IntType());
     std::string funcStr = "substr";
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
 
     std::vector<Expr *> exprs2 = { subExpr2, substrExpr };
-
 
     factory = new ProjectionOperatorFactory(exprs2, numProject, inputTypes, numCols);
     op = factory->CreateOperator();
@@ -632,20 +611,20 @@ TEST(ProjectTest, DependOtherColumn)
     int32_t *col2 = MakeInts(numRows, -100);
     int64_t *col3 = MakeLongs(numRows);
     const int32_t numProject = 2;
-    DataExpr *mulLeft = new DataExpr(0, INT32D);
-    DataExpr *mulRight = new DataExpr(1, INT32D);
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT32D);
+    FieldExpr *mulLeft = new FieldExpr(0, IntType());
+    FieldExpr *mulRight = new FieldExpr(1, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
 
-    DataExpr *conditionLeft = new DataExpr(0, INT32D);
-    DataExpr *conditionRight = new DataExpr(500);
-    BinaryExpr *condition = new BinaryExpr(LT, conditionLeft, conditionRight, BOOLD);
+    FieldExpr *conditionLeft = new FieldExpr(0, IntType());
+    LiteralExpr *conditionRight = new LiteralExpr(500, IntType());
+    BinaryExpr *condition = new BinaryExpr(LT, conditionLeft, conditionRight, BooleanType());
 
-    DataExpr *texp = new DataExpr(4000000000);
+    LiteralExpr *texp = new LiteralExpr(4000000000, LongType());
     texp->longVal = 4000000000;
 
-    DataExpr *fexp = new DataExpr(2, INT64D);
+    FieldExpr *fexp = new FieldExpr(2, LongType());
 
-    IfExpr *ifExpr = new IfExpr(condition, texp, fexp);
+   IfExpr *ifExpr = new IfExpr(condition, texp, fexp);
 
    std::vector<Expr*> exprs = {mulExpr, ifExpr};
    const int32_t numCols = 3;
@@ -705,21 +684,18 @@ TEST(ProjectTest, ProjectString1)
 
     const int32_t numProject = 2;
 
-    DataExpr *substrData = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(3);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    FieldExpr *substrData = new FieldExpr(0, VarcharType());
+    LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
+    LiteralExpr *substrLen = new LiteralExpr(3, IntType());
     std::string funcStr = "substr";
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *>args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
 
-    DataExpr *col0 = new DataExpr(0, VARCHARD);
+    FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { substrExpr, col0 };
 
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
@@ -782,17 +758,17 @@ TEST(ProjectTest, DictionaryVecTest)
     batch->SetVector(2, dictionaryVector);
 
     const int32_t numProject = 3;
-    DataExpr *addLeft1 = new DataExpr(0, INT32D);
-    DataExpr *addRight1 = new DataExpr(1);
-    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, INT32D);
+    FieldExpr *addLeft1 = new FieldExpr(0, IntType());
+    LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
 
-    DataExpr *addLeft2 = new DataExpr(1, INT32D);
-    DataExpr *addRight2 = new DataExpr(2);
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+    FieldExpr *addLeft2 = new FieldExpr(1, IntType());
+    LiteralExpr *addRight2 = new LiteralExpr(2, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
 
-    DataExpr *addLeft3 = new DataExpr(2, INT32D);
-    DataExpr *addRight3 = new DataExpr(10);
-    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, INT32D);
+    FieldExpr *addLeft3 = new FieldExpr(2, IntType());
+    LiteralExpr *addRight3 = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, IntType());
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
 
@@ -843,9 +819,9 @@ TEST(ProjectTest, DictionaryVecDoubleTest)
     batch->SetVector(0, doubleDicVector);
 
     const int32_t numProject = 1;
-    DataExpr *addRight = new DataExpr(10);
+    LiteralExpr *addRight = new LiteralExpr(10, DoubleType());
     addRight->doubleVal = 10;
-    std::vector<Expr *> exprs = { new BinaryExpr(ADD, new DataExpr(0, DOUBLED), addRight, DOUBLED) };
+    std::vector<Expr *> exprs = { new BinaryExpr(ADD, new FieldExpr(0, DoubleType()), addRight, DoubleType()) };
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto copy = DuplicateVectorBatch(batch);
@@ -873,7 +849,7 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     VarcharVector *col1 = new VarcharVector(vecAllocator, 5 * numRows, numRows);
 
     int32_t ids1[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-    DictionaryVector *varcharDicVector = new DictionaryVector(col1, ids1, numRows);
+    DictionaryVector *VarCharDicVector = new DictionaryVector(col1, ids1, numRows);
     string str1 = "hello";
     string str2 = "world";
     for (int32_t i = 0; i < numRows; i++) {
@@ -891,19 +867,16 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     VecTypes vecTypes(inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
 
-    batch->SetVector(0, varcharDicVector);
+    batch->SetVector(0, VarCharDicVector);
 
     const int32_t numProject = 1;
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "substr";
-    DataType retType = VARCHARD;
-std:vector<Expr *> args;
-    args.push_back(new DataExpr(0, VARCHARD));
-    args.push_back(new DataExpr(1));
-    args.push_back(new DataExpr(3));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    VecTypePtr retType = VarcharType();
+    std:vector<Expr *> args;
+    args.push_back(new FieldExpr(0, VarcharType()));
+    args.push_back(new LiteralExpr(1, IntType()));
+    args.push_back(new LiteralExpr(3, IntType()));
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     std::vector<Expr*> exprs = {substrExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -957,10 +930,10 @@ TEST(ProjectTest, DictionaryVecDecimal128Test)
     batch->SetVector(0, decimal128DicVector);
 
     const int32_t numProject = 1;
-    DataExpr *addRight = new DataExpr(20);
+    LiteralExpr *addRight = new LiteralExpr(20, IntType());
     addRight->longVal = 20;
     addRight->doubleVal = 20;
-    BinaryExpr *addExpr = new BinaryExpr(ADD, new DataExpr(0, DECIMAL128D), addRight, DECIMAL128D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, new FieldExpr(0, Decimal128Type(38, 0)), addRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { addExpr };
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1013,17 +986,17 @@ TEST(ProjectTest, DictionaryVecNestedTest)
     batch->SetVector(2, dictionaryNested);
 
     const int32_t numProjs = 3;
-    DataExpr *addLeft1 = new DataExpr(0, INT32D);
-    DataExpr *addRight1 = new DataExpr(1);
-    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, INT32D);
+    FieldExpr *addLeft1 = new FieldExpr(0, IntType());
+    LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
 
-    DataExpr *addLeft2 = new DataExpr(1, INT32D);
-    DataExpr *addRight2 = new DataExpr(2);
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+    FieldExpr *addLeft2 = new FieldExpr(1, IntType());
+    LiteralExpr *addRight2 = new LiteralExpr(2, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
 
-    DataExpr *addLeft3 = new DataExpr(2, INT32D);
-    DataExpr *addRight3 = new DataExpr(10);
-    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, INT32D);
+    FieldExpr *addLeft3 = new FieldExpr(2, IntType());
+    LiteralExpr *addRight3 = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, IntType());
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
 
@@ -1057,11 +1030,11 @@ TEST(ProjectTest, Decimal128Arithmetic)
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
-    DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
-    DataExpr *addRight = new DataExpr(20);
+    FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(20, IntType());
     addRight->longVal = 20;
     addRight->doubleVal = 20;
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, DECIMAL128D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr };
     const int32_t numCols = 1;
@@ -1094,10 +1067,10 @@ TEST(ProjectTest, Decimal128Divide)
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
-    DataExpr *divRight = new DataExpr(20);
+    LiteralExpr *divRight = new LiteralExpr(20, IntType());
     divRight->longVal = 20;
     divRight->doubleVal = 20;
-    BinaryExpr *divExpr = new BinaryExpr(DIV, new DataExpr(0, DECIMAL128D), divRight, DECIMAL128D);
+    BinaryExpr *divExpr = new BinaryExpr(DIV, new FieldExpr(0, Decimal128Type(38, 0)), divRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { divExpr };
 
     const int32_t numCols = 1;
@@ -1131,17 +1104,17 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     int64_t *col1 = MakeDecimals(numRows);
     int64_t *col2 = MakeDecimals(numRows, 100);
     const int32_t numProject = 2;
-    DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
-    DataExpr *addRight = new DataExpr(50);
+    FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(50, IntType());
     addRight->longVal = 50;
     addRight->doubleVal = 50;
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, DECIMAL128D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
-    DataExpr *mulLeft = new DataExpr(1, DECIMAL128D);
-    DataExpr *mulRight = new DataExpr(20);
+    FieldExpr *mulLeft = new FieldExpr(1, Decimal128Type(38, 0));
+    LiteralExpr *mulRight = new LiteralExpr(20, IntType());
     mulRight->longVal = 20;
     mulRight->doubleVal = 20;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, DECIMAL128D);
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr, mulExpr };
 
@@ -1207,28 +1180,24 @@ TEST(ProjectTest, StringSubstr)
 
 
     const int32_t numProject = 2;
-    DataExpr *substrData = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(5);
-    ParserHelper ph;
-    FunctionRegistry fr;
+    FieldExpr *substrData = new FieldExpr(0, VarcharType());
+    LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
+    LiteralExpr *substrLen = new LiteralExpr(5, IntType());
     std::string substrStr = "substr";
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    std::string funcID = ph.GetFnIdentifier(substrStr, args, retType);
-    FuncExpr *substrExpr = new FuncExpr(substrStr, args, retType, *fr.LookupFunction(funcID));
+    auto substrExpr = GetFuncExpr(substrStr, args, VarcharType());
 
     std::vector<Expr *> concatArgs;
     std::string concatStr = "concat";
     concatArgs.push_back(substrExpr);
-    concatArgs.push_back(new DataExpr(new std::string(" world")));
-    funcID = ph.GetFnIdentifier(concatStr, concatArgs, retType);
-    FuncExpr *concatExpr = new FuncExpr(concatStr, concatArgs, retType, *fr.LookupFunction(funcID));
+    concatArgs.push_back(new LiteralExpr(new std::string(" world"), VarcharType()));
+    auto concatExpr = GetFuncExpr(concatStr, concatArgs, VarcharType());
 
-    DataExpr *col0 = new DataExpr(0, VARCHARD);
+    auto col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr*> exprs = {concatExpr, col0};
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
@@ -1303,17 +1272,17 @@ TEST(ProjectTest, SlicedDictionaryVecTest)
 
     const int32_t numProject = 3;
 
-    DataExpr *addLeft1 = new DataExpr(0, INT32D);
-    DataExpr *addRight1 = new DataExpr(1);
-    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, INT32D);
+    FieldExpr *addLeft1 = new FieldExpr(0, IntType());
+    LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
 
-    DataExpr *addLeft2 = new DataExpr(1, INT32D);
-    DataExpr *addRight2 = new DataExpr(2);
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+    FieldExpr *addLeft2 = new FieldExpr(1, IntType());
+    LiteralExpr *addRight2 = new LiteralExpr(2, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
 
-    DataExpr *addLeft3 = new DataExpr(2, INT32D);
-    DataExpr *addRight3 = new DataExpr(10);
-    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, INT32D);
+    FieldExpr *addLeft3 = new FieldExpr(2, IntType());
+    LiteralExpr *addRight3 = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, IntType());
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
@@ -1367,9 +1336,9 @@ TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
     const int32_t numProject = 1;
     // string exprs[numProject] = {"$operator$ADD:1(#0, #0)"};
 
-    DataExpr *addLeft = new DataExpr(0, INT32D);
-    DataExpr *addRight = new DataExpr(0, INT32D);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    FieldExpr *addRight = new FieldExpr(0, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
 
     std::vector<Expr *> exprs = { addExpr };
 
@@ -1417,14 +1386,14 @@ TEST(ProjectTest, Tpcds96)
     }
 
     const int32_t numCols = 4;
-    DataExpr *addCol0 = new DataExpr(0, INT64D);
-    DataExpr *addCol1 = new DataExpr(1, INT64D);
-    DataExpr *addCol2_0 = new DataExpr(2, INT64D);
-    DataExpr *addCol2_1 = new DataExpr(2, INT64D);
-    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addCol0, addCol1, INT64D);
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addExpr1, addCol2_0, INT64D);
-    BinaryExpr *divExpr = new BinaryExpr(DIV, addCol2_1, addExpr2, INT64D);
-    DataExpr *expectRes = new DataExpr(3, INT64D);
+    FieldExpr *addCol0 = new FieldExpr(0, LongType());
+    FieldExpr *addCol1 = new FieldExpr(1, LongType());
+    FieldExpr *addCol2_0 = new FieldExpr(2, LongType());
+    FieldExpr *addCol2_1 = new FieldExpr(2, LongType());
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addCol0, addCol1, LongType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addExpr1, addCol2_0, LongType());
+    BinaryExpr *divExpr = new BinaryExpr(DIV, addCol2_1, addExpr2, LongType());
+    FieldExpr *expectRes = new FieldExpr(3, LongType());
     std::vector<Expr *> exprs = { divExpr, expectRes };
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG),
@@ -1473,6 +1442,138 @@ TEST(ProjectTest, Tpcds96)
     delete[] col2;
     delete[] col3;
 
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectTest, Round)
+{
+    const int32_t numRows = 1000;
+    int32_t *col0 = MakeInts(numRows, -5);
+    int64_t *col1 = MakeLongs(numRows, -5);
+    double *col2 = MakeDoubles(numRows, -5.123);
+    double *col3 = MakeDoubles(numRows, -5.123);
+    double *col4 = MakeDoubles(numRows, -1001.456);
+    // Make NaN and inf values
+    auto *col5 = new double[numRows];
+    double start = 1;
+    int32_t idx = 0;
+    for (double i = start; i < start + numRows; i++) {
+        if (idx % 2 == 0) {
+            // NaN
+            col5[idx++] = std::sqrt(-i);
+        } else {
+            // inf
+            col5[idx++] = i / 0.0;
+        }
+    }
+    const int32_t numCols = 6;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
+                                        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE),
+                                        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE)};
+    std::string funcStr = "round";
+
+    // rounded to tenths. since int type, no decimals, so should be same as input
+    auto data0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> args0;
+    args0.push_back(data0);
+    int32_t data0_decimal = 1;
+    args0.push_back(new LiteralExpr(data0_decimal, IntType()));
+    auto roundExpr0 = GetFuncExpr(funcStr, args0, IntType());
+
+    // rounded to tens
+    auto data1 = new FieldExpr(1, LongType());
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    int32_t data1_decimal = -1;
+    args1.push_back(new LiteralExpr(data1_decimal, IntType()));
+    auto roundExpr1 = GetFuncExpr(funcStr, args1, LongType());
+    double data1Pow = pow(10, data1_decimal);
+
+    // rounded to ones. equivalent to round()
+    auto data2 = new FieldExpr(2, DoubleType());
+    std::vector<Expr *> args2;
+    args2.push_back(data2);
+    int32_t data2_decimal = 0;
+    args2.push_back(new LiteralExpr(data2_decimal, IntType()));
+    auto roundExpr2 = GetFuncExpr(funcStr, args2, DoubleType());
+
+    // rounded to hundredths
+    auto data3 = new FieldExpr(3, DoubleType());
+    std::vector<Expr *> args3;
+    args3.push_back(data3);
+    int32_t data3_decimal = 2;
+    args3.push_back(new LiteralExpr(data3_decimal, IntType()));
+    auto roundExpr3 = GetFuncExpr(funcStr, args3, DoubleType());
+    double data3Pow = pow(10, data3_decimal);
+
+    // rounded to hundredths (all negatives)
+    auto data4 = new FieldExpr(4, DoubleType());
+    std::vector<Expr *> args4;
+    args4.push_back(data4);
+    int32_t data4_decimal = 2;
+    args4.push_back(new LiteralExpr(data4_decimal, IntType()));
+    auto roundExpr4 = GetFuncExpr(funcStr, args4, DoubleType());
+    double data4Pow = pow(10, data4_decimal);
+
+    // invalid values
+    auto data5 = new FieldExpr(5, DoubleType());
+    std::vector<Expr *> args5;
+    args5.push_back(data5);
+    int32_t data5_decimal = 2;
+    args5.push_back(new LiteralExpr(data5_decimal, IntType()));
+    auto roundExpr5 = GetFuncExpr(funcStr, args5, DoubleType());
+
+    std::vector<Expr *> exprs = { roundExpr0, roundExpr1, roundExpr2, roundExpr3, roundExpr4, roundExpr5 };
+
+    VecTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4, (int64_t) col5};
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        double val2 = ((DoubleVector *)ret[0]->GetVector(2))->GetValue(i);
+        double val3 = ((DoubleVector *)ret[0]->GetVector(3))->GetValue(i);
+        double val4 = ((DoubleVector *)ret[0]->GetVector(4))->GetValue(i);
+        double val5 = ((DoubleVector *)ret[0]->GetVector(5))->GetValue(i);
+
+        int32_t old0 = ((IntVector *)t->GetVector(0))->GetValue(i);
+        int64_t old1 = ((LongVector *)t->GetVector(1))->GetValue(i);
+        double old2 = ((DoubleVector *)t->GetVector(2))->GetValue(i);
+        double old3 = ((DoubleVector *)t->GetVector(3))->GetValue(i);
+        double old4 = ((DoubleVector *)t->GetVector(4))->GetValue(i);
+        double old5 = ((DoubleVector *)t->GetVector(5))->GetValue(i);
+
+        EXPECT_EQ(val0, round(old0));
+        EXPECT_EQ(val0, old0);
+        EXPECT_EQ(val1, (round(old1 * data1Pow) / data1Pow));
+        EXPECT_EQ(val2, round(old2));
+        EXPECT_EQ(val3, (round(old3 * data3Pow) / data3Pow));
+        EXPECT_EQ(val4, -(round(-old4 * data4Pow) / data4Pow));
+        if (i % 2 == 0) {
+            // cannot compare NaN values
+            EXPECT_TRUE(isnan(val5) && isnan(old5));
+        } else {
+            EXPECT_EQ(val5, old5);
+        }
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col0;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete[] col4;
+    delete[] col5;
     delete op;
     delete factory;
 }

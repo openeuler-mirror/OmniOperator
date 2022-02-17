@@ -6,6 +6,7 @@
 #define OMNI_RUNTIME_ROW_EXPRESSION_CODEGEN_H
 
 #include "expression_codegen.h"
+#include "util/type_util.h"
 
 #include <utility>
 
@@ -23,7 +24,8 @@ public:
 
     ~RowExpressionCodeGen() override = default;
 
-    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
+    void Visit(const omniruntime::expressions::FieldExpr &e) override;
     int64_t GetFunction() override;
 
 private:

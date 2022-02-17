@@ -43,6 +43,7 @@
 #include "../common/parser/parser.h"
 #include "../common/expr_printer.h"
 #include "../util/debug.h"
+#include "llvm_types.h"
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -57,7 +58,8 @@ public:
     virtual int64_t GetFunction() = 0;
 
     // visitor methods
-    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
+    void Visit(const omniruntime::expressions::FieldExpr &e) override;
     void Visit(const omniruntime::expressions::UnaryExpr &e) override;
     void Visit(const omniruntime::expressions::BinaryExpr &e) override;
     void Visit(const omniruntime::expressions::InExpr &e) override;
@@ -74,16 +76,11 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    llvm::Value* CreateConstantBool(bool n);
-    llvm::Value* CreateConstantInt(int32_t n);
-    llvm::Value* CreateConstantLong(int64_t n);
-    llvm::Value* CreateConstantDouble(double n);
-    llvm::Value* GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
-    llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
-    llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
-    llvm::Type* GetFunctionArgType(omniruntime::expressions::DataType t);
-    llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
-    void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
+    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
+        bool needsContext);
+
+    llvm::Value *GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
+    void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     llvm::Value *Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
@@ -102,10 +99,10 @@ protected:
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi, llvm::Value **isNeitherNull);
     void DivExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-                              llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull,
-                              llvm::PHINode **leftPhi, llvm::PHINode **rightPhi);
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
+        llvm::PHINode **rightPhi);
     // Helper functions and main function for parsing constant data expressions
-    CodeGenValue *DataExprConstantHelper(const omniruntime::expressions::DataExpr &dExpr);
+    CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
 
     virtual llvm::Function *CreateFunction();
     void OptimizeFunctionsAndModule();
@@ -123,15 +120,14 @@ protected:
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
     int numGlobalValues = 0;
+    std::unique_ptr<LLVMTypes> llvmTypes;
 
 private:
     std::string funcName;
-    std::map<std::string, FunctionSignature> funcNameToSignature;
     static void InitializeCodegenTargets();
-    void RegisterFunctions(std::vector<omniruntime::Function> func);
-    void RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs);
+    void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
+    llvm::Value *GetDictionaryVectorValue(omniruntime::vec::VecType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
     void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
         llvm::Value *rightNull);

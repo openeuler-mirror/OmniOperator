@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "expression_codegen.h"
+#include "util/type_util.h"
 
 class ProjectionCodeGen : public ExpressionCodeGen {
 public:

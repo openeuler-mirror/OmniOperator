@@ -10,6 +10,7 @@
 #include <cstdarg>
 
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 
 bool TypesMatch(const int32_t *actualTypes, const int32_t *expectTypes, int32_t columnNumber);
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
@@ -493,5 +494,16 @@ void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t proj
             typeIds.push_back(returnType);
             projectCols[i] = newProjectCol++;
         }
+    }
+}
+
+FuncExpr *GetFuncExpr(const std::string& funcName, std::vector<Expr*> args, VecTypePtr returnType)
+{
+    std::vector<VecTypeId> argTypes(args.size());
+    std::transform(args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    auto signature = FunctionSignature(funcName, argTypes, returnType->GetId());
+    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
+    if (function != nullptr) {
+        return new FuncExpr(funcName, args, std::move(returnType), function);
     }
 }

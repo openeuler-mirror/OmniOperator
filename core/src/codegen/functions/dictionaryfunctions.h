@@ -14,17 +14,18 @@
 
 #include <cstdint>
 
-extern "C" DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+extern DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
-extern "C" DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+extern DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
-extern "C" DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+extern DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
-extern "C" DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+extern DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
-extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr);
+extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(
+    int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr);
 
-extern "C" DLLEXPORT int64_t GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index,
-                                                            int64_t contextPtr);
+extern DLLEXPORT int64_t GetDecimalFromDictionaryVector(
+    int64_t contextPtr, int64_t dictionaryVectorAddr, int32_t index);
 
 #endif // OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

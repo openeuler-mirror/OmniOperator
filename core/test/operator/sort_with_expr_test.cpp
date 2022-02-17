@@ -22,9 +22,9 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    std::string sortKeys[2] = {"#0", "#1"};
-    Parser parser;
-    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
+    auto col0 = new FieldExpr(0, IntType());
+    auto col1 = new FieldExpr(1, LongType());
+    std::vector<Expr *> sortExprs{col0, col1};
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -58,9 +58,11 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    std::string sortKeys[2] = {"#0", "ADD:2(#1, 50:2)"};
-    Parser parser;
-    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
+    auto col0 = new FieldExpr(0, IntType());
+    auto addCol = new FieldExpr(0, IntType());
+    auto addLiteral = new LiteralExpr(50, IntType());
+    auto addExpr = new BinaryExpr(ADD, addCol, addLiteral);
+    std::vector<Expr *> sortExprs{col0, addExpr};
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -94,9 +96,13 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    std::string sortKeys[2] = {"ADD:1(#0, 50:1)", "ADD:2(#1, 50:2)"};
-    Parser parser;
-    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
+    auto add1Col = new FieldExpr(0, IntType());
+    auto add1Literal = new LiteralExpr(50, IntType());
+    auto add2Col = new FieldExpr(1, LongType());
+    auto add2Literal = new LiteralExpr(50, LongType());
+    auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal);
+    auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col);
+    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -139,9 +145,13 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     }
 
     int32_t outputCols[2] = {1, 2};
-    std::string sortKeys[2] = {"ADD:1(#0, 50:1)", "ADD:2(50:2, #2)"};
-    Parser parser;
-    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
+    auto add1Col = new FieldExpr(0, IntType());
+    auto add1Literal = new LiteralExpr(50, IntType());
+    auto add2Col = new FieldExpr(2, LongType());
+    auto add2Literal = new LiteralExpr(50, LongType());
+    auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal);
+    auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col);
+    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
@@ -178,9 +188,14 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 
     VecTypes sourceTypes(std::vector<VecType>({ type }));
     int32_t outputCols[vecCount] = {0};
-    std::string sortKeys[vecCount] = {"substr:15(#0, 1:1, 4:1)"};
-    Parser parser;
-    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 1, sourceTypes);
+
+    auto substrCol = new FieldExpr(0, VarcharType(200));
+    auto substrIndex = new LiteralExpr(1, IntType());
+    auto substrLen = new LiteralExpr(4, IntType());
+    std::vector<Expr*> args {substrCol, substrIndex, substrLen};
+    auto substrExpr = GetFuncExpr("substr", args, VarcharType(200));
+    std::vector<Expr *> sortExprs{substrExpr};
+
     int32_t ascendings[vecCount] = {true};
     int32_t nullFirsts[vecCount] = {true};
 
@@ -244,9 +259,14 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     int32_t outputCols[2] = {1, 2};
-    std::string sortKeys[2] = {"ADD:1(#0, 50:1)", "ADD:2(50:2, #2)"};
-    Parser parser;
-    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
+    auto add1Col = new FieldExpr(0, IntType());
+    auto add1Literal = new LiteralExpr(50, IntType());
+    auto add2Col = new FieldExpr(2, LongType());
+    auto add2Literal = new LiteralExpr(50, LongType());
+    auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal);
+    auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col);
+    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,

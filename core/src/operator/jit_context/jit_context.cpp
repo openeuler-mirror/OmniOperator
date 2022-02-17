@@ -30,11 +30,9 @@ constexpr int32_t PARAM_INDEX_9 = 9;
 int32_t GetProjectCol(Expr *expr)
 {
     // #0 or #5 is not expression
-    if (expr->GetType() == DATA_E) {
-        auto dataExpr = static_cast<DataExpr *>(expr);
-        if (dataExpr->isColumn) {
-            return dataExpr->colVal;
-        }
+    if (expr->GetType() == FIELD_E) {
+        auto fieldExpr = static_cast<FieldExpr *>(expr);
+        return fieldExpr->colVal;
     }
 
     return -1;
@@ -53,7 +51,7 @@ void GetTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys, vector<
         auto projectCol = GetProjectCol(projectKeys[i]);
         projectCols[i] = projectCol;
         if (projectCol == -1) {
-            auto returnType = projectKeys[i]->GetExprDataType();
+            auto returnType = projectKeys[i]->GetReturnTypeId();
             typeIds.push_back(returnType);
             projectCols[i] = newProjectCol++;
         }
@@ -73,7 +71,7 @@ void GetRequiredTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys,
         auto projectCol = GetProjectCol(projectKeys[i]);
         if (projectCol == -1) {
             // expression col
-            auto returnType = projectKeys[i]->GetExprDataType();
+            auto returnType = projectKeys[i]->GetReturnTypeId();
             typeIds.push_back(returnType);
             projectCols[i] = newProjectCol++;
         } else {

@@ -2,16 +2,18 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description:
  */
+#include "util/type_util.h"
 #include "./func_signature.h"
 
-using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
 FunctionSignature::FunctionSignature()
 {
 }
 
-FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType,
-                                     void *address = nullptr)
+FunctionSignature::FunctionSignature(
+    const std::string name, std::vector<VecTypeId> params,
+                                     const omniruntime::vec::VecTypeId &returnType, void *address)
 {
     this->funcName = name;
     this->paramTypes = params;
@@ -33,12 +35,12 @@ std::string FunctionSignature::GetName() const
     return this->funcName;
 }
 
-std::vector<DataType> FunctionSignature::GetParams() const
+const std::vector<VecTypeId> &FunctionSignature::GetParams() const
 {
     return this->paramTypes;
 }
 
-DataType FunctionSignature::GetReturnType() const
+VecTypeId FunctionSignature::GetReturnType() const
 {
     return this-> retType;
 }
@@ -46,4 +48,52 @@ DataType FunctionSignature::GetReturnType() const
 void* FunctionSignature::GetFunctionAddress() const
 {
     return this->funcAddress;
+}
+
+FunctionSignature &FunctionSignature::operator=(FunctionSignature other)
+{
+    std::swap(funcName, other.funcName);
+    std::swap(paramTypes, other.paramTypes);
+    std::swap(retType, other.retType);
+    std::swap(funcAddress, other.funcAddress);
+    return *this;
+}
+
+bool FunctionSignature::operator==(const FunctionSignature& other) const
+{
+    if (this->funcName != other.funcName ||
+        this->retType != other.retType ||
+        this->paramTypes.size() != other.paramTypes.size()) {
+        return false;
+    }
+
+    for (int i = 0; i < this->paramTypes.size(); i++) {
+        if (this->paramTypes.at(i) != other.paramTypes.at(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+size_t FunctionSignature::HashCode() const
+{
+    auto hashName = std::hash<std::string> {}(this->funcName);
+    auto hashReturnType = std::hash<int> {}(static_cast<int>(this->retType));
+    auto combinedHash = hashName ^ (hashReturnType << 1);
+    for (auto param : this->paramTypes) {
+        auto hashParamType = std::hash<int> {}(static_cast<int>(param));
+        combinedHash = hashParamType ^ (combinedHash << 1);
+    }
+    return combinedHash;
+}
+
+std::string FunctionSignature::ToString() const
+{
+    auto result = this->funcName;
+    for (auto const &param : this->paramTypes) {
+        result += "_";
+        result += TypeUtil::TypeToString(param);
+    }
+    result = result + "_" + TypeUtil::TypeToString(this->retType);
+    return result;
 }

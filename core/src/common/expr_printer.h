@@ -7,10 +7,12 @@
 #define __EXPRESSION_PRINTER_H__
 
 #include "expr_visitor.h"
+#include "util/type_util.h"
 
 class ExprPrinter : public ExprVisitor {
 public:
-    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
+    void Visit(const omniruntime::expressions::FieldExpr &e) override;
     void Visit(const omniruntime::expressions::UnaryExpr &e) override;
     void Visit(const omniruntime::expressions::BinaryExpr &e) override;
     void Visit(const omniruntime::expressions::InExpr &e) override;

@@ -8,33 +8,28 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector/vector_type.h>
 
-#include "common/datatype.h"
 
 class FunctionSignature {
 public:
     FunctionSignature();
-    FunctionSignature(std::string name, std::vector<omniruntime::expressions::DataType> params,
-                      omniruntime::expressions::DataType returnType, void* address);
+    FunctionSignature(const std::string name, std::vector<omniruntime::vec::VecTypeId> params,
+                      const omniruntime::vec::VecTypeId &returnType, void* address = nullptr);
     FunctionSignature(const FunctionSignature &fs);
-    FunctionSignature &operator=(FunctionSignature other)
-    {
-        std::swap(funcName, other.funcName);
-        std::swap(paramTypes, other.paramTypes);
-        std::swap(retType, other.retType);
-        std::swap(funcAddress, other.funcAddress);
-        return *this;
-    }
+    FunctionSignature &operator=(FunctionSignature other);
+    bool operator==(const FunctionSignature& other) const;
     ~FunctionSignature();
-    std::string GetId() const;
     std::string GetName() const;
-    std::vector<omniruntime::expressions::DataType> GetParams() const;
-    omniruntime::expressions::DataType GetReturnType() const;
+    const std::vector<omniruntime::vec::VecTypeId> &GetParams() const;
+    omniruntime::vec::VecTypeId GetReturnType() const;
     void* GetFunctionAddress() const;
+    size_t HashCode() const;
+    std::string ToString() const;
 private:
-    std::string funcName = "";
-    std::vector<omniruntime::expressions::DataType> paramTypes {};
-    omniruntime::expressions::DataType retType = omniruntime::expressions::DataType::INVALIDDATAD;
+    std::string funcName;
+    std::vector<omniruntime::vec::VecTypeId> paramTypes {};
+    omniruntime::vec::VecTypeId retType;
     void* funcAddress = nullptr;
 };
 

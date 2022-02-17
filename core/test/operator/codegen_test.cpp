@@ -38,9 +38,9 @@ typedef int32_t (*ProjectFunc)(int64_t *, int32_t, int64_t, int32_t *, int32_t, 
 TEST(CodeGenTest, SimpleFilter)
 {
     // create expression objects
-    DataExpr *lessThanLeft = new DataExpr(0, INT32D);
-    DataExpr *lessThanRight = new DataExpr(50);
-    BinaryExpr *lessThanExpr = new BinaryExpr(LT, lessThanLeft, lessThanRight, BOOLD);
+    FieldExpr *lessThanLeft = new FieldExpr(0, IntType());
+    LiteralExpr *lessThanRight = new LiteralExpr(50, IntType());
+    BinaryExpr *lessThanExpr = new BinaryExpr(LT, lessThanLeft, lessThanRight, BooleanType());
 
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
@@ -71,7 +71,7 @@ TEST(CodeGenTest, SimpleFilter)
 
     RowProjection rowProjection(*lessThanExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType(), BOOLD);
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_BOOLEAN);
 
     int32_t *dataLength = new int32_t(0);
     int64_t dictionaries[numCols] = {};
@@ -102,9 +102,9 @@ TEST(CodeGenTest, SimpleFilter)
 // Simple project example using individual row processing.
 TEST(CodeGenTest, SimpleProject)
 {
-    DataExpr *addLeft = new DataExpr(0, INT32D);
-    DataExpr *addRight = new DataExpr(50);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(50, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
 
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
@@ -134,7 +134,7 @@ TEST(CodeGenTest, SimpleProject)
 
     RowProjection rowProjection(*addExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
     bool isNull = false;
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -159,18 +159,18 @@ TEST(CodeGenTest, SimpleProject)
 // A more complicated test for individual row projection
 TEST(CodeGenTest, SingleProject)
 {
-    DataExpr *gtLeft = new DataExpr(1, INT64D);
-    DataExpr *gtRight = new DataExpr(3000000000);
+    FieldExpr *gtLeft = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
     gtRight->longVal = 3000000000;
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BOOLD);
+    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
-    DataExpr *addLeft = new DataExpr(0, INT32D);
-    DataExpr *addRight = new DataExpr(10);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
 
-    DataExpr *mulLeft = new DataExpr(0, INT32D);
-    DataExpr *mulRight = new DataExpr(-1);
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT32D);
+    FieldExpr *mulLeft = new FieldExpr(0, IntType());
+    LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
 
     IfExpr *ifExpr = new IfExpr(gtExpr, addExpr, mulExpr);
 
@@ -209,7 +209,7 @@ TEST(CodeGenTest, SingleProject)
 
     RowProjection rowProjection(*ifExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -237,7 +237,7 @@ TEST(CodeGenTest, SingleProject)
 // Test the short circuit functionality in the case that the projection is a column index.
 TEST(CodeGenTest, ShortCircuitProject)
 {
-    DataExpr *colExpr1 = new DataExpr(1, INT64D);
+    FieldExpr *colExpr1 = new FieldExpr(1, LongType());
 
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
@@ -303,11 +303,10 @@ TEST(CodeGenTest, ShortCircuitProject)
 // Test the row filter
 TEST(CodeGenTest, RowFilter)
 {
-    DataExpr *equalLeft = new DataExpr(0, INT32D);
-    DataExpr *equalRight = new DataExpr(0);
-    BinaryExpr *equalExpr = new BinaryExpr(EQ, equalLeft, equalRight, BOOLD);
+    FieldExpr *equalLeft = new FieldExpr(0, IntType());
+    LiteralExpr *equalRight = new LiteralExpr(0, IntType());
+    BinaryExpr *equalExpr = new BinaryExpr(EQ, equalLeft, equalRight, BooleanType());
 
-    DataType types[1] = {DataType::INT32D};
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes vecTypes(vecOfTypes);
@@ -334,7 +333,6 @@ TEST(CodeGenTest, RowFilter)
         offsets[col] = new int32_t[numRows];
     }
     int64_t dictionaryVectors[numCols] = {};
-    vector<DataType> typeVec = vector<DataType>(types, types + 2);
     auto filter = new RowFilter(*equalExpr);
     EXPECT_FALSE(filter == nullptr);
     auto filterFunc = filter->Create();
@@ -358,7 +356,6 @@ TEST(CodeGenTest, RowFilter)
 }
 
 TEST (CodeGenTest, RowFilterString) {
-    DataType types[2] = {DataType::VARCHARD, DataType::VARCHARD};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes vecTypes(vecOfTypes);
     const int32_t numCols = 2;
@@ -390,27 +387,19 @@ TEST (CodeGenTest, RowFilterString) {
         offsets[col][0] = 0;
         offsets[col][1] = 11;
     }
-
-    vector<DataType> typeVec = vector<DataType>(types, types + 2);
-
-    DataExpr *substrCol = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(5);
+    auto substrCol = new FieldExpr(0, VarcharType());
+    auto substrIndex = new LiteralExpr(1, IntType());
+    auto substrLen = new LiteralExpr(5, IntType());
     std::vector<Expr*> args;
     args.push_back(substrCol);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarcharType();
     std::string funcStr = "substr";
-    ParserHelper ph;
-    FunctionRegistry fr;
 
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
-
-    DataExpr *helloExpr = new DataExpr(new std::string("hello"));
-
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, substrExpr, helloExpr, BOOLD);
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
+    auto helloExpr = new LiteralExpr(new std::string("hello"), VarcharType(6));
+    auto eqExpr = new BinaryExpr(EQ, substrExpr, helloExpr, BooleanType());
 
     auto filter = new RowFilter(*eqExpr);
     EXPECT_FALSE(filter == nullptr);
@@ -421,19 +410,18 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    DataExpr *substrCol2 = new DataExpr(1, VARCHARD);
-    DataExpr *substrIndex2 = new DataExpr(1);
-    DataExpr *substrLen2 = new DataExpr(5);
+    auto substrCol2 = new FieldExpr(1, VarcharType());
+    auto *substrIndex2 = new LiteralExpr(1, IntType());
+    auto substrLen2 = new LiteralExpr(5, IntType());
     std::vector<Expr*> args2;
     args2.push_back(substrCol2);
     args2.push_back(substrIndex2);
     args2.push_back(substrLen2);
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
-    FuncExpr *substrExpr2 = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
+    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarcharType());
 
-    DataExpr *helloExpr2 = new DataExpr(new std::string("hello"));
+    auto helloExpr2 = new LiteralExpr(new std::string("hello"), VarcharType(6));
 
-    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, substrExpr2, helloExpr2, BOOLD);
+    auto eqExpr2 = new BinaryExpr(EQ, substrExpr2, helloExpr2, BooleanType());
     filter = new RowFilter(*eqExpr2);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
@@ -443,27 +431,26 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, false);
 
     delete filter;
-    DataExpr *substrCol3 = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex3 = new DataExpr(1);
-    DataExpr *substrLen3 = new DataExpr(5);
+
+    auto substrCol3 = new FieldExpr(0, VarcharType());
+    auto substrIndex3 = new LiteralExpr(1, IntType());
+    auto substrLen3 = new LiteralExpr(5, IntType());
     std::vector<Expr*> args3;
     args3.push_back(substrCol3);
     args3.push_back(substrIndex3);
     args3.push_back(substrLen3);
-    funcID = ph.GetFnIdentifier(funcStr, args3, retType);
-    FuncExpr *substrExpr3 = new FuncExpr(funcStr, args3, retType, *fr.LookupFunction(funcID));
+    auto substrExpr3 = GetFuncExpr(funcStr, args3, VarcharType());
 
-    DataExpr *substrCol4 = new DataExpr(1, VARCHARD);
-    DataExpr *substrIndex4 = new DataExpr(7);
-    DataExpr *substrLen4 = new DataExpr(11);
+    auto substrCol4 = new FieldExpr(1, VarcharType());
+    auto substrIndex4 = new LiteralExpr(7, IntType());
+    auto substrLen4 = new LiteralExpr(11, IntType());
     std::vector<Expr*> args4;
     args4.push_back(substrCol4);
     args4.push_back(substrIndex4);
     args4.push_back(substrLen4);
-    funcID = ph.GetFnIdentifier(funcStr, args4, retType);
-    FuncExpr *substrExpr4 = new FuncExpr(funcStr, args4, retType, *fr.LookupFunction(funcID));
+    auto substrExpr4 = GetFuncExpr(funcStr, args4, VarcharType());
 
-    BinaryExpr *eqExpr3 = new BinaryExpr(EQ, substrExpr3, substrExpr4, BOOLD);
+    auto eqExpr3 = new BinaryExpr(EQ, substrExpr3, substrExpr4, BooleanType());
     filter = new RowFilter(*eqExpr3);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
@@ -487,24 +474,24 @@ TEST (CodeGenTest, RowFilterString) {
 TEST(CodeGenTest, Operators1)
 {
     // create expression objects
-    DataExpr *addLeft = new DataExpr(0, INT32D);
-    DataExpr *addRight = new DataExpr(2);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
-    DataExpr *gteRight = new DataExpr(4);
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(2, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    LiteralExpr *gteRight = new LiteralExpr(4, IntType());
 
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, addLeft, addRight, BOOLD);
+    BinaryExpr *gteExpr = new BinaryExpr(GTE, addLeft, addRight, BooleanType());
 
-    DataExpr *ltLeft = new DataExpr(1, INT32D);
-    DataExpr *ltRight = new DataExpr(4);
-    BinaryExpr *ltExpr = new BinaryExpr(LT, ltLeft, ltRight, BOOLD);
+    FieldExpr *ltLeft = new FieldExpr(1, IntType());
+    LiteralExpr *ltRight = new LiteralExpr(4, IntType());
+    BinaryExpr *ltExpr = new BinaryExpr(LT, ltLeft, ltRight, BooleanType());
 
-    DataExpr *eqLeft = new DataExpr(2, INT32D);
-    DataExpr *eqRight = new DataExpr(2);
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BOOLD);
+    FieldExpr *eqLeft = new FieldExpr(2, IntType());
+    LiteralExpr *eqRight = new LiteralExpr(2, IntType());
+    BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
 
-    BinaryExpr *andLeft = new BinaryExpr(AND, ltExpr, eqExpr, BOOLD);
+    BinaryExpr *andLeft = new BinaryExpr(AND, ltExpr, eqExpr, BooleanType());
 
-    BinaryExpr *expr = new BinaryExpr(AND, gteExpr, andLeft, BOOLD);
+    BinaryExpr *expr = new BinaryExpr(AND, gteExpr, andLeft, BooleanType());
 
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
@@ -573,35 +560,29 @@ TEST(CodeGenTest, Operators1)
 TEST(CodeGenTest, MathFunctions1)
 {
     // create the expression objects
-    DataExpr *col01 = new DataExpr(0, INT32D);
-    DataExpr *col2 = new DataExpr(2, INT32D);
-    DataType retType = INT32D;
+    FieldExpr *col01 = new FieldExpr(0, IntType());
+    FieldExpr *col2 = new FieldExpr(2, IntType());
+    VecTypePtr retType = IntType();
     std::string funcStr = "abs";
-    ParserHelper ph;
-    FunctionRegistry fr;
 
     std::vector<Expr *> args1;
     args1.push_back(col01);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
-    FuncExpr *abs1 = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
+    auto abs1 = GetFuncExpr(funcStr, args1, IntType());
     std::vector<Expr *> args2;
     args2.push_back(col2);
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
-    FuncExpr *abs2 = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
-    BinaryExpr *eq1 = new BinaryExpr(EQ, abs1, abs2, BOOLD);
+    auto abs2 = GetFuncExpr(funcStr, args2, IntType());
+    auto eq1 = new BinaryExpr(EQ, abs1, abs2, BooleanType());
 
-    DataExpr *col02 = new DataExpr(0, INT32D);
-    DataExpr *col1 = new DataExpr(1, INT32D);
+    auto col02 = new FieldExpr(0, IntType());
+    auto col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> args3;
     std::vector<Expr *> args4;
     args3.push_back(col02);
-    funcID = ph.GetFnIdentifier(funcStr, args3, retType);
-    FuncExpr *abs3 = new FuncExpr(funcStr, args3, retType, *fr.LookupFunction(funcID));
+    auto abs3 = GetFuncExpr(funcStr, args3, IntType());
     args4.push_back(col1);
-    funcID = ph.GetFnIdentifier(funcStr, args4, retType);
-    FuncExpr *abs4 = new FuncExpr(funcStr, args4, retType, *fr.LookupFunction(funcID));
-    BinaryExpr *eq2 = new BinaryExpr(EQ, abs3, abs4, BOOLD);
-    BinaryExpr *expr = new BinaryExpr(AND, eq1, eq2, BOOLD);
+    auto abs4 = GetFuncExpr(funcStr, args4, IntType());
+    auto eq2 = new BinaryExpr(EQ, abs3, abs4, BooleanType());
+    auto expr = new BinaryExpr(AND, eq1, eq2, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -668,10 +649,10 @@ TEST(CodeGenTest, MathFunctions1)
 
 TEST(CodeGenTest, MathFunctions2)
 {
-    //create expression
-    DataExpr *valueExpr = new DataExpr(1, INT32D);
-    DataExpr *lowerExpr = new DataExpr(0, INT32D);
-    DataExpr *upperExpr = new DataExpr(2, INT32D);
+    // create expression
+    FieldExpr *valueExpr = new FieldExpr(1, IntType());
+    FieldExpr *lowerExpr = new FieldExpr(0, IntType());
+    FieldExpr *upperExpr = new FieldExpr(2, IntType());
     BetweenExpr *expr = new BetweenExpr(valueExpr, lowerExpr, upperExpr);
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
@@ -751,17 +732,17 @@ TEST(CodeGenTest, MathFunctions2)
 TEST(CodeGenTest, MathFunctions3)
 {
     //create expression objects
-    DataExpr *col01 = new DataExpr(0, INT32D);
-    DataExpr *data01 = new DataExpr(100);
-    BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BOOLD);
+    FieldExpr *col01 = new FieldExpr(0, IntType());
+    LiteralExpr *data01 = new LiteralExpr(100, IntType());
+    BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
 
-    DataExpr *col02 = new DataExpr(0, INT32D);
-    DataExpr *data02 = new DataExpr(200);
-    BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BOOLD);
+    FieldExpr *col02 = new FieldExpr(0, IntType());
+    LiteralExpr *data02 = new LiteralExpr(200, IntType());
+    BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
 
-    DataExpr *col03 = new DataExpr(0, INT32D);
-    DataExpr *data03 = new DataExpr(0);
-    BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BOOLD);
+    FieldExpr *col03 = new FieldExpr(0, IntType());
+    LiteralExpr *data03 = new LiteralExpr(0, IntType());
+    BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
@@ -849,11 +830,11 @@ TEST(CodeGenTest, MathFunctions3)
 TEST(CodeGenTest, MathFunctions4)
 {
     // create expression objects
-    DataExpr *col = new DataExpr(0, INT32D);
+    FieldExpr *col = new FieldExpr(0, IntType());
     std::vector<Expr *> args;
     args.push_back(col);
     for (int32_t i = 1; i<6; i++){
-        args.push_back(new DataExpr(i));
+        args.push_back(new LiteralExpr(i, IntType()));
     }
     InExpr *expr = new InExpr(args);
 
@@ -952,33 +933,27 @@ TEST(CodeGenTest, MathFunctions4)
 // For testing different types
 TEST(CodeGenTest, CastNumbers1)
 {
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string castStr = "CAST";
     std::string absStr = "abs";
-    DataType retType = DOUBLED;
+    VecTypePtr retType = DoubleType();
     // create expression objects
-    DataExpr *col0 = new DataExpr(0, INT32D);
+    auto col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> args01;
     args01.push_back(col0);
-    std::string funcID = ph.GetFnIdentifier(castStr, args01, retType);
-    FuncExpr *cast0 = new FuncExpr(castStr, args01, retType, *fr.LookupFunction(funcID));
+    auto cast0 = GetFuncExpr(castStr, args01, DoubleType());
     std::vector<Expr *> args02;
     args02.push_back(cast0);
-    funcID = ph.GetFnIdentifier(absStr, args02, retType);
-    FuncExpr *abs0 = new FuncExpr(absStr, args02, retType, *fr.LookupFunction(funcID));
+    auto abs0 = GetFuncExpr(absStr, args02, DoubleType());
 
-    DataExpr *col1 = new DataExpr(1, INT32D);
+    auto col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> args11;
     args11.push_back(col1);
-    funcID = ph.GetFnIdentifier(castStr, args11, retType);
-    FuncExpr *cast1 = new FuncExpr(castStr, args11, retType, *fr.LookupFunction(funcID));
+    auto cast1 = GetFuncExpr(castStr, args11, DoubleType());
     std::vector<Expr *> args12;
     args12.push_back(cast1);
-    funcID = ph.GetFnIdentifier(absStr, args12, retType);
-    FuncExpr *abs1 = new FuncExpr(absStr, args12, retType, *fr.LookupFunction(funcID));
+    auto abs1 = GetFuncExpr(absStr, args12, DoubleType());
 
-    BinaryExpr *expr = new BinaryExpr(EQ, abs0, abs1, BOOLD);
+    auto expr = new BinaryExpr(EQ, abs0, abs1, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
@@ -1053,18 +1028,15 @@ TEST(CodeGenTest, CastNumbers1)
 
 TEST(CodeGenTest, CastNumbers2)
 {
-    //create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
+    // create expression objects
     std::string castStr = "CAST";
-    DataExpr *col1 = new DataExpr(1, INT64D);
-    DataType retType = DOUBLED;
+    auto col1 = new FieldExpr(1, LongType());
+    VecTypePtr retType = DoubleType();
     std::vector<Expr *> args;
     args.push_back(col1);
-    std::string funcID = ph.GetFnIdentifier(castStr, args, retType);
-    FuncExpr *cast = new FuncExpr(castStr, args, retType, *fr.LookupFunction(funcID));
-    DataExpr *col2 = new DataExpr(2, DOUBLED);
-    BinaryExpr *expr = new BinaryExpr(GT, cast, col2, BOOLD);
+    auto cast = GetFuncExpr(castStr, args, DoubleType());
+    auto col2 = new FieldExpr(2, DoubleType());
+    auto expr = new BinaryExpr(GT, cast, col2, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
@@ -1139,18 +1111,15 @@ TEST(CodeGenTest, CastNumbers2)
 
 TEST(CodeGenTest, Like)
 {
-    //create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
+    // create expression objects
     std::string funcStr = "LIKE";
-    DataType retType = BOOLD;
-    DataExpr *col = new DataExpr(2, VARCHARD);
-    DataExpr *data = new DataExpr(new std::string(".*hello.*world.*"));
+    VecTypePtr retType = BooleanType();
+    auto col = new FieldExpr(2, VarcharType());
+    auto data = new LiteralExpr(new std::string(".*hello.*world.*"), VarcharType(17));
     std::vector<Expr *> args;
     args.push_back(col);
     args.push_back(data);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *expr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    auto expr = GetFuncExpr(funcStr, args, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1225,17 +1194,14 @@ TEST(CodeGenTest, Like)
 TEST(CodeGenTest, DateCast)
 {
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "CAST";
-    DataExpr *col2 = new DataExpr(2, VARCHARD);
+    auto col2 = new FieldExpr(2, VarcharType());
     std::vector<Expr *> args;
     args.push_back(col2);
-    DataType retType = INT32D;
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *cast = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
-    DataExpr *col0 = new DataExpr(0, INT32D);
-    BinaryExpr *expr = new BinaryExpr(GT, cast, col0, BOOLD);
+    VecTypePtr retType = IntType();
+    auto cast = GetFuncExpr(funcStr, args, IntType());
+    auto col0 = new FieldExpr(0, IntType());
+    auto expr = new BinaryExpr(GT, cast, col0, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1324,28 +1290,25 @@ TEST(CodeGenTest, DateCast)
 TEST(CodeGenTest, SubstrIn)
 {
     //create the expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
-    DataExpr *col2 = new DataExpr(2, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(2);
-    DataType retType = VARCHARD;
+    auto col2 = new FieldExpr(2, VarcharType());
+    auto substrIndex = new LiteralExpr(1, IntType());
+    auto substrLen = new LiteralExpr(2, IntType());
+    VecTypePtr retType = VarcharType();
     std::string funcStr = "substr";
     std::vector<Expr*> substrArgs;
     substrArgs.push_back(col2);
     substrArgs.push_back(substrIndex);
     substrArgs.push_back(substrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, substrArgs, retType);
-    FuncExpr *substrExpr = new FuncExpr(funcStr, substrArgs, retType, *fr.LookupFunction(funcID));
+    auto substrExpr = GetFuncExpr(funcStr, substrArgs, VarcharType());
 
     std::vector<Expr *> args;
     args.push_back(substrExpr);
-    args.push_back(new DataExpr(new std::string("12")));
-    args.push_back(new DataExpr(new std::string("21")));
-    args.push_back(new DataExpr(new std::string("13")));
-    args.push_back(new DataExpr(new std::string("31")));
-    args.push_back(new DataExpr(new std::string("34")));
-    args.push_back(new DataExpr(new std::string("43")));
+    args.push_back(new LiteralExpr(new std::string("12"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("21"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("13"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("31"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("34"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("43"), VarcharType(3)));
 
     InExpr *expr = new InExpr(args);
 
@@ -1436,20 +1399,17 @@ TEST(CodeGenTest, SubstrIn)
 
 TEST(CodeGenTest, ConcatStr)
 {
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "concat";
-    DataExpr *col1 = new DataExpr(1, VARCHARD);
-    DataExpr *col2 = new DataExpr(2, VARCHARD);
+    auto col1 = new FieldExpr(1, VarcharType());
+    auto col2 = new FieldExpr(2, VarcharType());
     std::vector<Expr*> concatArgs;
     concatArgs.push_back(col1);
     concatArgs.push_back(col2);
-    DataType retType = VARCHARD;
-    std::string funcID = ph.GetFnIdentifier(funcStr, concatArgs, retType);
-    FuncExpr *concatExpr = new FuncExpr(funcStr, concatArgs, retType, *fr.LookupFunction(funcID));
+    VecTypePtr retType = VarcharType();
+    auto concatExpr = GetFuncExpr(funcStr, concatArgs, VarcharType());
 
-    DataExpr *helloWorldExpr = new DataExpr(new std::string("helloworld"));
-    BinaryExpr *expr = new BinaryExpr(EQ, concatExpr, helloWorldExpr, BOOLD);
+    auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarcharType(11));
+    auto expr = new BinaryExpr(EQ, concatExpr, helloWorldExpr, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1538,31 +1498,22 @@ TEST(CodeGenTest, ConcatStr)
 TEST(CodeGenTest, ConcatChars)
 {
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
-    DataExpr *col1 = new DataExpr(1, CHARD);
-    col1->width = 30;
-    DataExpr *commaExpr = new DataExpr(new std::string(","));
+    auto *col1 = new FieldExpr(1, CharType(30));
+    auto commaExpr = new LiteralExpr(new std::string(","), CharType(2));
     std::string funcStr = "concat";
-    DataType retType = CHARD;
     std::vector<Expr *> innerArgs;
     innerArgs.push_back(col1);
     innerArgs.push_back(commaExpr);
-    std::string funcID = ph.GetFnIdentifier(funcStr, innerArgs, retType);
-    FuncExpr *innerConcat = new FuncExpr(funcStr, innerArgs, retType, *fr.LookupFunction(funcID));
-    innerConcat->width = 32;
+    auto innerConcat = GetFuncExpr(funcStr, innerArgs, CharType(32));
 
-    DataExpr *col2 = new DataExpr(2, CHARD);
-    col2->width = 20;
+    auto col2 = new FieldExpr(2, CharType(20));
     std::vector<Expr *> outerArgs;
     outerArgs.push_back(innerConcat);
     outerArgs.push_back(col2);
-    funcID = ph.GetFnIdentifier(funcStr, outerArgs, retType);
-    FuncExpr *outerConcat = new FuncExpr(funcStr, outerArgs, retType, *fr.LookupFunction(funcID));
-    outerConcat->width = 52;
+    auto outerConcat = GetFuncExpr(funcStr, outerArgs, CharType(52));
 
-    DataExpr *helloExpr = new DataExpr(new std::string("hello                         , world"));
-    BinaryExpr *expr = new BinaryExpr(EQ, outerConcat, helloExpr, BOOLD);
+    auto helloExpr = new LiteralExpr(new std::string("hello                         , world"), CharType(52));
+    auto expr = new BinaryExpr(EQ, outerConcat, helloExpr, BooleanType());
 
     auto charTypeA = new CharVecType(30);
     auto charTypeB = new CharVecType(20);
@@ -1652,18 +1603,142 @@ TEST(CodeGenTest, ConcatChars)
     delete context;
 }
 
+TEST(CodeGenTest, ToUpper)
+{
+    std::string funcStr = "upper";
+    auto *col1 = new FieldExpr(1, VarcharType());
+    std::vector<Expr*> toUpperArgs;
+    toUpperArgs.push_back(col1);
+    VecTypePtr retType = VarcharType();
+    auto toUpperExpr = GetFuncExpr(funcStr, toUpperArgs, VarcharType());
+
+    auto upperTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
+                                         VarcharType(80));
+    auto expr = new BinaryExpr(EQ, toUpperExpr, upperTestExpr, BooleanType());
+
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+    cout << endl;
+
+    string s1[] = {"[\\]^_abcdefghijklmnopqrstuvwxyz{|} The quick brown fox jumps over the lazy dog."};
+    int32_t v1[] = {8766};
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)s1->c_str();
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[2];
+    offsets[0] = new int32_t[1];
+    offsets[1] = new int32_t[2];
+    offsets[0][0] = 0;
+    offsets[1][0] = 0;
+    offsets[1][1] = s1[0].length();
+
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    int64_t dictionaries[2] = {};
+
+    auto context = new ExecutionContext();
+
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+
+    EXPECT_EQ(result, 1);
+
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 2; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] offsets;
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    codegen.reset();
+    delete context;
+}
+
+TEST(CodeGenTest, ToUpperChar)
+{
+    std::string funcStr = "upper";
+    auto *col1 = new FieldExpr(1, CharType(80));
+    std::vector<Expr*> toUpperCharArgs;
+    toUpperCharArgs.push_back(col1);
+    auto toUpperCharExpr = GetFuncExpr(funcStr, toUpperCharArgs, CharType(80));
+
+    auto upperCharTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."), CharType(80));
+    auto expr = new BinaryExpr(EQ, toUpperCharExpr, upperCharTestExpr, BooleanType());
+
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+    cout << endl;
+
+    string s1[] = {"[\\]^_abcdefghijklmnopqrstuvwxyz{|} The quick brown fox jumps over the lazy dog."};
+    int32_t v1[] = {8766};
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)s1->c_str();
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[2];
+    offsets[0] = new int32_t[1];
+    offsets[1] = new int32_t[2];
+    offsets[0][0] = 0;
+    offsets[1][0] = 0;
+    offsets[1][1] = s1[0].length();
+
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    int64_t dictionaries[2] = {};
+
+    auto context = new ExecutionContext();
+
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+
+    EXPECT_EQ(result, 1);
+
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 2; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] offsets;
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    codegen.reset();
+    delete context;
+}
+
 TEST(CodeGenTest, StringWithOps)
 {
-    //create expression objects
-    DataExpr *col21 = new DataExpr(2, VARCHARD);
-    DataExpr *sunday = new DataExpr(new std::string("Sunday"));
-    BinaryExpr *eqExpr1 = new BinaryExpr(EQ, col21, sunday, BOOLD);
+    // create expression objects
+    FieldExpr *col21 = new FieldExpr(2, VarcharType());
+    LiteralExpr *sunday = new LiteralExpr(new std::string("Sunday"), VarcharType(7));
+    BinaryExpr *eqExpr1 = new BinaryExpr(EQ, col21, sunday, BooleanType());
 
-    DataExpr *col22 = new DataExpr(2, VARCHARD);
-    DataExpr *saturday = new DataExpr(new std::string("Saturday"));
-    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, col22, saturday, BOOLD);
+    FieldExpr *col22 = new FieldExpr(2, VarcharType());
+    LiteralExpr *saturday = new LiteralExpr(new std::string("Saturday"), VarcharType(9));
+    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, col22, saturday, BooleanType());
 
-    BinaryExpr *expr = new BinaryExpr(OR, eqExpr1, eqExpr2, BOOLD);
+    BinaryExpr *expr = new BinaryExpr(OR, eqExpr1, eqExpr2, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1750,16 +1825,16 @@ auto codegen = FilterCodeGen::Create("stringTest1", *expr);
 TEST(CodeGenTest, Coalesce)
 {
     // create expression objects
-    DataExpr *value1 = new DataExpr(0, INT64D);
-    DataExpr *value2 = new DataExpr(0);
+    FieldExpr *value1 = new FieldExpr(0, LongType());
+    LiteralExpr *value2 = new LiteralExpr(0, LongType());
     value2->longVal = 0;
-    value2->dataType = INT64D;
+    value2->dataType = LongType();
     CoalesceExpr *coalesceExpr = new CoalesceExpr(value1, value2);
 
-    DataExpr *right = new DataExpr(123);
+    LiteralExpr *right = new LiteralExpr(123, LongType());
     right->longVal = 123;
-    right->dataType = INT64D;
-    BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BOOLD);
+    right->dataType = LongType();
+    BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -1819,16 +1894,16 @@ TEST(CodeGenTest, Coalesce)
 TEST(CodeGenTest, ProjectionCoalesce)
 {
     // create expression objects
-    DataExpr *value1 = new DataExpr(0, INT64D);
-    DataExpr *value2 = new DataExpr(100);
+    FieldExpr *value1 = new FieldExpr(0, LongType());
+    LiteralExpr *value2 = new LiteralExpr(100, LongType());
     value2->longVal = 100;
-    value2->dataType = INT64D;
+    value2->dataType = LongType();
     CoalesceExpr *coalesceExpr = new CoalesceExpr(value1, value2);
 
-    DataExpr *right = new DataExpr(100);
+    LiteralExpr *right = new LiteralExpr(100, LongType());
     right->longVal = 100;
-    right->dataType = INT64D;
-    BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BOOLD);
+    right->dataType = LongType();
+    BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -1892,7 +1967,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
 
 TEST(CodeGenTest, ProjectionIsNull)
 {
-    DataExpr *col0 = new DataExpr(0, INT64D);
+    FieldExpr *col0 = new FieldExpr(0, LongType());
     IsNullExpr *expr = new IsNullExpr(col0);
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
@@ -1957,7 +2032,7 @@ TEST(CodeGenTest, ProjectionIsNull)
 
 TEST(CodeGenTest, IsNull)
 {
-    DataExpr *col0 = new DataExpr(0, INT64D);
+    FieldExpr *col0 = new FieldExpr(0, LongType());
     IsNullExpr *expr = new IsNullExpr(col0);
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
@@ -2008,9 +2083,9 @@ TEST(CodeGenTest, IsNull)
 
 TEST(CodeGenTest, IsNotNull)
 {
-    DataExpr *col0 = new DataExpr(0, INT64D);
+    FieldExpr *col0 = new FieldExpr(0, LongType());
     IsNullExpr *isNull = new IsNullExpr(col0);
-    UnaryExpr *expr = new UnaryExpr(NOT, isNull, BOOLD);
+    UnaryExpr *expr = new UnaryExpr(NOT, isNull, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -2060,16 +2135,16 @@ TEST(CodeGenTest, IsNotNull)
 TEST(CodeGenTest, DecimalOperators1)
 {
     // create expression objects
-    DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
-    DataExpr *addRight = new DataExpr(5);
+    FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(5, Decimal128Type(38, 0));
     addRight->doubleVal = 5;
     addRight->longVal = 5;
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, DECIMAL128D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
-    DataExpr *equalRight = new DataExpr(15);
+    LiteralExpr *equalRight = new LiteralExpr(15, Decimal128Type(38, 0));
     equalRight->doubleVal = 15;
     equalRight->longVal = 15;
-    BinaryExpr *expr = new BinaryExpr(EQ, addExpr, equalRight, BOOLD);
+    BinaryExpr *expr = new BinaryExpr(EQ, addExpr, equalRight, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
@@ -2077,7 +2152,7 @@ TEST(CodeGenTest, DecimalOperators1)
     expr->Accept(printExprTree);
 
     // creating decimal
-    int64_t c1[4] = {10, 0, 9, 0};
+    int64_t c1[4] = { 10, 0, 9, 0 };
 
     int64_t c[2] = {(int64_t) c1, (int64_t) (c1 + 2)};
 
@@ -2123,9 +2198,9 @@ TEST(CodeGenTest, DecimalOperators1)
 TEST(CodeGenTest, DecimalOperators2)
 {
     string unparsed = "BETWEEN:4(#0, #1, #2)";
-    DataExpr *col0 = new DataExpr(0, DECIMAL128D);
-    DataExpr *col1 = new DataExpr(1, DECIMAL128D);
-    DataExpr *col2 = new DataExpr(2, DECIMAL128D);
+    FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
+    FieldExpr *col1 = new FieldExpr(1, Decimal128Type(38, 0));
+    FieldExpr *col2 = new FieldExpr(2, Decimal128Type(38, 0));
 
     BetweenExpr *expr = new BetweenExpr(col0, col1, col2);
 
@@ -2186,23 +2261,23 @@ TEST(CodeGenTest, DecimalOperators2)
 TEST(CodeGenTest, DecimalOperators3)
 {
     // create expression objects
-    DataExpr *col01 = new DataExpr(0, DECIMAL128D);
-    DataExpr *data01 = new DataExpr(100);
+    FieldExpr *col01 = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *data01 = new LiteralExpr(100, Decimal128Type(38, 0));
     data01->longVal = 100;
     data01->doubleVal = 100;
-    BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BOOLD);
+    BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
 
-    DataExpr *col02 = new DataExpr(0, DECIMAL128D);
-    DataExpr *data02 = new DataExpr(200);
+    FieldExpr *col02 = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *data02 = new LiteralExpr(200, Decimal128Type(38, 0));
     data02->longVal = 200;
     data02->doubleVal = 200;
-    BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BOOLD);
+    BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
 
-    DataExpr *col03 = new DataExpr(0, DECIMAL128D);
-    DataExpr *data03 = new DataExpr(0);
+    FieldExpr *col03 = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *data03 = new LiteralExpr(0, Decimal128Type(38, 0));
     data03->longVal = 0;
     data03->doubleVal = 0;
-    BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BOOLD);
+    BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
 
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
@@ -2265,11 +2340,11 @@ TEST(CodeGenTest, DecimalOperators3)
 TEST(CodeGenTest, ProjectionSubtractNulls)
 {
     // create expression objects
-    DataExpr *subLeft = new DataExpr(0, INT64D);
-    DataExpr *subRight = new DataExpr(100);
+    FieldExpr *subLeft = new FieldExpr(0, LongType());
+    LiteralExpr *subRight = new LiteralExpr(100, LongType());
     subRight->longVal = 100;
 
-    BinaryExpr *expr = new BinaryExpr(SUB, subLeft, subRight, INT64D);
+    BinaryExpr *expr = new BinaryExpr(SUB, subLeft, subRight, LongType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -2338,12 +2413,12 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
 TEST(CodeGenTest, ProjectionCodeGen)
 {
     // create expression objects
-    DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
-    DataExpr *addRight = new DataExpr(100);
+    FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(100, Decimal128Type(38, 0));
     addRight->longVal = 100;
     addRight->doubleVal = 100;
 
-    BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, DECIMAL128D);
+    BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
@@ -2436,11 +2511,11 @@ TEST(CodeGenTest, TestRowProjectLong)
     auto slicedVector = vector->Slice(4, 6);
 
     // create expression objects
-    DataExpr *addLeft = new DataExpr(0, INT64D);
-    DataExpr *addRight = new DataExpr(100);
+    FieldExpr *addLeft = new FieldExpr(0, LongType());
+    LiteralExpr *addRight = new LiteralExpr(100, LongType());
     addRight->longVal = 100;
 
-    BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, INT64D);
+    BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, LongType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -2481,19 +2556,16 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     auto slicedVector = vector->Slice(1, 1);
 
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "substr";
-    DataExpr *substrData = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(5);
-    DataType retType = VARCHARD;
+    auto substrData = new FieldExpr(0, VarcharType());
+    auto substrIndex = new LiteralExpr(1, IntType());
+    auto substrLen = new LiteralExpr(5, IntType());
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *expr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    auto expr = GetFuncExpr(funcStr, args, VarcharType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -2534,10 +2606,9 @@ TEST(CodeGenTest, CastNumbers3)
 {
     // create expression objects
     std::vector<Expr *> args;
-    DataExpr *col1 =  new DataExpr(1, DOUBLED);
-
-    DataExpr *col2 = new DataExpr(2, DOUBLED);
-    BinaryExpr *expr = new BinaryExpr(LT, col1, col2, BOOLD);
+    FieldExpr *col1 =  new FieldExpr(1, DoubleType());
+    FieldExpr *col2 = new FieldExpr(2, DoubleType());
+    BinaryExpr *expr = new BinaryExpr(LT, col1, col2, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
@@ -2644,22 +2715,19 @@ TEST (CodeGenTest, Substr) {
     }
 
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
-    DataExpr *substrData1 = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex1 = new DataExpr(-5 );
-    DataExpr *substrLen1 = new DataExpr(5 );
+    auto substrData1 = new FieldExpr(0, VarcharType());
+    auto substrIndex1 = new LiteralExpr(-5, IntType());
+    auto substrLen1 = new LiteralExpr(5, IntType());
     std::string funcStr = "substr";
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args1;
     args1.push_back(substrData1);
     args1.push_back(substrIndex1);
     args1.push_back(substrLen1);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
-    FuncExpr *substrExp1 = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
+    auto substrExp1 = GetFuncExpr(funcStr, args1, VarcharType());
 
-    DataExpr *ctionExpr= new DataExpr(new std::string("ction"));
-    BinaryExpr *expr1 = new BinaryExpr(EQ, substrExp1, ctionExpr, BOOLD);
+    auto ctionExpr= new LiteralExpr(new std::string("ction"), VarcharType(6));
+    auto expr1 = new BinaryExpr(EQ, substrExp1, ctionExpr, BooleanType());
 
     int64_t dictionaries[numCols] = {};
 
@@ -2672,16 +2740,15 @@ TEST (CodeGenTest, Substr) {
     delete filter;
 
     // create expression objects
-    DataExpr *substrData2 = new DataExpr(1, VARCHARD);
-    DataExpr *substrIndex2 = new DataExpr(-5);
+    auto substrData2 = new FieldExpr(1, VarcharType());
+    auto substrIndex2 = new LiteralExpr(-5, IntType());
     std::vector<Expr *> args2;
     args2.push_back(substrData2);
     args2.push_back(substrIndex2);
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
-    FuncExpr *substrExp2 = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
+    auto substrExp2 = GetFuncExpr(funcStr, args2, VarcharType());
 
-    DataExpr *ubsterExpr= new DataExpr(new std::string("UBSTR"));
-    BinaryExpr *expr2 = new BinaryExpr(EQ, substrExp2, ubsterExpr, BOOLD);
+    auto ubsterExpr= new LiteralExpr(new std::string("UBSTR"), VarcharType(6));
+    auto expr2 = new BinaryExpr(EQ, substrExp2, ubsterExpr, BooleanType());
 
     filter = new RowFilter(*expr2);
     EXPECT_FALSE(filter == nullptr);
@@ -2692,16 +2759,15 @@ TEST (CodeGenTest, Substr) {
     delete filter;
 
     // create expression objects
-    DataExpr *substrData3 = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex3 = new DataExpr(4);
+    auto substrData3 = new FieldExpr(0, VarcharType());
+    auto substrIndex3 = new LiteralExpr(4, IntType());
     std::vector<Expr *> args3;
     args3.push_back(substrData3);
     args3.push_back(substrIndex3);
-    funcID = ph.GetFnIdentifier(funcStr, args3, retType);
-    FuncExpr *substrExp3 = new FuncExpr(funcStr, args3, retType, *fr.LookupFunction(funcID));
+    auto substrExp3 = GetFuncExpr(funcStr, args3, VarcharType());
 
-    DataExpr *STRExpr= new DataExpr(new std::string("STR Function"));
-    BinaryExpr *expr3 = new BinaryExpr(EQ, substrExp3, STRExpr, BOOLD);
+    auto STRExpr= new LiteralExpr(new std::string("STR Function"), VarcharType(13));
+    auto expr3 = new BinaryExpr(EQ, substrExp3, STRExpr, BooleanType());
 
     filter = new RowFilter(*expr3);
     EXPECT_FALSE(filter == nullptr);
@@ -2727,22 +2793,19 @@ TEST (CodeGenTest, Substr) {
 TEST(CodeGenTest, Mm3HashInt)
 {
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
-    DataExpr *col0 = new DataExpr(0, INT32D);
-    DataExpr *data = new DataExpr(42);
+    auto col0 = new FieldExpr(0, IntType());
+    auto data = new LiteralExpr(42, IntType());
     std::string funcStr = "mm3hash";
-    DataType retType = INT32D;
+    VecTypePtr retType = IntType();
     std::vector<Expr *> hashArgs;
     hashArgs.push_back(col0);
     hashArgs.push_back(data);
-    std::string funcID = ph.GetFnIdentifier(funcStr, hashArgs, retType);
-    FuncExpr *mhash = new FuncExpr(funcStr, hashArgs, retType, *fr.LookupFunction(funcID));
+    auto mhash = GetFuncExpr(funcStr, hashArgs, IntType());
 
-    DataExpr *equalRight = new DataExpr(723455942);
+    auto equalRight = new LiteralExpr(723455942, IntType());
     equalRight->longVal = 723455942;
 
-    BinaryExpr *expr = new BinaryExpr(EQ, mhash, equalRight, BOOLD);
+    auto expr = new BinaryExpr(EQ, mhash, equalRight, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -2762,7 +2825,7 @@ TEST(CodeGenTest, Mm3HashInt)
     offsets[0][0] = 0;
 
     auto codegen = FilterCodeGen::Create("mm3hashTest", *expr);
-    //int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    // int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 
     int64_t dictionaries[1] = {};
 
@@ -2786,15 +2849,12 @@ TEST(CodeGenTest, Mm3HashInt)
 
 TEST(CodeGenTest, Mm3HashLong)
 {
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "mm3hash";
-    DataType retType = INT32D;
+    VecTypePtr retType = IntType();
     std::vector<Expr *> args;
-    args.push_back(new DataExpr(0, INT64D));
-    args.push_back(new DataExpr(42));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *expr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    args.push_back(new FieldExpr(0, LongType()));
+    args.push_back(new LiteralExpr(42, IntType()));
+    auto expr = GetFuncExpr(funcStr, args, IntType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -2812,8 +2872,7 @@ TEST(CodeGenTest, Mm3HashLong)
 
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
-
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     bool isNull = false;
@@ -2838,15 +2897,12 @@ TEST(CodeGenTest, Mm3HashLong)
 
 TEST(CodeGenTest, Mm3HashDouble)
 {
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "mm3hash";
-    DataType retType = INT32D;
+    VecTypePtr retType = IntType();
     std::vector<Expr *> args;
-    args.push_back(new DataExpr(0, DOUBLED));
-    args.push_back(new DataExpr(42));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *expr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    args.push_back(new FieldExpr(0, DoubleType()));
+    args.push_back(new LiteralExpr(42, IntType()));
+    auto expr = GetFuncExpr(funcStr, args, IntType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
@@ -2864,7 +2920,7 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -2890,15 +2946,12 @@ TEST(CodeGenTest, Mm3HashDouble)
 
 TEST(CodeGenTest, Mm3HashString)
 {
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "mm3hash";
-    DataType retType = INT32D;
+    VecTypePtr retType = IntType();
     std::vector<Expr *> args;
-    args.push_back(new DataExpr(0, VARCHARD));
-    args.push_back(new DataExpr(42));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *expr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    args.push_back(new FieldExpr(0, VarcharType()));
+    args.push_back(new LiteralExpr(42, IntType()));
+    auto expr = GetFuncExpr(funcStr, args, IntType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -2917,7 +2970,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     RowProjection codegen(*expr);
     RowProjFunc func = codegen.Create();
-    EXPECT_EQ(codegen.GetReturnType(), INT32D);
+    EXPECT_EQ(codegen.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -2944,32 +2997,28 @@ TEST(CodeGenTest, Mm3HashString)
 TEST(CodeGenTest, Pmod)
 {
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
-    DataExpr *col0 = new DataExpr(0, INT32D);
-    DataExpr *data1 = new DataExpr(42);
-    DataExpr *data2 = new DataExpr(20);
+    FieldExpr *col0 = new FieldExpr(0, IntType());
+    LiteralExpr *data1 = new LiteralExpr(42, IntType());
+    LiteralExpr *data2 = new LiteralExpr(20, IntType());
 
     std::string hashStr = "mm3hash";
-    DataType retType = INT32D;
+    VecTypePtr retType = IntType();
     std::vector<Expr *> hashArgs;
     hashArgs.push_back(col0);
     hashArgs.push_back(data1);
-    std::string funcID = ph.GetFnIdentifier(hashStr, hashArgs, retType);
-    FuncExpr *mhash = new FuncExpr(hashStr, hashArgs, retType, *fr.LookupFunction(funcID));
+    auto mhash = GetFuncExpr(hashStr, hashArgs, IntType());
 
     std::string pmodStr = "pmod";
     std::vector<Expr *> pmodArgs;
     pmodArgs.push_back(mhash);
-    DataExpr *pmodData1 = new DataExpr(42);
+    auto pmodData1 = new LiteralExpr(42, IntType());
     pmodArgs.push_back(pmodData1);
-    funcID = ph.GetFnIdentifier(pmodStr, pmodArgs, retType);
-    FuncExpr *pmod = new FuncExpr(pmodStr, pmodArgs, retType, *fr.LookupFunction(funcID));
+    auto pmod = GetFuncExpr(pmodStr, pmodArgs, IntType());
 
-    DataExpr *equalRight = new DataExpr(20);
+    auto equalRight = new LiteralExpr(20, IntType());
     equalRight->longVal = 20;
 
-    BinaryExpr *expr = new BinaryExpr(EQ, pmod, equalRight, BOOLD);
+    auto expr = new BinaryExpr(EQ, pmod, equalRight, BooleanType());
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
@@ -3044,35 +3093,27 @@ TEST(CodeGenTest, SubstrWithChars)
     }
 
     // create expression objects
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "substr";
-    DataType retType = CHARD;
-    DataExpr *substrData1 = new DataExpr(0, CHARD);
-    substrData1->width = 0;
-    DataExpr *substrIndex1 = new DataExpr(1);
-    DataExpr *substrLen1 = new DataExpr(5);
+    VecTypePtr retType = CharType(10);
+    FieldExpr *substrData1 = new FieldExpr(0, CharType(10));
+    LiteralExpr *substrIndex1 = new LiteralExpr(1, IntType());
+    LiteralExpr *substrLen1 = new LiteralExpr(5, IntType());
     std::vector<Expr *> args1;
     args1.push_back(substrData1);
     args1.push_back(substrIndex1);
     args1.push_back(substrLen1);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
-    FuncExpr *substrExpr1 = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
-    substrExpr1->width = 10;
+    auto substrExpr1 = GetFuncExpr(funcStr, args1, CharType(10));
 
-    DataExpr *substrData2 = new DataExpr(1, CHARD);
-    substrData2->width = 0;
-    DataExpr *substrIndex2 = new DataExpr(1);
-    DataExpr *substrLen2 = new DataExpr(5);
+    FieldExpr *substrData2 = new FieldExpr(1, CharType(10));
+    LiteralExpr *substrIndex2 = new LiteralExpr(1, IntType());
+    LiteralExpr *substrLen2 = new LiteralExpr(5, IntType());
     std::vector<Expr *> args2;
     args2.push_back(substrData2);
     args2.push_back(substrIndex2);
     args2.push_back(substrLen2);
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
-    FuncExpr *substrExpr2 = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
-    substrExpr2->width = 10;
+    auto substrExpr2 = GetFuncExpr(funcStr, args2, CharType(10));
 
-    BinaryExpr *expr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BOOLD);
+    auto expr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
 
     int64_t dictionaries[numCols] = {};
     auto filter = new RowFilter(*expr);
@@ -3099,20 +3140,17 @@ TEST(CodeGenTest, SubstrWithChars)
 
 TEST(CodeGenTest, CombineHash)
 {
-    ParserHelper ph;
-    FunctionRegistry fr;
-    DataExpr *col0 = new DataExpr(0, INT64D);
-    DataExpr *col1 = new DataExpr(1, INT64D);
+    FieldExpr *col0 = new FieldExpr(0, LongType());
+    FieldExpr *col1 = new FieldExpr(1, LongType());
     std::string funcStr = "combine_hash";
-    DataType retType = INT64D;
+    VecTypePtr retType = LongType();
     std::vector<Expr*> args;
     args.push_back(col0);
     args.push_back(col1);
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
-    FuncExpr *combineHash = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    auto combineHash = GetFuncExpr(funcStr, args, LongType());
 
-    DataExpr *col2 = new DataExpr(2, INT64D);
-    BinaryExpr *expr = new BinaryExpr(EQ, combineHash, col2, BOOLD);
+    FieldExpr *col2 = new FieldExpr(2, LongType());
+    BinaryExpr *expr = new BinaryExpr(EQ, combineHash, col2, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);

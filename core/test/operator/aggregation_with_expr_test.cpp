@@ -8,6 +8,7 @@
 #include "../../src/vector/vector_helper.h"
 #include "operator/jit_context/jit_context.h"
 #include "../util/test_util.h"
+#include "../../libconfig.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
@@ -32,16 +33,16 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     // groupByKeys
-    DataExpr *modRight = new DataExpr(3);
+    LiteralExpr *modRight = new LiteralExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, new DataExpr(0, INT64D), modRight, INT64D);
-    std::vector<Expr *> groupByKeys = { modExpr, new DataExpr(2, INT32D) };
+    BinaryExpr *modExpr = new BinaryExpr(MOD, new FieldExpr(0, LongType()), modRight, LongType());
+    std::vector<Expr *> groupByKeys = { modExpr, new FieldExpr(2, IntType()) };
 
     // aggKeys
-    DataExpr *mulRight = new DataExpr(5);
+    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
     mulRight->longVal = 5;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, new DataExpr(1, INT64D), mulRight, INT64D);
-    std::vector<Expr *> aggKeys = { mulExpr, new DataExpr(3, INT32D) };
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, new FieldExpr(1, LongType()), mulRight, LongType());
+    std::vector<Expr *> aggKeys = { mulExpr, new FieldExpr(3, IntType()) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
@@ -94,22 +95,22 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    DataExpr *modLeft = new DataExpr(0, INT64D);
-    DataExpr *modRight = new DataExpr(3);
+    FieldExpr *modLeft = new FieldExpr(0, LongType());
+    LiteralExpr *modRight = new LiteralExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
-    DataExpr *addLeft = new DataExpr(2, INT32D);
-    DataExpr *addRight = new DataExpr(5);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
+    FieldExpr *addLeft = new FieldExpr(2, IntType());
+    LiteralExpr *addRight = new LiteralExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
     std::vector<Expr *> groupByKeys = { modExpr, addExpr };
 
-    DataExpr *mulLeft = new DataExpr(1, INT64D);
-    DataExpr *mulRight = new DataExpr(5);
+    FieldExpr *mulLeft = new FieldExpr(1, LongType());
+    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
     mulRight->longVal = 5;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT64D);
-    DataExpr *addLeft2 = new DataExpr(3, INT32D);
-    DataExpr *addRight2 = new DataExpr(5);
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, LongType());
+    FieldExpr *addLeft2 = new FieldExpr(3, IntType());
+    LiteralExpr *addRight2 = new LiteralExpr(5, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
     std::vector<Expr *> aggKeys = { mulExpr, addExpr2 };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
@@ -163,8 +164,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::vector<Expr *> groupByKeys = { new DataExpr(0, INT64D), new DataExpr(2, INT32D) };
-    std::vector<Expr *> aggKeys = { new DataExpr(1, INT64D), new DataExpr(3, INT32D) };
+    std::vector<Expr *> groupByKeys = { new FieldExpr(0, LongType()), new FieldExpr(2, IntType()) };
+    std::vector<Expr *> aggKeys = { new FieldExpr(1, LongType()), new FieldExpr(3, IntType()) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 

@@ -4,45 +4,52 @@
  */
 #include "func_registry_string.h"
 #include "functions/stringfunctions.h"
+#include "../vector/vector_type.h"
 using namespace omniruntime;
-using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
-std::vector<Function> GetStringFunctionRegistry()
+std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
-    std::string substrStr = "substr_";
-    std::string substrWithStartStr = substrStr + "start_";
-    static std::vector<Function> stringFnRegistry = {
+    std::string substrStr = "substr";
+    std::vector<Function> stringFnRegistry = {
         // substr functions
-        Function(reinterpret_cast<void*>(SubstrExt), substrStr + DataTypeString(INT32D),
-                 {}, {VARCHARD, INT32D, INT32D, INT32PTRD}, VARCHARD, false, true),
-        Function(reinterpret_cast<void*>(SubstrExt64), substrStr + DataTypeString(INT64D),
-                 {}, {VARCHARD, INT64D, INT64D, INT32PTRD}, VARCHARD, false, true),
+        Function(reinterpret_cast<void*>(Substr<int32_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(SubstrChar<int32_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_CHAR, true),
+        Function(reinterpret_cast<void*>(Substr<int64_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(SubstrChar<int64_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_CHAR, true),
 
         // substr with start index functions
-        Function(reinterpret_cast<void*>(SubstrWithStartExt), substrWithStartStr + DataTypeString(INT32D),
-                 {}, {VARCHARD, INT32D, INT32PTRD}, VARCHARD, false, true),
-        Function(reinterpret_cast<void*>(SubstrWithStartExt64), substrWithStartStr + DataTypeString(INT64D),
-                 {}, {VARCHARD, INT64D, INT32PTRD}, VARCHARD, false, true),
+        Function(reinterpret_cast<void*>(SubstrWithStart<int32_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(SubstrCharWithStart<int32_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_CHAR, true),
+        Function(reinterpret_cast<void*>(SubstrWithStart<int64_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(SubstrCharWithStart<int64_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_CHAR, true),
 
         // concat functions
-        Function(reinterpret_cast<void*>(ConcatStrExt), "concat_string",
-                 {}, {VARCHARD, VARCHARD, INT32PTRD}, VARCHARD, false, true),
-        Function(reinterpret_cast<void*>(ConcatCharExt), "concat_char",
-                 {}, {CHARD, VARCHARD, INT32PTRD}, VARCHARD, false, true),
+        Function(reinterpret_cast<void *>(ConcatStr), "concat",
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void *>(ConcatChar), "concat",
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_CHAR}, OMNI_VEC_TYPE_CHAR, true),
 
-        Function(reinterpret_cast<void*>(LikeExt), "LIKE",
-                 {}, {VARCHARD, VARCHARD}, BOOLD, false),
+        Function(reinterpret_cast<void *>(Like), "LIKE",
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_BOOLEAN),
         Function(reinterpret_cast<void*>(CastString), "CAST",
-                 {}, {VARCHARD}, INT32D)
-    };
-    return stringFnRegistry;
-}
+                 {}, {OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_INT),
 
-std::vector<Function> GetStringCmpFn()
-{
-    static std::vector<Function> stringFnRegistry = {
-        Function(reinterpret_cast<void*>(StrCompareExt), "StrCompareExt", {},
-            {VARCHARD, VARCHARD}, INT32D, false)
+        Function(reinterpret_cast<void*>(ToUpper), "upper",
+                 {}, {OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(ToUpperChar), "upper",
+                 {}, {OMNI_VEC_TYPE_CHAR}, OMNI_VEC_TYPE_CHAR, true),
+
+        Function(reinterpret_cast<void *>(StrCompare), "compare",
+                 {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_INT)
     };
     return stringFnRegistry;
 }

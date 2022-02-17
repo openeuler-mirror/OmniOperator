@@ -5,7 +5,6 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <vector>
 #include <regex>
 #include "../../../thirdparty/huawei_secure_c/include/securec.h"
 #include "context_helper.h"
@@ -18,19 +17,19 @@
 using namespace std;
 
 namespace {
-    const int THOUSANDS  = 1000;
-    const int HUNDREDS = 100;
-    const int TENS = 10;
-    const double SECOND_OF_DAY = 86400.0;
-    const int BASE_YEAR = 1900;
+const int THOUSANDS = 1000;
+const int HUNDREDS = 100;
+const int TENS = 10;
+const double SECOND_OF_DAY = 86400.0;
+const int BASE_YEAR = 1900;
 
-    const int THOU = 0;
-    const int HUN = 1;
-    const int TEN = 2;
-    const int ONE = 3;
+const int THOU = 0;
+const int HUN = 1;
+const int TEN = 2;
+const int ONE = 3;
 }
 
-extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
+extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {
     int min = bpLen;
     if (apLen < min) {
@@ -45,7 +44,7 @@ extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const 
     }
 }
 
-extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
+extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
 {
     string s = string(str, strLen);
     string r = string(regexToMatch, regexLen);
@@ -57,82 +56,8 @@ extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *r
     return regex_match(s, re);
 }
 
-extern "C" DLLEXPORT const char *SubstrWithStartExt(const char *str, int32_t strLen, int32_t startIdx,
-                                                    int32_t *outLen, int64_t contextPtr)
-{
-    if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
-        *outLen = 0;
-        return "";
-    }
-
-    if (startIdx > 0) {
-        startIdx -= 1;
-    } else {
-        // negative start is relative to end of string
-        startIdx += strLen;
-    }
-
-    *outLen = strLen - startIdx;
-
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
-    if (res != EOK) {
-        std::cerr << "Substring failed" << std::endl;
-    }
-    return ret;
-}
-
-extern "C" DLLEXPORT const char *SubstrWithStartExt64(const char *str, int32_t strLen, int64_t startIdx,
-                                                    int32_t *outLen, int64_t contextPtr)
-{
-    return SubstrWithStartExt(str, strLen, static_cast<int32_t>(startIdx), outLen, contextPtr);
-}
-
-extern "C" DLLEXPORT const char *SubstrExt(const char *str, int32_t strLen, int32_t startIdx, int32_t length,
-                                           int32_t *outLen, int64_t contextPtr)
-{
-    if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
-        *outLen = 0;
-        return "";
-    }
-    int endIdx;
-    if (startIdx > 0) {
-        startIdx = startIdx - 1;
-        // Quick exit if we are sure that the position is after the end
-        if (strLen - startIdx <= length) {
-            endIdx = strLen;
-        } else if (length == 0) {
-            endIdx = startIdx;
-        } else {
-            endIdx = startIdx + length;
-        }
-    } else {
-        // negative start is relative to end of string
-        startIdx += strLen;
-        if (startIdx + length < strLen) {
-            endIdx = startIdx + length;
-        } else {
-            endIdx = strLen;
-        }
-    }
-
-    *outLen = endIdx - startIdx;
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
-    if (res != EOK) {
-        std::cerr << "Substring failed" << std::endl;
-    }
-    return ret;
-}
-
-extern "C" DLLEXPORT const char *SubstrExt64(const char *str, int32_t strLen, int64_t startIdx, int64_t length,
-                                             int32_t *outLen, int64_t contextPtr)
-{
-    return SubstrExt(str, strLen, static_cast<int32_t>(startIdx), static_cast<int32_t>(length), outLen, contextPtr);
-}
-
-extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
-                                              int32_t *outLen, int64_t contextPtr)
+extern DLLEXPORT const char *ConcatStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
+    int32_t *outLen)
 {
     *outLen = apLen + bpLen;
     if (*outLen <= 0) {
@@ -149,19 +74,19 @@ extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, con
     return ret;
 }
 
-extern "C" DLLEXPORT const char *ConcatCharExt(const char *ap, int32_t width, int32_t apLen, const char *bp,
-                                               int32_t bpLen, int32_t *outLen, int64_t contextPtr)
+extern DLLEXPORT const char *ConcatChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
+    const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
     if (bpLen == 0) {
         *outLen = apLen;
         return ap;
     }
-    int32_t apPaddedLen;
-    if (apLen <= width) {
+    int32_t apPaddedLen = 0;
+    if (apLen <= aWidth) {
         if (apPaddedLen == apLen) {
             apPaddedLen = apLen;
         } else {
-            apPaddedLen = width;
+            apPaddedLen = aWidth;
         }
     }
     *outLen = apPaddedLen + bpLen;
@@ -180,7 +105,7 @@ extern "C" DLLEXPORT const char *ConcatCharExt(const char *ap, int32_t width, in
     return ret;
 }
 
-extern "C" DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
+extern DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
@@ -189,11 +114,31 @@ extern "C" DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
     int32_t i2 = 8;
     int yr = THOUSANDS * (str[THOU] - '0') + HUNDREDS * (str[HUN] - '0') + TENS * (str[TEN] - '0') + (str[ONE] - '0');
     int mnth = TENS * (str[i1] - '0') + (str[i1 + 1] - '0'); // compute mnth
-    int day = TENS * (str[i2] - '0') + (str[i2 + 1] - '0'); // compute day
+    int day = TENS * (str[i2] - '0') + (str[i2 + 1] - '0');  // compute day
 
-    struct std::tm epoch = {0, 0, 0, 1, 1, 70};
-    struct std::tm t = {0, 0, 0, day, mnth, yr - BASE_YEAR};
+    struct std::tm epoch = { 0, 0, 0, 1, 1, 70 };
+    struct std::tm t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
     std::time_t epochTime = std::mktime(&epoch);
     std::time_t desiredTime = std::mktime(&t);
     return static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
+}
+
+extern DLLEXPORT const char *ToUpper(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen)
+{
+    auto ret = ArenaAllocatorMalloc(contextPtr, strLen);
+    for (int i = 0; i < strLen; i++) {
+        if (*(str + i) > 96 && *(str + i) < 123) {
+            *(ret + i) = *(str + i) - 32;
+        } else {
+            *(ret + i) = *(str + i);
+        }
+    }
+    *outLen = strLen;
+    return ret;
+}
+
+extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+    int32_t *outLen)
+{
+    return ToUpper(contextPtr, str, strLen, outLen);
 }

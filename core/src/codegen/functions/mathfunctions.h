@@ -6,6 +6,7 @@
 #define __MATHFUNCTIONS_H__
 
 #include <iostream>
+#include <cmath>
 
 // All extern functions go here temporarily
 #ifdef _WIN32
@@ -36,5 +37,20 @@ extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x);
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
+
+template<typename T>
+extern DLLEXPORT T Round(T num, int32_t decimals)
+{
+    if (std::isnan(num) || std::isinf(num)) {
+        return num;
+    }
+    int32_t tenthPower = 10;
+    double factor = std::pow(tenthPower, decimals);
+    if (num < 0) {
+        return -(std::round(-num * factor) / factor);
+    }
+
+    return std::round(num * factor) / factor;
+}
 
 #endif
