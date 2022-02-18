@@ -35,6 +35,7 @@ VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int
             case OMNI_VEC_TYPE_SHORT:
                 ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
                 break;
+            case OMNI_VEC_TYPE_CHAR:
             case OMNI_VEC_TYPE_VARCHAR: {
                 for (int j = 0; j < numRows; ++j) {
                     // std::cout << "row: " << j << std::endl;
@@ -1574,6 +1575,68 @@ TEST(ProjectTest, Round)
     delete[] col3;
     delete[] col4;
     delete[] col5;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectTest, ConcatStrAndChar)
+{
+    vector<string *> strings;
+
+    const int32_t numCols = 1;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_CHAR) };
+    VecTypes inputTypes(vecOfTypes);
+
+    const int32_t numRows = 1;
+    int64_t *col1 = new int64_t[numRows];
+
+    std::string *s = new std::string("AAAA");
+    col1[0] = (int64_t)(s->c_str());
+    strings.push_back(s);
+
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+
+    const int32_t numProject = 2;
+    std::vector<Expr *> concatArgs1, concatArgs2;
+    std::string concatStr = "concat";
+    concatArgs1.push_back(new LiteralExpr(new std::string("store"), VarcharType()));
+    concatArgs1.push_back(new FieldExpr(0, CharType(16)));
+    auto concatStrChar = GetFuncExpr(concatStr, concatArgs1, CharType(21));
+
+    concatArgs2.push_back(new FieldExpr(0, CharType(16)));
+    concatArgs2.push_back(new LiteralExpr(new std::string("store"), VarcharType()));
+    auto concatCharStr = GetFuncExpr(concatStr, concatArgs2, CharType(21));
+
+    std::vector<Expr*> exprs = { concatStrChar, concatCharStr };
+
+    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    string expected1 = "storeAAAA            ";
+    string expected2 = "AAAA            store";
+    for (int32_t i = 0; i < numReturned; i++) {
+        VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
+        uint8_t *actualChar1 = nullptr;
+        int len1 = vcVec1->GetValue(i, &actualChar1);
+        string actualStr1((char *)actualChar1, 0, len1);
+        EXPECT_EQ(actualStr1, expected1);
+
+        VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
+        uint8_t *actualChar2 = nullptr;
+        int len2 = vcVec2->GetValue(i, &actualChar2);
+        string actualStr2((char *)actualChar2, 0, len2);
+        EXPECT_EQ(actualStr2, expected2);
+    }
+
+    for (auto &s : strings) {
+        delete s;
+    }
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
     delete op;
     delete factory;
 }
