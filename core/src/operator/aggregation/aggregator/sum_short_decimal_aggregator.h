@@ -34,7 +34,7 @@ public:
             return;
         }
         if (state.val == nullptr) {
-            InitiateGroup(state, vectorBatch, offset);
+            InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
         if (inputRaw) {
