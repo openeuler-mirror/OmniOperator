@@ -1668,20 +1668,17 @@ TEST(ProjectTest, varcharExpand)
 
 
     const int32_t numProject = 2;
-    DataExpr *substrData = new DataExpr(0, VARCHARD);
-    DataExpr *substrIndex = new DataExpr(1);
-    DataExpr *substrLen = new DataExpr(5);
+    FieldExpr *substrData = new FieldExpr(0, VarcharType());
+    LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
+    LiteralExpr *substrLen = new LiteralExpr(5, IntType());
     ParserHelper ph;
-    FunctionRegistry fr;
     std::string substrStr = "substr";
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    std::string funcID = ph.GetFnIdentifier(substrStr, args, retType);
-    FuncExpr *substrExpr = new FuncExpr(substrStr, args, retType, *fr.LookupFunction(funcID));
-
+    auto substrExpr = GetFuncExpr(substrStr, args, VarcharType());
     std::string baseStr(" world");
     int32_t avgStrLen = 200;
     int32_t strLen = 0;
@@ -1695,11 +1692,10 @@ TEST(ProjectTest, varcharExpand)
     std::vector<Expr *> concatArgs;
     std::string concatStr = "concat";
     concatArgs.push_back(substrExpr);
-    concatArgs.push_back(new DataExpr(new std::string(baseStr)));
-    funcID = ph.GetFnIdentifier(concatStr, concatArgs, retType);
-    FuncExpr *concatExpr = new FuncExpr(concatStr, concatArgs, retType, *fr.LookupFunction(funcID));
+    concatArgs.push_back(new LiteralExpr(new std::string(baseStr), VarcharType()));
+    auto concatExpr = GetFuncExpr(concatStr, concatArgs, VarcharType());
 
-    DataExpr *col0 = new DataExpr(0, VARCHARD);
+    FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { concatExpr, col0 };
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();

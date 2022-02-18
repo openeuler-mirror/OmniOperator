@@ -174,11 +174,29 @@ public abstract class Vec implements Closeable {
             true);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address.
+     * @param type the type of this vector.
+     */
     protected Vec(long nativeVector, VecType type) {
         this(new VecAllocator(getAllocatorNative(nativeVector)), nativeVector, getCapacityInBytesNative(nativeVector),
             getSizeNative(nativeVector), getOffsetNative(nativeVector), type, true);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address.
+     * @param nativeVectorValueBufAddress valueBuf address of native vector.
+     * @param nativeVectorNullBufAddress nullBuf address of native vector.
+     * @param nativeVectorAllocator allocator address of native vector.
+     * @param capacityInBytes capacity in bytes of vector.
+     * @param size the actual number of value of vector.
+     * @param offset offset of positions in the input parameter.
+     * @param type the type of this vector
+     * */
     protected Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
                   long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
         this(new VecAllocator(nativeVectorAllocator), nativeVector, nativeVectorValueBufAddress,
@@ -550,6 +568,11 @@ public abstract class Vec implements Closeable {
         this.isCloseable = isCloseable;
     }
 
+    /**
+     * return the allocator of vector
+     *
+     * @return allocator of the vector
+     * */
     public VecAllocator getAllocator() {
         return allocator;
     }

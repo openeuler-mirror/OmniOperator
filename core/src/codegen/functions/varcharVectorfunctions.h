@@ -14,6 +14,6 @@
 
 #include <cstdint>
 
-extern "C" DLLEXPORT void WrapVarcharVector(int8_t *vectorPtr, int32_t index, int8_t *data, int32_t dataLen);
+extern DLLEXPORT int32_t WrapVarcharVector(int64_t vectorAddr, int32_t index, uint8_t *data, int32_t dataLen);
 
 #endif //OMNI_RUNTIME_VARCHARVECTORFUNCTIONS_H

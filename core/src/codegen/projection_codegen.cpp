@@ -10,31 +10,31 @@ using namespace omniruntime::expressions;
 
 
 namespace {
-    const int INPUT_TABLE_INDEX = 0;
-    const int NUM_ROWS_INDEX = 1;
-    const int OUTPUT_ADDRESS_INDEX = 2;
-    const int SELECTED = 3;
-    const int NUM_SELECTED = 4;
-    const int BITMAP = 5;
-    const int OFFSETS_INDEX = 6;
-    const int NEW_NULL_VALUES_INDEX = 7;
-    const int OUTPUT_OFFSETS_INDEX = 8;
-    const int EXECUTION_CONTEXT_IDX = 9;
-    const int DICTIONARY_VECTORS_IDX = 10;
-    const int ROW_PROJ_INPUT_INDEX = 0;
-    const int ROW_PROJ_NULL_BITMAP_INDEX = 1;
-    const int ROW_PROJ_OFFSETS_INDEX = 2;
-    const int ROW_PROJ_ROW_IDX_INDEX = 3;
-    const int ROW_PROJ_LENGTH_INDEX = 4;
-    const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 5;
-    const int ROW_PROJ_DICT_VECTORS_INDEX = 6;
-    const int ROW_PROJ_IS_NULL_INDEX = 7;
+const int INPUT_TABLE_INDEX = 0;
+const int NUM_ROWS_INDEX = 1;
+const int OUTPUT_ADDRESS_INDEX = 2;
+const int SELECTED = 3;
+const int NUM_SELECTED = 4;
+const int BITMAP = 5;
+const int OFFSETS_INDEX = 6;
+const int NEW_NULL_VALUES_INDEX = 7;
+const int OUTPUT_OFFSETS_INDEX = 8;
+const int EXECUTION_CONTEXT_IDX = 9;
+const int DICTIONARY_VECTORS_IDX = 10;
+const int ROW_PROJ_INPUT_INDEX = 0;
+const int ROW_PROJ_NULL_BITMAP_INDEX = 1;
+const int ROW_PROJ_OFFSETS_INDEX = 2;
+const int ROW_PROJ_ROW_IDX_INDEX = 3;
+const int ROW_PROJ_LENGTH_INDEX = 4;
+const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 5;
+const int ROW_PROJ_DICT_VECTORS_INDEX = 6;
+const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
 
-std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(
-    std::string name, const omniruntime::expressions::Expr &expression, bool filter)
+std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
+    const omniruntime::expressions::Expr &expression, bool filter)
 {
-    std::unique_ptr<ProjectionCodeGen> codegen {new ProjectionCodeGen(std::move(name), expression, filter)};
+    std::unique_ptr<ProjectionCodeGen> codegen { new ProjectionCodeGen(std::move(name), expression, filter) };
     codegen->Initialize();
     return codegen;
 }
@@ -52,7 +52,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 {
     llvm::Function *proj = &projFunc;
 
-    std::vector<Type*> args;
+    std::vector<Type *> args;
     /*
     For filter enabled:
     def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr)
@@ -85,8 +85,9 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     args.push_back(llvmTypes->I64PtrType());
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
-    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
-        "PROJECT_WRAPPER", module.get());
+    llvm::Function *funcDecl =
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "PROJECT_WRAPPER",
+                               module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *addToOutput = BasicBlock::Create(*context, "ADD_OUTPUT", funcDecl);
@@ -159,6 +160,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     // Type of output column
     Type *outPtrType = nullptr;
+    Function *varcharVectorFunc;
     switch (this->expr->GetReturnTypeId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32:
@@ -171,9 +173,15 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             outPtrType = llvmTypes->DoublePtrType();
             break;
         case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_VARCHAR: {
             outPtrType = llvmTypes->I8PtrType();
+            std::vector<VecTypeId> paramTypes = { OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_VARCHAR };
+            FunctionSignature varcharVectorFuncSignature =
+                FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_VEC_TYPE_INT);
+            varcharVectorFunc = module->getFunction(
+                omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
             break;
+        }
         case OMNI_VEC_TYPE_DECIMAL128:
             outPtrType = llvmTypes->I64PtrType();
             break;
@@ -208,7 +216,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
 
-    std::vector<Value*> projFuncArgs;
+    std::vector<Value *> projFuncArgs;
     // projFuncArgs contains the values of the arguments to the projection function
     // value*, bitmap*, offset*, rowIdx, outputLength*, executionContext, dictionaryVectors, isNullPtr
     int32_t argsSize = 8;
@@ -236,9 +244,10 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
-        std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen};
-        auto f = module->getFunction(WrapVarcharVectorStr);
-        builder->CreateCall(f, argVals);
+        std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
+        auto call = builder->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
+        InlineFunctionInfo inlineFunctionInfo;
+        auto inlineFunction = InlineFunction(*call, inlineFunctionInfo);
     } else {
         // x* gep = gep x* outColPtr, i32 counter
         gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
@@ -271,7 +280,8 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(
-        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+            jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
@@ -280,17 +290,13 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     return sym.getAddress();
 }
 
-std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
+std::vector<Type *> GetSingleProjectArguments(LLVMContext &context)
 {
-    std::vector<Type*> args = {
-        Type::getInt64PtrTy(context),
-        Type::getInt64PtrTy(context),
-        Type::getInt64PtrTy(context),
-        Type::getInt32Ty(context),
-        Type::getInt32PtrTy(context),
-        Type::getInt64Ty(context),
-        Type::getInt64PtrTy(context),
-        Type::getInt1PtrTy(context)
+    std::vector<Type *> args = {
+        Type::getInt64PtrTy(context), Type::getInt64PtrTy(context),
+        Type::getInt64PtrTy(context), Type::getInt32Ty(context),
+        Type::getInt32PtrTy(context), Type::getInt64Ty(context),
+        Type::getInt64PtrTy(context), Type::getInt1PtrTy(context)
     };
     return args;
 }
@@ -313,11 +319,13 @@ datatype and casted appropriately.
 int64_t ProjectionCodeGen::GetExpressionEvaluator()
 {
     // Array of addresses, bitmap, row index
-    std::vector<Type*> args = GetSingleProjectArguments(*context);
-    llvm::Function* baseFunc = this->CreateFunction();
-    FunctionType* funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
-    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
-        "FUNC_WRAPPER", module.get());
+    std::vector<Type *> args = GetSingleProjectArguments(*context);
+    llvm::Function *baseFunc = this->CreateFunction();
+    FunctionType *funcSignature = FunctionType::get(
+        llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
+    llvm::Function *funcDecl =
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER",
+                               module.get());
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);
@@ -337,7 +345,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     Argument *isNullPtr = funcDecl->getArg(ROW_PROJ_IS_NULL_INDEX);
     isNullPtr->setName("IS_NULL_PTR");
 
-    std::vector<Value*> funcArgs;
+    std::vector<Value *> funcArgs;
     funcArgs.push_back(inputData);
     funcArgs.push_back(nulls);
     funcArgs.push_back(offsets);

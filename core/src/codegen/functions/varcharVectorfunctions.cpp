@@ -9,8 +9,9 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-extern "C" DLLEXPORT void WrapVarcharVector(int8_t *vectorPtr, int32_t index, int8_t *data, int32_t dataLen)
+extern DLLEXPORT int32_t WrapVarcharVector(int64_t vectorAddr, int32_t index, uint8_t *data, int32_t dataLen)
 {
-    auto *varcharVectorPtr = reinterpret_cast<VarcharVector *>(vectorPtr);
+    auto *varcharVectorPtr = reinterpret_cast<VarcharVector *>(vectorAddr);
     varcharVectorPtr->SetValue(index, reinterpret_cast<uint8_t *>(data), dataLen);
+    return 0;
 }

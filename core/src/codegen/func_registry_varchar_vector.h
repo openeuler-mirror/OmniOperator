@@ -5,10 +5,16 @@
 #ifndef OMNI_RUNTIME_FUNC_REGISTRY_VARCHAR_VECTOR_H
 #define OMNI_RUNTIME_FUNC_REGISTRY_VARCHAR_VECTOR_H
 #include "function.h"
-
-std::vector<omniruntime::Function> GetVarcharVectorFunctionRegistry();
+#include "func_registry_base.h"
 
 // functions called directly from codegen
 const std::string WrapVarcharVectorStr = "WrapVarcharVector";
+
+namespace omniruntime {
+    class VarcharVectorFunctionRegistry : public BaseFunctionRegistry {
+    public:
+        std::vector<Function> GetFunctions() override;
+    };
+}
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_VARCHAR_VECTOR_H

@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.vector;
 
 import org.testng.Assert;
@@ -116,10 +117,11 @@ public class TestVarcharVec {
 
         VarcharVec values = new VarcharVec(data.toString().length(), size * 2);
         values.put(0, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, 0, size);
-        values.put(size, data.toString().getBytes(StandardCharsets.UTF_8),  0, offsets, size, size);
+        values.put(size, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, size, size);
         ByteBuffer buffer = ByteBuffer.wrap(data.toString().getBytes(StandardCharsets.UTF_8));
         for (int i = 0; i < size * 2; i++) {
-            assertEquals(new String(values.get(i)), new String(getDataFromBuffer(buffer, offsets[i], offsets[i + 1] - offsets[i])));
+            assertEquals(new String(values.get(i)),
+                    new String(getDataFromBuffer(buffer, offsets[i], offsets[i + 1] - offsets[i])));
         }
 
         assertEquals(offsets, values.getRawValueOffset());
@@ -142,17 +144,15 @@ public class TestVarcharVec {
         for (int i = 0; i < varcharVec.getSize(); i++) {
             if (i % 5 == 0) {
                 varcharVec.setNull(i);
-            }
-            else {
+            } else {
                 varcharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
             }
         }
         for (int i = 0; i < varcharVec.getSize(); i++) {
             if (i % 5 == 0) {
                 assertTrue(varcharVec.isNull(i));
-            }
-            else {
-                assertEquals("test" + i, new String (varcharVec.get(i), StandardCharsets.UTF_8));
+            } else {
+                assertEquals("test" + i, new String(varcharVec.get(i), StandardCharsets.UTF_8));
             }
         }
 
@@ -171,7 +171,7 @@ public class TestVarcharVec {
         assertTrue(varcharVec.hasNullValue());
         byte[] result = varcharVec.getRawValueNulls();
         assertEquals(isNulls, varcharVec.transformByteToBoolean(result, 0, result.length));
-        assertEquals(varcharVec.getValuesNulls(0, size) ,isNulls);
+        assertEquals(varcharVec.getValuesNulls(0, size), isNulls);
         int offset = 3;
         boolean[] acutal = varcharVec.getValuesNulls(offset, size / 2);
         for (int i = 0; i < size / 2; i++) {
@@ -255,16 +255,17 @@ public class TestVarcharVec {
         ByteBuffer buffer1 = ByteBuffer.wrap(acutal1);
         int[] offsets = getVec.getValueOffset(offset, getLen);
         for (int i = 0; i < getLen; i++) {
-            assertEquals(getString(getDataFromBuffer(buffer1, offsets[i], offsets[i + 1] - offsets[i])), getString(getVec.get(i + offset)));
+            assertEquals(getString(getDataFromBuffer(buffer1, offsets[i], offsets[i + 1] - offsets[i])),
+                    getString(getVec.get(i + offset)));
         }
         getVec.close();
     }
 
     @Test
     public void testEmptyString() {
-        String[] data = new String[] {"a", "ef", "", "ef", "", ""};
-        int[] offsets = new int[] {0, 1, 3, 3, 5, 5, 5};
-        String[] expected = new String[] {"a", "ef", "", "ef", "", ""};
+        String[] data = new String[]{"a", "ef", "", "ef", "", ""};
+        int[] offsets = new int[]{0, 1, 3, 3, 5, 5, 5};
+        String[] expected = new String[]{"a", "ef", "", "ef", "", ""};
         int size = 6;
         VarcharVec varcharVec = new VarcharVec(1024, size);
         for (int i = 0; i < size; i++) {
@@ -302,9 +303,9 @@ public class TestVarcharVec {
         Assert.assertEquals(getString(copyRegionEmpty.get(0)), emptyString);
 
         // copyPosition
-        int[] positions = new int[] {2, 4, 5};
+        int[] positions = new int[]{2, 4, 5};
         VarcharVec copyPosition = varcharVec.copyPositions(positions, 0, 3);
-        for (int i = 0; i< copyPosition.size; i++) {
+        for (int i = 0; i < copyPosition.size; i++) {
             Assert.assertEquals(getString(copyPosition.get(i)), emptyString);
         }
 
@@ -321,15 +322,15 @@ public class TestVarcharVec {
         String baseStr = "test";
         for (int i = 0; i < rowCount; i++) {
             String str = baseStr.substring(0, i);
-            str  += i;
+            str += i;
             varcharVec.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
         int expectedExpandedCapacity = 16;
         Assert.assertEquals(varcharVec.getCapacityInBytes(), expectedExpandedCapacity);
 
-        for(int i = 0; i < rowCount; i++) {
+        for (int i = 0; i < rowCount; i++) {
             String str = baseStr.substring(0, i);
-            str  += i;
+            str += i;
             Assert.assertEquals(new String(varcharVec.get(i)), str);
         }
 
@@ -379,8 +380,7 @@ public class TestVarcharVec {
         appended.close();
     }
 
-    private String getString(byte[] strInBytes)
-    {
+    private String getString(byte[] strInBytes) {
         return new String(strInBytes, StandardCharsets.UTF_8);
     }
 }

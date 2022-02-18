@@ -177,7 +177,7 @@ public:
         allocator->ResizeVectorData(this, toCapacityInBytes);
         valuesAddress = reference->GetValuesAddress();
         capacityInBytes = toCapacityInBytes;
-        long newAddress = reinterpret_cast<uintptr_t>(valuesAddress);
+        int64_t newAddress = reinterpret_cast<uintptr_t>(valuesAddress);
         return newAddress;
     }
 

@@ -5,13 +5,14 @@
 #include "func_registry_varchar_vector.h"
 #include "functions/varcharVectorfunctions.h"
 using namespace omniruntime;
-using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
-std::vector<Function> GetVarcharVectorFunctionRegistry()
+std::vector<Function> VarcharVectorFunctionRegistry::GetFunctions()
 {
-    std::vector<DataType> paramTypes = { INT8PTRD, INT32D, INT8PTRD, INT32D };
-    static std::vector<Function> varcharVectorFnRegistry = {
-        Function(reinterpret_cast<void *>(WrapVarcharVector), "WrapVarcharVector", {}, paramTypes, VOIDD, false)
+    std::vector<VecTypeId> paramTypes = { OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_VARCHAR };
+    std::vector<Function> varcharVectorFnRegistry = {
+            Function(reinterpret_cast<void *>(WrapVarcharVector), "WrapVarcharVector", {}, paramTypes,
+                     OMNI_VEC_TYPE_INT, false)
     };
     return varcharVectorFnRegistry;
 }
