@@ -1352,7 +1352,9 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         joinCompiler);
             } else {
                 Optional<Integer> hashChannel = hashSymbol.map(channelGetter(source));
-                if (getOmniAggEnabled(session)) {
+
+                // right now HashAggregationOmniOperator does not support the groupIdChannel, we should fall back
+                if (getOmniAggEnabled(session) && !groupIdChannel.isPresent()) {
                     // when omni is turned on there is no hash channel
                     int[] groupByInputChannels = Ints.toArray(groupByChannels);
                     VecType[] groupByInputTypes = OperatorUtils.toVecTypes(groupByTypes);
