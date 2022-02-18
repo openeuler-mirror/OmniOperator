@@ -56,8 +56,8 @@ extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToM
     return regex_match(s, re);
 }
 
-extern DLLEXPORT const char *ConcatStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
-    int32_t *outLen)
+extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
+    int32_t bpLen, int32_t *outLen)
 {
     *outLen = apLen + bpLen;
     if (*outLen <= 0) {
@@ -74,7 +74,7 @@ extern DLLEXPORT const char *ConcatStr(int64_t contextPtr, const char *ap, int32
     return ret;
 }
 
-extern DLLEXPORT const char *ConcatChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
+extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
     const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
     if (bpLen == 0) {
@@ -98,6 +98,65 @@ extern DLLEXPORT const char *ConcatChar(int64_t contextPtr, const char *ap, int3
     errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
     errno_t res2 = memset_s(ret + apLen, *outLen, ' ', apPaddedLen - apLen);
     errno_t res3 = memcpy_s(ret + apPaddedLen, *outLen, bp, bpLen);
+    if (res1 != EOK || res2 != EOK || res3 != EOK) {
+        std::cerr << "Concat failed" << std::endl;
+    }
+
+    return ret;
+}
+
+extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
+    const char *bp, int32_t bpLen, int32_t *outLen)
+{
+    if (bpLen == 0) {
+        *outLen = apLen;
+        return ap;
+    }
+    int32_t apPaddedLen = 0;
+    if (apLen <= aWidth) {
+        if (apPaddedLen == apLen) {
+            apPaddedLen = apLen;
+        } else {
+            apPaddedLen = aWidth;
+        }
+    }
+    *outLen = apPaddedLen + bpLen;
+    if (*outLen <= 0) {
+        *outLen = 0;
+        return "";
+    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
+    errno_t res2 = memset_s(ret + apLen, *outLen, ' ', apPaddedLen - apLen);
+    errno_t res3 = memcpy_s(ret + apPaddedLen, *outLen, bp, bpLen);
+    if (res1 != EOK || res2 != EOK || res3 != EOK) {
+        std::cerr << "Concat failed" << std::endl;
+    }
+
+    return ret;
+}
+
+extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
+    int32_t bWidth, int32_t bpLen, int32_t *outLen)
+{
+    if (bpLen == 0) {
+        *outLen = apLen;
+        return ap;
+    }
+    int32_t bpPaddedLen = 0;
+    if (bpLen <= bWidth) {
+        bpPaddedLen = bWidth;
+    }
+
+    *outLen = apLen + bpPaddedLen;
+    if (*outLen <= 0) {
+        *outLen = 0;
+        return "";
+    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
+    errno_t res2 = memcpy_s(ret + apLen, *outLen, bp, bpLen);
+    errno_t res3 = memset_s(ret + apLen + bpLen, *outLen, ' ', bpPaddedLen - bpLen);
     if (res1 != EOK || res2 != EOK || res3 != EOK) {
         std::cerr << "Concat failed" << std::endl;
     }
