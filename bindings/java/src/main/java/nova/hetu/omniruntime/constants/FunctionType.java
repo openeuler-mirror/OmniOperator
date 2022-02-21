@@ -20,9 +20,14 @@ public class FunctionType extends Constant {
     public static FunctionType OMNI_AGGREGATION_TYPE_SUM;
 
     /**
-     * The constant OMNI_AGGREGATION_TYPE_COUNT.
+     * The constant OMNI_AGGREGATION_TYPE_COUNT_COLUMN.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_COUNT;
+    public static FunctionType OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_COUNT_ALL.
+     */
+    public static FunctionType OMNI_AGGREGATION_TYPE_COUNT_ALL;
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_AVG.

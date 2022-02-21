@@ -128,7 +128,7 @@ OmniStatus WindowOperator::Init()
                 break;
             // for aggregate function we use AggregateType
             case OMNI_AGGREGATION_TYPE_SUM:
-            case OMNI_AGGREGATION_TYPE_COUNT:
+            case OMNI_AGGREGATION_TYPE_COUNT_COLUMN:
             case OMNI_AGGREGATION_TYPE_AVG:
             case OMNI_AGGREGATION_TYPE_MAX:
             case OMNI_AGGREGATION_TYPE_MIN:

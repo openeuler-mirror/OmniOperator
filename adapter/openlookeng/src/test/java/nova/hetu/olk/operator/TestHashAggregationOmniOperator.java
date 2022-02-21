@@ -16,6 +16,8 @@ import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.testing.MaterializedResult.resultBuilder;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static org.testng.Assert.assertEquals;
 
@@ -120,6 +122,61 @@ public class TestHashAggregationOmniOperator {
     int totalPageCount = 10;
 
     int threadNum = 10;
+
+    @Test(invocationCount = 1)
+    public void testCountAggregation() {
+        int[] omniGrouByChannels = {0, 1};
+        VecType[] omniGroupByTypes = {LongVecType.LONG, LongVecType.LONG};
+        int[] omniAggregationChannels = {2};
+        VecType[] omniAggregationTypes = {LongVecType.LONG, LongVecType.LONG};
+        FunctionType[] omniAggregator = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        List<VecType[]> inAndOutputTypes = new ArrayList<>();
+        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+
+        // expected
+        DriverContext driverContext = createDriverContext(Integer.MAX_VALUE);
+        MaterializedResult expected = getExpectedMaterializedRows(driverContext);
+
+        CountDownLatch countDownLatch = new CountDownLatch(threadNum);
+        CopyOnWriteArrayList<List<Page>> resultList = new CopyOnWriteArrayList<>();
+
+        for (int i = 0; i < threadNum; i++) {
+            int id = i;
+            Thread thread = new Thread(() -> {
+                try {
+                    List<Page> input = builderPage();
+                    List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
+                            input);
+                    List<Page> pages;
+
+                    HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(
+                            id, new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes,
+                            omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);
+                    pages = toPages(hashAggregationOmniOperatorFactory, driverContext, offHeapPages, false);
+                    resultList.add(pages);
+
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+            thread.start();
+        }
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        assertEquals(resultList.size(), threadNum);
+        for (List<Page> pages : resultList) {
+            assertPagesEqualIgnoreOrder(driverContext, pages, expected, false, Optional.empty());
+            for (Page page: pages) {
+                page.close();
+            }
+        }
+        resultList.clear();
+    }
 
     @Test(invocationCount = 1)
     public void testHashAggregation() {

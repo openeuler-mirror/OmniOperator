@@ -74,7 +74,7 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
-import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MAX;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MIN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
@@ -270,7 +270,7 @@ public class BenchmarkHashAggregationOmniOperator
                         res[i] = OMNI_AGGREGATION_TYPE_AVG;
                         break;
                     case "count":
-                        res[i] = OMNI_AGGREGATION_TYPE_COUNT;
+                        res[i] = OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
                         break;
                     case "min":
                         res[i] = OMNI_AGGREGATION_TYPE_MIN;

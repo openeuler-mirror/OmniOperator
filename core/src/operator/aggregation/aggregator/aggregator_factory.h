@@ -55,7 +55,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *      */
+             *       */
             case OMNI_VEC_TYPE_DECIMAL64: {
                 // TODO SumShortDecimalAggregator for olk
                 return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
@@ -194,14 +194,25 @@ public:
     }
 };
 
-class CountAggregatorFactory : public AggregatorFactory {
+class CountColumnAggregatorFactory : public AggregatorFactory {
 public:
-    CountAggregatorFactory() {}
-    ~CountAggregatorFactory() override {}
+    CountColumnAggregatorFactory() {}
+    ~CountColumnAggregatorFactory() override {}
     std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
-        return std::make_unique<CountAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
+        return std::make_unique<CountColumnAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
+    }
+};
+
+class CountAllAggregatorFactory : public AggregatorFactory {
+public:
+    CountAllAggregatorFactory() {}
+    ~CountAllAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) override
+    {
+        return std::make_unique<CountAllAggregator>(outputType, inputRaw, outputPartial);
     }
 };
 
@@ -237,8 +248,11 @@ static std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType a
         case OMNI_AGGREGATION_TYPE_MAX: {
             return std::make_unique<MaxAggregatorFactory>();
         }
-        case OMNI_AGGREGATION_TYPE_COUNT: {
-            return std::make_unique<CountAggregatorFactory>();
+        case OMNI_AGGREGATION_TYPE_COUNT_COLUMN: {
+            return std::make_unique<CountColumnAggregatorFactory>();
+        }
+        case OMNI_AGGREGATION_TYPE_COUNT_ALL: {
+            return std::make_unique<CountAllAggregatorFactory>();
         }
         default: {
             LogError("No such aggregate type %d", aggType);
