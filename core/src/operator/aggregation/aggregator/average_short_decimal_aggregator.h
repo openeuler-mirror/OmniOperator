@@ -138,10 +138,14 @@ public:
             }
 
             resultDec /= count;
-            auto oldScale = static_cast<Decimal128VecType *>((&(this->inputType)))->GetScale();
-            auto newScale = static_cast<Decimal128VecType *>((&(this->outputType)))->GetScale();
-            const int32_t deltaScale = newScale - oldScale;
-            static_cast<LongVector *>(vector)->SetValue(rowIndex, resultDec.Rescale(deltaScale).LowBits());
+
+//            auto oldScale = static_cast<Decimal128VecType *>((&(this->inputType)))->GetScale();
+//            auto newScale = static_cast<Decimal128VecType *>((&(this->outputType)))->GetScale();
+//            const int32_t deltaScale = newScale - oldScale;
+//
+//            resultDec = resultDec.Rescale(deltaScale);
+            static_cast<LongVector *>(vector)->SetValue(rowIndex, resultDec.LowBits());
+
         }
     }
 };
