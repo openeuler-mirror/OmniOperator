@@ -31,7 +31,7 @@ public:
             return;
         }
         if (inputRaw) {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_LONG) {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_DECIMAL128) {
                 LogError("Partial short decimal average should input long.");
             }
             // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
