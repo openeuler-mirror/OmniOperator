@@ -277,6 +277,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
     OptimizeFunctionsAndModule();
+
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(
             jit->getDataLayout().getGlobalPrefix())));

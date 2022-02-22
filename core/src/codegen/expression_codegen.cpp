@@ -24,7 +24,7 @@ using namespace orc;
 using namespace omniruntime;
 using namespace omniruntime::expressions;
 using namespace omniruntime::vec;
-using std::make_shared;
+using namespace std;
 
 namespace {
 const int INT32_VALUE = 32;
@@ -438,8 +438,8 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
     Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
-    Value *isNeitherNull;
-    Value *output;
+    Value *isNeitherNull = nullptr;
+    Value *output = nullptr;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     std::vector<Value *> argVals { leftPhi, rightPhi };
     std::vector<VecTypeId> params {binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId()};
@@ -687,15 +687,19 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL64: {
-            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantLong(lExpr.longVal),
-                llvmTypes->CreateConstantBool(isNullLiteral));
+            Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
+            Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
+            codeGenValue = new DecimalValue(llvmTypes->CreateConstantLong(lExpr.longVal),
+                llvmTypes->CreateConstantBool(isNullLiteral), precision, scale);
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            Value * const128 = llvmTypes->CreateConstant128(lExpr.longVal);
-            const int32_t intValue = 38;
-            codeGenValue = new DecimalValue(const128, llvmTypes->CreateConstantBool(isNullLiteral),
-                                            llvmTypes->CreateConstantInt(intValue), llvmTypes->CreateConstantInt(0));
+            std::string dec128String = isNullLiteral ? "0" : *lExpr.stringVal;
+            Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
+            Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
+            auto const128Val = llvm::ConstantInt::get(llvm::Type::getInt128Ty(*context), dec128String, 10);
+            codeGenValue = new DecimalValue(const128Val,  llvmTypes->CreateConstantBool(isNullLiteral), precision,
+                                            scale);
             break;
         }
         case OMNI_VEC_TYPE_NONE: {
@@ -880,9 +884,58 @@ CodeGenValuePtr CreateInvalidCodeGenValue()
     return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
 }
 
+void ExpressionCodeGen::PromoteType(BinaryExpr &binaryExpr)
+{
+    // precision and scale of the original type has to be maintained while type promotion
+    if (binaryExpr.left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128 &&
+        binaryExpr.right->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64) {
+        binaryExpr.right->dataType = std::make_unique<Decimal128VecType>(binaryExpr.right->dataType->GetPrecision(),
+                                                                         binaryExpr.right->dataType->GetScale());
+        // decimal128 accepts string literals
+        if (binaryExpr.right->GetType() == LITERAL_E) {
+            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr*>(binaryExpr.right);
+            literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
+        }
+    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64 &&
+        binaryExpr.right->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+        binaryExpr.left->dataType = std::make_unique<Decimal128VecType>(binaryExpr.left->dataType->GetPrecision(),
+                                                                         binaryExpr.left->dataType->GetScale());
+        if (binaryExpr.left->GetType() == LITERAL_E) {
+            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr*>(binaryExpr.left);
+            literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
+        }
+    } else {
+        Expr *smallerExpr = nullptr;
+        VecType biggerType;
+        if (binaryExpr.left->GetReturnTypeId() < binaryExpr.right->GetReturnTypeId()) {
+            biggerType = binaryExpr.right->GetReturnType();
+            smallerExpr = binaryExpr.left;
+        } else {
+            biggerType = binaryExpr.left->GetReturnType();
+            smallerExpr = binaryExpr.right;
+        }
+        if (biggerType.GetId() == OMNI_VEC_TYPE_DECIMAL128 && smallerExpr->GetType() == LITERAL_E) {
+            basic_string<char> decVal;
+            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr*>(smallerExpr);
+            if (literalExpr->GetReturnTypeId() == OMNI_VEC_TYPE_INT) {
+                decVal = to_string(literalExpr->intVal);
+            } else if (literalExpr->GetReturnTypeId() == OMNI_VEC_TYPE_LONG) {
+                decVal = to_string(literalExpr->longVal);
+            } else if (literalExpr->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE) {
+                decVal = to_string(literalExpr->doubleVal);
+            }
+            literalExpr->stringVal = make_unique<string>(decVal).release();
+        }
+        auto lType = std::make_unique<VecType>(biggerType);
+        auto rType = std::make_unique<VecType>(biggerType);
+        binaryExpr.left->dataType = std::move(lType);
+        binaryExpr.right->dataType = std::move(rType);
+    }
+}
+
 void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 {
-    const BinaryExpr *bExpr = &binaryExpr;
+    auto *bExpr = const_cast<BinaryExpr *>(&binaryExpr);
 
     auto leftId = static_cast<int32_t>(bExpr->left->GetReturnTypeId());
     auto rightId = static_cast<int32_t>(bExpr->right->GetReturnTypeId());
@@ -890,9 +943,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     if (bExpr->left->GetType() == ExprType::LITERAL_E || bExpr->right->GetType() == ExprType::LITERAL_E ||
         bExpr->left->GetType() == ExprType::FIELD_E || bExpr->right->GetType() == ExprType::FIELD_E) {
         if (leftId != rightId) {
-            VecType &biggerType = leftId < rightId ? bExpr->right->GetReturnType() : bExpr->left->GetReturnType();
-            bExpr->right->dataType = std::make_unique<VecType>(biggerType);
-            bExpr->left->dataType = std::make_unique<VecType>(biggerType);
+            PromoteType(*bExpr);
         }
     }
     CodeGenValuePtr left = VisitExpr(*(bExpr->left));

@@ -1072,7 +1072,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
     const int32_t numCols = 2;
 
     FieldExpr *subLeft0 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *subRight0 = new LiteralExpr(1, Decimal128Type(38, 0));
+    LiteralExpr *subRight0 = new LiteralExpr(new string("1"), Decimal128Type(38, 0));
     subRight0->longVal = 1;
     subRight0->doubleVal = 1;
     BinaryExpr *subExpr0 = new BinaryExpr(SUB, subLeft0, subRight0, Decimal128Type(38, 0));
@@ -1130,7 +1130,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
     const int32_t numCols = 2;
 
     FieldExpr *addLeft0 = new FieldExpr(0, Decimal128Type(38, 1));
-    LiteralExpr *addRight0 = new LiteralExpr(-1, Decimal128Type(38, 0));
+    LiteralExpr *addRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
     addRight0->longVal = -1;
     addRight0->doubleVal = -1;
     BinaryExpr *addExpr0 = new BinaryExpr(ADD, addLeft0, addRight0, Decimal128Type(38, 0));

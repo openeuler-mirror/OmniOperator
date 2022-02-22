@@ -93,10 +93,9 @@ Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
         return make_unique<LiteralExpr>(decimalVal, make_unique<Decimal64VecType>(jsonExpr["precision"].get<int32_t>(),
                 jsonExpr["scale"].get<int32_t>())).release();
     } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
-        // FIXME: Currently only support up to long; Support 128 bits in the future
-        auto decimalVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<LiteralExpr>(decimalVal, make_unique<Decimal128VecType>(jsonExpr["precision"].get<int32_t>(),
-                jsonExpr["scale"].get<int32_t>())).release();
+        string *dec128String = make_unique<string>(jsonExpr["value"].get<string>()).release();
+        return make_unique<LiteralExpr>(dec128String, make_unique<Decimal128VecType>(
+                jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>())).release();
     } else if (typeId == OMNI_VEC_TYPE_NONE) {
         return make_unique<LiteralExpr>(0, make_unique<VecType>()).release();
     } else {

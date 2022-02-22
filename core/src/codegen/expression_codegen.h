@@ -104,6 +104,7 @@ protected:
     void DivExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi);
+    void PromoteType(omniruntime::expressions::BinaryExpr &binaryExpr);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
 

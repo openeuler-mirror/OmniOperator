@@ -30,9 +30,9 @@ public:
     explicit DecimalValue(llvm::Value* data, llvm::Value* isNull, llvm::Value* precision,
                               llvm::Value* scale) : CodeGenValue(data, isNull), precision(precision),
                                  scale(scale) {}
-
-    llvm::Value* GetPrecision() { return precision; }
-    llvm::Value* GetScale() { return scale; }
+    virtual ~DecimalValue() = default;
+    const llvm::Value* GetPrecision() { return precision; }
+    const llvm::Value* GetScale() { return scale; }
 
 private:
     llvm::Value* precision;
@@ -44,8 +44,9 @@ public:
     explicit DecimalSplitValue(llvm::Value* high, llvm::Value* low, llvm::Value* isNull = nullptr, llvm::Value* precision = nullptr,
                                llvm::Value* scale = nullptr) : DecimalValue(nullptr, isNull, precision, scale),
                                high(high), low(low) {}
-    llvm::Value* GetHigh() { return high; }
-    llvm::Value* GetLow() { return low; }
+    virtual ~DecimalSplitValue() = default;
+    const llvm::Value* GetHigh() { return high; }
+    const llvm::Value* GetLow() { return low; }
 
 private:
     llvm::Value* high;

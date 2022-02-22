@@ -16,6 +16,7 @@ class DecimalIRBuilder {
 public:
     explicit DecimalIRBuilder(llvm::LLVMContext& context, llvm::Module& module, llvm::IRBuilder<> &builder) : context(context),
                 module(module), builder(builder) {}
+    virtual ~DecimalIRBuilder() = default;
     llvm::Value* CallDecimalFunction(const std::string& function_name,
                                      llvm::Type* return_type,
                                      const std::vector<llvm::Value*>& args);

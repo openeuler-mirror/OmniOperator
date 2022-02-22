@@ -4,7 +4,6 @@
  */
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "decimal_ir_builder.h"
-#include <llvm/Transforms/Utils/Cloning.h>
 #include "llvm_types.h"
 
 DecimalSplitValue DecimalIRBuilder::Split(llvm::Value *fullValue)
@@ -36,8 +35,8 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
         if (arg->getType() == llvmTypes.I128Type()) {
             // split i128 arg into two int64s.
             auto split = Split(arg);
-            disassembledArgs.push_back(split.GetHigh());
-            disassembledArgs.push_back(split.GetLow());
+            disassembledArgs.push_back(const_cast<llvm::Value*>(split.GetHigh()));
+            disassembledArgs.push_back(const_cast<llvm::Value*>(split.GetLow()));
         } else {
             disassembledArgs.push_back(arg);
         }

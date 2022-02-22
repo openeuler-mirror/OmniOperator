@@ -108,7 +108,6 @@ public:
     int64_t longVal = 0;
     double doubleVal = 0;
     std::string* stringVal = nullptr;
-    int64_t* dec128Val = nullptr;
 
     LiteralExpr();
     ~LiteralExpr() override;

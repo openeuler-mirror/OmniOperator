@@ -333,11 +333,11 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                 break;
             case OMNI_VEC_TYPE_DECIMAL128 :
                 // FIXME: Need to Support 128 bits properly
-                long d128Val;
+                String d128Val;
                 if (literal.getValue() instanceof Slice) {
-                    d128Val = Decimals.decodeUnscaledValue((Slice) literal.getValue()).longValue();
+                    d128Val = Decimals.decodeUnscaledValue((Slice) literal.getValue()).toString();
                 } else {
-                    d128Val = Long.parseLong(literal.getValue().toString());
+                    d128Val = literal.getValue().toString();
                 }
                 constantRoot.put("value", d128Val);
                 constantRoot.put("precision", ((Decimal128VecType) literalType).getPrecision());

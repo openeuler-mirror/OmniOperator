@@ -323,16 +323,6 @@ public:
 
     ~Decimal64VecType() override {}
 
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
-
     const static Decimal64VecType &Instance()
     {
         static Decimal64VecType type(19, 0);
@@ -349,16 +339,6 @@ public:
     }
 
     ~Decimal128VecType() override {}
-
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
 
     const static Decimal128VecType &Instance()
     {

@@ -2529,12 +2529,12 @@ TEST(CodeGenTest, DecimalOperators1)
 {
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *addRight = new LiteralExpr(5, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(new string("5"), Decimal128Type(38, 0));
     addRight->doubleVal = 5;
     addRight->longVal = 5;
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
-    LiteralExpr *equalRight = new LiteralExpr(15, Decimal128Type(38, 0));
+    LiteralExpr *equalRight = new LiteralExpr(new string("15"), Decimal128Type(38, 0));
     equalRight->doubleVal = 15;
     equalRight->longVal = 15;
     BinaryExpr *expr = new BinaryExpr(EQ, addExpr, equalRight, BooleanType());
@@ -2649,19 +2649,19 @@ TEST(CodeGenTest, DecimalOperators3)
 {
     // create expression objects
     FieldExpr *col01 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *data01 = new LiteralExpr(100, Decimal128Type(38, 0));
+    LiteralExpr *data01 = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
     data01->longVal = 100;
     data01->doubleVal = 100;
     BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
 
     FieldExpr *col02 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *data02 = new LiteralExpr(200, Decimal128Type(38, 0));
+    LiteralExpr *data02 = new LiteralExpr(new string("200"), Decimal128Type(38, 0));
     data02->longVal = 200;
     data02->doubleVal = 200;
     BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
 
     FieldExpr *col03 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *data03 = new LiteralExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *data03 = new LiteralExpr(new string("0"), Decimal128Type(38, 0));
     data03->longVal = 0;
     data03->doubleVal = 0;
     BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
@@ -2726,11 +2726,11 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     // currently fails
     FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *col1 = new FieldExpr(1, Decimal128Type(38, 0));
-    LiteralExpr *mulRight0 = new LiteralExpr(-1, Decimal128Type(38, 0));
+    LiteralExpr *mulRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
     mulRight0->doubleVal = -1;
     mulRight0->longVal = -1;
 
-    LiteralExpr *mulRight1 = new LiteralExpr(-1, Decimal128Type(38, 0));
+    LiteralExpr *mulRight1 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
     mulRight1->doubleVal = -1;
     mulRight1->longVal = -1;
 
@@ -2940,7 +2940,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
 {
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *addRight = new LiteralExpr(100, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
     addRight->longVal = 100;
     addRight->doubleVal = 100;
 
@@ -2972,7 +2972,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
-    vector<int64_t> oVec(3);
+    vector<int64_t> oVec(6);
     auto ov = oVec.data();
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);

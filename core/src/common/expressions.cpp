@@ -10,6 +10,7 @@
 #include "../codegen/func_registry.h"
 #include "../util/type_util.h"
 
+using namespace std;
 using namespace omniruntime::vec;
 
 namespace omniruntime {
@@ -91,11 +92,6 @@ LiteralExpr::LiteralExpr(std::string *val, VecTypePtr dt)
 {
     dataType = std::move(dt);
     stringVal = val;
-}
-LiteralExpr::LiteralExpr(int64_t *val, VecTypePtr dt)
-{
-    dataType = std::move(dt);
-    dec128Val = val;
 }
 
 // FieldExpr
