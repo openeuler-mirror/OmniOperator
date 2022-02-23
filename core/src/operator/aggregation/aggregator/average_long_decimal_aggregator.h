@@ -124,18 +124,18 @@ public:
             // write decimal if not overflow. otherwise throw exception
             int64_t overflowAccumulator = 0;
             int64_t count = 0;
-            Decimal128 resultDec;
-            DecimalOperations::DecodeAvgDecimal(state.val, resultDec, overflowAccumulator, count);
+            Decimal128 decodedDec;
+            DecimalOperations::DecodeAvgDecimal(state.val, decodedDec, overflowAccumulator, count);
             // TODO we do not support Decimal256 now. thus we cannot handle overflow.
             if (overflowAccumulator != 0) {
                 LogError("The sum of short decimal average is overflow.");
             }
 
-            resultDec /= count;
-            auto oldScale = static_cast<Decimal128VecType *>((&(this->inputType)))->GetScale();
-            auto newScale = static_cast<Decimal128VecType *>((&(this->outputType)))->GetScale();
-            const int32_t deltaScale = newScale - oldScale;
-            resultDec = resultDec.Rescale(deltaScale);
+            Decimal128 resultDec;
+            Decimal128 remainder;
+            Decimal128 countDec = count;
+            decodedDec.Divide(countDec, resultDec, remainder);
+            DecimalOperations::RoundUp(decodedDec, countDec, resultDec, remainder);
             static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, resultDec);
         }
     }
