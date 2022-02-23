@@ -47,7 +47,7 @@ public abstract class Vec implements Closeable {
     /**
      * The value buffer.
      */
-    protected final OmniBuf valuesBuf;
+    protected OmniBuf valuesBuf;
 
     /**
      * The nulls of vector, it is a bitmap.
@@ -55,14 +55,14 @@ public abstract class Vec implements Closeable {
     protected final OmniBuf nullsBuf;
 
     /**
+     * The native vector address.
+     */
+    protected final long nativeVector;
+
+    /**
      * The specialized vector allocator.
      */
     private final VecAllocator allocator;
-
-    /**
-     * The native vector address.
-     */
-    private final long nativeVector;
 
     /**
      * The {@link VecType} of this vector
@@ -174,11 +174,29 @@ public abstract class Vec implements Closeable {
             true);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address.
+     * @param type the type of this vector.
+     */
     protected Vec(long nativeVector, VecType type) {
         this(new VecAllocator(getAllocatorNative(nativeVector)), nativeVector, getCapacityInBytesNative(nativeVector),
             getSizeNative(nativeVector), getOffsetNative(nativeVector), type, true);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address.
+     * @param nativeVectorValueBufAddress valueBuf address of native vector.
+     * @param nativeVectorNullBufAddress nullBuf address of native vector.
+     * @param nativeVectorAllocator allocator address of native vector.
+     * @param capacityInBytes capacity in bytes of vector.
+     * @param size the actual number of value of vector.
+     * @param offset offset of positions in the input parameter.
+     * @param type the type of this vector
+     * */
     protected Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
                   long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
         this(new VecAllocator(nativeVectorAllocator), nativeVector, nativeVectorValueBufAddress,
@@ -197,7 +215,13 @@ public abstract class Vec implements Closeable {
 
     private static native long getAllocatorNative(long nativeVector);
 
-    private static native int getCapacityInBytesNative(long nativeVector);
+    /**
+     * get capacity in Bytes from native vector
+     *
+     * @param nativeVector nativeVector address
+     * @return capacity of native vector
+     */
+    protected static native int getCapacityInBytesNative(long nativeVector);
 
     private static native int getSizeNative(long nativeVector);
 
@@ -213,7 +237,13 @@ public abstract class Vec implements Closeable {
      */
     protected static native int getTypeIdNative(long nativeVector);
 
-    private static native long getValuesNative(long nativeVector);
+    /**
+     * get value address from native vector
+     *
+     * @param nativeVector native vector address
+     * @return value address of native vector
+     */
+    protected static native long getValuesNative(long nativeVector);
 
     private static native long getValueNullsNative(long nativeVector);
 
@@ -538,6 +568,11 @@ public abstract class Vec implements Closeable {
         this.isCloseable = isCloseable;
     }
 
+    /**
+     * return the allocator of vector
+     *
+     * @return allocator of the vector
+     * */
     public VecAllocator getAllocator() {
         return allocator;
     }

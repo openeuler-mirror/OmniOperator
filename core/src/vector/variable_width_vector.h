@@ -20,7 +20,11 @@ public:
     VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {};
 
     VariableWidthVector(VectorAllocator *pAllocator, int capacityInBytes, int size)
-        : Vector(pAllocator, capacityInBytes, size, (VecTypeId)TYPE_ID)
+        : Vector(pAllocator, capacityInBytes, size, TYPE_ID)
+    {}
+
+    VariableWidthVector(VectorAllocator *pAllocator, int size)
+        : Vector(pAllocator, INI_CAPACITY_IN_BYTES, size, TYPE_ID)
     {}
 
     int ALWAYS_INLINE GetValue(int index, T **dst)
@@ -168,13 +172,35 @@ public:
         }
     }
 
+    int64_t ExpandDataCapacity(int32_t toCapacityInBytes) override
+    {
+        allocator->ResizeVectorData(this, toCapacityInBytes);
+        valuesAddress = reference->GetValuesAddress();
+        capacityInBytes = toCapacityInBytes;
+        int64_t newAddress = reinterpret_cast<uintptr_t>(valuesAddress);
+        return newAddress;
+    }
+
 private:
+    static const int32_t INI_CAPACITY_IN_BYTES = 32 * 1024; // 32K
+
+    static const int32_t EXPAND_FACTOR = 2;
+
+    void CheckCapacity(int32_t needCapacityInBytes)
+    {
+        int32_t toCapacityInBytes = capacityInBytes;
+        while (toCapacityInBytes < needCapacityInBytes) {
+            toCapacityInBytes = toCapacityInBytes * EXPAND_FACTOR;
+        }
+        if (toCapacityInBytes != capacityInBytes) {
+            ExpandDataCapacity(toCapacityInBytes);
+        }
+    }
+
     void SetData(int index, const T *value, int start, int dataLen)
     {
         int startOffset = GetValueOffset(index);
-        if (startOffset + dataLen > capacityInBytes) {
-            return;
-        }
+        CheckCapacity(startOffset + dataLen);
         SetValueOffset(index + 1, startOffset + dataLen);
 
         // empty vector or empty string no need to copy data

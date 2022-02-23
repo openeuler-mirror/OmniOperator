@@ -222,7 +222,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
 
     Vector *projectedVec = nullptr;
-    if (outTypeId == OMNI_VEC_TYPE_VARCHAR) {
+    if (outTypeId == OMNI_VEC_TYPE_VARCHAR || outTypeId == OMNI_VEC_TYPE_CHAR) {
         projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
             selectedRows, context, dictionaryVectors);
     } else {
@@ -239,7 +239,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 {
     // using projector
     ((int32_t *)outVec->GetValueOffsets())[0] = 0;
-    this->projector(vecData.data(), vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
+    this->projector(vecData.data(), vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec),
         selectedRows, numSelectedRows, bitmap, offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
         reinterpret_cast<int32_t *>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context), dictionaryVectors);
     return outVec;

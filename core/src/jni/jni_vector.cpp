@@ -230,9 +230,16 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictio
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector, jobject jLazyLoader)
 {
-    LazyVector * lazyVector = reinterpret_cast<LazyVector *>(jNativeVector);
+    LazyVector *lazyVector = reinterpret_cast<LazyVector *>(jNativeVector);
     JniVectorLoader *loader = new JniVectorLoader(env, jLazyLoader);
     lazyVector->SetLoader(loader);
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *env, jclass jcls,
+    jlong jNativeVector, jint jToCapacityInBytes)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
+    return nativeVector->ExpandDataCapacity(jToCapacityInBytes);
 }
 
 Vector *TransformVector(long vectorAddr)

@@ -22,6 +22,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
     functionRegistries.push_back(make_unique<MathFunctionRegistry>());
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
     functionRegistries.push_back(make_unique<HashFunctionRegistry>());
+    functionRegistries.push_back(make_unique<VarcharVectorFunctionRegistry>());
 
     // External functions
     functionRegistries.push_back(make_unique<ExternalFunctionRegistry>());
