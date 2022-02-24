@@ -113,7 +113,7 @@ private:
     std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
 
     void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn, int32_t index) const;
-    void Accumulate(VectorBatch *resultVector, VectorAllocator *vecAllocator, int32_t start, int32_t end);
+    void Accumulate(VectorAllocator *vecAllocator, int32_t start, int32_t end);
 
     void AccumulateData(int32_t start, VectorBatch *resultVectorBatch, int32_t resultVectorPosition,
         int32_t originalVectorPosition, Vector *originalVector);

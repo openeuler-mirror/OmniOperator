@@ -108,27 +108,20 @@ void AggregateWindowFunction::Reset(WindowIndex *pWindowIndex)
 void AggregateWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
     int32_t frameStart, int32_t frameEnd)
 {
-    // the vector is used for aggregation in window operation
-    VectorBatch *resultVectorBatch = nullptr;
     if (frameStart < 0) {
         ResetAccumulator();
     } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
         // same or expanding frame
-        Accumulate(resultVectorBatch, column->GetAllocator(), currentEnd + 1, frameEnd);
+        Accumulate(column->GetAllocator(), currentEnd + 1, frameEnd);
         currentEnd = frameEnd;
     } else {
         // different frame
         ResetAccumulator();
-        Accumulate(resultVectorBatch, column->GetAllocator(), frameStart, frameEnd);
+        Accumulate(column->GetAllocator(), frameStart, frameEnd);
         currentStart = frameStart;
         currentEnd = frameEnd;
     }
     EvaluateFinal(aggregator, column, index);
-
-    // after the EvaluateFinal, we should release the vector
-    if (resultVectorBatch != nullptr) {
-        VectorHelper::FreeVecBatch(resultVectorBatch);
-    }
 }
 
 void AggregateWindowFunction::ResetAccumulator()
@@ -147,8 +140,7 @@ void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregat
     pAggregator->ExtractValue(aggregateState.operator*(), pColumn, index);
 }
 
-void AggregateWindowFunction::Accumulate(VectorBatch *resultVectorBatch, VectorAllocator *vecAllocator, int32_t start,
-    int32_t end)
+void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t start, int32_t end)
 {
     if (start > end) {
         return;
@@ -158,9 +150,9 @@ void AggregateWindowFunction::Accumulate(VectorBatch *resultVectorBatch, VectorA
     uint32_t width = (inputType.GetId() == OMNI_VEC_TYPE_VARCHAR || inputType.GetId() == OMNI_VEC_TYPE_CHAR) ?
         static_cast<const VarcharVecType &>(inputType).GetWidth() :
         0;
-
     // this is important to package data into an extra vector and use it to do the aggregation
-    resultVectorBatch = new VectorBatch(1, rowCount);
+    // the vector is used for aggregation in window operation
+    auto resultVectorBatch = new VectorBatch(1, rowCount);
     resultVectorBatch->SetVector(0,
         VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount));
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
@@ -177,6 +169,8 @@ void AggregateWindowFunction::Accumulate(VectorBatch *resultVectorBatch, VectorA
         Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
         AccumulateData(start, resultVectorBatch, resultVectorPosition, originalVectorPosition, originalVector);
     }
+    // after using the vector, we should release it
+    VectorHelper::FreeVecBatch(resultVectorBatch);
 }
 
 void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::VectorBatch *resultVectorBatch,
