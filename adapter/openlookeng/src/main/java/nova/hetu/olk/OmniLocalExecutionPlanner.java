@@ -49,7 +49,8 @@ import static io.prestosql.sql.planner.plan.JoinNode.Type.RIGHT;
 import static nova.hetu.olk.operator.OrderByOmniOperator.OrderByOmniOperatorFactory.createOrderByOmniOperatorFactory;
 import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
-import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MAX;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MIN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
@@ -314,8 +315,11 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         ImmutableList.Builder<Integer> builder = ImmutableList.builder();
         for (Symbol symbol : aggregations.keySet()) {
             AggregationNode.Aggregation aggregation = aggregations.get(symbol);
-            Symbol aggregationInputSymbol = Symbol.from(aggregation.getArguments().get(0));
-            builder.add(layout.get(aggregationInputSymbol));
+            List<Expression> arguments = aggregation.getArguments();
+            if (arguments.size() != 0) {
+                Symbol aggregationInputSymbol = Symbol.from(arguments.get(0));
+                builder.add(layout.get(aggregationInputSymbol));
+            }
         }
         return builder.build();
     }
@@ -333,7 +337,9 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             Map<Symbol, AggregationNode.Aggregation> aggregations) {
         ImmutableList.Builder<FunctionType> builder = ImmutableList.builder();
         for (Symbol aggregationOutputSymbol : aggregationOutputSymbols) {
-            Signature signature = aggregations.get(aggregationOutputSymbol).getSignature();
+            AggregationNode.Aggregation aggregation = aggregations.get(aggregationOutputSymbol);
+            Signature signature = aggregation.getSignature();
+            List<Expression> arguments = aggregation.getArguments();
             // aggregator type, eg:sum,avg...
             switch (signature.getName()) {
                 case "sum" :
@@ -342,9 +348,14 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 case "avg" :
                     builder.add(OMNI_AGGREGATION_TYPE_AVG);
                     break;
-                case "count" :
-                    builder.add(OMNI_AGGREGATION_TYPE_COUNT);
+                case "count" : {
+                    if (arguments.size() == 0) {
+                        builder.add(OMNI_AGGREGATION_TYPE_COUNT_ALL);
+                    } else {
+                        builder.add(OMNI_AGGREGATION_TYPE_COUNT_COLUMN);
+                    }
                     break;
+                }
                 case "min" :
                     builder.add(OMNI_AGGREGATION_TYPE_MIN);
                     break;
@@ -1270,7 +1281,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 List<Integer> aggregationChannels = getAggregationChannels(aggregations, source.getLayout());
                 List<Type> aggregationResultTypes = getAggregationResultTypes(aggregations, context);
                 FunctionType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
-                        .toArray(new FunctionType[aggregationChannels.size()]);
+                        .toArray(new FunctionType[aggregations.size()]);
                 int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
                 VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
 
@@ -1354,7 +1365,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             } else {
                 Optional<Integer> hashChannel = hashSymbol.map(channelGetter(source));
 
-                // right now HashAggregationOmniOperator does not support the groupIdChannel, we should fall back
+                // right now HashAggregationOmniOperator does not support the groupIdChannel, we
+                // should fall back
                 if (getOmniAggEnabled(session) && !groupIdChannel.isPresent()) {
                     // when omni is turned on there is no hash channel
                     int[] groupByInputChannels = Ints.toArray(groupByChannels);
@@ -1363,7 +1375,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     VecType[] aggregationInputTypes = OperatorUtils.toVecTypes(aggregationSourceTypes);
                     VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
                     FunctionType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
-                            .toArray(new FunctionType[aggregationChannels.size()]);
+                            .toArray(new FunctionType[aggregations.size()]);
 
                     return new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(
                             context.getNextOperatorId(), planNodeId, source.getTypes(), groupByInputChannels,

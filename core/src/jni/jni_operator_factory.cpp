@@ -77,7 +77,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                  */
+ *                                                                   */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -88,9 +88,9 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     int32_t groupByCols[groupByNum];
     GetColumnsFromExpressions(env, jGroupByChannel, groupByCols, groupByNum);
     auto groupByTypesCharPtr = env->GetStringUTFChars(jGroupByType, JNI_FALSE);
-    auto aggNum = env->GetArrayLength(jAggChannel);
-    int32_t aggCols[aggNum];
-    GetColumnsFromExpressions(env, jAggChannel, aggCols, aggNum);
+    size_t aggInputChannelNum = static_cast<size_t>(env->GetArrayLength(jAggChannel));
+    int32_t aggCols[aggInputChannelNum];
+    GetColumnsFromExpressions(env, jAggChannel, aggCols, aggInputChannelNum);
     auto aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
     auto aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
     auto aggFuncsCount = env->GetArrayLength(jAggFuncType);
@@ -110,7 +110,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                  */
+ *                                                                   */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -124,9 +124,9 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     int32_t groupByCols[groupByNum];
     GetColumnsFromExpressions(env, jGroupByChannel, groupByCols, groupByNum);
     auto groupByTypesCharPtr = env->GetStringUTFChars(jGroupByType, JNI_FALSE);
-    size_t aggNum = static_cast<size_t>(env->GetArrayLength(jAggChannel));
-    int32_t aggCols[aggNum];
-    GetColumnsFromExpressions(env, jAggChannel, aggCols, aggNum);
+    size_t aggInputChannelNum = static_cast<size_t>(env->GetArrayLength(jAggChannel));
+    int32_t aggCols[aggInputChannelNum];
+    GetColumnsFromExpressions(env, jAggChannel, aggCols, aggInputChannelNum);
     auto aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
     auto outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
@@ -138,10 +138,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     auto groupByTypeIds = groupByVecTypes.GetIds();
     auto aggTypeIds = aggVecTypes.GetIds();
 
+    auto aggNum = static_cast<size_t>(env->GetArrayLength(jAggFuncType));
+
     PrepareContext groupByColContext = { (uint32_t *)groupByCols, groupByNum };
     PrepareContext groupByTypeContext = { (uint32_t *)groupByTypeIds, groupByNum };
-    PrepareContext aggColContext = { (uint32_t *)aggCols, aggNum };
-    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggNum };
+    PrepareContext aggColContext = { (uint32_t *)aggCols, aggInputChannelNum };
+    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggInputChannelNum };
     PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
 
     int32_t groupColNum = groupByColContext.len;
@@ -172,7 +174,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                  */
+ *                                                                   */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
@@ -197,7 +199,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
 /**
  * Return an AggregationFactory object address.
- *                                                                   */
+ *                                                                    */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
@@ -215,9 +217,10 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
 
     auto sourceTypeIds = sourceTypes.GetIds();
+    auto aggInputColsCount = static_cast<size_t>(env->GetArrayLength(jAggInputCols));
     auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
-    PrepareContext aggInputColsContext = { (uint32_t *)aggInputCols, aggCount };
+    PrepareContext aggInputColsContext = { (uint32_t *)aggInputCols, aggInputColsCount };
     PrepareContext maskColsContext = { (uint32_t *)maskCols, aggCount };
     PrepareContext aggFuncTypesContext = { (uint32_t *)aggFuncTypes, aggCount };
 

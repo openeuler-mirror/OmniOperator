@@ -307,7 +307,7 @@ public class WindowOmniOperator implements Operator {
                         windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_SUM;
                         break;
                     case "count" :
-                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
+                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
                         break;
                     case "max" :
                         windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_MAX;

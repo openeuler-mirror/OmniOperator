@@ -9,6 +9,7 @@ import static io.prestosql.operator.OperatorAssertion.assertOperatorEquals;
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.spi.type.BooleanType.BOOLEAN;
 import static io.prestosql.spi.type.DoubleType.DOUBLE;
+import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.testing.MaterializedResult.resultBuilder;
 import static io.prestosql.testing.TestingTaskContext.createTaskContext;
@@ -17,7 +18,8 @@ import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static nova.hetu.olk.tool.OperatorUtils.transferToOffHeapPages;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
-import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MAX;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static org.testng.Assert.assertEquals;
@@ -37,6 +39,7 @@ import nova.hetu.olk.operator.AggregationOmniOperator.AggregationOmniOperatorFac
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.BooleanVecType;
 import nova.hetu.omniruntime.type.DoubleVecType;
+import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
@@ -81,7 +84,7 @@ public class TestAggregationOmniOperator {
 
         int id = 0;
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, new VarcharVecType(10)};
-        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_AVG,
+        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG,
                 OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX};
         int[] aggregationInputChannels = {0, 1, 2, 3};
         VecType[] aggregationOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE, LongVecType.LONG,
@@ -106,6 +109,36 @@ public class TestAggregationOmniOperator {
     }
 
     @Test(invocationCount = 1)
+    public void testCountAggregationCompare() {
+        List<Type> types = ImmutableList.of(BIGINT, BIGINT, INTEGER);
+        List<Page> input = rowPagesBuilder(types).row(1, 1, null).row(null, 2, 2).row(null, 3, 3).row(4, 4, 4)
+                .row(5, null, 5).row(null, 6, 6).build();
+
+        int id = 0;
+        VecType[] sourceTypes = {LongVecType.LONG, IntVecType.INTEGER};
+        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        int[] aggregationInputChannels = {0, 2};
+        VecType[] aggregationOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        AggregationNode.Step step = AggregationNode.Step.SINGLE;
+        ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();
+        for (int i = 0; i < aggregatorTypes.length; i++) {
+            maskChannels.add(Optional.empty());
+        }
+        AggregationOmniOperatorFactory AggregationOmniOperatorFactory = new AggregationOmniOperatorFactory(id,
+                new PlanNodeId(String.valueOf(id)), sourceTypes, aggregatorTypes, aggregationInputChannels,
+                maskChannels.build(), aggregationOutputTypes, step);
+
+        DriverContext driverContext = createTaskContext(executor, scheduledExecutor, TEST_SESSION)
+                .addPipelineContext(0, true, true, false).addDriverContext();
+        MaterializedResult expected = resultBuilder(driverContext.getSession(), BIGINT, BIGINT, BIGINT).row(3L, 6L, 5L)
+                .build();
+        assertOperatorEquals(AggregationOmniOperatorFactory, driverContext, input, expected);
+        assertEquals(driverContext.getSystemMemoryUsage(), 0);
+        assertEquals(driverContext.getMemoryUsage(), 0);
+    }
+
+    @Test(invocationCount = 1)
     public void testCountAggregation() {
         List<Page> input = rowPagesBuilder(BIGINT, BIGINT, BOOLEAN, BOOLEAN).row(10L, 20L, true, true)
                 .row(20L, 10L, true, true).pageBreak().row(10L, 30L, false, true).row(30L, 10L, true, false).build();
@@ -114,7 +147,7 @@ public class TestAggregationOmniOperator {
 
         int id = 0;
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, BooleanVecType.BOOLEAN, BooleanVecType.BOOLEAN};
-        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_SUM};
+        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_SUM};
         int[] aggregationInputChannels = {0, 1};
         VecType[] aggregationOutputTypes = {LongVecType.LONG, LongVecType.LONG};
         AggregationNode.Step step = AggregationNode.Step.SINGLE;
@@ -154,7 +187,7 @@ public class TestAggregationOmniOperator {
         int id = 0;
 
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, new VarcharVecType(10)};
-        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT};
+        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
         int[] aggregationInputChannels = {0, 1, 2, 3};
         VecType[] aggregationOutputTypes = {LongVecType.LONG};
         ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();

@@ -13,32 +13,38 @@
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
 #ifdef DEBUG_OPERATOR
-#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types)               \
-    do {                                                                                                             \
-        for (int32_t i = 0; i < group_by_num; ++i) {                                                                 \
-            auto vector = vector_batch->GetVector(group_by_idx[i]);                                                  \
-            auto typeId = vector->GetTypeId();                                                                       \
-            if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                                \
-                typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                         \
-            }                                                                                                        \
-            if (typeId != operator_types[group_by_idx[i]]) {                                                         \
-                LogWarn("Group by vector type %d != operator column type %d!", typeId,                               \
-                    operator_types[group_by_idx[i]]);                                                                \
-            }                                                                                                        \
-        }                                                                                                            \
-        for (int32_t i = 0; i < agg_num; ++i) {                                                                      \
-            auto vector = vector_batch->GetVector(agg_idx[i]);                                                       \
-            auto typeId = vector->GetTypeId();                                                                       \
-            if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                                \
-                typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                         \
-            }                                                                                                        \
-            if (typeId != operator_types[agg_idx[i]]) {                                                              \
-                LogWarn("Aggregate vector type %d != operator column type %d!", typeId, operator_types[agg_idx[i]]); \
-            }                                                                                                        \
-        }                                                                                                            \
+#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types, agg_func_types) \
+    do {                                                                                                               \
+        for (int32_t i = 0; i < group_by_num; ++i) {                                                                   \
+            auto vector = vector_batch->GetVector(group_by_idx[i]);                                                    \
+            auto typeId = vector->GetTypeId();                                                                         \
+            if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                                  \
+                typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                           \
+            }                                                                                                          \
+            if (typeId != operator_types[group_by_idx[i]]) {                                                           \
+                LogWarn("Group by vector type %d != operator column type %d!", typeId,                                 \
+                    operator_types[group_by_idx[i]]);                                                                  \
+            }                                                                                                          \
+        }                                                                                                              \
+        uint32_t aggInputIndex = 0;                                                                                    \
+        for (int32_t i = 0; i < agg_num; ++i) {                                                                        \
+            uint32_t aggregateType = agg_func_types[i];                                                                \
+            if (aggregateType != OMNI_AGGREGATION_TYPE_COUNT_ALL) {                                               \
+                auto vector = vector_batch->GetVector(agg_idx[aggInputIndex]);                                         \
+                auto typeId = vector->GetTypeId();                                                                     \
+                auto operatorType = operator_types[agg_idx[aggInputIndex]];                                            \
+                aggInputIndex++;                                                                                       \
+                if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                              \
+                    typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                       \
+                }                                                                                                      \
+                if (typeId != operatorType) {                                                                          \
+                    LogWarn("Aggregate vector type %d != operator column type %d!", typeId, operatorType);             \
+                }                                                                                                      \
+            }                                                                                                          \
+        }                                                                                                              \
     } while (0)
 #else
-#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types)
+#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types, agg_func_types)
 #endif
 
 namespace omniruntime {
@@ -87,8 +93,7 @@ void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, AggregateS
 
 template <typename V, typename D>
 void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t offset, ExecutionContext *context);
-void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset,
-    ExecutionContext *context);
+void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset, ExecutionContext *context);
 
 template <typename V>
 void SetVectorImpl(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
@@ -105,9 +110,14 @@ void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &te
 
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
-    HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol,
+    HashAggregationOperator(std::vector<ColumnIndex> groupByCols, std::vector<int32_t> &aggInputCols,
+        omniruntime::vec::VecTypes &aggInputTypes, omniruntime::vec::VecTypes &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
-        : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
+        : groupByCols(groupByCols),
+          aggInputCols(aggInputCols),
+          aggInputTypes(aggInputTypes),
+          aggOutputTypes(aggOutputTypes),
+          AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {
         groupedRows.reserve(DEFAULT_HASHTABLE_SIZE);
     }
@@ -118,16 +128,19 @@ public:
 
     int32_t GetOutput(std::vector<VectorBatch *> &data) override;
 
-    explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators)
-        : AggregationCommonOperator(std::move(aggregators), true, false)
+    explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators,
+        omniruntime::vec::VecTypes aggInputTypes, omniruntime::vec::VecTypes aggOutputTypes)
+        : AggregationCommonOperator(std::move(aggregators), true, false),
+          aggInputTypes(aggInputTypes),
+          aggOutputTypes(aggOutputTypes)
     {}
 
     OmniStatus Init() override;
 
     OmniStatus Close() override;
     void PreLoop(VectorBatch *vecBatch);
-    void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *types, const int32_t *groupByColIdx,
-        int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum);
+    void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
+        int32_t aggNum);
     void PostLoop(VectorBatch *vecBatch) const;
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> &GetStates()
     {
@@ -151,7 +164,9 @@ private:
     friend void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
-    std::vector<ColumnIndex> aggCols;
+    std::vector<int32_t> aggInputCols;
+    omniruntime::vec::VecTypes aggInputTypes;
+    omniruntime::vec::VecTypes aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
 };
 
@@ -161,12 +176,12 @@ public:
 
     HashAggregationOperatorFactory(PrepareContext groupByCol, VecTypes groupInputTypes, PrepareContext aggCol,
         VecTypes aggInputTypes, VecTypes aggOutputTypes, PrepareContext aggFuncTypes, bool inputRaw, bool outputPartial)
-        : groupByColContext(groupByCol),
+        : groupByColsContext(groupByCol),
           groupByTypes(groupInputTypes),
-          aggColContext(aggCol),
+          aggInputColsContext(aggCol),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
-          aggFuncTypeContext(aggFuncTypes),
+          aggFuncTypesContext(aggFuncTypes),
           AggregationCommonOperatorFactory(inputRaw, outputPartial)
     {}
 
@@ -175,14 +190,14 @@ public:
     OmniStatus Close() override;
 
 private:
-    PrepareContext groupByColContext;
-    std::vector<uint32_t> groupByColIdx;
+    PrepareContext groupByColsContext;
+    std::vector<int32_t> groupByColIdx;
     VecTypes groupByTypes;
-    PrepareContext aggColContext;
-    std::vector<uint32_t> aggColIdx;
+    PrepareContext aggInputColsContext;
+    std::vector<int32_t> aggInputCols;
     VecTypes aggInputTypes;
     VecTypes aggOutputTypes;
-    PrepareContext aggFuncTypeContext;
+    PrepareContext aggFuncTypesContext;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };
 } // end of namespace op

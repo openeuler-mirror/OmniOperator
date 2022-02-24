@@ -382,25 +382,25 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     // First stage
     ColumnIndex c0 = { 0, LongVecType::Instance(), LongVecType::Instance() };
     ColumnIndex c1 = { 1, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c2 = { 2, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c3 = { 3, LongVecType::Instance(), ContainerVecType::Instance() };
-    ColumnIndex c4 = { 4, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c5 = { 5, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c6 = { 6, LongVecType::Instance(), LongVecType::Instance() };
+    std::vector<int32_t> aggInputCols1 = { 2, 3, 4, 5, 6 };
+    VecTypes aggInputTypes1(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
+    VecTypes aggOutputTypes1(std::vector<VecType> { LongVecType::Instance(), ContainerVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
     std::vector<ColumnIndex> groupByColumns1 = { c0, c1 };
-    std::vector<ColumnIndex> aggregateColumns1 = { c2, c3, c4, c5, c6 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG,
         OMNI_VEC_TYPE_LONG, 2, true, true));
     aggs1.push_back(
         std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_CONTAINER, 3, true, true));
-    aggs1.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true));
     aggs1.push_back(
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 5, true, true));
     aggs1.push_back(
         std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 6, true, true));
-    HashAggregationOperator *groupBy1 =
-        new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, true);
+
+    HashAggregationOperator *groupBy1 = new HashAggregationOperator(groupByColumns1, aggInputCols1, aggInputTypes1,
+        aggOutputTypes1, std::move(aggs1), true, true);
     groupBy1->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -415,27 +415,28 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     if (input2 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
-    ColumnIndex c7 = { 0, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c8 = { 1, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c9 = { 2, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c10 = { 3, LongVecType::Instance(), ContainerVecType::Instance() };
-    ColumnIndex c11 = { 4, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c12 = { 5, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c13 = { 6, LongVecType::Instance(), LongVecType::Instance() };
-    groupByColumns1 = { c7, c8 };
-    aggregateColumns1 = { c9, c10, c11, c12, c13 };
+    ColumnIndex c2 = { 0, LongVecType::Instance(), LongVecType::Instance() };
+    ColumnIndex c3 = { 1, LongVecType::Instance(), LongVecType::Instance() };
+    std::vector<int32_t> aggInputCols2 = { 2, 3, 4, 5, 6 };
+    VecTypes aggInputTypes2(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
+    VecTypes aggOutputTypes2(std::vector<VecType> { LongVecType::Instance(), ContainerVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
+    groupByColumns1 = { c2, c3 };
+
     aggs1.clear();
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG,
         OMNI_VEC_TYPE_LONG, 2, true, true));
     aggs1.push_back(
         std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_CONTAINER, 3, true, true));
-    aggs1.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true));
     aggs1.push_back(
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 5, true, true));
     aggs1.push_back(
         std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 6, true, true));
-    HashAggregationOperator *groupBy2 =
-        new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, true);
+
+    HashAggregationOperator *groupBy2 = new HashAggregationOperator(groupByColumns1, aggInputCols2, aggInputTypes2,
+        aggOutputTypes2, std::move(aggs1), true, true);
     groupBy2->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -447,27 +448,28 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     Operator::DeleteOperator(groupBy2);
 
     // Second stage
-    ColumnIndex c14 = { 0, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c15 = { 1, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c16 = { 2, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c17 = { 3, LongVecType::Instance(), DoubleVecType::Instance() };
-    ColumnIndex c18 = { 4, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c19 = { 5, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c20 = { 6, LongVecType::Instance(), LongVecType::Instance() };
-    std::vector<ColumnIndex> groupByColumns2 = { c14, c15 };
-    std::vector<ColumnIndex> aggregateColumns2 = { c16, c17, c18, c19, c20 };
+    ColumnIndex c4 = { 0, LongVecType::Instance(), LongVecType::Instance() };
+    ColumnIndex c5 = { 1, LongVecType::Instance(), LongVecType::Instance() };
+    std::vector<int32_t> aggInputCols3 = { 2, 3, 4, 5, 6 };
+    VecTypes aggInputTypes3(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
+    VecTypes aggOutputTypes3(std::vector<VecType> { LongVecType::Instance(), DoubleVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
+
+    std::vector<ColumnIndex> groupByColumns2 = { c4, c5 };
     std::vector<std::unique_ptr<Aggregator>> aggs2;
     aggs2.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG,
         OMNI_VEC_TYPE_LONG, 2, false, false));
     aggs2.push_back(
         std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_CONTAINER, 3, false, false));
-    aggs2.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, false, false));
+    aggs2.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, false, false));
     aggs2.push_back(
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 5, false, false));
     aggs2.push_back(
         std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 6, false, false));
-    HashAggregationOperator *groupBy3 =
-        new HashAggregationOperator(groupByColumns2, aggregateColumns2, std::move(aggs2), false, false);
+
+    HashAggregationOperator *groupBy3 = new HashAggregationOperator(groupByColumns2, aggInputCols3, aggInputTypes3,
+        aggOutputTypes3, std::move(aggs2), false, false);
     groupBy3->Init();
 
     for (int32_t i = 0; i < result1.size(); ++i) {
@@ -517,25 +519,25 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     VectorBatch **input = buildVarCharInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE, data0, data1, data2, data3);
     // First stage
     VarcharVecType type1(1);
-    ColumnIndex c0 = { 0, type1, type1 };
     VarcharVecType type2(1);
-    ColumnIndex c1 = { 1, type2, LongVecType() };
     VarcharVecType type3(1);
-    ColumnIndex c2 = { 2, type3, type3 };
     VarcharVecType type4(4);
-    ColumnIndex c3 = { 3, type4, type4 };
+    ColumnIndex c0 = { 0, type1, type1 };
+    std::vector<int32_t> aggInputCols1 = { 1, 2, 3 };
+    VecTypes aggInputTypes1(std::vector<VecType> { type2, type3, type4 });
+    VecTypes aggOutputTypes1(std::vector<VecType> { LongVecType(), type3, type4 });
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
-    std::vector<ColumnIndex> aggregateColumns1 = { c1, c2, c3 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<CountAggregator>(OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_LONG, 1, INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_LONG, 1, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MinVarcharAggregator>(OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR, 2, INPUT_MODE,
         OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MaxVarcharAggregator>(OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR, 3, INPUT_MODE,
         OUTPUT_MODE));
-    HashAggregationOperator *groupByVarChar =
-        new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, false);
+
+    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1,
+        aggInputTypes1, aggOutputTypes1, std::move(aggs1), true, false);
     groupByVarChar->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -578,25 +580,25 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
     VectorBatch **input = buildVarCharInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE, data0, data1, data2, data3);
     // First stage
     CharVecType type1(1);
-    ColumnIndex c0 = { 0, type1, type1 };
     CharVecType type2(1);
-    ColumnIndex c1 = { 1, type2, LongVecType() };
     CharVecType type3(1);
-    ColumnIndex c2 = { 2, type3, type3 };
     CharVecType type4(4);
-    ColumnIndex c3 = { 3, type4, type4 };
+    ColumnIndex c0 = { 0, type1, type1 };
+    std::vector<int32_t> aggInputCols1 = { 1, 2, 3 };
+    VecTypes aggInputTypes1(std::vector<VecType> { type2, type3, type4 });
+    VecTypes aggOutputTypes1(std::vector<VecType> { LongVecType(), type3, type4 });
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
-    std::vector<ColumnIndex> aggregateColumns1 = { c1, c2, c3 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<CountAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG, 1, INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG, 1, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(
         std::make_unique<MinVarcharAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_CHAR, 2, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(
         std::make_unique<MaxVarcharAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_CHAR, 3, INPUT_MODE, OUTPUT_MODE));
-    HashAggregationOperator *groupByVarChar =
-        new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, false);
+
+    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1,
+        aggInputTypes1, aggOutputTypes1, std::move(aggs1), true, false);
     groupByVarChar->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -652,27 +654,27 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
 
     // First stage
     ColumnIndex c0 = { 0, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c1 = { 1, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c2 = { 2, LongVecType::Instance(), DoubleVecType::Instance() };
-    ColumnIndex c3 = { 3, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c4 = { 4, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c5 = { 5, LongVecType::Instance(), LongVecType::Instance() };
+    std::vector<int32_t> aggInputCols1 = { 1, 2, 3, 4, 5 };
+    VecTypes aggInputTypes1(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
+    VecTypes aggOutputTypes1(std::vector<VecType> { LongVecType::Instance(), DoubleVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
-    std::vector<ColumnIndex> aggregateColumns1 = { c1, c2, c3, c4, c5 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG,
         OMNI_VEC_TYPE_LONG, 1, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE, 2,
         INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(
-        std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4,
         INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 5,
         INPUT_MODE, OUTPUT_MODE));
-    HashAggregationOperator *groupByNULL =
-        new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, false);
+
+    HashAggregationOperator *groupByNULL = new HashAggregationOperator(groupByColumns1, aggInputCols1, aggInputTypes1,
+        aggOutputTypes1, std::move(aggs1), true, false);
     groupByNULL->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -728,14 +730,17 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     }
     ColumnIndex c0 = { 0, LongVecType::Instance(), LongVecType::Instance() };
     ColumnIndex c1 = { 1, LongVecType::Instance(), LongVecType::Instance() };
-    std::vector<ColumnIndex> v1 = { c0, c1 };
-    std::vector<ColumnIndex> v2 = { c0, c1 };
+    std::vector<int32_t> aggInputCols = { 0, 1 };
+    VecTypes aggInputTypes(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance() });
+    VecTypes aggOutputTypes(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance() });
+    std::vector<ColumnIndex> groupByColumns = { c0, c1 };
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, 0,
         INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         1, INPUT_MODE, OUTPUT_MODE));
-    HashAggregationOperator *groupBy = new HashAggregationOperator(v1, v2, std::move(aggs), true, false);
+    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes,
+        aggOutputTypes, std::move(aggs), true, false);
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -887,7 +892,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         0, true, true));
     aggs.push_back(
         std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_CONTAINER, 1, true, true));
-    aggs.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, true, true));
+    aggs.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, true, true));
     aggs.push_back(
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, true, true));
     aggs.push_back(
@@ -914,7 +919,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         0, true, true));
     aggs.push_back(
         std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_CONTAINER, 1, true, true));
-    aggs.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, true, true));
+    aggs.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, true, true));
     aggs.push_back(
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, true, true));
     aggs.push_back(
@@ -934,7 +939,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         OMNI_VEC_TYPE_LONG, 0, false, false));
     aggs1.push_back(
         std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE, 1, false, false));
-    aggs1.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, false, false));
     aggs1.push_back(
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, false, false));
     aggs1.push_back(
@@ -996,7 +1001,7 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs;
     std::unique_ptr<Aggregator> aggregator =
-        std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, true, true);
+        std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(5, std::move(aggregator)));
     aggregator = std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         1, true, true);
@@ -1023,7 +1028,7 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, false, false));
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG,
         OMNI_VEC_TYPE_LONG, 1, false, false));
     aggs1.push_back(
@@ -1285,7 +1290,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     perfUtil->Stop();
     long instCount = perfUtil->GetData();
     if (instCount != -1) {
-        printf("HashAgg with OmniJit,    used %lld instructions\n", perfUtil->GetData());
+        printf("HashAgg with OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
 
     timer.calculateElapse();
@@ -1420,17 +1425,18 @@ TEST(HashAggregationOperatorTest, supported_type_test)
 
     ColumnIndex c0 = { 0, LongVecType::Instance(), LongVecType::Instance() };
     ColumnIndex c1 = { 1, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c2 = { 2, LongVecType::Instance(), LongVecType::Instance() };
-    ColumnIndex c3 = { 3, LongVecType::Instance(), LongVecType::Instance() };
+    std::vector<int32_t> aggInputCols = { 2, 3 };
+    VecTypes aggInputTypes(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance() });
+    VecTypes aggOutputTypes(std::vector<VecType> { LongVecType::Instance(), LongVecType::Instance() });
     std::vector<ColumnIndex> groupByColumns = { c0, c1 };
-    std::vector<ColumnIndex> aggregateColumns = { c2, c3 };
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         2, INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         3, INPUT_MODE, OUTPUT_MODE));
-    HashAggregationOperator *groupBy =
-        new HashAggregationOperator(groupByColumns, aggregateColumns, std::move(aggs), true, false);
+
+    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes,
+        aggOutputTypes, std::move(aggs), true, false);
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -1445,7 +1451,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
         VectorHelper::FreeVecBatch(batch);
     }
     groupByColumns.clear();
-    aggregateColumns.clear();
+    aggInputCols.clear();
     aggs.clear();
     result.clear();
     delete[] input;
@@ -1457,15 +1463,18 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
     c0 = { 0, Date32VecType::Instance(), Date32VecType::Instance() };
     c1 = { 1, Date32VecType::Instance(), Date32VecType::Instance() };
-    c2 = { 2, Date32VecType::Instance(), Date32VecType::Instance() };
-    c3 = { 3, Date32VecType::Instance(), Date32VecType::Instance() };
+    aggInputCols = { 2, 3 };
+    VecTypes aggInputTypes1(std::vector<VecType> { Date32VecType::Instance(), Date32VecType::Instance() });
+    VecTypes aggOutputTypes1(std::vector<VecType> { Date32VecType::Instance(), Date32VecType::Instance() });
+
     groupByColumns = { c0, c1 };
-    aggregateColumns = { c2, c3 };
     aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(OMNI_VEC_TYPE_DATE32,
         OMNI_VEC_TYPE_DATE32, 2, INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(OMNI_VEC_TYPE_DATE32,
         OMNI_VEC_TYPE_DATE32, 3, INPUT_MODE, OUTPUT_MODE));
-    groupBy = new HashAggregationOperator(groupByColumns, aggregateColumns, std::move(aggs), true, false);
+
+    groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes1, aggOutputTypes1,
+        std::move(aggs), true, false);
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -1479,7 +1488,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
         VectorHelper::FreeVecBatch(batch);
     }
     groupByColumns.clear();
-    aggregateColumns.clear();
+    aggInputCols.clear();
     aggs.clear();
     result.clear();
     delete[] input;
@@ -1502,12 +1511,16 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupTypes[0] = IntVecType();
     aggTypes[0] = LongVecType();
     c0 = { 0, IntVecType::Instance(), IntVecType::Instance() };
-    c1 = { 1, LongVecType::Instance(), LongVecType::Instance() };
+    aggInputCols = { 1 };
+    omniruntime::vec::VecTypes aggInputTypes2(std::vector<VecType> { LongVecType::Instance() });
+    omniruntime::vec::VecTypes aggOutputTypes2(std::vector<VecType> { LongVecType::Instance() });
     groupByColumns = { c0 };
-    aggregateColumns = { c1 };
     aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         1, INPUT_MODE, OUTPUT_MODE));
-    groupBy = new HashAggregationOperator(groupByColumns, aggregateColumns, std::move(aggs), true, false);
+
+    groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes2, aggOutputTypes2,
+        std::move(aggs), true, false);
+
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -1525,7 +1538,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     }
     VectorHelper::FreeVecBatches(result);
     groupByColumns.clear();
-    aggregateColumns.clear();
+    aggInputCols.clear();
     aggs.clear();
     result.clear();
 }
@@ -1586,7 +1599,7 @@ TEST(AggregatorTest, sum_test)
 TEST(AggregatorTest, count_column_test)
 {
     int32_t ROW_PER_VEC_BATCH = 200;
-    auto countFactory = new CountAggregatorFactory();
+    auto countFactory = new CountColumnAggregatorFactory();
     // count test types : long + dictionary + null
     auto countLong = countFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, true, false);
     auto countNull = countFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 2, true, false);
@@ -1632,6 +1645,56 @@ TEST(AggregatorTest, count_column_test)
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete countFactory;
+}
+
+TEST(AggregatorTest, count_all_test)
+{
+    int32_t ROW_PER_VEC_BATCH = 200;
+    auto countAllFactory = new CountAllAggregatorFactory();
+    auto countLong = countAllFactory->CreateAggregator(OMNI_VEC_TYPE_NONE, OMNI_VEC_TYPE_LONG,
+                                                       Aggregator::INVALID_INPUT_COL, true, false);
+    auto countNull = countAllFactory->CreateAggregator(OMNI_VEC_TYPE_NONE, OMNI_VEC_TYPE_LONG,
+                                                       Aggregator::INVALID_INPUT_COL, true, false);
+
+    auto longInputVec = buildAggregateInput(LongVecType(), ROW_PER_VEC_BATCH);
+    LongVecType longVecType;
+    int32_t ids[ROW_PER_VEC_BATCH];
+    int64_t dict[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        ids[i] = 0;
+        dict[i] = 1;
+    }
+    auto nullInputVec = buildAggregateInput(VecType(OMNI_VEC_TYPE_NONE), ROW_PER_VEC_BATCH);
+
+    VectorBatch *vecBatch = new VectorBatch(2, ROW_PER_VEC_BATCH);
+    vecBatch->SetVector(0, longInputVec);
+    vecBatch->SetVector(1, nullInputVec);
+
+    // process long
+    AggregateState state { nullptr };
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            countLong->InitiateGroup(state, vecBatch, i);
+        } else {
+            countLong->ProcessGroup(state, vecBatch, i);
+        }
+    }
+    EXPECT_EQ(200, state.count);
+    state.val = nullptr;
+
+    // process null
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            countNull->InitiateGroup(state, vecBatch, i);
+        } else {
+            countNull->ProcessGroup(state, vecBatch, i);
+        }
+    }
+    EXPECT_EQ(200, state.count);
+    state.val = nullptr;
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete countAllFactory;
 }
 
 TEST(AggregatorTest, min_test)

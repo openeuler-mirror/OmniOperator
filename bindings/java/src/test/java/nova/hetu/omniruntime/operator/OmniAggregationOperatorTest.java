@@ -2,7 +2,10 @@
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
@@ -31,6 +34,50 @@ public class OmniAggregationOperatorTest {
     /**
      * Test execute agg multiple page.
      */
+    @Test
+    public void testExecuteCountMultiplePage() {
+        VecType[] sourceTypes = {LongVecType.LONG};
+        FunctionType[] agggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        int[] aggInputChannels = {1};
+        int[] maskChannels = {-1, -1};
+        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, agggFunctionTypes,
+                aggInputChannels, maskChannels, aggOutputTypes, true, false);
+
+        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
+        int rowNum = 100;
+        int pageCount = 10;
+        for (int i = 0; i < pageCount; i++) {
+            vecBatchList.add(new VecBatch(buildDataForCount(rowNum)));
+        }
+
+        OmniOperator omniOperator = factory.createOperator();
+        for (VecBatch vecBatch : vecBatchList.build()) {
+            omniOperator.addInput(vecBatch);
+        }
+
+        Iterator<VecBatch> output = omniOperator.getOutput();
+        while (output.hasNext()) {
+            VecBatch vecBatch = output.next();
+            if (vecBatch.getVectors().length != aggOutputTypes.length) {
+                throw new IllegalArgumentException(
+                        format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                                vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+            }
+
+            assertNotNull(vecBatch);
+            assertEquals(vecBatch.getVectors().length, 2);
+            Vec[] vectors = vecBatch.getVectors();
+            assertEquals(((LongVec) vectors[0]).get(0), 1000L);
+            assertEquals(((LongVec) vectors[1]).get(0), 500L);
+
+            freeVecBatch(vecBatch);
+        }
+
+        omniOperator.close();
+        factory.close();
+    }
+
     @Test
     public void testExecuteAggMultiplePage() {
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
@@ -155,6 +202,28 @@ public class OmniAggregationOperatorTest {
 
             releaseVecMemory(vecBatch.getVectors());
         }
+    }
+
+    private List<Vec> buildDataForCount(int rowNum) {
+        List<Vec> columns = new ArrayList<>();
+
+        LongVec c1 = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            c1.set(i, 0);
+        }
+        columns.add(c1);
+
+        LongVec c2 = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            if (i % 2 == 0) {
+                c2.set(i, 1);
+            } else {
+                c2.setNull(i);
+            }
+        }
+        columns.add(c2);
+
+        return columns;
     }
 
     private List<Vec> build4Columns(int rowNum) {

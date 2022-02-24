@@ -649,28 +649,14 @@ JitContext *CreateHashAggregationJitContext(VecTypes &groupByVecTypes, int32_t *
 #else
     // groupby channel and id
     auto groupColNum = groupByVecTypes.GetSize();
-    auto groupByTypeIds = groupByVecTypes.GetIds();
-    auto aggColNum = aggVecTypes.GetSize();
-    auto aggTypeIds = aggVecTypes.GetIds();
+    auto aggNum = aggFuncsCount;
 
-    int32_t colNum = groupColNum + aggColNum;
-    int32_t colTypes[colNum];
-
-    for (int i = 0; i < groupColNum; ++i) {
-        colTypes[groupByCols[i]] = groupByTypeIds[i];
-    }
-    for (int i = 0; i < aggColNum; ++i) {
-        colTypes[aggCols[i]] = aggTypeIds[i];
-    }
-
-    ParamValue pColType = ParamValue(colTypes, colNum);
     ParamValue pGroupNum = ParamValue(&groupColNum);
-    ParamValue pAggNum = ParamValue(&aggColNum);
+    ParamValue pAggNum = ParamValue(&aggNum);
 
     Specialization inloopSp;
-    inloopSp.AddSpecializedParam(PARAM_INDEX_3, &pColType);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_5, &pGroupNum);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_7, &pAggNum);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_4, &pGroupNum);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_5, &pAggNum);
 
     map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp } };
 

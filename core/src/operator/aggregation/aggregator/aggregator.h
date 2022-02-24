@@ -19,7 +19,7 @@ namespace op {
 using namespace omniruntime::vec;
 
 using ColumnIndex = struct ColumnIndex {
-    uint32_t idx;
+    int32_t idx;
     VecType input;
     VecType output;
 };
@@ -56,9 +56,9 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *       */
-    Aggregator(FunctionType aggregateType, int32_t inputType, int32_t outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false)
+     *        */
+    Aggregator(FunctionType aggregateType, int32_t inputType, int32_t outputType, int32_t channel, bool inputRaw = true,
+        bool outputPartial = false)
         : type(aggregateType),
           inputType(inputType),
           outputType(outputType),
@@ -113,6 +113,7 @@ public:
 
 public:
     static const int32_t INVALID_MASK_COL = -1;
+    static const int32_t INVALID_INPUT_COL = -1;
 
 protected:
     FunctionType type;

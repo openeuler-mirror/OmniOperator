@@ -27,10 +27,13 @@ OmniStatus AggregationOperatorFactory::Init()
     OmniStatus ret = OMNI_STATUS_NORMAL;
     uint32_t *aggInputColsPtr = aggInputColsContext.context;
     std::vector<VecType> types = sourceTypes.Get();
-    for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
+    for (int32_t i = 0; i < aggInputColsContext.len; i++) {
         aggInputCols.push_back(aggInputColsPtr[i]);
-        maskCols.push_back(maskColsContext.context[i]);
         aggInputTypes.push_back(types[aggInputColsPtr[i]]);
+    }
+
+    for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
+        maskCols.push_back(maskColsContext.context[i]);
     }
 
     uint32_t *aggFuncTypesPtr = aggFuncTypesContext.context;
@@ -40,8 +43,12 @@ OmniStatus AggregationOperatorFactory::Init()
                 CreateAggregatorFactory<SumAggregatorFactory>(maskCols[i]);
                 break;
             }
-            case OMNI_AGGREGATION_TYPE_COUNT: {
-                CreateAggregatorFactory<CountAggregatorFactory>(maskCols[i]);
+            case OMNI_AGGREGATION_TYPE_COUNT_COLUMN: {
+                CreateAggregatorFactory<CountColumnAggregatorFactory>(maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_COUNT_ALL: {
+                CreateAggregatorFactory<CountAllAggregatorFactory>(maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_MAX: {
@@ -74,11 +81,23 @@ Operator *AggregationOperatorFactory::CreateOperator()
 {
     std::vector<std::unique_ptr<Aggregator>> aggs;
 
+    uint32_t aggInputChannelIndex = 0;
     for (int32_t i = 0; i < this->aggOutputTypes.GetSize(); i++) {
-        auto inputType = aggInputTypes[i];
+        uint32_t aggregateType = aggFuncTypesContext.context[i];
+        VecType inputType;
+        int32_t aggInputCol;
+        if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
+            inputType = VecType(OMNI_VEC_TYPE_NONE);
+            aggInputCol = Aggregator::INVALID_INPUT_COL;
+        } else {
+            inputType = aggInputTypes[aggInputChannelIndex];
+            aggInputCol = aggInputCols[aggInputChannelIndex];
+            aggInputChannelIndex++;
+        }
+
         auto outputType = aggOutputTypes.Get()[i];
-        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(),
-            aggInputCols[i], inputRaw, outputPartial);
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(), aggInputCol,
+            inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
