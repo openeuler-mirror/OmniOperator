@@ -232,6 +232,27 @@ ExprType BetweenExpr::GetType() const
 }
 
 
+SwitchExpr::SwitchExpr() : whenClause(), falseExpr() {
+}
+SwitchExpr::~SwitchExpr()
+{
+    for (std::pair<Expr*, Expr*> vec : whenClause) {
+        delete vec.first;
+        delete vec.second;
+    }
+    delete falseExpr;
+}
+SwitchExpr::SwitchExpr(std::vector<std::pair<Expr*, Expr*>> whens, Expr* fexp)
+{
+    dataType = std::make_unique<VecType>(fexp->GetReturnType());
+    whenClause = whens;
+    falseExpr = fexp;
+}
+ExprType SwitchExpr::GetType() const
+{
+    return ExprType::SWITCH_E;
+}
+
 IfExpr::IfExpr() : condition(), trueExpr(), falseExpr() {
 }
 

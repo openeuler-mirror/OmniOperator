@@ -164,6 +164,42 @@ Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
     return make_unique<BetweenExpr>(val, lowBoundExpr, upBoundExpr).release();
 }
 
+Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
+{
+    Expr *elseExpr = ParseJSON(jsonExpr["else"]);
+    if (elseExpr == nullptr) {
+        return nullptr;
+    }
+    Expr *left = ParseJSON(jsonExpr["input"]);
+    if (left == nullptr) {
+        return nullptr;
+    }
+    int numOfCases = jsonExpr["numOfCases"].get<int>();
+    std::vector<std::pair<Expr*, Expr*>> whenClause;
+
+    for (int i = 0; i < numOfCases; i++) {
+        std::pair<Expr*, Expr*> when;
+        Expr *right = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["when"]);
+        if (right == nullptr) {
+            return nullptr;
+        }
+        Expr *result = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["result"]);
+        if (result == nullptr) {
+            return nullptr;
+        }
+        BinaryExpr *condition = new BinaryExpr(EQ, left, right, BooleanType());
+        when = make_pair(condition, result);
+        whenClause.push_back(when);
+    }
+    if (TypeUtil::IsStringType(elseExpr->GetReturnTypeId())
+        && elseExpr->GetType() == ExprType::LITERAL_E
+        && static_cast<LiteralExpr*>(elseExpr)->stringVal->compare("null") == 0) {
+        return make_unique<SwitchExpr>(whenClause,
+                                   ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId())).release();
+    }
+    return make_unique<SwitchExpr>(whenClause, elseExpr).release();
+}
+
 Expr *JSONParser::ParseJSONIf(Json jsonExpr)
 {
     Expr *cond = ParseJSON(jsonExpr["condition"]);
@@ -294,6 +330,8 @@ Expr *JSONParser::ParseJSON(Json jsonExpr)
         return ParseJsonIsNull(jsonExpr);
     } else if (exprTypeStr == "FUNC" || exprTypeStr == "FUNCTION") {
         return ParseJSONFunc(jsonExpr);
+    } else if (exprTypeStr == "SWITCH") {
+        return ParseJSONSwitch(jsonExpr);
     }
     // return nullptr if ExprType not supported
     return nullptr;

@@ -52,7 +52,14 @@ void ExprInfoExtractor::Visit(const CoalesceExpr &e)
     e.value1->Accept(*this);
     e.value2->Accept(*this);
 }
-
+void ExprInfoExtractor::Visit(const SwitchExpr &e)
+{
+    e.falseExpr->Accept(*this);
+    for (auto &when : e.whenClause) {
+        when.first->Accept(*this);
+        when.second->Accept(*this);
+    }
+}
 void ExprInfoExtractor::Visit(const IsNullExpr &e)
 {
     e.value->Accept(*this);

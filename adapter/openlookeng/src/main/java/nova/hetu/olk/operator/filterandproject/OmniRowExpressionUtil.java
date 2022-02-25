@@ -230,6 +230,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         ObjectNode specialFormRoot = MAPPER.createObjectNode();
         String formName = specialForm.getForm().name();
         int returnType = OperatorUtils.toVecType(specialForm.getType()).getId().ordinal();
+        int size = specialForm.getArguments().size();
         switch (formName) {
             case "AND" :
             case "OR" :
@@ -248,6 +249,19 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                         specialForm.getArguments().get(0).accept(this, context));
                 specialFormRoot.set("if_true", specialForm.getArguments().get(1).accept(this, context));
                 specialFormRoot.set("if_false", specialForm.getArguments().get(2).accept(this, context));
+                break;
+            case "SWITCH" :
+                specialFormRoot.put("exprType", "SWITCH").put("returnType", returnType).put("numOfCases",
+                        size - 2).set("input", specialForm.getArguments().get(0).accept(this, context));
+                for (int i = 1; i < size - 1; i++) {
+                    specialFormRoot.set("Case" + i, specialForm.getArguments().get(i).accept(this, context));
+                }
+                specialFormRoot.set("else", specialForm.getArguments().get(size - 1).accept(this, context));
+                break;
+            case "WHEN" :
+                specialFormRoot.put("exprType", "WHEN").put("returnType", returnType).set("when",
+                        specialForm.getArguments().get(0).accept(this, context));
+                specialFormRoot.set("result", specialForm.getArguments().get(1).accept(this, context));
                 break;
             case "COALESCE" :
                 specialFormRoot.put("exprType", "COALESCE").put("returnType", returnType).set("value1",

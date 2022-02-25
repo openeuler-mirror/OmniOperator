@@ -164,6 +164,21 @@ string getIfTestJson(int32_t rt, const string &val, const string &val1, const st
     return ss.str();
 }
 
+string getSwitchTestJson(int32_t rt, const string &val, const string &val1, const string &val2)
+{
+    ss.str("");
+    ss << R"({"exprType": "SWITCH", "returnType": )" << rt << R"(, "numOfCases": 1, "input": )" << val <<
+        R"(, "Case1": )" << val1 << R"(, "else": )" << val2 << R"(})";
+    return ss.str();
+}
+
+string getWhenTestJson(int32_t rt, const string &val, const string &val1)
+{
+    ss.str("");
+    ss << R"({"exprType": "WHEN", "returnType": )" << rt << R"(, "when": )" << val << R"(, "result": )" << val1 << R"(})";
+    return ss.str();
+}
+
 string getInTestJson(const vector<string> &args)
 {
     ss.str("");
@@ -458,6 +473,41 @@ public:
     }
 };
 
+class TestSwitchExpr : public TestExpr {
+    vector<pair<TestExpr *, TestExpr*>> whenClause;
+    TestExpr *elseExpr = nullptr;
+
+public:
+    TestSwitchExpr(vector<pair<TestExpr *, TestExpr *>> whenClause, TestExpr *elseExpr) : whenClause(std::move(whenClause)), elseExpr(elseExpr)
+    {
+        dataType = elseExpr->dataType;
+    }
+    ~TestSwitchExpr() override
+    {
+        for (pair<TestExpr*, TestExpr*> pair : whenClause) {
+           delete pair.first;
+           delete pair.second;
+        }
+        delete elseExpr;
+    }
+    bool operator == (const SwitchExpr &rhs) const
+    {
+        return (*dataType == rhs.GetReturnType() && elseExpr->isEqual(rhs.falseExpr) &&
+            std::equal(whenClause.begin(), whenClause.end(), rhs.whenClause.begin(), [](pair<TestExpr*, TestExpr*> left,
+                    std::pair<Expr*, Expr*> right) { return left.first->isEqual(right.first) && left.second->isEqual(right.second); }));
+    }
+
+    bool isEqual(Expr *that) const override
+    {
+        if (typeid(SwitchExpr) != typeid(*that))
+            return false;
+        auto *rhs = dynamic_cast<SwitchExpr *>(that);
+        bool result = (*this == *rhs);
+        EXPECT_TRUE(result);
+        return result;
+    }
+};
+
 class TestIfExpr : public TestExpr {
     TestExpr *condition = nullptr;
     TestExpr *tExpr = nullptr;
@@ -720,6 +770,21 @@ TEST(JSONParserTest, InExpr)
     TestInExpr expectedExpr(args);
     expectedExpr.isEqual(inExpr);
     delete inExpr;
+}
+
+TEST(JSONParserTest, SwitchExpr)
+{
+    string whenJson =
+            getWhenTestJson(OMNI_VEC_TYPE_INT, getInt64TestJson(int64Val), getInt32TestJSON(int32Val));
+    string unparsedSwitchJson =
+            getSwitchTestJson(OMNI_VEC_TYPE_INT, getInt32TestJSON(int32Val), whenJson, getInt32TestJSON(4));
+    Expr *switchExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedSwitchJson));
+    auto condition = new TestBinaryExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
+                                        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+    vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition, make_unique<TestLiteralExpr>(int32Val, *IntType()).release() } };
+    TestSwitchExpr expectedExpr(whenClause, make_unique<TestLiteralExpr>(4, *IntType()).release());
+    expectedExpr.isEqual(switchExpr);
+    delete switchExpr;
 }
 
 TEST(JSONParserTest, IfExpr)

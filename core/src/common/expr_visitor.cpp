@@ -31,6 +31,11 @@ void BetweenExpr::Accept(ExprVisitor &visitor) const
     return visitor.Visit(*this);
 }
 
+void SwitchExpr::Accept(ExprVisitor &visitor) const
+{
+    return visitor.Visit(*this);
+}
+
 void IfExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);

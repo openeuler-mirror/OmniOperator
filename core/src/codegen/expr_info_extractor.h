@@ -22,6 +22,7 @@ public:
     void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
+    void Visit(const omniruntime::expressions::SwitchExpr &e) override;
     std::set<int32_t> GetVectorIndexes();
 private:
     std::set<int32_t> vectorIndexes;
