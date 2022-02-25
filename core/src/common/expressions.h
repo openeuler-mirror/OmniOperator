@@ -59,10 +59,11 @@ enum ExprType {
     IN_E,
     BETWEEN_E,
     IF_E,
+    SWITCH_E,
     COALESCE_E,
     IS_NULL_E,
     FUNC_E,
-    INVALID_E
+    INVALID_E,
 };
 
 const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
@@ -192,6 +193,17 @@ public:
     ExprType GetType() const override;
 };
 
+class SwitchExpr : public Expr {
+public:
+    std::vector<std::pair<Expr*, Expr*>> whenClause;
+    Expr* falseExpr = nullptr;
+    SwitchExpr();
+    ~SwitchExpr() override;
+    SwitchExpr(std::vector<std::pair<Expr*, Expr*>> whens, Expr* fexp);
+
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+};
 
 class IfExpr : public Expr {
 public:

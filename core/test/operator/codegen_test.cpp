@@ -156,7 +156,400 @@ TEST(CodeGenTest, SimpleProject)
     delete[] dataLength;
     delete context;
 }
+
+//Same logic as Single Project Test below except using switch expression to replace if expression
 // A more complicated test for individual row projection
+// when gtExpr then addExpr
+// else mulExpr
+TEST(CodeGenTest, SingleCaseSwitch)
+{
+    FieldExpr *gtLeft = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
+    gtRight->longVal = 3000000000;
+    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+
+    FieldExpr *mulLeft = new FieldExpr(0, IntType());
+    LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+
+    std::vector<std::pair<Expr*, Expr*>> whenClause;
+    std::pair<Expr*, Expr*> when;
+    when.first = gtExpr;
+    when.second = addExpr;
+    whenClause.push_back(when);
+
+
+    SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
+
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes types(vecOfTypes);
+
+    const int numRows = 10;
+    int32_t *col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i;
+    }
+    int64_t *col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i % 2 ? 4000000000 : 12;
+    }
+
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
+    table[1] = (int64_t)col2;
+
+    const int32_t entries = numRows * numCols;
+
+    bool **bitmap = new bool *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        bitmap[col] = new bool[numRows];
+        for (int i = 0; i < numRows; i++) {
+            bitmap[col][i] = false;
+        }
+    }
+
+    auto **offsets = new int32_t *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        offsets[col] = new int32_t[numRows];
+    }
+
+    RowProjection rowProjection(*switchExpr);
+
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
+    auto context = new ExecutionContext();
+    bool isNull = false;
+    for (int32_t i = 0; i < numRows; i++) {
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        EXPECT_EQ(res, i % 2 ? i + 10 : -i);
+    }
+    context->getArena()->Reset();
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] col1;
+    delete[] col2;
+    delete[] table;
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] dataLength;
+    delete context;
+}
+
+// whenClause with 2 cases
+// when gtExpr then addExpr
+// when ltExpr then addExpr
+// else mulExpr
+TEST(CodeGenTest, DoubleCaseSwitch)
+{
+    FieldExpr *gtLeft = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
+    gtRight->longVal = 3000000000;
+    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+
+    FieldExpr *ltLeft = new FieldExpr(1, LongType());
+    LiteralExpr *ltRight = new LiteralExpr(3000000000, LongType());
+    ltRight->longVal = 3000000000;
+    BinaryExpr *ltExpr = new BinaryExpr(LT, ltLeft, ltRight, BooleanType());
+
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+
+    FieldExpr *addLeft1 = new FieldExpr(0, IntType());
+    LiteralExpr *addRight1 = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
+
+    FieldExpr *mulLeft = new FieldExpr(0, IntType());
+    LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+
+    std::vector<std::pair<Expr*, Expr*>> whenClause;
+    std::pair<Expr*, Expr*> when1;
+    std::pair<Expr*, Expr*> when2;
+    when1.first = gtExpr;
+    when1.second = addExpr;
+    when2.first = ltExpr;
+    when2.second = addExpr1;
+    whenClause.push_back(when1);
+    whenClause.push_back(when2);
+
+
+    SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
+
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes types(vecOfTypes);
+
+    const int numRows = 10;
+    int32_t *col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i;
+    }
+    int64_t *col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i % 2 ? 4000000000 : 12;
+    }
+
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
+    table[1] = (int64_t)col2;
+
+    const int32_t entries = numRows * numCols;
+
+    bool **bitmap = new bool *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        bitmap[col] = new bool[numRows];
+        for (int i = 0; i < numRows; i++) {
+            bitmap[col][i] = false;
+        }
+    }
+
+    auto **offsets = new int32_t *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        offsets[col] = new int32_t[numRows];
+    }
+
+    RowProjection rowProjection(*switchExpr);
+
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
+    auto context = new ExecutionContext();
+    bool isNull = false;
+    for (int32_t i = 0; i < numRows; i++) {
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        EXPECT_EQ(res, i + 10);
+    }
+    context->getArena()->Reset();
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] col1;
+    delete[] col2;
+    delete[] table;
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] dataLength;
+    delete context;
+}
+
+// whenClause with 3 cases
+// when gtExpr then addExpr
+// when gtExpr1 then addExpr1
+// when gtExpr2 then addExpr2
+// else mulExpr
+TEST(CodeGenTest, ThreeCaseSwitch)
+{
+    FieldExpr *gtLeft = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
+    gtRight->longVal = 3000000000;
+    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+
+    FieldExpr *gtLeft1 = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight1 = new LiteralExpr(3000000001, LongType());
+    gtRight1->longVal = 3000000001;
+    BinaryExpr *gtExpr1 = new BinaryExpr(GT, gtLeft1, gtRight1, BooleanType());
+
+    FieldExpr *gtLeft2 = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight2 = new LiteralExpr(3000000002, LongType());
+    gtRight2->longVal = 3000000002;
+    BinaryExpr *gtExpr2 = new BinaryExpr(GT, gtLeft2, gtRight2, BooleanType());
+
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+
+    FieldExpr *addLeft1 = new FieldExpr(0, IntType());
+    LiteralExpr *addRight1 = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
+
+    FieldExpr *addLeft2 = new FieldExpr(0, IntType());
+    LiteralExpr *addRight2 = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
+
+    FieldExpr *mulLeft = new FieldExpr(0, IntType());
+    LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+
+    std::vector<std::pair<Expr*, Expr*>> whenClause;
+    std::pair<Expr*, Expr*> when1;
+    std::pair<Expr*, Expr*> when2;
+    std::pair<Expr*, Expr*> when3;
+    when1.first = gtExpr;
+    when1.second = addExpr;
+    when2.first = gtExpr1;
+    when2.second = addExpr1;
+    when3.first = gtExpr2;
+    when3.second = addExpr2;
+    whenClause.push_back(when1);
+    whenClause.push_back(when2);
+    whenClause.push_back(when3);
+
+
+    SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
+
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes types(vecOfTypes);
+
+    const int numRows = 10;
+    int32_t *col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i;
+    }
+    int64_t *col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i % 2 ? 4000000000 : 12;
+    }
+
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
+    table[1] = (int64_t)col2;
+
+    const int32_t entries = numRows * numCols;
+
+    bool **bitmap = new bool *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        bitmap[col] = new bool[numRows];
+        for (int i = 0; i < numRows; i++) {
+            bitmap[col][i] = false;
+        }
+    }
+
+    auto **offsets = new int32_t *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        offsets[col] = new int32_t[numRows];
+    }
+
+    RowProjection rowProjection(*switchExpr);
+
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
+    auto context = new ExecutionContext();
+    bool isNull = false;
+    for (int32_t i = 0; i < numRows; i++) {
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        EXPECT_EQ(res, i % 2 ? i + 10 : -i);
+    }
+    context->getArena()->Reset();
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] col1;
+    delete[] col2;
+    delete[] table;
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] dataLength;
+    delete context;
+}
+
+TEST(CodeGenTest, SwitchElseNull)
+{
+    FieldExpr *gtLeft = new FieldExpr(1, LongType());
+    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
+    gtRight->longVal = 3000000000;
+    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(10, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+
+    VecTypePtr destType = make_unique<VecType>(OMNI_VEC_TYPE_INT);
+    LiteralExpr *nullExpr = new LiteralExpr();
+    nullExpr->isNull = true;
+    nullExpr->dataType = std::move(destType);
+
+    std::vector<std::pair<Expr*, Expr*>> whenClause;
+    std::pair<Expr*, Expr*> when;
+    when.first = gtExpr;
+    when.second = addExpr;
+    whenClause.push_back(when);
+
+
+    SwitchExpr *switchExpr = new SwitchExpr(whenClause, nullExpr);
+
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes types(vecOfTypes);
+
+    const int numRows = 10;
+    int32_t *col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i;
+    }
+    int64_t *col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i % 2 ? 4000000000 : 12;
+    }
+
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
+    table[1] = (int64_t)col2;
+
+    const int32_t entries = numRows * numCols;
+
+    bool **bitmap = new bool *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        bitmap[col] = new bool[numRows];
+        for (int i = 0; i < numRows; i++) {
+            bitmap[col][i] = false;
+        }
+    }
+
+    auto **offsets = new int32_t *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        offsets[col] = new int32_t[numRows];
+    }
+
+    RowProjection rowProjection(*switchExpr);
+
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_VEC_TYPE_INT);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
+    auto context = new ExecutionContext();
+    bool isNull = false;
+    for (int32_t i = 0; i < numRows; i++) {
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        EXPECT_EQ(res, i % 2 ? i + 10 : 0);
+    }
+    context->getArena()->Reset();
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] col1;
+    delete[] col2;
+    delete[] table;
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] dataLength;
+    delete context;
+}
+
 TEST(CodeGenTest, SingleProject)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());

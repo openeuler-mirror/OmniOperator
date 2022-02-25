@@ -33,6 +33,7 @@ private:
     static omniruntime::expressions::Expr *ParseJsonIsNull(nlohmann::json jsonExpr);
 
     static omniruntime::expressions::Expr *ParseJSONFunc(nlohmann::json jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONSwitch(nlohmann::json jsonExpr);
 
     static omniruntime::expressions::OperatorType GetOperatorType(omniruntime::expressions::Operator op);
 

@@ -996,6 +996,109 @@ void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
     }
 }
 
+
+void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
+{
+    Type *switchDataType = llvmTypes->VectorToLLVMType(switchExpr.GetReturnType());
+    Expr *elseExpr = switchExpr.falseExpr;
+    std::vector<std::pair<Expr*, Expr*>> whenClause = switchExpr.whenClause;
+    const int size = whenClause.size();
+
+    std::vector<BasicBlock*> condBlockList;
+    std::vector<BasicBlock*> trueBlockList;
+    BasicBlock *falseBlock = BasicBlock::Create(*context, "FALSE_BLOCK");
+    BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
+    int32_t numReservedValues = 2;
+
+    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, numReservedValues,
+                                                       nullptr, "temp_result_value");
+    AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), numReservedValues,
+                                                      nullptr,  "temp_result_null");
+    AllocaInst *resultLengthPtr = builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues,
+                                                        nullptr, "temp_result_length");
+    condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(0), func));
+    trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(0), func));
+
+    for (int i = 1; i < size; i++) {  // generate block lists used in the next loop to evaluate conditions
+        condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(i)));
+        trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(i), func));
+    }
+    for (int i = 0; i < size; i++) {  // evaluate condition in the whenClause
+        Expr *cond = whenClause[i].first;
+        Expr *resExpr = whenClause[i].second;
+
+        // if cond evaluates to true, control flow goes to trueBlock, save evTrue to temp value
+        // Otherwise goes to next Block in the list and keeps evaluating next cond in the whenClause
+        // If last cond evaluates to false, control flow goes to falseBlock and save evFalse to temp value
+        if (i == 0) {  // Create the entry of the block
+            builder->CreateBr(condBlockList[i]);
+        }
+        if (i > 0) {
+            func->getBasicBlockList().push_back(condBlockList[i]);
+        }
+        if (i < size - 1) {
+            builder->SetInsertPoint(condBlockList[i]);
+            CodeGenValuePtr evCond = VisitExpr(*cond);
+            if (!evCond->IsValidValue()) {
+                this->value = CreateInvalidCodeGenValue();
+                return;
+            }
+            builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data),
+                                  trueBlockList[i],condBlockList[i + 1]);
+        } else {
+            builder->SetInsertPoint(condBlockList[i]);
+            CodeGenValuePtr evCond = VisitExpr(*cond);
+            if (!evCond->IsValidValue()) {
+                this->value = CreateInvalidCodeGenValue();
+                return;
+            }
+            builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data),
+                                  trueBlockList[i], falseBlock);
+        }
+
+        builder->SetInsertPoint(trueBlockList[i]);
+        auto evTrue = VisitExpr(*resExpr);
+        if (!evTrue->IsValidValue()) {
+            this->value = CreateInvalidCodeGenValue();
+            return;
+        }
+        Value *evTrueValue = evTrue->data;
+        Value *evTrueLength = evTrue->length;
+        Value *evTrueNull = evTrue->isNull;
+        builder->CreateStore(evTrueValue, resultValuePtr);
+        builder->CreateStore(evTrueNull, resultNullPtr);
+        if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
+            builder->CreateStore(evTrueLength, resultLengthPtr);
+        }
+        builder->CreateBr(mergeBlock);
+    }
+
+    func->getBasicBlockList().push_back(falseBlock);
+    builder->SetInsertPoint(falseBlock);
+    auto evFalse = VisitExpr(*elseExpr);
+    if (!evFalse->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+    Value *evFalseValue = evFalse->data;
+    Value *evFalseLength = evFalse->length;
+    Value *evFalseNull = evFalse->isNull;
+    builder->CreateStore(evFalseValue, resultValuePtr);
+    builder->CreateStore(evFalseNull, resultNullPtr);
+    if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
+        builder->CreateStore(evFalseLength, resultLengthPtr);
+    }
+    builder->CreateBr(mergeBlock);
+
+    func->getBasicBlockList().push_back(mergeBlock);
+    builder->SetInsertPoint(mergeBlock);
+    if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
+        this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
+                                                builder->CreateLoad(resultLengthPtr));
+    }
+    this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
+}
+
 void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
 {
     Expr *cond = ifExpr.condition;

@@ -215,7 +215,37 @@ void ExprPrinter::Visit(const InExpr &e)
     }
     this->indentationDepth--;
 }
+/*
+ * Example:switch:bool(
+ *      Cmp:bool(EQ
+ *          #0,
+ *          100,
+ *      ),
+ *      Cmp:bool(EQ
+ *          #0,
+ *          200,
+ *      ),
+ *      Cmp:bool(),
+ *
+ *
+ * )
+ */
+void ExprPrinter::Visit(const SwitchExpr &e)
+{
+    string indent = GenerateIndentation();
+    printf((indent + "Switch:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+    this->indentationDepth++;
+    for (int i = 0; i < e.whenClause.size(); i++) {
+        (e.whenClause[i].first)->Accept(*this);
+        printf(",\n");
+        (e.whenClause[i].second)->Accept(*this);
+        printf(",\n");
+    }
 
+    e.falseExpr->Accept(*this);
+    printf("\n%s)", indent.c_str());
+    this->indentationDepth--;
+}
 /*
  * EXAMPLE
  *
