@@ -84,8 +84,8 @@ public class TestOmniExpressionUtil {
                 {constant(12345678910L, BIGINT), "{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":12345678910}"},
                 {constant(1, INTEGER), "{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":1}"},
                 {constant(2.0, DOUBLE), "{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":2.0}"},
-                {constant(4, createDecimalType(19)), "{\"exprType\":\"LITERAL\",\"dataType\":7,\"isNull\":false,\"value\":4,\"precision\":19,\"scale\":0}"},
-                {constant(5, createDecimalType(37)), "{\"exprType\":\"LITERAL\",\"dataType\":7,\"isNull\":false,\"value\":5,\"precision\":37,\"scale\":0}"},
+                {constant(4, createDecimalType(19)), "{\"exprType\":\"LITERAL\",\"dataType\":7,\"isNull\":false,\"value\":\"4\",\"precision\":19,\"scale\":0}"},
+                {constant(5, createDecimalType(37)), "{\"exprType\":\"LITERAL\",\"dataType\":7,\"isNull\":false,\"value\":\"5\",\"precision\":37,\"scale\":0}"},
                 {constant(varcharSlice, VARCHAR), "{\"exprType\":\"LITERAL\",\"dataType\":15,\"isNull\":false,\"value\":\"stringVal\",\"width\":1048576}"},
                 // Need support of UNKNOWN presto type in VecType
                 // {constant("UNKNOWN", UNKNOWN), "{\"exprType\":\"LITERAL\",\"dataType\":0,"isNull":false,\"value\":UNKNOWN}"},

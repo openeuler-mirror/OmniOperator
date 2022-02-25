@@ -12,11 +12,12 @@ To add new functions to omni-runtime, follow the steps below. You will need to m
    Parameter types can be `int32_t`,  `int64_t`, `double`, `boolean`, `string` or `decimal`.
    * For variable length `string` parameter aka `VARCHAR`, it's passed in as `char*`(pointer to the data) and `int32_t`(length of the string)
    * For fixed length `string` parameter aka `CHAR(width)`, it's passed in as `char*`(pointer to the data) `int32_t`(width) and `int32_t`(length of the string)
-   * For `decimal` 128bit parameter, it's passed in as `int64_t`(high 64 bit) and `int64_t`(low 64 bit) values
+   * For `decimal` 128bit parameter, it's passed in as `int64_t`(high 64 bit) and `int64_t`(low 64 bit) values.
    * If you need to allocate memory for returning `string` values, you can also pass in a `int64_t` in the beginning of parameter list as the pointer address to an `ExecutionContext` object, and use this object to allocate new memory for better performance and void memory leak
    
    Return type can also be `int32_t`,  `int64_t`, `double`, `boolean`, `string` or `decimal`.
    * For `string` return type, the function return type should be `char*`, but a pointer to the return string length will also be passed in at the end of the param list
+   * For `decimal` 128bit return type, the pointers to the high bits and low bits must be passed in at the end of the param list. 
    
 3. Write function in C++ in the `externalfunctions.cpp` file(If you want to use template for your functions you can put your implementation in header).
    ex:

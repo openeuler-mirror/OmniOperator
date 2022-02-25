@@ -1063,6 +1063,161 @@ TEST(ProjectTest, Decimal128Arithmetic)
     delete factory;
 }
 
+TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
+{
+    // currently fails
+    const int32_t numRows = 10;
+    int64_t *col0 = MakeDecimals(numRows, -5);
+    int64_t *col1 = MakeDecimals(numRows, -7);
+    const int32_t numCols = 2;
+
+    FieldExpr *subLeft0 = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *subRight0 = new LiteralExpr(new string("1"), Decimal128Type(38, 0));
+    subRight0->longVal = 1;
+    subRight0->doubleVal = 1;
+    BinaryExpr *subExpr0 = new BinaryExpr(SUB, subLeft0, subRight0, Decimal128Type(38, 0));
+
+    FieldExpr *subLeft1 = new FieldExpr(1, Decimal128Type(38, 0));
+    LiteralExpr *subRight1 = new LiteralExpr(-1, IntType());
+    subRight1->longVal = -1;
+    subRight1->doubleVal = -1;
+    BinaryExpr *subExpr1 = new BinaryExpr(SUB, subLeft1, subRight1, Decimal128Type(38, 0));
+
+    std::vector<Expr *> exprs = { subExpr0, subExpr1 };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int64_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        Decimal128 old0 = ((Decimal128Vector *)t->GetVector(0))->GetValue(i);
+        Decimal128 old1 = ((Decimal128Vector *)t->GetVector(1))->GetValue(i);
+        if (i <= 5) {
+            EXPECT_EQ(val0.HighBits(), -1);
+            EXPECT_EQ(val0.LowBits(), old0.LowBits() + 1);
+            EXPECT_EQ(val1.HighBits(), -1);
+            EXPECT_EQ(val1.LowBits(), old1.LowBits() - 1);
+        } else {
+            EXPECT_EQ(val0.HighBits(), 0);
+            EXPECT_EQ(val0.LowBits(), old0.LowBits() - 1);
+            EXPECT_EQ(val1.HighBits(), 0);
+            EXPECT_EQ(val1.LowBits(), old1.LowBits() + 1);
+        }
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col0;
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
+{
+    // currently fails
+    const int32_t numRows = 10;
+    int64_t *col0 = MakeDecimals(numRows, -5);
+    int64_t *col1 = MakeDecimals(numRows, -7);
+    const int32_t numCols = 2;
+
+    FieldExpr *addLeft0 = new FieldExpr(0, Decimal128Type(38, 1));
+    LiteralExpr *addRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
+    addRight0->longVal = -1;
+    addRight0->doubleVal = -1;
+    BinaryExpr *addExpr0 = new BinaryExpr(ADD, addLeft0, addRight0, Decimal128Type(38, 0));
+
+    FieldExpr *addLeft1 = new FieldExpr(1, Decimal128Type(38, 0));
+    LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
+    addRight1->longVal = 1;
+    addRight1->doubleVal = 1;
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, Decimal128Type(38, 0));
+
+    std::vector<Expr *> exprs = { addExpr0, addExpr1 };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int64_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        Decimal128 old0 = ((Decimal128Vector *)t->GetVector(0))->GetValue(i);
+        Decimal128 old1 = ((Decimal128Vector *)t->GetVector(1))->GetValue(i);
+        cout<<old0.LowBits()<<endl;
+        cout<<old1.LowBits()<<endl;
+        if (i <= 5) {
+            EXPECT_EQ(val0.HighBits(), -1);
+            EXPECT_EQ(val0.LowBits(), old0.LowBits() + 1);
+            EXPECT_EQ(val1.HighBits(), -1);
+            EXPECT_EQ(val1.LowBits(), old1.LowBits() - 1);
+        } else {
+            EXPECT_EQ(val0.HighBits(), 0);
+            EXPECT_EQ(val0.LowBits(), old0.LowBits() - 1);
+            EXPECT_EQ(val1.HighBits(), 0);
+            EXPECT_EQ(val1.LowBits(), old1.LowBits() + 1);
+        }
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col0;
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectTest, Decimal128Multiply)
+{
+    const int32_t numRows = 10;
+    int64_t *col1 = MakeDecimals(numRows);
+    const int32_t numProject = 1;
+    FieldExpr *mulLeft = new FieldExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *mulRight = new LiteralExpr(3, IntType());
+    mulRight->longVal = 3;
+    mulRight->doubleVal = 3;
+    BinaryExpr *addExpr = new BinaryExpr(MUL, mulLeft, mulRight, Decimal128Type(38, 0));
+
+    std::vector<Expr *> exprs = { addExpr };
+    const int32_t numCols = 1;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int64_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i * 3);
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
 TEST(ProjectTest, Decimal128Divide)
 {
     const int32_t numRows = 10;

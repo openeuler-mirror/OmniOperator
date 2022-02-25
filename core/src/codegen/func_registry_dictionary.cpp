@@ -22,7 +22,7 @@ std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void*>(GetVarcharFromDictionaryVector),
                  "DictionaryGetVarchar", {}, paramTypes, OMNI_VEC_TYPE_VARCHAR),
         Function(reinterpret_cast<void*>(GetDecimalFromDictionaryVector),
-                 "DictionaryGetDecimal", {}, paramTypes, OMNI_VEC_TYPE_DECIMAL128, true)
+                 "DictionaryGetDecimal", {}, paramTypes, OMNI_VEC_TYPE_DECIMAL128)
     };
     return dictionaryFnRegistry;
 }

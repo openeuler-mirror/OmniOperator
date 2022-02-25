@@ -2529,12 +2529,12 @@ TEST(CodeGenTest, DecimalOperators1)
 {
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *addRight = new LiteralExpr(5, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(new string("5"), Decimal128Type(38, 0));
     addRight->doubleVal = 5;
     addRight->longVal = 5;
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
-    LiteralExpr *equalRight = new LiteralExpr(15, Decimal128Type(38, 0));
+    LiteralExpr *equalRight = new LiteralExpr(new string("15"), Decimal128Type(38, 0));
     equalRight->doubleVal = 15;
     equalRight->longVal = 15;
     BinaryExpr *expr = new BinaryExpr(EQ, addExpr, equalRight, BooleanType());
@@ -2545,12 +2545,9 @@ TEST(CodeGenTest, DecimalOperators1)
     expr->Accept(printExprTree);
 
     // creating decimal
-    int64_t c1[4] = { 10, 0, 9, 0 };
-
-    int64_t c[2] = {(int64_t) c1, (int64_t) (c1 + 2)};
-
+    int64_t c[4] = { 10, 0, 9, 0 };
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c;
+    vals[0] = (int64_t) c;
 
     int32_t *selected = new int32_t[2];
 
@@ -2604,18 +2601,15 @@ TEST(CodeGenTest, DecimalOperators2)
 
     // creating decimal
     int64_t c1[2] = {4000, 0};
-    int64_t c[1] = {(int64_t) c1};
 
     int64_t d1[2] = {5000, 0};
-    int64_t d[1] = {(int64_t) d1};
 
     int64_t e1[2] = {15000, 0};
-    int64_t e[1] = {(int64_t) e1};
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)c;
-    vals[1] = (int64_t)d;
-    vals[2] = (int64_t)e;
+    vals[0] = (int64_t)c1;
+    vals[1] = (int64_t)d1;
+    vals[2] = (int64_t)e1;
 
     int32_t *selected = new int32_t[1];
 
@@ -2655,19 +2649,19 @@ TEST(CodeGenTest, DecimalOperators3)
 {
     // create expression objects
     FieldExpr *col01 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *data01 = new LiteralExpr(100, Decimal128Type(38, 0));
+    LiteralExpr *data01 = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
     data01->longVal = 100;
     data01->doubleVal = 100;
     BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
 
     FieldExpr *col02 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *data02 = new LiteralExpr(200, Decimal128Type(38, 0));
+    LiteralExpr *data02 = new LiteralExpr(new string("200"), Decimal128Type(38, 0));
     data02->longVal = 200;
     data02->doubleVal = 200;
     BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
 
     FieldExpr *col03 = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *data03 = new LiteralExpr(0, Decimal128Type(38, 0));
+    LiteralExpr *data03 = new LiteralExpr(new string("0"), Decimal128Type(38, 0));
     data03->longVal = 0;
     data03->doubleVal = 0;
     BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
@@ -2681,18 +2675,15 @@ TEST(CodeGenTest, DecimalOperators3)
 
     // creating decimal
     int64_t c1[2] = {-12222, -1};
-    int64_t c[1] = {(int64_t) c1};
 
     int64_t d1[2] = {-12312, -1};
-    int64_t d[1] = {(int64_t) d1};
 
     int64_t e1[2] = {42, 0};
-    int64_t e[1] = {(int64_t) e1};
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)c;
-    vals[1] = (int64_t)d;
-    vals[2] = (int64_t)e;
+    vals[0] = (int64_t)c1;
+    vals[1] = (int64_t)d1;
+    vals[2] = (int64_t)e1;
 
     int32_t *selected = new int32_t[1];
 
@@ -2718,6 +2709,148 @@ TEST(CodeGenTest, DecimalOperators3)
     context->getArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    codegen.reset();
+    delete context;
+}
+
+TEST(CodeGenTest, DISABLED_DecimalNegate)
+{
+    // currently fails
+    FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
+    FieldExpr *col1 = new FieldExpr(1, Decimal128Type(38, 0));
+    LiteralExpr *mulRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
+    mulRight0->doubleVal = -1;
+    mulRight0->longVal = -1;
+
+    LiteralExpr *mulRight1 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
+    mulRight1->doubleVal = -1;
+    mulRight1->longVal = -1;
+
+    BinaryExpr *mulExpr0 = new BinaryExpr(MUL, col0, mulRight0, Decimal128Type(38, 0));
+    BinaryExpr *mulExpr1 = new BinaryExpr(MUL, col1, mulRight1, Decimal128Type(38, 0));
+
+    FieldExpr *col2 = new FieldExpr(2, Decimal128Type(38, 0));
+    FieldExpr *col3 = new FieldExpr(3, Decimal128Type(38, 0));
+
+    BinaryExpr *gteExpr = new BinaryExpr(EQ, mulExpr0, col2, BooleanType());
+    BinaryExpr *lteExpr = new BinaryExpr(EQ, mulExpr1, col3, BooleanType());
+
+    BinaryExpr *expr = new BinaryExpr(AND, lteExpr, gteExpr, BooleanType());
+
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes types(vecOfTypes);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    // creating decimal
+    int64_t c1[2] = {3, 0};
+    int64_t d1[2] = {4, 0};
+    int64_t e1[2] = {3, -1};
+    int64_t f1[2] = {4, -1};
+
+    int64_t *vals = new int64_t[4];
+    vals[0] = (int64_t)c1;
+    vals[1] = (int64_t)d1;
+    vals[2] = (int64_t)e1;
+    vals[3] = (int64_t)f1;
+
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[4];
+    for (int i = 0; i < 4; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[4];
+    for (int col = 0; col < 4; col++) {
+        offsets[col] = new int32_t[1];
+    }
+
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    int64_t dictionaries[4] = {};
+    auto context = new ExecutionContext();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 1);
+
+    for (int i = 0; i < 4; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    codegen.reset();
+    delete context;
+}
+
+TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
+{
+    // currently fails
+    FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
+    FieldExpr *col1 = new FieldExpr(1, Decimal128Type(38, 0));
+    std::string absFuncStr = "abs";
+    std::vector<Expr*> absArgs;
+    absArgs.push_back(col0);
+    auto absExpr = GetFuncExpr(absFuncStr, absArgs, Decimal128Type(38, 0));
+
+    std::string compFuncStr = "Decimal128Compare";
+    std::vector<Expr*> compArgs;
+    compArgs.push_back(absExpr);
+    compArgs.push_back(col1);
+    auto compExpr = GetFuncExpr(compFuncStr, compArgs, IntType());
+
+    LiteralExpr *eqRight = new LiteralExpr(0, IntType());
+
+    BinaryExpr *expr = new BinaryExpr(EQ, compExpr, eqRight, BooleanType());
+
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes types(vecOfTypes);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    // creating decimal
+    int64_t c1[2] = {3, -1};
+    int64_t d1[2] = {3, 0};
+
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t)c1;
+    vals[1] = (int64_t)d1;
+
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[2];
+    for (int col = 0; col < 2; col++) {
+        offsets[col] = new int32_t[1];
+    }
+
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    int64_t dictionaries[2] = {};
+    auto context = new ExecutionContext();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 1);
+
+    for (int i = 0; i < 2; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
     }
@@ -2764,7 +2897,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
-    vector<int64_t> oVec(3);
+    vector<int64_t> oVec(6);
     auto ov = oVec.data();
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
@@ -2807,7 +2940,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
 {
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *addRight = new LiteralExpr(100, Decimal128Type(38, 0));
+    LiteralExpr *addRight = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
     addRight->longVal = 100;
     addRight->doubleVal = 100;
 
@@ -2820,10 +2953,9 @@ TEST(CodeGenTest, ProjectionCodeGen)
 
     // creating decimal
     int64_t c1[6] = {10, 0, 20, 0, 30, 0};
-    int64_t c[3] = {(int64_t) c1, (int64_t) (c1 + 2), (int64_t) (c1 + 4)};
 
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c;
+    vals[0] = (int64_t)c1;
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
@@ -2840,7 +2972,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
-    vector<int64_t> oVec(3);
+    vector<int64_t> oVec(6);
     auto ov = oVec.data();
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
@@ -2848,21 +2980,16 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
-    int64_t *result = reinterpret_cast<int64_t *>(oVec[0]);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
 
-    EXPECT_EQ(*result, 110);
-    EXPECT_EQ(*(result + 1), 0);
-
-    result = reinterpret_cast<int64_t *>(oVec[1]);
-    EXPECT_EQ(*(result), 120);
-    EXPECT_EQ(*(result + 1), 0);
-
-    result = reinterpret_cast<int64_t *>(oVec[2]);
-    EXPECT_EQ(*(result), 130);
-    EXPECT_EQ(*(result + 1), 0);
+    EXPECT_EQ(oVec.at(0), 110);
+    EXPECT_EQ(oVec.at(1), 0);
+    EXPECT_EQ(oVec.at(2), 120);
+    EXPECT_EQ(oVec.at(3), 0);
+    EXPECT_EQ(oVec.at(4), 130);
+    EXPECT_EQ(oVec.at(5), 0);
     context->getArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
@@ -2873,16 +3000,12 @@ TEST(CodeGenTest, ProjectionCodeGen)
     EXPECT_EQ(newNullValues[1], true);
     EXPECT_EQ(newNullValues[2], true);
 
-    result = reinterpret_cast<int64_t *>(oVec[0]);
-    EXPECT_EQ(*result, 0);
-    EXPECT_EQ(*(result + 1), 0);
-    result = reinterpret_cast<int64_t *>(oVec[1]);
-    EXPECT_EQ(*(result), 0);
-    EXPECT_EQ(*(result + 1), 0);
-
-    result = reinterpret_cast<int64_t *>(oVec[2]);
-    EXPECT_EQ(*(result), 0);
-    EXPECT_EQ(*(result + 1), 0);
+    EXPECT_EQ(oVec.at(0), 0);
+    EXPECT_EQ(oVec.at(1), 0);
+    EXPECT_EQ(oVec.at(2), 0);
+    EXPECT_EQ(oVec.at(3), 0);
+    EXPECT_EQ(oVec.at(4), 0);
+    EXPECT_EQ(oVec.at(5), 0);
 
     context->getArena()->Reset();
     for (int i = 0; i < 1; i++) {

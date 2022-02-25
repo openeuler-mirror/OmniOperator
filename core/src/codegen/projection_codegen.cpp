@@ -183,7 +183,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128:
-            outPtrType = llvmTypes->I64PtrType();
+            outPtrType = llvmTypes->I128PtrType();
             break;
         case OMNI_VEC_TYPE_BOOLEAN:
             outPtrType = llvmTypes->I1PtrType();
@@ -276,7 +276,6 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     // Return results
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
-
     OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(

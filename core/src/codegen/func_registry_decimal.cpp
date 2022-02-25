@@ -13,23 +13,24 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
     VecTypeId retType = OMNI_VEC_TYPE_DECIMAL128;
     static std::vector<Function> decimalFnRegistry = {
         // Decimal Add
-        Function(reinterpret_cast<void*>(AddDec128), "Add_decimal128", {}, paramTypes, retType, true),
+        Function(reinterpret_cast<void*>(AddDec128), "Add_decimal128", {}, paramTypes, retType),
         // Decimal Subtract
-        Function(reinterpret_cast<void*>(SubDec128), "Sub_decimal128", {}, paramTypes, retType, true),
+        Function(reinterpret_cast<void*>(SubDec128), "Sub_decimal128", {}, paramTypes, retType),
         // Decimal Division
-        Function(reinterpret_cast<void *>(DivDec128), "Div_decimal128", {}, paramTypes, retType, true),
+        Function(reinterpret_cast<void *>(DivDec128), "Div_decimal128", {}, paramTypes, retType),
         // Decimal Multiplication
-        Function(reinterpret_cast<void*>(MulDec128), "Mul_decimal128", {}, paramTypes, retType, true),
+        Function(reinterpret_cast<void*>(MulDec128), "Mul_decimal128", {}, paramTypes, retType),
         // Decimal Compare
         Function(reinterpret_cast<void *>(Decimal128Compare), "Decimal128Compare", {},
                  paramTypes, OMNI_VEC_TYPE_INT),
         // Decimal Absolute
         Function(reinterpret_cast<void *>(AbsDecimal128), "abs", {}, {OMNI_VEC_TYPE_DECIMAL128},
-                 OMNI_VEC_TYPE_DECIMAL128, true),
+                 OMNI_VEC_TYPE_DECIMAL128),
         // Decimal Cast Long to Decimal128
         Function(reinterpret_cast<void*>(CastInt64ToDecimal128), "CAST", {},
-                 {OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_DECIMAL128, true)
-
+                 {OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_DECIMAL128),
+        Function(reinterpret_cast<void*>(CastInt64ToDecimal128), "CAST", {},
+                 {OMNI_VEC_TYPE_DECIMAL64}, OMNI_VEC_TYPE_DECIMAL128)
     };
 
     return decimalFnRegistry;

@@ -132,22 +132,6 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
     return filterAndProjectOperator.release();
 }
 
-int64_t GetDecimal128Data(Vector *col, uint32_t nRows)
-{
-    int32_t longs = 2;
-    int64_t *values = reinterpret_cast<int64_t *>(col->GetValues());
-    // create new vector to store addresses of rows
-    unique_ptr<vec64> vcData = make_unique<vec64>();
-    int32_t positionOffset = col->GetPositionOffset();
-
-    for (int32_t row = 0; row < nRows; row++) {
-        int64_t *index = &((values)[(positionOffset + row) * longs]);
-        vcData->push_back(reinterpret_cast<int64_t>(index));
-    }
-    // data handling
-    return reinterpret_cast<int64_t>(vcData.release()->data());
-}
-
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
     std::vector<Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
@@ -166,8 +150,6 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
         VecTypeId typeId = colVec->GetTypeId();
         if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
             dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
-        } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
-            valuesAddress = GetDecimal128Data(colVec, vecBatch->GetRowCount());
         } else {
             valuesAddress = VectorHelper::GetValuesAddr(colVec);
         }

@@ -23,9 +23,9 @@ extern DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAd
 extern DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
 extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(
-    int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr);
+        int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr);
 
-extern DLLEXPORT int64_t GetDecimalFromDictionaryVector(
-    int64_t contextPtr, int64_t dictionaryVectorAddr, int32_t index);
+extern DLLEXPORT void GetDecimalFromDictionaryVector(
+        int64_t dictionaryVectorAddr, int32_t index, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 #endif // OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

@@ -17,18 +17,22 @@
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t x, int64_t y);
+extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow);
 
-extern "C" DLLEXPORT int64_t AddDec128(int64_t contextPtr, int64_t x, int64_t y);
+extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT int64_t SubDec128(int64_t contextPtr, int64_t x, int64_t y);
+extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT int64_t DivDec128(int64_t contextPtr, int64_t x, int64_t y);
+extern "C" DLLEXPORT void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT int64_t MulDec128(int64_t contextPtr, int64_t x, int64_t y);
+extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t contextPtr, int64_t x);
+extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t contextPtr, int64_t x);
+extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 #endif // OMNI_RUNTIME_DECIMALFUNCTIONS_H

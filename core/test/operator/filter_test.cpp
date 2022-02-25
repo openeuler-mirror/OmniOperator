@@ -1927,7 +1927,7 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     args2.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
     auto absExpr2 = GetFuncExpr(absStr, args2, Decimal128Type(38, 0));
 
-    auto eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2,  Decimal128Type(38, 0));
+    BinaryExpr *eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2,  BooleanType());
 
     std::vector<Expr *> args3;
     args3.push_back(new FieldExpr(1, Decimal128Type(38, 0)));
@@ -1937,16 +1937,20 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     args4.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
     auto absExpr4 = GetFuncExpr(absStr, args4, Decimal128Type(38, 0));
 
-    auto eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4,  Decimal128Type(38, 0));
-    auto filterExpr = new BinaryExpr(AND, eqExpr1, eqExpr2, BooleanType());
-
+    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4,  BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(AND, eqExpr1, eqExpr2, BooleanType());
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(
             filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
+    auto start = std::chrono::system_clock::now();
     op->AddInput(in1);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "BenchmarkDecimalColumn round - elapsed: " << elapsed.count() << " ms\n";
     EXPECT_EQ(numReturned, 1000);
 
 

@@ -205,6 +205,16 @@ public:
         return width;
     }
 
+    uint32_t GetPrecision() const
+    {
+        return precision;
+    }
+
+    uint32_t GetScale() const
+    {
+        return scale;
+    }
+
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(VecType, id, width, precision, scale, dateUnit, timeUnit);
 
     VecType &operator = (const VecType &right)
@@ -313,16 +323,6 @@ public:
 
     ~Decimal64VecType() override {}
 
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
-
     const static Decimal64VecType &Instance()
     {
         static Decimal64VecType type(19, 0);
@@ -339,16 +339,6 @@ public:
     }
 
     ~Decimal128VecType() override {}
-
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
 
     const static Decimal128VecType &Instance()
     {
