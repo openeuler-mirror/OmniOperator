@@ -8,7 +8,7 @@ import org.testng.annotations.Test;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_DATA_TYPE_VARCHAR;
+import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_VARCHAR;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -33,7 +33,7 @@ public class TestVarcharVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 1024);
-        assertEquals(vec.getDataType().getId(), OMNI_DATA_TYPE_VARCHAR);
+        assertEquals(vec.getType().getId(), OMNI_VARCHAR);
         vec.close();
     }
 

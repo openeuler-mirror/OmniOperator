@@ -9,85 +9,85 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <climits>
-#include "type/decimal128.h"
-#include "../util/debug.h"
+#include "decimal128.h"
+#include "util/debug.h"
 
 namespace omniruntime {
 namespace type {
 constexpr int32_t DATA_TYPE_MAX_COUNT = 20;
 
 enum DataTypeId {
-    OMNI_DATA_TYPE_NONE = 0,
-    OMNI_DATA_TYPE_INT = 1,
-    OMNI_DATA_TYPE_LONG = 2,
-    OMNI_DATA_TYPE_DOUBLE = 3,
-    OMNI_DATA_TYPE_BOOLEAN = 4,
-    OMNI_DATA_TYPE_SHORT = 5,
-    OMNI_DATA_TYPE_DECIMAL64 = 6,
-    OMNI_DATA_TYPE_DECIMAL128 = 7,
-    OMNI_DATA_TYPE_DATE32 = 8,
-    OMNI_DATA_TYPE_DATE64 = 9,
-    OMNI_DATA_TYPE_TIME32 = 10,
-    OMNI_DATA_TYPE_TIME64 = 11,
-    OMNI_DATA_TYPE_TIMESTAMP = 12,
-    OMNI_DATA_TYPE_INTERVAL_MONTHS = 13,
-    OMNI_DATA_TYPE_INTERVAL_DAY_TIME = 14,
-    OMNI_DATA_TYPE_VARCHAR = 15,
-    OMNI_DATA_TYPE_CHAR = 16,
-    OMNI_DATA_TYPE_ROW = 17,
-    OMNI_DATA_TYPE_INVALID
+    OMNI_NONE = 0,
+    OMNI_INT = 1,
+    OMNI_LONG = 2,
+    OMNI_DOUBLE = 3,
+    OMNI_BOOLEAN = 4,
+    OMNI_SHORT = 5,
+    OMNI_DECIMAL64 = 6,
+    OMNI_DECIMAL128 = 7,
+    OMNI_DATE32 = 8,
+    OMNI_DATE64 = 9,
+    OMNI_TIME32 = 10,
+    OMNI_TIME64 = 11,
+    OMNI_TIMESTAMP = 12,
+    OMNI_INTERVAL_MONTHS = 13,
+    OMNI_INTERVAL_DAY_TIME = 14,
+    OMNI_VARCHAR = 15,
+    OMNI_CHAR = 16,
+    OMNI_CONTAINER = 17,
+    OMNI_INVALID
 };
 
-template <DataTypeId typeId> struct NativeType {};
+template <DataTypeId dataTypeId> struct NativeType {};
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_INT> {
+template <> struct NativeType<DataTypeId::OMNI_INT> {
     using type = int32_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_LONG> {
+template <> struct NativeType<DataTypeId::OMNI_LONG> {
     using type = int64_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_DOUBLE> {
+template <> struct NativeType<DataTypeId::OMNI_DOUBLE> {
     using type = double;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_BOOLEAN> {
+template <> struct NativeType<DataTypeId::OMNI_BOOLEAN> {
     using type = bool;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_SHORT> {
+template <> struct NativeType<DataTypeId::OMNI_SHORT> {
     using type = int16_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_DECIMAL64> {
+template <> struct NativeType<DataTypeId::OMNI_DECIMAL64> {
     using type = int64_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_DECIMAL128> {
+template <> struct NativeType<DataTypeId::OMNI_DECIMAL128> {
     using type = Decimal128;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_DATE32> {
+template <> struct NativeType<DataTypeId::OMNI_DATE32> {
     using type = int32_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_DATE64> {
+template <> struct NativeType<DataTypeId::OMNI_DATE64> {
     using type = int64_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_TIME64> {
+template <> struct NativeType<DataTypeId::OMNI_TIME64> {
     using type = int64_t;
 };
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_VARCHAR> {
+template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
     using type = uint8_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_CHAR> {
+template <> struct NativeType<DataTypeId::OMNI_CHAR> {
     using type = uint8_t;
 };
 
-template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_ROW> {
+template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
@@ -133,25 +133,25 @@ template <> struct NativeType<DataTypeId::OMNI_DATA_TYPE_ROW> {
         }                                                             \
     }()
 
-NLOHMANN_JSON_SERIALIZE_ENUM(DataTypeId, { { OMNI_DATA_TYPE_NONE, nullptr },
-    { OMNI_DATA_TYPE_INT, "OMNI_DATA_TYPE_INT" },
-    { OMNI_DATA_TYPE_LONG, "OMNI_DATA_TYPE_LONG" },
-    { OMNI_DATA_TYPE_DOUBLE, "OMNI_DATA_TYPE_DOUBLE" },
-    { OMNI_DATA_TYPE_BOOLEAN, "OMNI_DATA_TYPE_BOOLEAN" },
-    { OMNI_DATA_TYPE_SHORT, "OMNI_DATA_TYPE_SHORT" },
-    { OMNI_DATA_TYPE_DECIMAL64, "OMNI_DATA_TYPE_DECIMAL64" },
-    { OMNI_DATA_TYPE_DECIMAL128, "OMNI_DATA_TYPE_DECIMAL128" },
-    { OMNI_DATA_TYPE_DATE32, "OMNI_DATA_TYPE_DATE32" },
-    { OMNI_DATA_TYPE_DATE64, "OMNI_DATA_TYPE_DATE64" },
-    { OMNI_DATA_TYPE_TIME32, "OMNI_DATA_TYPE_TIME32" },
-    { OMNI_DATA_TYPE_TIME64, "OMNI_DATA_TYPE_TIME64" },
-    { OMNI_DATA_TYPE_TIMESTAMP, "OMNI_DATA_TYPE_TIMESTAMP" },
-    { OMNI_DATA_TYPE_INTERVAL_MONTHS, "OMNI_DATA_TYPE_INTERVAL_MONTHS" },
-    { OMNI_DATA_TYPE_INTERVAL_DAY_TIME, "OMNI_DATA_TYPE_INTERVAL_DAY_TIME" },
-    { OMNI_DATA_TYPE_VARCHAR, "OMNI_DATA_TYPE_VARCHAR" },
-    { OMNI_DATA_TYPE_CHAR, "OMNI_DATA_TYPE_CHAR" },
-    { OMNI_DATA_TYPE_ROW, "OMNI_DATA_TYPE_ROW" },
-    { OMNI_DATA_TYPE_INVALID, "OMNI_DATA_TYPE_INVALID" } })
+NLOHMANN_JSON_SERIALIZE_ENUM(DataTypeId, { { OMNI_NONE, nullptr },
+    { OMNI_INT, "OMNI_INT" },
+    { OMNI_LONG, "OMNI_LONG" },
+    { OMNI_DOUBLE, "OMNI_DOUBLE" },
+    { OMNI_BOOLEAN, "OMNI_BOOLEAN" },
+    { OMNI_SHORT, "OMNI_SHORT" },
+    { OMNI_DECIMAL64, "OMNI_DECIMAL64" },
+    { OMNI_DECIMAL128, "OMNI_DECIMAL128" },
+    { OMNI_DATE32, "OMNI_DATE32" },
+    { OMNI_DATE64, "OMNI_DATE64" },
+    { OMNI_TIME32, "OMNI_TIME32" },
+    { OMNI_TIME64, "OMNI_TIME64" },
+    { OMNI_TIMESTAMP, "OMNI_TIMESTAMP" },
+    { OMNI_INTERVAL_MONTHS, "OMNI_INTERVAL_MONTHS" },
+    { OMNI_INTERVAL_DAY_TIME, "OMNI_INTERVAL_DAY_TIME" },
+    { OMNI_VARCHAR, "OMNI_VARCHAR" },
+    { OMNI_CHAR, "OMNI_CHAR" },
+    { OMNI_CONTAINER, "OMNI_CONTAINER" },
+    { OMNI_INVALID, "OMNI_INVALID" } })
 
 enum DateUnit { DAY, MILLI };
 
@@ -173,7 +173,7 @@ public:
           timeUnit(type.timeUnit)
     {}
 
-    DataType() : DataType(OMNI_DATA_TYPE_INVALID) {}
+    DataType() : DataType(OMNI_INVALID) {}
 
     explicit DataType(DataTypeId id) : id(id), width(0), precision(0), scale(0), dateUnit(DAY), timeUnit(SEC) {}
 
@@ -192,6 +192,16 @@ public:
     uint32_t GetWidth() const
     {
         return width;
+    }
+
+    uint32_t GetPrecision() const
+    {
+        return precision;
+    }
+
+    uint32_t GetScale() const
+    {
+        return scale;
     }
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(DataType, id, width, precision, scale, dateUnit, timeUnit);
@@ -227,9 +237,22 @@ protected:
     TimeUnit timeUnit;
 };
 
+class NoneDataType : public DataType {
+public:
+    NoneDataType() : DataType(DataTypeId::OMNI_NONE) {}
+
+    ~NoneDataType() override {}
+
+    const static NoneDataType &Instance()
+    {
+        static NoneDataType type;
+        return type;
+    }
+};
+
 class IntDataType : public DataType {
 public:
-    IntDataType() : DataType(DataTypeId::OMNI_DATA_TYPE_INT) {}
+    IntDataType() : DataType(DataTypeId::OMNI_INT) {}
 
     ~IntDataType() override {}
 
@@ -242,7 +265,7 @@ public:
 
 class LongDataType : public DataType {
 public:
-    LongDataType() : DataType(DataTypeId::OMNI_DATA_TYPE_LONG) {}
+    LongDataType() : DataType(DataTypeId::OMNI_LONG) {}
 
     ~LongDataType() override {}
 
@@ -255,7 +278,7 @@ public:
 
 class DoubleDataType : public DataType {
 public:
-    DoubleDataType() : DataType(DataTypeId::OMNI_DATA_TYPE_DOUBLE) {}
+    DoubleDataType() : DataType(DataTypeId::OMNI_DOUBLE) {}
 
     ~DoubleDataType() override {}
 
@@ -268,7 +291,7 @@ public:
 
 class BooleanDataType : public DataType {
 public:
-    BooleanDataType() : DataType(DataTypeId::OMNI_DATA_TYPE_BOOLEAN) {}
+    BooleanDataType() : DataType(DataTypeId::OMNI_BOOLEAN) {}
 
     ~BooleanDataType() override {}
 
@@ -281,7 +304,7 @@ public:
 
 class ShortDataType : public DataType {
 public:
-    ShortDataType() : DataType(DataTypeId::OMNI_DATA_TYPE_SHORT) {}
+    ShortDataType() : DataType(DataTypeId::OMNI_SHORT) {}
 
     ~ShortDataType() override {}
 
@@ -294,7 +317,7 @@ public:
 
 class Decimal64DataType : public DataType {
 public:
-    Decimal64DataType(int32_t precision, int32_t scale) : DataType(DataTypeId::OMNI_DATA_TYPE_DECIMAL64)
+    Decimal64DataType(int32_t precision, int32_t scale) : DataType(DataTypeId::OMNI_DECIMAL64)
     {
         this->precision = precision;
         this->scale = scale;
@@ -321,7 +344,7 @@ public:
 
 class Decimal128DataType : public DataType {
 public:
-    Decimal128DataType(int32_t precision, int32_t scale) : DataType(DataTypeId::OMNI_DATA_TYPE_DECIMAL128)
+    Decimal128DataType(int32_t precision, int32_t scale) : DataType(DataTypeId::OMNI_DECIMAL128)
     {
         this->precision = precision;
         this->scale = scale;
@@ -348,7 +371,7 @@ public:
 
 class Date32DataType : public DataType {
 public:
-    explicit Date32DataType(DateUnit dateUnit) : DataType(DataTypeId::OMNI_DATA_TYPE_DATE32)
+    explicit Date32DataType(DateUnit dateUnit) : DataType(DataTypeId::OMNI_DATE32)
     {
         this->dateUnit = dateUnit;
     }
@@ -369,7 +392,7 @@ public:
 
 class Date64DataType : public DataType {
 public:
-    explicit Date64DataType(DateUnit dateUnit) : DataType(DataTypeId::OMNI_DATA_TYPE_DATE64)
+    explicit Date64DataType(DateUnit dateUnit) : DataType(DataTypeId::OMNI_DATE64)
     {
         this->dateUnit = dateUnit;
     }
@@ -390,7 +413,7 @@ public:
 
 class Time32DataType : public DataType {
 public:
-    explicit Time32DataType() : DataType(DataTypeId::OMNI_DATA_TYPE_TIME32) {}
+    explicit Time32DataType() : DataType(DataTypeId::OMNI_TIME32) {}
 
     ~Time32DataType() override {}
 
@@ -403,7 +426,7 @@ public:
 
 class Time64DataType : public DataType {
 public:
-    explicit Time64DataType() : DataType(DataTypeId::OMNI_DATA_TYPE_TIME64) {}
+    explicit Time64DataType() : DataType(DataTypeId::OMNI_TIME64) {}
 
     ~Time64DataType() override {}
 
@@ -414,22 +437,22 @@ public:
     }
 };
 
-class RowDataType : public DataType {
+class ContainerDataType : public DataType {
 public:
-    explicit RowDataType() : DataType(DataTypeId::OMNI_DATA_TYPE_ROW) {}
+    explicit ContainerDataType() : DataType(DataTypeId::OMNI_CONTAINER) {}
 
-    ~RowDataType() override {}
+    ~ContainerDataType() override {}
 
-    const static RowDataType &Instance()
+    const static ContainerDataType &Instance()
     {
-        static RowDataType type;
+        static ContainerDataType type;
         return type;
     }
 };
 
 class VarcharDataType : public DataType {
 public:
-    explicit VarcharDataType(uint32_t width) : DataType(DataTypeId::OMNI_DATA_TYPE_VARCHAR)
+    explicit VarcharDataType(uint32_t width) : DataType(DataTypeId::OMNI_VARCHAR)
     {
         this->width = width;
     }
@@ -451,7 +474,7 @@ protected:
 
 class CharDataType : public VarcharDataType {
 public:
-    explicit CharDataType(uint32_t width) : VarcharDataType(width, DataTypeId::OMNI_DATA_TYPE_CHAR) {}
+    explicit CharDataType(uint32_t width) : VarcharDataType(width, DataTypeId::OMNI_CHAR) {}
 
     ~CharDataType() override {}
 

@@ -36,17 +36,3 @@ TEST(ExecutionContext, testAllocateAndReset)
 
     delete executionContext;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

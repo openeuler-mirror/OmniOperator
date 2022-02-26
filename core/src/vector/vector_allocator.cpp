@@ -15,9 +15,9 @@ VectorAllocator::VectorAllocator(std::string scope) : scope(scope), leakDetector
 
 VectorAllocator::~VectorAllocator() {}
 
-void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, VecTypeId typeId)
+void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, DataTypeId dataTypeId)
 {
-    VectorReference *reference = new VectorReference(capacityInBytes, size, typeId);
+    VectorReference *reference = new VectorReference(capacityInBytes, size, dataTypeId);
     vector->SetVectorReference(reference);
 #ifdef DEBUG_VECTOR
     VectorTracer *tracer = leakDetector.NewTracer(vector);

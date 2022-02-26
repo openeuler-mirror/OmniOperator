@@ -7,9 +7,9 @@
 
 #include <stdint.h>
 #include <vector>
-#include "../vector/vector_type.h"
+#include "../type/data_type.h"
 #include "../vector/vector_batch.h"
-#include "../vector/vector_types.h"
+#include "../type/data_types.h"
 #include "operator.h"
 #include "operator_factory.h"
 #include "../vector/vector_helper.h"
@@ -17,7 +17,7 @@
 
 class PagesIndex {
 public:
-    explicit PagesIndex(const omniruntime::vec::VecTypes &types);
+    explicit PagesIndex(const omniruntime::type::DataTypes &types);
     ~PagesIndex();
     int32_t AddVecBatches(std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
     void Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
@@ -28,7 +28,7 @@ public:
 
     const int32_t *GetTypes() const
     {
-        return vecTypeIds;
+        return dataTypeIds;
     }
     int32_t GetTypesCount() const
     {
@@ -49,8 +49,8 @@ public:
     }
 
 private:
-    const omniruntime::vec::VecType *vecTypes;
-    const int32_t *vecTypeIds;
+    const omniruntime::type::DataType *dataTypes;
+    const int32_t *dataTypeIds;
     int32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
     int64_t *valueAddresses;

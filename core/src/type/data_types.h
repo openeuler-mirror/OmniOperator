@@ -1,4 +1,4 @@
-l/*
+/*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
@@ -10,60 +10,60 @@ l/*
 
 namespace omniruntime {
 namespace type {
-class VecTypes {
+class DataTypes {
 public:
-    VecTypes(const VecTypes &types) : VecTypes(types.vecTypes) {}
+    DataTypes(const DataTypes &types) : DataTypes(types.dataTypes) {}
 
-    explicit VecTypes(const std::vector<VecType> &vecTypes)
-        : vecTypes(vecTypes), vecTypesSize(vecTypes.size()), vecTypeIds(nullptr)
+    explicit DataTypes(const std::vector<DataType> &dataTypes)
+        : dataTypes(dataTypes), dataTypesSize(dataTypes.size()), dataTypeIds(nullptr)
     {
-        InitVecTypeIds();
+        InitDataTypeIds();
     }
 
-    VecTypes &operator = (const VecTypes &types)
+    DataTypes &operator = (const DataTypes &types)
     {
-        vecTypes = types.vecTypes;
-        vecTypesSize = types.vecTypesSize;
-        if (vecTypeIds != nullptr) {
-            delete[] vecTypeIds;
+        dataTypes = types.dataTypes;
+        dataTypesSize = types.dataTypesSize;
+        if (dataTypeIds != nullptr) {
+            delete[] dataTypeIds;
         }
-        InitVecTypeIds();
+        InitDataTypeIds();
         return *this;
     }
 
-    ~VecTypes()
+    ~DataTypes()
     {
-        delete[] vecTypeIds;
+        delete[] dataTypeIds;
     }
 
-    const std::vector<VecType> &Get() const
+    const std::vector<DataType> &Get() const
     {
-        return vecTypes;
+        return dataTypes;
     }
 
     const int32_t *GetIds() const
     {
-        return vecTypeIds;
+        return dataTypeIds;
     }
 
     int32_t GetSize() const
     {
-        return vecTypesSize;
+        return dataTypesSize;
     }
 
 private:
-    void InitVecTypeIds()
+    void InitDataTypeIds()
     {
-        int32_t size = vecTypes.size();
-        vecTypeIds = new int32_t[size];
+        int32_t size = dataTypes.size();
+        dataTypeIds = new int32_t[size];
         for (int i = 0; i < size; ++i) {
-            vecTypeIds[i] = vecTypes[i].GetId();
+            dataTypeIds[i] = dataTypes[i].GetId();
         }
     }
 
-    int32_t vecTypesSize;
-    std::vector<VecType> vecTypes;
-    int32_t *vecTypeIds;
+    int32_t dataTypesSize;
+    std::vector<DataType> dataTypes;
+    int32_t *dataTypeIds;
 };
 }
 }

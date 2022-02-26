@@ -19,6 +19,6 @@ public class LongDataType extends DataType {
      * The construct
      */
     public LongDataType() {
-        super(DataTypeId.OMNI_DATA_TYPE_LONG);
+        super(DataTypeId.OMNI_LONG);
     }
 }

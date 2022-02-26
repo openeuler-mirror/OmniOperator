@@ -115,8 +115,8 @@ public class OmniSortWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createSortWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
-                    context.sortKeys, context.sortAscendings, context.sortNullFirsts);
+            return createSortWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes),
+                    context.outputColumns, context.sortKeys, context.sortAscendings, context.sortNullFirsts);
         }
     }
 }

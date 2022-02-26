@@ -40,10 +40,10 @@ public class OmniWindowWithExprOperatorFactory
      * @param argumentKeys the argument keys
      * @param windowFunctionReturnType the window function return type
      */
-    public OmniWindowWithExprOperatorFactory(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
-            int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
-            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
-            DataType[] windowFunctionReturnType) {
+    public OmniWindowWithExprOperatorFactory(DataType[] sourceTypes, int[] outputChannels,
+            FunctionType[] windowFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels,
+            int[] sortOrder, int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions,
+            String[] argumentKeys, DataType[] windowFunctionReturnType) {
         super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
                 preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
                 argumentKeys, windowFunctionReturnType)));

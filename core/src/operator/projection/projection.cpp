@@ -35,10 +35,10 @@ RowProjFunc RowProjection::Create()
 }
 
 // Return INVALIDDATAD if expression is unsupported
-VecType RowProjection::GetReturnType()
+DataType RowProjection::GetReturnType()
 {
     if (this->expression == nullptr) {
-        return VecType(OMNI_VEC_TYPE_INVALID);
+        return DataType(OMNI_INVALID);
     }
     return this->expression->GetReturnType();
 }
@@ -87,7 +87,7 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(VecTypes &inputTypes, int32_t nCols, const Expr &expr, bool filter)
+Projection::Projection(DataTypes &inputTypes, int32_t nCols, const Expr &expr, bool filter)
     : inputTypes(inputTypes), nCols(nCols), expr(&expr)
 {
     this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
@@ -116,13 +116,13 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
 
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch.GetVector(i);
-        if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
             colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
         dictVecAddress = 0;
         valuesAddress = 0;
-        VecTypeId typeId = colVec->GetTypeId();
-        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
+        DataTypeId typeId = colVec->GetTypeId();
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
             dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
         } else {
             valuesAddress = VectorHelper::GetValuesAddr(colVec);
@@ -151,7 +151,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         // if no row gets filtered or without a filter
         // we can just slice the whole vector
         Vector *colVec = vecBatch->GetVector(this->columnProjectionIndex);
-        if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
             colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
         if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount()) {
@@ -160,7 +160,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         // if some rows get filtered,
         // we can just copy the original vector
         if (selectedRows != nullptr && numSelectedRows != 0) {
-            if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
+            if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
                 return static_cast<DictionaryVector *>(colVec)->ExtractDictionary(selectedRows, numSelectedRows);
             } else {
                 return colVec->CopyPositions(selectedRows, 0, numSelectedRows);
@@ -168,33 +168,33 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         }
     }
 
-    VecTypeId outTypeId = expr->GetReturnTypeId();
+    DataTypeId outTypeId = expr->GetReturnTypeId();
     std::unique_ptr<Vector> outVec;
     int32_t avgStringLength = 200;
     switch (outTypeId) {
-        case vec::OMNI_VEC_TYPE_INT:
+        case type::OMNI_INT:
             outVec = std::make_unique<IntVector>(vecAllocator, numSelectedRows);
             break;
-        case vec::OMNI_VEC_TYPE_LONG:
+        case type::OMNI_LONG:
             outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
             break;
-        case vec::OMNI_VEC_TYPE_DOUBLE:
+        case type::OMNI_DOUBLE:
             outVec = std::make_unique<DoubleVector>(vecAllocator, numSelectedRows);
             break;
-        case vec::OMNI_VEC_TYPE_VARCHAR:
-        case vec::OMNI_VEC_TYPE_CHAR:
+        case type::OMNI_VARCHAR:
+        case type::OMNI_CHAR:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
             outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
-        case vec::OMNI_VEC_TYPE_DECIMAL64:
+        case type::OMNI_DECIMAL64:
             // FIXME: Support Decimal64Vector in the future
             outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
             break;
-        case vec::OMNI_VEC_TYPE_DECIMAL128:
+        case type::OMNI_DECIMAL128:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
             break;
-        case vec::OMNI_VEC_TYPE_BOOLEAN:
+        case type::OMNI_BOOLEAN:
             outVec = std::make_unique<BooleanVector>(vecAllocator, numSelectedRows);
             break;
         default: {
@@ -204,7 +204,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
 
     Vector *projectedVec = nullptr;
-    if (outTypeId == OMNI_VEC_TYPE_VARCHAR || outTypeId == OMNI_VEC_TYPE_CHAR) {
+    if (outTypeId == OMNI_VARCHAR || outTypeId == OMNI_CHAR) {
         projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
             selectedRows, context, dictionaryVectors);
     } else {
@@ -284,7 +284,7 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
-    VecTypes &inputTypes, int32_t nCols)
+    DataTypes &inputTypes, int32_t nCols)
     : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
 {
     this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());

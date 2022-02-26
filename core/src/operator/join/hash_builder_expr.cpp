@@ -13,8 +13,8 @@ namespace op {
 using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
-    const VecTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-    int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
+        const DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+        int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
 {
     auto operatorFactory = std::make_unique<HashBuilderWithExprOperatorFactory>(buildTypes, buildHashKeys,
         buildHashKeysCount, filter, hashTableCount);
@@ -22,14 +22,14 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
 }
 
 
-HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const VecTypes &buildTypes,
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
     int32_t hashTableCount)
 {
-    std::vector<VecType> newBuildTypes;
+    std::vector<DataType> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
         this->buildHashCols, this->projectFuncs);
-    this->buildTypes = std::make_unique<VecTypes>(newBuildTypes);
+    this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes.get()),
         this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);
 }
@@ -47,7 +47,7 @@ Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
     return hashBuilderWithExprOperator.release();
 }
 
-HashBuilderWithExprOperator::HashBuilderWithExprOperator(const VecTypes &buildTypes,
+HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
     const std::vector<int32_t> &buildHashCols, const std::vector<RowProjFunc> &projectFuncs,
     HashBuilderOperator *hashBuilderOperator)
     : buildTypes(buildTypes),

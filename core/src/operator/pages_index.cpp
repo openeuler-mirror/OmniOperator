@@ -33,9 +33,9 @@ int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, 
     int32_t to, int32_t len);
 
 // function implements for class PagesIndex
-PagesIndex::PagesIndex(const omniruntime::vec::VecTypes &types)
-    : vecTypes(types.Get().data()),
-      vecTypeIds(types.GetIds()),
+PagesIndex::PagesIndex(const omniruntime::type::DataTypes &types)
+    : dataTypes(types.Get().data()),
+      dataTypeIds(types.GetIds()),
       typesCount(types.GetSize()),
       columns(nullptr),
       valueAddresses(nullptr),
@@ -782,30 +782,30 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
     int32_t to, int32_t currentCol)
 {
     switch (sortColTypes[currentCol]) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             ColumnarSort<omniruntime::vec::IntVector, int32_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
                 sortColCount, valueAddresses, columns, from, to, currentCol);
             break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             ColumnarSort<omniruntime::vec::LongVector, int64_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
                 sortColCount, valueAddresses, columns, from, to, currentCol);
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             ColumnarSortDouble(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
                 columns, from, to, currentCol);
             break;
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             ColumnarSort<omniruntime::vec::BooleanVector, bool>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
                 sortColCount, valueAddresses, columns, from, to, currentCol);
             break;
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
             ColumnarSortVarChar(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
                 columns, from, to, currentCol);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             ColumnarSortDec128(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
                 columns, from, to, currentCol);
             break;
@@ -836,33 +836,33 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         Vector **inputVecBatch = inputVecBatches[outputCol];
 
         switch (colTypeId) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 outputVecBatch->SetVector(j,
                     ConstructVector<IntVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 outputVecBatch->SetVector(j,
                     ConstructVector<LongVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 outputVecBatch->SetVector(j,
                     ConstructVector<DoubleVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 outputVecBatch->SetVector(j,
                     ConstructVector<BooleanVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                auto vecType = (VarcharVecType &)vecTypes[outputCol];
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                auto vecType = (VarcharDataType &)dataTypes[outputCol];
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch,
                     vecType.GetWidth(), vecAllocator);
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 outputVecBatch->SetVector(j,
                     ConstructVector<Decimal128Vector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
@@ -888,7 +888,7 @@ PagesIndex::~PagesIndex()
 
 template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *outputVector, int32_t outputIndex)
 {
-    if (inputVector->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
+    if (inputVector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
         auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
         SetValue(dictionaryVector->GetDictionary(), dictionaryVector->GetId(inputIndex), outputVector, outputIndex);
     } else {
@@ -921,7 +921,7 @@ T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vect
 
 void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *outputVector, int32_t outputIndex)
 {
-    if (inputVector->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
+    if (inputVector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
         auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
         SetVarcharValue(dictionaryVector->GetDictionary(), dictionaryVector->GetId(inputIndex), outputVector,
             outputIndex);

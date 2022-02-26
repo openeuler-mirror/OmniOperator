@@ -5,7 +5,7 @@
 #ifndef OMNI_RUNTIME_SUM_LONG_DECIMAL_AGGREGATOR_H
 #define OMNI_RUNTIME_SUM_LONG_DECIMAL_AGGREGATOR_H
 #include "aggregator.h"
-#include "vector/type/decimal_operations.h"
+#include "type/decimal_operations.h"
 
 
 namespace omniruntime {
@@ -14,11 +14,11 @@ static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
 
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
+    SumLongDecimalAggregator(const DataType &in, const DataType &out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
+    SumLongDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 

@@ -7,14 +7,12 @@ package nova.hetu.omniruntime.type;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Objects;
-
 /**
  * Decimal128 data type
  *
  * @since 2021-08-05
  */
-public class Decimal128DataType extends DataType {
+public class Decimal128DataType extends DecimalDataType {
     /**
      * Default precision value of decimal.
      */
@@ -30,35 +28,14 @@ public class Decimal128DataType extends DataType {
      */
     public static final Decimal128DataType DECIMAL128 = new Decimal128DataType(DEFAULT_PRECISION, DEFAULT_SCALE);
 
-    @JsonProperty
-    private final int precision;
-
-    @JsonProperty
-    private final int scale;
-
     /**
-     * Construct of decima128 vector type.
+     * Construct of decimal128 data type.
      *
      * @param precision the precision of decimal.
      * @param scale the scale of decimal.
      */
     @JsonCreator
     public Decimal128DataType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
-        super(DataTypeId.OMNI_DATA_TYPE_DECIMAL128);
-        this.precision = precision;
-        this.scale = scale;
-    }
-
-    public int getPrecision() {
-        return precision;
-    }
-
-    public int getScale() {
-        return scale;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(precision, scale, super.getId());
+        super(precision, scale, DataTypeId.OMNI_DECIMAL128);
     }
 }

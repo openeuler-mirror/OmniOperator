@@ -11,8 +11,8 @@
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-SortMergeJoinScanner::SortMergeJoinScanner(const VecTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
-    int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const VecTypes &bufferedTableKeysTypes,
+SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
+    int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
     int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch)
     : joinType(joinType),
       streamedTableKeysCols(streamedTableKeysCols),
@@ -24,7 +24,7 @@ SortMergeJoinScanner::SortMergeJoinScanner(const VecTypes &streamedTableKeysType
 {
     streamedPagesIndex = streamedTablePagesIndex;
     bufferedPagesIndex = bufferedTablePagesIndex;
-    this->streamedTableKeysTypes = std::make_unique<VecTypes>(streamedTableKeysTypes);
+    this->streamedTableKeysTypes = std::make_unique<DataTypes>(streamedTableKeysTypes);
     preStreamedValueAddress = -1;
     preStatus = std::make_unique<InitialJoinStatus>();
 }
@@ -220,7 +220,7 @@ bool SortMergeJoinScanner::PreKeyMatched()
     }
     auto curValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     bool isMatched = CompareRowKeys(preStreamedValueAddress, streamedPagesIndex, streamedTableKeysCols, curValueAddr,
-                                    streamedPagesIndex, streamedTableKeysCols) == 0;
+        streamedPagesIndex, streamedTableKeysCols) == 0;
     return isMatched;
 }
 

@@ -30,10 +30,12 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     bool data8[DATA_SIZE] = {true, false, false, true};
     std::string data9[DATA_SIZE] = {"123", "456", "789", "012"};
 
-    std::vector<VecType> types = { IntVecType::Instance(),       DoubleVecType::Instance(),  VarcharVecType(10),
-        LongVecType::Instance(),      Decimal128VecType(10, 2),   Date32VecType::Instance(),
-        Decimal64VecType::Instance(), BooleanVecType::Instance(), CharVecType::Instance() };
-    VecTypes sourceTypes(types);
+    std::vector<DataType> types = { IntDataType::Instance(),       DoubleDataType::Instance(),
+        VarcharDataType(10),           LongDataType::Instance(),
+        Decimal128DataType(10, 2),     Date32DataType::Instance(),
+        Decimal64DataType::Instance(), BooleanDataType::Instance(),
+        CharDataType::Instance() };
+    DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
@@ -76,8 +78,8 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     int32_t data01[DATA_SIZE] = {0, 1, 2};
     double data02[DATA_SIZE] = {6.6, 5.5, 4.4};
 
-    std::vector<VecType> types = { IntVecType::Instance(), DoubleVecType::Instance() };
-    VecTypes sourceTypes(types);
+    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    DataTypes sourceTypes(types);
 
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE, data01, data02);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(LIMIT_COUNT);
@@ -122,8 +124,8 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     int32_t data1[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    std::vector<VecType> types = { IntVecType::Instance(), DoubleVecType::Instance() };
-    VecTypes sourceTypes(types);
+    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE, data1, data2);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(LIMIT_COUNT);
     operatorFactory->SetJitContext(nullptr);

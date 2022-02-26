@@ -28,14 +28,15 @@ static string getString(int32_t index, int32_t offset, int32_t width)
     return str;
 }
 
-TEST(varcharType, VarcharHashPerf){
+TEST(varcharType, VarcharHashPerf)
+{
     std::vector<string> vec;
     for (int i = 0; i < ROW_SIZE; i++) {
         string str = getString(i, 10, VAR_LEN);
         vec.emplace_back(str);
     }
 
-    //Test perf
+    // Test perf
     std::cout << "Test times: " << ROW_SIZE << std::endl;
     std::cout << "varchar length: " << VAR_LEN << std::endl;
 
@@ -47,7 +48,7 @@ TEST(varcharType, VarcharHashPerf){
 
     double sum = 0;
     int hashVal;
-    for (int j = 0; j < ROUNDS; j++){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -65,11 +66,11 @@ TEST(varcharType, VarcharHashPerf){
 
     std::cout << "HashUtil::HashValue()" << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++ ){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
-            hashVal = HashUtil::HashValue((int8_t *) vec[i].c_str(), VAR_LEN);
+            hashVal = HashUtil::HashValue((int8_t *)vec[i].c_str(), VAR_LEN);
         }
 
         timer.calculateElapse();
@@ -82,7 +83,8 @@ TEST(varcharType, VarcharHashPerf){
     std::cout << "hashVal: " << hashVal << std::endl;
 }
 
-TEST(LongType, LongHashPerf) {
+TEST(LongType, LongHashPerf)
+{
     std::cout << "Test times: " << ROW_SIZE << std::endl;
     std::cout << "long scope: [" << START << ", " << START + ROW_SIZE << "]" << std::endl;
 

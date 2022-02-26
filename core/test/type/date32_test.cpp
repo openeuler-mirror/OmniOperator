@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "type/date32.h"
 
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 TEST(Date32, add_normal)
 {

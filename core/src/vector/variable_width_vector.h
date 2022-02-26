@@ -12,8 +12,8 @@
 
 namespace omniruntime {
 namespace vec {
-template <VecTypeId TYPE_ID> class VariableWidthVector : public Vector {
-    using T = typename NativeType<TYPE_ID>::type;
+template <DataTypeId TYPE_ID> class VariableWidthVector : public Vector {
+    using T = typename type::NativeType<TYPE_ID>::type;
     using VariableWidthVectorImpl = VariableWidthVector<TYPE_ID>;
 
 public:
@@ -146,7 +146,7 @@ public:
 
         T *value = nullptr;
         int32_t valueLen = 0;
-        if (other->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        if (other->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
             VariableWidthVectorImpl *src = static_cast<VariableWidthVectorImpl *>(other);
             for (int32_t i = 0; i < length; i++) {
                 if (other->IsValueNull(i)) {
@@ -227,7 +227,7 @@ private:
 
     int32_t lastOffsetPosition = -1;
 };
-using VarcharVector = VariableWidthVector<OMNI_VEC_TYPE_VARCHAR>;
+using VarcharVector = VariableWidthVector<type::OMNI_VARCHAR>;
 }
 }
 #endif // __VARIABLE_WIDTH_VECTOR_OPERATOR_H__

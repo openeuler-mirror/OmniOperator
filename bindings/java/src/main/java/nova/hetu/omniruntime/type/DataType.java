@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * base class of data type
+ * data type
  *
  * @since 2021-08-05
  */
@@ -18,12 +18,12 @@ public class DataType implements Serializable {
     /**
      * It is a none data type
      */
-    public static final DataType NONE = new DataType(DataTypeId.OMNI_DATA_TYPE_NONE);
+    public static final DataType NONE = new DataType(DataTypeId.OMNI_NONE);
 
     /**
      * It is a invalid data type
      */
-    public static final DataType INVALID = new DataType(DataTypeId.OMNI_DATA_TYPE_INVALID);
+    public static final DataType INVALID = new DataType(DataTypeId.OMNI_INVALID);
 
     private static final long serialVersionUID = 2589766491688675794L;
 
@@ -39,38 +39,38 @@ public class DataType implements Serializable {
     }
 
     /**
-     * Create a vector type object.
+     * Create a data type object.
      *
-     * @param typeId create vector type by vector type id.
-     * @return vector type.
+     * @param typeId create data type by data type id.
+     * @return data type.
      */
     public static DataType create(int typeId) {
         return new DataType(DataTypeId.values()[typeId]);
     }
 
     /**
-     * The vector type id
+     * The data type id
      */
     public enum DataTypeId {
-        OMNI_DATA_TYPE_NONE,
-        OMNI_DATA_TYPE_INT,
-        OMNI_DATA_TYPE_LONG,
-        OMNI_DATA_TYPE_DOUBLE,
-        OMNI_DATA_TYPE_BOOLEAN,
-        OMNI_DATA_TYPE_SHORT,
-        OMNI_DATA_TYPE_DECIMAL64,
-        OMNI_DATA_TYPE_DECIMAL128,
-        OMNI_DATA_TYPE_DATE32,
-        OMNI_DATA_TYPE_DATE64,
-        OMNI_DATA_TYPE_TIME32,
-        OMNI_DATA_TYPE_TIME64,
-        OMNI_DATA_TYPE_TIMESTAMP,
-        OMNI_DATA_TYPE_INTERVAL_MONTHS,
-        OMNI_DATA_TYPE_INTERVAL_DAY_TIME,
-        OMNI_DATA_TYPE_VARCHAR,
-        OMNI_DATA_TYPE_CHAR,
-        OMNI_DATA_TYPE_CONTAINER,
-        OMNI_DATA_TYPE_INVALID
+        OMNI_NONE,
+        OMNI_INT,
+        OMNI_LONG,
+        OMNI_DOUBLE,
+        OMNI_BOOLEAN,
+        OMNI_SHORT,
+        OMNI_DECIMAL64,
+        OMNI_DECIMAL128,
+        OMNI_DATE32,
+        OMNI_DATE64,
+        OMNI_TIME32,
+        OMNI_TIME64,
+        OMNI_TIMESTAMP,
+        OMNI_INTERVAL_MONTHS,
+        OMNI_INTERVAL_DAY_TIME,
+        OMNI_VARCHAR,
+        OMNI_CHAR,
+        OMNI_CONTAINER,
+        OMNI_INVALID
     }
 
     /**
@@ -92,14 +92,14 @@ public class DataType implements Serializable {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object obj) {
+        if (this == obj) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        DataType dataType = (DataType) o;
+        DataType dataType = (DataType) obj;
         return id == dataType.id;
     }
 

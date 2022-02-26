@@ -7,11 +7,11 @@
 namespace omniruntime {
 namespace vec {
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount,
-    std::vector<uintptr_t> &fieldVectors, int32_t vectorCount, std::vector<VecType> &types)
-    : Vector(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_TYPE_CONTAINER),
+    std::vector<uintptr_t> &fieldVectors, int32_t vectorCount, std::vector<DataType> &dataTypes)
+    : Vector(allocator, vectorCount * BYTES, positionCount, type::OMNI_CONTAINER),
       vectorCount(vectorCount),
       positionCount(positionCount),
-      vecTypes(types)
+      dataTypes(dataTypes)
 {
     for (int32_t i = 0; i < vectorCount; ++i) {
         SetValue(i, fieldVectors[i]);
@@ -21,7 +21,7 @@ ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCou
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount)
     : vectorCount(capacityInBytes / BYTES),
       positionCount(positionCount),
-      Vector(allocator, capacityInBytes, positionCount, OMNI_VEC_TYPE_CONTAINER)
+      Vector(allocator, capacityInBytes, positionCount, type::OMNI_CONTAINER)
 {
     // init vec is null in container
     for (int i = 0; i < vectorCount; i++) {
@@ -45,7 +45,7 @@ ContainerVector *ContainerVector::Slice(int32_t positionOffset, int32_t length)
             (reinterpret_cast<Vector *>(GetValue(i)))->Slice(fieldVecStartIndex, fieldVecLength));
     }
 
-    auto newContainerVec = new ContainerVector(GetAllocator(), length, newVecAddr, vectorCount, vecTypes);
+    auto newContainerVec = new ContainerVector(GetAllocator(), length, newVecAddr, vectorCount, dataTypes);
     newContainerVec->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
     return newContainerVec;
 }
@@ -75,7 +75,7 @@ ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset
                                             ->CopyPositions(fieldVecPositions.data(), 0, fieldVecPositions.size()));
     }
 
-    auto newContainerVec = new ContainerVector(GetAllocator(), length, vecAddr, vectorCount, vecTypes);
+    auto newContainerVec = new ContainerVector(GetAllocator(), length, vecAddr, vectorCount, dataTypes);
     for (int32_t i = 0; i < length; ++i) {
         int position = positions[offset + i];
         newContainerVec->SetValueNull(position, IsValueNull(position));
@@ -103,7 +103,7 @@ ContainerVector *ContainerVector::CopyRegion(int positionOffset, int length)
             (reinterpret_cast<Vector *>(GetValue(i)))->CopyRegion(fieldVecStartIndex, fieldVecLength));
     }
 
-    auto newContainerVec = new ContainerVector(GetAllocator(), length, newVecAddr, vectorCount, vecTypes);
+    auto newContainerVec = new ContainerVector(GetAllocator(), length, newVecAddr, vectorCount, dataTypes);
     newContainerVec->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
     return newContainerVec;
 }
@@ -116,8 +116,8 @@ void ContainerVector::Append(Vector *other, int positionOffset, int length)
                  otherContainer->GetVectorCount());
         return;
     }
-    if (other->GetTypeId() != typeId) {
-        LogError("this vec type %d is not equal other type %d, container vec append failed.", typeId,
+    if (other->GetTypeId() != dataTypeId) {
+        LogError("this vec type %d is not equal other type %d, container vec append failed.", dataTypeId,
             other->GetTypeId());
         return;
     }

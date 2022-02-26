@@ -54,7 +54,7 @@ int CompareVectorBatch(int32_t leftPosition, vec::VectorBatch *left, int32_t rig
 
 class TopNOperatorFactory : public OperatorFactory {
 public:
-    TopNOperatorFactory(const vec::VecTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
+    TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperatorFactory() override;
@@ -62,7 +62,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    const vec::VecTypes sourceTypes;
+    const type::DataTypes sourceTypes;
     std::vector<int32_t> sortCols;
     int32_t n = 0;
     std::vector<int32_t> sortAscendings;
@@ -72,7 +72,7 @@ private:
 
 class TopNOperator : public Operator {
 public:
-    TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
+    TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
         std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperator() override;
@@ -82,7 +82,7 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
 private:
-    const vec::VecTypes &sourceTypes;
+    const type::DataTypes &sourceTypes;
     int32_t sourceTypesCount = 0;
     std::vector<int32_t> sortCols;
     int32_t n = 0;

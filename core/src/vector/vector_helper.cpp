@@ -35,45 +35,45 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
 {
     int32_t originalRowIndex;
     vector = ExpandVectorAndIndex(vector, rowIndex, originalRowIndex);
-    auto vecTypeId = vector->GetTypeId();
+    auto dataTypeId = vector->GetTypeId();
     if (vector->IsValueNull(originalRowIndex)) {
         std::cout << "NULL"
                   << "\t";
         return;
     }
-    switch (vecTypeId) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32: {
+    switch (dataTypeId) {
+        case OMNI_INT:
+        case OMNI_DATE32: {
             std::cout << std::dec << static_cast<IntVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64: {
+        case OMNI_LONG:
+        case OMNI_DECIMAL64: {
             std::cout << std::dec << static_cast<LongVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_DOUBLE: {
+        case OMNI_DOUBLE: {
             std::cout << static_cast<DoubleVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_BOOLEAN: {
+        case OMNI_BOOLEAN: {
             std::cout << static_cast<BooleanVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR: {
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
             uint8_t *value = nullptr;
             int32_t len = static_cast<VarcharVector *>(vector)->GetValue(originalRowIndex, &value);
             std::string valueString(value, value + len);
             std::cout << valueString << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_DECIMAL128: {
+        case OMNI_DECIMAL128: {
             Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(originalRowIndex);
             std::cout << result << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_CONTAINER: {
+        case OMNI_CONTAINER: {
             ContainerVector *containerVector = static_cast<ContainerVector *>(vector);
             DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
             LongVector *longVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
@@ -82,7 +82,7 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         default:
-            LogError("Error vector type %d", vecTypeId);
+            LogError("Error vector type %d", dataTypeId);
     }
 }
 
@@ -116,38 +116,38 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
 
     for (int32_t i = 0; i < vectorCount; ++i) {
         switch (types[i]) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
+            case OMNI_INT:
+            case OMNI_DATE32: {
                 IntVector *vector = new IntVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
                 LongVector *vector = new LongVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 DoubleVector *vector = new DoubleVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
-            case OMNI_VEC_TYPE_BOOLEAN: {
+            case OMNI_BOOLEAN: {
                 BooleanVector *vector = new BooleanVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
                 VarcharVector *vector = new VarcharVector(allocator, 50 * rowCount, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 break;
             }
-            case OMNI_VEC_TYPE_CONTAINER: {
+            case OMNI_CONTAINER: {
                 break;
             }
             default:
@@ -162,30 +162,30 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
             auto vector = pV->GetVector(i);
             auto resVec = result->GetVector(i);
             switch (types[i]) {
-                case OMNI_VEC_TYPE_INT:
-                case OMNI_VEC_TYPE_DATE32: {
+                case OMNI_INT:
+                case OMNI_DATE32: {
                     auto rValues = static_cast<int32_t *>(static_cast<IntVector *>(vector)->GetValues());
                     static_cast<IntVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
-                case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64: {
+                case OMNI_LONG:
+                case OMNI_DECIMAL64: {
                     auto rValues = static_cast<int64_t *>(static_cast<IntVector *>(vector)->GetValues());
                     static_cast<LongVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
-                case OMNI_VEC_TYPE_DOUBLE: {
+                case OMNI_DOUBLE: {
                     auto rValues = static_cast<double *>(static_cast<DoubleVector *>(vector)->GetValues());
                     static_cast<DoubleVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
-                case OMNI_VEC_TYPE_BOOLEAN: {
+                case OMNI_BOOLEAN: {
                     auto rValues = static_cast<bool *>(static_cast<BooleanVector *>(vector)->GetValues());
                     static_cast<BooleanVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
-                case OMNI_VEC_TYPE_VARCHAR:
-                case OMNI_VEC_TYPE_CHAR: {
+                case OMNI_VARCHAR:
+                case OMNI_CHAR: {
                     for (int32_t j = 0; j < rc; ++j) {
                         uint8_t *data = nullptr;
                         int32_t len = static_cast<VarcharVector *>(vector)->GetValue(j, &data);
@@ -194,10 +194,10 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
                     }
                     break;
                 }
-                case OMNI_VEC_TYPE_DECIMAL128: {
+                case OMNI_DECIMAL128: {
                     break;
                 }
-                case OMNI_VEC_TYPE_CONTAINER: {
+                case OMNI_CONTAINER: {
                     break;
                 }
                 default:

@@ -9,7 +9,7 @@
 namespace omniruntime {
 namespace vec {
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount)
-    : DictionaryVector(dictionary->GetAllocator(), idsCount)
+    : DictionaryVector(dictionary->GetAllocator(), dictionary->GetTypeId(), idsCount)
 {
     this->dictionary = dictionary->Slice(0, dictionary->GetSize());
     error_t ret = memcpy_s(valuesAddress, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
@@ -33,13 +33,13 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
 }
 
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t idsCount)
-    : DictionaryVector(dictionary->GetAllocator(), idsCount)
+    : DictionaryVector(dictionary->GetAllocator(), dictionary->GetTypeId(), idsCount)
 {
     this->dictionary = dictionary->Slice(0, dictionary->GetSize());
 }
 
-DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t idsCount)
-    : Vector(allocator, idsCount * sizeof(int32_t), idsCount, OMNI_VEC_TYPE_DICTIONARY), dictionary(nullptr)
+DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t idsCount)
+    : Vector(allocator, idsCount * sizeof(int32_t), idsCount, DataTypeId(dataTypeId)), dictionary(nullptr)
 {}
 
 DictionaryVector::~DictionaryVector()
@@ -51,78 +51,78 @@ DictionaryVector::~DictionaryVector()
 
 int32_t DictionaryVector::GetInt(int32_t position) const
 {
-    VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_INT || dictionaryType == OMNI_VEC_TYPE_DATE32) {
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_FLAT) {
         return static_cast<IntVector *>(dictionary)->GetValue(GetId(position));
-    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+    } else if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetInt(GetId(position));
     } else {
-        std::cerr << "unsupported type:" << dictionaryType << std::endl;
+        std::cerr << "unsupported encoding:" << dictionaryEncoding << std::endl;
         return -1;
     }
 }
 
 int64_t DictionaryVector::GetLong(int32_t position) const
 {
-    VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_LONG || dictionaryType == OMNI_VEC_TYPE_DECIMAL64) {
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_FLAT) {
         return static_cast<LongVector *>(dictionary)->GetValue(GetId(position));
-    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+    } else if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetLong(GetId(position));
     } else {
-        std::cerr << "unsupported type:" << dictionaryType << std::endl;
+        std::cerr << "unsupported encoding:" << dictionaryEncoding << std::endl;
         return -1;
     }
 }
 
 double DictionaryVector::GetDouble(int32_t position) const
 {
-    VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_DOUBLE) {
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_FLAT) {
         return static_cast<DoubleVector *>(dictionary)->GetValue(GetId(position));
-    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+    } else if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetDouble(GetId(position));
     } else {
-        std::cerr << "unsupported type:" << dictionaryType << std::endl;
+        std::cerr << "unsupported encoding:" << dictionaryEncoding << std::endl;
         return -1;
     }
 }
 
 bool DictionaryVector::GetBoolean(int32_t position) const
 {
-    VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_BOOLEAN) {
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_FLAT) {
         return static_cast<BooleanVector *>(dictionary)->GetValue(GetId(position));
-    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+    } else if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetBoolean(GetId(position));
     } else {
-        std::cerr << "unsupported type:" << dictionaryType << std::endl;
+        std::cerr << "unsupported encoding:" << dictionaryEncoding << std::endl;
         return -1;
     }
 }
 
 int32_t DictionaryVector::GetVarchar(int32_t position, uint8_t **dst) const
 {
-    VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_VARCHAR || dictionaryType == OMNI_VEC_TYPE_CHAR) {
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_FLAT) {
         return static_cast<VarcharVector *>(dictionary)->GetValue(GetId(position), dst);
-    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+    } else if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetVarchar(GetId(position), dst);
     } else {
-        std::cerr << "unsupported type:" << dictionaryType << std::endl;
+        std::cerr << "unsupported encoding:" << dictionaryEncoding << std::endl;
         return -1;
     }
 }
 
 Decimal128 DictionaryVector::GetDecimal128(int32_t position) const
 {
-    VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_DECIMAL128) {
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_FLAT) {
         return static_cast<Decimal128Vector *>(dictionary)->GetValue(GetId(position));
-    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+    } else if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetDecimal128(GetId(position));
     } else {
-        std::cerr << "unsupported type:" << dictionaryType << std::endl;
+        std::cerr << "unsupported encoding:" << dictionaryEncoding << std::endl;
         return -1;
     }
 }
@@ -176,7 +176,7 @@ Vector *DictionaryVector::ExtractDictionary()
             positions[i] = (preIds == nullptr) ? currentIds[i + positionOffset] : currentIds[preIds[i]];
         }
         preIds = positions;
-    } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
+    } while (dictionary->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY);
     return dictionary->CopyPositions(positions, 0, size);
 }
 
@@ -194,7 +194,7 @@ Vector *DictionaryVector::ExtractDictionary(const int32_t *positions, int32_t le
             newPositions[i] = (preIds == nullptr) ? currentIds[positions[i] + positionOffset] : currentIds[preIds[i]];
         }
         preIds = newPositions;
-    } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
+    } while (dictionary->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY);
     return dictionary->CopyPositions(preIds, 0, length);
 }
 
@@ -212,7 +212,7 @@ Vector *DictionaryVector::ExtractDictionaryAndIds(int32_t positionOffset, int32_
                 (preIds == nullptr) ? currentIds[i + positionOffset + this->positionOffset] : currentIds[preIds[i]];
         }
         preIds = originalIds;
-    } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
+    } while (dictionary->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY);
     return dictionary;
 }
 } // namespace vec

@@ -8,7 +8,7 @@
 
 using namespace std;
 using namespace omniruntime::expressions;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 using Json = nlohmann::json;
 
@@ -38,33 +38,33 @@ OperatorType JSONParser::GetOperatorType(Operator op)
 
 Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
 {
-    VecTypeId typeId = static_cast<VecTypeId>(jsonExpr["dataType"].get<int32_t>());
-    VecTypePtr retType;
+    DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
+    DataTypePtr retType;
     auto colVal = jsonExpr["colVal"].get<int32_t>();
     if (TypeUtil::IsStringType(typeId)) {
         int width = jsonExpr["width"].get<int32_t>();
-        if (typeId == OMNI_VEC_TYPE_CHAR) {
-            retType = make_unique<CharVecType>(width);
+        if (typeId == OMNI_CHAR) {
+            retType = make_unique<CharDataType>(width);
         } else {
-            retType = make_unique<VarcharVecType>(width);
+            retType = make_unique<VarcharDataType>(width);
         }
     } else if (TypeUtil::IsDecimalType(typeId)) {
         int precision = jsonExpr["precision"].get<int32_t>();
         int scale = jsonExpr["scale"].get<int32_t>();
-        if (typeId == OMNI_VEC_TYPE_DECIMAL64) {
-            retType = make_unique<Decimal64VecType>(precision, scale);
+        if (typeId == OMNI_DECIMAL64) {
+            retType = make_unique<Decimal64DataType>(precision, scale);
         } else {
-            retType = make_unique<Decimal128VecType>(precision, scale);
+            retType = make_unique<Decimal128DataType>(precision, scale);
         }
     } else {
-        retType = make_unique<VecType>(typeId);
+        retType = make_unique<DataType>(typeId);
     }
     return make_unique<FieldExpr>(colVal, std::move(retType)).release();
 }
 
 Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
 {
-    VecTypeId typeId = static_cast<VecTypeId>(jsonExpr["dataType"].get<int32_t>());
+    DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
 
     // Null check on Literals
     if (jsonExpr["isNull"].get<bool>()) {
@@ -73,37 +73,37 @@ Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
         return expr;
     }
     // proceed with non-null value
-    if (typeId == OMNI_VEC_TYPE_BOOLEAN) {
+    if (typeId == OMNI_BOOLEAN) {
         bool boolVal = jsonExpr["value"].get<bool>();
-        return make_unique<LiteralExpr>(boolVal, make_unique<BooleanVecType>()).release();
-    } else if (typeId == OMNI_VEC_TYPE_INT) {
+        return make_unique<LiteralExpr>(boolVal, make_unique<BooleanDataType>()).release();
+    } else if (typeId == OMNI_INT) {
         auto intVal = jsonExpr["value"].get<int32_t>();
-        return make_unique<LiteralExpr>(intVal, make_unique<IntVecType>()).release();
-    } else if (typeId == OMNI_VEC_TYPE_DATE32) {
+        return make_unique<LiteralExpr>(intVal, make_unique<IntDataType>()).release();
+    } else if (typeId == OMNI_DATE32) {
         auto intVal = jsonExpr["value"].get<int32_t>();
-        return make_unique<LiteralExpr>(intVal, make_unique<VecType>(OMNI_VEC_TYPE_DATE32)).release();
-    } else if (typeId == OMNI_VEC_TYPE_LONG) {
+        return make_unique<LiteralExpr>(intVal, make_unique<DataType>(OMNI_DATE32)).release();
+    } else if (typeId == OMNI_LONG) {
         auto longVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<LiteralExpr>(longVal, make_unique<LongVecType>()).release();
-    } else if (typeId == OMNI_VEC_TYPE_DOUBLE) {
+        return make_unique<LiteralExpr>(longVal, make_unique<LongDataType>()).release();
+    } else if (typeId == OMNI_DOUBLE) {
         auto doubleVal = jsonExpr["value"].get<double>();
-        return make_unique<LiteralExpr>(doubleVal, make_unique<DoubleVecType>()).release();
-    } else if (typeId == OMNI_VEC_TYPE_DECIMAL64) {
+        return make_unique<LiteralExpr>(doubleVal, make_unique<DoubleDataType>()).release();
+    } else if (typeId == OMNI_DECIMAL64) {
         auto decimalVal = jsonExpr["value"].get<int64_t>();
         return make_unique<LiteralExpr>(decimalVal,
-            make_unique<Decimal64VecType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
+            make_unique<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
             .release();
-    } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
+    } else if (typeId == OMNI_DECIMAL128) {
         string *dec128String = make_unique<string>(jsonExpr["value"].get<string>()).release();
         return make_unique<LiteralExpr>(dec128String,
-            make_unique<Decimal128VecType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
+            make_unique<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
             .release();
-    } else if (typeId == OMNI_VEC_TYPE_NONE) {
-        return make_unique<LiteralExpr>(0, make_unique<VecType>()).release();
+    } else if (typeId == OMNI_NONE) {
+        return make_unique<LiteralExpr>(0, make_unique<DataType>()).release();
     } else {
         string *stringVal = make_unique<string>(jsonExpr["value"].get<string>()).release();
         int32_t width = jsonExpr["width"].get<int32_t>();
-        return make_unique<LiteralExpr>(stringVal, make_unique<VarcharVecType>(width)).release();
+        return make_unique<LiteralExpr>(stringVal, make_unique<VarcharDataType>(width)).release();
     }
 }
 
@@ -121,7 +121,7 @@ Expr *JSONParser::ParseJSONBinary(Json jsonExpr)
 
     OperatorType retType = GetOperatorType(op);
     if (retType == COMPARISON || retType == LOGICAL) {
-        return make_unique<BinaryExpr>(op, leftExpr, rightExpr, make_unique<BooleanVecType>()).release();
+        return make_unique<BinaryExpr>(op, leftExpr, rightExpr, make_unique<BooleanDataType>()).release();
     }
     return make_unique<BinaryExpr>(op, leftExpr, rightExpr).release();
 }
@@ -133,7 +133,7 @@ Expr *JSONParser::ParseJSONUnary(Json jsonExpr)
     if (expr == nullptr) {
         return nullptr;
     }
-    return make_unique<UnaryExpr>(op, expr, make_unique<BooleanVecType>()).release();
+    return make_unique<UnaryExpr>(op, expr, make_unique<BooleanDataType>()).release();
 }
 
 Expr *JSONParser::ParseJSONIn(Json jsonExpr)
@@ -249,9 +249,9 @@ Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
 Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
 {
     string funcName = jsonExpr["function_name"];
-    VecTypeId retTypeId = static_cast<VecTypeId>(jsonExpr["returnType"].get<int32_t>());
+    DataTypeId retTypeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
     std::vector<Expr *> args;
-    VecTypePtr retType;
+    DataTypePtr retType;
     int32_t width = INT32_MAX;
     int32_t precision;
     int32_t scale;
@@ -275,28 +275,28 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
         }
     }
     // Check that the signature matches
-    vector<VecTypeId> argTypes(args.size());
+    vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
-        [](Expr *expr) -> VecTypeId { return expr->GetReturnTypeId(); });
+        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (TypeUtil::IsStringType(retTypeId)) {
         width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
-        if (retTypeId == OMNI_VEC_TYPE_CHAR) {
-            retType = make_unique<CharVecType>(width);
+        if (retTypeId == OMNI_CHAR) {
+            retType = make_unique<CharDataType>(width);
         } else {
-            retType = make_unique<VarcharVecType>(width);
+            retType = make_unique<VarcharDataType>(width);
         }
     } else if (TypeUtil::IsDecimalType(retTypeId)) {
         precision = jsonExpr["precision"].get<int32_t>();
         scale = jsonExpr["scale"].get<int32_t>();
-        if (retTypeId == OMNI_VEC_TYPE_DECIMAL64) {
-            retType = make_unique<Decimal64VecType>(precision, scale);
+        if (retTypeId == OMNI_DECIMAL64) {
+            retType = make_unique<Decimal64DataType>(precision, scale);
         } else {
-            retType = make_unique<Decimal128VecType>(precision, scale);
+            retType = make_unique<Decimal128DataType>(precision, scale);
         }
     } else {
-        retType = make_unique<VecType>(retTypeId);
+        retType = make_unique<DataType>(retTypeId);
     }
     if (function != nullptr) {
         return make_unique<FuncExpr>(funcName, args, std::move(retType), function).release();

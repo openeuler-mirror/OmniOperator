@@ -3,9 +3,9 @@
  */
 
 #include "gtest/gtest.h"
-#include "vector_common.h"
+#include "vector/vector_common.h"
 
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 TEST(Decimal128, abs_negate)
 {

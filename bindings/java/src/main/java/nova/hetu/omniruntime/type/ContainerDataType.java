@@ -18,7 +18,7 @@ public class ContainerDataType extends DataType {
     private DataType[] fieldTypes;
 
     public ContainerDataType(DataType[] fieldTypes) {
-        super(DataTypeId.OMNI_DATA_TYPE_CONTAINER);
+        super(DataTypeId.OMNI_CONTAINER);
         this.fieldTypes = fieldTypes;
     }
 
@@ -26,7 +26,7 @@ public class ContainerDataType extends DataType {
      * Container construct
      */
     public ContainerDataType() {
-        super(DataTypeId.OMNI_DATA_TYPE_CONTAINER);
+        super(DataTypeId.OMNI_CONTAINER);
     }
 
     /**

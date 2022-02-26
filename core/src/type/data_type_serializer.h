@@ -5,18 +5,18 @@
 #ifndef OMNI_RUNTIME_DATA_TYPE_SERIALIZER_H
 #define OMNI_RUNTIME_DATA_TYPE_SERIALIZER_H
 
-#include "vector_type.h"
+#include "data_type.h"
 #include "data_types.h"
 
 namespace omniruntime {
 namespace type {
-std::string Serialize(const std::vector<VecType> &types);
+std::string Serialize(const std::vector<DataType> &types);
 
-std::string SerializeSingle(const VecType &type);
+std::string SerializeSingle(const DataType &type);
 
-VecTypes Deserialize(const std::string &vecTypes);
+DataTypes Deserialize(const std::string &dataTypes);
 
-VecType DeserializeSingle(const std::string &vecTypeExt);
+DataType DeserializeSingle(const std::string &dataTypeExt);
 }
 }
 

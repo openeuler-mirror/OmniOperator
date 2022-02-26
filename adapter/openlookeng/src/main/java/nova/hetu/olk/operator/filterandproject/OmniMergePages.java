@@ -15,6 +15,7 @@ import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.WorkProcessor;
 import io.prestosql.operator.project.MergePages;
@@ -145,7 +146,8 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      * @return Page output
      */
     public Page flush() {
-        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, dataTypes, totalPositions), totalPositions);
+        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, dataTypes, totalPositions),
+                totalPositions);
         merge(mergeResult, pages, vecAllocator);
         Page finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
         currentPageSizeInBytes = 0;

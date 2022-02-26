@@ -27,7 +27,7 @@ namespace omniruntime {
          * it will always be the first parameter in your function, default to false
          */
         Function(void *address, const std::string &name, const std::vector<std::string> &aliases, const
-        std::vector<omniruntime::vec::VecTypeId> &paramTypes, const omniruntime::vec::VecTypeId
+        std::vector<omniruntime::type::DataTypeId> &paramTypes, const omniruntime::type::DataTypeId
         &retType, bool setExecutionContext = false);
 
         Function(const std::string &fnID, const FunctionSignature &signature);
@@ -41,8 +41,8 @@ namespace omniruntime {
 
         ~Function();
         const std::vector<FunctionSignature> &GetSignatures() const;
-        omniruntime::vec::VecTypeId GetReturnType() const;
-        const std::vector<omniruntime::vec::VecTypeId> &GetParamTypes() const;
+        omniruntime::type::DataTypeId GetReturnType() const;
+        const std::vector<omniruntime::type::DataTypeId> &GetParamTypes() const;
         std::string GetId() const;
         const void *GetAddress() const;
         bool IsExecutionContextSet() const;

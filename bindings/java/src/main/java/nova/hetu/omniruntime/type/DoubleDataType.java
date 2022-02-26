@@ -19,6 +19,6 @@ public class DoubleDataType extends DataType {
      * The construct.
      */
     public DoubleDataType() {
-        super(DataTypeId.OMNI_DATA_TYPE_DOUBLE);
+        super(DataTypeId.OMNI_DOUBLE);
     }
 }

@@ -8,17 +8,17 @@
 
 using namespace std;
 using namespace omniruntime;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 vector<Function> ExternalFunctionRegistry::GetFunctions()
 {
     std::vector<Function> externalFunctionRegistry = {
-            Function(reinterpret_cast<void*>(StringLength), "length", {}, {OMNI_VEC_TYPE_VARCHAR},
-                     OMNI_VEC_TYPE_INT),
-            Function(reinterpret_cast<void*>(Increment<int32_t>), "Increment", {}, {OMNI_VEC_TYPE_INT},
-                     OMNI_VEC_TYPE_INT),
-            Function(reinterpret_cast<void*>(Increment<int64_t>), "Increment", {}, {OMNI_VEC_TYPE_LONG},
-                     OMNI_VEC_TYPE_LONG),
+            Function(reinterpret_cast<void*>(StringLength), "length", {}, {OMNI_VARCHAR},
+                     OMNI_INT),
+            Function(reinterpret_cast<void*>(Increment<int32_t>), "Increment", {}, {OMNI_INT},
+                     OMNI_INT),
+            Function(reinterpret_cast<void*>(Increment<int64_t>), "Increment", {}, {OMNI_LONG},
+                     OMNI_LONG),
     };
     return externalFunctionRegistry;
 }

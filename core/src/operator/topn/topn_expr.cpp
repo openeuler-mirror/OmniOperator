@@ -11,31 +11,29 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 
-TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const vec::VecTypes &sourceVecTypes, int32_t n,
+TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
     int32_t sortKeyCount)
 {
-    std::vector<VecType> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(sourceVecTypes, sortKeys, sortKeyCount, newSourceTypes,
-        this->rowProjections, this->sortCols, this->projectFuncs);
+    std::vector<DataType> newSourceTypes;
+    OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
+        this->sortCols, this->projectFuncs);
 
-    this->sourceTypes = std::make_unique<VecTypes>(newSourceTypes);
+    this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*(this->sourceTypes.get()), n,
         this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
 }
 
-TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory()
-{}
+TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() {}
 
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {
     auto topNOperator = static_cast<TopNOperator *>(topNOperatorFactory->CreateOperator());
-    auto pOperator = std::make_unique<TopNWithExprOperator>(*(sourceTypes.get()), sortCols,
-        projectFuncs, topNOperator);
+    auto pOperator = std::make_unique<TopNWithExprOperator>(*(sourceTypes.get()), sortCols, projectFuncs, topNOperator);
     return pOperator.release();
 }
 
-TopNWithExprOperator::TopNWithExprOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &sortCols,
+TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator)
     : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
 {}
@@ -70,4 +68,3 @@ OmniStatus TopNWithExprOperator::Close()
 }
 }
 }
-

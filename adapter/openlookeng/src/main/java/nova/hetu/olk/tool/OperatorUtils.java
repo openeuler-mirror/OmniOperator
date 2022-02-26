@@ -4,6 +4,7 @@
 
 package nova.hetu.olk.tool;
 
+import static io.prestosql.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.prestosql.spi.type.Decimals.MAX_SHORT_PRECISION;
 
 import com.google.common.primitives.Ints;
@@ -24,6 +25,7 @@ import io.prestosql.spi.type.RowType;
 import io.prestosql.spi.type.StandardTypes;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeSignature;
+import nova.hetu.olk.block.ByteArrayOmniBlock;
 import nova.hetu.olk.block.DictionaryOmniBlock;
 import nova.hetu.olk.block.DoubleArrayOmniBlock;
 import nova.hetu.olk.block.Int128ArrayOmniBlock;
@@ -32,18 +34,17 @@ import nova.hetu.olk.block.LazyOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
-import nova.hetu.olk.block.ByteArrayOmniBlock;
+import nova.hetu.omniruntime.type.BooleanDataType;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Date32DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.Decimal64DataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.DoubleDataType;
-import nova.hetu.omniruntime.type.BooleanDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.CharDataType;
-import nova.hetu.omniruntime.type.Decimal64DataType;
-import nova.hetu.omniruntime.type.Decimal128DataType;
-import nova.hetu.omniruntime.type.Date32DataType;
-import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
@@ -91,37 +92,35 @@ public final class OperatorUtils {
         TypeSignature signature = type.getTypeSignature();
         String base = signature.getBase();
         switch (base) {
-            case StandardTypes.INTEGER :
+            case StandardTypes.INTEGER:
                 return IntDataType.INTEGER;
-            case StandardTypes.BIGINT :
+            case StandardTypes.BIGINT:
                 return LongDataType.LONG;
-            case StandardTypes.DOUBLE :
+            case StandardTypes.DOUBLE:
                 return DoubleDataType.DOUBLE;
-            case StandardTypes.BOOLEAN :
+            case StandardTypes.BOOLEAN:
                 return BooleanDataType.BOOLEAN;
-            case StandardTypes.VARBINARY :
-                // FIXME: the max varbinary length is 8000. when varchar support dynamic
-                // allocate, pls fix it.
-                return new VarcharDataType(8000);
-            case StandardTypes.VARCHAR :
+            case StandardTypes.VARBINARY:
+                return new VarcharDataType(0);
+            case StandardTypes.VARCHAR:
                 int width = signature.getParameters().get(0).getLongLiteral().intValue();
                 return new VarcharDataType(width);
-            case StandardTypes.CHAR :
+            case StandardTypes.CHAR:
                 return new CharDataType(signature.getParameters().get(0).getLongLiteral().intValue());
-            case StandardTypes.DECIMAL :
+            case StandardTypes.DECIMAL:
                 int precision = signature.getParameters().get(0).getLongLiteral().intValue();
                 int scale = signature.getParameters().get(1).getLongLiteral().intValue();
                 if (precision <= MAX_SHORT_PRECISION) {
                     return new Decimal64DataType(precision, scale);
                 }
                 return new Decimal128DataType(precision, scale);
-            case StandardTypes.DATE :
+            case StandardTypes.DATE:
                 return Date32DataType.DATE32;
-            case StandardTypes.ROW :
+            case StandardTypes.ROW:
                 RowType rowType = (RowType) type;
                 return new ContainerDataType(toDataTypes(rowType.getTypeParameters()));
-            default :
-                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + base);
+            default:
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support data Type " + base);
         }
     }
 
@@ -162,33 +161,33 @@ public final class OperatorUtils {
         for (int i = 0; i < dataTypes.length; i++) {
             DataType type = dataTypes[i];
             switch (type.getId()) {
-                case OMNI_DATA_TYPE_INT :
-                case OMNI_DATA_TYPE_DATE32 :
+                case OMNI_INT:
+                case OMNI_DATE32:
                     vecsResult.add(new IntVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_DATA_TYPE_LONG :
-                case OMNI_DATA_TYPE_DECIMAL64 :
+                case OMNI_LONG:
+                case OMNI_DECIMAL64:
                     vecsResult.add(new LongVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_DATA_TYPE_DOUBLE :
+                case OMNI_DOUBLE:
                     vecsResult.add(new DoubleVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_DATA_TYPE_BOOLEAN :
+                case OMNI_BOOLEAN:
                     vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_DATA_TYPE_VARCHAR :
-                case OMNI_DATA_TYPE_CHAR :
+                case OMNI_VARCHAR:
+                case OMNI_CHAR:
                     vecsResult.add(new VarcharVec(vecAllocator, totalPositions * ((VarcharDataType) type).getWidth(),
                             totalPositions));
                     break;
-                case OMNI_DATA_TYPE_DECIMAL128 :
+                case OMNI_DECIMAL128:
                     vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
                     break;
-                case OMNI_DATA_TYPE_CONTAINER :
+                case OMNI_CONTAINER:
                     vecsResult.add(createBlankContainerVector(vecAllocator, type, totalPositions));
                     break;
-                default :
-                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + type);
+                default:
+                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support data type " + type);
             }
         }
         return vecsResult;
@@ -487,5 +486,59 @@ public final class OperatorUtils {
                 src.close();
             }
         }
+    }
+
+    /**
+     * build a RowOmniBlock from a ContainerVec
+     *
+     * @param containerVec a container vector
+     * @return the RowOmniBlock
+     */
+    public static RowOmniBlock buildRowOmniBlock(ContainerVec containerVec) {
+        DataType[] dataTypes = containerVec.getDataTypes();
+        int positionCount = containerVec.getPositionCount();
+        Block[] rowBlocks = new Block[dataTypes.length];
+        int vectorCount = containerVec.getDataTypes().length;
+        for (int vecIdx = 0; vecIdx < vectorCount; ++vecIdx) {
+            DataType dataType = dataTypes[vecIdx];
+            switch (dataType.getId()) {
+                case OMNI_BOOLEAN:
+                    rowBlocks[vecIdx] = new ByteArrayOmniBlock(positionCount,
+                            new BooleanVec(containerVec.getVector(vecIdx)));
+                    break;
+                case OMNI_INT:
+                case OMNI_DATE32:
+                    rowBlocks[vecIdx] = new IntArrayOmniBlock(positionCount,
+                            new IntVec(containerVec.getVector(vecIdx)));
+                    break;
+                case OMNI_LONG:
+                case OMNI_DECIMAL64:
+                    rowBlocks[vecIdx] = new LongArrayOmniBlock(positionCount,
+                            new LongVec(containerVec.getVector(vecIdx)));
+                    break;
+                case OMNI_DOUBLE:
+                    rowBlocks[vecIdx] = new DoubleArrayOmniBlock(positionCount,
+                            new DoubleVec(containerVec.getVector(vecIdx)));
+                    break;
+                case OMNI_VARCHAR:
+                case OMNI_CHAR:
+                    rowBlocks[vecIdx] = new VariableWidthOmniBlock(positionCount,
+                            new VarcharVec(containerVec.getVector(vecIdx)));
+                    break;
+                case OMNI_DECIMAL128:
+                    rowBlocks[vecIdx] = new Int128ArrayOmniBlock(positionCount,
+                            new Decimal128Vec(containerVec.getVector(vecIdx), dataType));
+                    break;
+                default:
+                    throw new PrestoException(GENERIC_INTERNAL_ERROR,
+                            "Unsupported data type " + dataTypes[vecIdx].getId());
+            }
+        }
+        int[] fieldBlockOffsets = new int[positionCount + 1];
+        byte[] nulls = containerVec.getRawValueNulls();
+        for (int position = 0; position < positionCount; position++) {
+            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position] + (nulls[position] == Vec.NULL ? 0 : 1);
+        }
+        return new RowOmniBlock(0, positionCount, nulls, fieldBlockOffsets, rowBlocks);
     }
 }

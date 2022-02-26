@@ -10,24 +10,24 @@ namespace omniruntime {
 namespace type {
 using json = nlohmann::json;
 
-std::string Serialize(const std::vector<VecType> &types)
+std::string Serialize(const std::vector<DataType> &types)
 {
     return json(types).dump();
 }
 
-std::string SerializeSingle(const VecType &type)
+std::string SerializeSingle(const DataType &type)
 {
     return json(type).dump();
 }
 
-VecTypes Deserialize(const std::string &vecTypes)
+DataTypes Deserialize(const std::string &dataTypes)
 {
-    return VecTypes(json::parse(vecTypes));
+    return DataTypes(json::parse(dataTypes));
 }
 
-VecType DeserializeSingle(const std::string &vecType)
+DataType DeserializeSingle(const std::string &dataType)
 {
-    return json::parse(vecType);
+    return json::parse(dataType);
 }
 }
 }

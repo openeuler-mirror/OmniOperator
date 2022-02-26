@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "operator/aggregation/definitions.h"
-#include "vector/vector_type.h"
+#include "type/data_type.h"
 #include "vector/vector.h"
 #include "vector/vector_common.h"
 #include "operator/execution_context.h"
@@ -20,8 +20,8 @@ using namespace omniruntime::vec;
 
 using ColumnIndex = struct ColumnIndex {
     int32_t idx;
-    VecType input;
-    VecType output;
+    DataType input;
+    DataType output;
 };
 
 using PrepareContext = struct PrepareContext {
@@ -58,7 +58,7 @@ public:
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
      *       */
-    Aggregator(FunctionType aggregateType, const VecType &inputType, const VecType &outputType, int32_t channel,
+    Aggregator(FunctionType aggregateType, const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
           inputType(inputType),
@@ -97,12 +97,12 @@ public:
         return type;
     }
 
-    const VecType &GetInputType() const
+    const DataType &GetInputType() const
     {
         return inputType;
     }
 
-    const VecType &GetOutputType() const
+    const DataType &GetOutputType() const
     {
         return outputType;
     }
@@ -118,8 +118,8 @@ public:
 
 protected:
     FunctionType type;
-    VecType inputType;
-    VecType outputType;
+    DataType inputType;
+    DataType outputType;
     bool initiated;
     bool inputRaw;
     bool outputPartial;

@@ -7,16 +7,17 @@
 
 #include "../util/debug.h"
 #include "../util/compiler_util.h"
+#include "../type/data_type.h"
 #include "vector_reference.h"
 #include "vector_allocator.h"
-#include "vector_type.h"
 #include "vector_encoding.h"
 
 namespace omniruntime {
 namespace vec {
+using DataTypeId  = type::DataTypeId;
 class Vector {
 public:
-    Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecTypeId typeId);
+    Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);
 
     virtual ~Vector();
 
@@ -60,9 +61,9 @@ public:
         return valuesAddress;
     }
 
-    VecTypeId GetTypeId() const
+    DataTypeId GetTypeId() const
     {
-        return typeId;
+        return dataTypeId;
     }
 
     int GetCapacityInBytes() const
@@ -144,7 +145,7 @@ public:
 
     VectorTracer *GetVectorTracer();
 
-    virtual VectorEncoding encoding()
+    virtual VectorEncoding GetEncoding()
     {
         return OMNI_VEC_ENCODING_FLAT;
     }
@@ -154,7 +155,7 @@ protected:
     Vector(Vector *vector, int size, int offset);
 
     // this method does not apply for memory for chunk,it is mainly used for dictionary vector or other vector
-    Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset);
+    Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataType type, int32_t positionOffset);
 
     void SetValueNulls(int startIndex, bool *nulls, int length);
 
@@ -164,7 +165,7 @@ protected:
     int positionOffset = 0;
     int capacityInBytes = 0;
     int size = 0;
-    VecTypeId typeId;
+    DataTypeId dataTypeId;
     VectorReference *reference = nullptr;
     VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;

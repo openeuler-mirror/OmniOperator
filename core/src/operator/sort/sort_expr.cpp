@@ -14,7 +14,7 @@ namespace op {
 using namespace omniruntime::vec;
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-    const vec::VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortKeysCount)
 {
@@ -23,14 +23,14 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
     return pOperatorFactory.release();
 }
 
-SortWithExprOperatorFactory::SortWithExprOperatorFactory(const vec::VecTypes &sourceTypes, int32_t *outputCols,
+SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortKeysCount)
 {
-    std::vector<VecType> newSourceTypes;
+    std::vector<DataType> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,
         this->sortCols, this->projectFuncs);
-    this->sourceTypes = std::make_unique<VecTypes>(newSourceTypes);
+    this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes.get()), outputCols,
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount);
 }
@@ -47,7 +47,7 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
     return pOperator.release();
 }
 
-SortWithExprOperator::SortWithExprOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &sortCols,
+SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<RowProjFunc> &projectFuncs, SortOperator *sortOperator)
     : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
 {}

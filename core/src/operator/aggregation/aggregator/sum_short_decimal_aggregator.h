@@ -5,7 +5,7 @@
 #ifndef OMNI_RUNTIME_SUM_SHORT_DECIMAL_AGGREGATOR_H
 #define OMNI_RUNTIME_SUM_SHORT_DECIMAL_AGGREGATOR_H
 #include "aggregator.h"
-#include "vector/type/decimal_operations.h"
+#include "type/decimal_operations.h"
 
 namespace omniruntime {
 namespace op {
@@ -16,11 +16,11 @@ namespace op {
 
 class SumShortDecimalAggregator : public Aggregator {
 public:
-    SumShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
+    SumShortDecimalAggregator(const DataType &in, const DataType &out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
+    SumShortDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 
@@ -38,7 +38,7 @@ public:
             return;
         }
         if (inputRaw) {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_LONG) {
+            if (vector->GetTypeId() != OMNI_LONG) {
                 LogError("Partial short decimal average should input long.");
             }
             // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
@@ -54,7 +54,7 @@ public:
             // 4. encode to state
             DecimalOperations::EncodeSumDecimal(state.val, leftVal, oldOverflow);
         } else {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_VARCHAR) {
+            if (vector->GetTypeId() != OMNI_VARCHAR) {
                 LogError("Partial short decimal average should input long.");
             }
             // 1. get a new intermediate value
@@ -86,7 +86,7 @@ public:
             return;
         }
         if (inputRaw) {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_LONG) {
+            if (vector->GetTypeId() != OMNI_LONG) {
                 LogError("Partial short decimal average should input long.");
             }
             // input vector is expected as LongVec
@@ -96,7 +96,7 @@ public:
             Decimal128 initState = DecimalOperations::UnscaledDecimal(curVal);
             DecimalOperations::EncodeSumDecimal(state.val, initState, 0);
         } else {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_VARCHAR) {
+            if (vector->GetTypeId() != OMNI_VARCHAR) {
                 LogError("Partial short decimal average should input long.");
             }
             // input vector is expected as VarcharVec
@@ -118,13 +118,13 @@ public:
             return;
         }
         if (outputPartial) {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_VARCHAR) {
+            if (vector->GetTypeId() != OMNI_VARCHAR) {
                 LogError("Partial short decimal average should output varbinary.");
             }
             static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
                 PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
-            if (vector->GetTypeId() != OMNI_VEC_TYPE_DECIMAL128) {
+            if (vector->GetTypeId() != OMNI_DECIMAL128) {
                 LogError("Partial short decimal average should output long decimal.");
             }
             // write decimal if not overflow. otherwise throw exception

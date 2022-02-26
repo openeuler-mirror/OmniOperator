@@ -5,11 +5,11 @@
 #include <algorithm>
 #include "function.h"
 
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 namespace omniruntime {
     Function::Function(void* address, const std::string& name, const std::vector<std::string>& aliases,
-                       const std::vector<VecTypeId>& paramTypes, const VecTypeId &retType, bool setExecutionContext)
+                       const std::vector<DataTypeId>& paramTypes, const DataTypeId &retType, bool setExecutionContext)
     {
         this->address = address;
         // update function name used for lookup in codegen
@@ -39,11 +39,11 @@ namespace omniruntime {
         return this->signatures.at(0).ToString();
     }
 
-    VecTypeId Function::GetReturnType() const
+    DataTypeId Function::GetReturnType() const
     {
         return this->signatures.at(0).GetReturnType();
     }
-    const std::vector<VecTypeId> &Function::GetParamTypes() const
+    const std::vector<DataTypeId> &Function::GetParamTypes() const
     {
         return this->signatures.at(0).GetParams();
     }

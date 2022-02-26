@@ -5,15 +5,15 @@
 #include "util/type_util.h"
 #include "./func_signature.h"
 
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 FunctionSignature::FunctionSignature()
 {
 }
 
 FunctionSignature::FunctionSignature(
-    const std::string name, std::vector<VecTypeId> params,
-                                     const omniruntime::vec::VecTypeId &returnType, void *address)
+        const std::string name, std::vector<DataTypeId> params,
+        const omniruntime::type::DataTypeId &returnType, void *address)
 {
     this->funcName = name;
     this->paramTypes = params;
@@ -35,12 +35,12 @@ std::string FunctionSignature::GetName() const
     return this->funcName;
 }
 
-const std::vector<VecTypeId> &FunctionSignature::GetParams() const
+const std::vector<DataTypeId> &FunctionSignature::GetParams() const
 {
     return this->paramTypes;
 }
 
-VecTypeId FunctionSignature::GetReturnType() const
+DataTypeId FunctionSignature::GetReturnType() const
 {
     return this-> retType;
 }

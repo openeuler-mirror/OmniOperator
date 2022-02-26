@@ -36,11 +36,11 @@ public class OmniAggregationOperatorTest {
      */
     @Test
     public void testExecuteCountMultiplePage() {
-        VecType[] sourceTypes = {LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG};
         FunctionType[] agggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
         int[] aggInputChannels = {1};
         int[] maskChannels = {-1, -1};
-        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, agggFunctionTypes,
                 aggInputChannels, maskChannels, aggOutputTypes, true, false);
 

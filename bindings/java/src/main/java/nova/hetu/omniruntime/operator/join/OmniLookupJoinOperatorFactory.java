@@ -51,10 +51,10 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createLookupJoinOperatorFactory(DataTypeSerializer.serialize(context.probeTypes), context.probeOutputCols,
-                context.probeHashCols, context.buildOutputCols, DataTypeSerializer.serialize(context.buildOutputTypes),
-                context.joinType.getValue(), factoryContext.getHashBuilderOperatorFactory(),
-                factoryContext.getNativeJitContext());
+        return createLookupJoinOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
+                context.probeOutputCols, context.probeHashCols, context.buildOutputCols,
+                DataTypeSerializer.serialize(context.buildOutputTypes), context.joinType.getValue(),
+                factoryContext.getHashBuilderOperatorFactory(), factoryContext.getNativeJitContext());
     }
 
     /**
@@ -125,7 +125,6 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
      * @since 20210630
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-
         private final long hashBuilderOperatorFactory;
 
         /**

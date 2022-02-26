@@ -69,7 +69,7 @@ public class VecBatch implements Closeable {
      */
     public VecBatch(long nativeVecBatch, long[] nativeVectors, long[] nativeVectorValueBufAddresses,
                     long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses,
-                    long[] nativeVectorAllocators, int[] capacityInBytes, int[] sizes, int[] offsets, int[] encodings,
+                    long[] nativeVectorAllocators, int[] capacityInBytes, int[] offsets, int[] encodings,
                     int[] dataTypeIds, int rowCount) {
         int vecCount = nativeVectors.length;
         Vec[] newVectors = new Vec[vecCount];
@@ -78,7 +78,7 @@ public class VecBatch implements Closeable {
             DataType dataType = DataType.create(dataTypeIds[idx]);
             newVectors[idx] = VecFactory.create(nativeVector, nativeVectorValueBufAddresses[idx],
                 nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], nativeVectorAllocators[idx],
-                capacityInBytes[idx], sizes[idx], offsets[idx], VecEncoding.values()[encodings[idx]], dataType);
+                capacityInBytes[idx], rowCount, offsets[idx], VecEncoding.values()[encodings[idx]], dataType);
         }
         this.rowCount = rowCount;
         this.nativeVectorBatch = nativeVecBatch;

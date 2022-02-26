@@ -19,7 +19,7 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     public BooleanVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT,BooleanDataType.BOOLEAN);
+        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, BooleanDataType.BOOLEAN);
     }
 
     public BooleanVec(long nativeVector) {
@@ -27,9 +27,9 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     public BooleanVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                      long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, BooleanDataType.BOOLEAN);
+                size, offset, BooleanDataType.BOOLEAN);
     }
 
     private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice) {
@@ -63,7 +63,7 @@ public class BooleanVec extends FixedWidthVec {
     /**
      * get boolean values from the specified position
      *
-     * @param index  the position of element
+     * @param index the position of element
      * @param length the number of element
      * @return boolean value array
      */
@@ -77,7 +77,7 @@ public class BooleanVec extends FixedWidthVec {
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start  the element index in values
+     * @param start the element index in values
      * @param length the number of elements that need to written
      */
     public void put(boolean[] values, int offset, int start, int length) {

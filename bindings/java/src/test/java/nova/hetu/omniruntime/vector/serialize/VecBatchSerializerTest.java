@@ -427,7 +427,7 @@ public class VecBatchSerializerTest {
     }
 
     @Test(expectedExceptions = IllegalStateException.class,
-            expectedExceptionsMessageRegExp = "Unexpected value: OMNI_VEC_TYPE_INVALID")
+            expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
     public void testSerializeInvalidType()
     {
         int row = 5;

@@ -16,12 +16,11 @@ namespace project_test {
 void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op,
     const int PROJECT_COUNT, bool isBoolResult = false)
 {
-    std::vector<VecTypeId> dataTypes = { OMNI_VEC_TYPE_INT,        OMNI_VEC_TYPE_LONG,    OMNI_VEC_TYPE_DOUBLE,
-        OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_CHAR };
+    std::vector<DataTypeId> dataTypes = { OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL128, OMNI_VARCHAR, OMNI_CHAR };
     for (int i = 0; i < PROJECT_COUNT; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         if (isBoolResult) {
-            EXPECT_EQ(binaryExpr->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+            EXPECT_EQ(binaryExpr->GetReturnTypeId(), OMNI_BOOLEAN);
         } else {
             EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
         }
@@ -33,9 +32,9 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
         LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
         EXPECT_EQ(right->GetType(), LITERAL_E);
         if (i == 3) {
-            EXPECT_EQ(right->GetReturnTypeId(), OMNI_VEC_TYPE_DECIMAL128);
+            EXPECT_EQ(right->GetReturnTypeId(), OMNI_DECIMAL128);
         } else if (i == 5) {
-            EXPECT_EQ(right->GetReturnTypeId(), OMNI_VEC_TYPE_CHAR);
+            EXPECT_EQ(right->GetReturnTypeId(), OMNI_CHAR);
         } else {
             EXPECT_EQ(right->GetReturnTypeId(), dataTypes[i]);
         }
@@ -59,8 +58,7 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
 void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op,
     const int PROJECT_COUNT)
 {
-    std::vector<VecTypeId> dataTypes = { OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE,
-        OMNI_VEC_TYPE_DECIMAL128 };
+    std::vector<DataTypeId> dataTypes = { OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL128 };
     for (int i = 0; i < PROJECT_COUNT; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
@@ -72,7 +70,7 @@ void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::ex
         LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
         EXPECT_EQ(right->GetType(), LITERAL_E);
         if (i == 3) {
-            EXPECT_EQ(right->GetReturnTypeId(), OMNI_VEC_TYPE_DECIMAL128);
+            EXPECT_EQ(right->GetReturnTypeId(), OMNI_DECIMAL128);
         } else {
             EXPECT_EQ(right->GetReturnTypeId(), dataTypes[i]);
         }
@@ -93,11 +91,11 @@ TEST(ParseTest, parseNotOperation)
     const int PROJECT_COUNT = 1;
     int vecTypeCount = 1;
     string expr = "$operator$NOT:4(#0)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_BOOLEAN) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     UnaryExpr *notExpr = static_cast<UnaryExpr *>(result);
     EXPECT_EQ(notExpr->op, NOT);
     FieldExpr *colExpr = static_cast<FieldExpr *>(notExpr->exp);
@@ -112,9 +110,9 @@ TEST(ParseTest, parseAddOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$ADD:1(#0, 0:1)", "$operator$ADD:2(#1, 1:2)",
                                        "$operator$ADD:3(#2, 2:3)", "$operator$ADD:7(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testArithmeticBinaryExpressions(result, ADD, PROJECT_COUNT);
@@ -129,9 +127,9 @@ TEST(ParseTest, parseSubtractOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$SUBTRACT:1(#0, 0:1)", "$operator$SUBTRACT:2(#1, 1:2)",
                                        "$operator$SUBTRACT:3(#2, 2:3)", "$operator$SUBTRACT:7(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testArithmeticBinaryExpressions(result, SUB, PROJECT_COUNT);
@@ -146,9 +144,9 @@ TEST(ParseTest, parseMultiplyOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$MULTIPLY:1(#0, 0:1)", "$operator$MULTIPLY:2(#1, 1:2)",
                                        "$operator$MULTIPLY:3(#2, 2:3)", "$operator$MULTIPLY:7(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testArithmeticBinaryExpressions(result, MUL, PROJECT_COUNT);
@@ -163,9 +161,9 @@ TEST(ParseTest, parseDivideOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$DIVIDE:1(#0, 0:1)", "$operator$DIVIDE:2(#1, 1:2)",
                                        "$operator$DIVIDE:3(#2, 2:3)", "$operator$DIVIDE:7(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testArithmeticBinaryExpressions(result, DIV, PROJECT_COUNT);
@@ -180,9 +178,9 @@ TEST(ParseTest, parseModulusOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$MODULUS:1(#0, 0:1)", "$operator$MODULUS:2(#1, 1:2)",
                                        "$operator$MODULUS:3(#2, 2:3)", "$operator$MODULUS:7(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testArithmeticBinaryExpressions(result, MOD, PROJECT_COUNT);
@@ -198,9 +196,9 @@ TEST(ParseTest, parseLTOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$LESS_THAN:4(#0, 0:1)", "$operator$LESS_THAN:4(#1, 1:2)",
                                        "$operator$LESS_THAN:4(#2, 2:3)", "$operator$LESS_THAN:4(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testCmpBinaryExpressions(result, LT, PROJECT_COUNT, true);
@@ -217,9 +215,9 @@ TEST(ParseTest, parseLTEOperation)
                                        "$operator$LESS_THAN_OR_EQUAL:4(#1, 1:2)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#2, 2:3)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testCmpBinaryExpressions(result, LTE, PROJECT_COUNT, true);
@@ -234,9 +232,9 @@ TEST(ParseTest, parseGTOperation)
     int vecTypeCount = 4;
     string exprs[PROJECT_COUNT] = {"$operator$GREATER_THAN:4(#0, 0:1)", "$operator$GREATER_THAN:4(#1, 1:2)",
                                        "$operator$GREATER_THAN:4(#2, 2:3)", "$operator$GREATER_THAN:4(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testCmpBinaryExpressions(result, GT, PROJECT_COUNT, true);
@@ -253,9 +251,9 @@ TEST(ParseTest, parseGTEOperation)
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#1, 1:2)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#2, 2:3)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#3, 3:7)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DECIMAL128) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testCmpBinaryExpressions(result, GTE, PROJECT_COUNT, true);
@@ -271,10 +269,9 @@ TEST(ParseTest, parseEQOperation)
     string exprs[PROJECT_COUNT] = {"$operator$EQUAL:4(#0, 0:1)", "$operator$EQUAL:4(#1, 1:2)",
                                        "$operator$EQUAL:4(#2, 2:3)", "$operator$EQUAL:4(#3, 3:7)",
                                        "$operator$EQUAL:4(#4, 'hello':15)", "$operator$EQUAL:4(#5, 'hello':16[6])"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT),     VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE),  VecType(OMNI_VEC_TYPE_DECIMAL128),
-        VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_CHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT),        DataType(OMNI_LONG),    DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128), DataType(OMNI_VARCHAR), DataType(OMNI_CHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testCmpBinaryExpressions(result, EQ, PROJECT_COUNT, true);
@@ -291,10 +288,9 @@ TEST(ParseTest, parseNEQOperation)
                                        "$operator$NOT_EQUAL:4(#2, 2:3)", "$operator$NOT_EQUAL:4(#3, 3:7)",
                                        "$operator$NOT_EQUAL:4(#4, 'hello':15)",
                                        "$operator$NOT_EQUAL:4(#5, 'hello':16[6])"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT),     VecType(OMNI_VEC_TYPE_LONG),
-        VecType(OMNI_VEC_TYPE_DOUBLE),  VecType(OMNI_VEC_TYPE_DECIMAL128),
-        VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_CHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT),        DataType(OMNI_LONG),    DataType(OMNI_DOUBLE),
+        DataType(OMNI_DECIMAL128), DataType(OMNI_VARCHAR), DataType(OMNI_CHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     testCmpBinaryExpressions(result, NEQ, PROJECT_COUNT, true);
@@ -309,14 +305,14 @@ TEST(ParseTest, parseLogicOperations)
     const int PROJECT_COUNT = 2;
     int vecTypeCount = 2;
     string exprs[PROJECT_COUNT] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_BOOLEAN), VecType(OMNI_VEC_TYPE_BOOLEAN) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
     EXPECT_EQ(result.size(), PROJECT_COUNT);
     for (int i = 0; i < PROJECT_COUNT; i++) {
         BinaryExpr *logExpr = static_cast<BinaryExpr *>(result.at(i));
-        EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+        EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_BOOLEAN);
         FieldExpr *logLeft = static_cast<FieldExpr *>(logExpr->left);
         LiteralExpr *logRight = static_cast<LiteralExpr *>(logExpr->right);
         EXPECT_EQ(logLeft->GetType(), FIELD_E);
@@ -342,12 +338,11 @@ TEST(ParseTest, parseBetweenOperation)
 {
     int vecTypeCount = 3;
     string expr = "$operator$BETWEEN:4(#1, #0, #2)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_DOUBLE),
-        VecType(OMNI_VEC_TYPE_LONG) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_LONG) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     BetweenExpr *betweenExpr = static_cast<BetweenExpr *>(result);
     FieldExpr *valueExpr = static_cast<FieldExpr *>(betweenExpr->value);
     FieldExpr *lowerExpr = static_cast<FieldExpr *>(betweenExpr->lowerBound);
@@ -355,15 +350,15 @@ TEST(ParseTest, parseBetweenOperation)
 
     EXPECT_EQ(valueExpr->GetType(), FIELD_E);
     EXPECT_EQ(valueExpr->colVal, 1);
-    EXPECT_EQ(valueExpr->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
+    EXPECT_EQ(valueExpr->GetReturnTypeId(), OMNI_DOUBLE);
 
     EXPECT_EQ(lowerExpr->GetType(), FIELD_E);
     EXPECT_EQ(lowerExpr->colVal, 0);
-    EXPECT_EQ(lowerExpr->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(lowerExpr->GetReturnTypeId(), OMNI_INT);
 
     EXPECT_EQ(upperExpr->GetType(), FIELD_E);
     EXPECT_EQ(upperExpr->colVal, 2);
-    EXPECT_EQ(upperExpr->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(upperExpr->GetReturnTypeId(), OMNI_LONG);
 }
 
 // Test In expression
@@ -371,12 +366,11 @@ TEST(ParseTest, parseInOperation)
 {
     int vecTypeCount = 3;
     string expr = "$operator$IN:4(#1, #0, #2)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_DOUBLE),
-        VecType(OMNI_VEC_TYPE_LONG) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_LONG) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     InExpr *inExpr = static_cast<InExpr *>(result);
     auto args = inExpr->arguments;
     FieldExpr *arg0 = static_cast<FieldExpr *>(args[0]);
@@ -385,15 +379,15 @@ TEST(ParseTest, parseInOperation)
 
     EXPECT_EQ(arg0->GetType(), FIELD_E);
     EXPECT_EQ(arg0->colVal, 1);
-    EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
+    EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_DOUBLE);
 
     EXPECT_EQ(arg1->GetType(), FIELD_E);
     EXPECT_EQ(arg1->colVal, 0);
-    EXPECT_EQ(arg1->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(arg1->GetReturnTypeId(), OMNI_INT);
 
     EXPECT_EQ(arg2->GetType(), FIELD_E);
     EXPECT_EQ(arg2->colVal, 2);
-    EXPECT_EQ(arg2->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(arg2->GetReturnTypeId(), OMNI_LONG);
 }
 
 // Test coalesce expression
@@ -401,22 +395,22 @@ TEST(ParseTest, parseCoalesceOperation)
 {
     int vecTypeCount = 3;
     string expr = "COALESCE:1(#1, #0)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_INT);
     CoalesceExpr *coalesceExpr = static_cast<CoalesceExpr *>(result);
     FieldExpr *value1 = static_cast<FieldExpr *>(coalesceExpr->value1);
     FieldExpr *value2 = static_cast<FieldExpr *>(coalesceExpr->value2);
 
     EXPECT_EQ(value1->GetType(), FIELD_E);
     EXPECT_EQ(value1->colVal, 1);
-    EXPECT_EQ(value1->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(value1->GetReturnTypeId(), OMNI_INT);
 
     EXPECT_EQ(value2->GetType(), FIELD_E);
     EXPECT_EQ(value2->colVal, 0);
-    EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(value2->GetReturnTypeId(), OMNI_INT);
 }
 
 // Test If expression
@@ -424,23 +418,23 @@ TEST(ParseTest, parseIfOperation)
 {
     int vecTypeCount = 1;
     string expr = "IF:15(true:4, #0, 'hello':15)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VARCHAR);
     IfExpr *ifExpr = static_cast<IfExpr *>(result);
     LiteralExpr *condition = static_cast<LiteralExpr *>(ifExpr->condition);
     FieldExpr *tExpr = static_cast<FieldExpr *>(ifExpr->trueExpr);
     LiteralExpr *fExpr = static_cast<LiteralExpr *>(ifExpr->falseExpr);
 
-    EXPECT_EQ(condition->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(condition->GetReturnTypeId(), OMNI_BOOLEAN);
     EXPECT_EQ(condition->GetType(), LITERAL_E);
     EXPECT_EQ(condition->boolVal, true);
 
     EXPECT_EQ(tExpr->GetType(), FIELD_E);
     EXPECT_EQ(tExpr->colVal, 0);
-    EXPECT_EQ(tExpr->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(tExpr->GetReturnTypeId(), OMNI_VARCHAR);
 
     EXPECT_EQ(fExpr->GetType(), LITERAL_E);
     EXPECT_STREQ(fExpr->stringVal->c_str(), "hello");
@@ -451,17 +445,17 @@ TEST(ParseTest, parseIsNullOperation)
 {
     int vecTypeCount = 1;
     string expr = "IS_NULL:4(#0)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_CHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_CHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     IsNullExpr *isNullExpr = static_cast<IsNullExpr *>(result);
     FieldExpr *value = static_cast<FieldExpr *>(isNullExpr->value);
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_CHAR);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_CHAR);
 }
 
 // Test IsNotNull expression
@@ -469,11 +463,11 @@ TEST(ParseTest, parseIsNotNullOperation)
 {
     int vecTypeCount = 1;
     string expr = "IS_NOT_NULL:4(#0)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_CHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_CHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     UnaryExpr *unaryExpr = static_cast<UnaryExpr *>(result);
     EXPECT_EQ(unaryExpr->op, NOT);
     IsNullExpr *isNullExpr = static_cast<IsNullExpr *>(unaryExpr->exp);
@@ -481,7 +475,7 @@ TEST(ParseTest, parseIsNotNullOperation)
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_CHAR);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_CHAR);
 }
 
 // Test Cast expression
@@ -489,11 +483,11 @@ TEST(ParseTest, parseCastOperation)
 {
     int vecTypeCount = 1;
     string expr = "CAST:2(#0)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_LONG);
     FuncExpr *castExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(castExpr->funcName.c_str(), "CAST");
     auto args = castExpr->arguments;
@@ -501,7 +495,7 @@ TEST(ParseTest, parseCastOperation)
 
     EXPECT_EQ(arg0->GetType(), FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
-    EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_INT);
 }
 
 // Test abs expression
@@ -509,11 +503,11 @@ TEST(ParseTest, parseAbsOperation)
 {
     int vecTypeCount = 1;
     string expr = "abs:3(#0)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_DOUBLE);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "abs");
     auto args = absExpr->arguments;
@@ -521,7 +515,7 @@ TEST(ParseTest, parseAbsOperation)
 
     EXPECT_EQ(arg0->GetType(), FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
-    EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
+    EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_DOUBLE);
 }
 
 // test substr
@@ -529,11 +523,11 @@ TEST(ParseTest, parseSubstrOperation)
 {
     int vecTypeCount = 1;
     string expr = "substr:15(#0, 1:1, 6:1)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VARCHAR);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "substr");
     auto args = absExpr->arguments;
@@ -543,15 +537,15 @@ TEST(ParseTest, parseSubstrOperation)
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VARCHAR);
 
     EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->intVal, 1);
-    EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
 
     EXPECT_EQ(length->GetType(), LITERAL_E);
     EXPECT_EQ(length->intVal, 6);
-    EXPECT_EQ(length->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(length->GetReturnTypeId(), OMNI_INT);
 }
 
 // test concat
@@ -559,11 +553,11 @@ TEST(ParseTest, parseConcatOperation)
 {
     int vecTypeCount = 1;
     string expr = "concat:15(#0, 'hello':15)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VARCHAR);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "concat");
     auto args = absExpr->arguments;
@@ -572,11 +566,11 @@ TEST(ParseTest, parseConcatOperation)
 
     EXPECT_EQ(value1->GetType(), FIELD_E);
     EXPECT_EQ(value1->colVal, 0);
-    EXPECT_EQ(value1->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(value1->GetReturnTypeId(), OMNI_VARCHAR);
 
     EXPECT_EQ(value2->GetType(), LITERAL_E);
     EXPECT_STREQ(value2->stringVal->c_str(), "hello");
-    EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VARCHAR);
 }
 
 // Test Like
@@ -584,11 +578,11 @@ TEST(ParseTest, parseLikeOperation)
 {
     int vecTypeCount = 1;
     string expr = "LIKE:4(#0, '%hello':15)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "LIKE");
     auto args = absExpr->arguments;
@@ -597,11 +591,11 @@ TEST(ParseTest, parseLikeOperation)
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VARCHAR);
 
     EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_STREQ(index->stringVal->c_str(), ".*hello");
-    EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(index->GetReturnTypeId(), OMNI_VARCHAR);
 }
 
 // Test mm3hash
@@ -609,11 +603,11 @@ TEST(ParseTest, parseMM3HashOperation)
 {
     int vecTypeCount = 1;
     string expr = "mm3hash:1(#0, 2:1)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_INT);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "mm3hash");
     auto args = absExpr->arguments;
@@ -622,11 +616,11 @@ TEST(ParseTest, parseMM3HashOperation)
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VARCHAR);
 
     EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->intVal, 2);
-    EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
 }
 
 // Test combine hash
@@ -634,11 +628,11 @@ TEST(ParseTest, parseCombineHashOperation)
 {
     int vecTypeCount = 1;
     string expr = "combine_hash:2(#0, 2:2)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_LONG);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "combine_hash");
     auto args = absExpr->arguments;
@@ -647,11 +641,11 @@ TEST(ParseTest, parseCombineHashOperation)
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_LONG);
 
     EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->longVal, 2);
-    EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(index->GetReturnTypeId(), OMNI_LONG);
 }
 
 // Test pmod hash
@@ -659,11 +653,11 @@ TEST(ParseTest, parsePmodOperation)
 {
     int vecTypeCount = 1;
     string expr = "pmod:1(#0, 5:1)";
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_INT);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "pmod");
     auto args = absExpr->arguments;
@@ -672,11 +666,11 @@ TEST(ParseTest, parsePmodOperation)
 
     EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
-    EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(value->GetReturnTypeId(), OMNI_INT);
 
     EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->intVal, 5);
-    EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
 }
 
 // Test null expr
@@ -684,8 +678,8 @@ TEST(ParseTest, parseNullExprOperation)
 {
     int vecTypeCount = 0;
     string expr = "abs:1(2)";
-    std::vector<VecType> vecOfTypes = {};
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result, nullptr);
@@ -696,8 +690,8 @@ TEST(ParseTest, parseNullStringOperation)
 {
     int vecTypeCount = 0;
     string expr = "null:0";
-    std::vector<VecType> vecOfTypes = {};
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     FieldExpr *nullExpr = static_cast<FieldExpr *>(result);
@@ -707,8 +701,8 @@ TEST(ParseTest, parseNullStringOperation)
 TEST(ParseTest, ParseExpressions)
 {
     string exprs[2] = {"$operator$SUBTRACT:1(#0, 10:1)", "$operator$ADD:2(#1, 1:2)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
-    VecTypes inputTypes(vecOfTypes);
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
+    DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, 2, inputTypes);
     // check substract expression

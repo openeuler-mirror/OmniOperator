@@ -9,8 +9,8 @@
 #include "../../src/vector/vector_common.h"
 #include "../../src/operator/operator.h"
 #include "../../src/operator/operator_factory.h"
-#include "../../src/vector/vector_types.h"
-#include "../../src/vector/vector_type.h"
+#include "../../src/type/data_types.h"
+#include "../../src/type/data_type.h"
 #include "../../src/vector/vector_allocator_factory.h"
 #include "codegen/func_signature.h"
 #include "codegen/func_registry.h"
@@ -19,11 +19,11 @@
 using namespace omniruntime::vec;
 
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
-omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::vec::VecTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<VecType> &vecTypes);
-omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::vec::VarcharVecType type, std::string *values,
+omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::type::DataTypes &types, int32_t rowCount, ...);
+omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<DataType> &dataTypes);
+omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::VarcharDataType type, std::string *values,
     int32_t length);
-omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::vec::VecType &vecType, int32_t rowCount,
+omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
     int32_t *ids, int32_t idsCount, ...);
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
     int32_t expectedRowCount, ...);
@@ -128,12 +128,12 @@ template <typename T, typename E> void AssertVectorEquals(T *vector, E *expected
     }
 }
 
-void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes);
+void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataType> &dataTypes);
 
-void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
+void GetTestTypeIds(DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
-    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::VecTypePtr returnType);
+    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
 
 #endif

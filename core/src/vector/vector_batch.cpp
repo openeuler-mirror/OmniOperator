@@ -40,48 +40,48 @@ Vector *VectorBatch::NewContainerVec(VectorAllocator *vecAllocator)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<VecType> vecTypes = {DoubleVecType(), LongVecType()};
-    return new ContainerVector(vecAllocator, rowCount, vectorAddresses, 2, vecTypes);
+    std::vector<DataType> dataTypes = {DoubleDataType(), LongDataType()};
+    return new ContainerVector(vecAllocator, rowCount, vectorAddresses, 2, dataTypes);
 }
 
-void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<VecType> &types)
+void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<DataType> &types)
 {
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypeIds[colIndex] = types[colIndex].GetId();
         switch (types[colIndex].GetId()) {
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 SetVector(colIndex, new BooleanVector(vecAllocator, rowCount));
                 break;
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
+            case OMNI_INT:
+            case OMNI_DATE32: {
                 SetVector(colIndex, new IntVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
                 SetVector(colIndex, new LongVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 SetVector(colIndex, new DoubleVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_CONTAINER: {
+            case OMNI_CONTAINER: {
                 Vector *containerVector = NewContainerVec(vecAllocator);
                 SetVector(colIndex, containerVector);
                 break;
             }
-            case OMNI_VEC_TYPE_SHORT: {
+            case OMNI_SHORT: {
                 SetVector(colIndex, new IntVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                int32_t width = (static_cast<const VarcharVecType *>(&types[colIndex]))->GetWidth();
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                int32_t width = (static_cast<const VarcharDataType *>(&types[colIndex]))->GetWidth();
                 SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * width, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCount));
                 break;
             }

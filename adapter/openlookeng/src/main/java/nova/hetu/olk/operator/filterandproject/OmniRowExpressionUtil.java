@@ -313,25 +313,25 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         }
         constantRoot.put("isNull", false);
         switch (literalType.getId()) {
-            case OMNI_DATA_TYPE_BOOLEAN :
+            case OMNI_BOOLEAN:
                 constantRoot.put("value", Boolean.valueOf(literal.getValue().toString()));
                 break;
-            case OMNI_DATA_TYPE_DOUBLE :
+            case OMNI_DOUBLE:
                 constantRoot.put("value", Double.parseDouble(literal.getValue().toString()));
                 break;
-            case OMNI_DATA_TYPE_INT :
-            case OMNI_DATA_TYPE_DATE32 :
+            case OMNI_INT:
+            case OMNI_DATE32:
                 constantRoot.put("value", Integer.parseInt(literal.getValue().toString()));
                 break;
-            case OMNI_DATA_TYPE_LONG :
+            case OMNI_LONG:
                 constantRoot.put("value", Long.parseLong(literal.getValue().toString()));
                 break;
-            case OMNI_DATA_TYPE_DECIMAL64 :
+            case OMNI_DECIMAL64:
                 constantRoot.put("value", (Long.parseLong(literal.getValue().toString())));
                 constantRoot.put("precision", ((Decimal64DataType) literalType).getPrecision());
                 constantRoot.put("scale", ((Decimal64DataType) literalType).getScale());
                 break;
-            case OMNI_DATA_TYPE_DECIMAL128 :
+            case OMNI_DECIMAL128:
                 // FIXME: Need to Support 128 bits properly
                 String d128Val;
                 if (literal.getValue() instanceof Slice) {
@@ -343,8 +343,8 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                 constantRoot.put("precision", ((Decimal128DataType) literalType).getPrecision());
                 constantRoot.put("scale", ((Decimal128DataType) literalType).getScale());
                 break;
-            case OMNI_DATA_TYPE_CHAR :
-            case OMNI_DATA_TYPE_VARCHAR :
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
                 String varcharValue;
                 if (literal.getValue() instanceof Slice) {
                     varcharValue = ((Slice) literal.getValue()).toStringAscii();
@@ -354,7 +354,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                 constantRoot.put("value", varcharValue);
                 constantRoot.put("width", ((VarcharDataType) literalType).getWidth());
                 break;
-            case OMNI_DATA_TYPE_NONE :
+            case OMNI_NONE:
                 // TODO: Support UNKNOWN presto type in DataType
                 // omni-runtime treat NONE regardless of its value
                 constantRoot.put("value", "UNKNOWN");

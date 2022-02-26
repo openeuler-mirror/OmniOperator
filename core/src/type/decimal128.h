@@ -11,7 +11,7 @@
 #include "decimal_base.h"
 
 namespace omniruntime {
-namespace vec {
+namespace type {
 enum class OpStatus {
     SUCCESS = 0,
     OP_OVERFLOW = 1,
@@ -21,7 +21,7 @@ enum class OpStatus {
 
 class Decimal128 : public BasicDecimal {
 public:
-    Decimal128(int64_t high_bits, uint64_t low_bits);
+    Decimal128(int64_t highBits, uint64_t lowBits);
 
     Decimal128() : Decimal128(0, 0) {}
 
@@ -32,7 +32,7 @@ public:
     // / \brief Convert any integer value into a Decimal128.
     template <typename T,
         typename = typename std::enable_if<std::is_integral<T>::value && (sizeof(T) <= sizeof(uint64_t)), T>::type>
-    constexpr Decimal128(T value) noexcept : Decimal128(value >= T { 0 } ? 0 : -1, static_cast<uint64_t>(value))
+    constexpr Decimal128(T value) noexcept : Decimal128((value >= T { 0 }) ? 0 : -1, static_cast<uint64_t>(value))
     { // NOLINT
     }
 
@@ -97,6 +97,9 @@ public:
     static constexpr int32_t BYTE_WIDTH = 16;
     static constexpr int32_t BIT_WIDTH = 128;
     static constexpr int32_t LOW_BITS_WIDTH = 64;
+    static constexpr int64_t DIVISION_ARRAY_LENGTH_FOUR = 4;
+    static constexpr int64_t DIVISION_ARRAY_LENGTH_THREE = 3;
+    static constexpr int64_t DIVISION_ARRAY_LENGTH_TWO = 2;
 
 private:
     uint64_t lowBits;

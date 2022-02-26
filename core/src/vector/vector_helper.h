@@ -14,9 +14,11 @@
 #include "container_vector.h"
 #include "dictionary_vector.h"
 #include "lazy_vector.h"
+#include "../type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
+using namespace type;
 class VectorHelper {
 public:
     VectorHelper() = delete;
@@ -28,28 +30,28 @@ public:
             return;
         }
         switch (vector->GetTypeId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 static_cast<IntVector *>(vector)->SetValue(index, *static_cast<int32_t *>(value));
                 break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 static_cast<LongVector *>(vector)->SetValue(index, *static_cast<int64_t *>(value));
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 static_cast<DoubleVector *>(vector)->SetValue(index, *static_cast<double *>(value));
                 break;
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 static_cast<BooleanVector *>(vector)->SetValue(index, *static_cast<bool *>(value));
                 break;
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR:
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
                 static_cast<VarcharVector *>(vector)->SetValue(index,
                     reinterpret_cast<const uint8_t *>(static_cast<std::string *>(value)->c_str()),
                     static_cast<std::string *>(value)->length());
                 break;
-            case OMNI_VEC_TYPE_DECIMAL128:
-                static_cast<Decimal128Vector *>(vector)->SetValue(index, *static_cast<Decimal128 *>(value));
+            case OMNI_DECIMAL128:
+                static_cast<Decimal128Vector *>(vector)->SetValue(index, *static_cast<type::Decimal128 *>(value));
                 break;
             default:
                 LogError("No such data type %d", vector->GetTypeId());
@@ -60,8 +62,8 @@ public:
     static void SetValue(Vector *vector, int32_t index, void *value, int32_t length)
     {
         switch (vector->GetTypeId()) {
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR:
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
                 static_cast<VarcharVector *>(vector)->SetValue(index, static_cast<uint8_t *>(value), length);
                 break;
             default:
@@ -73,39 +75,36 @@ public:
     static int32_t GetValue(Vector *vector, int32_t index, void *value)
     {
         int32_t length = 0;
-        switch (vector->GetTypeId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
-                *static_cast<int32_t *>(value) = static_cast<IntVector *>(vector)->GetValue(index);
+        int32_t originIndex = 0;
+        auto *originVector = VectorHelper::ExpandVectorAndIndex(vector, index, originIndex);
+        switch (originVector->GetTypeId()) {
+            case OMNI_INT:
+            case OMNI_DATE32: {
+                *static_cast<int32_t *>(value) = static_cast<IntVector *>(originVector)->GetValue(originIndex);
                 break;
             }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
-                *static_cast<int64_t *>(value) = static_cast<LongVector *>(vector)->GetValue(index);
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
+                *static_cast<int64_t *>(value) = static_cast<LongVector *>(originVector)->GetValue(originIndex);
                 break;
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                *static_cast<double *>(value) = static_cast<DoubleVector *>(vector)->GetValue(index);
+            case OMNI_DOUBLE: {
+                *static_cast<double *>(value) = static_cast<DoubleVector *>(originVector)->GetValue(originIndex);
                 break;
             }
-            case OMNI_VEC_TYPE_BOOLEAN: {
-                *static_cast<bool *>(value) = static_cast<BooleanVector *>(vector)->GetValue(index);
+            case OMNI_BOOLEAN: {
+                *static_cast<bool *>(value) = static_cast<BooleanVector *>(originVector)->GetValue(originIndex);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                length = static_cast<VarcharVector *>(vector)->GetValue(index, static_cast<uint8_t **>(value));
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                length =
+                    static_cast<VarcharVector *>(originVector)->GetValue(originIndex, static_cast<uint8_t **>(value));
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                *static_cast<Decimal128 *>(value) = static_cast<Decimal128Vector *>(vector)->GetValue(index);
-                break;
-            }
-            case OMNI_VEC_TYPE_DICTIONARY: {
-                auto *dictionaryVector = static_cast<DictionaryVector *>(vector);
-                Vector *dictionary = dictionaryVector->GetDictionary();
-                int32_t id = dictionaryVector->GetId(index);
-                length = VectorHelper::GetValue(dictionary, id, value);
+            case OMNI_DECIMAL128: {
+                *static_cast<type::Decimal128 *>(value) =
+                    static_cast<Decimal128Vector *>(originVector)->GetValue(originIndex);
                 break;
             }
             default:
@@ -115,51 +114,69 @@ public:
         return length;
     }
 
-    static Vector *CreateVector(VectorAllocator *allocator, int32_t typeId, int32_t capacityInBytes, int32_t size)
+    static Vector *CreateVector(VectorAllocator *allocator, int32_t vectorEncodingId, int32_t dataTypeId,
+        int32_t capacityInBytes, int32_t size)
     {
         Vector *vector = nullptr;
-        switch (typeId) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
-                vector = new IntVector(allocator, size);
+        switch (vectorEncodingId) {
+            case OMNI_VEC_ENCODING_FLAT:
+                vector = CreateFlatVector(allocator, dataTypeId, capacityInBytes, size);
                 break;
-            }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
-                vector = new LongVector(allocator, size);
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                vector = new DoubleVector(allocator, size);
-                break;
-            }
-            case OMNI_VEC_TYPE_BOOLEAN: {
-                vector = new BooleanVector(allocator, size);
-                break;
-            }
-            case OMNI_VEC_TYPE_CONTAINER: {
+            case OMNI_VEC_ENCODING_CONTAINER: {
                 vector = new ContainerVector(allocator, capacityInBytes, size);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                vector = new VarcharVector(allocator, capacityInBytes, size);
+            case OMNI_VEC_ENCODING_DICTIONARY: {
+                vector = new DictionaryVector(allocator, dataTypeId, size);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                vector = new Decimal128Vector(allocator, size);
-                break;
-            }
-            case OMNI_VEC_TYPE_DICTIONARY: {
-                vector = new DictionaryVector(allocator, size);
-                break;
-            }
-            case OMNI_VEC_TYPE_LAZY: {
+            case OMNI_VEC_ENCODING_LAZY: {
                 vector = new LazyVector(allocator, size);
                 break;
             }
             default: {
-                LogError("No such data type %d", typeId);
+                LogError("No such encoding type %d", vectorEncodingId);
+                break;
+            }
+        }
+        return vector;
+    }
+
+    static Vector *CreateFlatVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t capacityInBytes,
+        int32_t size)
+    {
+        Vector *vector = nullptr;
+        switch (dataTypeId) {
+            case OMNI_INT:
+            case OMNI_DATE32: {
+                vector = new IntVector(allocator, size);
+                break;
+            }
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_DECIMAL64: {
+                vector = new LongVector(allocator, size);
+                break;
+            }
+            case OMNI_DOUBLE: {
+                vector = new DoubleVector(allocator, size);
+                break;
+            }
+            case OMNI_BOOLEAN: {
+                vector = new BooleanVector(allocator, size);
+                break;
+            }
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                vector = new VarcharVector(allocator, capacityInBytes, size);
+                break;
+            }
+            case OMNI_DECIMAL128: {
+                vector = new Decimal128Vector(allocator, size);
+                break;
+            }
+            default: {
+                LogError("No such data type %d", dataTypeId);
                 break;
             }
         }
@@ -168,7 +185,7 @@ public:
 
     static Vector *ExpandVectorAndIndex(Vector *vector, int32_t index, int32_t &originalIndex)
     {
-        if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        if (vector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
             originalIndex = index;
             return vector;
         }
@@ -179,7 +196,7 @@ public:
 
     static Vector *ExpandVectorAndIndexes(Vector *vector, int32_t offset, int32_t length, int32_t *originalIndexes)
     {
-        if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        if (vector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
             for (int i = 0; i < length; ++i) {
                 originalIndexes[i] = offset + i;
             }
@@ -194,23 +211,24 @@ public:
     {
         int32_t positionOffset = vector->GetPositionOffset();
         void *values = vector->GetValues();
+        if (vector->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
+            return reinterpret_cast<int64_t>(values);
+        }
         switch (vector->GetTypeId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + positionOffset);
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + positionOffset);
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 return reinterpret_cast<int64_t>(reinterpret_cast<double *>(values) + positionOffset);
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(values) + positionOffset);
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * positionOffset);
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR:
-                return reinterpret_cast<int64_t>(values);
-            case OMNI_VEC_TYPE_LAZY:
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
                 return reinterpret_cast<int64_t>(values);
             default:
                 LogError("Do not support such vector type %d", vector->GetTypeId());
@@ -220,32 +238,32 @@ public:
 
     static int64_t GetValuePtrAndLength(Vector *vector, int32_t rowIndex, int32_t *length)
     {
+        if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            auto dictionaryVector = static_cast<DictionaryVector *>(vector);
+            int32_t originalRowIndex;
+            auto dictionary = dictionaryVector->ExtractDictionaryAndId(rowIndex, originalRowIndex);
+            return GetValuePtrAndLength(dictionary, originalRowIndex, length);
+        }
         int32_t positionOffset = vector->GetPositionOffset();
         int32_t finalIndex = positionOffset + rowIndex;
         void *values = vector->GetValues();
         switch (vector->GetTypeId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + finalIndex);
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + finalIndex);
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 return reinterpret_cast<int64_t>(reinterpret_cast<double *>(values) + finalIndex);
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(values) + finalIndex);
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * finalIndex);
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VARCHAR: {
                 uint8_t *value = nullptr;
                 *length = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &value);
                 return reinterpret_cast<int64_t>(value);
-            }
-            case OMNI_VEC_TYPE_DICTIONARY: {
-                auto dictionaryVector = static_cast<DictionaryVector *>(vector);
-                int32_t originalRowIndex;
-                auto dictionary = dictionaryVector->ExtractDictionaryAndId(rowIndex, originalRowIndex);
-                return GetValuePtrAndLength(dictionary, originalRowIndex, length);
             }
             default:
                 LogError("Do not support such vector type %d", vector->GetTypeId());

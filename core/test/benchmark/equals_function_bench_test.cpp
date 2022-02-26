@@ -25,7 +25,7 @@ static string getString(int32_t index, int32_t offset, int32_t width)
     return str;
 }
 
-static bool hashagg_equal(Vector* vector1, uint32_t offset1, Vector* vector2, uint32_t offset2)
+static bool hashagg_equal(Vector *vector1, uint32_t offset1, Vector *vector2, uint32_t offset2)
 {
     bool isInputNull1 = vector1->IsValueNull(offset1);
     bool isInputNull2 = vector2->IsValueNull(offset2);
@@ -62,7 +62,8 @@ static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVect
     }
 }
 
-TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf){
+TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
+{
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
@@ -82,7 +83,7 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf){
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     bool isEqual;
-    for (int j = 0; j < ROUNDS; j++){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -100,13 +101,13 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf){
 
     VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string  str = getString(i, 20, VAR_LEN);
+        std::string str = getString(i, 20, VAR_LEN);
         vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
     std::cout << "Compare different varchar: " << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -128,20 +129,21 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf){
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
-TEST(varcharType, IsSameNodeFuncVarcharImplPerf){
+TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
+{
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string  str = getString(i, 10, VAR_LEN);
+        std::string str = getString(i, 10, VAR_LEN);
         vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector1->SetValueNotNull(i);
         vector2->SetValueNotNull(i);
     }
 
-    //Test perf
+    // Test perf
     std::cout << "Test times: " << ROW_SIZE << std::endl;
     std::cout << "varchar length: " << VAR_LEN << std::endl;
 
@@ -151,7 +153,7 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf){
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     bool isEqual;
-    for (int j = 0; j < ROUNDS; j++){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -169,14 +171,14 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf){
 
     VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string  str = getString(i, 20, VAR_LEN);
+        std::string str = getString(i, 20, VAR_LEN);
         vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector3->SetValueNotNull(i);
     }
 
     std::cout << "Compare different varchar: " << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -197,5 +199,3 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf){
     delete vector3;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
-
-

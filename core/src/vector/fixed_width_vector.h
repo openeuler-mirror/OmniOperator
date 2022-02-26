@@ -5,20 +5,22 @@
 #ifndef __FIXED_WIDTH_VECTOR_OPERATOR_H__
 #define __FIXED_WIDTH_VECTOR_OPERATOR_H__
 
+#include <type/data_type.h>
 #include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 #include "vector.h"
-#include "type/decimal128.h"
+#include "../type/decimal128.h"
+#include "../type/data_type.h"
 #include "dictionary_vector.h"
 
 namespace omniruntime {
 namespace vec {
-template <VecTypeId TYPE_ID> class FixedWidthVector : public Vector {
+template <DataTypeId TYPE_ID> class FixedWidthVector : public Vector {
     using T = typename NativeType<TYPE_ID>::type;
     using FixedWidthVectorImpl = FixedWidthVector<TYPE_ID>;
 
 public:
-    FixedWidthVector(VectorAllocator *allocator, int size) : Vector(allocator, BYTES * size, size, (VecTypeId)TYPE_ID)
+    FixedWidthVector(VectorAllocator *allocator, int size) : Vector(allocator, BYTES * size, size, TYPE_ID)
     {}
 
     FixedWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {}
@@ -88,7 +90,7 @@ public:
             return;
         }
 
-        if (other->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        if (other->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
             int32_t otherPositionOffset = other->GetPositionOffset();
             void *otherValues = static_cast<T *>(other->GetValues()) + otherPositionOffset;
             bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
@@ -113,12 +115,12 @@ protected:
     static const int BYTES = sizeof(T);
 };
 
-using BooleanVector = FixedWidthVector<OMNI_VEC_TYPE_BOOLEAN>;
-using IntVector = FixedWidthVector<OMNI_VEC_TYPE_INT>;
-using ShortVector = FixedWidthVector<OMNI_VEC_TYPE_SHORT>;
-using LongVector = FixedWidthVector<OMNI_VEC_TYPE_LONG>;
-using DoubleVector = FixedWidthVector<OMNI_VEC_TYPE_DOUBLE>;
-using Decimal128Vector = FixedWidthVector<OMNI_VEC_TYPE_DECIMAL128>;
+using BooleanVector = FixedWidthVector<type::OMNI_BOOLEAN>;
+using IntVector = FixedWidthVector<type::OMNI_INT>;
+using ShortVector = FixedWidthVector<type::OMNI_SHORT>;
+using LongVector = FixedWidthVector<type::OMNI_LONG>;
+using DoubleVector = FixedWidthVector<type::OMNI_DOUBLE>;
+using Decimal128Vector = FixedWidthVector<type::OMNI_DECIMAL128>;
 }
 }
 #endif // __FIXED_WIDTH_VECTOR_OPERATOR_H__

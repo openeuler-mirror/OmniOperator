@@ -126,13 +126,13 @@ public class TestHashAggregationOmniOperator {
     @Test(invocationCount = 1)
     public void testCountAggregation() {
         int[] omniGrouByChannels = {0, 1};
-        VecType[] omniGroupByTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] omniGroupByTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] omniAggregationChannels = {2};
-        VecType[] omniAggregationTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] omniAggregationTypes = {LongDataType.LONG, LongDataType.LONG};
         FunctionType[] omniAggregator = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        List<VecType[]> inAndOutputTypes = new ArrayList<>();
-        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
-        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+        List<DataType[]> inAndOutputTypes = new ArrayList<>();
+        inAndOutputTypes.add(new DataType[]{LongDataType.LONG, LongDataType.LONG, LongDataType.LONG});
+        inAndOutputTypes.add(new DataType[]{LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG});
 
         // expected
         DriverContext driverContext = createDriverContext(Integer.MAX_VALUE);

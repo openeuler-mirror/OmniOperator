@@ -12,7 +12,7 @@ using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
-TopNOperatorFactory::TopNOperatorFactory(const vec::VecTypes &sourceTypes, int32_t n, int32_t *sortCols,
+TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
     : sourceTypes(sourceTypes)
 {
@@ -30,7 +30,7 @@ Operator *TopNOperatorFactory::CreateOperator()
     return new TopNOperator(sourceTypes, n, sortCols, sortAscendings, sortNullFirsts, sortColCount);
 }
 
-TopNOperator::TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
+TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
     : sourceTypes(sourceTypes), sourceTypesCount(sourceTypes.GetSize())
 {
@@ -83,26 +83,26 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
         int32_t originalPosition;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
         switch (typeIds[i]) {
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 SetValueForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 SetValueForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 SetValueForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 SetValueForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
                 SetVarCharForSingleRowVecBatch(singleRowVecBatch, i, vector, originalPosition);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 SetValueForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             default:
@@ -119,26 +119,26 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
         int32_t originalPosition;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
         switch (typeIds[i]) {
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 SetVectorForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 SetVectorForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 SetVectorForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 SetVectorForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
                 SetVectorForSingleRowVecBatch<VarcharVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 SetVectorForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             default:
@@ -169,7 +169,7 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
         for (int i = 0; i < sourceTypesCount; ++i) {
             Vector *pqVector = pqVecBatch->GetVector(i);
             Vector *tmpVector = tmpVecBatch->GetVector(i);
-            if (typeIds[i] == OMNI_VEC_TYPE_VARCHAR || typeIds[i] == OMNI_VEC_TYPE_CHAR) {
+            if (typeIds[i] == OMNI_VARCHAR || typeIds[i] == OMNI_CHAR) {
                 SetVarcharValueForVectorBatch(rowNum, static_cast<VarcharVector *>(pqVector),
                     static_cast<VarcharVector *>(tmpVector));
             } else {
@@ -191,21 +191,21 @@ void TopNOperator::SetValueForVectorBatch(int32_t typeId, int64_t index, Vector 
         return;
     }
     switch (typeId) {
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             SetValueForVector<BooleanVector>(pqVector, tmpVector, index);
             break;
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             SetValueForVector<IntVector>(pqVector, tmpVector, index);
             break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             SetValueForVector<LongVector>(pqVector, tmpVector, index);
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             SetValueForVector<DoubleVector>(pqVector, tmpVector, index);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             SetValueForVector<Decimal128Vector>(pqVector, tmpVector, index);
             break;
         default:
@@ -228,14 +228,14 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *
 void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
 {
     int vecIndex = 0;
-    for (const VecType &item : sourceTypes.Get()) {
-        if (item.GetId() != OMNI_VEC_TYPE_VARCHAR && item.GetId() != OMNI_VEC_TYPE_CHAR) {
+    for (const DataType &item : sourceTypes.Get()) {
+        if (item.GetId() != OMNI_VARCHAR && item.GetId() != OMNI_CHAR) {
             vecIndex++;
             continue;
         }
-        auto vecType = (VarcharVecType &)item;
+        auto dataType = (VarcharDataType &)item;
         VarcharVector *varcharVector =
-            new VarcharVector(vecAllocator, positionCount * vecType.GetWidth(), positionCount);
+            new VarcharVector(vecAllocator, positionCount * dataType.GetWidth(), positionCount);
         VarcharVector *tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
         for (int i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {

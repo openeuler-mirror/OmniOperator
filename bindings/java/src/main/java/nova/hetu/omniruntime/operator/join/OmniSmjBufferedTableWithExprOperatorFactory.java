@@ -4,8 +4,7 @@
 
 package nova.hetu.omniruntime.operator.join;
 
-import java.util.Arrays;
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
@@ -13,7 +12,8 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
-import static java.util.Objects.requireNonNull;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * The type Omni sort merge buffered table with expression operator factory.
@@ -29,7 +29,8 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
      * @param soruceTypes the all input vector types
      * @param equalKeyExprs equal condition key expressions
      * @param outputChannels output of streamed table
-     * @param smjStreamedTableOperatorFactory streamed table operator factory instance
+     * @param smjStreamedTableOperatorFactory streamed table operator factory
+     *            instance
      */
     public OmniSmjBufferedTableWithExprOperatorFactory(DataType[] soruceTypes, String[] equalKeyExprs,
             int[] outputChannels, OmniSmjStreamedTableWithExprOperatorFactory smjStreamedTableOperatorFactory) {

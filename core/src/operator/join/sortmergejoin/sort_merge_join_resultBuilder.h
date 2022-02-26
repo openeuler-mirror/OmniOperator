@@ -8,7 +8,7 @@
 
 #include "dynamic_pages_index.h"
 #include "vector/vector.h"
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "expression/expressions.h"
 #include "operator/filter/filter_and_project.h"
 
@@ -16,9 +16,9 @@ namespace omniruntime {
 namespace op {
 class JoinResultBuilder {
 public:
-    JoinResultBuilder(const vec::VecTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
+    JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
         int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
-        const vec::VecTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
+        const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
         DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator);
 
     int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
@@ -36,11 +36,11 @@ private:
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     VectorBatch *NewEmptyVectorBatch() const;
 
-    const vec::VecTypes &leftTableOutputTypes;
+    const type::DataTypes &leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
-    const vec::VecTypes &rightTableOutputTypes;
+    const type::DataTypes &rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     DynamicPagesIndex *rightTablePagesIndex;

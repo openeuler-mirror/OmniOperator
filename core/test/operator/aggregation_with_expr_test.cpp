@@ -28,8 +28,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType() }));
-    VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
+    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     // groupByKeys
@@ -62,7 +62,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {180};
     int32_t expData4[] = {36};
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(), IntVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
@@ -91,8 +91,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType() }));
-    VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
+    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     FieldExpr *modLeft = new FieldExpr(0, LongType());
@@ -131,7 +131,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t expData2[] = {10};
     int64_t expData3[] = {180};
     int32_t expData4[] = {76};
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(), IntVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
@@ -160,8 +160,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType() }));
-    VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
+    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     std::vector<Expr *> groupByKeys = { new FieldExpr(0, LongType()), new FieldExpr(2, IntType()) };
@@ -185,7 +185,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {36};
     int32_t expData4[] = {36};
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(), IntVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 

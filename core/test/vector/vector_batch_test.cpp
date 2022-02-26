@@ -7,13 +7,13 @@
 
 using namespace omniruntime::vec;
 
-void VectorBatchTestInitVecTypes(std::vector<VecType> &types)
+void VectorBatchTestInitDataTypes(std::vector<DataType> &types)
 {
-    types.push_back(IntVecType::Instance());
-    types.push_back(DoubleVecType::Instance());
-    types.push_back(LongVecType::Instance());
-    types.push_back(DoubleVecType::Instance());
-    types.push_back(ContainerVecType::Instance());
+    types.push_back(IntDataType::Instance());
+    types.push_back(DoubleDataType::Instance());
+    types.push_back(LongDataType::Instance());
+    types.push_back(DoubleDataType::Instance());
+    types.push_back(ContainerDataType::Instance());
 }
 
 TEST(VectorBatch, constructVectorBatchWithVectorCount)
@@ -38,8 +38,8 @@ TEST(VectorBatch, constructVectorBatchWithVectorCount)
 
 TEST(VectorBatch, constructVectorBatchWithTypes)
 {
-    std::vector<VecType> types;
-    VectorBatchTestInitVecTypes(types);
+    std::vector<DataType> types;
+    VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
@@ -51,8 +51,8 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
 
 TEST(VectorBatch, getVectorCount)
 {
-    std::vector<VecType> types;
-    VectorBatchTestInitVecTypes(types);
+    std::vector<DataType> types;
+    VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
@@ -63,8 +63,8 @@ TEST(VectorBatch, getVectorCount)
 
 TEST(VectorBatch, getVectorTypes)
 {
-    std::vector<VecType> types;
-    VectorBatchTestInitVecTypes(types);
+    std::vector<DataType> types;
+    VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(5, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 

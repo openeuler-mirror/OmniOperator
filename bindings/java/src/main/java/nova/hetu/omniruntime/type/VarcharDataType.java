@@ -15,7 +15,7 @@ import java.util.Objects;
  */
 public class VarcharDataType extends DataType {
     /**
-     * max width for varchar vec type
+     * max width for varchar data type
      */
     public static final int MAX_WIDTH = 1024 * 1024;
 
@@ -31,12 +31,12 @@ public class VarcharDataType extends DataType {
     protected final int width;
 
     /**
-     * The construct of varchar vector type
+     * The construct of varchar data type
      *
      * @param width the width of varchar
      */
     public VarcharDataType(@JsonProperty("width") int width) {
-        super(DataTypeId.OMNI_DATA_TYPE_VARCHAR);
+        super(DataTypeId.OMNI_VARCHAR);
         if (width > MAX_WIDTH) {
             this.width = MAX_WIDTH;
         } else {
@@ -56,5 +56,17 @@ public class VarcharDataType extends DataType {
     @Override
     public int hashCode() {
         return Objects.hash(width, super.getId());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        VarcharDataType other = (VarcharDataType) obj;
+        return (Objects.equals(width, other.getWidth()) && Objects.equals(super.getId(), other.getId()));
     }
 }

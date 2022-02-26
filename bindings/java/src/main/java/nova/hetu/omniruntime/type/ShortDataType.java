@@ -19,6 +19,6 @@ public class ShortDataType extends DataType {
      * The construct
      */
     public ShortDataType() {
-        super(DataTypeId.OMNI_DATA_TYPE_SHORT);
+        super(DataTypeId.OMNI_SHORT);
     }
 }

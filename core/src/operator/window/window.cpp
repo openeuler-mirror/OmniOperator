@@ -5,19 +5,16 @@
 
 #include "window.h"
 #include "../sort/sort.h"
-#include "../status.h"
-#include "../util/operator_util.h"
-#include "../util/function_type.h"
 
 using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
-WindowOperatorFactory::WindowOperatorFactory(const VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
     int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-    const VecTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount)
+    const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount)
 {
     this->outputColsCount = outputColsCount;
     this->windowFunctionCount = windowFunctionCount;
@@ -28,7 +25,7 @@ WindowOperatorFactory::WindowOperatorFactory(const VecTypes &sourceTypes, int32_
     this->expectedPositions = expectedPositions;
     this->argumentChannelsCount = argumentChannelsCount;
 
-    this->sourceTypes = std::make_unique<VecTypes>(sourceTypes);
+    this->sourceTypes = std::make_unique<DataTypes>(sourceTypes);
     this->outputCols.insert(this->outputCols.begin(), outputCols, outputCols + outputColsCount);
     this->windowFunctionTypes.insert(this->windowFunctionTypes.begin(), windowFunctionTypes,
         windowFunctionTypes + windowFunctionCount);
@@ -37,7 +34,7 @@ WindowOperatorFactory::WindowOperatorFactory(const VecTypes &sourceTypes, int32_
     this->sortCols.insert(this->sortCols.begin(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.begin(), sortAscendings, sortAscendings + sortColCount);
     this->sortNullFirsts.insert(this->sortNullFirsts.begin(), sortNullFirsts, sortNullFirsts + sortColCount);
-    this->allTypes = std::make_unique<VecTypes>(allTypes);
+    this->allTypes = std::make_unique<DataTypes>(allTypes);
     this->argumentChannels.insert(this->argumentChannels.begin(), argumentChannels,
         argumentChannels + argumentChannelsCount);
 }
@@ -49,11 +46,11 @@ OmniStatus WindowOperatorFactory::Init()
 
 WindowOperatorFactory::~WindowOperatorFactory() = default;
 
-WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const VecTypes &sourceTypes,
+WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const DataTypes &sourceTypes,
     int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount,
     int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-    int32_t expectedPositions, const VecTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount)
+    int32_t expectedPositions, const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount)
 {
     auto operatorFactory = make_unique<WindowOperatorFactory>(sourceTypes, outputCols, outputColsCount,
         windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
@@ -73,12 +70,12 @@ Operator *WindowOperatorFactory::CreateOperator()
     return windowOperator.release();
 }
 
-WindowOperator::WindowOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &outputCols,
+WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols,
     int32_t outputColsCount, std::vector<int32_t> &windowFunctionTypes, int32_t windowFunctionCount,
     std::vector<int32_t> &partitionCols, int32_t partitionCount, std::vector<int32_t> &preGroupedCols,
     int32_t preGroupedCount, std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings,
     std::vector<int32_t> &sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-    int32_t expectedPositions, const vec::VecTypes &allTypes, std::vector<int32_t> &argumentChannels,
+    int32_t expectedPositions, const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels,
     int32_t argumentChannelsCount)
     : sourceTypes(sourceTypes), allTypes(allTypes)
 {
@@ -138,7 +135,7 @@ OmniStatus WindowOperator::Init()
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    VecType(OMNI_VEC_TYPE_NONE), allTypes.Get()[sourceTypes.GetSize() + i])));
+                    DataType(OMNI_NONE), allTypes.Get()[sourceTypes.GetSize() + i])));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;
@@ -186,7 +183,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
-    std::vector<VecType> finalOutputTypes;
+    std::vector<DataType> finalOutputTypes;
     finalOutputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
         finalOutputTypes.push_back(allTypes.Get()[finalOutputCols[colIdx]]);
@@ -207,7 +204,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 }
 
 void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-    std::vector<vec::VecType> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
+    std::vector<type::DataType> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = std::make_unique<VectorBatch>(finalOutputColsCount, rowCount).release();
@@ -235,40 +232,40 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     }
 }
 
-void WindowOperator::InitResultVectors(const std::vector<VecType> &outputTypes, VectorBatch *&vecBatch,
+void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypes, VectorBatch *&vecBatch,
     const int32_t &rowCount, const int32_t outputColsCount, const int finalOutputColsCount) const
 {
     for (int colIndex = outputColsCount; colIndex < finalOutputColsCount; ++colIndex) {
         auto type = outputTypes[colIndex];
         switch (type.GetId()) {
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 vecBatch->SetVector(colIndex, new BooleanVector(vecAllocator, rowCount));
                 break;
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
+            case OMNI_INT:
+            case OMNI_DATE32: {
                 vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
                 vecBatch->SetVector(colIndex, new LongVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 vecBatch->SetVector(colIndex, new DoubleVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_SHORT: {
+            case OMNI_SHORT: {
                 vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                int32_t width = (static_cast<const VarcharVecType *>(&type))->GetWidth();
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                int32_t width = (static_cast<const VarcharDataType *>(&type))->GetWidth();
                 vecBatch->SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * width, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 vecBatch->SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCount));
                 break;
             }

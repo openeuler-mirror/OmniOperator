@@ -10,7 +10,7 @@
 using std::map;
 using std::string;
 using std::vector;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 using namespace omniruntime::jit;
 using namespace omniruntime::expressions;
 
@@ -38,7 +38,7 @@ int32_t GetProjectCol(Expr *expr)
     return -1;
 }
 
-void GetTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys, vector<int32_t> &typeIds,
+void GetTypeIds(DataTypes &inputTypes, const vector<Expr *> &projectKeys, vector<int32_t> &typeIds,
     vector<int32_t> &projectCols)
 {
     const int32_t *inputTypeIds = inputTypes.GetIds();
@@ -59,7 +59,7 @@ void GetTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys, vector<
 }
 
 // hash aggregation with expression will use it.
-void GetRequiredTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys, vector<int32_t> &typeIds,
+void GetRequiredTypeIds(DataTypes &inputTypes, const vector<Expr *> &projectKeys, vector<int32_t> &typeIds,
     vector<int32_t> &projectCols)
 {
     auto inputTypeIds = const_cast<int32_t *>(inputTypes.GetIds());
@@ -87,7 +87,7 @@ void GetRequiredTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys,
     }
 }
 
-JitContext *CreateSortJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
+JitContext *CreateSortJitContext(DataTypes &sourceDataTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount)
 {
 #if defined(DISABLE_JIT)
@@ -96,8 +96,8 @@ JitContext *CreateSortJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, 
     JNI_DEBUG_LOG("create sort JIT context starting.");
     auto start = START();
 
-    const int32_t *sourceTypes = sourceVecTypes.GetIds();
-    auto typesCount = sourceVecTypes.GetSize();
+    const int32_t *sourceTypes = sourceDataTypes.GetIds();
+    auto typesCount = sourceDataTypes.GetSize();
     int sortColTypes[sortColsCount];
     for (int32_t i = 0; i < sortColsCount; ++i) {
         sortColTypes[i] = sourceTypes[sortCols[i]];
@@ -145,7 +145,7 @@ JitContext *CreateSortJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, 
 #endif
 }
 
-JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
+JitContext *CreateSortWithExprJitContext(DataTypes &sourceDataTypes, int32_t *outputCols, int32_t outputColsCount,
     const vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts)
 {
 #if defined(DISABLE_JIT)
@@ -154,7 +154,7 @@ JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outp
     int32_t sortKeysCount = sortKeys.size();
     vector<int32_t> newSourceTypes;
     vector<int32_t> sortCols(sortKeysCount);
-    GetTypeIds(sourceVecTypes, sortKeys, newSourceTypes, sortCols);
+    GetTypeIds(sourceDataTypes, sortKeys, newSourceTypes, sortCols);
 
     int sortColTypes[sortKeysCount];
     for (int32_t i = 0; i < sortKeysCount; ++i) {
@@ -205,7 +205,7 @@ JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outp
 #endif
 }
 
-JitContext *CreateHashBuilderJitContext(VecTypes &buildVecTypes, int32_t *buildHashCols, int32_t buildHashColsCount,
+JitContext *CreateHashBuilderJitContext(DataTypes &buildDataTypes, int32_t *buildHashCols, int32_t buildHashColsCount,
     int32_t operatorCount)
 {
 #if defined(DISABLE_JIT)
@@ -214,7 +214,7 @@ JitContext *CreateHashBuilderJitContext(VecTypes &buildVecTypes, int32_t *buildH
     JNI_DEBUG_LOG("create hash builder JIT context starting.");
     auto start = START();
 
-    const int32_t *buildTypes = buildVecTypes.GetIds();
+    const int32_t *buildTypes = buildDataTypes.GetIds();
     int32_t hashColTypes[buildHashColsCount];
     for (int32_t i = 0; i < buildHashColsCount; i++) {
         hashColTypes[i] = buildTypes[buildHashCols[i]];
@@ -251,22 +251,23 @@ JitContext *CreateHashBuilderJitContext(VecTypes &buildVecTypes, int32_t *buildH
 #endif
 }
 
-JitContext *CreateLookupJoinJitContext(VecTypes &probeVecTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
-    int32_t *probeHashCols, int32_t probeHashColsCount, VecTypes &buildOutputVecTypes, int32_t *buildOutputCols)
+JitContext *CreateLookupJoinJitContext(DataTypes &probeDataTypes, int32_t *probeOutputCols,
+    int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, DataTypes &buildOutputDataTypes,
+    int32_t *buildOutputCols)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
 #else
     JNI_DEBUG_LOG("create lookup join JIT context starting.");
     auto start = START();
-    const int32_t *probeTypes = probeVecTypes.GetIds();
+    const int32_t *probeTypes = probeDataTypes.GetIds();
     int32_t hashColTypes[probeHashColsCount];
     for (int32_t i = 0; i < probeHashColsCount; i++) {
         hashColTypes[i] = probeTypes[probeHashCols[i]];
     }
 
-    const int32_t *buildOutputTypes = buildOutputVecTypes.GetIds();
-    auto buildOutputColsCount = buildOutputVecTypes.GetSize();
+    const int32_t *buildOutputTypes = buildOutputDataTypes.GetIds();
+    auto buildOutputColsCount = buildOutputDataTypes.GetSize();
 
     ParamValue pProbeOutputColsCount = ParamValue(&probeOutputColsCount);
     ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
@@ -308,7 +309,7 @@ JitContext *CreateLookupJoinJitContext(VecTypes &probeVecTypes, int32_t *probeOu
 #endif
 }
 
-JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes,
+JitContext *CreateHashBuilderWithExprJitContext(DataTypes &buildDataTypes,
     const vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t operatorCount)
 {
 #if defined(DISABLE_JIT)
@@ -317,7 +318,7 @@ JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes,
     int32_t buildHashKeysCount = buildHashKeys.size();
     vector<int32_t> buildTypes;
     vector<int32_t> buildHashCols(buildHashKeysCount);
-    GetTypeIds(buildVecTypes, buildHashKeys, buildTypes, buildHashCols);
+    GetTypeIds(buildDataTypes, buildHashKeys, buildTypes, buildHashCols);
 
     int32_t hashColTypes[buildHashKeysCount];
     for (int32_t i = 0; i < buildHashKeysCount; i++) {
@@ -357,9 +358,9 @@ JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes,
 #endif
 }
 
-JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t *probeOutputCols,
+JitContext *CreateLookupJoinWithExprJitContext(DataTypes &probeDataTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, const vector<omniruntime::expressions::Expr *> &probeHashKeys,
-    VecTypes &buildOutputVecTypes, int32_t *buildOutputCols)
+    DataTypes &buildOutputDataTypes, int32_t *buildOutputCols)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -367,15 +368,15 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
     int32_t probeHashKeysCount = probeHashKeys.size();
     vector<int32_t> probeTypes;
     vector<int32_t> probeHashCols(probeHashKeysCount);
-    GetTypeIds(probeVecTypes, probeHashKeys, probeTypes, probeHashCols);
+    GetTypeIds(probeDataTypes, probeHashKeys, probeTypes, probeHashCols);
 
     int32_t hashColTypes[probeHashKeysCount];
     for (int32_t i = 0; i < probeHashKeysCount; i++) {
         hashColTypes[i] = probeTypes[probeHashCols[i]];
     }
 
-    const int32_t *buildOutputTypes = buildOutputVecTypes.GetIds();
-    auto buildOutputColsCount = buildOutputVecTypes.GetSize();
+    const int32_t *buildOutputTypes = buildOutputDataTypes.GetIds();
+    auto buildOutputColsCount = buildOutputDataTypes.GetSize();
 
     ParamValue pProbeOutputColsCount = ParamValue(&probeOutputColsCount);
     ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
@@ -419,14 +420,14 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
 #endif
 }
 
-JitContext *CreateTopNJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *sortCols, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortColsCount)
+JitContext *CreateTopNJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *sortCols,
+    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
 #else
-    auto sourceTypeIds = sourceVecTypes.GetIds();
-    auto sourceTypesCount = sourceVecTypes.GetSize();
+    auto sourceTypeIds = sourceDataTypes.GetIds();
+    auto sourceTypesCount = sourceDataTypes.GetSize();
     ParamValue pSourceTypes = ParamValue(sourceTypeIds, sourceTypesCount);
     ParamValue pSortCols = ParamValue(sortCols, sortColsCount);
     ParamValue pSortColCount = ParamValue(&sortColsCount);
@@ -449,7 +450,7 @@ JitContext *CreateTopNJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int
 #endif
 }
 
-JitContext *CreateTopNWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes,
+JitContext *CreateTopNWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes,
     const vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts)
 {
 #if defined(DISABLE_JIT)
@@ -458,7 +459,7 @@ JitContext *CreateTopNWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTy
     int32_t sortKeysCount = sortKeys.size();
     vector<int32_t> newSourceTypes;
     vector<int32_t> sortCols(sortKeysCount);
-    GetTypeIds(sourceVecTypes, sortKeys, newSourceTypes, sortCols);
+    GetTypeIds(sourceDataTypes, sortKeys, newSourceTypes, sortCols);
 
     ParamValue pSourceTypes = ParamValue(newSourceTypes.data(), newSourceTypes.size());
     ParamValue pSortKeyCount = ParamValue(&sortKeysCount);
@@ -485,15 +486,15 @@ JitContext *CreateTopNWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTy
 #endif
 }
 
-JitContext *CreateWindowJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
+JitContext *CreateWindowJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
 #else
-    auto typesCount = sourceVecTypes.GetSize();
-    const int32_t *sourceTypes = sourceVecTypes.GetIds();
+    auto typesCount = sourceDataTypes.GetSize();
+    const int32_t *sourceTypes = sourceDataTypes.GetIds();
     int32_t finalSortColsCount = sortColsCount + partitionCount;
     int32_t finalSortCols[finalSortColsCount];
     int32_t finalSortAscendings[finalSortColsCount];
@@ -559,19 +560,19 @@ JitContext *CreateWindowJitContext(omniruntime::vec::VecTypes &sourceVecTypes, i
 #endif
 }
 
-JitContext *CreateWindowWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
+JitContext *CreateWindowWithExprJitContext(DataTypes &sourceDataTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
-    int32_t sortColsCount, VecTypes &outputTypes, const vector<omniruntime::expressions::Expr *> &argumentKeys)
+    int32_t sortColsCount, DataTypes &outputTypes, const vector<omniruntime::expressions::Expr *> &argumentKeys)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
 #else
-    auto typesCount = sourceVecTypes.GetSize();
-    vector<VecType> allTypesVec;
-    allTypesVec.insert(allTypesVec.end(), sourceVecTypes.Get().begin(), sourceVecTypes.Get().end());
+    auto typesCount = sourceDataTypes.GetSize();
+    vector<DataType> allTypesVec;
+    allTypesVec.insert(allTypesVec.end(), sourceDataTypes.Get().begin(), sourceDataTypes.Get().end());
     allTypesVec.insert(allTypesVec.end(), outputTypes.Get().begin(), outputTypes.Get().end());
 
-    VecTypes allTypes(allTypesVec);
+    DataTypes allTypes(allTypesVec);
     int32_t finalSortColsCount = sortColsCount + partitionCount;
     int32_t finalSortCols[finalSortColsCount];
     int32_t finalSortAscendings[finalSortColsCount];
@@ -587,7 +588,7 @@ JitContext *CreateWindowWithExprJitContext(VecTypes &sourceVecTypes, int32_t *ou
         finalSortNullFirsts[i] = sortNullFirsts[i - partitionCount];
     }
 
-    auto inputTypes = const_cast<int32_t *>(sourceVecTypes.GetIds());
+    auto inputTypes = const_cast<int32_t *>(sourceDataTypes.GetIds());
     int32_t finalSortColTypes[finalSortColsCount];
     for (int32_t i = 0; i < finalSortColsCount; i++) {
         finalSortColTypes[i] = inputTypes[finalSortCols[i]];
@@ -641,14 +642,14 @@ JitContext *CreateWindowWithExprJitContext(VecTypes &sourceVecTypes, int32_t *ou
 #endif
 }
 
-JitContext *CreateHashAggregationJitContext(VecTypes &groupByVecTypes, int32_t *groupByCols, VecTypes &aggVecTypes,
-    int32_t *aggCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, VecTypes &outputVecTypes)
+JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t *groupByCols, DataTypes &aggDataTypes,
+    int32_t *aggCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, DataTypes &outputDataTypes)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
 #else
     // groupby channel and id
-    auto groupColNum = groupByVecTypes.GetSize();
+    auto groupColNum = groupByDataTypes.GetSize();
     auto aggNum = aggFuncsCount;
 
     ParamValue pGroupNum = ParamValue(&groupColNum);
@@ -675,10 +676,10 @@ JitContext *CreateHashAggregationJitContext(VecTypes &groupByVecTypes, int32_t *
 #endif
 }
 
-JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes,
+JitContext *CreateHashAggregationWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes,
     const vector<omniruntime::expressions::Expr *> &groupByKeys,
     const vector<omniruntime::expressions::Expr *> &aggKeys, int32_t *aggFuncTypes, int32_t aggFuncsCount,
-    omniruntime::vec::VecTypes &outputVecTypes)
+    omniruntime::type::DataTypes &outputDataTypes)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -713,8 +714,8 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
 #endif
 }
 
-JitContext *CreateAggregationJitContext(VecTypes &sourceVecTypes, int32_t *aggCols, int32_t *aggMaskCols,
-    int32_t *aggFuncTypes, int32_t aggFuncsCount, VecTypes &outputVecTypes)
+JitContext *CreateAggregationJitContext(DataTypes &sourceDataTypes, int32_t *aggCols, int32_t *aggMaskCols,
+    int32_t *aggFuncTypes, int32_t aggFuncsCount, DataTypes &outputDataTypes)
 {
 #if defined(DISABLE_JIT)
     return nullptr;

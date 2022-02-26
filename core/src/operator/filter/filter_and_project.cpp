@@ -55,7 +55,7 @@ bool SimpleFilter::Initialize()
         return false;
     }
 
-    if (this->expression->GetReturnTypeId() != OMNI_VEC_TYPE_BOOLEAN) {
+    if (this->expression->GetReturnTypeId() != OMNI_BOOLEAN) {
         LogWarn("Filter expression can only return boolean, current type: %d", this->expression->GetReturnTypeId());
         return false;
     }
@@ -87,9 +87,9 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
     return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
 }
 
-FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, VecTypes &inputTypes,
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
-    : inputVecTypes(inputTypes)
+    : inputDataTypes(inputDataTypes)
 {
     this->inputVecCount = inputVecCount;
     this->projectVecCount = projectVecCount;
@@ -100,13 +100,13 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     parsedExpr->Accept(printExprTree);
     std::cout << std::endl;
 #endif
-    this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes.GetIds(), inputVecCount);
+    this->filter = make_unique<Filter>(*parsedExpr, inputDataTypes.GetIds(), inputVecCount);
     if (!this->filter->isSupported) {
         this->isSupportedExpr = false;
     }
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto projection = make_unique<Projection>(inputVecTypes, inputVecCount, *(projectExprs.at(i)), true);
+        auto projection = make_unique<Projection>(inputDataTypes, inputVecCount, *(projectExprs.at(i)), true);
         if (!projection->IsSupported()) {
             this->isSupportedExpr = false;
             break;
@@ -127,7 +127,7 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputVecTypes.GetIds(),
+    auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputDataTypes.GetIds(),
         this->inputVecCount, this->projections, this->projectVecCount, new ExecutionContext());
     return filterAndProjectOperator.release();
 }
@@ -142,13 +142,13 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
 
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch->GetVector(i);
-        if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
             colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
         dictVecAddress = 0;
         valuesAddress = 0;
-        VecTypeId typeId = colVec->GetTypeId();
-        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
+        DataTypeId typeId = colVec->GetTypeId();
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
             dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
         } else {
             valuesAddress = VectorHelper::GetValuesAddr(colVec);

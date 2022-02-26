@@ -9,10 +9,11 @@
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
-JoinResultBuilder::JoinResultBuilder(const vec::VecTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
+JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
     int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
-    const vec::VecTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
+    const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
     DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator)
     : leftTableOutputTypes(leftTableOutputTypes),
       leftTableOutputCols(leftTableOutputCols),
@@ -38,12 +39,12 @@ void JoinResultBuilder::JoinFilterCodeGen()
 {
     Parser parser;
     if (!filterExpStr.empty()) {
-        std::vector<VecType> allTypes;
+        std::vector<DataType> allTypes;
         allTypes.insert(allTypes.end(), leftTableOutputTypes.Get().begin(), leftTableOutputTypes.Get().end());
         allTypes.insert(allTypes.end(), rightTableOutputTypes.Get().begin(), rightTableOutputTypes.Get().end());
-        VecTypes vecTypes(allTypes);
+        DataTypes dataTypes(allTypes);
         omniruntime::expressions::Expr *filterExpr =
-            parser.ParseRowExpression(filterExpStr, vecTypes, vecTypes.GetSize());
+            parser.ParseRowExpression(filterExpStr, dataTypes, dataTypes.GetSize());
         executionContext = new ExecutionContext();
         simpleFilter = new SimpleFilter(*filterExpr);
         simpleFilter->Initialize();
@@ -54,13 +55,13 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     VectorBatch *vectorBatch = std::make_unique<VectorBatch>(outputColCount, maxRowCount).release();
-    std::vector<VecType> allTypes;
+    std::vector<DataType> allTypes;
     allTypes.reserve(outputColCount);
-    std::vector<VecType> leftTypes = leftTableOutputTypes.Get();
+    std::vector<DataType> leftTypes = leftTableOutputTypes.Get();
     for (int idx = 0; idx < leftTableOutputColsCount; idx++) {
         allTypes.push_back(leftTypes.at(leftTableOutputCols[idx]));
     }
-    std::vector<VecType> rightTypes = rightTableOutputTypes.Get();
+    std::vector<DataType> rightTypes = rightTableOutputTypes.Get();
     for (int idx = 0; idx < rightTableOutputColsCount; idx++) {
         allTypes.push_back(rightTypes.at(rightTableOutputCols[idx]));
     }
@@ -68,7 +69,7 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     return vectorBatch;
 }
 
-template<typename T, typename V>
+template <typename T, typename V>
 void AddFixWidthValueToVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
 {
     T *fixWidthValueVector = static_cast<T *>(inputVector);
@@ -96,43 +97,38 @@ void AddVarcharValueToVector(Vector *inputVector, int32_t inputRowId, Vector *ou
 
 void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
 {
-    switch (inputVector->GetTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
-            AddFixWidthValueToVector<IntVector, int32_t>(inputVector, inputRowId, outputVector, outputRowId);
+    int32_t originalId;
+    Vector *originalVector = VectorHelper::ExpandVectorAndIndex(inputVector, inputRowId, originalId);
+    switch (originalVector->GetTypeId()) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            AddFixWidthValueToVector<IntVector, int32_t>(originalVector, originalId, outputVector, outputRowId);
             break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
-            AddFixWidthValueToVector<LongVector, int64_t>(inputVector, inputRowId, outputVector, outputRowId);
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            AddFixWidthValueToVector<LongVector, int64_t>(originalVector, originalId, outputVector, outputRowId);
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
-            AddFixWidthValueToVector<DoubleVector, double>(inputVector, inputRowId, outputVector, outputRowId);
+        case OMNI_DOUBLE:
+            AddFixWidthValueToVector<DoubleVector, double>(originalVector, originalId, outputVector, outputRowId);
             break;
-        case OMNI_VEC_TYPE_BOOLEAN:
-            AddFixWidthValueToVector<BooleanVector, bool>(inputVector, inputRowId, outputVector, outputRowId);
+        case OMNI_BOOLEAN:
+            AddFixWidthValueToVector<BooleanVector, bool>(originalVector, originalId, outputVector, outputRowId);
             break;
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR:
-            AddVarcharValueToVector(inputVector, inputRowId, outputVector, outputRowId);
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
+            AddVarcharValueToVector(originalVector, originalId, outputVector, outputRowId);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
-            AddFixWidthValueToVector<Decimal128Vector, Decimal128>(inputVector, inputRowId, outputVector, outputRowId);
+        case OMNI_DECIMAL128:
+            AddFixWidthValueToVector<Decimal128Vector, Decimal128>(originalVector, originalId, outputVector,
+                outputRowId);
             break;
-        case OMNI_VEC_TYPE_DICTIONARY: {
-            int32_t originalId;
-            auto *dicVector = static_cast<DictionaryVector *>(inputVector);
-            Vector *originalVector = dicVector->ExtractDictionaryAndId(inputRowId, originalId);
-            AddValueToBuildVector(originalVector, originalId, outputVector, outputRowId);
-            break;
-        }
         default:
             break;
     }
 }
 
 int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
-    std::vector<int64_t> &streamedTableValueAddresses,
-    std::vector<int64_t> &bufferedTableValueAddresses)
+    std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses)
 {
     bool isFillOneBatch = false;
     int32_t buildRowCount = 0;

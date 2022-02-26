@@ -12,7 +12,7 @@ Chunk *VectorReference::zeroChunk = new Chunk(0);
 /*
  * Encoding : values | nulls | offsets(option)
  */
-VectorReference::VectorReference(int capacityInBytes, int size, VecTypeId typeId) : reference(1), writable(true)
+VectorReference::VectorReference(int capacityInBytes, int size, DataTypeId dataTypeId) : reference(1), writable(true)
 {
     // for empty vector, like lazy vector.
     if (capacityInBytes == -1) {
@@ -27,7 +27,7 @@ VectorReference::VectorReference(int capacityInBytes, int size, VecTypeId typeId
     valueChunk = new Chunk(capacityInBytes);
     int nullsCapacityInBytes = size;
     int offsetsCapacityInBytes = 0;
-    bool isVariableType = IsVariableWidthType(typeId);
+    bool isVariableType = IsVariableWidthType(dataTypeId);
     if (isVariableType) {
         offsetsCapacityInBytes += (size + 1) * sizeof(int32_t);
     }
@@ -65,8 +65,8 @@ VectorReference::~VectorReference()
 bool VectorReference::IsVariableWidthType(int type)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
             return true;
         default:
             return false;

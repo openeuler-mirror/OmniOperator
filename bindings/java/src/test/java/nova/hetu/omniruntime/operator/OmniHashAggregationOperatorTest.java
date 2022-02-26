@@ -35,11 +35,11 @@ public class OmniHashAggregationOperatorTest {
     @Test
     public void testExecuteCountMultiplePage() {
         String[] groupByChannel = {"#0", "#1"};
-        VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
         String[] aggChannels = {"#3"};
-        VecType[] aggTypes = {LongVecType.LONG};
+        DataType[] aggTypes = {LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
 
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChannel,
                 groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);

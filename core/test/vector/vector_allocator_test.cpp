@@ -49,7 +49,7 @@ TEST(VectorAllocator, newVector)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 2048);
-    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_LONG);
     delete vector;
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);
@@ -142,7 +142,7 @@ TEST(VectorAllocator, memoryLeak)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 2048);
-    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_LONG);
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
@@ -156,7 +156,7 @@ TEST(VectorAllocator, doubleFree)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 2048);
-    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_LONG);
 
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
@@ -171,7 +171,7 @@ TEST(VectorAllocator, usedAfterReleased)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 2048);
-    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_LONG);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_LONG);
     delete vector;
     std::string stack = "HASH_AGG";
     vector->RecordStack(stack, JNI_ADD_INPUT);

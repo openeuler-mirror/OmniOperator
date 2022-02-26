@@ -16,7 +16,7 @@ public class VarcharVec extends VariableWidthVec {
     private static final int EXPAND_FACTOR = 2;
 
     public VarcharVec(VecAllocator allocator, int size) {
-        super(INIT_CAPACITY_IN_BYTES, size, VarcharVecType.VARCHAR);
+        super(INIT_CAPACITY_IN_BYTES, size, VarcharDataType.VARCHAR);
     }
 
     public VarcharVec(int capacityInBytes, int size) {

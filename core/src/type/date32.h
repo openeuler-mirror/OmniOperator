@@ -11,7 +11,7 @@
 #include "date_base.h"
 
 namespace omniruntime {
-namespace vec {
+namespace type {
 class Date32 : public BasicDate {
 public:
     Date32(const Date32 &date) : Date32(date.value) {}
@@ -21,7 +21,7 @@ public:
     // Convert any integer value into a Date32.
     template <typename T,
         typename = typename std::enable_if<std::is_integral<T>::value && (sizeof(T) <= sizeof(int32_t)), T>::type>
-    constexpr Date32(T value) noexcept : Date32(static_cast<int32_t>(value))
+    explicit constexpr Date32(T value) noexcept : Date32(static_cast<int32_t>(value))
     { // NOLINT
     }
 

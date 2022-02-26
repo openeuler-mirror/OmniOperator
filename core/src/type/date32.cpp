@@ -5,7 +5,7 @@
 #include "date32.h"
 
 namespace omniruntime {
-namespace vec {
+namespace type {
 Date32 &Date32::operator = (const Date32 &right)
 {
     value = right.value;

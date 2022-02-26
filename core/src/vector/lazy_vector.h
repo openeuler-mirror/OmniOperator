@@ -7,13 +7,14 @@
 
 #include "fixed_width_vector.h"
 #include "loader/vector_loader.h"
+#include "../type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
 class LazyVector : public Vector {
 public:
     LazyVector(VectorAllocator *allocator, int32_t size)
-        : Vector(allocator, -1, size, OMNI_VEC_TYPE_LAZY), loader(nullptr), loadedVector(nullptr)
+        : Vector(allocator, -1, size, type::OMNI_NONE), loader(nullptr), loadedVector(nullptr)
     {}
 
     void SetLoader(VectorLoader *loader)
@@ -73,7 +74,7 @@ public:
         }
     }
 
-    VecEncoding encoding() override
+    VectorEncoding GetEncoding() override
     {
         return OMNI_VEC_ENCODING_LAZY;
     }

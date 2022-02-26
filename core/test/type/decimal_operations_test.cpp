@@ -4,11 +4,11 @@
 
 #include "gtest/gtest.h"
 #include "type/decimal_operations.h"
-#include "vector_common.h"
+#include "vector/vector_common.h"
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregation.h"
 
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 TEST(DecimalOperations, sum_encode_and_decode_decimal)
 {
@@ -95,7 +95,7 @@ TEST(DecimalOperations, exceeds_or_equal_ten_to_thirty_eight)
 
     int64_t c5 = 0x4b3b4ca85a86c47aL;
     result.SetValue(c5, 1);
-    bool  flag = DecimalOperations::ExceedsOrEqualTenToThirtyEight(result);
+    bool flag = DecimalOperations::ExceedsOrEqualTenToThirtyEight(result);
     EXPECT_EQ(flag, false);
 }
 
@@ -138,10 +138,10 @@ TEST(DecimalOperations, roundUp)
     Decimal128 newDec3 = 3;
     Decimal128 newDec4 = 2;
     Decimal128 expectValue = 4;
-    DecimalOperations::RoundUp(newDec1,newDec2,newDec3,newDec4);
+    DecimalOperations::RoundUp(newDec1, newDec2, newDec3, newDec4);
     EXPECT_EQ(newDec3, expectValue);
 
     newDec4 = 0;
-    DecimalOperations::RoundUp(newDec1,newDec2,newDec3,newDec4);
+    DecimalOperations::RoundUp(newDec1, newDec2, newDec3, newDec4);
     EXPECT_EQ(newDec3, expectValue);
 }

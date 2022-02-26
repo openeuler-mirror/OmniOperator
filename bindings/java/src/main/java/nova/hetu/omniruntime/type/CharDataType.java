@@ -15,7 +15,7 @@ import java.util.Objects;
  */
 public class CharDataType extends VarcharDataType {
     /**
-     * max width for char vec type
+     * max width for char data type
      */
     public static final int MAX_WIDTH = 65_536;
 
@@ -25,12 +25,12 @@ public class CharDataType extends VarcharDataType {
     public static final CharDataType CHAR = new CharDataType(MAX_WIDTH);
 
     /**
-     * The construct of char vector type
+     * The construct of char data type
      *
      * @param width the width of char
      */
     public CharDataType(@JsonProperty("width") int width) {
-        super(width, DataTypeId.OMNI_DATA_TYPE_CHAR);
+        super(width, DataTypeId.OMNI_CHAR);
     }
 
     @Override

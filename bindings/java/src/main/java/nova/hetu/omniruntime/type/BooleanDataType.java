@@ -19,6 +19,6 @@ public class BooleanDataType extends DataType {
      * Boolean construct
      */
     public BooleanDataType() {
-        super(DataTypeId.OMNI_DATA_TYPE_BOOLEAN);
+        super(DataTypeId.OMNI_BOOLEAN);
     }
 }

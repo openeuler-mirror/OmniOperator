@@ -43,24 +43,24 @@ PagesHashStrategy::~PagesHashStrategy()
     }
 }
 
-static bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex,
-    Vector *rightVector, int32_t rightRowIndex)
+static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, int32_t leftRowIndex, Vector *rightVector,
+    int32_t rightRowIndex)
 {
-    switch (vecType) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+    switch (dataType) {
+        case OMNI_INT:
+        case OMNI_DATE32:
             return ValueEqualsValueIgnoreNulls<IntVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             return ValueEqualsValueIgnoreNulls<LongVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             return DoubleValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             return ValueEqualsValueIgnoreNulls<BooleanVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
             return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             return ValueEqualsValueIgnoreNulls<Decimal128Vector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         default:
             return false;

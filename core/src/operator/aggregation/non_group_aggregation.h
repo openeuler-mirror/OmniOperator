@@ -6,7 +6,7 @@
 #define NON_GROUP_AGGREGATION_H
 
 #include "aggregation.h"
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
@@ -14,7 +14,8 @@ namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
     AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<int32_t> &aggInputCols,
-        std::vector<int32_t> &maskColIds, omniruntime::vec::VecTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
+        std::vector<int32_t> &maskColIds, omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw,
+        bool outputPartial)
         : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
           aggInputCols(aggInputCols),
           maskCols(maskColIds),
@@ -32,7 +33,7 @@ public:
 private:
     std::vector<int32_t> aggInputCols;
     std::vector<int32_t> maskCols;
-    omniruntime::vec::VecTypes aggOutputTypes;
+    omniruntime::type::DataTypes aggOutputTypes;
     std::vector<AggregateState> aggStates;
 };
 
@@ -41,9 +42,9 @@ public:
     Operator *CreateOperator() override;
 
 public:
-    AggregationOperatorFactory(omniruntime::vec::VecTypes &sourceTypes, PrepareContext aggFuncTypesContext,
-        PrepareContext aggInputColsContext, PrepareContext maskColsContext, omniruntime::vec::VecTypes &aggOutputTypes,
-        bool inputRaw, bool outputPartial)
+    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, PrepareContext aggFuncTypesContext,
+        PrepareContext aggInputColsContext, PrepareContext maskColsContext,
+        omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
         : sourceTypes(sourceTypes),
           aggFuncTypesContext(aggFuncTypesContext),
           aggInputColsContext(aggInputColsContext),
@@ -60,12 +61,12 @@ private:
     template <class T> void CreateAggregatorFactory(int32_t maskCol);
 
 private:
-    omniruntime::vec::VecTypes sourceTypes;
+    omniruntime::type::DataTypes sourceTypes;
     PrepareContext aggFuncTypesContext;
     PrepareContext aggInputColsContext;
     PrepareContext maskColsContext;
-    omniruntime::vec::VecTypes aggOutputTypes;
-    std::vector<omniruntime::vec::VecType> aggInputTypes;
+    omniruntime::type::DataTypes aggOutputTypes;
+    std::vector<omniruntime::type::DataType> aggInputTypes;
     std::vector<int32_t> aggInputCols;
     std::vector<int32_t> maskCols;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;

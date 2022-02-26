@@ -29,7 +29,7 @@ public class TestLongVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 2048);
-        assertEquals(vec.getDataType(), LongDataType.LONG);
+        assertEquals(vec.getType(), LongDataType.LONG);
         vec.close();
     }
 

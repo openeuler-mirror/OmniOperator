@@ -19,6 +19,6 @@ public class IntDataType extends DataType {
      * The construct
      */
     public IntDataType() {
-        super(DataTypeId.OMNI_DATA_TYPE_INT);
+        super(DataTypeId.OMNI_INT);
     }
 }

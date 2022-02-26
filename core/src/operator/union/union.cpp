@@ -8,13 +8,14 @@ using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-UnionOperatorFactory::UnionOperatorFactory(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct)
+UnionOperatorFactory::UnionOperatorFactory(const type::DataTypes &sourceTypes, int32_t sourceTypesCount,
+    bool isDistinct)
     : sourceTypes(sourceTypes), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
 {}
 
 UnionOperatorFactory::~UnionOperatorFactory() {}
 
-UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const vec::VecTypes &sourceTypes,
+UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const type::DataTypes &sourceTypes,
     int32_t sourceTypesCount, bool isDistinct)
 {
     auto uOperatorFactory = std::make_unique<UnionOperatorFactory>(sourceTypes, sourceTypesCount, isDistinct);
@@ -27,7 +28,7 @@ Operator *UnionOperatorFactory::CreateOperator()
     return unionOperator;
 }
 
-UnionOperator::UnionOperator(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct)
+UnionOperator::UnionOperator(const type::DataTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct)
     : sourceTypes(sourceTypes), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
 {}
 

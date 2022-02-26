@@ -44,9 +44,10 @@ static int32_t CompareVarchar(Vector *leftColumn, int32_t leftColumnPosition, Ve
     }
 }
 
-int64_t ReverseBytes(int64_t var0) {
-    var0 = (var0 & 71777214294589695L) << 8 | ((uint64_t) var0) >> 8 & 71777214294589695L;
-    return var0 << 48 | (var0 & 4294901760L) << 16 | ((uint64_t) var0) >> 16 & 4294901760L | ((uint64_t) var0) >> 48;
+int64_t ReverseBytes(int64_t var0)
+{
+    var0 = (var0 & 71777214294589695L) << 8 | ((uint64_t)var0) >> 8 & 71777214294589695L;
+    return var0 << 48 | (var0 & 4294901760L) << 16 | ((uint64_t)var0) >> 16 & 4294901760L | ((uint64_t)var0) >> 48;
 }
 
 int64_t LongBytesToLong(int64_t bytes)
@@ -102,7 +103,8 @@ int32_t CompareVarcharByLong(Vector *leftColumn, int32_t leftColumnPosition, Vec
     }
 }
 
-TEST(varcharType, CompareVarcharPerf){
+TEST(varcharType, CompareVarcharPerf)
+{
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
@@ -122,7 +124,7 @@ TEST(varcharType, CompareVarcharPerf){
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     int comp;
-    for (int j = 0; j < ROUNDS; j++ ){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -140,13 +142,13 @@ TEST(varcharType, CompareVarcharPerf){
 
     VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string  str = getString(i, 20, VAR_LEN);
+        std::string str = getString(i, 20, VAR_LEN);
         vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
     std::cout << "Compare different varchar:" << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++ ){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -168,7 +170,8 @@ TEST(varcharType, CompareVarcharPerf){
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
-TEST(varcharType, CompareVarcharByLongPerf){
+TEST(varcharType, CompareVarcharByLongPerf)
+{
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
@@ -179,7 +182,7 @@ TEST(varcharType, CompareVarcharByLongPerf){
         vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
-    //Test perf
+    // Test perf
     std::cout << "Test times: " << ROW_SIZE << std::endl;
     std::cout << "varchar length: " << VAR_LEN << std::endl;
 
@@ -189,7 +192,7 @@ TEST(varcharType, CompareVarcharByLongPerf){
     std::cout << "Compare equal varchar" << std::endl;
     double sum = 0;
     int comp;
-    for (int j = 0; j < ROUNDS; j++ ){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -213,7 +216,7 @@ TEST(varcharType, CompareVarcharByLongPerf){
 
     std::cout << "Compare not equal varchar" << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++ ){
+    for (int j = 0; j < ROUNDS; j++) {
         timer.reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
@@ -234,5 +237,3 @@ TEST(varcharType, CompareVarcharByLongPerf){
     delete vector3;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
-
-

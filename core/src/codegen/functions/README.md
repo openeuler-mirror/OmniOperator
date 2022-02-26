@@ -37,24 +37,24 @@ To add new functions to omni-runtime, follow the steps below. You will need to m
    vector<Function> ExternalFunctionRegistry::GetFunctions()
    {
        std::vector<Function> externalFunctionRegistry = {
-               Function(reinterpret_cast<void*>(Increment<int32_t>), "Increment", {}, {OMNI_VEC_TYPE_INT},
-                        OMNI_VEC_TYPE_INT),
-               Function(reinterpret_cast<void*>(Increment<int64_t>), "Increment", {}, {OMNI_VEC_TYPE_LONG},
-                        OMNI_VEC_TYPE_LONG),
+               Function(reinterpret_cast<void*>(Increment<int32_t>), "Increment", {}, {OMNI_INT},
+                        OMNI_INT),
+               Function(reinterpret_cast<void*>(Increment<int64_t>), "Increment", {}, {OMNI_LONG},
+                        OMNI_LONG),
        };
        return externalFunctionRegistry;
    }
    ```
    
    The return types and parameter types in function signature registered can only be the data types, currently supporting:
-   * OMNI_VEC_TYPE_INT
-   * OMNI_VEC_TYPE_LONG
-   * OMNI_VEC_TYPE_DOUBLE
-   * OMNI_VEC_TYPE_BOOLEAN
-   * OMNI_VEC_TYPE_VARCHAR
-   * OMNI_VEC_TYPE_CHAR
-   * OMNI_VEC_TYPE_DECIMAL64
-   * OMNI_VEC_TYPE_DECIMAL128
+   * OMNI_INT
+   * OMNI_LONG
+   * OMNI_DOUBLE
+   * OMNI_BOOLEAN
+   * OMNI_VARCHAR
+   * OMNI_CHAR
+   * OMNI_DECIMAL64
+   * OMNI_DECIMAL128
    
 
 7. Finally, if you are adding a new function registry, register it in the `FunctionRegistry` class in `func_registry` by adding it to the registries list in `GetFunctionRegistries()` method:

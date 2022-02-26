@@ -24,14 +24,15 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     public DictionaryVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                         long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, DataType.create(getTypeIdNative(nativeVector)));
+                size, offset, DataType.create(getTypeIdNative(nativeVector)));
         loadDictionaryAndIds(size);
     }
 
     public DictionaryVec(Vec dictionary, int[] ids) {
-        super(dictionary.getAllocator(), ids.length * BYTES, ids.length, VecEncoding.OMNI_VEC_ENCODING_DICTIONARY, dictionary.getDataType());
+        super(dictionary.getAllocator(), ids.length * BYTES, ids.length,
+                VecEncoding.OMNI_VEC_ENCODING_DICTIONARY, dictionary.getType());
         // set ids
         valuesBuf.setIntArray(0, ids, 0, ids.length * BYTES);
         // set dictionary vector

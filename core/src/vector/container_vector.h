@@ -17,12 +17,13 @@
  */
 namespace omniruntime {
 namespace vec {
+using DataType = type::DataType;
 class ContainerVector : public Vector {
-    using T = typename NativeType<OMNI_VEC_TYPE_CONTAINER>::type;
+    using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
 
 public:
     ContainerVector(VectorAllocator *allocator, int32_t positionCount, std::vector<uintptr_t>& fieldVectors,
-        int32_t vectorCount, std::vector<VecType>& vecTypes);
+        int32_t vectorCount, std::vector<DataType>& dataTypes);
 
     ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount);
 
@@ -48,9 +49,9 @@ public:
         return vectorCount;
     }
 
-    std::vector<VecType> ALWAYS_INLINE &GetVecTypes()
+    std::vector<DataType> ALWAYS_INLINE &GetDataTypes()
     {
-        return vecTypes;
+        return dataTypes;
     }
 
     ContainerVector *Slice(int positionOffset, int length) override;
@@ -63,14 +64,14 @@ public:
 
     ~ContainerVector() override;
 
-    VecEncoding encoding() override
+    VectorEncoding GetEncoding() override
     {
         return OMNI_VEC_ENCODING_CONTAINER;
     }
 
 private:
     static const int BYTES = sizeof(T);
-    std::vector<VecType> vecTypes;
+    std::vector<DataType> dataTypes;
     int32_t vectorCount;
     int32_t positionCount;
 
@@ -83,11 +84,11 @@ private:
         return fieldVecOffsets;
     }
 
-    ContainerVector(ContainerVector *vector, int32_t vectorCount, int32_t positionOffset, VecType types[])
+    ContainerVector(ContainerVector *vector, int32_t vectorCount, int32_t positionOffset, DataType types[])
         : Vector(vector, vectorCount, positionOffset)
     {
         for (int32_t i = 0; i < vectorCount; ++i) {
-            this->vecTypes.push_back(types[i]);
+            this->dataTypes.push_back(types[i]);
         }
     }
 };

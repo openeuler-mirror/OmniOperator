@@ -22,9 +22,9 @@ public class TestDecimal128Vec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 4096);
-        assertEquals(vec.getDataType().getId(), DataType.DataTypeId.OMNI_DATA_TYPE_DECIMAL128);
-        assertEquals(((Decimal128DataType) (vec.getDataType())).getPrecision(), 38);
-        assertEquals(((Decimal128DataType) (vec.getDataType())).getScale(), 0);
+        assertEquals(vec.getType().getId(), DataType.DataTypeId.OMNI_DECIMAL128);
+        assertEquals(((Decimal128DataType) (vec.getType())).getPrecision(), 38);
+        assertEquals(((Decimal128DataType) (vec.getType())).getScale(), 0);
         vec.close();
     }
 

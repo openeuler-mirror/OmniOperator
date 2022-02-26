@@ -7,14 +7,14 @@
 #include <limits>
 #include <array>
 #include <iomanip>
-#include <compiler_util.h>
-#include "../../util/debug.h"
+#include <util/compiler_util.h>
+#include "util/debug.h"
 
 namespace omniruntime {
-namespace vec {
-static constexpr int32_t INT_BIT_WIDTH = 32;
-static constexpr int32_t MAX_PRECISION = 38;
-static constexpr int32_t PRINT_OUT_HEX_WIDTH = 16;
+namespace type {
+const int32_t INT_BIT_WIDTH = 32;
+const int32_t MAX_PRECISION = 38;
+const int32_t PRINT_OUT_HEX_WIDTH = 16;
 const Decimal128 Decimal128::SCALE_MULTIPLIERS[] = {
     Decimal128(1LL),
     Decimal128(10LL),
@@ -177,19 +177,19 @@ static int64_t FillInArray(const Decimal128 &value, uint32_t *array, uint32_t ar
             array[1] = static_cast<uint32_t>(high);
             array[2] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
             array[3] = static_cast<uint32_t>(low);
-            return 4;
+            return Decimal128::DIVISION_ARRAY_LENGTH_FOUR;
         }
 
         array[0] = static_cast<uint32_t>(high);
         array[1] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
         array[2] = static_cast<uint32_t>(low);
-        return 3;
+        return Decimal128::DIVISION_ARRAY_LENGTH_THREE;
     }
 
     if (low > std::numeric_limits<uint32_t>::max()) {
         array[0] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
         array[1] = static_cast<uint32_t>(low);
-        return 2;
+        return Decimal128::DIVISION_ARRAY_LENGTH_TWO;
     }
 
     if (low == 0) {
@@ -230,7 +230,7 @@ static inline void ShiftArrayRight(uint32_t *array, int64_t length, int64_t bits
 
 // Fix the signs of the result and remainder at the end of the division based on
 // the signs of the dividend and divisor.
-template <class DecimalClass>
+template<class DecimalClass>
 static inline void FixDivisionSigns(DecimalClass &result, DecimalClass &remainder, bool dividendWasNegative,
     bool divisorWasNegative)
 {
@@ -244,7 +244,7 @@ static inline void FixDivisionSigns(DecimalClass &result, DecimalClass &remainde
 }
 
 // Build a little endian array of uint64_t from a big endian array of uint32_t.
-template <size_t N>
+template<size_t N>
 static OpStatus BuildFromArray(std::array<uint64_t, N> &resultArray, const uint32_t *array, int64_t length)
 {
     for (int64_t i = length - 2 * N - 1; i >= 0; i--) {
@@ -282,7 +282,7 @@ static OpStatus BuildFromArray(Decimal128 &value, const uint32_t *array, int64_t
 }
 
 // Do a division where the divisor fits into a single 32 bit value.
-template <class DecimalClass>
+template<class DecimalClass>
 static OpStatus SingleDivide(const uint32_t *dividend, int64_t dividendLength, uint32_t divisor,
     DecimalClass &remainder, DecimalClass &result)
 {
@@ -357,7 +357,7 @@ static uint32_t GuessResult(uint32_t *dividendArray, uint32_t *divisorArray, uin
     return guess;
 }
 
-template <class DecimalClass>
+template<class DecimalClass>
 static OpStatus ComplexDivide(uint32_t *dividendArray, int64_t dividendLength, uint32_t *divisorArray,
     uint32_t divisorLength, DecimalClass &remainder, DecimalClass &result)
 {
@@ -395,7 +395,7 @@ static OpStatus ComplexDivide(uint32_t *dividendArray, int64_t dividendLength, u
     return OpStatus::SUCCESS;
 }
 // / \brief Do a decimal division with remainder.
-template <class DecimalClass>
+template<class DecimalClass>
 static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &divisor, DecimalClass &result,
     DecimalClass &remainder)
 {

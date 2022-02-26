@@ -8,7 +8,8 @@
 
 #include "vector.h"
 #include "vector_allocator.h"
-#include "type/decimal128.h"
+#include "../type/decimal128.h"
+#include "../type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
@@ -18,7 +19,7 @@ public:
 
     DictionaryVector(Vector *dictionary, int32_t idsCount);
 
-    DictionaryVector(VectorAllocator *allocator, int32_t idsCount);
+    DictionaryVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t idsCount);
 
     ~DictionaryVector() override;
 
@@ -27,10 +28,10 @@ public:
         return dictionary;
     }
 
-    VecTypeId ExtractDictionaryTypeId()
+    type::DataTypeId ExtractDictionaryTypeId()
     {
-        VecTypeId dictionaryType = dictionary->GetTypeId();
-        if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+        VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+        if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
             return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryTypeId();
         }
         return dictionary->GetTypeId();
@@ -39,8 +40,8 @@ public:
     Vector *ExtractDictionaryAndId(int32_t position, int32_t &originalId)
     {
         ASSERT(position < size);
-        VecTypeId dictionaryType = dictionary->GetTypeId();
-        if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+        VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+        if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
             return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryAndId(GetId(position), originalId);
         }
         originalId = GetId(position);
@@ -101,7 +102,7 @@ public:
         delete[] nulls;
     }
 
-    VectorEncoding encoding() override
+    VectorEncoding GetEncoding() override
     {
         return OMNI_VEC_ENCODING_DICTIONARY;
     }

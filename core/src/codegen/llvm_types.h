@@ -5,7 +5,7 @@
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
 #include "util/type_util.h"
-#include "../vector/vector_type.h"
+#include "../type/data_type.h"
 
 #ifndef OMNI_RUNTIME_LLVM_TYPES_H
 #define OMNI_RUNTIME_LLVM_TYPES_H
@@ -57,18 +57,18 @@ public:
     llvm::Value *CreateConstant128(int64_t v);
 
     /// For a given Vector type, find the corresponding ir type.
-    llvm::Type* ToLLVMType(omniruntime::vec::VecTypeId id);
+    llvm::Type* ToLLVMType(omniruntime::type::DataTypeId id);
 
-    llvm::Type* VectorToLLVMType(omniruntime::vec::VecType type);
+    llvm::Type* VectorToLLVMType(omniruntime::type::DataType type);
 
-    llvm::Type* ToPointerType(omniruntime::vec::VecTypeId typeId);
+    llvm::Type* ToPointerType(omniruntime::type::DataTypeId typeId);
 
-    llvm::Type* GetFunctionReturnType(omniruntime::vec::VecTypeId typeId);
+    llvm::Type* GetFunctionReturnType(omniruntime::type::DataTypeId typeId);
 
     virtual ~LLVMTypes();
 
 private:
-    std::map<omniruntime::vec::VecTypeId, llvm::Type*> VectorToLLVMTypeMap;
+    std::map<omniruntime::type::DataTypeId, llvm::Type*> VectorToLLVMTypeMap;
     llvm::LLVMContext& context;
 };
 

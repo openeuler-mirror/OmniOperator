@@ -24,8 +24,8 @@ TEST(ContainerVector, sliceVector)
     longVector->SetValues(0, data2, rows);
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
-    std::vector<VecType> vecTypes = { DoubleVecType(), LongVecType() };
-    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, vecTypes);
+    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
+    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
 
     int offset = 1;
     ContainerVector *slice1 = originalVector->Slice(offset, 5);
@@ -51,7 +51,7 @@ TEST(ContainerVector, setAndGetValue)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<VecType> VECTOR_TYPES = { DoubleVecType(), LongVecType() };
+    std::vector<DataType> VECTOR_TYPES = { DoubleDataType(), LongDataType() };
     ContainerVector *vector =
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
     Vector *values[] = {new DoubleVector(allocator, POSITION_COUNT), new LongVector(allocator, POSITION_COUNT)};
@@ -84,8 +84,8 @@ TEST(ContainerVector, copyPositions)
     longVector->SetValues(0, data2, rows);
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
-    std::vector<VecType> vecTypes = { DoubleVecType(), LongVecType() };
-    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, vecTypes);
+    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
+    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
 
     int32_t positions[] = {1, 3, 5, 7, 9};
     ContainerVector *copyPositioned = originalVector->CopyPositions(positions, 0, 5);
@@ -120,8 +120,8 @@ TEST(ContainerVector, copyRegion)
     longVector->SetValues(0, data2, rows);
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
-    std::vector<VecType> vecTypes = { DoubleVecType(), LongVecType() };
-    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, vecTypes);
+    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
+    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
 
     int offset = 1;
     ContainerVector *copyRegionedVec = originalVector->CopyRegion(offset, 5);
@@ -147,7 +147,7 @@ TEST(ContainerVector, jniFreeVector)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<VecType> VECTOR_TYPES = { DoubleVecType(), LongVecType() };
+    std::vector<DataType> VECTOR_TYPES = { DoubleDataType(), LongDataType() };
     ContainerVector *vector =
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
     Vector *vec = (Vector *)vector;
@@ -165,7 +165,7 @@ TEST(ContainerVector, getVectorAllocator)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<VecType> VECTOR_TYPES = { DoubleVecType(), LongVecType() };
+    std::vector<DataType> VECTOR_TYPES = { DoubleDataType(), LongDataType() };
     ContainerVector *vector =
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
 
@@ -193,7 +193,7 @@ TEST(ContainerVector, appendVector)
     const int32_t columnCount = 2;
     std::vector<uintptr_t> vectorAddresses = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(src1) };
-    std::vector<VecType> vectorTypes = { DoubleVecType(), LongVecType() };
+    std::vector<DataType> vectorTypes = { DoubleDataType(), LongDataType() };
     auto *vector = new ContainerVector(allocator, rows, vectorAddresses, columnCount, vectorTypes);
 
     auto *src2 = new LongVector(allocator, rows);
@@ -204,15 +204,15 @@ TEST(ContainerVector, appendVector)
     doubleVector1->SetValues(0, data22, rows);
 
     std::vector<uintptr_t> vecAddr2 = { reinterpret_cast<uintptr_t>(doubleVector1), reinterpret_cast<uintptr_t>(src2) };
-    std::vector<VecType> vecTypes2 = { DoubleVecType(), LongVecType() };
-    auto *vector2 = new ContainerVector(allocator, rows, vecAddr2, columnCount, vecTypes2);
+    std::vector<DataType> dataTypes2 = { DoubleDataType(), LongDataType() };
+    auto *vector2 = new ContainerVector(allocator, rows, vecAddr2, columnCount, dataTypes2);
 
     auto *appendedDouble = new DoubleVector(allocator, 10);
     auto *appendedLong = new LongVector(allocator, 10);
     std::vector<uintptr_t> appendedAddr = { reinterpret_cast<uintptr_t>(appendedDouble),
         reinterpret_cast<uintptr_t>(appendedLong) };
-    std::vector<VecType> appendedVecType = { DoubleVecType(), LongVecType() };
-    auto *appended = new ContainerVector(allocator, rows, appendedAddr, columnCount, appendedVecType);
+    std::vector<DataType> appendedDataType = { DoubleDataType(), LongDataType() };
+    auto *appended = new ContainerVector(allocator, rows, appendedAddr, columnCount, appendedDataType);
     appended->Append(vector, 0, 5);
     appended->Append(vector2, 5, 5);
 

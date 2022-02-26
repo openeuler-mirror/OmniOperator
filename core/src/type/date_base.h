@@ -6,7 +6,7 @@
 #define OMNI_RUNTIME_DATE_BASE_H
 
 namespace omniruntime {
-namespace vec {
+namespace type {
 class BasicDate {
 public:
     BasicDate() {}

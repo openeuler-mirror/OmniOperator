@@ -5,7 +5,7 @@
 #define __PARTITIONEDOUTPUT_H__
 
 #include "../operator_factory.h"
-#include "../../vector/vector_type_serializer.h"
+#include "../../type/data_type_serializer.h"
 #include "../../vector/vector_helper.h"
 
 #include <vector>
@@ -41,14 +41,14 @@ static void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRow
 
 class PartitionedOutputOperatorFactory : public OperatorFactory {
 public:
-    PartitionedOutputOperatorFactory(const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
+    PartitionedOutputOperatorFactory(const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
         int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
         int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
         int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperatorFactory() override;
 
-    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(const VecTypes &sourceTypes,
+    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(const DataTypes &sourceTypes,
         int32_t sourceTypeCount, bool replicatesAnyRow, int nullChannel, int32_t *partitionChannels,
         int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition,
         int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
@@ -122,7 +122,7 @@ public:
     }
 
 private:
-    std::unique_ptr<VecTypes> sourceTypes;
+    std::unique_ptr<DataTypes> sourceTypes;
     int32_t sourceTypeCount;
     bool replicatesAnyRow;
     int nullChannel;
@@ -140,7 +140,7 @@ private:
 
 class PartitionedOutputOperator : public Operator {
 public:
-    PartitionedOutputOperator(const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
+    PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
         int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
         int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
         int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
@@ -222,7 +222,7 @@ public:
     }
 
 private:
-    const VecTypes &sourceTypes;
+    const DataTypes &sourceTypes;
     int32_t sourceTypeCount;
     bool replicatesAnyRow;
     int nullChannel;

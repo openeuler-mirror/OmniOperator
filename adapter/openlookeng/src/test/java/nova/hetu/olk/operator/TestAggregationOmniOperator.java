@@ -9,6 +9,7 @@ import static io.prestosql.operator.OperatorAssertion.assertOperatorEquals;
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.spi.type.BooleanType.BOOLEAN;
 import static io.prestosql.spi.type.DoubleType.DOUBLE;
+import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.testing.MaterializedResult.resultBuilder;
 import static io.prestosql.testing.TestingTaskContext.createTaskContext;
@@ -103,6 +104,36 @@ public class TestAggregationOmniOperator {
         MaterializedResult expected = resultBuilder(driverContext.getSession(), BIGINT, DOUBLE, BIGINT, VARCHAR)
                 .row(100L, 49.5, 4950L, "399").build();
         assertOperatorEquals(aggregationOmniOperatorFactory, driverContext, input, expected);
+        assertEquals(driverContext.getSystemMemoryUsage(), 0);
+        assertEquals(driverContext.getMemoryUsage(), 0);
+    }
+
+    @Test(invocationCount = 1)
+    public void testCountAggregationCompare() {
+        List<Type> types = ImmutableList.of(BIGINT, BIGINT, INTEGER);
+        List<Page> input = rowPagesBuilder(types).row(1, 1, null).row(null, 2, 2).row(null, 3, 3).row(4, 4, 4)
+                .row(5, null, 5).row(null, 6, 6).build();
+
+        int id = 0;
+        DataType[] sourceTypes = {LongDataType.LONG, IntDataType.INTEGER};
+        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        int[] aggregationInputChannels = {0, 2};
+        DataType[] aggregationOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        AggregationNode.Step step = AggregationNode.Step.SINGLE;
+        ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();
+        for (int i = 0; i < aggregatorTypes.length; i++) {
+            maskChannels.add(Optional.empty());
+        }
+        AggregationOmniOperatorFactory AggregationOmniOperatorFactory = new AggregationOmniOperatorFactory(id,
+                new PlanNodeId(String.valueOf(id)), sourceTypes, aggregatorTypes, aggregationInputChannels,
+                maskChannels.build(), aggregationOutputTypes, step);
+
+        DriverContext driverContext = createTaskContext(executor, scheduledExecutor, TEST_SESSION)
+                .addPipelineContext(0, true, true, false).addDriverContext();
+        MaterializedResult expected = resultBuilder(driverContext.getSession(), BIGINT, BIGINT, BIGINT).row(3L, 6L, 5L)
+                .build();
+        assertOperatorEquals(AggregationOmniOperatorFactory, driverContext, input, expected);
         assertEquals(driverContext.getSystemMemoryUsage(), 0);
         assertEquals(driverContext.getMemoryUsage(), 0);
     }

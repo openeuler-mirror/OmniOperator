@@ -8,22 +8,22 @@
 #include "../operator_factory.h"
 #include "../projection/projection.h"
 #include "../topn/topn.h"
-#include "../../vector/vector_types.h"
+#include "../../type/data_types.h"
 
 namespace omniruntime {
 namespace op {
 class TopNWithExprOperatorFactory : public OperatorFactory {
 public:
-    TopNWithExprOperatorFactory(const vec::VecTypes &sourceVecTypes, int32_t n,
-        const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
-        int32_t *sortNullFirsts, int32_t sortKeyCount);
+    TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
+                                const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
+                                int32_t *sortNullFirsts, int32_t sortKeyCount);
 
     ~TopNWithExprOperatorFactory() override;
 
     Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<vec::VecTypes> sourceTypes;
+    std::unique_ptr<type::DataTypes> sourceTypes;
     std::vector<int32_t> sortCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -32,8 +32,8 @@ private:
 
 class TopNWithExprOperator : public Operator {
 public:
-    TopNWithExprOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &sortCols,
-        std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator);
+    TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
+                         std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator);
 
     ~TopNWithExprOperator() override;
 
@@ -44,7 +44,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::vec::VecTypes &sourceTypes;
+    const omniruntime::type::DataTypes &sourceTypes;
     std::vector<int32_t> sortCols;
     std::vector<RowProjFunc> projectFuncs;
     TopNOperator *topNOperator;

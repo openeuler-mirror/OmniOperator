@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector.serialize;
@@ -11,8 +11,7 @@ import java.nio.ByteBuffer;
 import nova.hetu.omniruntime.type.CharDataType;
 import nova.hetu.omniruntime.type.Date32DataType;
 import nova.hetu.omniruntime.type.Date64DataType;
-import nova.hetu.omniruntime.type.Decimal128DataType;
-import nova.hetu.omniruntime.type.Decimal64DataType;
+import nova.hetu.omniruntime.type.DecimalDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
@@ -53,21 +52,19 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             index++;
         }
 
-        return vecBatchBuilder.setRowCount(vecBatch.getRowCount())
-            .setVecCount(vecBatch.getVectorCount())
-            .build()
-            .toByteArray();
+        return vecBatchBuilder.setRowCount(vecBatch.getRowCount()).setVecCount(vecBatch.getVectorCount()).build()
+                .toByteArray();
     }
 
     private VecBatchSerde.Vec buildProtoVec(Vec vec, int[] ids) {
         VecBatchSerde.Vec.Builder protoVecBuilder = VecBatchSerde.Vec.newBuilder();
         VecBatchSerde.DataTypeExt.Builder protoDataTypeExtBuild = VecBatchSerde.DataTypeExt.newBuilder();
         VecBatchSerde.VecEncoding.Builder protoVecEncodingBuild = VecBatchSerde.VecEncoding.newBuilder();
-        DataType dataType = vec.getDataType();
+        DataType dataType = vec.getType();
         VecEncoding encoding = vec.getEncoding();
         protoDataTypeExtBuild.setId(VecBatchSerde.DataTypeExt.DataTypeId.valueOf(dataType.getId().name()));
-        protoVecEncodingBuild.setEncodingTypeId(encoding.ordinal());
-        switch (encoding){
+        protoVecEncodingBuild.setEncodingId(encoding.ordinal());
+        switch (encoding) {
             case OMNI_VEC_ENCODING_FLAT:
                 setProtoDataTypeExt(protoDataTypeExtBuild, dataType);
                 break;
@@ -97,6 +94,8 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 }
                 break;
             }
+            default:
+                throw new IllegalStateException("Unexpected encoding: " + encoding);
         }
 
         Vec compactVec = compactVec(vec, ids);
@@ -116,12 +115,9 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         // only serialize the actual null size
         valueNullsBuf.limit(compactVec.getRealNullBufCapacityInBytes());
         VecBatchSerde.Vec protoVec = protoVecBuilder.setTypeExt(protoDataTypeExtBuild.build())
-            .setVecEncoding(protoVecEncodingBuild.build())
-            .setSize(compactVec.getSize())
-            .setOffset(compactVec.getOffset())
-            .setValues(ByteString.copyFrom(valueBuf))
-            .setNulls(ByteString.copyFrom(valueNullsBuf))
-            .build();
+                .setVecEncoding(protoVecEncodingBuild.build()).setSize(compactVec.getSize())
+                .setOffset(compactVec.getOffset()).setValues(ByteString.copyFrom(valueBuf))
+                .setNulls(ByteString.copyFrom(valueNullsBuf)).build();
 
         if (compactVec != vec) {
             compactVec.close();
@@ -131,59 +127,49 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
 
     private void setProtoDataTypeExt(VecBatchSerde.DataTypeExt.Builder protoDataTypeExtBuild, DataType dataType) {
         switch (dataType.getId()) {
-            case OMNI_DATA_TYPE_INT:
-            case OMNI_DATA_TYPE_LONG:
-            case OMNI_DATA_TYPE_SHORT:
-            case OMNI_DATA_TYPE_BOOLEAN:
-            case OMNI_DATA_TYPE_DOUBLE:
+            case OMNI_INT:
+            case OMNI_LONG:
+            case OMNI_SHORT:
+            case OMNI_BOOLEAN:
+            case OMNI_DOUBLE:
                 break;
-            case OMNI_DATA_TYPE_DATE32:
+            case OMNI_DATE32:
                 protoDataTypeExtBuild.setDateUnit(
                         VecBatchSerde.DataTypeExt.DateUnit.valueOf(((Date32DataType) dataType).getDateUnit().name()));
                 break;
-            case OMNI_DATA_TYPE_DATE64:
+            case OMNI_DATE64:
                 protoDataTypeExtBuild.setDateUnit(
                         VecBatchSerde.DataTypeExt.DateUnit.valueOf(((Date64DataType) dataType).getDateUnit().name()));
                 break;
-            case OMNI_DATA_TYPE_VARCHAR:
+            case OMNI_VARCHAR:
                 protoDataTypeExtBuild.setWidth(((VarcharDataType) dataType).getWidth());
                 break;
-            case OMNI_DATA_TYPE_CHAR:
+            case OMNI_CHAR:
                 protoDataTypeExtBuild.setWidth(((CharDataType) dataType).getWidth());
                 break;
-            case OMNI_DATA_TYPE_INTERVAL_DAY_TIME:
+            case OMNI_INTERVAL_DAY_TIME:
                 protoDataTypeExtBuild.setDateUnit(VecBatchSerde.DataTypeExt.DateUnit.DAY);
                 break;
-            case OMNI_DATA_TYPE_INTERVAL_MONTHS:
+            case OMNI_INTERVAL_MONTHS:
                 protoDataTypeExtBuild.setDateUnit(VecBatchSerde.DataTypeExt.DateUnit.MILLI);
                 break;
-            case OMNI_DATA_TYPE_DECIMAL64: {
-                if (dataType instanceof Decimal64DataType) {
-                    protoDataTypeExtBuild.setScale(((Decimal64DataType) dataType).getScale());
-                    protoDataTypeExtBuild.setPrecision(((Decimal64DataType) dataType).getPrecision());
+            case OMNI_DECIMAL64:
+            case OMNI_DECIMAL128: {
+                if (dataType instanceof DecimalDataType) {
+                    protoDataTypeExtBuild.setScale(((DecimalDataType) dataType).getScale());
+                    protoDataTypeExtBuild.setPrecision(((DecimalDataType) dataType).getPrecision());
                 } else {
-                    throw new IllegalStateException("Unexpected value: " + dataType.getId());
-                }
-                break;
-            }
-            case OMNI_DATA_TYPE_DECIMAL128: {
-                if (dataType instanceof Decimal128DataType) {
-                    protoDataTypeExtBuild.setScale(((Decimal128DataType) dataType).getScale());
-                    protoDataTypeExtBuild.setPrecision(((Decimal128DataType) dataType).getPrecision());
-                } else {
-                    throw new IllegalStateException("Unexpected value: " + dataType.getId());
+                    throw new IllegalStateException("Unexpected data type: " + dataType.getId());
                 }
                 break;
             }
             // TODO: support time32 and time64
-            case OMNI_DATA_TYPE_TIME32:
-            case OMNI_DATA_TYPE_TIME64:
+            case OMNI_TIME32:
+            case OMNI_TIME64:
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + dataType.getId());
+                throw new IllegalStateException("Unexpected data type: " + dataType.getId());
         }
-
-
     }
 
     private Vec compactVec(Vec vec, int[] ids) {
@@ -232,70 +218,69 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
 
     private Vec buildVec(VecAllocator vecAllocator, VecBatchSerde.Vec protoVec) {
         VecBatchSerde.DataTypeExt protoTypeExt = protoVec.getTypeExt();
-        VecEncoding vecEncoding = VecEncoding.values()[protoVec.getVecEncoding().getEncodingTypeId()];
+        VecEncoding vecEncoding = VecEncoding.values()[protoVec.getVecEncoding().getEncodingId()];
         VecBatchSerde.DataTypeExt.DataTypeId dataTypeId = protoTypeExt.getId();
         int vecSize = protoVec.getSize();
         Vec vec;
-        switch (vecEncoding){
+        switch (vecEncoding) {
             case OMNI_VEC_ENCODING_FLAT:
                 vec = createFlatVec(vecAllocator, vecSize, dataTypeId, protoVec);
-                break;
+                vec.setValuesBuf(protoVec.getValues().toByteArray());
+                vec.setNullsBuf(protoVec.getNulls().toByteArray());
+                return vec;
             case OMNI_VEC_ENCODING_CONTAINER:
                 int vecCount = protoVec.getSubVectorsCount();
                 long[] subVecAddresses = new long[vecCount];
-                DataType[] subVecTypes = new DataType[vecCount];
+                DataType[] subDataTypes = new DataType[vecCount];
                 for (int i = 0; i < vecCount; i++) {
                     Vec subVec = buildVec(vecAllocator, protoVec.getSubVectors(i));
                     subVecAddresses[i] = subVec.getNativeVector();
-                    subVecTypes[i] = subVec.getDataType();
+                    subDataTypes[i] = subVec.getType();
                 }
-                return new ContainerVec(vecAllocator, vecCount, protoVec.getSize(), subVecAddresses, subVecTypes);
+                return new ContainerVec(vecAllocator, vecCount, protoVec.getSize(), subVecAddresses, subDataTypes);
             default:
-                throw new IllegalStateException("Unexpected value: " + protoVec.getTypeExt().getId());
+                throw new IllegalStateException("Unexpected encoding: " + vecEncoding);
         }
-        vec.setValuesBuf(protoVec.getValues().toByteArray());
-        vec.setNullsBuf(protoVec.getNulls().toByteArray());
-        return vec;
     }
+
     private Vec createFlatVec(VecAllocator vecAllocator, int vecSize, VecBatchSerde.DataTypeExt.DataTypeId dataTypeId,
-                              VecBatchSerde.Vec protoVec) {
+            VecBatchSerde.Vec protoVec) {
         Vec vec;
         switch (dataTypeId) {
-            case OMNI_DATA_TYPE_INT:
-            case OMNI_DATA_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 vec = new IntVec(vecAllocator, vecSize);
                 break;
-            case OMNI_DATA_TYPE_LONG:
-            case OMNI_DATA_TYPE_DATE64:
-            case OMNI_DATA_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_DECIMAL64:
                 vec = new LongVec(vecAllocator, vecSize);
                 break;
-            case OMNI_DATA_TYPE_SHORT:
+            case OMNI_SHORT:
                 vec = new ShortVec(vecAllocator, vecSize);
                 break;
-            case OMNI_DATA_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 vec = new BooleanVec(vecAllocator, vecSize);
                 break;
-            case OMNI_DATA_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 vec = new DoubleVec(vecAllocator, vecSize);
                 break;
-            case OMNI_DATA_TYPE_VARCHAR:
-            case OMNI_DATA_TYPE_CHAR:
-                vec = new VarcharVec(vecAllocator, protoVec.getValues().size(), protoVec.getSize());
-                if (vec instanceof VarcharVec) {
-                    ((VarcharVec) vec).setOffsetsBuf(protoVec.getOffsets().toByteArray());
-                }
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                VarcharVec varcharVec = new VarcharVec(vecAllocator, protoVec.getValues().size(), protoVec.getSize());
+                varcharVec.setOffsetsBuf(protoVec.getOffsets().toByteArray());
+                vec = varcharVec;
                 break;
-            case OMNI_DATA_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 vec = new Decimal128Vec(vecAllocator, vecSize);
                 break;
             // TODO: support other data types
-            case OMNI_DATA_TYPE_TIME32:
-            case OMNI_DATA_TYPE_TIME64:
-            case OMNI_DATA_TYPE_INTERVAL_DAY_TIME:
-            case OMNI_DATA_TYPE_INTERVAL_MONTHS:
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+            case OMNI_INTERVAL_DAY_TIME:
+            case OMNI_INTERVAL_MONTHS:
             default:
-                throw new IllegalStateException("Unexpected value: " + protoVec.getTypeExt().getId());
+                throw new IllegalStateException("Unexpected data type: " + protoVec.getTypeExt().getId());
         }
         return vec;
     }

@@ -64,7 +64,7 @@ public class LazyVec extends FixedWidthVec {
     }
 
     @Override
-    public VecEncoding getEncoding(){
+    public VecEncoding getEncoding() {
         return VecEncoding.OMNI_VEC_ENCODING_LAZY;
     }
 }

@@ -9,13 +9,14 @@
 
 #include <cstdint>
 #include <iostream>
-#include <vector/fixed_width_vector.h>
-
+#include <climits>
+#include "../thirdparty/huawei_secure_c/include/securec.h"
+#include "util/debug.h"
 #include "decimal_base.h"
 #include "decimal128.h"
 
 namespace omniruntime {
-namespace vec {
+namespace type {
 static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
 static constexpr int32_t BYTES_OF_LONG = 8;
 class DecimalOperations {
@@ -104,7 +105,7 @@ public:
         uint64_t z0 = l0 + r0;
         int overflow = UnsignedIsSmaller(z0, l0) ? 1 : 0;
         uint64_t intermediateResult = l1 + r1 + overflow;
-        int64_t z1 = intermediateResult & (~omniruntime::vec::SIGN_LONG_MASK);
+        int64_t z1 = intermediateResult & (~omniruntime::type::SIGN_LONG_MASK);
         Pack(result, z0, z1, resultNegative);
 
         return ((uint64_t)intermediateResult) >> 63;
@@ -157,7 +158,7 @@ public:
 
     static inline void Pack(Decimal128 &decimal128, uint64_t low, int64_t high, bool negative)
     {
-        decimal128.SetValue(high | (negative ? omniruntime::vec::SIGN_LONG_MASK : 0), low);
+        decimal128.SetValue(high | (negative ? omniruntime::type::SIGN_LONG_MASK : 0), low);
     }
 
     static inline bool UnsignedIsSmaller(uint64_t first, uint64_t second)
@@ -172,7 +173,7 @@ public:
 
     static inline int64_t GetLong(int64_t bits)
     {
-        return bits & ~omniruntime::vec::SIGN_LONG_MASK;
+        return bits & ~omniruntime::type::SIGN_LONG_MASK;
     }
 
     static inline int CompareUnsigned(int64_t x, int64_t y)
@@ -187,9 +188,9 @@ public:
 
     static inline Decimal128 UnscaledDecimal(int64_t unscaledValue)
     {
-        vec::Decimal128 decimal128;
+        Decimal128 decimal128;
         if (unscaledValue < 0) {
-            decimal128.SetValue(omniruntime::vec::SIGN_LONG_MASK, -unscaledValue);
+            decimal128.SetValue(omniruntime::type::SIGN_LONG_MASK, -unscaledValue);
         } else {
             decimal128.SetValue(0, unscaledValue);
         }

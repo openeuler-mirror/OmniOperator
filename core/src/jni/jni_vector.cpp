@@ -7,7 +7,7 @@
 #include "../util/debug.h"
 #include "../memory/memory_pool.h"
 #include "../vector/vector_common.h"
-#include "../vector/vector_type_serializer.h"
+#include "../type/data_type_serializer.h"
 #include "../vector/vector_helper.h"
 #include "jni_common_def.h"
 #include "jni_vector_loader.h"
@@ -32,10 +32,10 @@ VectorAllocator *TransformAllocator(long allocatorAddr);
 #endif
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
-    jlong jAllocator, jint jCapacityInBytes, jint jValueCount, jint jVectorTypeId)
+    jlong jAllocator, jint jCapacityInBytes, jint jValueCount, jint jVectorEncodingId, jint jVectorTypeId)
 {
-    Vector *vector =
-        VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorTypeId, jCapacityInBytes, jValueCount);
+    Vector *vector = VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorEncodingId, jVectorTypeId,
+        jCapacityInBytes, jValueCount);
     RECORD_VECTOR_STACK(vector, VecOpType::JNI_NEW, env);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
@@ -152,12 +152,12 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositio
     return containerVec->GetPositionCount();
 }
 
-JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative(JNIEnv *env, jclass jcls,
+JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getDataTypesNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector)
 {
     ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
-    auto vecTypes = containerVec->GetVecTypes();
-    return env->NewStringUTF(Serialize(vecTypes).data());
+    auto DataTypes = containerVec->GetDataTypes();
+    return env->NewStringUTF(Serialize(DataTypes).data());
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative(JNIEnv *env, jclass jcls,
@@ -233,6 +233,13 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNa
     LazyVector *lazyVector = reinterpret_cast<LazyVector *>(jNativeVector);
     JniVectorLoader *loader = new JniVectorLoader(env, jLazyLoader);
     lazyVector->SetLoader(loader);
+}
+
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
+    return nativeVector->GetEncoding();
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *env, jclass jcls,

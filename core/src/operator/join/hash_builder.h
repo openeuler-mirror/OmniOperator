@@ -15,11 +15,11 @@ namespace omniruntime {
 namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
-    HashBuilderOperatorFactory(const vec::VecTypes &buildTypes, const int32_t *buildHashCols,
-        int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
+    HashBuilderOperatorFactory(const type::DataTypes &buildTypes, const int32_t *buildHashCols,
+                               int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     int32_t Init();
     ~HashBuilderOperatorFactory() override;
-    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const vec::VecTypes &vecTypes,
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const type::DataTypes &dataTypes,
         const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
     JoinHashTables *GetHashTables() const
@@ -28,7 +28,7 @@ public:
     }
 
 private:
-    std::unique_ptr<vec::VecTypes> buildTypes;
+    std::unique_ptr<type::DataTypes> buildTypes;
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
     int32_t hashTableCount;
@@ -37,8 +37,8 @@ private:
 
 class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(const vec::VecTypes &buildTypes, std::vector<int32_t> &buildHashCols,
-        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
+    HashBuilderOperator(const type::DataTypes &buildTypes, std::vector<int32_t> &buildHashCols,
+                        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
 
     ~HashBuilderOperator() override;
 
@@ -49,7 +49,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const vec::VecTypes &buildTypes;
+    const type::DataTypes &buildTypes;
     std::vector<int32_t> buildHashCols;
     std::unique_ptr<PagesIndex> pagesIndex;
     int32_t partitionIndex;

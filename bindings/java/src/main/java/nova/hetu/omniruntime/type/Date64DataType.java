@@ -28,7 +28,7 @@ public class Date64DataType extends DataType {
      * @param dateUnit the unit of date
      */
     public Date64DataType(@JsonProperty("dateUnit") DataType.DateUnit dateUnit) {
-        super(DataTypeId.OMNI_DATA_TYPE_DATE64);
+        super(DataTypeId.OMNI_DATE64);
         this.dateUnit = dateUnit;
     }
 
@@ -39,5 +39,17 @@ public class Date64DataType extends DataType {
     @Override
     public int hashCode() {
         return Objects.hash(dateUnit, super.getId());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        Date64DataType other = (Date64DataType) obj;
+        return (Objects.equals(dateUnit, other.getDateUnit()) && Objects.equals(super.getId(), other.getId()));
     }
 }

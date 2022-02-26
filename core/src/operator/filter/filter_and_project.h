@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "vector/vector_batch.h"
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
 #include "operator/projection/projection.h"
@@ -128,10 +128,10 @@ private:
 
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const * inputVecTypes, int32_t vecCount,
+    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const * inputDataTypes, int32_t vecCount,
         const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount, ExecutionContext *context)
         : filter(filter),
-          inputTypes(inputVecTypes),
+          inputTypes(inputDataTypes),
           vecCount(vecCount),
           projections(projections),
           projectVecCount(projectVecCount),
@@ -160,7 +160,7 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, VecTypes &inputVecTypes,
+    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, DataTypes &inputDataTypes,
         int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
         int32_t projectVecCount);
 
@@ -172,7 +172,7 @@ public:
 
 private:
     std::string expression;
-    VecTypes inputVecTypes;
+    DataTypes inputDataTypes;
     int32_t inputVecCount;
     int32_t projectVecCount;
     std::unique_ptr<Filter> filter;

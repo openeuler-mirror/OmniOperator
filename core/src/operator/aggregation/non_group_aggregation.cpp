@@ -26,12 +26,11 @@ OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
     uint32_t *aggInputColsPtr = aggInputColsContext.context;
-    std::vector<VecType> types = sourceTypes.Get();
+    std::vector<DataType> types = sourceTypes.Get();
     for (int32_t i = 0; i < aggInputColsContext.len; i++) {
         aggInputCols.push_back(aggInputColsPtr[i]);
         aggInputTypes.push_back(types[aggInputColsPtr[i]]);
     }
-
     for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
         maskCols.push_back(maskColsContext.context[i]);
     }
@@ -84,10 +83,10 @@ Operator *AggregationOperatorFactory::CreateOperator()
     uint32_t aggInputChannelIndex = 0;
     for (int32_t i = 0; i < this->aggOutputTypes.GetSize(); i++) {
         uint32_t aggregateType = aggFuncTypesContext.context[i];
-        VecType inputType;
+        DataType inputType;
         int32_t aggInputCol;
         if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-            inputType = VecType(OMNI_VEC_TYPE_NONE);
+            inputType = DataType(OMNI_NONE);
             aggInputCol = Aggregator::INVALID_INPUT_COL;
         } else {
             inputType = aggInputTypes[aggInputChannelIndex];

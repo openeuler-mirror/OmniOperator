@@ -310,9 +310,9 @@ TEST(LongVector, appendVector)
     EXPECT_TRUE(allocator != nullptr);
 
     int64_t data[5] = {1, 2, 3, 4, 5};
-    auto *src1 = new LongVector (allocator, 5);
+    auto *src1 = new LongVector(allocator, 5);
     src1->SetValues(0, data, 5);
-    auto *src2 = new LongVector (allocator, 5);
+    auto *src2 = new LongVector(allocator, 5);
     int64_t data2[5] = {6, 7, 8, 9, 10};
     src2->SetValues(0, data2, 5);
 

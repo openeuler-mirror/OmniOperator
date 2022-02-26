@@ -80,10 +80,10 @@ void TestSort(bool harden)
     int rowCounts[1] = {dataSize};
     VectorBatch *datas[1];
     VectorBatch *vecBatch = new VectorBatch(dataSize, 2); // 2
-    Vector *column1 = new Vector(data1, VecType::INT32, DATA_SIZE);
-    Vector *column2 = new Vector(data2, VecType::INT32, DATA_SIZE);
-    vecBatch->setColumn(column1, VecType::INT32);
-    vecBatch->setColumn(column2, VecType::INT32);
+    Vector *column1 = new Vector(data1, DataType::INT32, DATA_SIZE);
+    Vector *column2 = new Vector(data2, DataType::INT32, DATA_SIZE);
+    vecBatch->setColumn(column1, DataType::INT32);
+    vecBatch->setColumn(column2, DataType::INT32);
     datas[0] = vecBatch;
     using Time = int;
     using ms = int;

@@ -11,7 +11,7 @@
 #include "util/debug.h"
 
 using namespace omniruntime::expressions;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 using namespace std;
 
 string ExprPrinter::BinaryExprPrinterHelper(const Operator &op) const
@@ -154,7 +154,7 @@ void PrintCharVal(const LiteralExpr &e, bool printWithTypes, string &indent)
     if (printWithTypes) {
         printf("s_");
     }
-    if (e.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
+    if (e.GetReturnTypeId() == OMNI_CHAR) {
         printf(indent.append("'%s[%d]':%s").c_str(), (e.stringVal)->c_str(), e.dataType->GetWidth(),
             TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     } else {
@@ -185,29 +185,29 @@ void ExprPrinter::Visit(const LiteralExpr &e)
     string indent = GenerateIndentation();
     const bool printWithTypes = false; // for debugging types
     switch (e.GetReturnTypeId()) {
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             PrintBoolVal(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             PrintIntVal(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_LONG:
+        case OMNI_LONG:
             PrintLongVal(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             PrintDoubleVal(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_CHAR:
             PrintCharVal(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VARCHAR:
             PrintCharVal(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_DECIMAL64:
             PrintDecimal64Val(e, printWithTypes, indent);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             PrintDecimal128Val(e, printWithTypes, indent);
             break;
         default:
@@ -218,7 +218,7 @@ void ExprPrinter::Visit(const LiteralExpr &e)
 void ExprPrinter::Visit(const FieldExpr &e)
 {
     string indent = GenerateIndentation();
-    if (e.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
+    if (e.GetReturnTypeId() == OMNI_CHAR) {
         printf(indent.append("#%d[%d]").c_str(), e.colVal, e.GetReturnType().GetWidth());
     } else {
         printf(indent.append("#%d").c_str(), e.colVal);

@@ -14,6 +14,7 @@ import static io.prestosql.spi.block.DictionaryId.randomDictionaryId;
 
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.olk.tool.OperatorUtils.buildRowOmniBlock;
 
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
@@ -25,18 +26,21 @@ import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
 import io.prestosql.spi.block.IntArrayList;
 import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.LongVec;
-import nova.hetu.omniruntime.vector.DoubleVec;
-import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.BooleanVec;
+import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecEncoding;
 import org.openjdk.jol.info.ClassLayout;
 import java.util.Arrays;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import nova.hetu.olk.tool.OperatorUtils;
 
 /**
  * The type Dictionary omni block.
@@ -213,43 +217,50 @@ public class DictionaryOmniBlock<T> implements Block<T> {
     }
 
     private static Block buildBlock(Vec dictionary) {
-        DataType dataType = dictionary.getDataType();
+        DataType dataType = dictionary.getType();
         Block dictionaryBlock;
         VecEncoding vecEncoding = dictionary.getEncoding();
-        switch (vecEncoding){
-            case OMNI_VEC_ENCODING_DICTIONARY:
-                return new DictionaryOmniBlock((DictionaryVec) dictionary, false, randomDictionaryId());
+        switch (vecEncoding) {
             case OMNI_VEC_ENCODING_FLAT:
                 dictionaryBlock = createFlatBlock(dataType.getId(), dictionary);
                 break;
-            default :
-                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + dataType.getId());
+            case OMNI_VEC_ENCODING_DICTIONARY:
+                dictionaryBlock = new DictionaryOmniBlock((DictionaryVec) dictionary, false, randomDictionaryId());
+                break;
+            case OMNI_VEC_ENCODING_CONTAINER:
+                dictionaryBlock = buildRowOmniBlock((ContainerVec) dictionary);
+                break;
+            default:
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support encoding " + vecEncoding);
         }
         return dictionaryBlock;
     }
 
-    private static Block createFlatBlock(DataType.DataTypeId dataTypeId, Vec dictionary){
+    private static Block createFlatBlock(DataType.DataTypeId dataTypeId, Vec dictionary) {
         Block dictionaryBlock;
         switch (dataTypeId) {
-            case OMNI_DATA_TYPE_INT :
-            case OMNI_DATA_TYPE_DATE32 :
+            case OMNI_BOOLEAN:
+                dictionaryBlock = new ByteArrayOmniBlock(dictionary.getSize(), (BooleanVec) dictionary);
+                break;
+            case OMNI_INT:
+            case OMNI_DATE32:
                 dictionaryBlock = new IntArrayOmniBlock(dictionary.getSize(), (IntVec) dictionary);
                 break;
-            case OMNI_DATA_TYPE_LONG :
-            case OMNI_DATA_TYPE_DECIMAL64 :
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 dictionaryBlock = new LongArrayOmniBlock(dictionary.getSize(), (LongVec) dictionary);
                 break;
-            case OMNI_DATA_TYPE_DOUBLE :
+            case OMNI_DOUBLE:
                 dictionaryBlock = new DoubleArrayOmniBlock(dictionary.getSize(), (DoubleVec) dictionary);
                 break;
-            case OMNI_DATA_TYPE_VARCHAR :
-            case OMNI_DATA_TYPE_CHAR :
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
                 dictionaryBlock = new VariableWidthOmniBlock(dictionary.getSize(), (VarcharVec) dictionary);
                 break;
-            case OMNI_DATA_TYPE_DECIMAL128 :
+            case OMNI_DECIMAL128:
                 dictionaryBlock = new Int128ArrayOmniBlock(dictionary.getSize(), (Decimal128Vec) dictionary);
                 break;
-            default :
+            default:
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + dataTypeId);
         }
         return dictionaryBlock;
@@ -380,8 +391,10 @@ public class DictionaryOmniBlock<T> implements Block<T> {
             return logicalSizeInBytes;
         }
 
-        // Calculation of logical size can be performed as part of calculateCompactSize() with minor modifications.
-        // Keeping this calculation separate as this is a little more expensive and may not be called as often.
+        // Calculation of logical size can be performed as part of
+        // calculateCompactSize() with minor modifications.
+        // Keeping this calculation separate as this is a little more expensive and may
+        // not be called as often.
         long sizeInBytes = 0;
         long[] seenSizes = new long[dictionary.getPositionCount()];
         Arrays.fill(seenSizes, -1L);
@@ -582,7 +595,8 @@ public class DictionaryOmniBlock<T> implements Block<T> {
             return this;
         }
 
-        // determine which dictionary entries are referenced and build a reindex for them
+        // determine which dictionary entries are referenced and build a reindex for
+        // them
         int dictionarySize = dictionary.getPositionCount();
         IntArrayList dictionaryPositionsToCopy = new IntArrayList(min(dictionarySize, positionCount));
         int[] remapIndex = new int[dictionarySize];

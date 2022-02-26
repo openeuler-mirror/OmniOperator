@@ -271,7 +271,7 @@ void ReadColumnHashes(int32_t offset, int32_t addressesCount, int64_t *addresses
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
@@ -307,7 +307,7 @@ static void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, in
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
@@ -344,7 +344,7 @@ static void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, i
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
@@ -379,7 +379,7 @@ static void ReadColumnCharHashes(int32_t offset, int32_t addressesCount, int64_t
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
@@ -407,32 +407,32 @@ static void ProcessColumns(int32_t offset, int32_t addressesCount, int64_t *addr
 {
     for (int32_t columnIdx = 0; columnIdx < colCount; ++columnIdx) {
         switch (types[columnIdx]) {
-            case omniruntime::vec::OMNI_VEC_TYPE_INT:
-            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+            case omniruntime::type::OMNI_INT:
+            case omniruntime::type::OMNI_DATE32:
                 ReadColumnHashes<IntVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+            case omniruntime::type::OMNI_LONG:
                 ReadColumnHashes<LongVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            case omniruntime::type::OMNI_DOUBLE:
                 ReadColumnHashes<DoubleVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            case omniruntime::type::OMNI_BOOLEAN:
                 ReadColumnHashes<BooleanVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+            case omniruntime::type::OMNI_DECIMAL64:
                 ReadColumnDecimal64Hashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+            case omniruntime::type::OMNI_DECIMAL128:
                 ReadColumnDecimal128Hashes(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
-            case omniruntime::vec::OMNI_VEC_TYPE_CHAR:
+            case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_CHAR:
                 ReadColumnCharHashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
                 break;
             default:

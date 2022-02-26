@@ -8,7 +8,7 @@
 #include <type_traits>
 
 namespace omniruntime {
-namespace vec {
+namespace type {
 class BasicDecimal {
 public:
     BasicDecimal() {};
