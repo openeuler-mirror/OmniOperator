@@ -188,7 +188,10 @@ private:
 
     void CheckCapacity(int32_t needCapacityInBytes)
     {
-        int32_t toCapacityInBytes = capacityInBytes;
+        if (needCapacityInBytes <= 0) {
+            return;
+        }
+        int32_t toCapacityInBytes = (capacityInBytes > 0) ? capacityInBytes : INI_CAPACITY_IN_BYTES;
         while (toCapacityInBytes < needCapacityInBytes) {
             toCapacityInBytes = toCapacityInBytes * EXPAND_FACTOR;
         }

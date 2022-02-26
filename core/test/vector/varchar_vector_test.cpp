@@ -319,8 +319,22 @@ TEST(VarcharVector, setValueExpand)
         EXPECT_EQ(actualStr, str);
     }
 
+    // initial capacity is zero
+    auto *iniZeroCapacityVector = new VarcharVector(allocator, 0, 1);
+    std::string emptyStr = "";
+    iniZeroCapacityVector->SetValue(0, reinterpret_cast<const uint8_t *>(emptyStr.c_str()), 0);
+    EXPECT_EQ(iniZeroCapacityVector->GetCapacityInBytes(), 0);
+
+    iniZeroCapacityVector->SetValue(0, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
+    EXPECT_EQ(iniZeroCapacityVector->GetCapacityInBytes(), 32 * 1024 );
+    uint8_t *actualChar = nullptr;
+    int len = iniZeroCapacityVector->GetValue(0, &actualChar);
+    std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+    EXPECT_EQ(actualStr, s);
+
     delete vector;
     delete vector1;
+    delete iniZeroCapacityVector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
