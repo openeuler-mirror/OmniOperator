@@ -17,6 +17,7 @@
 namespace omniruntime {
 namespace vec {
 static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
+static constexpr int32_t BYTES_OF_LONG = 8;
 class DecimalOperations {
 public:
     DecimalOperations(int64_t high_bits, uint64_t low_bits) = delete;
@@ -35,9 +36,12 @@ public:
         int64_t highBits = val.HighBits();
         uint64_t lowBits = val.LowBits();
         auto *p = static_cast<int64_t *>(ptr);
-        memcpy_s(p, 8, &overflow, 8);
-        memcpy_s(p + 1, 8, &highBits, 8);
-        memcpy_s(p + 2, 8, &lowBits, 8);
+        auto err1 = memcpy_s(p, BYTES_OF_LONG, &overflow, BYTES_OF_LONG);
+        auto err2 = memcpy_s(p + 1, BYTES_OF_LONG, &highBits, BYTES_OF_LONG);
+        auto err3 = memcpy_s(p + 2, BYTES_OF_LONG, &lowBits, BYTES_OF_LONG);
+        if (err1 != EOK || err2 != EOK || err3 != EOK) {
+            LogError("Encode sum decimal failed!");
+        }
     }
 
     // decimal and overflow is encoded in continuous memory
@@ -55,10 +59,13 @@ public:
         int64_t highBits = val.HighBits();
         uint64_t lowBits = val.LowBits();
         auto *p = static_cast<int64_t *>(ptr);
-        memcpy_s(p, 8, &count, 8);
-        memcpy_s(p + 1, 8, &overflow, 8);
-        memcpy_s(p + 2, 8, &highBits, 8);
-        memcpy_s(p + 3, 8, &lowBits, 8);
+        auto err1 = memcpy_s(p, BYTES_OF_LONG, &count, BYTES_OF_LONG);
+        auto err2 = memcpy_s(p + 1, BYTES_OF_LONG, &overflow, BYTES_OF_LONG);
+        auto err3 = memcpy_s(p + 2, BYTES_OF_LONG, &highBits, BYTES_OF_LONG);
+        auto err4 = memcpy_s(p + 3, BYTES_OF_LONG, &lowBits, BYTES_OF_LONG);
+        if (err1 != EOK || err2 != EOK || err3 != EOK || err4 != EOK) {
+            LogError("Encode avg decimal failed!");
+        }
     }
 
     static inline long AddWithOverflow(Decimal128 &left, Decimal128 &right, Decimal128 &result)
