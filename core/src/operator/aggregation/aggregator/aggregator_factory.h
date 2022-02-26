@@ -207,7 +207,7 @@ class CountColumnAggregatorFactory : public AggregatorFactory {
 public:
     CountColumnAggregatorFactory() {}
     ~CountColumnAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &inputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         return std::make_unique<CountColumnAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
@@ -218,7 +218,7 @@ class CountAllAggregatorFactory : public AggregatorFactory {
 public:
     CountAllAggregatorFactory() {}
     ~CountAllAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         return std::make_unique<CountAllAggregator>(outputType, inputRaw, outputPartial);

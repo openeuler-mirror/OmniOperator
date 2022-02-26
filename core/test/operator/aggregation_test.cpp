@@ -1695,9 +1695,9 @@ TEST(AggregatorTest, count_all_test)
 {
     int32_t ROW_PER_VEC_BATCH = 200;
     auto countAllFactory = new CountAllAggregatorFactory();
-    auto countLong = countAllFactory->CreateAggregator(OMNI_VEC_TYPE_NONE, OMNI_VEC_TYPE_LONG,
+    auto countLong = countAllFactory->CreateAggregator(NoneVecType::Instance(), LongVecType::Instance(),
                                                        Aggregator::INVALID_INPUT_COL, true, false);
-    auto countNull = countAllFactory->CreateAggregator(OMNI_VEC_TYPE_NONE, OMNI_VEC_TYPE_LONG,
+    auto countNull = countAllFactory->CreateAggregator(NoneVecType::Instance(), LongVecType::Instance(),
                                                        Aggregator::INVALID_INPUT_COL, true, false);
 
     auto longInputVec = buildAggregateInput(LongVecType(), ROW_PER_VEC_BATCH);
