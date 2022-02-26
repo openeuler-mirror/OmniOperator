@@ -349,6 +349,14 @@ public class TestVarcharVec {
             Assert.assertEquals(getString(vector1.get(i)), baseStr + i);
         }
 
+        VarcharVec initZeroCapacityVector = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 0, 1);
+        initZeroCapacityVector.set(0, "".getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(initZeroCapacityVector.getCapacityInBytes(), 0);
+        initZeroCapacityVector.set(0, baseStr.getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(initZeroCapacityVector.getCapacityInBytes(), 32 * 1024);
+        Assert.assertEquals(new String(initZeroCapacityVector.get(0)), baseStr);
+        initZeroCapacityVector.close();
+
         varcharVec.close();
         vector1.close();
     }

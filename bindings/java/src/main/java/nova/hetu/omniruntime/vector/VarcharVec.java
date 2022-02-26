@@ -97,7 +97,10 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     private void checkCapacity(int needCapacityInBytes) {
-        int toCapacityInBytes = capacityInBytes;
+        if (needCapacityInBytes <= 0) {
+            return;
+        }
+        int toCapacityInBytes = (capacityInBytes > 0) ? capacityInBytes : INIT_CAPACITY_IN_BYTES;
         // the capacity is doubled for each calculation
         while (toCapacityInBytes < needCapacityInBytes) {
             toCapacityInBytes *= EXPAND_FACTOR;
