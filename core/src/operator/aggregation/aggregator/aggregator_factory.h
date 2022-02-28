@@ -35,10 +35,6 @@ public:
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
-        // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
-        if (inputTypeId == OMNI_VEC_TYPE_VARCHAR) {
-            return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
-        }
         switch (inputTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
@@ -60,8 +56,10 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *       */
-            case OMNI_VEC_TYPE_DECIMAL64: {
+             *         */
+            // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
+            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_VARCHAR: {
                 return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
@@ -88,11 +86,6 @@ public:
         // TODO add a param to represent engine type or
         //  inputType and outputType are from physical operations
         //  use meta programming to avoid explicit Vector type in template
-        // if (inputType == OMNI_VEC_TYPE_DECIMAL64 && outputType == OMNI_VEC_TYPE_VARCHAR) {...}
-        if (inputTypeId == OMNI_VEC_TYPE_VARCHAR) {
-            return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
-                                                            outputPartial);
-        }
         switch (inputTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
@@ -108,11 +101,11 @@ public:
                 return std::make_unique<AverageAggregator<DoubleVector>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-            case OMNI_VEC_TYPE_DECIMAL64: {
+            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_VARCHAR: {
                 return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-                // TODO AverageLongDecimalAggregator for olk
             case OMNI_VEC_TYPE_DECIMAL128: {
                 return std::make_unique<AverageLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
@@ -210,7 +203,7 @@ public:
     std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
-        return std::make_unique<CountColumnAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
+        return std::make_unique<CountColumnAggregator>(outputType, channel, inputRaw, outputPartial);
     }
 };
 

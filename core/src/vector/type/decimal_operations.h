@@ -3,8 +3,8 @@
  * Description: DecimalOperations
  */
 
-#ifndef OMNI_RUNTIME_DECIMALOPERATIONS_H
-#define OMNI_RUNTIME_DECIMALOPERATIONS_H
+#ifndef OMNI_RUNTIME_DECIMAL_OPERATIONS_H
+#define OMNI_RUNTIME_DECIMAL_OPERATIONS_H
 
 
 #include <cstdint>
@@ -93,7 +93,7 @@ public:
     }
 
     static inline long AddUnsignedReturnOverflow(const Decimal128 &left, const Decimal128 &right, Decimal128 &result,
-                                          bool resultNegative)
+        bool resultNegative)
     {
         uint64_t l0 = left.LowBits();
         int64_t l1 = GetLong(left.HighBits());
@@ -207,4 +207,4 @@ public:
 }
 }
 
-#endif // OMNI_RUNTIME_DECIMALOPERATIONS_H
+#endif // OMNI_RUNTIME_DECIMAL_OPERATIONS_H

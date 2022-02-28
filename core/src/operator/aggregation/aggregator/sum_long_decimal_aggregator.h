@@ -5,7 +5,7 @@
 #ifndef OMNI_RUNTIME_SUM_LONG_DECIMAL_AGGREGATOR_H
 #define OMNI_RUNTIME_SUM_LONG_DECIMAL_AGGREGATOR_H
 #include "aggregator.h"
-#include "vector/type/decimalOperations.h"
+#include "vector/type/decimal_operations.h"
 
 
 namespace omniruntime {

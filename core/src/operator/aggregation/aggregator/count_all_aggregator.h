@@ -15,7 +15,7 @@ public:
 
     CountAllAggregator(const VecType &out, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneVecType::Instance(), out, INVALID_INPUT_COL, inputRaw,
-                     outputPartial)
+        outputPartial)
     {}
 
     ~CountAllAggregator() override {}

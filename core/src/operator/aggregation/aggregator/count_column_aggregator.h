@@ -9,10 +9,12 @@ namespace omniruntime {
 namespace op {
 class CountColumnAggregator : public Aggregator {
 public:
-    CountColumnAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, in, out, channel) {}
+    CountColumnAggregator(const VecType &out, int32_t channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneVecType::Instance(), out, channel)
+    {}
 
-    CountColumnAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, in, out, channel, inputRaw, outputPartial)
+    CountColumnAggregator(const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneVecType::Instance(), out, channel, inputRaw, outputPartial)
     {}
 
     ~CountColumnAggregator() override {}

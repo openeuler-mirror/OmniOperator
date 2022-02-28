@@ -1,4 +1,4 @@
-#define DEBUG
+/* #undef DEBUG */
 /* #undef TRACE */
 /* #undef DEBUG_OPERATOR */
 /* #undef DEBUG_VECTOR */

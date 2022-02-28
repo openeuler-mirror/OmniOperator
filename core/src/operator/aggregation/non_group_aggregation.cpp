@@ -96,8 +96,8 @@ Operator *AggregationOperatorFactory::CreateOperator()
         }
 
         auto outputType = aggOutputTypes.Get()[i];
-        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputType, outputType,
-                                                                   aggInputCol, inputRaw, outputPartial);
+        auto aggregator =
+            aggregatorFactories[i]->CreateAggregator(inputType, outputType, aggInputCol, inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 

@@ -3,7 +3,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "type/decimalOperations.h"
+#include "type/decimal_operations.h"
 #include "vector_common.h"
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregation.h"

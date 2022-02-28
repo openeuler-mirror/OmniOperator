@@ -20,7 +20,8 @@ public:
 
     ~AverageLongDecimalAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override {
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
@@ -76,7 +77,8 @@ public:
         }
     }
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override {
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
@@ -106,7 +108,8 @@ public:
         }
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override {
+    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    {
         if (state.val == nullptr) {
             vector->SetValueNull(rowIndex);
             return;
@@ -116,7 +119,7 @@ public:
                 LogError("Partial short decimal average should output varbinary.");
             }
             static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
-                                                           PARTIAL_AVG_OUTPUT_LENGTH);
+                PARTIAL_AVG_OUTPUT_LENGTH);
         } else {
             if (vector->GetTypeId() != OMNI_VEC_TYPE_DECIMAL128) {
                 LogError("Final short decimal average should output long.");
