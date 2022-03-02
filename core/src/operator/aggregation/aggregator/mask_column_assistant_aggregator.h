@@ -10,8 +10,8 @@ namespace op {
 class MaskColAggregator : public Aggregator {
 public:
     MaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
-        : Aggregator(realAggregator->GetType(), realAggregator->GetInputChannel(), realAggregator->GetInputType(),
-        realAggregator->GetOutputType(), realAggregator->IsInputRaw(), realAggregator->IsOutputPartial()),
+        : Aggregator(realAggregator->GetType(), realAggregator->GetInputType(), realAggregator->GetOutputType(),
+        realAggregator->GetInputChannel(), realAggregator->IsInputRaw(), realAggregator->IsOutputPartial()),
           maskColumnId(maskColumnId),
           realAggregator(std::move(realAggregator))
     {}
@@ -57,12 +57,12 @@ public:
         return realAggregator->GetType();
     }
 
-    int32_t GetInputType() const
+    VecType GetInputType() const
     {
         return realAggregator->GetInputType();
     }
 
-    int32_t GetOutputType() const
+    VecType GetOutputType() const
     {
         return realAggregator->GetOutputType();
     }

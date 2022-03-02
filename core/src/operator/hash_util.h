@@ -8,51 +8,52 @@
 #include <stdint.h>
 #include "../util/compiler_util.h"
 #include "../../thirdparty/huawei_secure_c/include/securec.h"
-namespace {
-
+namespace omniruntime {
+namespace op {
 static const int32_t ROTATE_DISTANCE_1 = 1;
 static const int32_t ROTATE_DISTANCE_2 = 2;
 static const int32_t ROTATE_DISTANCE_4 = 4;
-static const  int32_t ROTATE_DISTANCE_7 = 7;
-static const  int32_t ROTATE_DISTANCE_8 = 8;
-static const  int32_t ROTATE_DISTANCE_11 = 11;
-static const  int32_t ROTATE_DISTANCE_12 = 12;
-static const  int32_t ROTATE_DISTANCE_16 = 16;
-static const  int32_t ROTATE_DISTANCE_18 = 18;
-static const  int32_t ROTATE_DISTANCE_23 = 23;
-static const  int32_t ROTATE_DISTANCE_27 = 27;
-static const  int32_t ROTATE_DISTANCE_29 = 29;
-static const  int32_t ROTATE_DISTANCE_31 = 31;
-static const  int32_t ROTATE_DISTANCE_32 = 32;
-static const  int32_t ROTATE_DISTANCE_33 = 33;
-static const  int32_t ROTATE_DISTANCE_48 = 48;
-static const  int32_t MAX_ROTATE_DISTANCE = 64;
-static const  int64_t DEFAULT_SEED = 0;
-static const  int32_t SIZE_OF_LONG = 8;
-static const  int64_t SIGN_LONG_MASK = 1L << 63;
-static const  int64_t HASH_OF_TRUE = 1231;
-static const  int64_t HASH_OF_FALSE = 1237;
+static const int32_t ROTATE_DISTANCE_7 = 7;
+static const int32_t ROTATE_DISTANCE_8 = 8;
+static const int32_t ROTATE_DISTANCE_11 = 11;
+static const int32_t ROTATE_DISTANCE_12 = 12;
+static const int32_t ROTATE_DISTANCE_16 = 16;
+static const int32_t ROTATE_DISTANCE_18 = 18;
+static const int32_t ROTATE_DISTANCE_23 = 23;
+static const int32_t ROTATE_DISTANCE_27 = 27;
+static const int32_t ROTATE_DISTANCE_29 = 29;
+static const int32_t ROTATE_DISTANCE_31 = 31;
+static const int32_t ROTATE_DISTANCE_32 = 32;
+static const int32_t ROTATE_DISTANCE_33 = 33;
+static const int32_t ROTATE_DISTANCE_48 = 48;
+static const int32_t MAX_ROTATE_DISTANCE = 64;
+static const int64_t DEFAULT_SEED = 0;
+static const int32_t SIZE_OF_LONG = 8;
+static const int64_t SIGN_LONG_MASK = 1L << 63;
+static const int64_t HASH_OF_TRUE = 1231;
+static const int64_t HASH_OF_FALSE = 1237;
 
-    constexpr uint64_t PRIME64_1 = 0x9E3779B185EBCA87L;
-    constexpr uint64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
-    constexpr int64_t PRIME64_3 = 0x165667B19E3779F9L;
-    constexpr uint64_t PRIME64_4 = 0x85EBCA77C2b2AE63L;
-    constexpr int64_t PRIME64_5 = 0x27D4EB2F165667C5L;
-    constexpr int32_t MAX_ARRAY_SIZE = 1073741824;
-    constexpr int32_t UPDATE_BODY_LENGTH = 32;
-    constexpr int32_t UINT8_STEP_4 = 4;
-    constexpr int32_t UINT8_STEP_8 = 8;
-    constexpr int32_t UINT8_STEP_32 = 32;
-    constexpr int32_t PTR_STEP_1 = 1;
-    constexpr int32_t PTR_STEP_2 = 2;
-    constexpr int32_t PTR_STEP_3 = 3;
-    constexpr int32_t PTR_STEP_4 = 4;
-}
+constexpr uint64_t PRIME64_1 = 0x9E3779B185EBCA87L;
+constexpr uint64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
+constexpr int64_t PRIME64_3 = 0x165667B19E3779F9L;
+constexpr uint64_t PRIME64_4 = 0x85EBCA77C2b2AE63L;
+constexpr int64_t PRIME64_5 = 0x27D4EB2F165667C5L;
+constexpr int32_t MAX_ARRAY_SIZE = 1073741824;
+constexpr int32_t UPDATE_BODY_LENGTH = 32;
+constexpr int32_t UINT8_STEP_4 = 4;
+constexpr int32_t UINT8_STEP_8 = 8;
+constexpr int32_t UINT8_STEP_32 = 32;
+constexpr int32_t PTR_STEP_1 = 1;
+constexpr int32_t PTR_STEP_2 = 2;
+constexpr int32_t PTR_STEP_3 = 3;
+constexpr int32_t PTR_STEP_4 = 4;
+
 class HashUtil {
 public:
     static int32_t HashArraySize(int32_t expected, float f);
 
-    static ALWAYS_INLINE int64_t HashValue(int32_t value) {
+    static ALWAYS_INLINE int64_t HashValue(int32_t value)
+    {
         return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
     }
 
@@ -94,7 +95,7 @@ public:
         return hash;
     }
 
-    ALWAYS_INLINE uint64_t operator()(uint64_t combinedHash) const
+    ALWAYS_INLINE uint64_t operator () (uint64_t combinedHash) const
     {
         return combinedHash;
     }
@@ -131,6 +132,7 @@ public:
 
         return static_cast<int32_t>(hash) & mask;
     }
+
     static ALWAYS_INLINE int64_t RotateLeft(uint64_t i, int32_t distance)
     {
         return (i << distance) | (i >> (MAX_ROTATE_DISTANCE - distance));
@@ -220,7 +222,7 @@ public:
         }
 
         int64_t hash = HashUtil::RotateLeft(v1, ROTATE_DISTANCE_1) + HashUtil::RotateLeft(v2, ROTATE_DISTANCE_7) +
-                       HashUtil::RotateLeft(v3, ROTATE_DISTANCE_12) + HashUtil::RotateLeft(v4, ROTATE_DISTANCE_18);
+            HashUtil::RotateLeft(v3, ROTATE_DISTANCE_12) + HashUtil::RotateLeft(v4, ROTATE_DISTANCE_18);
 
         hash = XxHash64Update(hash, v1);
         hash = XxHash64Update(hash, v2);
@@ -256,9 +258,10 @@ public:
 
         return var2;
     }
+
     static ALWAYS_INLINE long UnpackUnsignedLong(int64_t value)
     {
-        return value & ~SIGN_LONG_MASK;
+        return value & ~omniruntime::op::SIGN_LONG_MASK;
     }
 
     static ALWAYS_INLINE int64_t Reverse(uint64_t i)
@@ -272,5 +275,7 @@ public:
         return i;
     }
 };
+}
+}
 
 #endif

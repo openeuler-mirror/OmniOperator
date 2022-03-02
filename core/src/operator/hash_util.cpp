@@ -6,7 +6,8 @@
 #include <stdint.h>
 #include <cmath>
 
-
+namespace omniruntime {
+namespace op {
 int64_t NextPowerOfTwo(int64_t x);
 int32_t HashUtil::HashArraySize(int32_t expected, float f)
 {
@@ -36,7 +37,8 @@ int64_t NextPowerOfTwo(int64_t x)
         return (x | x >> ROTATE_DISTANCE_32) + 1;
     }
 }
-
+}
+}
 
 
 

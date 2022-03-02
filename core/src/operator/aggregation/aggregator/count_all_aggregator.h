@@ -9,13 +9,13 @@ namespace omniruntime {
 namespace op {
 class CountAllAggregator : public Aggregator {
 public:
-    CountAllAggregator(int32_t out)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_VEC_TYPE_NONE, out, INVALID_INPUT_COL)
+    CountAllAggregator(const VecType &out)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneVecType::Instance(), out, INVALID_INPUT_COL)
     {}
 
-    CountAllAggregator(int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_VEC_TYPE_NONE, out, INVALID_INPUT_COL, inputRaw,
-                     outputPartial)
+    CountAllAggregator(const VecType &out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneVecType::Instance(), out, INVALID_INPUT_COL, inputRaw,
+        outputPartial)
     {}
 
     ~CountAllAggregator() override {}

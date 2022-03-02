@@ -13,8 +13,10 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename IN, typename ResultType> class SumAggregator : public Aggregator {
 public:
-    SumAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel) {}
-    SumAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+    SumAggregator(const VecType &in, const VecType &out, int32_t channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
+    {}
+    SumAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
     ~SumAggregator() override {}

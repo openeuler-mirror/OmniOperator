@@ -127,7 +127,7 @@ void AggregateWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t 
 void AggregateWindowFunction::ResetAccumulator()
 {
     if (currentStart >= 0) {
-        aggregator = aggregatorFactory->CreateAggregator(inputType.GetId(), outputType.GetId(), 0);
+        aggregator = aggregatorFactory->CreateAggregator(inputType, outputType, 0);
         aggregateState = std::make_unique<omniruntime::op::AggregateState>();
         currentStart = -1;
         currentEnd = -1;

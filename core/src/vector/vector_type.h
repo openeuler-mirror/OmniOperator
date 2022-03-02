@@ -248,6 +248,19 @@ protected:
     TimeUnit timeUnit;
 };
 
+class NoneVecType : public VecType {
+public:
+    NoneVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_NONE) {}
+
+    ~NoneVecType() override {}
+
+    const static NoneVecType &Instance()
+    {
+        static NoneVecType type;
+        return type;
+    }
+};
+
 class IntVecType : public VecType {
 public:
     IntVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_INT) {}

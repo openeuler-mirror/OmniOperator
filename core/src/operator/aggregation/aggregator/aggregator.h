@@ -34,6 +34,7 @@ using AggregateState = union AggregateState {
     void *val;
     // For count()
     int64_t count;
+
     // For basic type avg()
     struct {
         void *avgVal;
@@ -56,9 +57,9 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *        */
-    Aggregator(FunctionType aggregateType, int32_t inputType, int32_t outputType, int32_t channel, bool inputRaw = true,
-        bool outputPartial = false)
+     *       */
+    Aggregator(FunctionType aggregateType, const VecType &inputType, const VecType &outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
           inputType(inputType),
           outputType(outputType),
@@ -96,12 +97,12 @@ public:
         return type;
     }
 
-    int32_t GetInputType() const
+    const VecType &GetInputType() const
     {
         return inputType;
     }
 
-    int32_t GetOutputType() const
+    const VecType &GetOutputType() const
     {
         return outputType;
     }
@@ -117,8 +118,8 @@ public:
 
 protected:
     FunctionType type;
-    int32_t inputType;
-    int32_t outputType;
+    VecType inputType;
+    VecType outputType;
     bool initiated;
     bool inputRaw;
     bool outputPartial;
