@@ -1282,7 +1282,7 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
-    op->AddInput(copy);;
+    op->AddInput(copy);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -1887,4 +1887,167 @@ TEST(ProjectTest, varcharExpand)
     delete op;
     delete factory;
 }
+
+TEST(ProjectTest, testDivDecimal)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto addLeft = new LiteralExpr(new std::string("10357"), Decimal128Type(5, 2));
+    auto addRight = new LiteralExpr(new std::string("95942"), Decimal128Type(5, 2));
+
+    BinaryExpr *divExpr = new BinaryExpr(DIV, addLeft, addRight, Decimal128Type(38, 2));
+
+    std::vector<Expr *> exprs = { divExpr };
+    const int32_t numCols = 0;
+    std::vector<VecType> vecOfTypes = {};
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0.LowBits(), 11);
+    EXPECT_EQ(val0.HighBits(), 0);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
 }
+
+
+TEST(ProjectTest, testADDDecimal)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto addLeft = new LiteralExpr(new std::string("478193"), Decimal128Type(6, 3));
+    auto addRight = new LiteralExpr(new std::string("54356783"), Decimal128Type(8, 5));
+
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(9, 5));
+
+    std::vector<Expr *> exprs = { addExpr };
+    const int32_t numCols = 0;
+    std::vector<VecType> vecOfTypes = {};
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0.LowBits(), 102176083);
+    EXPECT_EQ(val0.HighBits(), 0);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectTest, testDecinalBetween)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto value = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
+    auto lowerBound = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
+    auto upperBound = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 1));
+
+    auto expr = new BetweenExpr(value, lowerBound, upperBound);
+
+    std::vector<Expr *> exprs = { expr };
+    const int32_t numCols = 0;
+    std::vector<VecType> vecOfTypes = {};
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_FALSE(val0);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+
+
+TEST(ProjectTest, testDecinmalIn)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto arg0 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
+    auto arg1 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
+    auto arg2 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
+
+    std::vector<Expr*> args = {arg0, arg1, arg2};
+
+    auto expr = new InExpr(args);
+
+    std::vector<Expr *> exprs = { expr };
+    const int32_t numCols = 0;
+    std::vector<VecType> vecOfTypes = {};
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_TRUE(val0);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+
+TEST(ProjectTest, trstDecimalComprehensive)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto condition = new LiteralExpr(true, BooleanType());
+    auto v1 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 1));
+    v1->isNull = true;
+    auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
+    auto coalesce = new CoalesceExpr(v1, v2);
+
+    auto falseExpr = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
+    auto ifExpr = new IfExpr(condition, coalesce, falseExpr);
+
+    auto right = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 2));
+
+    auto expr  = new BinaryExpr(GT, ifExpr, right, BooleanType());
+
+
+    std::vector<Expr *> exprs = { expr };
+    const int32_t numCols = 0;
+    std::vector<VecType> vecOfTypes = {};
+    VecTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_FALSE(val0);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+}
+
+
+

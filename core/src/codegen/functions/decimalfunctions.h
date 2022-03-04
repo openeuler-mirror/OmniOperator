@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include "../../vector/type/decimal128.h"
+#include "../../vector/type/decimal_operations.h"
 #include <vector>
 
 // All extern functions go here temporarily

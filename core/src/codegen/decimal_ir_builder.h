@@ -15,7 +15,7 @@
 class DecimalIRBuilder {
 public:
     explicit DecimalIRBuilder(llvm::LLVMContext& context, llvm::Module& module, llvm::IRBuilder<> &builder) : context(context),
-                module(module), builder(builder) {}
+    module(module), builder(builder) {this->AddScaleMultiplier();}
     virtual ~DecimalIRBuilder() = default;
     llvm::Value* CallDecimalFunction(const std::string& function_name,
                                      llvm::Type* return_type,
@@ -26,11 +26,20 @@ public:
     DecimalSplitValue Split(llvm::Value *fullValue);
     // Combine the two parts into an i128
     llvm::Value* ToInt128(llvm::Value *high, llvm::Value *low) const;
+    void AddScaleMultiplier() const;
+    llvm::Value* ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale,
+                               llvm::Value &rightValue, llvm::Value &rightScale,
+                               llvm::Value** scaledLeft, llvm::Value** scaledRight);
+    llvm::Value* ScaleValue(llvm::Value &value, llvm::Value &delta);
+    llvm::Value* GetScaleMultiplier(llvm::Value &delta);
+    llvm::Value* BuildIfElse(llvm::Value &condition, llvm::Type &return_type,
+        std::function<llvm::Value* ()> then_func, std::function<llvm::Value* ()> else_func);
     friend class ExpressionCodeGen;
 private:
     llvm::LLVMContext& context;
     llvm::Module& module;
     llvm::IRBuilder<> &builder;
+    const std::string scaleMultipliersName = "scaleMultipliers";
 };
 
 

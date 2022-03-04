@@ -105,6 +105,9 @@ protected:
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi);
     void PromoteType(omniruntime::expressions::BinaryExpr &binaryExpr);
+    void PromoteType(omniruntime::expressions::Expr &expr, VecType vecType);
+    void HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v2,
+        llvm::BasicBlock &isNotNullBlock, llvm::BasicBlock  &isNullBlock, llvm::PHINode &pn, llvm::PHINode &pnNull);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
 
