@@ -306,9 +306,14 @@ public class WindowOmniOperator implements Operator {
                     case "sum" :
                         windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_SUM;
                         break;
-                    case "count" :
-                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+                    case "count" : {
+                        if (windowFunctionDefinitions.get(i).getArgumentChannels().size() == 0) {
+                            windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
+                        } else {
+                            windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+                        }
                         break;
+                    }
                     case "max" :
                         windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_MAX;
                         break;

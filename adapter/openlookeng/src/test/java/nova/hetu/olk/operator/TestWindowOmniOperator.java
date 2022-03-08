@@ -28,7 +28,6 @@ import com.google.common.primitives.Ints;
 
 import io.prestosql.metadata.Metadata;
 import io.prestosql.operator.DriverContext;
-import io.prestosql.operator.OperatorFactory;
 import io.prestosql.operator.WindowFunctionDefinition;
 import io.prestosql.operator.window.AggregateWindowFunction;
 import io.prestosql.operator.window.FrameInfo;
@@ -94,7 +93,14 @@ public class TestWindowOmniOperator {
                     METADATA.getAggregateFunctionImplementation(
                             new Signature("min", AGGREGATE, BIGINT.getTypeSignature(), BIGINT.getTypeSignature()))),
             BIGINT, UNBOUNDED_FRAME, 1));
-    private static final List<WindowFunctionDefinition> COUNT = ImmutableList.of(window(
+    private static final List<WindowFunctionDefinition> COUNT_COLUMN = ImmutableList.of(window(
+            AggregateWindowFunction.supplier(
+                    new Signature("count", FunctionKind.AGGREGATE, BigintType.BIGINT.getTypeSignature(),
+                            BIGINT.getTypeSignature()),
+                    METADATA.getAggregateFunctionImplementation(
+                            new Signature("count", AGGREGATE, BIGINT.getTypeSignature(), BIGINT.getTypeSignature()))),
+            BIGINT, UNBOUNDED_FRAME, 1));
+    private static final List<WindowFunctionDefinition> COUNT_ALL = ImmutableList.of(window(
             AggregateWindowFunction.supplier(
                     new Signature("count", FunctionKind.AGGREGATE, BigintType.BIGINT.getTypeSignature(),
                             BIGINT.getTypeSignature()),
@@ -305,19 +311,74 @@ public class TestWindowOmniOperator {
     }
 
     @Test
-    public void testCountPartition() {
+    public void testCountColumnPartition() {
         List<Page> input = rowPagesBuilder(INTEGER, BIGINT, DOUBLE).row(2, -1L, -0.1).row(1, 2L, 0.3).row(1, 4L, 0.2)
                 .pageBreak().row(2, 5L, 0.4).row(1, 6L, 0.1).build();
         List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
-                0, new PlanNodeId("test"), ImmutableList.of(INTEGER, BIGINT, DOUBLE), Ints.asList(0, 1, 2), COUNT,
+                0, new PlanNodeId("test"), ImmutableList.of(INTEGER, BIGINT, DOUBLE), Ints.asList(0, 1, 2), COUNT_COLUMN,
                 Ints.asList(0), Ints.asList(), Ints.asList(1),
                 ImmutableList.copyOf(new SortOrder[]{SortOrder.ASC_NULLS_LAST}), 0, 10000);
 
         DriverContext driverContext = createDriverContext();
         MaterializedResult expected = resultBuilder(driverContext.getSession(), INTEGER, BIGINT, DOUBLE, INTEGER)
                 .row(1, 2L, 0.3, 1).row(1, 4L, 0.2, 2).row(1, 6L, 0.1, 3).row(2, -1L, -0.1, 1).row(2, 5L, 0.4, 2)
+                .build();
+
+        assertOperatorEquals(operatorFactory, driverContext, offHeapPages, expected, false);
+    }
+
+    @Test
+    public void testCountColumnPartitionWithoutSort() {
+        List<Page> input = rowPagesBuilder(INTEGER, BIGINT, DOUBLE).row(2, -1L, -0.1).row(1, 2L, 0.3).row(1, 4L, 0.2)
+                .pageBreak().row(2, 5L, 0.4).row(1, 6L, 0.1).build();
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
+
+        WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
+                0, new PlanNodeId("test"), ImmutableList.of(INTEGER, BIGINT, DOUBLE), Ints.asList(0, 1, 2), COUNT_COLUMN,
+                Ints.asList(0), Ints.asList(), Ints.asList(), ImmutableList.copyOf(new SortOrder[]{}), 0, 10000);
+
+        DriverContext driverContext = createDriverContext();
+        MaterializedResult expected = resultBuilder(driverContext.getSession(), INTEGER, BIGINT, DOUBLE, INTEGER)
+                .row(1, 2L, 0.3, 3).row(1, 4L, 0.2, 3).row(1, 6L, 0.1, 3).row(2, -1L, -0.1, 2).row(2, 5L, 0.4, 2)
+                .build();
+
+        assertOperatorEquals(operatorFactory, driverContext, offHeapPages, expected, false);
+    }
+
+    @Test
+    public void testCountAllPartition() {
+        List<Page> input = rowPagesBuilder(INTEGER, BIGINT, DOUBLE).row(2, -1L, -0.1).row(1, 2L, 0.3).row(1, 4L, 0.2)
+                .pageBreak().row(2, 5L, 0.4).row(1, 6L, null).build();
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
+
+        WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
+                0, new PlanNodeId("test"), ImmutableList.of(INTEGER, BIGINT, DOUBLE), Ints.asList(0, 1, 2), COUNT_ALL,
+                Ints.asList(0), Ints.asList(), Ints.asList(1),
+                ImmutableList.copyOf(new SortOrder[]{SortOrder.ASC_NULLS_LAST}), 0, 10000);
+
+        DriverContext driverContext = createDriverContext();
+        MaterializedResult expected = resultBuilder(driverContext.getSession(), INTEGER, BIGINT, DOUBLE, INTEGER)
+                .row(1, 2L, 0.3, 1).row(1, 4L, 0.2, 2).row(1, 6L, null, 3).row(2, -1L, -0.1, 1).row(2, 5L, 0.4, 2)
+                .build();
+
+        assertOperatorEquals(operatorFactory, driverContext, offHeapPages, expected, false);
+    }
+
+    @Test
+    public void testCountAllPartitionWithoutSort() {
+        List<Page> input = rowPagesBuilder(INTEGER, BIGINT, DOUBLE).row(2, -1L, -0.1).row(1, 2L, 0.3).row(1, 4L, 0.2)
+                .pageBreak().row(2, 5L, 0.4).row(1, 6L, null).build();
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
+
+        WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
+                0, new PlanNodeId("test"), ImmutableList.of(INTEGER, BIGINT, DOUBLE), Ints.asList(0, 1, 2), COUNT_ALL,
+                Ints.asList(0), Ints.asList(), Ints.asList(), ImmutableList.copyOf(new SortOrder[]{}), 0, 10000);
+
+        DriverContext driverContext = createDriverContext();
+        MaterializedResult expected = resultBuilder(driverContext.getSession(), INTEGER, BIGINT, DOUBLE, INTEGER)
+                .row(1, 2L, 0.3, 3).row(1, 4L, 0.2, 3).row(1, 6L, null, 3).row(2, -1L, -0.1, 2).row(2, 5L, 0.4, 2)
                 .build();
 
         assertOperatorEquals(operatorFactory, driverContext, offHeapPages, expected, false);

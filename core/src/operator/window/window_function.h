@@ -107,15 +107,22 @@ private:
     std::unique_ptr<omniruntime::op::AggregatorFactory> aggregatorFactory;
     int32_t currentStart;
     int32_t currentEnd;
-    const VecType &inputType;
-    const VecType &outputType;
+    const VecType inputType;
+    const VecType outputType;
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
     std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
 
     void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn, int32_t index) const;
+
     void Accumulate(VectorAllocator *vecAllocator, int32_t start, int32_t end);
 
-    void AccumulateData(int32_t start, VectorBatch *resultVectorBatch, int32_t resultVectorPosition,
-        int32_t originalVectorPosition, Vector *originalVector);
+    void AccumulateData(VectorBatch *resultVectorBatch, int32_t resultVectorPosition, Vector ***inputVectors,
+        int64_t inputAddress);
+
+    void AssignValueForVector(Vector *originalVector, int32_t originalVectorPosition, Vector *resultVector,
+        int32_t resultVectorPosition);
+
+    template <typename T>
+    void SetValue(Vector *inputVector, int32_t inputPosition, Vector *outputVector, int32_t outputPosition);
 };
 #endif
