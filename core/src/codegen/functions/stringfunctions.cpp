@@ -48,10 +48,7 @@ extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToM
 {
     string s = string(str, strLen);
     string r = string(regexToMatch, regexLen);
-    // Using re2 library
-    // return RE2::FullMatch(S, R);
 
-    // Using std regex library
     regex re = regex(r);
     return regex_match(s, re);
 }
