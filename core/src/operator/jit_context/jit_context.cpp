@@ -683,43 +683,24 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
 #if defined(DISABLE_JIT)
     return nullptr;
 #else
+    // groupby channel and id
     int32_t groupColNum = groupByKeys.size();
-    int32_t aggColNum = aggKeys.size();
-    int32_t totalNum = groupColNum + aggColNum;
-    vector<omniruntime::expressions::Expr *> projectKeys;
-    projectKeys.insert(projectKeys.end(), groupByKeys.begin(), groupByKeys.end());
-    projectKeys.insert(projectKeys.end(), aggKeys.begin(), aggKeys.end());
+    auto aggNum = aggFuncsCount;
 
-    vector<int32_t> projectTypes;
-    vector<int32_t> projectCols(totalNum);
-    GetRequiredTypeIds(sourceVecTypes, projectKeys, projectTypes, projectCols);
-
-    auto projectColsFront = &projectCols.front();
-    int32_t groupByCols[groupColNum];
-    std::copy(projectColsFront, projectColsFront + groupColNum, groupByCols);
-    int32_t aggCols[aggColNum];
-    std::copy(projectColsFront + groupColNum, projectColsFront + groupColNum + aggColNum, aggCols);
-
-    int32_t groupByTypeIds[groupColNum];
-    std::copy(projectTypes.begin(), projectTypes.begin() + groupColNum, groupByTypeIds);
-    int32_t aggTypeIds[aggColNum];
-    std::copy(projectTypes.begin() + groupColNum, projectTypes.begin() + groupColNum + aggColNum, aggTypeIds);
-
-    ParamValue pColType = ParamValue(projectTypes.data(), totalNum);
     ParamValue pGroupNum = ParamValue(&groupColNum);
-    ParamValue pAggNum = ParamValue(&aggColNum);
+    ParamValue pAggNum = ParamValue(&aggNum);
 
     Specialization inloopSp;
-    inloopSp.AddSpecializedParam(PARAM_INDEX_3, &pColType);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_5, &pGroupNum);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_7, &pAggNum);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_4, &pGroupNum);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_5, &pAggNum);
 
     map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp } };
 
     omniruntime::jit::Context groupAggWithExprContext(GenerateOperatorTemplatePath("group_aggregation_expr"),
         map<string, Specialization>());
-    omniruntime::jit::Context groupAggContext(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
-    Jit jit(vector<omniruntime::jit::Context> { groupAggWithExprContext, groupAggContext });
+    omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"),
+        hashGroupbySps);
+    Jit jit(vector<omniruntime::jit::Context> { groupAggWithExprContext, groupAggregationContext });
     jit.Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
         Optimization::SROA, Optimization::AGGRESIVE_DCE },
         vector<ModuleOptimization> { ModuleOptimization::PRUNE_EH });
