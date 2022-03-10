@@ -119,10 +119,10 @@ class LookupJoinOutputBuilder {
 public:
     LookupJoinOutputBuilder(const int32_t *probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *buildOutputCols, const vec::VecTypes &buildOutputTypes, int32_t outputRowSize);
-    ~LookupJoinOutputBuilder() {}
+    ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, int64_t partitionedJoinPosition);
     void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
-        std::vector<VectorBatch *> &outputTables);
+        std::vector<VectorBatch *> &outputVecBatches);
 
 private:
     const int32_t *probeTypes;

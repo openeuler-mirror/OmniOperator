@@ -17,6 +17,8 @@
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
+constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
+
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const vec::VecTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     const vec::VecTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables)
@@ -620,12 +622,13 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
 }
 
 void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe,
-    const JoinHashTables *hashTables, std::vector<VectorBatch *> &outputTables)
+    const JoinHashTables *hashTables, std::vector<VectorBatch *> &outputVecBatches)
 {
     int32_t positionCount = probeIndex.size();
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize);
+    // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize ? outputRowSize : DEFAULT_ROW_SIZE);
     int32_t tableCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
-    outputTables.reserve(tableCount);
+    outputVecBatches.reserve(tableCount);
 
     Vector **probeAllColumns = joinProbe->GetProbeAllColumns();
     int32_t columnCount = probeOutputColsCount + buildOutputTypes.GetSize();
@@ -644,7 +647,7 @@ void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const J
             vecAllocator);
 
         position += rowCount;
-        outputTables.push_back(vectorBatch);
+        outputVecBatches.push_back(vectorBatch);
     }
 
     isSequentialProbeIndices = true;
