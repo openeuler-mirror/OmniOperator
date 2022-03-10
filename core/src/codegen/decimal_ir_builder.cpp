@@ -6,6 +6,94 @@
 #include "decimal_ir_builder.h"
 #include "llvm_types.h"
 
+
+void DecimalIRBuilder::AddScaleMultiplier() const
+{
+    std::string value = "1";
+    int32_t decimal128Precision = 38;
+    std::vector<llvm::Constant*> scale_multipliers;
+    for (int i = 0; i < decimal128Precision + 1; ++i) { // 38 stands for the max precision
+        int32_t radix = 10;
+        auto multiplier = llvm::ConstantInt::get(llvm::Type::getInt128Ty(this->context), value, radix);
+        scale_multipliers.push_back(multiplier);
+        value.append("0");
+    }
+    LLVMTypes llvmTypes(context);
+    auto arrayType = llvm::ArrayType::get(llvmTypes.I128Type(), decimal128Precision + 1);
+    auto initializer = llvm::ConstantArray::get(
+        arrayType, llvm::ArrayRef<llvm::Constant*>(scale_multipliers));
+
+    auto globalScaleMultipliers = std::make_unique<llvm::GlobalVariable>(this->module, arrayType, true,
+        llvm::GlobalValue::LinkOnceAnyLinkage, initializer, this->scaleMultipliersName).release();
+    int32_t alignment = 16;
+    globalScaleMultipliers->setAlignment(llvm::MaybeAlign(alignment));
+}
+
+llvm::Value *DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+                                           llvm::Value &rightScale, llvm::Value** scaledLeft, llvm::Value** scaledRight)
+{
+    llvm::Value* le = this->builder.CreateICmpSLE(&leftScale, &rightScale);
+    auto higherScale = this->builder.CreateSelect(le, &rightScale, &leftScale);
+
+    auto leftDelta = this->builder.CreateSub(higherScale, &leftScale);
+    *scaledLeft = ScaleValue(leftValue, *leftDelta);
+
+    auto rightDelta = this->builder.CreateSub(higherScale, &rightScale);
+    *scaledRight =  ScaleValue(rightValue, *rightDelta);
+}
+
+llvm::Value* DecimalIRBuilder::GetScaleMultiplier(llvm::Value &delta)
+{
+    LLVMTypes llvmTypes(context);
+    auto constArray = this->module.getGlobalVariable(this->scaleMultipliersName);
+    auto ptr = builder.CreateGEP(constArray, {llvmTypes.CreateConstantInt(0), &delta});
+    return this->builder.CreateLoad(ptr);
+}
+
+llvm::Value *DecimalIRBuilder::ScaleValue(llvm::Value &value, llvm::Value &delta)
+{
+    LLVMTypes llvmTypes(context);
+    auto lessEqual = this->builder.CreateICmpSLE(&delta, llvmTypes.CreateConstantInt(0));
+
+    auto trueBranch = [&] {return &value;};
+    auto falseBranch = [&] {
+        auto multiplier = GetScaleMultiplier(delta);
+        return this->builder.CreateMul(&value, multiplier);
+    };
+
+    return BuildIfElse(*lessEqual, *llvmTypes.I128Type(), trueBranch, falseBranch);
+}
+
+
+llvm::Value* DecimalIRBuilder::BuildIfElse(llvm::Value &condition, llvm::Type &return_type,
+    std::function<llvm::Value* ()> then_func, std::function<llvm::Value* ()> else_func)
+{
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+
+    // Create blocks for the then, else and merge cases.
+    llvm::BasicBlock* trueBlock = llvm::BasicBlock::Create(this->context, "then", function);
+    llvm::BasicBlock* falseBlock = llvm::BasicBlock::Create(this->context, "else", function);
+    llvm::BasicBlock* mergeBlock = llvm::BasicBlock::Create(this->context, "merge", function);
+
+    builder.CreateCondBr(&condition, trueBlock, falseBlock);
+
+    builder.SetInsertPoint(trueBlock);
+    auto thenValue = then_func();
+    builder.CreateBr(mergeBlock);
+
+    builder.SetInsertPoint(falseBlock);
+    auto elseValue = else_func();
+    builder.CreateBr(mergeBlock);
+
+    builder.SetInsertPoint(mergeBlock);
+    int32_t numReservedValues = 2;
+    llvm::PHINode* result = builder.CreatePHI(&return_type, numReservedValues, "res_value");
+    result->addIncoming(thenValue, trueBlock);
+    result->addIncoming(elseValue, falseBlock);
+    return result;
+}
+
+
 DecimalSplitValue DecimalIRBuilder::Split(llvm::Value *fullValue)
 {
     LLVMTypes types(context);

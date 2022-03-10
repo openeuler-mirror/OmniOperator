@@ -57,11 +57,13 @@ extern "C" DLLEXPORT void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
 {
     Decimal128 lValue(xHigh, xLow);
     Decimal128 rValue(yHigh, yLow);
+    Decimal128 remainder;
+    Decimal128 result;
+    lValue.Divide(rValue, result, remainder);
+    DecimalOperations::RoundUp(lValue, rValue, result, remainder);
 
-    lValue /= rValue;
-
-    *outHighPtr = lValue.HighBits();
-    *outLowPtr = lValue.LowBits();
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
 }
 
 extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
