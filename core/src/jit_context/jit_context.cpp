@@ -3,9 +3,9 @@
  * Description: Jit Context Source File
  */
 #include "jit_context.h"
-#include "../../jit/jit.h"
-#include "../optimization.h"
-#include "../libconfig.h"
+#include "jit/jit.h"
+#include "operator/optimization.h"
+#include "../../libconfig.h"
 
 using std::map;
 using std::string;

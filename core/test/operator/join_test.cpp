@@ -2,17 +2,18 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: lookup join operator test implementations
  */
-#include "gtest/gtest.h"
-#include "../../src/operator/join/hash_builder.h"
-#include "../../src/operator/join/lookup_join.h"
-#include "../../src/operator/hash_util.h"
-#include "../../src/operator/jit_context/jit_context.h"
-#include "../util/test_util.h"
 #include <vector>
 #include <chrono>
 #include <thread>
-#include <src/vector/vector_helper.h>
-#include <src/vector/dictionary_vector.h>
+
+#include "gtest/gtest.h"
+#include "operator/join/hash_builder.h"
+#include "operator/join/lookup_join.h"
+#include "operator/hash_util.h"
+#include "jit_context/jit_context.h"
+#include "../util/test_util.h"
+#include "vector/vector_helper.h"
+#include "vector/dictionary_vector.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

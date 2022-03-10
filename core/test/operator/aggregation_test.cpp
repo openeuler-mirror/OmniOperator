@@ -3,8 +3,8 @@
 #include "operator/aggregation/aggregator/all_aggregators.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation.h"
-#include "test/util/test_util.h"
-#include "operator/jit_context/jit_context.h"
+#include "../util/test_util.h"
+#include "jit_context/jit_context.h"
 #include "vector/vector_helper.h"
 #include "util/perf_util.h"
 #include "../../libconfig.h"
@@ -394,8 +394,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         LongVecType::Instance(), 2, true, true));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(),
         ContainerVecType::Instance(), 3, true, true));
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 4, true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 4, true, true));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 5, true, true));
     aggs1.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -430,8 +429,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         LongVecType::Instance(), 2, true, true));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(),
         ContainerVecType::Instance(), 3, true, true));
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 4, true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 4, true, true));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 5, true, true));
     aggs1.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -463,8 +461,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         LongVecType::Instance(), 2, false, false));
     aggs2.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(),
         ContainerVecType::Instance(), 3, false, false));
-    aggs2.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 4, false, false));
+    aggs2.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 4, false, false));
     aggs2.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 5, false, false));
     aggs2.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -530,8 +527,7 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 1,
-        INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 1, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MinVarcharAggregator>(VarcharVecType::Instance(), VarcharVecType::Instance(), 2,
         INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MaxVarcharAggregator>(VarcharVecType::Instance(), VarcharVecType::Instance(), 3,
@@ -591,8 +587,7 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 1,
-        INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 1, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MinVarcharAggregator>(CharVecType::Instance(), CharVecType::Instance(), 2,
         INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MaxVarcharAggregator>(CharVecType::Instance(), CharVecType::Instance(), 3,
@@ -666,8 +661,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
         LongVecType::Instance(), 1, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(), DoubleVecType::Instance(),
         2, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 3,
-        INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 3, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 4, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -892,8 +886,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongVecType::Instance(), 0, true, true));
     aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(),
         ContainerVecType::Instance(), 1, true, true));
-    aggs.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 2, true, true));
+    aggs.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 2, true, true));
     aggs.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 3, true, true));
     aggs.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -920,8 +913,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongVecType::Instance(), 0, true, true));
     aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(),
         ContainerVecType::Instance(), 1, true, true));
-    aggs.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 2, true, true));
+    aggs.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 2, true, true));
     aggs.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 3, true, true));
     aggs.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -941,8 +933,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongVecType::Instance(), 0, false, false));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(), DoubleVecType::Instance(),
         1, false, false));
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 2, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 2, false, false));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 3, false, false));
     aggs1.push_back(std::make_unique<MaxAggregator<LongVector, int64_t>>(LongVecType::Instance(),
@@ -1031,8 +1022,7 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 0, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongVecType::Instance(), 0, false, false));
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongVecType::Instance(),
         LongVecType::Instance(), 1, false, false));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongVecType::Instance(), DoubleVecType::Instance(),

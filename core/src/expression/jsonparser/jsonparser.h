@@ -4,22 +4,20 @@
 #ifndef __JSONPARSER_H__
 #define __JSONPARSER_H__
 
-// Contains expressions.h
-#include "../expressions.h"
-
 #include <string>
 #include <iostream>
 
 #include <nlohmann/json.hpp>
-#include <common/parserhelper.h>
-#include <codegen/func_registry.h>
+#include "expression/parserhelper.h"
+#include "codegen/func_registry.h"
 #include "util/type_util.h"
+#include "expression/expressions.h"
 
 class JSONParser {
 public:
     static omniruntime::expressions::Expr *ParseJSON(nlohmann::json jsonExpr);
     static std::vector<omniruntime::expressions::Expr *> ParseJSON(nlohmann::json expressions[],
-                                                                   int32_t numberOfExpressions);
+        int32_t numberOfExpressions);
 
 private:
     static omniruntime::expressions::Expr *ParseJSONFieldRef(nlohmann::json jsonExpr);
@@ -36,7 +34,6 @@ private:
     static omniruntime::expressions::Expr *ParseJSONSwitch(nlohmann::json jsonExpr);
 
     static omniruntime::expressions::OperatorType GetOperatorType(omniruntime::expressions::Operator op);
-
 };
 
 

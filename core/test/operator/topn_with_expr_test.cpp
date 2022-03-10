@@ -3,10 +3,10 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../src/operator/topn/topn_expr.h"
-#include "../../src/vector/vector_helper.h"
+#include "operator/topn/topn_expr.h"
+#include "vector/vector_helper.h"
 #include "../util/test_util.h"
-#include "src/operator/jit_context/jit_context.h"
+#include "jit_context/jit_context.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;

@@ -7,8 +7,8 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
-#include "../util/debug.h"
 #include <map>
+#include "util/debug.h"
 
 using namespace omniruntime::expressions;
 using namespace omniruntime::vec;
@@ -61,14 +61,14 @@ string ExprPrinter::GenerateIndentation() const
  * EXAMPLE
  *
  * Bin:bool(OR,
- *     Cmp:bool(EQ,
- *         #7,
- *         'Winter
- *     ),
- *     Cmp:bool(EQ,
- *         #2,
- *         'Summer'
- *      )
+ * Cmp:bool(EQ,
+ * #7,
+ * 'Winter
+ * ),
+ * Cmp:bool(EQ,
+ * #2,
+ * 'Summer'
+ * )
  * )
  *
  */
@@ -94,9 +94,9 @@ void ExprPrinter::Visit(const BinaryExpr &e)
  * EXAMPLE
  *
  * Unary:bool(NOT,
- *     IsNull:bool(
- *         #0
- *     )
+ * IsNull:bool(
+ * #0
+ * )
  * )
  *
  */
@@ -117,62 +117,98 @@ void ExprPrinter::Visit(const UnaryExpr &e)
     this->indentationDepth--;
 }
 
+void PrintBoolVal(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("bool_");
+    }
+    e.boolVal ? printf("%s", indent.append("true").c_str()) : printf("%s", indent.append("false").c_str());
+}
+
+void PrintIntVal(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("i32_");
+    }
+    printf(indent.append("%d:%s").c_str(), e.intVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+}
+
+void PrintLongVal(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("i64_");
+    }
+    printf(indent.append("%ld:%s").c_str(), e.longVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+}
+
+void PrintDoubleVal(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("d64_");
+    }
+    printf(indent.append("%f:%s").c_str(), e.doubleVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+}
+
+void PrintCharVal(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("s_");
+    }
+    if (e.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
+        printf(indent.append("'%s[%d]':%s").c_str(), (e.stringVal)->c_str(), e.dataType->GetWidth(),
+            TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+    } else {
+        printf(indent.append("'%s':%s").c_str(), (e.stringVal)->c_str(),
+            TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+    }
+}
+
+void PrintDecimal64Val(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("d64_");
+    }
+    printf(indent.append("%ld").c_str(), e.longVal);
+}
+
+void PrintDecimal128Val(const LiteralExpr &e, bool printWithTypes, string &indent)
+{
+    if (printWithTypes) {
+        printf("d128_");
+    }
+    // FIXME: printing as int64_t for now;
+    printf(indent.append("%ld").c_str(), e.longVal);
+}
+
 void ExprPrinter::Visit(const LiteralExpr &e)
 {
     string indent = GenerateIndentation();
     const bool printWithTypes = false; // for debugging types
     switch (e.GetReturnTypeId()) {
         case OMNI_VEC_TYPE_BOOLEAN:
-            if (printWithTypes) {
-                printf("bool_");
-            }
-            e.boolVal ? printf("%s", indent.append("true").c_str()) : printf("%s", indent.append("false").c_str());
+            PrintBoolVal(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32:
-            if (printWithTypes) {
-                printf("i32_");
-            }
-            printf(indent.append("%d:%s").c_str(), e.intVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            PrintIntVal(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_LONG:
-            if (printWithTypes) {
-                printf("i64_");
-            }
-            printf(indent.append("%ld:%s").c_str(), e.longVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            PrintLongVal(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_DOUBLE:
-            if (printWithTypes) {
-                printf("d64_");
-            }
-            printf(indent.append("%f:%s").c_str(), e.doubleVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            PrintDoubleVal(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_CHAR:
-            if (printWithTypes) {
-                printf("s_");
-            }
-            printf(indent.append("'%s[%d]':%s").c_str(), (e.stringVal)->c_str(), e.dataType->GetWidth(),
-                TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            PrintCharVal(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_VARCHAR:
-            if (printWithTypes) {
-                printf("s_");
-            }
-            printf(indent.append("'%s':%s").c_str(), (e.stringVal)->c_str(),
-                TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            PrintCharVal(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_DECIMAL64:
-            if (printWithTypes) {
-                printf("d64_");
-            }
-            printf(indent.append("%ld").c_str(), (long)e.longVal);
+            PrintDecimal64Val(e, printWithTypes, indent);
             break;
         case OMNI_VEC_TYPE_DECIMAL128:
-            if (printWithTypes) {
-                printf("d128_");
-            }
-            // FIXME: printing as int64_t for now;
-            printf(indent.append("%ld").c_str(), (long)e.longVal);
+            PrintDecimal128Val(e, printWithTypes, indent);
             break;
         default:
             printf("invalid DataType %d", e.GetReturnTypeId());
@@ -193,10 +229,10 @@ void ExprPrinter::Visit(const FieldExpr &e)
  * EXAMPLE
  *
  * In:bool(
- *     1,
- *     2,
- *     3,
- *     4
+ * 1,
+ * 2,
+ * 3,
+ * 4
  * )
  *
  */
@@ -217,15 +253,15 @@ void ExprPrinter::Visit(const InExpr &e)
 }
 /*
  * Example:switch:bool(
- *      Cmp:bool(EQ
- *          #0,
- *          100,
- *      ),
- *      Cmp:bool(EQ
- *          #0,
- *          200,
- *      ),
- *      Cmp:bool(),
+ * Cmp:bool(EQ
+ * #0,
+ * 100,
+ * ),
+ * Cmp:bool(EQ
+ * #0,
+ * 200,
+ * ),
+ * Cmp:bool(),
  *
  *
  * )
@@ -250,9 +286,9 @@ void ExprPrinter::Visit(const SwitchExpr &e)
  * EXAMPLE
  *
  * Between:bool(
- *     5,
- *     -1,
- *     7,
+ * 5,
+ * -1,
+ * 7,
  * )
  *
  */
@@ -276,18 +312,18 @@ void ExprPrinter::Visit(const BetweenExpr &e)
  * EXAMPLE
  *
  * If:bool(
- *     Cmp:bool(GT,
- *         #0,
- *         100,
- *     ),
- *     Cmp:bool(GT,
- *         #0,
- *         200
- *     ),
- *     Cmp:bool(LT,
- *         #0,
- *         0
- *     )
+ * Cmp:bool(GT,
+ * #0,
+ * 100,
+ * ),
+ * Cmp:bool(GT,
+ * #0,
+ * 200
+ * ),
+ * Cmp:bool(LT,
+ * #0,
+ * 0
+ * )
  * )
  *
  */
@@ -311,11 +347,11 @@ void ExprPrinter::Visit(const IfExpr &e)
  * EXAMPLE
  *
  * Cmp:bool(EQ,
- *     Coalesce:int64(
- *         #0,
- *         0
- *     ),
- *     123
+ * Coalesce:int64(
+ * #0,
+ * 0
+ * ),
+ * 123
  * )
  *
  */
@@ -338,7 +374,7 @@ void ExprPrinter::Visit(const CoalesceExpr &e)
  * Printed Pared Expression
  *
  * IsNull:bool(
- *     #0
+ * #0
  * )
  *
  */
@@ -355,8 +391,8 @@ void ExprPrinter::Visit(const IsNullExpr &e)
 /*
  * EXAMPLE
  * concat:string(
- *     #1,
- *     #2
+ * #1,
+ * #2
  * )
  *
  */

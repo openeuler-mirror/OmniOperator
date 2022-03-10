@@ -2,17 +2,18 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: sort operator test implementations
  */
-#include "gtest/gtest.h"
-#include "../../src/operator/sort/sort.h"
-#include "../../src/operator/jit_context/jit_context.h"
-#include "../../src/vector/vector_helper.h"
-#include "../util/test_util.h"
 #include <thread>
 #include <time.h>
 #include <vector>
 #include <iostream>
 #include <chrono>
 #include <memory>
+
+#include "gtest/gtest.h"
+#include "operator/sort/sort.h"
+#include "jit_context/jit_context.h"
+#include "vector/vector_helper.h"
+#include "../util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

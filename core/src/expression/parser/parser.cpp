@@ -31,7 +31,7 @@ string DemangleOperator(string opStr)
 OperatorType GetBinaryOperatorType(string opStr)
 {
     vector<string> allCmpOps { "LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL",
-        "EQUAL",     "NOT_EQUAL" };
+        "EQUAL", "NOT_EQUAL" };
     vector<string> allLogOps { "AND", "OR" };
     vector<string> allArithOps { "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS" };
     for (const string &cmpOp : allCmpOps) {
@@ -192,15 +192,16 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // BinaryExpr
     OperatorType binRetType = GetBinaryOperatorType(opStr);
     if (binRetType != OperatorType::INVALIDOPTTYPE && args.size() == ARG2) {
-        return std::make_unique<BinaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], args[1], std::move(type)
-            ).release();
+        return std::make_unique<BinaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], args[1],
+            std::move(type))
+            .release();
     }
 
     // UnaryExpr
     // only handling NOT for now
     if (IsUnaryOperator(opStr) && args.size() == 1) {
-        return std::make_unique<UnaryExpr>(
-            StringToOperator(DemangleOperator(opStr)), args[0], std::move(type)).release();
+        return std::make_unique<UnaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], std::move(type))
+            .release();
     }
 
     // Special form
@@ -212,8 +213,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     if (opStr == "COALESCE")
         return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
     if (opStr == "IF") {
-        if (TypeUtil::IsStringType(args[ARG2]->GetReturnTypeId()) &&
-            args[ARG2]->GetType() == ExprType::LITERAL_E &&
+        if (TypeUtil::IsStringType(args[ARG2]->GetReturnTypeId()) && args[ARG2]->GetType() == ExprType::LITERAL_E &&
             static_cast<LiteralExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
             return std::make_unique<IfExpr>(args[0], args[1],
                 ParserHelper::GetDefaultValueForType(args[1]->GetReturnTypeId()))
@@ -229,7 +229,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     }
     // When casting to the same type, the result is the argument itself
     // Treat argument as constant DataExpr instead of returning FuncExpr
-        if (opStr == "CAST" && args.size() == 1 && (typeId == args[0]->GetReturnTypeId())) {
+    if (opStr == "CAST" && args.size() == 1 && (typeId == args[0]->GetReturnTypeId())) {
         if (args[0]->GetType() == LITERAL_E) {
             return static_cast<LiteralExpr *>(args[0]);
         } else if (args[0]->GetType() == FIELD_E) {
@@ -242,8 +242,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // Function
     // Check that the signature matches
     vector<VecTypeId> argTypes(args.size());
-    std::transform(
-        args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    std::transform(args.begin(), args.end(), argTypes.begin(),
+        [](Expr *expr) -> VecTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(opStr, argTypes, type->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
@@ -310,8 +310,8 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, VecType
 FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const VecTypes &inputTypes)
 {
     int colIdx = stoi(fieldStr.substr(1));
-    VecType& colType = const_cast<VecType&>(inputTypes.Get().at(colIdx));
-    return std::make_unique<FieldExpr>(colIdx, std::make_unique<VecType>(colType)).release();;
+    VecType &colType = const_cast<VecType &>(inputTypes.Get().at(colIdx));
+    return std::make_unique<FieldExpr>(colIdx, std::make_unique<VecType>(colType)).release();
 }
 
 LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)

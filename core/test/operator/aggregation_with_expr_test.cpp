@@ -5,8 +5,8 @@
 #include <gtest/gtest.h>
 #include "operator/aggregation/aggregation.h"
 #include "operator/aggregation/group_aggregation_expr.h"
-#include "../../src/vector/vector_helper.h"
-#include "operator/jit_context/jit_context.h"
+#include "vector/vector_helper.h"
+#include "jit_context/jit_context.h"
 #include "../util/test_util.h"
 #include "../../libconfig.h"
 

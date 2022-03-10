@@ -2,13 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description:
  */
-#include "gtest/gtest.h"
-#include <src/common/expressions.h>
-#include <src/common/jsonparser/jsonparser.h>
-
 #include <utility>
+#include "gtest/gtest.h"
+#include "expression/expressions.h"
+#include "expression/jsonparser/jsonparser.h"
+
 #include "test/util/test_util.h"
-#include <common/parserhelper.h>
+#include "expression/parserhelper.h"
 
 using namespace std;
 using namespace omniruntime::expressions;
@@ -175,7 +175,8 @@ string getSwitchTestJson(int32_t rt, const string &val, const string &val1, cons
 string getWhenTestJson(int32_t rt, const string &val, const string &val1)
 {
     ss.str("");
-    ss << R"({"exprType": "WHEN", "returnType": )" << rt << R"(, "when": )" << val << R"(, "result": )" << val1 << R"(})";
+    ss << R"({"exprType": "WHEN", "returnType": )" << rt << R"(, "when": )" << val << R"(, "result": )" << val1 <<
+        R"(})";
     return ss.str();
 }
 
@@ -470,27 +471,30 @@ public:
 };
 
 class TestSwitchExpr : public TestExpr {
-    vector<pair<TestExpr *, TestExpr*>> whenClause;
+    vector<pair<TestExpr *, TestExpr *>> whenClause;
     TestExpr *elseExpr = nullptr;
 
 public:
-    TestSwitchExpr(vector<pair<TestExpr *, TestExpr *>> whenClause, TestExpr *elseExpr) : whenClause(std::move(whenClause)), elseExpr(elseExpr)
+    TestSwitchExpr(vector<pair<TestExpr *, TestExpr *>> whenClause, TestExpr *elseExpr)
+        : whenClause(std::move(whenClause)), elseExpr(elseExpr)
     {
         dataType = elseExpr->dataType;
     }
     ~TestSwitchExpr() override
     {
-        for (pair<TestExpr*, TestExpr*> pair : whenClause) {
-           delete pair.first;
-           delete pair.second;
+        for (pair<TestExpr *, TestExpr *> pair : whenClause) {
+            delete pair.first;
+            delete pair.second;
         }
         delete elseExpr;
     }
     bool operator == (const SwitchExpr &rhs) const
     {
         return (*dataType == rhs.GetReturnType() && elseExpr->isEqual(rhs.falseExpr) &&
-            std::equal(whenClause.begin(), whenClause.end(), rhs.whenClause.begin(), [](pair<TestExpr*, TestExpr*> left,
-                    std::pair<Expr*, Expr*> right) { return left.first->isEqual(right.first) && left.second->isEqual(right.second); }));
+            std::equal(whenClause.begin(), whenClause.end(), rhs.whenClause.begin(),
+            [](pair<TestExpr *, TestExpr *> left, std::pair<Expr *, Expr *> right) {
+                return left.first->isEqual(right.first) && left.second->isEqual(right.second);
+            }));
     }
 
     bool isEqual(Expr *that) const override
@@ -770,14 +774,14 @@ TEST(JSONParserTest, InExpr)
 
 TEST(JSONParserTest, SwitchExpr)
 {
-    string whenJson =
-            getWhenTestJson(OMNI_VEC_TYPE_INT, getInt64TestJson(int64Val), getInt32TestJSON(int32Val));
+    string whenJson = getWhenTestJson(OMNI_VEC_TYPE_INT, getInt64TestJson(int64Val), getInt32TestJSON(int32Val));
     string unparsedSwitchJson =
-            getSwitchTestJson(OMNI_VEC_TYPE_INT, getInt32TestJSON(int32Val), whenJson, getInt32TestJSON(4));
+        getSwitchTestJson(OMNI_VEC_TYPE_INT, getInt32TestJSON(int32Val), whenJson, getInt32TestJSON(4));
     Expr *switchExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedSwitchJson));
     auto condition = new TestBinaryExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
-                                        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
-    vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition, make_unique<TestLiteralExpr>(int32Val, *IntType()).release() } };
+        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+    vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition,
+        make_unique<TestLiteralExpr>(int32Val, *IntType()).release() } };
     TestSwitchExpr expectedExpr(whenClause, make_unique<TestLiteralExpr>(4, *IntType()).release());
     expectedExpr.isEqual(switchExpr);
     delete switchExpr;

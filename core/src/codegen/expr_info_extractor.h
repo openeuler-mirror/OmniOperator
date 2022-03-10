@@ -2,7 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Extract essential information from the expression tree
  */
-#include "../common/expr_visitor.h"
+#include "expression/expr_visitor.h"
 #include "func_registry_string.h"
 #include "func_registry_dictionary.h"
 #include "func_registry_decimal.h"
@@ -24,6 +24,7 @@ public:
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
     std::set<int32_t> GetVectorIndexes();
+
 private:
     std::set<int32_t> vectorIndexes;
 };

@@ -7,10 +7,10 @@
 #define __SORT_MERGE_JOIN_RESULT_BUILDER_H__
 
 #include "dynamic_pages_index.h"
-#include "../../../vector/vector.h"
-#include "../../../vector/vector_types.h"
-#include "../../../common/expressions.h"
-#include "../../filter/filter_and_project.h"
+#include "vector/vector.h"
+#include "vector/vector_types.h"
+#include "expression/expressions.h"
+#include "operator/filter/filter_and_project.h"
 
 namespace omniruntime {
 namespace op {
@@ -21,8 +21,7 @@ public:
         const vec::VecTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
         DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator);
 
-    int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
-        std::vector<int64_t> &streamedTableValueAddresses,
+    int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
         std::vector<int64_t> &bufferedTableValueAddresses);
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages);

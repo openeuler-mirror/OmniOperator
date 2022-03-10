@@ -8,12 +8,12 @@
 #include <string>
 #include <vector>
 
-#include <src/common/jsonparser/jsonparser.h>
-#include "../../src/codegen/expression_codegen.h"
-#include "../../src/codegen/filter_codegen.h"
-#include "../../src/codegen/projection_codegen.h"
-#include "../../src/operator/filter/filter_and_project.h"
-#include "../../src/codegen/functions/murmur3_hash.h"
+#include "expression/jsonparser/jsonparser.h"
+#include "codegen/expression_codegen.h"
+#include "codegen/filter_codegen.h"
+#include "codegen/projection_codegen.h"
+#include "operator/filter/filter_and_project.h"
+#include "codegen/functions/murmur3_hash.h"
 #include "../util/test_util.h"
 
 using omniruntime::op::RowFilter;
@@ -29,7 +29,8 @@ using namespace omniruntime::op;
 const string defaultTestFunctionName = "test-function";
 
 typedef int32_t (*FilterFunc)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-typedef int32_t (*ProjectFunc)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
+typedef int32_t (*ProjectFunc)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *,
+    int64_t, int64_t *);
 
 // Filter is basically just a projection that must return a boolean.
 // The logic for filtering out rows from final output is handled in C++ when
@@ -79,12 +80,14 @@ TEST(CodeGenTest, SimpleFilter)
 
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < 50; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        bool res = *((bool *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_TRUE(res);
     }
     context->getArena()->Reset();
     for (int32_t i = 50; i < 100; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        bool res = *((bool *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_FALSE(res);
     }
     context->getArena()->Reset();
@@ -141,7 +144,8 @@ TEST(CodeGenTest, SimpleProject)
     int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < 100; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 50);
     }
     context->getArena()->Reset();
@@ -157,7 +161,7 @@ TEST(CodeGenTest, SimpleProject)
     delete context;
 }
 
-//Same logic as Single Project Test below except using switch expression to replace if expression
+// Same logic as Single Project Test below except using switch expression to replace if expression
 // A more complicated test for individual row projection
 // when gtExpr then addExpr
 // else mulExpr
@@ -176,8 +180,8 @@ TEST(CodeGenTest, SingleCaseSwitch)
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
     BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
 
-    std::vector<std::pair<Expr*, Expr*>> whenClause;
-    std::pair<Expr*, Expr*> when;
+    std::vector<std::pair<Expr *, Expr *>> whenClause;
+    std::pair<Expr *, Expr *> when;
     when.first = gtExpr;
     when.second = addExpr;
     whenClause.push_back(when);
@@ -229,7 +233,8 @@ TEST(CodeGenTest, SingleCaseSwitch)
     auto context = new ExecutionContext();
     bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
     context->getArena()->Reset();
@@ -274,9 +279,9 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
     BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
 
-    std::vector<std::pair<Expr*, Expr*>> whenClause;
-    std::pair<Expr*, Expr*> when1;
-    std::pair<Expr*, Expr*> when2;
+    std::vector<std::pair<Expr *, Expr *>> whenClause;
+    std::pair<Expr *, Expr *> when1;
+    std::pair<Expr *, Expr *> when2;
     when1.first = gtExpr;
     when1.second = addExpr;
     when2.first = ltExpr;
@@ -331,7 +336,8 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     auto context = new ExecutionContext();
     bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 10);
     }
     context->getArena()->Reset();
@@ -386,10 +392,10 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
     BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
 
-    std::vector<std::pair<Expr*, Expr*>> whenClause;
-    std::pair<Expr*, Expr*> when1;
-    std::pair<Expr*, Expr*> when2;
-    std::pair<Expr*, Expr*> when3;
+    std::vector<std::pair<Expr *, Expr *>> whenClause;
+    std::pair<Expr *, Expr *> when1;
+    std::pair<Expr *, Expr *> when2;
+    std::pair<Expr *, Expr *> when3;
     when1.first = gtExpr;
     when1.second = addExpr;
     when2.first = gtExpr1;
@@ -447,7 +453,8 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     auto context = new ExecutionContext();
     bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
     context->getArena()->Reset();
@@ -480,8 +487,8 @@ TEST(CodeGenTest, SwitchElseNull)
     nullExpr->isNull = true;
     nullExpr->dataType = std::move(destType);
 
-    std::vector<std::pair<Expr*, Expr*>> whenClause;
-    std::pair<Expr*, Expr*> when;
+    std::vector<std::pair<Expr *, Expr *>> whenClause;
+    std::pair<Expr *, Expr *> when;
     when.first = gtExpr;
     when.second = addExpr;
     whenClause.push_back(when);
@@ -533,7 +540,8 @@ TEST(CodeGenTest, SwitchElseNull)
     auto context = new ExecutionContext();
     bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : 0);
     }
     context->getArena()->Reset();
@@ -610,7 +618,8 @@ TEST(CodeGenTest, SingleProject)
     auto context = new ExecutionContext();
     bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
     context->getArena()->Reset();
@@ -676,7 +685,8 @@ TEST(CodeGenTest, ShortCircuitProject)
     bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
         isNull = false;
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
+            reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 10);
     }
     context->getArena()->Reset();
@@ -732,7 +742,8 @@ TEST(CodeGenTest, RowFilter)
     EXPECT_FALSE(filter == nullptr);
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < numRows; i++) {
-        bool res = filterFunc(table, (int64_t*) bitmap, (int64_t*) offsets, i, reinterpret_cast<int64_t>(context), dictionaryVectors);
+        bool res = filterFunc(table, (int64_t *)bitmap, (int64_t *)offsets, i, reinterpret_cast<int64_t>(context),
+            dictionaryVectors);
         EXPECT_EQ(res, i % 2 == 0);
     }
     context->getArena()->Reset();
@@ -748,7 +759,8 @@ TEST(CodeGenTest, RowFilter)
     delete context;
 }
 
-TEST (CodeGenTest, RowFilterString) {
+TEST(CodeGenTest, RowFilterString)
+{
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes vecTypes(vecOfTypes);
     const int32_t numCols = 2;
@@ -760,8 +772,8 @@ TEST (CodeGenTest, RowFilterString) {
     s1[0] = "hello world";
     s2[0] = "world hello";
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t) s1->c_str();
-    vals[1] = (int64_t) s2->c_str();
+    vals[0] = (int64_t)s1->c_str();
+    vals[1] = (int64_t)s2->c_str();
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[numCols];
@@ -783,7 +795,7 @@ TEST (CodeGenTest, RowFilterString) {
     auto substrCol = new FieldExpr(0, VarcharType());
     auto substrIndex = new LiteralExpr(1, IntType());
     auto substrLen = new LiteralExpr(5, IntType());
-    std::vector<Expr*> args;
+    std::vector<Expr *> args;
     args.push_back(substrCol);
     args.push_back(substrIndex);
     args.push_back(substrLen);
@@ -799,14 +811,15 @@ TEST (CodeGenTest, RowFilterString) {
     auto filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
 
-    bool res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    bool res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
+        dictionaryVectors);
     EXPECT_EQ(res, true);
     delete filter;
 
     auto substrCol2 = new FieldExpr(1, VarcharType());
     auto *substrIndex2 = new LiteralExpr(1, IntType());
     auto substrLen2 = new LiteralExpr(5, IntType());
-    std::vector<Expr*> args2;
+    std::vector<Expr *> args2;
     args2.push_back(substrCol2);
     args2.push_back(substrIndex2);
     args2.push_back(substrLen2);
@@ -820,7 +833,8 @@ TEST (CodeGenTest, RowFilterString) {
     filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
 
-    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
+        dictionaryVectors);
     EXPECT_EQ(res, false);
 
     delete filter;
@@ -828,7 +842,7 @@ TEST (CodeGenTest, RowFilterString) {
     auto substrCol3 = new FieldExpr(0, VarcharType());
     auto substrIndex3 = new LiteralExpr(1, IntType());
     auto substrLen3 = new LiteralExpr(5, IntType());
-    std::vector<Expr*> args3;
+    std::vector<Expr *> args3;
     args3.push_back(substrCol3);
     args3.push_back(substrIndex3);
     args3.push_back(substrLen3);
@@ -837,7 +851,7 @@ TEST (CodeGenTest, RowFilterString) {
     auto substrCol4 = new FieldExpr(1, VarcharType());
     auto substrIndex4 = new LiteralExpr(7, IntType());
     auto substrLen4 = new LiteralExpr(11, IntType());
-    std::vector<Expr*> args4;
+    std::vector<Expr *> args4;
     args4.push_back(substrCol4);
     args4.push_back(substrIndex4);
     args4.push_back(substrLen4);
@@ -849,7 +863,8 @@ TEST (CodeGenTest, RowFilterString) {
     filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
 
-    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
+        dictionaryVectors);
     EXPECT_EQ(res, true);
     context->getArena()->Reset();
     for (int i = 0; i < numCols; i++) {
@@ -887,7 +902,8 @@ TEST(CodeGenTest, Operators1)
     BinaryExpr *expr = new BinaryExpr(AND, gteExpr, andLeft, BooleanType());
 
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT),
+        VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
@@ -921,7 +937,8 @@ TEST(CodeGenTest, Operators1)
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     // number of rows that passed filter
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
 
     v1[0] = 2;
@@ -931,7 +948,8 @@ TEST(CodeGenTest, Operators1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -977,7 +995,8 @@ TEST(CodeGenTest, MathFunctions1)
     auto eq2 = new BinaryExpr(EQ, abs3, abs4, BooleanType());
     auto expr = new BinaryExpr(AND, eq1, eq2, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT),
+        VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
@@ -1009,7 +1028,8 @@ TEST(CodeGenTest, MathFunctions1)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     context->getArena()->Reset();
 
@@ -1023,7 +1043,8 @@ TEST(CodeGenTest, MathFunctions1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
 
     context->getArena()->Reset();
@@ -1048,7 +1069,8 @@ TEST(CodeGenTest, MathFunctions2)
     FieldExpr *upperExpr = new FieldExpr(2, IntType());
     BetweenExpr *expr = new BetweenExpr(valueExpr, lowerExpr, upperExpr);
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT),
+        VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
@@ -1082,7 +1104,8 @@ TEST(CodeGenTest, MathFunctions2)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -1094,7 +1117,8 @@ TEST(CodeGenTest, MathFunctions2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1105,7 +1129,8 @@ TEST(CodeGenTest, MathFunctions2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1124,7 +1149,7 @@ TEST(CodeGenTest, MathFunctions2)
 
 TEST(CodeGenTest, MathFunctions3)
 {
-    //create expression objects
+    // create expression objects
     FieldExpr *col01 = new FieldExpr(0, IntType());
     LiteralExpr *data01 = new LiteralExpr(100, IntType());
     BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
@@ -1138,7 +1163,8 @@ TEST(CodeGenTest, MathFunctions3)
     BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT),
+        VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1170,7 +1196,8 @@ TEST(CodeGenTest, MathFunctions3)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1181,7 +1208,8 @@ TEST(CodeGenTest, MathFunctions3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1192,7 +1220,8 @@ TEST(CodeGenTest, MathFunctions3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1203,7 +1232,8 @@ TEST(CodeGenTest, MathFunctions3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1226,12 +1256,13 @@ TEST(CodeGenTest, MathFunctions4)
     FieldExpr *col = new FieldExpr(0, IntType());
     std::vector<Expr *> args;
     args.push_back(col);
-    for (int32_t i = 1; i<6; i++){
+    for (int32_t i = 1; i < 6; i++) {
         args.push_back(new LiteralExpr(i, IntType()));
     }
     InExpr *expr = new InExpr(args);
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT),
+        VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1263,7 +1294,8 @@ TEST(CodeGenTest, MathFunctions4)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1274,7 +1306,8 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1285,7 +1318,8 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1296,7 +1330,8 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1307,7 +1342,8 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -1348,7 +1384,8 @@ TEST(CodeGenTest, CastNumbers1)
 
     auto expr = new BinaryExpr(EQ, abs0, abs1, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_DOUBLE) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
+        VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1380,7 +1417,8 @@ TEST(CodeGenTest, CastNumbers1)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1391,7 +1429,8 @@ TEST(CodeGenTest, CastNumbers1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1402,7 +1441,8 @@ TEST(CodeGenTest, CastNumbers1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1431,7 +1471,8 @@ TEST(CodeGenTest, CastNumbers2)
     auto col2 = new FieldExpr(2, DoubleType());
     auto expr = new BinaryExpr(GT, cast, col2, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_DOUBLE) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
+        VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1463,7 +1504,8 @@ TEST(CodeGenTest, CastNumbers2)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1474,7 +1516,8 @@ TEST(CodeGenTest, CastNumbers2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1485,7 +1528,8 @@ TEST(CodeGenTest, CastNumbers2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1514,7 +1558,8 @@ TEST(CodeGenTest, Like)
     args.push_back(data);
     auto expr = GetFuncExpr(funcStr, args, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR),
+        VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1553,7 +1598,8 @@ TEST(CodeGenTest, Like)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1566,7 +1612,8 @@ TEST(CodeGenTest, Like)
 
     offsets[2][1] = s2->length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1596,7 +1643,8 @@ TEST(CodeGenTest, DateCast)
     auto col0 = new FieldExpr(0, IntType());
     auto expr = new BinaryExpr(GT, cast, col0, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR),
+        VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1635,7 +1683,8 @@ TEST(CodeGenTest, DateCast)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1649,7 +1698,8 @@ TEST(CodeGenTest, DateCast)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1663,7 +1713,8 @@ TEST(CodeGenTest, DateCast)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1682,13 +1733,13 @@ TEST(CodeGenTest, DateCast)
 
 TEST(CodeGenTest, SubstrIn)
 {
-    //create the expression objects
+    // create the expression objects
     auto col2 = new FieldExpr(2, VarcharType());
     auto substrIndex = new LiteralExpr(1, IntType());
     auto substrLen = new LiteralExpr(2, IntType());
     VecTypePtr retType = VarcharType();
     std::string funcStr = "substr";
-    std::vector<Expr*> substrArgs;
+    std::vector<Expr *> substrArgs;
     substrArgs.push_back(col2);
     substrArgs.push_back(substrIndex);
     substrArgs.push_back(substrLen);
@@ -1705,7 +1756,8 @@ TEST(CodeGenTest, SubstrIn)
 
     InExpr *expr = new InExpr(args);
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR),
+        VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1744,7 +1796,8 @@ TEST(CodeGenTest, SubstrIn)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -1759,7 +1812,8 @@ TEST(CodeGenTest, SubstrIn)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1773,7 +1827,8 @@ TEST(CodeGenTest, SubstrIn)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1795,7 +1850,7 @@ TEST(CodeGenTest, ConcatStr)
     std::string funcStr = "concat";
     auto col1 = new FieldExpr(1, VarcharType());
     auto col2 = new FieldExpr(2, VarcharType());
-    std::vector<Expr*> concatArgs;
+    std::vector<Expr *> concatArgs;
     concatArgs.push_back(col1);
     concatArgs.push_back(col2);
     VecTypePtr retType = VarcharType();
@@ -1804,7 +1859,8 @@ TEST(CodeGenTest, ConcatStr)
     auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarcharType(11));
     auto expr = new BinaryExpr(EQ, concatExpr, helloWorldExpr, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR),
+        VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1842,7 +1898,8 @@ TEST(CodeGenTest, ConcatStr)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -1857,7 +1914,8 @@ TEST(CodeGenTest, ConcatStr)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1871,7 +1929,8 @@ TEST(CodeGenTest, ConcatStr)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1910,7 +1969,7 @@ TEST(CodeGenTest, ConcatChars)
 
     auto charTypeA = new CharVecType(30);
     auto charTypeB = new CharVecType(20);
-    std::vector<VecType> vecOfTypes = { IntVecType(), VecType(*charTypeA), VecType(*charTypeB)};
+    std::vector<VecType> vecOfTypes = { IntVecType(), VecType(*charTypeA), VecType(*charTypeB) };
     VecTypes types(vecOfTypes);
     Parser parser {};
     ExprPrinter printExprTree;
@@ -1948,7 +2007,8 @@ TEST(CodeGenTest, ConcatChars)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -1963,7 +2023,8 @@ TEST(CodeGenTest, ConcatChars)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1977,7 +2038,8 @@ TEST(CodeGenTest, ConcatChars)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -2000,13 +2062,14 @@ TEST(CodeGenTest, ToUpper)
 {
     std::string funcStr = "upper";
     auto *col1 = new FieldExpr(1, VarcharType());
-    std::vector<Expr*> toUpperArgs;
+    std::vector<Expr *> toUpperArgs;
     toUpperArgs.push_back(col1);
     VecTypePtr retType = VarcharType();
     auto toUpperExpr = GetFuncExpr(funcStr, toUpperArgs, VarcharType());
 
-    auto upperTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
-                                         VarcharType(80));
+    auto upperTestExpr = new LiteralExpr(
+        new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
+        VarcharType(80));
     auto expr = new BinaryExpr(EQ, toUpperExpr, upperTestExpr, BooleanType());
 
     ExprPrinter printExprTree;
@@ -2040,7 +2103,8 @@ TEST(CodeGenTest, ToUpper)
 
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
 
@@ -2063,11 +2127,13 @@ TEST(CodeGenTest, ToUpperChar)
 {
     std::string funcStr = "upper";
     auto *col1 = new FieldExpr(1, CharType(80));
-    std::vector<Expr*> toUpperCharArgs;
+    std::vector<Expr *> toUpperCharArgs;
     toUpperCharArgs.push_back(col1);
     auto toUpperCharExpr = GetFuncExpr(funcStr, toUpperCharArgs, CharType(80));
 
-    auto upperCharTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."), CharType(80));
+    auto upperCharTestExpr = new LiteralExpr(
+        new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
+        CharType(80));
     auto expr = new BinaryExpr(EQ, toUpperCharExpr, upperCharTestExpr, BooleanType());
 
     ExprPrinter printExprTree;
@@ -2101,7 +2167,8 @@ TEST(CodeGenTest, ToUpperChar)
 
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
 
@@ -2133,7 +2200,8 @@ TEST(CodeGenTest, StringWithOps)
 
     BinaryExpr *expr = new BinaryExpr(OR, eqExpr1, eqExpr2, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR),
+        VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2168,12 +2236,13 @@ TEST(CodeGenTest, StringWithOps)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-auto codegen = FilterCodeGen::Create("stringTest1", *expr);
+    auto codegen = FilterCodeGen::Create("stringTest1", *expr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -2186,7 +2255,8 @@ auto codegen = FilterCodeGen::Create("stringTest1", *expr);
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -2198,7 +2268,8 @@ auto codegen = FilterCodeGen::Create("stringTest1", *expr);
     vals[2] = (int64_t)s2->c_str();
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -2229,7 +2300,8 @@ TEST(CodeGenTest, Coalesce)
     right->dataType = LongType();
     BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG),
+        VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2261,13 +2333,15 @@ TEST(CodeGenTest, Coalesce)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -2325,7 +2399,8 @@ TEST(CodeGenTest, ProjectionCoalesce)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
+        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2337,7 +2412,8 @@ TEST(CodeGenTest, ProjectionCoalesce)
     for (int i = 0; i < 3; i++) {
         bitmap[0][0] = true;
     }
-    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2390,7 +2466,8 @@ TEST(CodeGenTest, ProjectionIsNull)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
+        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2402,7 +2479,8 @@ TEST(CodeGenTest, ProjectionIsNull)
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = true;
     }
-    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2453,13 +2531,15 @@ TEST(CodeGenTest, IsNull)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, false);
     context->getArena()->Reset();
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
@@ -2504,13 +2584,15 @@ TEST(CodeGenTest, IsNotNull)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, false);
     context->getArena()->Reset();
 
@@ -2547,7 +2629,7 @@ TEST(CodeGenTest, DecimalOperators1)
     // creating decimal
     int64_t c[4] = { 10, 0, 9, 0 };
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t) c;
+    vals[0] = (int64_t)c;
 
     int32_t *selected = new int32_t[2];
 
@@ -2568,7 +2650,8 @@ TEST(CodeGenTest, DecimalOperators1)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -2594,7 +2677,8 @@ TEST(CodeGenTest, DecimalOperators2)
 
     BetweenExpr *expr = new BetweenExpr(col0, col1, col2);
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128),
+        VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2629,7 +2713,8 @@ TEST(CodeGenTest, DecimalOperators2)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -2668,7 +2753,8 @@ TEST(CodeGenTest, DecimalOperators3)
 
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128),
+        VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2704,7 +2790,8 @@ TEST(CodeGenTest, DecimalOperators3)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -2780,7 +2867,8 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
 
     for (int i = 0; i < 4; i++) {
@@ -2802,12 +2890,12 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
     FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *col1 = new FieldExpr(1, Decimal128Type(38, 0));
     std::string absFuncStr = "abs";
-    std::vector<Expr*> absArgs;
+    std::vector<Expr *> absArgs;
     absArgs.push_back(col0);
     auto absExpr = GetFuncExpr(absFuncStr, absArgs, Decimal128Type(38, 0));
 
     std::string compFuncStr = "Decimal128Compare";
-    std::vector<Expr*> compArgs;
+    std::vector<Expr *> compArgs;
     compArgs.push_back(absExpr);
     compArgs.push_back(col1);
     auto compExpr = GetFuncExpr(compFuncStr, compArgs, IntType());
@@ -2847,7 +2935,8 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
 
     for (int i = 0; i < 2; i++) {
@@ -2904,7 +2993,8 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
+        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2916,7 +3006,8 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = true;
     }
-    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], true);
     EXPECT_EQ(newNullValues[1], true);
     EXPECT_EQ(newNullValues[2], true);
@@ -2979,7 +3070,8 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
+        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2995,7 +3087,8 @@ TEST(CodeGenTest, ProjectionCodeGen)
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = true;
     }
-    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], true);
     EXPECT_EQ(newNullValues[1], true);
     EXPECT_EQ(newNullValues[2], true);
@@ -3023,7 +3116,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
 TEST(CodeGenTest, TestRowProjectLong)
 {
     int64_t values[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    auto * vector = CreateVector<LongVector>(values, 10);
+    auto *vector = CreateVector<LongVector>(values, 10);
     auto slicedVector = vector->Slice(4, 6);
 
     // create expression objects
@@ -3052,7 +3145,8 @@ TEST(CodeGenTest, TestRowProjectLong)
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < slicedVector->GetSize(); i++) {
         isNull = false;
-        void *valuePtr = func(valuesAddr, nullsAddr, offsetsAddr, i, &length, reinterpret_cast<int64_t>(context), dictVecAddr, &isNull);
+        void *valuePtr = func(valuesAddr, nullsAddr, offsetsAddr, i, &length, reinterpret_cast<int64_t>(context),
+            dictVecAddr, &isNull);
         int64_t value = *((int64_t *)valuePtr);
         int64_t inputValue = slicedVector->GetValue(i);
         EXPECT_EQ(value, inputValue + 100);
@@ -3102,7 +3196,8 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < slicedVector->GetSize(); i++) {
         isNull = false;
-        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &length, reinterpret_cast<int64_t>(context), dictionaries, &isNull);
+        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &length, reinterpret_cast<int64_t>(context),
+            dictionaries, &isNull);
         uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
         std::string result(value, value + length);
 
@@ -3122,11 +3217,12 @@ TEST(CodeGenTest, CastNumbers3)
 {
     // create expression objects
     std::vector<Expr *> args;
-    FieldExpr *col1 =  new FieldExpr(1, DoubleType());
+    FieldExpr *col1 = new FieldExpr(1, DoubleType());
     FieldExpr *col2 = new FieldExpr(2, DoubleType());
     BinaryExpr *expr = new BinaryExpr(LT, col1, col2, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_DOUBLE),
+        VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes types(vecOfTypes);
     Parser parser {};
     ExprPrinter printExprTree;
@@ -3158,7 +3254,8 @@ TEST(CodeGenTest, CastNumbers3)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -3169,7 +3266,8 @@ TEST(CodeGenTest, CastNumbers3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -3180,7 +3278,8 @@ TEST(CodeGenTest, CastNumbers3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -3198,7 +3297,8 @@ TEST(CodeGenTest, CastNumbers3)
     delete context;
 }
 
-TEST (CodeGenTest, Substr) {
+TEST(CodeGenTest, Substr)
+{
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     const int32_t numCols = 2;
@@ -3210,8 +3310,8 @@ TEST (CodeGenTest, Substr) {
     s2[0] = "Function SUBSTR";
 
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t) s1->c_str();
-    vals[1] = (int64_t) s2->c_str();
+    vals[0] = (int64_t)s1->c_str();
+    vals[1] = (int64_t)s2->c_str();
 
     int32_t *selected = new int32_t[1];
     bool **bitmap = new bool *[numCols];
@@ -3242,7 +3342,7 @@ TEST (CodeGenTest, Substr) {
     args1.push_back(substrLen1);
     auto substrExp1 = GetFuncExpr(funcStr, args1, VarcharType());
 
-    auto ctionExpr= new LiteralExpr(new std::string("ction"), VarcharType(6));
+    auto ctionExpr = new LiteralExpr(new std::string("ction"), VarcharType(6));
     auto expr1 = new BinaryExpr(EQ, substrExp1, ctionExpr, BooleanType());
 
     int64_t dictionaries[numCols] = {};
@@ -3251,7 +3351,8 @@ TEST (CodeGenTest, Substr) {
     EXPECT_FALSE(filter == nullptr);
     auto filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
-    bool res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    bool res =
+        filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
     delete filter;
 
@@ -3263,14 +3364,14 @@ TEST (CodeGenTest, Substr) {
     args2.push_back(substrIndex2);
     auto substrExp2 = GetFuncExpr(funcStr, args2, VarcharType());
 
-    auto ubsterExpr= new LiteralExpr(new std::string("UBSTR"), VarcharType(6));
+    auto ubsterExpr = new LiteralExpr(new std::string("UBSTR"), VarcharType(6));
     auto expr2 = new BinaryExpr(EQ, substrExp2, ubsterExpr, BooleanType());
 
     filter = new RowFilter(*expr2);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
-    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
     delete filter;
 
@@ -3282,14 +3383,14 @@ TEST (CodeGenTest, Substr) {
     args3.push_back(substrIndex3);
     auto substrExp3 = GetFuncExpr(funcStr, args3, VarcharType());
 
-    auto STRExpr= new LiteralExpr(new std::string("STR Function"), VarcharType(13));
+    auto STRExpr = new LiteralExpr(new std::string("STR Function"), VarcharType(13));
     auto expr3 = new BinaryExpr(EQ, substrExp3, STRExpr, BooleanType());
 
     filter = new RowFilter(*expr3);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
-    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
     context->getArena()->Reset();
 
@@ -3348,7 +3449,8 @@ TEST(CodeGenTest, Mm3HashInt)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
@@ -3560,8 +3662,10 @@ TEST(CodeGenTest, Pmod)
 
     auto context = new ExecutionContext();
 
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)codegen->GetFunction();
-    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(
+        intptr_t)codegen->GetFunction();
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
@@ -3588,8 +3692,8 @@ TEST(CodeGenTest, SubstrWithChars)
     s2[0] = "Function SUBSTR";
 
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t) s1->c_str();
-    vals[1] = (int64_t) s2->c_str();
+    vals[0] = (int64_t)s1->c_str();
+    vals[1] = (int64_t)s2->c_str();
 
     int32_t *selected = new int32_t[1];
     bool **bitmap = new bool *[numCols];
@@ -3636,7 +3740,8 @@ TEST(CodeGenTest, SubstrWithChars)
     EXPECT_FALSE(filter == nullptr);
     auto filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
-    bool res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    bool res =
+        filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
 
     context->getArena()->Reset();
@@ -3660,7 +3765,7 @@ TEST(CodeGenTest, CombineHash)
     FieldExpr *col1 = new FieldExpr(1, LongType());
     std::string funcStr = "combine_hash";
     VecTypePtr retType = LongType();
-    std::vector<Expr*> args;
+    std::vector<Expr *> args;
     args.push_back(col0);
     args.push_back(col1);
     auto combineHash = GetFuncExpr(funcStr, args, LongType());
@@ -3668,7 +3773,8 @@ TEST(CodeGenTest, CombineHash)
     FieldExpr *col2 = new FieldExpr(2, LongType());
     BinaryExpr *expr = new BinaryExpr(EQ, combineHash, col2, BooleanType());
 
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG),
+        VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -3676,7 +3782,7 @@ TEST(CodeGenTest, CombineHash)
     int64_t v1[1] = {12};
     int64_t v2[1] = {123};
     int64_t v3[1] = {495};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t)v1;
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
@@ -3698,7 +3804,8 @@ TEST(CodeGenTest, CombineHash)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
@@ -3790,15 +3897,18 @@ TEST(CodeGenTest, JSONFunc)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
 
     v1[0] = -1;
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 1);
 
     v1[0] = 2;
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {

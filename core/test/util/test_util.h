@@ -6,7 +6,6 @@
 #define __TEST_UTIL_H__
 
 #include <time.h>
-#include <common/expressions.h>
 #include "../../src/vector/vector_common.h"
 #include "../../src/operator/operator.h"
 #include "../../src/operator/operator_factory.h"
@@ -15,7 +14,7 @@
 #include "../../src/vector/vector_allocator_factory.h"
 #include "codegen/func_signature.h"
 #include "codegen/func_registry.h"
-#include "common/expressions.h"
+#include "expression/expressions.h"
 
 using namespace omniruntime::vec;
 
@@ -135,6 +134,6 @@ void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t proj
     std::vector<int32_t> &typeIds, int32_t *projectCols);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
-    std::vector<omniruntime::expressions::Expr*> args, omniruntime::expressions::VecTypePtr returnType);
+    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::VecTypePtr returnType);
 
 #endif
