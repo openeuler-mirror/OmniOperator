@@ -117,6 +117,7 @@ OmniStatus WindowOperator::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
     pagesIndex = std::move(make_unique<PagesIndex>(sourceTypes));
+    int32_t sourceTypeIdx = 0;
     for (int32_t i = 0; i < windowFunctionCount; i++) {
         auto type = windowFunctionTypes[i];
         switch (type) {
@@ -134,6 +135,10 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MIN:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
                     sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+                break;
+            case OMNI_AGGREGATION_TYPE_COUNT_ALL:
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
+                    VecType(OMNI_VEC_TYPE_NONE), allTypes.Get()[sourceTypes.GetSize() + i])));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;

@@ -145,7 +145,7 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t 
     if (start > end) {
         return;
     }
-    Vector ***vectorBatch = windowIndex->GetPagesIndex()->GetColumns();
+    Vector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
     uint32_t width = (inputType.GetId() == OMNI_VEC_TYPE_VARCHAR || inputType.GetId() == OMNI_VEC_TYPE_CHAR) ?
         static_cast<const VarcharVecType &>(inputType).GetWidth() :
@@ -153,73 +153,92 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t 
     // this is important to package data into an extra vector and use it to do the aggregation
     // the vector is used for aggregation in window operation
     auto resultVectorBatch = new VectorBatch(1, rowCount);
-    resultVectorBatch->SetVector(0,
-        VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount));
+    if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
+        resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
+    } else {
+        resultVectorBatch->SetVector(0,
+            VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount));
+    }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
             windowIndex->GetPagesIndex()->GetValueAddresses()[resultVectorPosition + windowIndex->GetStart()];
-        int32_t vectorIndex = DecodeSliceIndex(sliceAddress);
-        int32_t vectorPosition = DecodePosition(sliceAddress);
 
         // actually the data to the aggregation function are from the sorted data with SortPagesIndexIfNecessary()
         // function since the implementation of SortPagesIndexIfNecessary will never return dictionary block here we add
         // the ExpandVectorAndIndex to ensure we send the right data to aggregation
-        Vector *vector = vectorBatch[argumentChannels][vectorIndex];
-        int32_t originalVectorPosition;
-        Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
-        AccumulateData(start, resultVectorBatch, resultVectorPosition, originalVectorPosition, originalVector);
+        AccumulateData(resultVectorBatch, resultVectorPosition - start, vectors, sliceAddress);
     }
     // after using the vector, we should release it
     VectorHelper::FreeVecBatch(resultVectorBatch);
 }
 
-void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::VectorBatch *resultVectorBatch,
-    int32_t resultVectorPosition, int32_t originalVectorPosition, omniruntime::vec::Vector *originalVector)
+void AggregateWindowFunction::AccumulateData(VectorBatch *resultVectorBatch, int32_t resultVectorPosition,
+    Vector ***inputVectors, int64_t inputAddress)
 {
+    int32_t vectorIndex = DecodeSliceIndex(inputAddress);
+    int32_t vectorPosition = DecodePosition(inputAddress);
+    Vector *originalVector = nullptr;
+    int32_t originalVectorPosition;
+    if (argumentChannels == -1) {
+        originalVectorPosition = vectorPosition;
+        aggregator->ProcessGroup(aggregateState.operator*(), resultVectorBatch, resultVectorPosition);
+        return;
+    } else {
+        Vector *vector = inputVectors[argumentChannels][vectorIndex];
+        originalVector = VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
+    }
+
     auto resultVector = resultVectorBatch->GetVector(0);
     if (originalVector->IsValueNull(originalVectorPosition)) {
-        resultVector->SetValueNull(resultVectorPosition - start);
+        resultVector->SetValueNull(resultVectorPosition);
     } else {
-        switch (originalVector->GetTypeId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
-                int32_t actual = static_cast<IntVector *>(originalVector)->GetValue(originalVectorPosition);
-                static_cast<IntVector *>(resultVector)->SetValue(resultVectorPosition - start, actual);
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
-                int64_t actual = static_cast<LongVector *>(originalVector)->GetValue(originalVectorPosition);
-                static_cast<LongVector *>(resultVector)->SetValue(resultVectorPosition - start, actual);
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                double actual = static_cast<DoubleVector *>(originalVector)->GetValue(originalVectorPosition);
-                static_cast<DoubleVector *>(resultVector)->SetValue(resultVectorPosition - start, actual);
-                break;
-            }
-            case OMNI_VEC_TYPE_BOOLEAN: {
-                bool actual = static_cast<BooleanVector *>(originalVector)->GetValue(originalVectorPosition);
-                static_cast<BooleanVector *>(resultVector)->SetValue(resultVectorPosition - start, actual);
-                break;
-            }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                uint8_t *actual = nullptr;
-                int32_t length =
-                    static_cast<VarcharVector *>(originalVector)->GetValue(originalVectorPosition, &actual);
-                static_cast<VarcharVector *>(resultVector)->SetValue(resultVectorPosition - start, actual, length);
-                break;
-            }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                Decimal128 actual = static_cast<Decimal128Vector *>(originalVector)->GetValue(originalVectorPosition);
-                static_cast<Decimal128Vector *>(resultVector)->SetValue(resultVectorPosition - start, actual);
-                break;
-            }
-            default:
-                break;
-        }
-
-        aggregator->ProcessGroup(aggregateState.operator*(), resultVectorBatch, resultVectorPosition - start);
+        AssignValueForVector(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+        aggregator->ProcessGroup(aggregateState.operator*(), resultVectorBatch, resultVectorPosition);
     }
+}
+
+void AggregateWindowFunction::AssignValueForVector(Vector *originalVector, int32_t originalVectorPosition,
+    Vector *resultVector, int32_t resultVectorPosition)
+{
+    switch (originalVector->GetTypeId()) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            SetValue<IntVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+            break;
+        }
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
+            SetValue<LongVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+            break;
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            SetValue<DoubleVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+            break;
+        }
+        case OMNI_VEC_TYPE_BOOLEAN: {
+            SetValue<BooleanVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+            break;
+        }
+        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR: {
+            uint8_t *actual = nullptr;
+            int32_t length = static_cast<VarcharVector *>(originalVector)->GetValue(originalVectorPosition, &actual);
+            static_cast<VarcharVector *>(resultVector)->SetValue(resultVectorPosition, actual, length);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            SetValue<Decimal128Vector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+template <typename T>
+void AggregateWindowFunction::SetValue(Vector *inputVector, int32_t inputPosition, Vector *outputVector,
+    int32_t outputPosition)
+{
+    auto value = static_cast<T *>(inputVector)->GetValue(inputPosition);
+    static_cast<T *>(outputVector)->SetValue(outputPosition, value);
 }
