@@ -28,7 +28,7 @@ void DecimalIRBuilder::AddScaleMultiplier() const
     globalScaleMultipliers->setAlignment(llvm::MaybeAlign(alignment));
 }
 
-llvm::Value *DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+void DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
     llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight)
 {
     llvm::Value *le = this->builder.CreateICmpSLE(&leftScale, &rightScale);

@@ -30,7 +30,7 @@ public:
     // Combine the two parts into an i128
     llvm::Value *ToInt128(llvm::Value *high, llvm::Value *low) const;
     void AddScaleMultiplier() const;
-    llvm::Value *ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
         llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight);
     llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta);
     llvm::Value *GetScaleMultiplier(llvm::Value &delta);

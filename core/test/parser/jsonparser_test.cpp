@@ -75,7 +75,7 @@ string getDec64TestJson(int64_t val, int32_t precision, int32_t scale)
 string getDec128TestJson(const string &val, int32_t precision, int32_t scale)
 {
     ss.str("");
-    ss << R"({ "exprType": "LITERAL", "dataType": 7, "isNull": false, "value": )" << val << R"(, "precision": )" <<
+    ss << R"({ "exprType": "LITERAL", "dataType": 7, "isNull": false, "value": ")" << val << R"(", "precision": )" <<
         precision << R"(, "scale": )" << scale << R"(})";
     return ss.str();
 }
@@ -199,6 +199,16 @@ string getBinaryTestJson(int32_t rt, const string &op, const string &left, const
     return ss.str();
 }
 
+string getDecimalBinaryTestJson(int32_t rt, const string &op, const string &left, const string &right,
+                                int32_t returnPrecision, int32_t returnScale)
+{
+    ss.str("");
+    ss << R"({ "exprType": "BINARY", "returnType": )" << rt << R"(, "precision": )" << returnPrecision
+    << R"(, "scale": )" << returnScale << R"(, "operator": ")" << op << R"(", "left": )" << left <<
+    R"(, "right": )" << right << R"(})";
+    return ss.str();
+}
+
 string getUnaryTestJson(const string &op, const string &expr)
 {
     ss.str("");
@@ -287,7 +297,6 @@ public:
         : expr(make_unique<FieldExpr>(colVal, make_unique<DataType>(dt)).release())
     {
         dataType = &(expr->GetReturnType());
-        ;
     }
     ~TestFieldExpr() override
     {
@@ -315,12 +324,9 @@ class TestBinaryExpr : public TestExpr {
     TestExpr *right = nullptr;
 
 public:
-    TestBinaryExpr(Operator op, TestExpr *left, TestExpr *right) : op(op), left(left), right(right)
+    TestBinaryExpr(Operator op, TestExpr *left, TestExpr *right, DataTypePtr dt) : op(op), left(left), right(right)
     {
-        if (CmpOps.find(op) != CmpOps.end())
-            dataType = BooleanType().release();
-        else
-            dataType = left->dataType->GetId() > right->dataType->GetId() ? left->dataType : right->dataType;
+        dataType = dt.release();
     }
     ~TestBinaryExpr() override
     {
@@ -697,7 +703,7 @@ TEST(JSONParserTest, BinaryExpr_EQ)
         getBinaryTestJson(OMNI_BOOLEAN, CmpOps.at(EQ), getInt32TestJSON(int32Val), getInt64TestJson(int64Val));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
     TestBinaryExpr expectedExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
-        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+        make_unique<TestLiteralExpr>(int64Val, *LongType()).release(), BooleanType());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
@@ -708,10 +714,37 @@ TEST(JSONParserTest, BinaryExpr_ADD)
         getBinaryTestJson(OMNI_LONG, ArithOps.at(ADD), getInt32TestJSON(int32Val), getInt64TestJson(int64Val));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
     TestBinaryExpr expectedExpr(ADD, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
-        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+        make_unique<TestLiteralExpr>(int64Val, *LongType()).release(), LongType());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
+
+TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL64)
+{
+    string unparsedBinaryJson =
+            getDecimalBinaryTestJson(OMNI_DECIMAL64, ArithOps.at(ADD), getDec64TestJson((int64_t) 65, 6, 2),
+                                     getInt64TestJson(int64Val), 10, 3);
+    Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
+    TestBinaryExpr expectedExpr(ADD, make_unique<TestLiteralExpr>((int64_t) 65, *Decimal64Type(6, 2)).release(),
+                                make_unique<TestLiteralExpr>(int64Val, *LongType()).release(), Decimal64Type(10, 3));
+    expectedExpr.isEqual(addExpr);
+    delete addExpr;
+}
+
+
+TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL128)
+{
+    string unparsedBinaryJson =
+            getDecimalBinaryTestJson(OMNI_DECIMAL128, ArithOps.at(DIV), getDec128TestJson("123456", 32, 2),
+                                     getInt32TestJSON(int32Val), 35, 4);
+    auto divExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
+    TestBinaryExpr expectedExpr(DIV, make_unique<TestLiteralExpr>(new std::string("123456"), *Decimal128Type(32, 2)).release(),
+                                make_unique<TestLiteralExpr>(int32Val, *IntType()).release(), Decimal128Type(35, 4));
+    expectedExpr.isEqual(divExpr);
+    delete divExpr;
+}
+
+
 
 TEST(JSONParserTest, UnaryExpr_NOT)
 {
@@ -780,7 +813,7 @@ TEST(JSONParserTest, SwitchExpr)
         getSwitchTestJson(OMNI_INT, getInt32TestJSON(int32Val), whenJson, getInt32TestJSON(4));
     Expr *switchExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedSwitchJson));
     auto condition = new TestBinaryExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
-        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+        make_unique<TestLiteralExpr>(int64Val, *LongType()).release(), BooleanType());
     vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition,
         make_unique<TestLiteralExpr>(int32Val, *IntType()).release() } };
     TestSwitchExpr expectedExpr(whenClause, make_unique<TestLiteralExpr>(4, *IntType()).release());
@@ -795,7 +828,7 @@ TEST(JSONParserTest, IfExpr)
     string unparsedIfJson = getIfTestJson(OMNI_INT, conditionJson, getInt32TestJSON(int32Val), getInt32TestJSON(4));
     Expr *ifExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIfJson));
     auto condition = new TestBinaryExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
-        make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+        make_unique<TestLiteralExpr>(int64Val, *LongType()).release(), BooleanType());
     TestIfExpr expectedExpr(condition, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
         make_unique<TestLiteralExpr>(4, *IntType()).release());
     expectedExpr.isEqual(ifExpr);

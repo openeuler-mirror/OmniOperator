@@ -176,8 +176,9 @@ void PrintDecimal128Val(const LiteralExpr &e, bool printWithTypes, string &inden
     if (printWithTypes) {
         printf("d128_");
     }
-    // FIXME: printing as int64_t for now;
-    printf(indent.append("%ld").c_str(), e.longVal);
+    printf(indent.append("'%s':%s(%d, %d)").c_str(), (e.stringVal)->c_str(),
+           TypeUtil::TypeToString(e.GetReturnTypeId()).c_str(),
+           e.dataType->GetPrecision(), e.dataType->GetScale());
 }
 
 void ExprPrinter::Visit(const LiteralExpr &e)

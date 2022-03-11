@@ -1048,7 +1048,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 
     DataTypes outputTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType(),
         LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
-    string argumentChannels[8] = {"#0", "#1", "SUBTRACT:1(#2, 2:1)", "#3", "#4", "#5", "#7", "#8"};
+    string argumentChannels[8] = {"#0", "#1", "SUBTRACT:8(#2, 2:8)", "#3", "#4", "#5", "#7", "#8"};
     Parser parser;
     std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes);
 

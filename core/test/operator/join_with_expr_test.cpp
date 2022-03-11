@@ -29,18 +29,16 @@ void DeleteJoinExprOperatorFactory(HashBuilderWithExprOperatorFactory *hashBuild
 std::vector<omniruntime::expressions::Expr *> CreateBuildHashKeys()
 {
     omniruntime::expressions::FieldExpr *addLeft = new omniruntime::expressions::FieldExpr(1, LongType());
-    omniruntime::expressions::LiteralExpr *addRight = new omniruntime::expressions::LiteralExpr(50, LongType());
-    addRight->longVal = 50;
-    omniruntime::expressions::BinaryExpr *addExpr =
-        new omniruntime::expressions::BinaryExpr(omniruntime::expressions::ADD, addLeft, addRight, LongType());
+    omniruntime::expressions::LiteralExpr *addRight = new omniruntime::expressions::LiteralExpr(50L, LongType());
+    omniruntime::expressions::BinaryExpr *addExpr = new omniruntime::expressions::BinaryExpr(
+    omniruntime::expressions::ADD, addLeft, addRight, LongType());
     std::vector<omniruntime::expressions::Expr *> buildHashKeysExprs = { addExpr };
     return buildHashKeysExprs;
 }
 
 std::vector<omniruntime::expressions::Expr *> CreateProbeHashKeys()
 {
-    omniruntime::expressions::LiteralExpr *addLeftProbe = new omniruntime::expressions::LiteralExpr(50, LongType());
-    addLeftProbe->longVal = 50;
+    omniruntime::expressions::LiteralExpr *addLeftProbe = new omniruntime::expressions::LiteralExpr(50L, LongType());
     omniruntime::expressions::FieldExpr *addRightProbe = new omniruntime::expressions::FieldExpr(1, LongType());
     omniruntime::expressions::BinaryExpr *addExprProbe = new omniruntime::expressions::BinaryExpr(
         omniruntime::expressions::ADD, addLeftProbe, addRightProbe, LongType());
