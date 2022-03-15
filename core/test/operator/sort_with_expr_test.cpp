@@ -4,10 +4,10 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../src/operator/sort/sort_expr.h"
-#include "../../src/vector/vector_helper.h"
+#include "operator/sort/sort_expr.h"
+#include "vector/vector_helper.h"
 #include "../util/test_util.h"
-#include "../../src/operator/jit_context/jit_context.h"
+#include "jit_context/jit_context.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
@@ -24,7 +24,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     int outputCols[2] = {0, 1};
     auto col0 = new FieldExpr(0, IntType());
     auto col1 = new FieldExpr(1, LongType());
-    std::vector<Expr *> sortExprs{col0, col1};
+    std::vector<Expr *> sortExprs { col0, col1 };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -62,7 +62,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     auto addCol = new FieldExpr(0, IntType());
     auto addLiteral = new LiteralExpr(50, IntType());
     auto addExpr = new BinaryExpr(ADD, addCol, addLiteral);
-    std::vector<Expr *> sortExprs{col0, addExpr};
+    std::vector<Expr *> sortExprs { col0, addExpr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -102,7 +102,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal);
     auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col);
-    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+    std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -151,7 +151,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal);
     auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col);
-    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+    std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
@@ -192,9 +192,9 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     auto substrCol = new FieldExpr(0, VarcharType(200));
     auto substrIndex = new LiteralExpr(1, IntType());
     auto substrLen = new LiteralExpr(4, IntType());
-    std::vector<Expr*> args {substrCol, substrIndex, substrLen};
+    std::vector<Expr *> args { substrCol, substrIndex, substrLen };
     auto substrExpr = GetFuncExpr("substr", args, VarcharType(200));
-    std::vector<Expr *> sortExprs{substrExpr};
+    std::vector<Expr *> sortExprs { substrExpr };
 
     int32_t ascendings[vecCount] = {true};
     int32_t nullFirsts[vecCount] = {true};
@@ -265,7 +265,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal);
     auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col);
-    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+    std::vector<Expr *> sortExprs { add1Expr, add2Expr };
 
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};

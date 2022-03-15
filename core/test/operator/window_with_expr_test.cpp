@@ -3,10 +3,10 @@
  * @Description: window operator implementations
  */
 #include "gtest/gtest.h"
-#include "../../src/operator/window/window_expr.h"
+#include "operator/window/window_expr.h"
 #include "../util/test_util.h"
-#include "../../src/vector/vector_helper.h"
-#include "../../src/operator/jit_context/jit_context.h"
+#include "vector/vector_helper.h"
+#include "jit_context/jit_context.h"
 
 using namespace std;
 using namespace omniruntime::vec;

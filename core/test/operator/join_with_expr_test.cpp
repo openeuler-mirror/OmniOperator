@@ -4,11 +4,11 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../src/operator/join/hash_builder_expr.h"
-#include "../../src/operator/join/lookup_join_expr.h"
+#include "operator/join/hash_builder_expr.h"
+#include "operator/join/lookup_join_expr.h"
 #include "../util/test_util.h"
-#include "../../src/vector/vector_helper.h"
-#include "../../src/operator/jit_context/jit_context.h"
+#include "vector/vector_helper.h"
+#include "jit_context/jit_context.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -28,22 +28,20 @@ void DeleteJoinExprOperatorFactory(HashBuilderWithExprOperatorFactory *hashBuild
 
 std::vector<omniruntime::expressions::Expr *> CreateBuildHashKeys()
 {
-    omniruntime::expressions::FieldExpr *addLeft =
-            new omniruntime::expressions::FieldExpr(1, LongType());
-omniruntime::expressions::LiteralExpr *addRight = new omniruntime::expressions::LiteralExpr(50, LongType());
+    omniruntime::expressions::FieldExpr *addLeft = new omniruntime::expressions::FieldExpr(1, LongType());
+    omniruntime::expressions::LiteralExpr *addRight = new omniruntime::expressions::LiteralExpr(50, LongType());
     addRight->longVal = 50;
-    omniruntime::expressions::BinaryExpr *addExpr = new omniruntime::expressions::BinaryExpr(
-        omniruntime::expressions::ADD, addLeft, addRight, LongType());
+    omniruntime::expressions::BinaryExpr *addExpr =
+        new omniruntime::expressions::BinaryExpr(omniruntime::expressions::ADD, addLeft, addRight, LongType());
     std::vector<omniruntime::expressions::Expr *> buildHashKeysExprs = { addExpr };
     return buildHashKeysExprs;
 }
 
 std::vector<omniruntime::expressions::Expr *> CreateProbeHashKeys()
 {
-        omniruntime::expressions::LiteralExpr *addLeftProbe = new omniruntime::expressions::LiteralExpr(50, LongType());
+    omniruntime::expressions::LiteralExpr *addLeftProbe = new omniruntime::expressions::LiteralExpr(50, LongType());
     addLeftProbe->longVal = 50;
-    omniruntime::expressions::FieldExpr *addRightProbe =
-            new omniruntime::expressions::FieldExpr(1, LongType());
+    omniruntime::expressions::FieldExpr *addRightProbe = new omniruntime::expressions::FieldExpr(1, LongType());
     omniruntime::expressions::BinaryExpr *addExprProbe = new omniruntime::expressions::BinaryExpr(
         omniruntime::expressions::ADD, addLeftProbe, addRightProbe, LongType());
     std::vector<omniruntime::expressions::Expr *> probeHashKeysExprs = { addExprProbe };
@@ -135,7 +133,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
-                                                                         LongType()) };
+        LongType()) };
     int32_t hashKeysCount = 1;
     std::string filter = "";
     int32_t hashTableCount = 1;
@@ -160,7 +158,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
     std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::FieldExpr(1,
-                                                                         LongType()) };
+        LongType()) };
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;

@@ -57,7 +57,7 @@ Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
             retType = make_unique<Decimal128VecType>(precision, scale);
         }
     } else {
-            retType = make_unique<VecType>(typeId);
+        retType = make_unique<VecType>(typeId);
     }
     return make_unique<FieldExpr>(colVal, std::move(retType)).release();
 }
@@ -90,12 +90,14 @@ Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
         return make_unique<LiteralExpr>(doubleVal, make_unique<DoubleVecType>()).release();
     } else if (typeId == OMNI_VEC_TYPE_DECIMAL64) {
         auto decimalVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<LiteralExpr>(decimalVal, make_unique<Decimal64VecType>(jsonExpr["precision"].get<int32_t>(),
-                jsonExpr["scale"].get<int32_t>())).release();
+        return make_unique<LiteralExpr>(decimalVal,
+            make_unique<Decimal64VecType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
+            .release();
     } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
         string *dec128String = make_unique<string>(jsonExpr["value"].get<string>()).release();
-        return make_unique<LiteralExpr>(dec128String, make_unique<Decimal128VecType>(
-                jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>())).release();
+        return make_unique<LiteralExpr>(dec128String,
+            make_unique<Decimal128VecType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
+            .release();
     } else if (typeId == OMNI_VEC_TYPE_NONE) {
         return make_unique<LiteralExpr>(0, make_unique<VecType>()).release();
     } else {
@@ -174,10 +176,10 @@ Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
         return nullptr;
     }
     int numOfCases = jsonExpr["numOfCases"].get<int>();
-    std::vector<std::pair<Expr*, Expr*>> whenClause;
+    std::vector<std::pair<Expr *, Expr *>> whenClause;
 
     for (int i = 0; i < numOfCases; i++) {
-        std::pair<Expr*, Expr*> when;
+        std::pair<Expr *, Expr *> when;
         Expr *right = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["when"]);
         if (right == nullptr) {
             return nullptr;
@@ -190,11 +192,10 @@ Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
         when = make_pair(condition, result);
         whenClause.push_back(when);
     }
-    if (TypeUtil::IsStringType(elseExpr->GetReturnTypeId())
-        && elseExpr->GetType() == ExprType::LITERAL_E
-        && static_cast<LiteralExpr*>(elseExpr)->stringVal->compare("null") == 0) {
-        return make_unique<SwitchExpr>(whenClause,
-                                   ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId())).release();
+    if (TypeUtil::IsStringType(elseExpr->GetReturnTypeId()) && elseExpr->GetType() == ExprType::LITERAL_E &&
+        static_cast<LiteralExpr *>(elseExpr)->stringVal->compare("null") == 0) {
+        return make_unique<SwitchExpr>(whenClause, ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId()))
+            .release();
     }
     return make_unique<SwitchExpr>(whenClause, elseExpr).release();
 }
@@ -213,11 +214,10 @@ Expr *JSONParser::ParseJSONIf(Json jsonExpr)
     if (falseExpr == nullptr) {
         return nullptr;
     }
-    if (TypeUtil::IsStringType(falseExpr->GetReturnTypeId())
-        && falseExpr->GetType() == ExprType::LITERAL_E
-        && static_cast<LiteralExpr*>(falseExpr)->stringVal->compare("null") == 0) {
-        return make_unique<IfExpr>(cond, trueExpr,
-            ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId())).release();
+    if (TypeUtil::IsStringType(falseExpr->GetReturnTypeId()) && falseExpr->GetType() == ExprType::LITERAL_E &&
+        static_cast<LiteralExpr *>(falseExpr)->stringVal->compare("null") == 0) {
+        return make_unique<IfExpr>(cond, trueExpr, ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId()))
+            .release();
     }
 
     return make_unique<IfExpr>(cond, trueExpr, falseExpr).release();
@@ -265,7 +265,7 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
         }
     }
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
-        if (funcName == "CAST" && args.size() == 1 && retTypeId == args[0]->GetReturnTypeId()) {
+    if (funcName == "CAST" && args.size() == 1 && retTypeId == args[0]->GetReturnTypeId()) {
         if (args[0]->GetType() == LITERAL_E) {
             return static_cast<LiteralExpr *>(args[0]);
         } else if (args[0]->GetType() == FIELD_E) {
@@ -277,7 +277,7 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     // Check that the signature matches
     vector<VecTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
-        [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+        [](Expr *expr) -> VecTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (TypeUtil::IsStringType(retTypeId)) {

@@ -7,10 +7,7 @@
 #define __OMNI_OPERATOR_FACTORY_H__
 
 #include "operator.h"
-
-typedef struct JitContext {
-    uintptr_t func;
-} JitContext;
+#include "jit_context/jit_context.h"
 
 class OperatorFactory {
 public:

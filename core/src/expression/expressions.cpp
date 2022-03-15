@@ -6,16 +6,16 @@
 #include <string>
 #include <algorithm>
 #include <utility>
-#include "../vector/vector_type.h"
-#include "../codegen/func_registry.h"
-#include "../util/type_util.h"
+#include "vector/vector_type.h"
+#include "codegen/func_registry.h"
+#include "util/type_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace expressions {
-bool IsNullLiteral(const std::string& value)
+bool IsNullLiteral(const std::string &value)
 {
     const std::string loweredNullValue = "null";
     if (value.size() != loweredNullValue.size()) {
@@ -185,12 +185,12 @@ InExpr::InExpr()
 
 InExpr::~InExpr()
 {
-    for (Expr* exp : arguments) {
+    for (Expr *exp : arguments) {
         delete exp;
     }
 }
 
-InExpr::InExpr(std::vector<Expr*> args)
+InExpr::InExpr(std::vector<Expr *> args)
 {
     dataType = BooleanType();
     arguments = std::move(args);
@@ -214,7 +214,7 @@ BetweenExpr::~BetweenExpr()
     delete upperBound;
 }
 
-BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound)
+BetweenExpr::BetweenExpr(Expr *val, Expr *lowBound, Expr *upBound)
 {
     dataType = BooleanType();
     value = val;
@@ -228,17 +228,16 @@ ExprType BetweenExpr::GetType() const
 }
 
 
-SwitchExpr::SwitchExpr() : whenClause(), falseExpr() {
-}
+SwitchExpr::SwitchExpr() : whenClause(), falseExpr() {}
 SwitchExpr::~SwitchExpr()
 {
-    for (std::pair<Expr*, Expr*> vec : whenClause) {
+    for (std::pair<Expr *, Expr *> vec : whenClause) {
         delete vec.first;
         delete vec.second;
     }
     delete falseExpr;
 }
-SwitchExpr::SwitchExpr(std::vector<std::pair<Expr*, Expr*>> whens, Expr* fexp)
+SwitchExpr::SwitchExpr(std::vector<std::pair<Expr *, Expr *>> whens, Expr *fexp)
 {
     dataType = std::make_unique<VecType>(fexp->GetReturnType());
     whenClause = whens;
@@ -249,8 +248,7 @@ ExprType SwitchExpr::GetType() const
     return ExprType::SWITCH_E;
 }
 
-IfExpr::IfExpr() : condition(), trueExpr(), falseExpr() {
-}
+IfExpr::IfExpr() : condition(), trueExpr(), falseExpr() {}
 
 IfExpr::~IfExpr()
 {
@@ -259,7 +257,7 @@ IfExpr::~IfExpr()
     delete falseExpr;
 }
 
-IfExpr::IfExpr(Expr* cond, Expr* texp, Expr* fexp)
+IfExpr::IfExpr(Expr *cond, Expr *texp, Expr *fexp)
 {
     dataType = std::make_unique<VecType>(texp->GetReturnType());
     condition = cond;
@@ -273,8 +271,7 @@ ExprType IfExpr::GetType() const
 }
 
 
-CoalesceExpr::CoalesceExpr() : value1(), value2() {
-}
+CoalesceExpr::CoalesceExpr() : value1(), value2() {}
 
 CoalesceExpr::~CoalesceExpr()
 {
@@ -282,7 +279,7 @@ CoalesceExpr::~CoalesceExpr()
     delete value2;
 }
 
-CoalesceExpr::CoalesceExpr(Expr* val1, Expr* val2)
+CoalesceExpr::CoalesceExpr(Expr *val1, Expr *val2)
 {
     dataType = std::make_unique<VecType>(val1->GetReturnType());
     value1 = val1;
@@ -294,15 +291,14 @@ ExprType CoalesceExpr::GetType() const
     return ExprType::COALESCE_E;
 }
 
-IsNullExpr::IsNullExpr() : value() {
-}
+IsNullExpr::IsNullExpr() : value() {}
 
 IsNullExpr::~IsNullExpr()
 {
     delete value;
 }
 
-IsNullExpr::IsNullExpr(Expr* value)
+IsNullExpr::IsNullExpr(Expr *value)
 {
     dataType = BooleanType();
     this->value = value;
@@ -317,12 +313,12 @@ FuncExpr::FuncExpr() = default;
 
 FuncExpr::~FuncExpr()
 {
-    for (Expr* exp : arguments) {
+    for (Expr *exp : arguments) {
         delete exp;
     }
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, VecTypePtr returnType)
 {
     funcName = fnName;
     arguments = std::move(args);
@@ -330,12 +326,12 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr retur
 
     std::vector<VecTypeId> argTypes(arguments.size());
     std::transform(arguments.begin(), arguments.end(), argTypes.begin(),
-        [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+        [](Expr *expr) -> VecTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, dataType->GetId());
     this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType, const Function *function)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, VecTypePtr returnType, const Function *function)
 {
     funcName = fnName;
     arguments = std::move(args);

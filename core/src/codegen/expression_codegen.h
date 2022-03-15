@@ -5,8 +5,6 @@
 #ifndef __EXPRESSION_CODEGEN_H__
 #define __EXPRESSION_CODEGEN_H__
 
-#include "./codegen_value.h"
-
 #include <iostream>
 #include <string>
 #include <memory>
@@ -38,14 +36,14 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
-#include "./codegen_context.h"
-#include "../common/expressions.h"
-#include "../common/parser/parser.h"
-#include "../common/expr_printer.h"
-#include "../util/debug.h"
+#include "codegen_value.h"
+#include "codegen_context.h"
+#include "expression/expressions.h"
+#include "expression/parser/parser.h"
+#include "expression/expr_printer.h"
+#include "util/debug.h"
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
-
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -58,9 +56,9 @@ public:
     void Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
-    llvm::IRBuilder<>& GetIRBuilder();
-    llvm::Module& GetModule();
-    llvm::LLVMContext& GetContext();
+    llvm::IRBuilder<> &GetIRBuilder();
+    llvm::Module &GetModule();
+    llvm::LLVMContext &GetContext();
     // visitor methods
     void Visit(const omniruntime::expressions::LiteralExpr &e) override;
     void Visit(const omniruntime::expressions::FieldExpr &e) override;
@@ -81,8 +79,8 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
-        bool needsContext);
+    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<omniruntime::vec::VecTypeId> &params,
+        omniruntime::vec::VecTypeId &retTypeId, bool needsContext);
 
     llvm::Value *GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
     void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
@@ -105,9 +103,9 @@ protected:
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi);
     void PromoteType(omniruntime::expressions::BinaryExpr &binaryExpr);
-    void PromoteType(omniruntime::expressions::Expr &expr, VecType vecType);
-    void HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v2,
-        llvm::BasicBlock &isNotNullBlock, llvm::BasicBlock  &isNullBlock, llvm::PHINode &pn, llvm::PHINode &pnNull);
+    void PromoteType(omniruntime::expressions::Expr &expr, omniruntime::vec::VecType vecType);
+    void HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v2, llvm::BasicBlock &isNotNullBlock,
+        llvm::BasicBlock &isNullBlock, llvm::PHINode &pn, llvm::PHINode &pnNull);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
 

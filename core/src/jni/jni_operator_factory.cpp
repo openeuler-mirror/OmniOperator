@@ -4,27 +4,27 @@
  */
 
 #include "jni_operator_factory.h"
-#include "../operator/operator_factory.h"
-#include "../operator/jit_context/jit_context.h"
-#include "../operator/sort/sort.h"
-#include "../operator/sort/sort_expr.h"
-#include "../operator/aggregation/group_aggregation.h"
-#include "../operator/aggregation/group_aggregation_expr.h"
-#include "../operator/aggregation/non_group_aggregation.h"
-#include "../operator/filter/filter_and_project.h"
-#include "../operator/window/window.h"
-#include "../operator/join/hash_builder.h"
-#include "../operator/join/lookup_join.h"
-#include "../operator/join/hash_builder_expr.h"
-#include "../operator/join/lookup_join_expr.h"
-#include "../operator/join/sortmergejoin/sort_merge_join_expr.h"
-#include "../operator/topn/topn.h"
-#include "../operator/topn/topn_expr.h"
-#include "../operator/partitionedoutput/partitionedoutput.h"
-#include "../operator/union/union.h"
-#include "../operator/window/window_expr.h"
-#include "../operator/limit/limit.h"
-#include "../operator/limit/distinct_limit.h"
+#include "operator/operator_factory.h"
+#include "jit_context/jit_context.h"
+#include "operator/sort/sort.h"
+#include "operator/sort/sort_expr.h"
+#include "operator/aggregation/group_aggregation.h"
+#include "operator/aggregation/group_aggregation_expr.h"
+#include "operator/aggregation/non_group_aggregation.h"
+#include "operator/filter/filter_and_project.h"
+#include "operator/window/window.h"
+#include "operator/join/hash_builder.h"
+#include "operator/join/lookup_join.h"
+#include "operator/join/hash_builder_expr.h"
+#include "operator/join/lookup_join_expr.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr.h"
+#include "operator/topn/topn.h"
+#include "operator/topn/topn_expr.h"
+#include "operator/partitionedoutput/partitionedoutput.h"
+#include "operator/union/union.h"
+#include "operator/window/window_expr.h"
+#include "operator/limit/limit.h"
+#include "operator/limit/distinct_limit.h"
 #include "config.h"
 
 using omniruntime::vec::Deserialize;
@@ -77,7 +77,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                   */
+ *                                                                    */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -110,7 +110,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                   */
+ *                                                                    */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -174,7 +174,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                   */
+ *                                                                    */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
@@ -199,7 +199,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
 /**
  * Return an AggregationFactory object address.
- *                                                                    */
+ *                                                                     */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,

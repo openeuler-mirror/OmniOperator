@@ -7,6 +7,7 @@
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
 
 namespace {
@@ -86,8 +87,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "PROJECT_WRAPPER",
-                               module.get());
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *addToOutput = BasicBlock::Create(*context, "ADD_OUTPUT", funcDecl);
@@ -279,8 +279,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(
-        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(
-            jit->getDataLayout().getGlobalPrefix())));
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
@@ -291,12 +290,10 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
 std::vector<Type *> GetSingleProjectArguments(LLVMContext &context)
 {
-    std::vector<Type *> args = {
-        Type::getInt64PtrTy(context), Type::getInt64PtrTy(context),
-        Type::getInt64PtrTy(context), Type::getInt32Ty(context),
-        Type::getInt32PtrTy(context), Type::getInt64Ty(context),
-        Type::getInt64PtrTy(context), Type::getInt1PtrTy(context)
-    };
+    std::vector<Type *> args = { Type::getInt64PtrTy(context), Type::getInt64PtrTy(context),
+                                 Type::getInt64PtrTy(context), Type::getInt32Ty(context),
+                                 Type::getInt32PtrTy(context), Type::getInt64Ty(context),
+                                 Type::getInt64PtrTy(context), Type::getInt1PtrTy(context) };
     return args;
 }
 
@@ -320,11 +317,9 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type *> args = GetSingleProjectArguments(*context);
     llvm::Function *baseFunc = this->CreateFunction();
-    FunctionType *funcSignature = FunctionType::get(
-        llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
+    FunctionType *funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER",
-                               module.get());
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);

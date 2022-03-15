@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: print expression tree visitor for expressions
@@ -22,6 +21,7 @@ public:
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
+
 private:
     std::string BinaryExprPrinterHelper(const omniruntime::expressions::Operator &op) const;
     std::string GenerateIndentation() const;

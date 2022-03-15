@@ -6,17 +6,17 @@
 
 using namespace omniruntime::expressions;
 
-void LiteralExpr::Accept(ExprVisitor &visitor)  const
+void LiteralExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);
 }
 
-void FieldExpr::Accept(ExprVisitor &visitor)  const
+void FieldExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);
 }
 
-void BinaryExpr::Accept(ExprVisitor &visitor)  const
+void BinaryExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);
 }

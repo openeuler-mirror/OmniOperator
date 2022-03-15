@@ -5,9 +5,12 @@
 #ifndef OMNI_RUNTIME_JIT_CONTEXT_H
 #define OMNI_RUNTIME_JIT_CONTEXT_H
 
-#include "../operator_factory.h"
 #include "vector/vector_types.h"
-#include "../../common/expressions.h"
+#include "expression/expressions.h"
+
+using JitContext = struct JitContext {
+    uintptr_t func;
+};
 
 JitContext *CreateSortJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,

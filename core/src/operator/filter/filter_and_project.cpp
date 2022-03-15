@@ -3,8 +3,8 @@
  * Description: FilterAndProject operator source file
  */
 #include "filter_and_project.h"
-#include "../../vector/vector_helper.h"
-#include "../../common/jsonparser/jsonparser.h"
+#include "vector/vector_helper.h"
+#include "expression/jsonparser/jsonparser.h"
 
 namespace omniruntime {
 namespace op {

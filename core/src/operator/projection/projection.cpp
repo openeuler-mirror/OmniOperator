@@ -3,8 +3,8 @@
  * Description: Projection operator source file
  */
 #include "projection.h"
-#include "../../vector/vector_helper.h"
-#include "../../common/jsonparser/jsonparser.h"
+#include "vector/vector_helper.h"
+#include "expression/jsonparser/jsonparser.h"
 
 using namespace std;
 using namespace omniruntime::op;
@@ -53,7 +53,7 @@ int RowProjection::GetIndexIfColumnProjection()
     if (!IsColumnProjection()) {
         return -1;
     }
-    return static_cast<const FieldExpr*>(this->expression)->colVal;
+    return static_cast<const FieldExpr *>(this->expression)->colVal;
 }
 }
 }
@@ -221,8 +221,8 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 {
     // using projector
     ((int32_t *)outVec->GetValueOffsets())[0] = 0;
-    this->projector(vecData.data(), vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec),
-        selectedRows, numSelectedRows, bitmap, offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
+    this->projector(vecData.data(), vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec), selectedRows,
+        numSelectedRows, bitmap, offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
         reinterpret_cast<int32_t *>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context), dictionaryVectors);
     return outVec;
 }
@@ -231,10 +231,9 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
     int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const
 {
-    int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(),
-        reinterpret_cast<int64_t>(outVec->GetValues()), selectedRows, numSelectedRows, bitmap, offsets,
-        reinterpret_cast<bool *>(outVec->GetValueNulls()), reinterpret_cast<int32_t *>(outVec->GetValueOffsets()),
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
+    this->projector(vecData.data(), vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
+        selectedRows, numSelectedRows, bitmap, offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
+        reinterpret_cast<int32_t *>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context), dictionaryVectors);
     return outVec;
 }
 

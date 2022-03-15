@@ -2,16 +2,17 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: window operator implementations
  */
-#include "gtest/gtest.h"
-#include "../../src/operator/sort/sort.h"
-#include "../../src/operator/window/window.h"
-#include "../util/test_util.h"
 #include <time.h>
 #include <vector>
 #include <iostream>
 #include <chrono>
-#include "../../src/operator/jit_context/jit_context.h"
-#include "../../src/vector/vector_helper.h"
+
+#include "gtest/gtest.h"
+#include "operator/sort/sort.h"
+#include "operator/window/window.h"
+#include "../util/test_util.h"
+#include "jit_context/jit_context.h"
+#include "vector/vector_helper.h"
 #include "../../libconfig.h"
 
 using namespace std;

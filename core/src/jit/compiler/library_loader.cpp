@@ -96,49 +96,15 @@ void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector
 
 LibraryLoader::LibraryLoader() : neededLibs()
 {
-    unordered_map<string, CoreLibrary> baseLibs = {
-            { "stdc++", CoreLibrary("libstdc++.so", "stdc++") },
-            { "jemalloc", CoreLibrary("libjemalloc.so", "jemalloc") },
-            { "memory_pool", CoreLibrary("libmemory_pool.so", "memory_pool", 1)},
-            { "omni_vector", CoreLibrary("libomni_vector.so", "omni_vector", 2)},
-            {"expr_visitor", CoreLibrary("libexpr_visitor.so", "expr_visitor", 1)},
-            {"expressions", CoreLibrary("libexpressions.so", "expressions", 2)},
-            {"expr_printer", CoreLibrary("libexpr_printer.so", "expr_printer", 2)},
-            {"codegen", CoreLibrary("libcodegen.so", "codegen", 3)},
-            {"parserhelper", CoreLibrary("libparserhelper.so", "parserhelper", 4)},
-            {"parser", CoreLibrary("libparser.so", "parser", 5)},
-            {"jsonparser", CoreLibrary("libjsonparser.so", "jsonparser", 5)},
-            {"projection", CoreLibrary("libprojection.so", "projection", 6)},
-            {"hash_util", CoreLibrary("libhash_util.so", "hash_util", 6)},
-            {"filter_and_project", CoreLibrary("libfilter_and_project.so", "filter_and_project", 7)},
-            {"operator_util", CoreLibrary("liboperator_util.so", "operator_util", 7)},
-            {"pages_index", CoreLibrary("libpages_index.so", "pages_index", 8)},
-            {"pages_hash_strategy", CoreLibrary("libpages_hash_strategy.so", "pages_hash_strategy", 8)},
-            {"aggregator", CoreLibrary("libaggregator.so", "aggregator", 8)},
-            {"aggregation", CoreLibrary("libaggregation.so", "aggregation", 8)},
-            {"join_hash_table", CoreLibrary("libjoin_hash_table.so", "join_hash_table", 8)},
-            {"group_aggregation", CoreLibrary("libgroup_aggregation.so", "group_aggregation", 9)},
-            {"non_group_aggregation", CoreLibrary("libnon_group_aggregation.so", "non_group_aggregation", 9)},
-            {"hash_builder", CoreLibrary("libhash_builder.so", "hash_builder", 9)},
-            {"lookup_join", CoreLibrary("liblookup_join.so", "lookup_join", 9)},
-            {"sort", CoreLibrary("libsort.so", "sort", 9)},
-            {"topn", CoreLibrary("libtopn.so", "topn", 9)},
-            {"window_function", CoreLibrary("libwindow_function.so", "window_function", 9)},
-            {"window_partition", CoreLibrary("libwindow_partition.so", "window_partition", 9)},
-            {"window", CoreLibrary("libwindow.so", "window", 10)},
-            {"sort_expr", CoreLibrary("libsort_expr.so", "sort_expr", 11)},
-            {"hash_builder_expr", CoreLibrary("libhash_builder_expr.so", "hash_builder_expr", 11)},
-            {"lookup_join_expr", CoreLibrary("liblookup_join_expr.so", "lookup_join_expr", 11)},
-            { "window_expr", CoreLibrary("libwindow_expr.so", "window_expr", 11)},
-            {"group_aggregation_expr", CoreLibrary("libgroup_aggregation_expr.so", "group_aggregation_expr", 11)},
-            {"topn_expr", CoreLibrary("libtopn_expr.so", "topn_expr", 11)}
-    };
+    unordered_map<string, CoreLibrary> baseLibs = { { "stdc++", CoreLibrary("libstdc++.so", "stdc++") },
+        { "operator", CoreLibrary("liboperator.so", "operator", 1) } };
 
     ParseExtraDependencies(baseLibs, neededLibs);
 
     for (auto &p : baseLibs) {
         neededLibs.push_back(p.second);
     }
+
     std::stable_sort(neededLibs.begin(), neededLibs.end(),
         [](const CoreLibrary &a, const CoreLibrary &b) { return a.Priority() < b.Priority(); });
 }

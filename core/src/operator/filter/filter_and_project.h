@@ -8,15 +8,15 @@
 #include <memory>
 #include <vector>
 
-#include "../../vector/vector_batch.h"
-#include "../../vector/vector_types.h"
-#include "../operator_factory.h"
-#include "../operator.h"
-#include "../projection/projection.h"
-#include "../../codegen/filter_codegen.h"
-#include "../../common/expressions.h"
-#include "../../codegen/row_expression_codegen.h"
-#include "../execution_context.h"
+#include "vector/vector_batch.h"
+#include "vector/vector_types.h"
+#include "operator/operator_factory.h"
+#include "operator/operator.h"
+#include "operator/projection/projection.h"
+#include "codegen/filter_codegen.h"
+#include "expression/expressions.h"
+#include "codegen/row_expression_codegen.h"
+#include "operator/execution_context.h"
 
 using vec64 = std::vector<int64_t>;
 using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
@@ -49,7 +49,7 @@ private:
  */
 class SimpleFilter {
 public:
-    /**
+    /* *
      * Simple Filter constructor
      *
      * @param expression the filter expression, must return evaluates to boolean type
@@ -59,21 +59,21 @@ public:
 
     ~SimpleFilter();
 
-    /**
+    /* *
      * Initialize the filter, this method must be called after the construct
      *
      * @return if the expression and types can be supported or not
      */
     bool Initialize();
 
-    /**
+    /* *
      * Get all the vector indexes used in the expression
      *
      * @return set including the indexes, or empty set if filter not supported or initialized
      */
     std::set<int32_t> GetVectorIndexes();
 
-    /**
+    /* *
      * Evaluate the filter
      *
      * To make it consistent and simplify the evaluation logic, please make sure
@@ -103,7 +103,7 @@ private:
 
 class Filter {
 public:
-    Filter(const expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount);
+    Filter(const expressions::Expr &expression, int32_t const * inputTypeIds, int32_t inputVecCount);
     ~Filter()
     {
         this->codeGen.reset();
@@ -128,7 +128,7 @@ private:
 
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const *inputVecTypes, int32_t vecCount,
+    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const * inputVecTypes, int32_t vecCount,
         const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount, ExecutionContext *context)
         : filter(filter),
           inputTypes(inputVecTypes),
@@ -161,9 +161,8 @@ private:
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
     FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, VecTypes &inputVecTypes,
-                                    int32_t inputVecCount,
-                                    const std::vector<omniruntime::expressions::Expr *>  &projections,
-                                    int32_t projectVecCount);
+        int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
+        int32_t projectVecCount);
 
     ~FilterAndProjectOperatorFactory() override;
 
