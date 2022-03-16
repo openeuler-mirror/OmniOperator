@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace omniruntime::expressions;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 constexpr int32_t INT_DEFAULT_VALUE = 0;
 constexpr int64_t LONG_DEFAULT_VALUE = 0L;
@@ -14,27 +14,27 @@ constexpr bool BOOL_DEFAULT_VALUE = true;
 constexpr char *CHAR_DEFAULT_VALUE = "NULL";
 constexpr int64_t DECIMAL128_DEFAULT_VALUE = 0L;
 
-omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(VecTypeId destTypeId)
+omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId)
 {
-    VecTypePtr destType = make_unique<VecType>(destTypeId);
+    DataTypePtr destType = make_unique<DataType>(destTypeId);
     switch (destTypeId) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             return std::make_unique<LiteralExpr>(INT_DEFAULT_VALUE, std::move(destType)).release();
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             return std::make_unique<LiteralExpr>(LONG_DEFAULT_VALUE, std::move(destType)).release();
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             return std::make_unique<LiteralExpr>(DOUBLE_DEFAULT_VALUE, std::move(destType)).release();
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             return std::make_unique<LiteralExpr>(BOOL_DEFAULT_VALUE, std::move(destType)).release();
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
             return std::make_unique<LiteralExpr>(
                     make_unique<string>(CHAR_DEFAULT_VALUE).release(), std::move(destType)).release();
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             return std::make_unique<LiteralExpr>(DECIMAL128_DEFAULT_VALUE, std::move(destType)).release();
-        case OMNI_VEC_TYPE_NONE:
+        case OMNI_NONE:
             return std::make_unique<LiteralExpr>(INT_DEFAULT_VALUE, std::move(destType)).release();
         default:
             return nullptr;

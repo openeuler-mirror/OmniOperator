@@ -6,12 +6,12 @@
 #include <string>
 #include <algorithm>
 #include <utility>
-#include "vector/vector_type.h"
+#include "type/data_type.h"
 #include "codegen/func_registry.h"
 #include "util/type_util.h"
 
 using namespace std;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 namespace omniruntime {
 namespace expressions {
@@ -43,12 +43,12 @@ ExprType Expr::GetType() const
     return INVALID_E;
 }
 
-VecType &Expr::GetReturnType() const
+DataType &Expr::GetReturnType() const
 {
     return *dataType;
 }
 
-VecTypeId Expr::GetReturnTypeId() const
+DataTypeId Expr::GetReturnTypeId() const
 {
     return dataType->GetId();
 }
@@ -58,7 +58,7 @@ LiteralExpr::LiteralExpr() {}
 
 LiteralExpr::~LiteralExpr()
 {
-    if (dataType->GetId() == VecTypeId::OMNI_VEC_TYPE_VARCHAR) {
+    if (dataType->GetId() == DataTypeId::OMNI_VARCHAR) {
         delete stringVal;
     }
 }
@@ -68,27 +68,27 @@ ExprType LiteralExpr::GetType() const
     return ExprType::LITERAL_E;
 }
 // Helper constructors for different data types
-LiteralExpr::LiteralExpr(bool val, VecTypePtr dt)
+LiteralExpr::LiteralExpr(bool val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     boolVal = val;
 }
-LiteralExpr::LiteralExpr(int32_t val, VecTypePtr dt)
+LiteralExpr::LiteralExpr(int32_t val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     intVal = val;
 }
-LiteralExpr::LiteralExpr(int64_t val, VecTypePtr dt)
+LiteralExpr::LiteralExpr(int64_t val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     longVal = val;
 }
-LiteralExpr::LiteralExpr(double val, VecTypePtr dt)
+LiteralExpr::LiteralExpr(double val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     doubleVal = val;
 }
-LiteralExpr::LiteralExpr(std::string *val, VecTypePtr dt)
+LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     stringVal = val;
@@ -105,7 +105,7 @@ ExprType FieldExpr::GetType() const
 }
 
 // Helper constructors
-FieldExpr::FieldExpr(int32_t colIdx, VecTypePtr colType)
+FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType)
 {
     dataType = std::move(colType);
     colVal = colIdx;
@@ -123,13 +123,13 @@ BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
     right = rightExpr;
     // use the more encompassing DataType
     if (leftExpr->GetReturnTypeId() <= rightExpr->GetReturnTypeId()) {
-        dataType = std::make_unique<VecType>(rightExpr->GetReturnType());
+        dataType = std::make_unique<DataType>(rightExpr->GetReturnType());
     } else {
-        dataType = std::make_unique<VecType>(leftExpr->GetReturnType());
+        dataType = std::make_unique<DataType>(leftExpr->GetReturnType());
     }
 }
 
-BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, VecTypePtr dt)
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt)
 {
     op = bop;
     left = leftExpr;
@@ -160,7 +160,7 @@ UnaryExpr::UnaryExpr(Operator uop, Expr *expr)
     exp = expr;
 }
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr, VecTypePtr dt)
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt)
 {
     op = uop;
     exp = expr;
@@ -239,7 +239,7 @@ SwitchExpr::~SwitchExpr()
 }
 SwitchExpr::SwitchExpr(std::vector<std::pair<Expr *, Expr *>> whens, Expr *fexp)
 {
-    dataType = std::make_unique<VecType>(fexp->GetReturnType());
+    dataType = std::make_unique<DataType>(fexp->GetReturnType());
     whenClause = whens;
     falseExpr = fexp;
 }
@@ -259,7 +259,7 @@ IfExpr::~IfExpr()
 
 IfExpr::IfExpr(Expr *cond, Expr *texp, Expr *fexp)
 {
-    dataType = std::make_unique<VecType>(texp->GetReturnType());
+    dataType = std::make_unique<DataType>(texp->GetReturnType());
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
@@ -281,7 +281,7 @@ CoalesceExpr::~CoalesceExpr()
 
 CoalesceExpr::CoalesceExpr(Expr *val1, Expr *val2)
 {
-    dataType = std::make_unique<VecType>(val1->GetReturnType());
+    dataType = std::make_unique<DataType>(val1->GetReturnType());
     value1 = val1;
     value2 = val2;
 }
@@ -318,20 +318,20 @@ FuncExpr::~FuncExpr()
     }
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, VecTypePtr returnType)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr returnType)
 {
     funcName = fnName;
     arguments = std::move(args);
     dataType = std::move(returnType);
 
-    std::vector<VecTypeId> argTypes(arguments.size());
+    std::vector<DataTypeId> argTypes(arguments.size());
     std::transform(arguments.begin(), arguments.end(), argTypes.begin(),
-        [](Expr *expr) -> VecTypeId { return expr->GetReturnTypeId(); });
+        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, dataType->GetId());
     this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, VecTypePtr returnType, const Function *function)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr returnType, const Function *function)
 {
     funcName = fnName;
     arguments = std::move(args);

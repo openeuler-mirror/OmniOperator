@@ -9,9 +9,9 @@
 using namespace omniruntime::vec;
 
 // function implements for class PagesIndex
-DynamicPagesIndex::DynamicPagesIndex(const omniruntime::vec::VecTypes &types)
-    : vecTypes(types.Get().data()),
-      vecTypeIds(types.GetIds()),
+DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types)
+    : dataTypes(types.Get().data()),
+      dataTypeIds(types.GetIds()),
       typesCount(types.GetSize()),
       positionCount(0),
       finishAddData(false)

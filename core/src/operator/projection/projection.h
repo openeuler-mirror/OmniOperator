@@ -11,7 +11,7 @@
 #include "operator/operator.h"
 #include "vector/vector_common.h"
 #include "vector/vector_allocator_factory.h"
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "expression/expressions.h"
 #include "projection.h"
 #include "operator/execution_context.h"
@@ -39,7 +39,7 @@ public:
     explicit RowProjection(const omniruntime::expressions::Expr &expression);
     ~RowProjection();
     RowProjFunc Create();
-    VecType GetReturnType();
+    DataType GetReturnType();
     bool IsColumnProjection();
     int GetIndexIfColumnProjection();
 
@@ -50,7 +50,7 @@ private:
 
 class Projection {
 public:
-    Projection(VecTypes &inputTypes, int32_t nCols, const expressions::Expr &expr, bool filter);
+    Projection(DataTypes &inputTypes, int32_t nCols, const expressions::Expr &expr, bool filter);
     ~Projection()
     {
         delete this->expr;
@@ -73,14 +73,14 @@ public:
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, std::vector<int64_t> const & vecData,
         int64_t *bitmap, int64_t *offsets, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    omniruntime::vec::VecType GetOutputType() const
+    omniruntime::type::DataType GetOutputType() const
     {
         return this->expr->GetReturnType();
     }
 
 private:
     int32_t *inputTypeIds;
-    VecTypes inputTypes;
+    DataTypes inputTypes;
     int32_t nCols;
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
@@ -129,7 +129,7 @@ private:
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
     ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs, int32_t nProj,
-        VecTypes &inputTypes, int32_t nCols);
+        DataTypes &inputTypes, int32_t nCols);
 
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
@@ -137,7 +137,7 @@ public:
 
 private:
     int32_t *inputTypeIds;
-    VecTypes inputTypes;
+    DataTypes inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
     int32_t nProj;

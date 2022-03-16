@@ -5,7 +5,7 @@ import org.testng.annotations.Test;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DOUBLE;
+import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_DOUBLE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -30,7 +30,7 @@ public class TestDoubleVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 2048);
-        assertEquals(vec.getType().getId(), OMNI_VEC_TYPE_DOUBLE);
+        assertEquals(vec.getType().getId(), OMNI_DOUBLE);
         vec.close();
     }
 

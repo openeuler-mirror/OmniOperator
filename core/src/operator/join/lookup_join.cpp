@@ -19,23 +19,23 @@ namespace omniruntime {
 namespace op {
 constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
 
-LookupJoinOperatorFactory::LookupJoinOperatorFactory(const vec::VecTypes &probeTypes, int32_t *probeOutputCols,
+LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-    const vec::VecTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables)
+    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables)
     : joinType(joinType), hashTables(hashTables)
 {
     int32_t probeHashColTypes[probeHashColsCount];
     for (int32_t i = 0; i < probeHashColsCount; i++) {
         probeHashColTypes[i] = probeTypes.GetIds()[probeHashCols[i]];
     }
-    this->probeTypes = std::make_unique<VecTypes>(probeTypes);
+    this->probeTypes = std::make_unique<DataTypes>(probeTypes);
     this->probeOutputCols.insert(this->probeOutputCols.end(), probeOutputCols, probeOutputCols + probeOutputColsCount);
     this->probeHashCols.insert(this->probeHashCols.end(), probeHashCols, probeHashCols + probeHashColsCount);
     this->probeHashColTypes.insert(this->probeHashColTypes.end(), probeHashColTypes,
         probeHashColTypes + probeHashColsCount);
     this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
         buildOutputCols + buildOutputTypes.GetSize());
-    this->buildOutputTypes = std::make_unique<VecTypes>(buildOutputTypes);
+    this->buildOutputTypes = std::make_unique<DataTypes>(buildOutputTypes);
     this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
     this->rowSize += OperatorUtil::GetRowSize(buildOutputTypes.Get());
     this->hashTables->SetProbeTypes(this->probeTypes.get());
@@ -44,9 +44,10 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const vec::VecTypes &probeT
 
 LookupJoinOperatorFactory::~LookupJoinOperatorFactory() {}
 
-LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const vec::VecTypes &probeTypes,
+LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const type::DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    int32_t *buildOutputCols, const vec::VecTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr)
+    int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
+    int64_t hashBuilderFactoryAddr)
 {
     HashBuilderOperatorFactory *hashBuilderFactory =
         reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
@@ -64,9 +65,9 @@ Operator *LookupJoinOperatorFactory::CreateOperator()
     return pLookupJoinOperator.release();
 }
 
-LookupJoinOperator::LookupJoinOperator(const VecTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
+LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
-    const vec::VecTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables, int32_t outputRowSize)
+    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables, int32_t outputRowSize)
     : probeTypes(probeTypes), buildOutputTypes(buildOutputTypes)
 {
     this->probeOutputCols = probeOutputCols;
@@ -202,7 +203,7 @@ void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t
     int64_t hash;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
-    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -229,7 +230,7 @@ void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, in
     int64_t hash;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
-    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -257,7 +258,7 @@ void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, i
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     Decimal128 decimal128Value;
-    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -288,7 +289,7 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
     int32_t valueLength;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
-    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -320,28 +321,28 @@ void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, 
 {
     for (int32_t i = 0; i < hashColsCount; ++i) {
         switch (hashColTypes[i]) {
-            case omniruntime::vec::OMNI_VEC_TYPE_INT:
-            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+            case omniruntime::type::OMNI_INT:
+            case omniruntime::type::OMNI_DATE32:
                 CalculateColHashes<omniruntime::vec::IntVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+            case omniruntime::type::OMNI_LONG:
                 CalculateColHashes<omniruntime::vec::LongVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            case omniruntime::type::OMNI_DOUBLE:
                 CalculateColHashes<omniruntime::vec::DoubleVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            case omniruntime::type::OMNI_BOOLEAN:
                 CalculateColHashes<omniruntime::vec::BooleanVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+            case omniruntime::type::OMNI_DECIMAL64:
                 CalculateColDec64Hashes(hashCols[i], rowCount, hashes, nulls);
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
+            case omniruntime::type::OMNI_DECIMAL128: {
                 CalculateColDec128Hashes(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
-            case omniruntime::vec::OMNI_VEC_TYPE_CHAR: {
+            case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_CHAR: {
                 CalculateColVarcharHashes(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
@@ -402,7 +403,7 @@ int64_t JoinProbe::GetCurrentJoinPosition(const JoinHashTables *hashTables) cons
 }
 
 LookupJoinOutputBuilder::LookupJoinOutputBuilder(const int32_t *probeTypes, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, int32_t *buildOutputCols, const vec::VecTypes &buildOutputTypes,
+    int32_t probeOutputColsCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
     int32_t outputRowSize)
     : buildOutputTypes(buildOutputTypes)
 {
@@ -541,7 +542,7 @@ void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probe
         column = probeAllColumns[probeOutputCols[columnIdx]];
         // we want to keep only one level dictionary vector here
         // if the data is non-dictionary, we build dictionary to avoid data copy
-        if (column->GetTypeId() == vec::OMNI_VEC_TYPE_DICTIONARY) {
+        if (column->GetEncoding() == vec::OMNI_VEC_ENCODING_DICTIONARY) {
             probeColumn = column->CopyPositions(&probeIndex[position], 0, rowCount);
         } else {
             probeColumn = new DictionaryVector(column, &probeIndex[position], rowCount);
@@ -574,7 +575,7 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
 
 SPECIALIZE(OMNIJIT_CONSTRUCT_BUILD_COLUMNS)
 void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashTables,
-    const std::vector<VecType> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
+    const std::vector<DataType> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<int64_t> &buildIndex, int32_t position,
     int32_t rowCount, VectorAllocator *vecAllocator)
 {
@@ -583,34 +584,34 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
     int32_t outputColumnIndex = probeOutputColsCount;
     for (int32_t columnIdx = 0; columnIdx < buildOutputColsCount; columnIdx++) {
         buildOutputCol = buildOutputCols[columnIdx];
-        const VecType &vecType = buildOutputTypes[columnIdx];
+        const DataType &dataType = buildOutputTypes[columnIdx];
         switch (buildOutputIds[columnIdx]) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_INT:
+            case OMNI_DATE32:
                 buildColumn = ConstructBuildColumn<IntVector, int32_t>(vecAllocator, hashTables, buildOutputCol,
                     buildIndex.data(), position, rowCount);
                 break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 buildColumn = ConstructBuildColumn<LongVector, int64_t>(vecAllocator, hashTables, buildOutputCol,
                     buildIndex.data(), position, rowCount);
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 buildColumn = ConstructBuildColumn<DoubleVector, double>(vecAllocator, hashTables, buildOutputCol,
                     buildIndex.data(), position, rowCount);
                 break;
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_BOOLEAN:
                 buildColumn = ConstructBuildColumn<BooleanVector, bool>(vecAllocator, hashTables, buildOutputCol,
                     buildIndex.data(), position, rowCount);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
-                uint32_t width = ((VarcharVecType &)vecType).GetWidth();
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                uint32_t width = ((VarcharDataType &)dataType).GetWidth();
                 buildColumn = ConstructBuildVarcharColumn(vecAllocator, hashTables, buildOutputCol, buildIndex.data(),
                     position, rowCount, width);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_DECIMAL128:
                 buildColumn = ConstructBuildColumn<Decimal128Vector, Decimal128>(vecAllocator, hashTables,
                     buildOutputCol, buildIndex.data(), position, rowCount);
                 break;

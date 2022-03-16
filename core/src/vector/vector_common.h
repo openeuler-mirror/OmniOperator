@@ -5,9 +5,10 @@
 #ifndef OMNI_RUNTIME_VECTOR_COMMON_H
 #define OMNI_RUNTIME_VECTOR_COMMON_H
 
-#include "vector_type.h"
-#include "vector_types.h"
+#include "../type/data_type.h"
+#include "../type/data_types.h"
 
+#include "vector_encoding.h"
 #include "vector.h"
 #include "vector_batch.h"
 #include "vector_allocator.h"

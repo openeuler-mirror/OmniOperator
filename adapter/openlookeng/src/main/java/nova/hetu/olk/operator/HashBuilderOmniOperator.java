@@ -32,11 +32,10 @@ import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,7 +110,7 @@ public class HashBuilderOmniOperator implements Operator {
             this.preComputedHashChannel = requireNonNull(preComputedHashChannel, "preComputedHashChannel is null");
             this.buildTypes = ImmutableList.copyOf(requireNonNull(buildTypes, "sourceTypes is null"));
 
-            VecType[] omniBuildTypes = OperatorUtils.toVecTypes(buildTypes);
+            DataType[] omniBuildTypes = OperatorUtils.toDataTypes(buildTypes);
             String[] omniSearchFunctions = searchFunctions.stream().toArray(String[]::new);
             this.omniHashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(omniBuildTypes,
                     Ints.toArray(hashChannels), filterFunction, sortChannel, omniSearchFunctions, operatorCount);

@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
@@ -17,26 +17,26 @@ import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
 public abstract class DecimalVec extends FixedWidthVec {
     private final int typeWidth;
 
-    public DecimalVec(int size, int typeLength, VecType type) {
-        super(size * typeLength, size, type);
+    public DecimalVec(int size, int typeLength, DataType type) {
+        super(size * typeLength, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
-    public DecimalVec(VecAllocator allocator, int size, int typeLength, VecType type) {
-        super(allocator, size * typeLength, size, type);
+    public DecimalVec(VecAllocator allocator, int size, int typeLength, DataType type) {
+        super(allocator, size * typeLength, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
-    public DecimalVec(long nativeVector, int typeLength, VecType type) {
+    public DecimalVec(long nativeVector, int typeLength, DataType type) {
         super(nativeVector, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
     public DecimalVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                       long nativeVectorAllocator, int capacityInBytes, int size, int offset, int typeLength,
-                      VecType type) {
+                      DataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, type);
+                size, offset, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 

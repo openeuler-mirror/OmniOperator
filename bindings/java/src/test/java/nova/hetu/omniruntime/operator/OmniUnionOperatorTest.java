@@ -14,10 +14,10 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
@@ -35,7 +35,7 @@ public class OmniUnionOperatorTest {
      */
     @Test
     public void testUnionByTwoCols() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         Object[][] sourceDatas1 = {{5, 3, 2, 6, 1, 4, 7, 8}, {5.0, 3.0, 2.0, 6.0, 1.0, 4.0, 7.0, 8.0}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
@@ -68,7 +68,7 @@ public class OmniUnionOperatorTest {
      */
     @Test
     public void testUnionByTwoColsWithNulls() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         Object[][] sourceDatas1 = {{null, 3, 2, 6, 1, 4, 7, 8}, {5.0, 3.0, 2.0, 6.0, 1.0, 4.0, null, 8.0}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
@@ -103,7 +103,7 @@ public class OmniUnionOperatorTest {
      */
     @Test
     public void testUnionWithDictionaryType() {
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] ids = {0, 1, 2, 3};
 
         Object[][] sourceDatas1 = {{1L, null, 3L, null}, {111L, 11L, 333L, 33L}};

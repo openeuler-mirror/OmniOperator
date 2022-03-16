@@ -9,7 +9,7 @@
 #include "../operator.h"
 #include "../operator_factory.h"
 #include "../pages_index.h"
-#include "../../vector/vector_types.h"
+#include "../../type/data_types.h"
 #include "window_partition.h"
 #include "window.h"
 
@@ -17,28 +17,26 @@ namespace omniruntime {
 namespace op {
 class WindowWithExprOperatorFactory : public OperatorFactory {
 public:
-
-    WindowWithExprOperatorFactory(const vec::VecTypes &sourceTypes,
-        int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount,
-        int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount,
-        int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
-        int32_t preSortedChannelPrefix, int32_t expectedPositions, const vec::VecTypes &outputVecTypes,
-        const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount);
+    WindowWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+        int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
+        int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
+        int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
+        const type::DataTypes &outputDataTypes, const std::vector<omniruntime::expressions::Expr *> &argumentKeys,
+        int32_t argumentChannelsCount);
 
     ~WindowWithExprOperatorFactory() override;
 
-    static WindowWithExprOperatorFactory *CreateWindowWithExprOperatorFactory(
-        const vec::VecTypes &sourceTypes, int32_t *outputCols,int32_t outputColsCount, int32_t *windowFunctionTypes,
-        int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols,
-        int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
-        int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-        const vec::VecTypes &outputVecTypes, const std::vector<omniruntime::expressions::Expr *> &argumentKeys,
-        int32_t argumentChannelsCount);
+    static WindowWithExprOperatorFactory *CreateWindowWithExprOperatorFactory(const type::DataTypes &sourceTypes,
+        int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount,
+        int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount,
+        int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
+        int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
+        const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount);
 
     Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<vec::VecTypes> sourceTypes;
+    std::unique_ptr<type::DataTypes> sourceTypes;
     std::vector<int32_t> argumentChannels;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -47,7 +45,7 @@ private:
 
 class WindowWithExprOperator : public Operator {
 public:
-    WindowWithExprOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &argumentChannels,
+    WindowWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &argumentChannels,
         std::vector<RowProjFunc> &projectFuncs, WindowOperator *windowOperator);
 
     ~WindowWithExprOperator() override;
@@ -59,7 +57,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const vec::VecTypes &sourceTypes;
+    const type::DataTypes &sourceTypes;
     std::vector<int32_t> argumentChannels;
     std::vector<RowProjFunc> projectFuncs;
     WindowOperator *windowOperator;

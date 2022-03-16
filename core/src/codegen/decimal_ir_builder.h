@@ -10,37 +10,39 @@
 #include <llvm/IR/Value.h>
 #include "llvm/IR/IRBuilder.h"
 #include "codegen_value.h"
-#include "../vector/vector_type.h"
+#include "../type/data_type.h"
 
 class DecimalIRBuilder {
 public:
-    explicit DecimalIRBuilder(llvm::LLVMContext& context, llvm::Module& module, llvm::IRBuilder<> &builder) : context(context),
-    module(module), builder(builder) {this->AddScaleMultiplier();}
+    explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder)
+        : context(context), module(module), builder(builder)
+    {
+        this->AddScaleMultiplier();
+    }
     virtual ~DecimalIRBuilder() = default;
-    llvm::Value* CallDecimalFunction(const std::string& function_name,
-                                     llvm::Type* return_type,
-                                     const std::vector<llvm::Value*>& args);
-    std::shared_ptr<DecimalValue> BuildDecimalValue(llvm::Value *data, omniruntime::vec::VecType &retType,
-                                                    llvm::Value *isNull = nullptr);
+    llvm::Value *CallDecimalFunction(const std::string &function_name, llvm::Type *return_type,
+        const std::vector<llvm::Value *> &args);
+    std::shared_ptr<DecimalValue> BuildDecimalValue(llvm::Value *data, omniruntime::type::DataType &retType,
+        llvm::Value *isNull = nullptr);
     // Make from i128 value
     DecimalSplitValue Split(llvm::Value *fullValue);
     // Combine the two parts into an i128
-    llvm::Value* ToInt128(llvm::Value *high, llvm::Value *low) const;
+    llvm::Value *ToInt128(llvm::Value *high, llvm::Value *low) const;
     void AddScaleMultiplier() const;
-    llvm::Value* ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale,
-                               llvm::Value &rightValue, llvm::Value &rightScale,
-                               llvm::Value** scaledLeft, llvm::Value** scaledRight);
-    llvm::Value* ScaleValue(llvm::Value &value, llvm::Value &delta);
-    llvm::Value* GetScaleMultiplier(llvm::Value &delta);
-    llvm::Value* BuildIfElse(llvm::Value &condition, llvm::Type &return_type,
-        std::function<llvm::Value* ()> then_func, std::function<llvm::Value* ()> else_func);
+    llvm::Value *ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+        llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight);
+    llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta);
+    llvm::Value *GetScaleMultiplier(llvm::Value &delta);
+    llvm::Value *BuildIfElse(llvm::Value &condition, llvm::Type &return_type, std::function<llvm::Value *()> then_func,
+        std::function<llvm::Value *()> else_func);
     friend class ExpressionCodeGen;
+
 private:
-    llvm::LLVMContext& context;
-    llvm::Module& module;
+    llvm::LLVMContext &context;
+    llvm::Module &module;
     llvm::IRBuilder<> &builder;
     const std::string scaleMultipliersName = "scaleMultipliers";
 };
 
 
-#endif //OMNI_RUNTIME_DECIMAL_IR_BUILDER_H
+#endif // OMNI_RUNTIME_DECIMAL_IR_BUILDER_H

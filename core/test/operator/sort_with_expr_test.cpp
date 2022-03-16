@@ -18,7 +18,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -54,7 +54,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -92,7 +92,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -136,12 +136,12 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
     void *datas[3] = {data0, data1, data2};
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = new VectorBatch(3, dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        VecType vecType = sourceTypes.Get()[i];
-        vecBatch->SetVector(i, CreateDictionaryVector(vecType, dataSize, ids, dataSize, datas[i]));
+        DataType dataType = sourceTypes.Get()[i];
+        vecBatch->SetVector(i, CreateDictionaryVector(dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     int32_t outputCols[2] = {1, 2};
@@ -166,7 +166,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    VecTypes expectedTypes(std::vector<VecType> { LongVecType(), LongVecType() });
+    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -178,7 +178,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
 TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 {
-    VarcharVecType type(10);
+    VarcharDataType type(10);
     const int32_t dataSize = 4;
     const int32_t vecCount = 1;
     std::string values[dataSize] = {"hello", "world", "omni", "runtime"};
@@ -186,7 +186,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     VectorBatch *vecBatch = new VectorBatch(vecCount, dataSize);
     vecBatch->SetVector(0, vector);
 
-    VecTypes sourceTypes(std::vector<VecType>({ type }));
+    DataTypes sourceTypes(std::vector<DataType>({ type }));
     int32_t outputCols[vecCount] = {0};
 
     auto substrCol = new FieldExpr(0, VarcharType(200));
@@ -257,7 +257,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     vecBatch->SetVector(1, slicedVec1);
     vecBatch->SetVector(2, slicedVec2);
 
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
     int32_t outputCols[2] = {1, 2};
     auto add1Col = new FieldExpr(0, IntType());
     auto add1Literal = new LiteralExpr(50, IntType());
@@ -280,7 +280,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
     int64_t expectData1[5] = {0, 0, 5, 1, 3};
     int64_t expectData2[5] = {0, 0, 11, 55, 33};
-    VecTypes expectedTypes(std::vector<VecType> { LongVecType(), LongVecType() });
+    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
     expectVecBatch->GetVector(0)->SetValueNull(1);

@@ -7,7 +7,7 @@
 #define __HASH_BUILDER_EXPR_H__
 
 #include "../operator_factory.h"
-#include "../../vector/vector_types.h"
+#include "../../type/data_types.h"
 #include "../projection/projection.h"
 #include "../join/hash_builder.h"
 
@@ -15,11 +15,11 @@ namespace omniruntime {
 namespace op {
 class HashBuilderWithExprOperatorFactory : public OperatorFactory {
 public:
-    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(const vec::VecTypes &buildTypes,
-        const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
-        std::string &filter, int32_t hashTableCount);
+    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(
+        const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+        int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount);
 
-    HashBuilderWithExprOperatorFactory(const vec::VecTypes &buildTypes,
+    HashBuilderWithExprOperatorFactory(const type::DataTypes &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
         std::string &filter, int32_t hashTableCount);
 
@@ -33,7 +33,7 @@ public:
     }
 
 private:
-    std::unique_ptr<vec::VecTypes> buildTypes;
+    std::unique_ptr<type::DataTypes> buildTypes;
     std::vector<int32_t> buildHashCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -42,7 +42,7 @@ private:
 
 class HashBuilderWithExprOperator : public Operator {
 public:
-    HashBuilderWithExprOperator(const vec::VecTypes &buildTypes, const std::vector<int32_t> &buildHashCols,
+    HashBuilderWithExprOperator(const type::DataTypes &buildTypes, const std::vector<int32_t> &buildHashCols,
         const std::vector<RowProjFunc> &projectFuncs, HashBuilderOperator *HashBuilderOperator);
 
     ~HashBuilderWithExprOperator() override;
@@ -54,7 +54,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::vec::VecTypes &buildTypes;
+    const omniruntime::type::DataTypes &buildTypes;
     std::vector<int32_t> buildHashCols;
     std::vector<RowProjFunc> projectFuncs;
     HashBuilderOperator *hashBuilderOperator;

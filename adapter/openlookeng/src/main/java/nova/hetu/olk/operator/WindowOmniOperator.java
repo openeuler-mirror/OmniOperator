@@ -42,7 +42,7 @@ import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -233,7 +233,7 @@ public class WindowOmniOperator implements Operator {
                 List<Integer> outputChannels, List<WindowFunctionDefinition> windowFunctionDefinitions,
                 List<Integer> partitionChannels, List<Integer> preGroupedChannels, List<Integer> sortChannels,
                 List<SortOrder> sortOrder, int preSortedChannelPrefix, int expectedPositions) {
-            VecType[] omniSourceTypes = OperatorUtils.toVecTypes(sourceTypes);
+            DataType[] omniSourceTypes = OperatorUtils.toDataTypes(sourceTypes);
             int[] omniOutputChannels = outputChannels.stream().mapToInt(Integer::valueOf).toArray();
             FunctionType[] windowFunctionType = getWindowFunctionTypes(windowFunctionDefinitions);
             int[] omniPartitionChannels = partitionChannels.stream().mapToInt(Integer::valueOf).toArray();
@@ -255,7 +255,7 @@ public class WindowOmniOperator implements Operator {
             }
 
             int[] argumentChannels = getArgumentChannels(windowFunctionDefinitions);
-            VecType[] omniWindowReturnTypes = getVecTypes(windowFunctionDefinitions);
+            DataType[] omniWindowReturnTypes = getDataTypes(windowFunctionDefinitions);
 
             OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(omniSourceTypes,
                     omniOutputChannels, windowFunctionType, omniPartitionChannels, omnipreGroupedChannels,
@@ -265,11 +265,11 @@ public class WindowOmniOperator implements Operator {
             return omniWindowOperatorFactory;
         }
 
-        private VecType[] getVecTypes(List<WindowFunctionDefinition> windowFunctionDefinitions) {
-            VecType[] omniWindowReturnTypes = new VecType[windowFunctionDefinitions.size()];
+        private DataType[] getDataTypes(List<WindowFunctionDefinition> windowFunctionDefinitions) {
+            DataType[] omniWindowReturnTypes = new DataType[windowFunctionDefinitions.size()];
 
             for (int i = 0; i < windowFunctionDefinitions.size(); i++) {
-                omniWindowReturnTypes[i] = OperatorUtils.toVecType(windowFunctionDefinitions.get(i).getType());
+                omniWindowReturnTypes[i] = OperatorUtils.toDataType(windowFunctionDefinitions.get(i).getType());
             }
             return omniWindowReturnTypes;
         }

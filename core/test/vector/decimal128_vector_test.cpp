@@ -10,7 +10,6 @@ using namespace omniruntime::vec;
 
 TEST(Decimal128Vector, SliceVector)
 {
-
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
@@ -46,7 +45,6 @@ TEST(Decimal128Vector, SliceVector)
 // Test set/get
 TEST(Decimal128Vector, SetAndGetValue)
 {
-
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
@@ -65,7 +63,6 @@ TEST(Decimal128Vector, SetAndGetValue)
 // Test SetValues
 TEST(Decimal128Vector, SetValues)
 {
-
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != NULL);
 
@@ -83,7 +80,7 @@ TEST(Decimal128Vector, SetValues)
     Decimal128Vector *Decimal128Vector2 = new Decimal128Vector(allocator, size);
     Decimal128Vector2->SetValues(1, p + 2 * 2, 3);
     for (int i = 0; i < 3; i++) {
-        Decimal128 decimal128 =  Decimal128Vector2->GetValue(i + 1);
+        Decimal128 decimal128 = Decimal128Vector2->GetValue(i + 1);
         EXPECT_TRUE(decimal128.LowBits() == values[(i + 2) * 2]);
         EXPECT_TRUE(decimal128.HighBits() == values[(i + 2) * 2 + 1]);
     }

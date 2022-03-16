@@ -4,9 +4,6 @@
  */
 
 #include "window_function.h"
-#include "../../vector/vector_common.h"
-#include "../../vector/vector_helper.h"
-#include "../util/operator_util.h"
 
 using namespace omniruntime::vec;
 using namespace std;
@@ -86,7 +83,7 @@ void RowNumberFunction::RankingProcessRow(Vector *column, int32_t index, bool ne
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-    const VecType &inputType, const VecType &outputType)
+    const DataType &inputType, const DataType &outputType)
     : inputType(inputType), outputType(outputType)
 {
     this->windowIndex = nullptr;
@@ -112,12 +109,12 @@ void AggregateWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t 
         ResetAccumulator();
     } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
         // same or expanding frame
-        Accumulate(column->GetAllocator(), currentEnd + 1, frameEnd);
+        Accumulate(column->GetAllocator(), column->GetEncoding(), currentEnd + 1, frameEnd);
         currentEnd = frameEnd;
     } else {
         // different frame
         ResetAccumulator();
-        Accumulate(column->GetAllocator(), frameStart, frameEnd);
+        Accumulate(column->GetAllocator(), column->GetEncoding(), frameStart, frameEnd);
         currentStart = frameStart;
         currentEnd = frameEnd;
     }
@@ -140,15 +137,16 @@ void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregat
     pAggregator->ExtractValue(aggregateState.operator*(), pColumn, index);
 }
 
-void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t start, int32_t end)
+void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEncoding vectorEncoding, int32_t start,
+    int32_t end)
 {
     if (start > end) {
         return;
     }
     Vector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
-    uint32_t width = (inputType.GetId() == OMNI_VEC_TYPE_VARCHAR || inputType.GetId() == OMNI_VEC_TYPE_CHAR) ?
-        static_cast<const VarcharVecType &>(inputType).GetWidth() :
+    uint32_t width = (inputType.GetId() == OMNI_VARCHAR || inputType.GetId() == OMNI_CHAR) ?
+        static_cast<const VarcharDataType &>(inputType).GetWidth() :
         0;
     // this is important to package data into an extra vector and use it to do the aggregation
     // the vector is used for aggregation in window operation
@@ -157,7 +155,7 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t 
         resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
     } else {
         resultVectorBatch->SetVector(0,
-            VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount));
+            VectorHelper::CreateVector(vecAllocator, vectorEncoding, inputType.GetId(), rowCount * width, rowCount));
     }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
@@ -201,32 +199,32 @@ void AggregateWindowFunction::AssignValueForVector(Vector *originalVector, int32
     Vector *resultVector, int32_t resultVectorPosition)
 {
     switch (originalVector->GetTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32: {
+        case OMNI_INT:
+        case OMNI_DATE32: {
             SetValue<IntVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
             break;
         }
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64: {
+        case OMNI_LONG:
+        case OMNI_DECIMAL64: {
             SetValue<LongVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
             break;
         }
-        case OMNI_VEC_TYPE_DOUBLE: {
+        case OMNI_DOUBLE: {
             SetValue<DoubleVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
             break;
         }
-        case OMNI_VEC_TYPE_BOOLEAN: {
+        case OMNI_BOOLEAN: {
             SetValue<BooleanVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
             break;
         }
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR: {
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
             uint8_t *actual = nullptr;
             int32_t length = static_cast<VarcharVector *>(originalVector)->GetValue(originalVectorPosition, &actual);
             static_cast<VarcharVector *>(resultVector)->SetValue(resultVectorPosition, actual, length);
             break;
         }
-        case OMNI_VEC_TYPE_DECIMAL128: {
+        case OMNI_DECIMAL128: {
             SetValue<Decimal128Vector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
             break;
         }

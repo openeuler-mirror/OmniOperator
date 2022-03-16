@@ -5,60 +5,60 @@
 #ifndef OMNI_RUNTIME_JIT_CONTEXT_H
 #define OMNI_RUNTIME_JIT_CONTEXT_H
 
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "expression/expressions.h"
 
 using JitContext = struct JitContext {
     uintptr_t func;
 };
 
-JitContext *CreateSortJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
+JitContext *CreateSortJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortColsCount);
 
-JitContext *CreateSortWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
+JitContext *CreateSortWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
     int32_t *sortNullFirsts);
 
-JitContext *CreateHashBuilderJitContext(omniruntime::vec::VecTypes &buildVecTypes, int32_t *buildHashCols,
+JitContext *CreateHashBuilderJitContext(omniruntime::type::DataTypes &buildDataTypes, int32_t *buildHashCols,
     int32_t buildHashColsCount, int32_t operatorCount);
 
-JitContext *CreateLookupJoinJitContext(omniruntime::vec::VecTypes &probeVecTypes, int32_t *probeOutputCols,
+JitContext *CreateLookupJoinJitContext(omniruntime::type::DataTypes &probeDataTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    omniruntime::vec::VecTypes &buildOutputVecTypes, int32_t *buildOutputCols);
+    omniruntime::type::DataTypes &buildOutputDataTypes, int32_t *buildOutputCols);
 
-JitContext *CreateHashBuilderWithExprJitContext(omniruntime::vec::VecTypes &buildVecTypes,
+JitContext *CreateHashBuilderWithExprJitContext(omniruntime::type::DataTypes &buildDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t operatorCount);
 
-JitContext *CreateLookupJoinWithExprJitContext(omniruntime::vec::VecTypes &probeVecTypes, int32_t *probeOutputCols,
+JitContext *CreateLookupJoinWithExprJitContext(omniruntime::type::DataTypes &probeDataTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
-    omniruntime::vec::VecTypes &buildOutputVecTypes, int32_t *buildOutputCols);
+    omniruntime::type::DataTypes &buildOutputDataTypes, int32_t *buildOutputCols);
 
-JitContext *CreateTopNJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *sortCols, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortColsCount);
+JitContext *CreateTopNJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *sortCols,
+    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount);
 
-JitContext *CreateTopNWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes,
+JitContext *CreateTopNWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts);
 
-JitContext *CreateWindowJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
+JitContext *CreateWindowJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount);
 
-JitContext *CreateWindowWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
+JitContext *CreateWindowWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortColsCount, omniruntime::vec::VecTypes &outputTypes,
+    int32_t *sortNullFirsts, int32_t sortColsCount, omniruntime::type::DataTypes &outputTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys);
 
-JitContext *CreateHashAggregationJitContext(omniruntime::vec::VecTypes &groupByVecTypes, int32_t *groupByCols,
-    omniruntime::vec::VecTypes &aggVecTypes, int32_t *aggCols, int32_t *aggFuncTypes, int32_t aggFuncsCount,
-    omniruntime::vec::VecTypes &outputVecTypes);
+JitContext *CreateHashAggregationJitContext(omniruntime::type::DataTypes &groupByDataTypes, int32_t *groupByCols,
+    omniruntime::type::DataTypes &aggDataTypes, int32_t *aggCols, int32_t *aggFuncTypes, int32_t aggFuncsCount,
+    omniruntime::type::DataTypes &outputDataTypes);
 
-JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes,
+JitContext *CreateHashAggregationWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &groupByKeys,
     const std::vector<omniruntime::expressions::Expr *> &aggKeys, int32_t *aggFuncTypes, int32_t aggFuncsCount,
-    omniruntime::vec::VecTypes &outputVecTypes);
+    omniruntime::type::DataTypes &outputDataTypes);
 
-JitContext *CreateAggregationJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *aggCols,
-    int32_t *aggMaskCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, omniruntime::vec::VecTypes &outputVecTypes);
+JitContext *CreateAggregationJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *aggCols,
+    int32_t *aggMaskCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, omniruntime::type::DataTypes &outputDataTypes);
 
 #endif // OMNI_RUNTIME_JIT_CONTEXT_H

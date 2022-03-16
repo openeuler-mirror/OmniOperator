@@ -6,8 +6,8 @@
 #include <iostream>
 
 using namespace std;
-using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
+using namespace omniruntime::type;
 
 Parser::Parser() {}
 
@@ -83,25 +83,25 @@ string Parser::StripString(const string &input)
     return newInput;
 }
 
-VecTypeId ParseReturnType(const string &typeString)
+DataTypeId ParseReturnType(const string &typeString)
 {
     int endIdx = 2;
     int widthIdx = typeString.find('[');
     if (widthIdx != string::npos) {
-        if (stoi(typeString.substr(0, endIdx)) == OMNI_VEC_TYPE_CHAR) {
-            return OMNI_VEC_TYPE_CHAR;
+        if (stoi(typeString.substr(0, endIdx)) == OMNI_CHAR) {
+            return OMNI_CHAR;
         }
     }
     if (typeString.find_first_not_of("0123456789") == string::npos && stoi(typeString) < INT32_MAX) {
         int typeOrdinal = stoi(typeString);
-        return static_cast<VecTypeId>(typeOrdinal);
+        return static_cast<DataTypeId>(typeOrdinal);
     }
     LogError("Invalid return type: %s", typeString.c_str());
-    return OMNI_VEC_TYPE_INVALID;
+    return OMNI_INVALID;
 }
 
 std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const string expressions[],
-    int32_t numberOfExpressions, VecTypes inputTypes)
+    int32_t numberOfExpressions, DataTypes inputTypes)
 {
     std::vector<Expr *> vExprs;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
@@ -113,7 +113,7 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
     return vExprs;
 }
 
-Expr *Parser::ParseRowExpression(const string &inputStr, VecTypes inputTypes, int32_t vecCount)
+Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
     int firstParenInd = input.find('(');
@@ -176,15 +176,15 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     int typeIdx = opStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
-    unique_ptr<VecType> type;
-    VecTypeId typeId;
+    unique_ptr<DataType> type;
+    DataTypeId typeId;
     if (typeIdx != string::npos) {
         typeId = ParseReturnType(opStr.substr(typeIdx + 1));
-        if (typeId == OMNI_VEC_TYPE_CHAR) {
+        if (typeId == OMNI_CHAR) {
             width = stoi(opStr.substr(typeIdx + stepSize, opStr.size() - typeIdx - stepSize));
-            type = make_unique<CharVecType>(width);
+            type = make_unique<CharDataType>(width);
         } else {
-            type = make_unique<VecType>(typeId);
+            type = make_unique<DataType>(typeId);
         }
         opStr = opStr.substr(0, typeIdx);
     }
@@ -241,9 +241,9 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // Function
     // Check that the signature matches
-    vector<VecTypeId> argTypes(args.size());
+    vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
-        [](Expr *expr) -> VecTypeId { return expr->GetReturnTypeId(); });
+        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(opStr, argTypes, type->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
@@ -270,37 +270,37 @@ string *FixString(const string &dataStr)
     return fixedStr;
 }
 
-LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, VecTypePtr currType)
+LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTypePtr currType)
 {
     switch (currType->GetId()) {
         // handle boolean as int32
-        case OMNI_VEC_TYPE_BOOLEAN: {
+        case OMNI_BOOLEAN: {
             return std::make_unique<LiteralExpr>(stoi(literalStr), std::move(currType)).release();
         }
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32: {
+        case OMNI_INT:
+        case OMNI_DATE32: {
             LiteralExpr *e = std::make_unique<LiteralExpr>(stoi(literalStr), std::move(currType)).release();
             e->longVal = e->intVal;
             e->doubleVal = e->intVal;
             return e;
         }
         // Need to handle decimals properly
-        case OMNI_VEC_TYPE_DECIMAL128: {
+        case OMNI_DECIMAL128: {
             string *dec128String = make_unique<string>(literalStr).release();
             return std::make_unique<LiteralExpr>(dec128String, std::move(currType)).release();
         }
-        case OMNI_VEC_TYPE_DECIMAL64:
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_DECIMAL64:
+        case OMNI_LONG: {
             return std::make_unique<LiteralExpr>(stol(literalStr), std::move(currType)).release();
         }
-        case OMNI_VEC_TYPE_DOUBLE: {
+        case OMNI_DOUBLE: {
             return std::make_unique<LiteralExpr>(stod(literalStr), std::move(currType)).release();
         }
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
             return std::make_unique<LiteralExpr>(FixString(literalStr), std::move(currType)).release();
         }
-        case OMNI_VEC_TYPE_NONE: {
+        case OMNI_NONE: {
             return std::make_unique<LiteralExpr>(0, std::move(currType)).release();
         }
         default: {
@@ -310,11 +310,11 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, VecType
     }
 }
 
-FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const VecTypes &inputTypes)
+FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const DataTypes &inputTypes)
 {
     int colIdx = stoi(fieldStr.substr(1));
-    VecType &colType = const_cast<VecType &>(inputTypes.Get().at(colIdx));
-    return std::make_unique<FieldExpr>(colIdx, std::make_unique<VecType>(colType)).release();
+    DataType &colType = const_cast<DataType &>(inputTypes.Get().at(colIdx));
+    return std::make_unique<FieldExpr>(colIdx, std::make_unique<DataType>(colType)).release();
 }
 
 LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
@@ -322,11 +322,11 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
     int typeIdx = literalStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
-    VecTypePtr currType;
-    VecTypeId currTypeId;
+    DataTypePtr currType;
+    DataTypeId currTypeId;
     if (typeIdx != string::npos) {
         currTypeId = ParseReturnType(literalStr.substr(typeIdx + 1));
-        if (currTypeId == OMNI_VEC_TYPE_CHAR) {
+        if (currTypeId == OMNI_CHAR) {
             width = stoi(literalStr.substr(typeIdx + stepSize, literalStr.size() - typeIdx - stepSize));
         }
         literalStr = literalStr.substr(0, typeIdx);
@@ -337,7 +337,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     // Case with boolean true/false
     if (literalStr == "true" || literalStr == "false") {
-        currType = make_unique<BooleanVecType>();
+        currType = make_unique<BooleanDataType>();
         return std::make_unique<LiteralExpr>(literalStr == "true", std::move(currType)).release();
     }
 
@@ -354,13 +354,13 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
     }
 
     if (TypeUtil::IsStringType(currTypeId)) {
-        if (currTypeId == OMNI_VEC_TYPE_CHAR) {
-            currType = make_unique<CharVecType>(width);
+        if (currTypeId == OMNI_CHAR) {
+            currType = make_unique<CharDataType>(width);
         } else {
-            currType = make_unique<VarcharVecType>(width);
+            currType = make_unique<VarcharDataType>(width);
         }
     } else {
-        currType = make_unique<VecType>(currTypeId);
+        currType = make_unique<DataType>(currTypeId);
     }
 
     // Case with regular data (int, long, double, string ...)

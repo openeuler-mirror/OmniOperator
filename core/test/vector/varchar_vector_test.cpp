@@ -16,7 +16,7 @@ TEST(VarcharVector, newVector)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 1024);
-    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_VARCHAR);
     delete vector;
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);
@@ -109,7 +109,7 @@ TEST(VarcharVector, setValueNull)
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
-    VarcharVector *vector = new VarcharVector(allocator,1024, 256);
+    VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             vector->SetValueNull(i);
@@ -206,7 +206,7 @@ TEST(VarcharVector, emptyString)
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    std::vector<std::string> data = {"e", "abc", "", "hg", ""};
+    std::vector<std::string> data = { "e", "abc", "", "hg", "" };
     int size = 5;
     VarcharVector *original = new VarcharVector(allocator, 1024, size);
     for (int i = 0; i < size; i++) {
@@ -326,7 +326,7 @@ TEST(VarcharVector, setValueExpand)
     EXPECT_EQ(iniZeroCapacityVector->GetCapacityInBytes(), 0);
 
     iniZeroCapacityVector->SetValue(0, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
-    EXPECT_EQ(iniZeroCapacityVector->GetCapacityInBytes(), 32 * 1024 );
+    EXPECT_EQ(iniZeroCapacityVector->GetCapacityInBytes(), 32 * 1024);
     uint8_t *actualChar = nullptr;
     int len = iniZeroCapacityVector->GetValue(0, &actualChar);
     std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);

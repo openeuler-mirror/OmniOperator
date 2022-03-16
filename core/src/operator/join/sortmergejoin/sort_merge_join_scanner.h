@@ -5,7 +5,7 @@
 #ifndef __SORT_MERGE_JOIN_SCANNER_H__
 #define __SORT_MERGE_JOIN_SCANNER_H__
 
-#include "../../../vector/vector_types.h"
+#include "../../../type/data_types.h"
 #include "dynamic_pages_index.h"
 #include "../common_join.h"
 #include "../../../vector/vector_common.h"
@@ -57,8 +57,8 @@ public:
 
 class SortMergeJoinScanner {
 public:
-    SortMergeJoinScanner(const VecTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols, int32_t keyColsCount,
-        DynamicPagesIndex *streamedTablePagesIndex, const VecTypes &bufferedTableKeysTypes,
+    SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols, int32_t keyColsCount,
+        DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
         int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch);
 
     int64_t FindNextJoinRows();
@@ -112,7 +112,7 @@ private:
 
     int32_t *bufferedTableKeysCols;
 
-    std::unique_ptr<VecTypes> streamedTableKeysTypes;
+    std::unique_ptr<DataTypes> streamedTableKeysTypes;
 
     int32_t keyColsCount;
 

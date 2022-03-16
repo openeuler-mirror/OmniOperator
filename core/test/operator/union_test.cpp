@@ -13,22 +13,22 @@ using namespace std;
 
 TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
 {
-    //construct data;
+    // construct data;
     const int32_t DATA_SIZE = 6;
-    //table1
+    // table1
     int32_t data1[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    //table2
+    // table2
     int32_t data3[DATA_SIZE] = {10, 11, 12, 10, 11, 12};
     double data4[DATA_SIZE] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1};
 
-    std::vector<VecType> types = { IntVecType::Instance(),  DoubleVecType::Instance() };
-    VecTypes sourceTypes(types);
+    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE, data1, data2);
     VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, DATA_SIZE, data3, data4);
 
-    UnionOperatorFactory *operatorFactory = UnionOperatorFactory::CreateUnionOperatorFactory(
-        sourceTypes, sourceTypes.GetSize(),false);
+    UnionOperatorFactory *operatorFactory =
+        UnionOperatorFactory::CreateUnionOperatorFactory(sourceTypes, sourceTypes.GetSize(), false);
     operatorFactory->SetJitContext(nullptr);
     UnionOperator *unionOperator = dynamic_cast<UnionOperator *>(CreateTestOperator(operatorFactory));
     unionOperator->AddInput(vecBatch1);

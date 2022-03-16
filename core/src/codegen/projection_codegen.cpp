@@ -7,7 +7,7 @@
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 
 namespace {
@@ -162,30 +162,30 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Type *outPtrType = nullptr;
     Function *varcharVectorFunc;
     switch (this->expr->GetReturnTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             outPtrType = llvmTypes->I32PtrType();
             break;
-        case OMNI_VEC_TYPE_LONG:
+        case OMNI_LONG:
             outPtrType = llvmTypes->I64PtrType();
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             outPtrType = llvmTypes->DoublePtrType();
             break;
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
             outPtrType = llvmTypes->I8PtrType();
-            std::vector<VecTypeId> paramTypes = { OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_VARCHAR };
+            std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
             FunctionSignature varcharVectorFuncSignature =
-                FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_VEC_TYPE_INT);
+                FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
             varcharVectorFunc = module->getFunction(
                 omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
             break;
         }
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             outPtrType = llvmTypes->I128PtrType();
             break;
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             outPtrType = llvmTypes->I1PtrType();
             break;
         default:

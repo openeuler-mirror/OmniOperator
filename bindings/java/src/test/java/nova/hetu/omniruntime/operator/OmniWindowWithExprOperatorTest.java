@@ -7,10 +7,10 @@ import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -32,7 +32,7 @@ public class OmniWindowWithExprOperatorTest {
      */
     @Test
     public void testMax() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         int[] outputChannels = {0, 1, 2};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
         int[] partitionChannels = {0};
@@ -43,7 +43,7 @@ public class OmniWindowWithExprOperatorTest {
         int preSortedChannelPrefix = 0;
         int expectedPositions = 10000;
         String[] argumentKeys = {"ADD:3(#2, 50:3)"};
-        VecType[] windowFunctionReturnType = {DoubleVecType.DOUBLE};
+        DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
         OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentKeys, windowFunctionReturnType);

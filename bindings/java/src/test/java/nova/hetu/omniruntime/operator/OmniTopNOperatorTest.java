@@ -3,10 +3,10 @@ package nova.hetu.omniruntime.operator;
 import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.operator.topn.OmniTopNOperatorFactory;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -32,7 +32,7 @@ public class OmniTopNOperatorTest {
         ArrayList<Vec> longVecs = new ArrayList<>();
         longVecs.add(longVec);
 
-        VecType[] sourceTypes = {LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG};
         String[] sortCols = {"#0"};
         int[] sortAsc = {0};
         int[] nullFirst = {0};
@@ -70,7 +70,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(vec2);
         longVecs.add(vec3);
 
-        VecType[] sourceTypes = {IntVecType.INTEGER,LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         String[] sortCols = {"#0", "#1"};
         int[] sortAsc = {1,1};
         int[] nullFirst = {0,0};
@@ -120,7 +120,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(vec2);
         longVecs.add(vec3);
 
-        VecType[] sourceTypes = {IntVecType.INTEGER,LongVecType.LONG,DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         String[] sortCols = {"#1"};
         int[] sortAsc = {0};
         int[] nullFirst = {0};

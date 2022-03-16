@@ -9,8 +9,8 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -30,7 +30,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      * @param filterExpression the filter expression in join
      * @param operatorCount the operator count
      */
-    public OmniHashBuilderWithExprOperatorFactory(VecType[] buildTypes, String[] buildHashKeys,
+    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
             Optional<String> filterExpression, int operatorCount) {
         super(new FactoryContext(new JitContext(buildTypes, buildHashKeys, filterExpression, operatorCount)));
     }
@@ -44,7 +44,7 @@ public class OmniHashBuilderWithExprOperatorFactory
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createHashBuilderWithExprOperatorFactory(VecTypeSerializer.serialize(context.buildTyeps),
+        return createHashBuilderWithExprOperatorFactory(DataTypeSerializer.serialize(context.buildTyeps),
                 context.buildHashKeys, context.filterExpression, context.operatorCount,
                 factoryContext.getNativeJitContext());
     }
@@ -53,7 +53,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      * The jit Context.
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] buildTyeps;
+        private final DataType[] buildTyeps;
 
         private final String[] buildHashKeys;
 
@@ -61,7 +61,7 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         private final int operatorCount;
 
-        public JitContext(VecType[] buildTyeps, String[] buildHashKeys, Optional<String> filterExpression,
+        public JitContext(DataType[] buildTyeps, String[] buildHashKeys, Optional<String> filterExpression,
                 int operatorCount) {
             this.buildTyeps = requireNonNull(buildTyeps, "buildTyeps");
             this.buildHashKeys = requireNonNull(buildHashKeys, "buildHashKeys");
@@ -100,7 +100,7 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createHashBuilderWithExprJitContext(VecTypeSerializer.serialize(context.buildTyeps),
+            return createHashBuilderWithExprJitContext(DataTypeSerializer.serialize(context.buildTyeps),
                     context.buildHashKeys, context.filterExpression, context.operatorCount);
         }
     }

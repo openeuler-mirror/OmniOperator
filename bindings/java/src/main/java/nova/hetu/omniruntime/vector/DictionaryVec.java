@@ -4,8 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.DictionaryVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 
 /**
  * dictionary vec
@@ -20,19 +19,20 @@ public class DictionaryVec extends FixedWidthVec {
     private int[] ids;
 
     public DictionaryVec(long nativeVector) {
-        super(nativeVector, DictionaryVecType.DICTIONARY);
+        super(nativeVector, DataType.create(getTypeIdNative(nativeVector)));
         loadDictionaryAndIds(size);
     }
 
     public DictionaryVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                         long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, DictionaryVecType.DICTIONARY);
+                size, offset, DataType.create(getTypeIdNative(nativeVector)));
         loadDictionaryAndIds(size);
     }
 
     public DictionaryVec(Vec dictionary, int[] ids) {
-        super(dictionary.getAllocator(), ids.length * BYTES, ids.length, DictionaryVecType.DICTIONARY);
+        super(dictionary.getAllocator(), ids.length * BYTES, ids.length,
+                VecEncoding.OMNI_VEC_ENCODING_DICTIONARY, dictionary.getType());
         // set ids
         valuesBuf.setIntArray(0, ids, 0, ids.length * BYTES);
         // set dictionary vector
@@ -79,8 +79,9 @@ public class DictionaryVec extends FixedWidthVec {
 
     private void loadDictionary() {
         long dictionaryNative = getDictionaryNative(getNativeVector());
-        VecType type = VecType.create(getTypeIdNative(dictionaryNative));
-        this.dictionary = VecFactory.create(dictionaryNative, type);
+        DataType type = DataType.create(getTypeIdNative(dictionaryNative));
+        VecEncoding encoding = VecEncoding.values()[getVecEncodingNative(dictionaryNative)];
+        this.dictionary = VecFactory.create(dictionaryNative, encoding, type);
     }
 
     /**
@@ -100,7 +101,7 @@ public class DictionaryVec extends FixedWidthVec {
      * @return integer value
      */
     public int getInt(int index) {
-        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
             return ((IntVec) dictionary).get(getId(index));
         } else {
             return ((DictionaryVec) dictionary).getInt(getId(index));
@@ -115,7 +116,7 @@ public class DictionaryVec extends FixedWidthVec {
      */
     public long getLong(int index) {
         int dicIndex = getId(index);
-        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
             return ((LongVec) dictionary).get(dicIndex);
         } else {
             return ((DictionaryVec) dictionary).getLong(dicIndex);
@@ -129,7 +130,7 @@ public class DictionaryVec extends FixedWidthVec {
      * @return double value
      */
     public double getDouble(int index) {
-        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
             return ((DoubleVec) dictionary).get(getId(index));
         } else {
             return ((DictionaryVec) dictionary).getDouble(getId(index));
@@ -143,7 +144,7 @@ public class DictionaryVec extends FixedWidthVec {
      * @return boolean value
      */
     public boolean getBoolean(int index) {
-        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
             return ((BooleanVec) dictionary).get(getId(index));
         } else {
             return ((DictionaryVec) dictionary).getBoolean(getId(index));
@@ -157,7 +158,7 @@ public class DictionaryVec extends FixedWidthVec {
      * @return byte array
      */
     public byte[] getBytes(int index) {
-        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
             return ((VarcharVec) dictionary).get(getId(index));
         } else {
             return ((DictionaryVec) dictionary).getBytes(getId(index));
@@ -171,7 +172,7 @@ public class DictionaryVec extends FixedWidthVec {
      * @return long array
      */
     public long[] getDecimal128(int index) {
-        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
             return ((Decimal128Vec) dictionary).get(getId(index));
         } else {
             return ((DictionaryVec) dictionary).getDecimal128(getId(index));
@@ -208,5 +209,10 @@ public class DictionaryVec extends FixedWidthVec {
     @Override
     public int getRealValueBufCapacityInBytes() {
         return size * BYTES;
+    }
+
+    @Override
+    public VecEncoding getEncoding() {
+        return VecEncoding.OMNI_VEC_ENCODING_DICTIONARY;
     }
 }

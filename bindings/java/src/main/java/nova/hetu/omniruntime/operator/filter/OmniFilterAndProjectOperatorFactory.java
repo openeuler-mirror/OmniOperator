@@ -9,8 +9,8 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +33,7 @@ public class OmniFilterAndProjectOperatorFactory
      * @param inputTypes the input types
      * @param projections the projections
      */
-    public OmniFilterAndProjectOperatorFactory(String expression, VecType[] inputTypes, List<String> projections) {
+    public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections) {
         super(new FactoryContext(new JitContext(expression, inputTypes, projections)));
     }
 
@@ -45,7 +45,7 @@ public class OmniFilterAndProjectOperatorFactory
      * @param projections    the projections
      * @param parseFormat    the format to parse expression into
      */
-    public OmniFilterAndProjectOperatorFactory(String expression, VecType[] inputTypes, List<String> projections,
+    public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
         int parseFormat) {
         super(new FactoryContext(new JitContext(expression, inputTypes, projections, parseFormat)));
     }
@@ -60,7 +60,7 @@ public class OmniFilterAndProjectOperatorFactory
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         // long nativeOperatorFactory is 0 if operations/data-types are unsupported
         JitContext context = factoryContext.getJitContext();
-        long factoryAddr = createFilterAndProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes),
+        long factoryAddr = createFilterAndProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
             context.inputTypes.length, context.expression, context.projections.toArray(), context.projections.size(),
             factoryContext.getNativeJitContext(), context.parseFormat);
         if (factoryAddr != 0) {
@@ -79,7 +79,7 @@ public class OmniFilterAndProjectOperatorFactory
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] inputTypes;
+        private final DataType[] inputTypes;
 
         private final String expression;
 
@@ -94,7 +94,7 @@ public class OmniFilterAndProjectOperatorFactory
          * @param inputTypes the input types
          * @param projections the projections
          */
-        public JitContext(String expression, VecType[] inputTypes, List<String> projections) {
+        public JitContext(String expression, DataType[] inputTypes, List<String> projections) {
             this(expression, inputTypes, projections, 0);
         }
 
@@ -106,7 +106,7 @@ public class OmniFilterAndProjectOperatorFactory
          * @param projections the projections
          * @param parseFormat the parsing format of expressions
          */
-        public JitContext(String expression, VecType[] inputTypes, List<String> projections, int parseFormat) {
+        public JitContext(String expression, DataType[] inputTypes, List<String> projections, int parseFormat) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expression = requireNonNull(expression, "Expression is null.");
             this.projections = requireNonNull(projections, "Project indices is null.");

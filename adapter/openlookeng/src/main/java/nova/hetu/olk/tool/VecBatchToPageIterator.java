@@ -6,6 +6,7 @@ package nova.hetu.olk.tool;
 
 import static io.prestosql.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.prestosql.spi.block.DictionaryId.randomDictionaryId;
+import static nova.hetu.olk.tool.OperatorUtils.buildRowOmniBlock;
 
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
@@ -19,7 +20,7 @@ import nova.hetu.olk.block.IntArrayOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.olk.block.ByteArrayOmniBlock;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
@@ -88,51 +89,5 @@ public class VecBatchToPageIterator implements Iterator<Page> {
         }
         vecBatch.close();
         return new Page(positionCount, blocks);
-    }
-
-    private RowOmniBlock buildRowOmniBlock(ContainerVec containerVec) {
-        VecType[] vecTypes = containerVec.getVecTypes();
-        int positionCount = containerVec.getPositionCount();
-        Block[] rowBlocks = new Block[vecTypes.length];
-        int vectorCount = containerVec.getVecTypes().length;
-        for (int vecIdx = 0; vecIdx < vectorCount; ++vecIdx) {
-            VecType vecType = vecTypes[vecIdx];
-            Block block;
-            switch (vecType.getId()) {
-                case OMNI_VEC_TYPE_INT :
-                case OMNI_VEC_TYPE_DATE32 :
-                    block = new IntArrayOmniBlock(positionCount, new IntVec(containerVec.getVector(vecIdx)));
-                    rowBlocks[vecIdx] = block;
-                    break;
-                case OMNI_VEC_TYPE_LONG :
-                case OMNI_VEC_TYPE_DECIMAL64 :
-                    block = new LongArrayOmniBlock(positionCount, new LongVec(containerVec.getVector(vecIdx)));
-                    rowBlocks[vecIdx] = block;
-                    break;
-                case OMNI_VEC_TYPE_DOUBLE :
-                    block = new DoubleArrayOmniBlock(positionCount, new DoubleVec(containerVec.getVector(vecIdx)));
-                    rowBlocks[vecIdx] = block;
-                    break;
-                case OMNI_VEC_TYPE_VARCHAR :
-                case OMNI_VEC_TYPE_CHAR :
-                    block = new VariableWidthOmniBlock(positionCount, new VarcharVec(containerVec.getVector(vecIdx)));
-                    rowBlocks[vecIdx] = block;
-                    break;
-                case OMNI_VEC_TYPE_DECIMAL128 :
-                    block = new Int128ArrayOmniBlock(positionCount,
-                            new Decimal128Vec(containerVec.getVector(vecIdx), vecType));
-                    rowBlocks[vecIdx] = block;
-                    break;
-                default :
-                    throw new PrestoException(GENERIC_INTERNAL_ERROR,
-                            "Unsupported vector type " + vecTypes[vecIdx].getId());
-            }
-        }
-        int[] fieldBlockOffsets = new int[positionCount + 1];
-        byte[] nulls = containerVec.getRawValueNulls();
-        for (int position = 0; position < positionCount; position++) {
-            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position] + (nulls[position] == Vec.NULL ? 0 : 1);
-        }
-        return new RowOmniBlock(0, positionCount, nulls, fieldBlockOffsets, rowBlocks);
     }
 }

@@ -6,9 +6,9 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.operator.topn.OmniTopNWithExprOperatorFactory;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
@@ -19,7 +19,7 @@ public class OmniTopNWithExprOperatorTest {
 
     @Test
     public void testTopNWithAllExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
         String[] sortKeys = {"ADD:1(#0, 5:1)", "MODULUS:2(#2, 3:2)"};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
@@ -53,7 +53,7 @@ public class OmniTopNWithExprOperatorTest {
 
     @Test
     public void testTopNWithPartialExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
         String[] sortKeys = {"#0", "MODULUS:2(#2, 3:2)"};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
@@ -87,7 +87,7 @@ public class OmniTopNWithExprOperatorTest {
 
     @Test
     public void testTopNWithNoExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
         String[] sortKeys = {"#0", "#2"};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};

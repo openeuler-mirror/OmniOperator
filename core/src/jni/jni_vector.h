@@ -13,9 +13,9 @@ extern "C" {
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    newVectorNative
- * Signature: (IIIJ)J
+ * Signature: (JIIII)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *, jclass, jlong, jint, jint,
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *, jclass, jlong, jint, jint, jint,
     jint);
 
 /*
@@ -120,10 +120,10 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositio
 
 /*
  * Class:     nova_hetu_omniruntime_vector_ContainerVec
- * Method:    getVecTypesNative
+ * Method:    getDataTypesNative
  * Signature: (J)[I;
  */
-JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getDataTypesNative(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_VariableWidthVec
@@ -184,12 +184,17 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatc
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative(JNIEnv *, jclass, jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getVecEncodingNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNative(JNIEnv *, jclass, jlong);
+/*
  * Class:     nova_hetu_omniruntime_vector_VarcharVec
  * Method:    expandDataCapacity
  * Signature: (JI)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity
-        (JNIEnv *, jclass, jlong, jint);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *, jclass, jlong, jint);
 
 #ifdef __cplusplus
 }

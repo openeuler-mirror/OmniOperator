@@ -296,7 +296,7 @@ TEST(DictionaryVector, NestedDictionaryVectorExtract)
     int32_t nestedIds[] = {1, 2, 3, 4, 5, 6, 7, 8};
     auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 8);
 
-    Vector * checkDictionary = nested->ExtractDictionary();
+    Vector *checkDictionary = nested->ExtractDictionary();
     EXPECT_EQ(nested->GetLong(0), dictionary->GetValue(1));
     EXPECT_EQ(nested->GetLong(1), dictionary->GetValue(2));
     EXPECT_EQ(nested->GetLong(2), dictionary->GetValue(2));

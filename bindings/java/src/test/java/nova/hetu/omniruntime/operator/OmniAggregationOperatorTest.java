@@ -13,8 +13,8 @@ import static org.testng.Assert.fail;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -36,11 +36,11 @@ public class OmniAggregationOperatorTest {
      */
     @Test
     public void testExecuteCountMultiplePage() {
-        VecType[] sourceTypes = {LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG};
         FunctionType[] agggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
         int[] aggInputChannels = {1};
         int[] maskChannels = {-1, -1};
-        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, agggFunctionTypes,
                 aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
@@ -80,12 +80,12 @@ public class OmniAggregationOperatorTest {
 
     @Test
     public void testExecuteAggMultiplePage() {
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                 OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         int[] aggInputChannels = {0, 1, 2, 3};
         int[] maskChannels = {-1, -1, -1, -1};
-        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
                 aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
@@ -142,12 +142,12 @@ public class OmniAggregationOperatorTest {
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+                    DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
                     FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                             OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
                     int[] aggInputChannels = {0, 1, 2, 3};
                     int[] maskChannels = {-1, -1, -1, -1};
-                    VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
                             aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
@@ -182,7 +182,7 @@ public class OmniAggregationOperatorTest {
         }
     }
 
-    private void assertResult(int rowNum, int pageCount, VecType[] aggOutputTypes, OmniOperator omniOperator) {
+    private void assertResult(int rowNum, int pageCount, DataType[] aggOutputTypes, OmniOperator omniOperator) {
         Iterator<VecBatch> output = omniOperator.getOutput();
         while (output.hasNext()) {
             VecBatch vecBatch = output.next();

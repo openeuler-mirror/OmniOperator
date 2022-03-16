@@ -11,7 +11,7 @@
 #include "sort_merge_join_scanner.h"
 #include "dynamic_pages_index.h"
 #include "../../../vector/vector.h"
-#include "../../../vector/vector_types.h"
+#include "../../../type/data_types.h"
 #include "../common_join.h"
 
 namespace omniruntime {
@@ -22,11 +22,11 @@ public:
 
     ~SortMergeJoinOperator() override;
 
-    void ConfigStreamedTblInfo(const vec::VecTypes &streamedTypes, const std::vector<int32_t> &streamedKeysCols,
-        const std::vector<int32_t> &streamedOutputCols);
+    void ConfigStreamedTblInfo(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeysCols,
+                               const std::vector<int32_t> &streamedOutputCols);
 
-    void ConfigBufferedTblInfo(const vec::VecTypes &bufferedTypes, std::vector<int32_t> &bufferedKeysCols,
-        std::vector<int32_t> &bufferedOutputCols);
+    void ConfigBufferedTblInfo(const type::DataTypes &bufferedTypes, std::vector<int32_t> &bufferedKeysCols,
+                               std::vector<int32_t> &bufferedOutputCols);
     // see SortMergeJoinAddInputCode
     int32_t AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch);
 
@@ -44,12 +44,12 @@ public:
 private:
     int32_t GetJoinResult();
 
-    vec::VecTypes *streamedTypes;
+    type::DataTypes *streamedTypes;
     std::vector<int32_t> streamedKeysCols;
     std::vector<int32_t> streamedOutputCols;
     DynamicPagesIndex *streamedTblPagesIndex;
 
-    vec::VecTypes *bufferedTypes;
+    type::DataTypes *bufferedTypes;
     std::vector<int32_t> bufferedKeysCols;
     std::vector<int32_t> bufferedOutputCols;
     DynamicPagesIndex *bufferedTblPagesIndex;

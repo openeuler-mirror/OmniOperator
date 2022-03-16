@@ -4,14 +4,14 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 
 public class VecUtil {
     private VecUtil() {
 
     }
 
-    public static void setType(Vec vec, VecType vecType) {
-        vec.setType(vecType);
+    public static void setDataType(Vec vec, DataType dataType) {
+        vec.setDataType(dataType);
     }
 }

@@ -4,17 +4,17 @@
  */
 #include "func_registry_context.h"
 #include "functions/context_helper.h"
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 using namespace omniruntime;
 
 std::vector<Function> ContextFunctionRegistry::GetFunctions()
 {
     std::vector<Function> contextFnRegistry = {
         Function(reinterpret_cast<void*>(ArenaAllocatorMalloc), "ArenaAllocatorMalloc", {},
-                 {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT},
-                 OMNI_VEC_TYPE_CHAR),
-        Function(reinterpret_cast<void*>(ArenaAllocatorReset), "ArenaAllocatorReset", {}, {OMNI_VEC_TYPE_LONG},
-                 OMNI_VEC_TYPE_BOOLEAN)
+                 {OMNI_LONG, OMNI_INT},
+                 OMNI_CHAR),
+        Function(reinterpret_cast<void*>(ArenaAllocatorReset), "ArenaAllocatorReset", {}, {OMNI_LONG},
+                 OMNI_BOOLEAN)
     };
     return contextFnRegistry;
 }

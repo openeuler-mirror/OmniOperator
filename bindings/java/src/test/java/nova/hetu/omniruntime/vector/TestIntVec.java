@@ -3,7 +3,7 @@ package nova.hetu.omniruntime.vector;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
-import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_INT;
+import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_INT;
 import java.util.Arrays;
 
 import static org.testng.Assert.assertEquals;
@@ -29,7 +29,7 @@ public class TestIntVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 1024);
-        assertEquals(vec.getType().getId(), OMNI_VEC_TYPE_INT);
+        assertEquals(vec.getType().getId(), OMNI_INT);
         vec.close();
     }
 

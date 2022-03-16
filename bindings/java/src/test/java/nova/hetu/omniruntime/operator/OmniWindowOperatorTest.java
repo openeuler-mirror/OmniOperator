@@ -7,8 +7,8 @@ import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -28,7 +28,7 @@ public class OmniWindowOperatorTest {
      */
     @Test
     public void testRank() {
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputChannels = {0, 1};
         FunctionType[] windowFunction = {FunctionType.OMNI_WINDOW_TYPE_RANK};
         int[] partitionChannels = {0};
@@ -39,7 +39,7 @@ public class OmniWindowOperatorTest {
         int preSortedChannelPrefix = 0;
         int expectedPositions = 10000;
         int[] argumentChannels = {};
-        VecType[] windowFunctionReturnType = {LongVecType.LONG};
+        DataType[] windowFunctionReturnType = {LongDataType.LONG};
         OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(sourceTypes, outputChannels,
                 windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
                 preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
@@ -75,7 +75,7 @@ public class OmniWindowOperatorTest {
      */
     @Test
     public void testCount() {
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputChannels = {0, 1};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
                 FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
@@ -87,7 +87,7 @@ public class OmniWindowOperatorTest {
         int preSortedChannelPrefix = 0;
         int expectedPositions = 10000;
         int[] argumentChannels = {1, -1};
-        VecType[] windowFunctionReturnType = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] windowFunctionReturnType = {LongDataType.LONG, LongDataType.LONG};
         OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(sourceTypes, outputChannels,
                 windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
                 preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);

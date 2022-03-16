@@ -23,39 +23,43 @@ message VecBatch {
 }
 
 message Vec {
-    VecTypeExt typeExt = 1;
-    int32 size = 2;
-    int32 offset = 3;
-    bytes values = 4;
-    bytes nulls = 5;
-    bytes offsets = 6;
-    repeated Vec subVectors = 7;
+    DataTypeExt typeExt = 1;
+    VecEncoding  vecEncoding = 2;
+    int32 size = 3;
+    int32 offset = 4;
+    bytes values = 5;
+    bytes nulls = 6;
+    bytes offsets = 7;
+    repeated Vec subVectors = 8;
 }
 
-message VecTypeExt {
-    enum VecTypeId {
-        OMNI_VEC_TYPE_NONE = 0;
-        OMNI_VEC_TYPE_INT = 1;
-        OMNI_VEC_TYPE_LONG = 2;
-        OMNI_VEC_TYPE_DOUBLE = 3;
-        OMNI_VEC_TYPE_BOOLEAN = 4;
-        OMNI_VEC_TYPE_SHORT = 5;
-        OMNI_VEC_TYPE_DECIMAL64 = 6;
-        OMNI_VEC_TYPE_DECIMAL128 = 7;
-        OMNI_VEC_TYPE_DATE32 = 8;
-        OMNI_VEC_TYPE_DATE64 = 9;
-        OMNI_VEC_TYPE_TIME32 = 10;
-        OMNI_VEC_TYPE_TIME64 = 11;
-        OMNI_VEC_TYPE_TIMESTAMP = 12;
-        OMNI_VEC_TYPE_INTERVAL_MONTHS = 13;
-        OMNI_VEC_TYPE_INTERVAL_DAY_TIME = 14;
-        OMNI_VEC_TYPE_VARCHAR = 15;
-        OMNI_VEC_TYPE_CHAR = 16;
-        OMNI_VEC_TYPE_DICTIONARY = 17;
-        OMNI_VEC_TYPE_CONTAINER = 18;
-        OMNI_VEC_TYPE_INVALID = 19;
+message VecEncoding{
+    int32 encodingId = 1;
+}
+
+message DataTypeExt {
+    enum DataTypeId {
+        OMNI_NONE = 0;
+        OMNI_INT = 1;
+        OMNI_LONG = 2;
+        OMNI_DOUBLE = 3;
+        OMNI_BOOLEAN = 4;
+        OMNI_SHORT = 5;
+        OMNI_DECIMAL64 = 6;
+        OMNI_DECIMAL128 = 7;
+        OMNI_DATE32 = 8;
+        OMNI_DATE64 = 9;
+        OMNI_TIME32 = 10;
+        OMNI_TIME64 = 11;
+        OMNI_TIMESTAMP = 12;
+        OMNI_INTERVAL_MONTHS = 13;
+        OMNI_INTERVAL_DAY_TIME = 14;
+        OMNI_VARCHAR = 15;
+        OMNI_CHAR = 16;
+        OMNI_CONTAINER = 17;
+        OMNI_INVALID = 18;
     }
-    VecTypeId id = 1;
+    DataTypeId id = 1;
     int32 width = 2;
     int32 precision = 3;
     int32 scale = 4;

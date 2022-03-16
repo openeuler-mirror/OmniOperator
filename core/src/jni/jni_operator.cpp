@@ -54,11 +54,10 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         // set vector addresses parameter to vector batch construct.
         jlongArray jVecAddresses = env->NewLongArray(vecCount);
         env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *)vecBatch->GetVectors());
-
         long allocators[vecCount];
         int32_t capacityInBytes[vecCount];
-        int32_t sizes[vecCount];
         int32_t offsets[vecCount];
+        int32_t encodings[vecCount];
         long valueBufAddrs[vecCount];
         long nullBufAddrs[vecCount];
         long offsetBufAddrs[vecCount];
@@ -66,8 +65,8 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
             Vector *vector = vecBatch->GetVector(i);
             allocators[i] = (long)vector->GetAllocator();
             capacityInBytes[i] = vector->GetCapacityInBytes();
-            sizes[i] = vector->GetSize();
             offsets[i] = vector->GetPositionOffset();
+            encodings[i] = vector->GetEncoding();
             // By default, all 3 buf arrays will have a value,
             // if not, it will be 0, which means a null pointer.
             valueBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValues());
@@ -82,17 +81,17 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         jintArray jVecCapacityInBytes = env->NewIntArray(vecCount);
         env->SetIntArrayRegion(jVecCapacityInBytes, 0, vecCount, capacityInBytes);
 
-        // set vector sizes parameter to vector batch construct.
-        jintArray jVecSizes = env->NewIntArray(vecCount);
-        env->SetIntArrayRegion(jVecSizes, 0, vecCount, sizes);
-
         // set vector offsets ids parameter to vector batch construct.
         jintArray jVecOffsets = env->NewIntArray(vecCount);
         env->SetIntArrayRegion(jVecOffsets, 0, vecCount, offsets);
 
+        // set vector encoding
+        jintArray jVecEncodingIds = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecEncodingIds, 0, vecCount, encodings);
+
         // set vector type ids parameter to vector batch construct.
-        jintArray jVecTypeIds = env->NewIntArray(vecCount);
-        env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *)vecBatch->GetVectorTypeIds());
+        jintArray jDataTypeIds = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jDataTypeIds, 0, vecCount, (const jint *)vecBatch->GetVectorTypeIds());
 
         // set vector value buf address
         jlongArray jVecValueBufAddrs = env->NewLongArray(vecCount);
@@ -109,7 +108,7 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         // create vector batch java object.
         jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), jVecAddresses,
             jVecValueBufAddrs, jVecNullBufAddrs, jVecOffsetBufAddrs, jVecAllocatorAddresses, jVecCapacityInBytes,
-            jVecSizes, jVecOffsets, jVecTypeIds, vecBatch->GetRowCount());
+            jVecOffsets, jVecEncodingIds, jDataTypeIds, vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }
     return res;

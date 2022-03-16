@@ -52,14 +52,14 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
 {
     // construct input data
     const int32_t DATA_SIZE = 4;
-    VecTypes buildTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
+    DataTypes buildTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
     buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, DATA_SIZE));
-    VecType vecType = buildTypes.Get()[1];
+    DataType dataType = buildTypes.Get()[1];
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
+    buildVecBatch->SetVector(1, CreateDictionaryVector(dataType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
     int32_t hashKeysCount = 1;
@@ -75,13 +75,13 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     std::vector<VectorBatch *> hashBuilderOutput;
     hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
 
-    VecTypes probeTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
+    DataTypes probeTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
     probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, DATA_SIZE));
-    VecType probeVecType = probeTypes.Get()[1];
-    probeVecBatch->SetVector(1, CreateDictionaryVector(probeVecType, DATA_SIZE, ids, DATA_SIZE, probeData1));
+    DataType probeDataType = probeTypes.Get()[1];
+    probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, DATA_SIZE, ids, DATA_SIZE, probeData1));
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -89,7 +89,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
-    VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
+    DataTypes buildOutputTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
     auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
@@ -123,14 +123,14 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 {
     // construct input data
     const int32_t DATA_SIZE = 4;
-    VecTypes buildTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
+    DataTypes buildTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
     buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, DATA_SIZE));
-    VecType vecType = buildTypes.Get()[1];
+    DataType dataType = buildTypes.Get()[1];
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
+    buildVecBatch->SetVector(1, CreateDictionaryVector(dataType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
         LongType()) };
@@ -147,13 +147,13 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     std::vector<VectorBatch *> hashBuilderOutput;
     hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
 
-    VecTypes probeTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
+    DataTypes probeTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
     probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, DATA_SIZE));
-    VecType probeVecType = probeTypes.Get()[1];
-    probeVecBatch->SetVector(1, CreateDictionaryVector(probeVecType, DATA_SIZE, ids, DATA_SIZE, probeData1));
+    DataType probeDataType = probeTypes.Get()[1];
+    probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, DATA_SIZE, ids, DATA_SIZE, probeData1));
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -162,7 +162,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
-    VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
+    DataTypes buildOutputTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
     auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,

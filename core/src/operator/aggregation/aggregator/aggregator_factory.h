@@ -22,7 +22,7 @@ public:
      * @param outputPartial
      * @return
      */
-    virtual std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType,
+    virtual std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType,
         int32_t channel, bool inputRaw = true, bool outputPartial = false) = 0;
 };
 
@@ -31,21 +31,21 @@ class SumAggregatorFactory : public AggregatorFactory {
 public:
     SumAggregatorFactory() {}
     ~SumAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
         switch (inputTypeId) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
+            case OMNI_INT:
+            case OMNI_DATE32: {
                 return std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_LONG: {
                 return std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 return std::make_unique<SumAggregator<DoubleVector, double, double>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
@@ -58,12 +58,12 @@ public:
              * |  Final |     /       |    Decimal128 |
              *          */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
-            case OMNI_VEC_TYPE_DECIMAL64:
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_DECIMAL64:
+            case OMNI_VARCHAR: {
                 return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 return std::make_unique<SumLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
@@ -79,7 +79,7 @@ class AverageAggregatorFactory : public AggregatorFactory {
 public:
     AverageAggregatorFactory() {}
     ~AverageAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
@@ -87,26 +87,26 @@ public:
         //  inputType and outputType are from physical operations
         //  use meta programming to avoid explicit Vector type in template
         switch (inputTypeId) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
-            case OMNI_VEC_TYPE_CONTAINER: {
+            case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_CONTAINER: {
                 return std::make_unique<AverageAggregator<IntVector>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_LONG: {
                 return std::make_unique<AverageAggregator<LongVector>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 return std::make_unique<AverageAggregator<DoubleVector>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-            case OMNI_VEC_TYPE_DECIMAL64:
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_DECIMAL64:
+            case OMNI_VARCHAR: {
                 return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 return std::make_unique<AverageLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
@@ -122,41 +122,41 @@ class MinAggregatorFactory : public AggregatorFactory {
 public:
     MinAggregatorFactory() {}
     ~MinAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
         auto outputTypeId = outputType.GetId();
         // Adapt to openLooKeng
-        if (inputTypeId == OMNI_VEC_TYPE_INT && outputTypeId == OMNI_VEC_TYPE_LONG) {
+        if (inputTypeId == OMNI_INT && outputTypeId == OMNI_LONG) {
             return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(inputType, outputType, channel,
                 inputRaw, outputPartial);
         }
-        if (inputTypeId == OMNI_VEC_TYPE_LONG && outputTypeId == OMNI_VEC_TYPE_INT) {
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_INT) {
             return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
                 inputRaw, outputPartial);
         }
         switch (inputTypeId) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
+            case OMNI_INT:
+            case OMNI_DATE32: {
                 return std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
                 return std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 return std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(inputType, outputType,
                     channel, inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 return std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(inputType,
                     outputType, channel, inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
                 return std::make_unique<MinVarcharAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
             }
             default: {
@@ -171,41 +171,41 @@ class MaxAggregatorFactory : public AggregatorFactory {
 public:
     MaxAggregatorFactory() {}
     ~MaxAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
         auto outputTypeId = outputType.GetId();
         // Adapt to openLooKeng
-        if (inputTypeId == OMNI_VEC_TYPE_INT && outputTypeId == OMNI_VEC_TYPE_LONG) {
+        if (inputTypeId == OMNI_INT && outputTypeId == OMNI_LONG) {
             return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(inputType, outputType, channel,
                 inputRaw, outputPartial);
         }
-        if (inputTypeId == OMNI_VEC_TYPE_LONG && outputTypeId == OMNI_VEC_TYPE_INT) {
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_INT) {
             return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
                 inputRaw, outputPartial);
         }
         switch (inputTypeId) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
+            case OMNI_INT:
+            case OMNI_DATE32: {
                 return std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
                 return std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(inputType, outputType, channel,
                     inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 return std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(inputType, outputType,
                     channel, inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
+            case OMNI_DECIMAL128: {
                 return std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(inputType,
                     outputType, channel, inputRaw, outputPartial);
             }
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
                 return std::make_unique<MaxVarcharAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
             }
             default: {
@@ -220,7 +220,7 @@ class CountColumnAggregatorFactory : public AggregatorFactory {
 public:
     CountColumnAggregatorFactory() {}
     ~CountColumnAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         return std::make_unique<CountColumnAggregator>(outputType, channel, inputRaw, outputPartial);
@@ -231,7 +231,7 @@ class CountAllAggregatorFactory : public AggregatorFactory {
 public:
     CountAllAggregatorFactory() {}
     ~CountAllAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false) override
     {
         return std::make_unique<CountAllAggregator>(outputType, inputRaw, outputPartial);
@@ -242,7 +242,7 @@ template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
     MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
     ~MaskAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataType &inputType, const DataType &outputType,
         int32_t inputChannel, bool inputRaw = true, bool outputPartial = false) override
     {
         std::unique_ptr<Aggregator> realAggregator =

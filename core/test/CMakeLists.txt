@@ -5,6 +5,7 @@ add_subdirectory(llvm)
 add_subdirectory(memory)
 add_subdirectory(benchmark)
 add_subdirectory(parser)
+add_subdirectory(type)
 
 # configure
 set(OM_TEST_TARGET omtest)
@@ -16,6 +17,7 @@ set(MY_LINK
         memtest
         benchtest
         parsertest
+        typetest
         )
 
 # find gtest package

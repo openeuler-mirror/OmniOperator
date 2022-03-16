@@ -6,7 +6,7 @@
 #define __JOIN_HASH_TABLE_H__
 
 #include "../../vector/vector.h"
-#include "../../vector/vector_types.h"
+#include "../../type/data_types.h"
 #include "../filter/filter_and_project.h"
 
 #include <stdint.h>
@@ -55,17 +55,17 @@ public:
         return static_cast<int32_t>(result);
     }
 
-    void SetBuildTypes(omniruntime::vec::VecTypes *buildTypes)
+    void SetBuildTypes(omniruntime::type::DataTypes *buildTypes)
     {
         this->buildTypes = buildTypes;
     }
 
-    omniruntime::vec::VecTypes* GetBuildVecTypes()
+    omniruntime::type::DataTypes* GetBuildDataTypes()
     {
         return this->buildTypes;
     }
 
-    void SetProbeTypes(omniruntime::vec::VecTypes *probeTypes)
+    void SetProbeTypes(omniruntime::type::DataTypes *probeTypes)
     {
         this->probeTypes = probeTypes;
     }
@@ -109,8 +109,8 @@ private:
     std::atomic_int32_t hashTableSize;
     int32_t partitionMask;
     int32_t shiftSize;
-    omniruntime::vec::VecTypes *probeTypes;
-    omniruntime::vec::VecTypes *buildTypes;
+    omniruntime::type::DataTypes *probeTypes;
+    omniruntime::type::DataTypes *buildTypes;
     std::string filterExpression;
     omniruntime::expressions::Expr *filterExpr = nullptr;
     SimpleFilter *simpleFilter = nullptr;

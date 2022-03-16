@@ -11,8 +11,8 @@ import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -34,8 +34,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
      * @param inputRaw the input raw
      * @param outputPartial the output partial
      */
-    public OmniAggregationOperatorFactory(VecType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
-            int[] maskChannels, VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+    public OmniAggregationOperatorFactory(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
+            int[] maskChannels, DataType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
         super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
                 aggOutputTypes, inputRaw, outputPartial)));
     }
@@ -50,9 +50,9 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createAggregationOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+        return createAggregationOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 toNativeConstants(context.aggFunctionTypes), context.aggInputChannels, context.maskChannels,
-                VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial,
+                DataTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial,
                 factoryContext.getNativeJitContext());
     }
 
@@ -62,7 +62,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final FunctionType[] aggFunctionTypes;
 
@@ -70,7 +70,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
 
         private final int[] maskChannels;
 
-        private final VecType[] aggOutputTypes;
+        private final DataType[] aggOutputTypes;
 
         private final boolean inputRaw;
 
@@ -86,8 +86,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
          * @param inputRaw the input raw
          * @param outputPartial the output partial
          */
-        public JitContext(VecType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels, int[] maskChannels,
-                VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+        public JitContext(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels, int[] maskChannels,
+                DataType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes is null");
             this.aggInputChannels = requireNonNull(aggInputChannels, "aggInputChannels is null");
@@ -139,9 +139,9 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            long aggregationJitContext = createAggregationJitContext(VecTypeSerializer.serialize(context.sourceTypes),
+            long aggregationJitContext = createAggregationJitContext(DataTypeSerializer.serialize(context.sourceTypes),
                     toNativeConstants(context.aggFunctionTypes), context.aggInputChannels, context.maskChannels,
-                    VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial);
+                    DataTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial);
             return aggregationJitContext;
         }
     }

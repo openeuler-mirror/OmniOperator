@@ -7,7 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/status.h"
@@ -18,18 +18,18 @@ namespace omniruntime {
 namespace op {
 class DistinctLimitOperatorFactory : public OperatorFactory {
 public:
-    DistinctLimitOperatorFactory(const vec::VecTypes &sourceTypes, const int32_t *distinctCols,
-        int32_t distinctColsCount, int32_t hashCol, int64_t limit);
+    DistinctLimitOperatorFactory(const type::DataTypes &sourceTypes, const int32_t *distinctCols,
+                                 int32_t distinctColsCount, int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperatorFactory() override;
 
-    static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(const vec::VecTypes &sourceTypes,
+    static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(const type::DataTypes &sourceTypes,
         const int32_t *distinctCols, int32_t distinctColsCount, int32_t hashCol, int64_t limit);
 
     Operator *CreateOperator() override;
 
 private:
-    const vec::VecTypes *sourceTypes;
+    const type::DataTypes *sourceTypes;
     int32_t *distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;
@@ -53,7 +53,7 @@ using FillOutputFunc = void (*)(VectorBatch *resultBatch, std::vector<AggregateS
     int32_t colIndex);
 
 using DistinctLimitFuncSet = struct {
-    VecTypeId typeId;
+    DataTypeId dataTypeId;
     DuplicateValueFunc duplicateValueFunc;
     GenerateHashFunc generateHashFunc;
     GenerateHashFuncVect generateHashFuncVect;
@@ -66,8 +66,8 @@ public:
     static const int32_t INVALID_DISTINCT_COL_ID = -1;
 
 public:
-    DistinctLimitOperator(const vec::VecTypes *sourceTypes, int32_t *distinctCols, int32_t distinctColsCount,
-        int32_t hashCol, int64_t limit);
+    DistinctLimitOperator(const type::DataTypes *sourceTypes, int32_t *distinctCols, int32_t distinctColsCount,
+                          int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperator() override;
 
@@ -91,8 +91,8 @@ private:
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil>
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
-    const vec::VecTypes *sourceTypes;
-    vec::VecTypes *outTypes;
+    const type::DataTypes *sourceTypes;
+    type::DataTypes *outTypes;
     int32_t *distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;

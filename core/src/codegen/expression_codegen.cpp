@@ -23,7 +23,7 @@ using namespace llvm;
 using namespace orc;
 using namespace omniruntime;
 using namespace omniruntime::expressions;
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 using namespace std;
 
 namespace {
@@ -42,22 +42,22 @@ CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Exp
 }
 
 // TODO:: define size of a vector
-std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
+std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<DataTypeId> &params, DataTypeId &retTypeId,
     bool needsContext)
 {
     std::vector<Type *> args;
     if (needsContext) {
         args.push_back(llvmTypes->I64Type());
     }
-    for (auto type: params) {
-        if (type == OMNI_VEC_TYPE_DECIMAL128) {
+    for (auto type : params) {
+        if (type == OMNI_DECIMAL128) {
             // add high and low
             args.push_back(llvmTypes->I64Type());
             args.push_back(llvmTypes->I64Type());
         } else {
             args.push_back(llvmTypes->ToLLVMType(type));
             if (TypeUtil::IsStringType(type)) {
-                if (type == OMNI_VEC_TYPE_CHAR) {
+                if (type == OMNI_CHAR) {
                     // Add Type for width support
                     args.push_back(llvmTypes->I32Type());
                 }
@@ -69,7 +69,7 @@ std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<VecT
     // return arguments
     if (TypeUtil::IsStringType(retTypeId)) {
         args.push_back(llvmTypes->I32PtrType());
-    } else if (retTypeId == OMNI_VEC_TYPE_DECIMAL128) {
+    } else if (retTypeId == OMNI_DECIMAL128) {
         // Add high and low output pointers
         args.push_back(llvmTypes->I64PtrType());
         args.push_back(llvmTypes->I64PtrType());
@@ -123,17 +123,17 @@ ExpressionCodeGen::~ExpressionCodeGen()
 }
 
 
-llvm::IRBuilder<>& ExpressionCodeGen::GetIRBuilder()
+llvm::IRBuilder<> &ExpressionCodeGen::GetIRBuilder()
 {
     return *builder;
 }
 
-Module& ExpressionCodeGen::GetModule()
+Module &ExpressionCodeGen::GetModule()
 {
     return *module;
 }
 
-LLVMContext& ExpressionCodeGen::GetContext()
+LLVMContext &ExpressionCodeGen::GetContext()
 {
     return *context;
 }
@@ -177,21 +177,16 @@ void ExpressionCodeGen::RegisterFunctions(const std::vector<omniruntime::Functio
         auto &jd = jit->getMainJITDylib();
         auto &dl = jit->getDataLayout();
         llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
-        std::vector<VecTypeId> params = func.GetParamTypes();
-        VecTypeId retType = func.GetReturnType();
+        std::vector<DataTypeId> params = func.GetParamTypes();
+        DataTypeId retType = func.GetReturnType();
         std::vector<Type *> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
-        auto s = llvm::orc::absoluteSymbols({
-            {
-                mangle(func.GetId()),
-                JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()), JITSymbolFlags::Exported)
-                }
-            });
+        auto s = llvm::orc::absoluteSymbols({ { mangle(func.GetId()),
+            JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()), JITSymbolFlags::Exported) } });
         auto ign = jd.define(s);
         if (ign) {
             LogError("Error while defining absolute symbol in jd");
         }
-        llvm::Type *ret =
-                (retType == OMNI_VEC_TYPE_DECIMAL128) ? llvmTypes->VoidType() : llvmTypes->ToLLVMType(retType);
+        llvm::Type *ret = (retType == OMNI_DECIMAL128) ? llvmTypes->VoidType() : llvmTypes->ToLLVMType(retType);
         llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
         auto linkage = llvm::Function::ExternalLinkage;
         llvm::Function *fn = llvm::Function::Create(ft, linkage, func.GetId(), *module);
@@ -204,8 +199,7 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
 {
     // call function
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
-    auto signature = FunctionSignature(strCompareStr,
-        std::vector<VecTypeId> { OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR }, OMNI_VEC_TYPE_INT);
+    auto signature = FunctionSignature(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT);
     auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
     auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
@@ -224,7 +218,7 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
         *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
     }
     if (op == ADD || op == SUB || op == MUL) {
-        std::vector<Value *> argLeftVals { left, left};
+        std::vector<Value *> argLeftVals { left, left };
         std::vector<Value *> argRightVals { right, right };
         incomingBlock = builder->GetInsertBlock();
         nullBlock = BasicBlock::Create(*context, "nullBlock", builder->GetInsertBlock()->getParent());
@@ -233,26 +227,24 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
         builder->CreateCondBr(nullCond, nullBlock, nextInst);
         builder->SetInsertPoint(nullBlock);
         switch (binaryExpr->left->GetReturnType().GetId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
                 leftZero = builder->CreateSub(left, left);
                 rightZero = builder->CreateSub(right, right);
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_DOUBLE:
                 leftZero = builder->CreateFSub(left, left);
                 rightZero = builder->CreateFSub(right, right);
                 break;
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                std::vector<VecTypeId> params {OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128};
-                std::string funcId = FunctionSignature(subDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+            case OMNI_DECIMAL128: {
+                std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
+                std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
                 leftZero = decimalIRBuilder->CallDecimalFunction(funcId,
-                                                                 llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()),
-                                                                 argLeftVals);
+                    llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
                 rightZero = decimalIRBuilder->CallDecimalFunction(funcId,
-                                                                  llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()),
-                                                                  argRightVals);
+                    llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals);
                 break;
             }
             default:
@@ -290,30 +282,28 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
     builder->CreateCondBr(nullCond, nullBlock, nextInst);
     builder->SetInsertPoint(nullBlock);
     switch (binaryExpr->left->GetReturnTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             leftZero = builder->CreateSub(left, left);
             rightOne = builder->CreateSub(builder->CreateAdd(right, llvmTypes->CreateConstantInt(1)), right);
             break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             leftZero = builder->CreateSub(left, left);
             rightOne = builder->CreateSub(builder->CreateAdd(right, llvmTypes->CreateConstantLong(1)), right);
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             leftZero = builder->CreateFSub(left, left);
             rightOne = builder->CreateFSub(builder->CreateFAdd(right, llvmTypes->CreateConstantDouble(1.0)), right);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128: {
-            std::vector<VecTypeId> params {OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128};
-            std::string funcId = FunctionSignature(subDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+        case OMNI_DECIMAL128: {
+            std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
+            std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
             leftZero = decimalIRBuilder->CallDecimalFunction(funcId,
-                                                             llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()),
-                                                             argLeftVals);
-            funcId = FunctionSignature(divDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
+            funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             rightOne = decimalIRBuilder->CallDecimalFunction(funcId,
-                                                             llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()),
-                                                             argRightVals);
+                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals);
             break;
         }
         default:
@@ -442,58 +432,58 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
     Value *output = nullptr;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     std::vector<Value *> argVals { leftPhi, rightPhi };
-    std::vector<VecTypeId> params {binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId()};
+    std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId() };
     Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
-    std::string dictionaryCmpFuncId = FunctionSignature(decimal128CompareStr, params, OMNI_VEC_TYPE_INT).ToString();
+    std::string dictionaryCmpFuncId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
     switch (binaryExpr->op) {
         case LT:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
-                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, {left, right}),
+                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, { left, right }),
                 llvmTypes->CreateConstantInt(0)));
             break;
         case GT:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(
-                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, {left, right}),
+                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, { left, right }),
                 llvmTypes->CreateConstantInt(0)));
             break;
         case LTE:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(
-                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, {left, right}),
+                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, { left, right }),
                 llvmTypes->CreateConstantInt(0)));
             break;
         case GTE:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(
-                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, {left, right}),
+                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, { left, right }),
                 llvmTypes->CreateConstantInt(0)));
             break;
         case EQ: {
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(
-                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, {left, right}),
+                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, { left, right }),
                 llvmTypes->CreateConstantInt(0)));
             break;
         }
         case NEQ:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpNE(
-                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, {left, right}),
+                decimalIRBuilder->CallDecimalFunction(dictionaryCmpFuncId, returnType, { left, right }),
                 llvmTypes->CreateConstantInt(0)));
             break;
         case ADD: {
-            std::string funcId = FunctionSignature(addDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+            std::string funcId = FunctionSignature(addDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
         case SUB: {
-            std::string funcId = FunctionSignature(subDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+            std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
         case MUL: {
-            std::string funcId = FunctionSignature(mulDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+            std::string funcId = FunctionSignature(mulDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
         case DIV: {
-            std::string funcId = FunctionSignature(divDec128Str, params, OMNI_VEC_TYPE_DECIMAL128).ToString();
+            std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
@@ -502,9 +492,9 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
             output = nullptr;
     }
 
-    if (binaryExpr->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+    if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL128) {
         this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
-                                                          builder->CreateOr(leftIsNull, rightIsNull));
+            builder->CreateOr(leftIsNull, rightIsNull));
     } else {
         this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
@@ -607,7 +597,7 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
 
     // cast char* to int64 for output
-    if (expr->GetReturnTypeId() == VecTypeId::OMNI_VEC_TYPE_VARCHAR) {
+    if (expr->GetReturnTypeId() == DataTypeId::OMNI_VARCHAR) {
         result->data = builder->CreatePtrToInt(result->data, llvmTypes->I64Type());
     }
     // Return value
@@ -616,34 +606,34 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     return func;
 }
 
-Value *ExpressionCodeGen::GetIntToPtr(omniruntime::vec::VecTypeId vecTypeId, Value *elementAddr)
+Value *ExpressionCodeGen::GetIntToPtr(omniruntime::type::DataTypeId dataTypeId, Value *elementAddr)
 {
     Value *elementPtr = nullptr;
     // Convert the column address to array of proper datatype.
-    switch (vecTypeId) {
-        case OMNI_VEC_TYPE_BOOLEAN:
+    switch (dataTypeId) {
+        case OMNI_BOOLEAN:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I1PtrType());
             break;
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I32PtrType());
             break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->DoublePtrType());
             break;
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I8PtrType());
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_DECIMAL128:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I128PtrType());
             break;
         default:
-            LLVM_DEBUG_LOG("Unsupported column data type %d", vecTypeId);
+            LLVM_DEBUG_LOG("Unsupported column data type %d", dataTypeId);
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
     }
@@ -655,24 +645,24 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
     CodeGenValue *codeGenValue = nullptr;
     bool isNullLiteral = lExpr.isNull;
     switch (lExpr.GetReturnTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32: {
+        case OMNI_INT:
+        case OMNI_DATE32: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantInt(lExpr.intVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_LONG: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantLong(lExpr.longVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case OMNI_VEC_TYPE_DOUBLE: {
+        case OMNI_DOUBLE: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantDouble(lExpr.doubleVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
             Constant *strValConst =
                 ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(lExpr.stringVal->c_str())));
             Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, llvmTypes->I8PtrType());
@@ -681,28 +671,28 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             codeGenValue = new CodeGenValue(strValPtr, llvmTypes->CreateConstantBool(isNullLiteral), strLenConst);
             break;
         }
-        case OMNI_VEC_TYPE_BOOLEAN: {
+        case OMNI_BOOLEAN: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantBool(lExpr.boolVal),
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case OMNI_VEC_TYPE_DECIMAL64: {
+        case OMNI_DECIMAL64: {
             Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
             Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
             codeGenValue = new DecimalValue(llvmTypes->CreateConstantLong(lExpr.longVal),
                 llvmTypes->CreateConstantBool(isNullLiteral), precision, scale);
             break;
         }
-        case OMNI_VEC_TYPE_DECIMAL128: {
+        case OMNI_DECIMAL128: {
             std::string dec128String = isNullLiteral ? "0" : *lExpr.stringVal;
             Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
             Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
             auto const128Val = llvm::ConstantInt::get(llvm::Type::getInt128Ty(*context), dec128String, 10);
-            codeGenValue = new DecimalValue(const128Val,  llvmTypes->CreateConstantBool(isNullLiteral), precision,
-                                            scale);
+            codeGenValue =
+                new DecimalValue(const128Val, llvmTypes->CreateConstantBool(isNullLiteral), precision, scale);
             break;
         }
-        case OMNI_VEC_TYPE_NONE: {
+        case OMNI_NONE: {
             codeGenValue =
                 new CodeGenValue(llvmTypes->CreateConstantInt(lExpr.intVal), llvmTypes->CreateConstantBool(true));
             break;
@@ -717,33 +707,33 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
     return codeGenValue;
 }
 
-Value *ExpressionCodeGen::GetDictionaryVectorValue(VecType vectorType, Value *rowIdx, Value *dictionaryVectorPtr,
+Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *rowIdx, Value *dictionaryVectorPtr,
     AllocaInst *&lengthAllocaInst)
 {
-    std::vector<VecTypeId> paramTypes = { OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT };
-    VecTypeId typeId = vectorType.GetId();
+    std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT };
+    DataTypeId typeId = dataType.GetId();
     FunctionSignature dictionaryFuncSignature;
     switch (typeId) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
-            dictionaryFuncSignature = FunctionSignature(dictionaryGetIntStr, paramTypes, OMNI_VEC_TYPE_INT);
+        case OMNI_INT:
+        case OMNI_DATE32:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetIntStr, paramTypes, OMNI_INT);
             break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
-            dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_VEC_TYPE_LONG);
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_LONG);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
-            dictionaryFuncSignature = FunctionSignature(dictionaryGetDecimalStr, paramTypes, OMNI_VEC_TYPE_DECIMAL128);
+        case OMNI_DECIMAL128:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetDecimalStr, paramTypes, OMNI_DECIMAL128);
             break;
-        case OMNI_VEC_TYPE_DOUBLE:
-            dictionaryFuncSignature = FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_VEC_TYPE_DOUBLE);
+        case OMNI_DOUBLE:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_DOUBLE);
             break;
-        case OMNI_VEC_TYPE_BOOLEAN:
-            dictionaryFuncSignature = FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_VEC_TYPE_BOOLEAN);
+        case OMNI_BOOLEAN:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_BOOLEAN);
             break;
-        case OMNI_VEC_TYPE_CHAR:
-        case OMNI_VEC_TYPE_VARCHAR:
-            dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VEC_TYPE_VARCHAR);
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
             break;
         default:
             LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", typeId);
@@ -759,14 +749,14 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(VecType vectorType, Value *ro
         funcArgs.push_back(lengthAllocaInst);
     }
     Value *result = nullptr;
-    if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
+    if (typeId == OMNI_DECIMAL128) {
         result = decimalIRBuilder->CallDecimalFunction(
             FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
             llvmTypes->ToLLVMType(typeId), funcArgs);
     } else {
         result = builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
         InlineFunctionInfo inlineFunctionInfo;
-        auto inlinedFunction = llvm::InlineFunction(*((CallInst *) result), inlineFunctionInfo);
+        auto inlinedFunction = llvm::InlineFunction(*((CallInst *)result), inlineFunctionInfo);
     }
     return result;
 }
@@ -875,7 +865,7 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
     bitmapValue = builder->CreateLoad(bitmapGEP);
 
-    if (fExpr.GetReturnTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128) {
+    if (fExpr.GetReturnTypeId() == omniruntime::type::OMNI_DECIMAL128) {
         Value *precision = llvmTypes->CreateConstantInt(fExpr.GetReturnType().GetPrecision());
         Value *scale = llvmTypes->CreateConstantInt(fExpr.GetReturnType().GetScale());
         this->value.reset(make_unique<DecimalValue>(phiValue, bitmapValue, precision, scale).release());
@@ -893,26 +883,26 @@ CodeGenValuePtr CreateInvalidCodeGenValue()
 void ExpressionCodeGen::PromoteType(BinaryExpr &binaryExpr)
 {
     // precision and scale of the original type has to be maintained while type promotion
-    if (binaryExpr.left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128 &&
-        binaryExpr.right->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64) {
-        binaryExpr.right->dataType = std::make_unique<Decimal128VecType>(binaryExpr.right->dataType->GetPrecision(),
-                                                                         binaryExpr.right->dataType->GetScale());
+    if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL128 &&
+        binaryExpr.right->GetReturnTypeId() == OMNI_DECIMAL64) {
+        binaryExpr.right->dataType = std::make_unique<Decimal128DataType>(binaryExpr.right->dataType->GetPrecision(),
+            binaryExpr.right->dataType->GetScale());
         // decimal128 accepts string literals
         if (binaryExpr.right->GetType() == LITERAL_E) {
-            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr*>(binaryExpr.right);
+            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr *>(binaryExpr.right);
             literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
         }
-    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64 &&
-        binaryExpr.right->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
-        binaryExpr.left->dataType = std::make_unique<Decimal128VecType>(binaryExpr.left->dataType->GetPrecision(),
-                                                                         binaryExpr.left->dataType->GetScale());
+    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL64 &&
+        binaryExpr.right->GetReturnTypeId() == OMNI_DECIMAL128) {
+        binaryExpr.left->dataType = std::make_unique<Decimal128DataType>(binaryExpr.left->dataType->GetPrecision(),
+            binaryExpr.left->dataType->GetScale());
         if (binaryExpr.left->GetType() == LITERAL_E) {
-            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr*>(binaryExpr.left);
+            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr *>(binaryExpr.left);
             literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
         }
     } else {
         Expr *smallerExpr = nullptr;
-        VecType biggerType;
+        DataType biggerType;
         if (binaryExpr.left->GetReturnTypeId() < binaryExpr.right->GetReturnTypeId()) {
             biggerType = binaryExpr.right->GetReturnType();
             smallerExpr = binaryExpr.left;
@@ -920,20 +910,20 @@ void ExpressionCodeGen::PromoteType(BinaryExpr &binaryExpr)
             biggerType = binaryExpr.left->GetReturnType();
             smallerExpr = binaryExpr.right;
         }
-        if (biggerType.GetId() == OMNI_VEC_TYPE_DECIMAL128 && smallerExpr->GetType() == LITERAL_E) {
+        if (biggerType.GetId() == OMNI_DECIMAL128 && smallerExpr->GetType() == LITERAL_E) {
             basic_string<char> decVal;
-            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr*>(smallerExpr);
-            if (literalExpr->GetReturnTypeId() == OMNI_VEC_TYPE_INT) {
+            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr *>(smallerExpr);
+            if (literalExpr->GetReturnTypeId() == OMNI_INT) {
                 decVal = to_string(literalExpr->intVal);
-            } else if (literalExpr->GetReturnTypeId() == OMNI_VEC_TYPE_LONG) {
+            } else if (literalExpr->GetReturnTypeId() == OMNI_LONG) {
                 decVal = to_string(literalExpr->longVal);
-            } else if (literalExpr->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE) {
+            } else if (literalExpr->GetReturnTypeId() == OMNI_DOUBLE) {
                 decVal = to_string(literalExpr->doubleVal);
             }
             literalExpr->stringVal = make_unique<string>(decVal).release();
         }
-        auto lType = std::make_unique<VecType>(biggerType);
-        auto rType = std::make_unique<VecType>(biggerType);
+        auto lType = std::make_unique<DataType>(biggerType);
+        auto rType = std::make_unique<DataType>(biggerType);
         binaryExpr.left->dataType = std::move(lType);
         binaryExpr.right->dataType = std::move(rType);
     }
@@ -980,14 +970,13 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     }
 
-    if (bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_INT || bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_LONG ||
-        bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DATE32 ||
-        bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64) {
+    if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_LONG ||
+        bExpr->left->GetReturnTypeId() == OMNI_DATE32 || bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE) {
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_DOUBLE) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
@@ -997,19 +986,19 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             this->BinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL128) {
         if (bExpr->op == MUL) {
             this->BinaryExprDecimalHelper(bExpr, leftValue, rightValue, leftNull, rightNull);
         } else if (bExpr->op == DIV) {
             int32_t scale = bExpr->GetReturnType().GetScale() + bExpr->right->dataType->GetScale() -
-                    bExpr->left->dataType->GetScale();
+                bExpr->left->dataType->GetScale();
             auto scaledLeft = decimalIRBuilder->ScaleValue(*left->data, *llvmTypes->CreateConstantInt(scale));
             this->BinaryExprDecimalHelper(bExpr, scaledLeft, rightValue, leftNull, rightNull);
         } else {
-            Value* scaledLeft = nullptr;
-            Value* scaledRight = nullptr;
-            auto leftScale = (Value*)static_cast<DecimalValue*>(left.get())->GetScale();
-            auto rightScale = (Value*)static_cast<DecimalValue*>(right.get())->GetScale();
+            Value *scaledLeft = nullptr;
+            Value *scaledRight = nullptr;
+            auto leftScale = (Value *)static_cast<DecimalValue *>(left.get())->GetScale();
+            auto rightScale = (Value *)static_cast<DecimalValue *>(right.get())->GetScale();
             decimalIRBuilder->ScaleValues(*leftValue, *leftScale, *rightValue, *rightScale, &scaledLeft, &scaledRight);
             this->BinaryExprDecimalHelper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
         }
@@ -1109,36 +1098,35 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
 {
     Type *switchDataType = llvmTypes->VectorToLLVMType(switchExpr.GetReturnType());
     Expr *elseExpr = switchExpr.falseExpr;
-    std::vector<std::pair<Expr*, Expr*>> whenClause = switchExpr.whenClause;
+    std::vector<std::pair<Expr *, Expr *>> whenClause = switchExpr.whenClause;
     const int size = whenClause.size();
 
-    std::vector<BasicBlock*> condBlockList;
-    std::vector<BasicBlock*> trueBlockList;
+    std::vector<BasicBlock *> condBlockList;
+    std::vector<BasicBlock *> trueBlockList;
     BasicBlock *falseBlock = BasicBlock::Create(*context, "FALSE_BLOCK");
     BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
     int32_t numReservedValues = 2;
 
-    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, numReservedValues,
-                                                       nullptr, "temp_result_value");
-    AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), numReservedValues,
-                                                      nullptr,  "temp_result_null");
-    AllocaInst *resultLengthPtr = builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues,
-                                                        nullptr, "temp_result_length");
+    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, numReservedValues, nullptr, "temp_result_value");
+    AllocaInst *resultNullPtr =
+        builder->CreateAlloca(Type::getInt1Ty(*context), numReservedValues, nullptr, "temp_result_null");
+    AllocaInst *resultLengthPtr =
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_length");
     condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(0), func));
     trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(0), func));
 
-    for (int i = 1; i < size; i++) {  // generate block lists used in the next loop to evaluate conditions
+    for (int i = 1; i < size; i++) { // generate block lists used in the next loop to evaluate conditions
         condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(i)));
         trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(i), func));
     }
-    for (int i = 0; i < size; i++) {  // evaluate condition in the whenClause
+    for (int i = 0; i < size; i++) { // evaluate condition in the whenClause
         Expr *cond = whenClause[i].first;
         Expr *resExpr = whenClause[i].second;
 
         // if cond evaluates to true, control flow goes to trueBlock, save evTrue to temp value
         // Otherwise goes to next Block in the list and keeps evaluating next cond in the whenClause
         // If last cond evaluates to false, control flow goes to falseBlock and save evFalse to temp value
-        if (i == 0) {  // Create the entry of the block
+        if (i == 0) { // Create the entry of the block
             builder->CreateBr(condBlockList[i]);
         }
         if (i > 0) {
@@ -1152,7 +1140,7 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
                 return;
             }
             builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data),
-                                  trueBlockList[i],condBlockList[i + 1]);
+                trueBlockList[i], condBlockList[i + 1]);
         } else {
             builder->SetInsertPoint(condBlockList[i]);
             CodeGenValuePtr evCond = VisitExpr(*cond);
@@ -1161,7 +1149,7 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
                 return;
             }
             builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data),
-                                  trueBlockList[i], falseBlock);
+                trueBlockList[i], falseBlock);
         }
 
         builder->SetInsertPoint(trueBlockList[i]);
@@ -1202,7 +1190,7 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     builder->SetInsertPoint(mergeBlock);
     if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
         this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
-                                                builder->CreateLoad(resultLengthPtr));
+            builder->CreateLoad(resultLengthPtr));
     }
     this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
 }
@@ -1276,14 +1264,14 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
     PHINode *scalePhi = nullptr;
     if (TypeUtil::IsDecimalType(ifExpr.GetReturnTypeId())) {
         precisionPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "precision");
-        auto evTruePrecision = (Value*)static_cast<DecimalValue*>(evTrue.get())->GetPrecision();
-        auto evFalsePrecision = (Value*)static_cast<DecimalValue*>(evFalse.get())->GetPrecision();
+        auto evTruePrecision = (Value *)static_cast<DecimalValue *>(evTrue.get())->GetPrecision();
+        auto evFalsePrecision = (Value *)static_cast<DecimalValue *>(evFalse.get())->GetPrecision();
         precisionPhi->addIncoming(evTruePrecision, trueBlock);
         precisionPhi->addIncoming(evFalsePrecision, falseBlock);
 
         scalePhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "scale");
-        auto evTrueScale = (Value*)static_cast<DecimalValue*>(evTrue.get())->GetScale();
-        auto evFalseScale = (Value*)static_cast<DecimalValue*>(evFalse.get())->GetScale();
+        auto evTrueScale = (Value *)static_cast<DecimalValue *>(evTrue.get())->GetScale();
+        auto evFalseScale = (Value *)static_cast<DecimalValue *>(evFalse.get())->GetScale();
         scalePhi->addIncoming(evTrueScale, trueBlock);
         scalePhi->addIncoming(evFalseScale, falseBlock);
 
@@ -1294,33 +1282,33 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
     this->value = make_shared<CodeGenValue>(pn, phiNull, lengthPhi);
 }
 
-void ExpressionCodeGen::PromoteType(Expr& expr, VecType vecType)
+void ExpressionCodeGen::PromoteType(Expr &expr, DataType dataType)
 {
-    if (vecType.GetId() == OMNI_VEC_TYPE_DECIMAL128) {
-        VecTypeId exprReturnDataId = expr.GetReturnTypeId();
-        if (exprReturnDataId == OMNI_VEC_TYPE_DECIMAL64) {
-            expr.dataType = std::make_unique<Decimal128VecType>(expr.dataType->GetPrecision(),
-                                                                expr.dataType->GetScale());
+    if (dataType.GetId() == OMNI_DECIMAL128) {
+        DataTypeId exprReturnDataId = expr.GetReturnTypeId();
+        if (exprReturnDataId == OMNI_DECIMAL64) {
+            expr.dataType =
+                std::make_unique<Decimal128DataType>(expr.dataType->GetPrecision(), expr.dataType->GetScale());
         }
         int32_t decimal128Precision = 38;
         int32_t defaultDecimalScale = 0;
         if (expr.GetType() == LITERAL_E) {
-            auto literalExpr = static_cast<LiteralExpr*>(&expr);
-            if (exprReturnDataId == OMNI_VEC_TYPE_INT || exprReturnDataId == OMNI_VEC_TYPE_DATE32) {
+            auto literalExpr = static_cast<LiteralExpr *>(&expr);
+            if (exprReturnDataId == OMNI_INT || exprReturnDataId == OMNI_DATE32) {
                 literalExpr->stringVal = make_unique<string>(to_string(literalExpr->intVal)).release();
-                literalExpr->dataType = std::make_unique<Decimal128VecType>(decimal128Precision, defaultDecimalScale);
-            } else if (exprReturnDataId == OMNI_VEC_TYPE_LONG) {
+                literalExpr->dataType = std::make_unique<Decimal128DataType>(decimal128Precision, defaultDecimalScale);
+            } else if (exprReturnDataId == OMNI_LONG) {
                 literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
-                literalExpr->dataType = std::make_unique<Decimal128VecType>(decimal128Precision, defaultDecimalScale);
-            } else if (exprReturnDataId == OMNI_VEC_TYPE_DOUBLE) {
+                literalExpr->dataType = std::make_unique<Decimal128DataType>(decimal128Precision, defaultDecimalScale);
+            } else if (exprReturnDataId == OMNI_DOUBLE) {
                 literalExpr->stringVal = make_unique<string>(to_string(literalExpr->doubleVal)).release();
-                literalExpr->dataType = std::make_unique<Decimal128VecType>(decimal128Precision, defaultDecimalScale);
-            } else if (exprReturnDataId == OMNI_VEC_TYPE_DECIMAL64) {
+                literalExpr->dataType = std::make_unique<Decimal128DataType>(decimal128Precision, defaultDecimalScale);
+            } else if (exprReturnDataId == OMNI_DECIMAL64) {
                 literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
             }
         }
     } else {
-        expr.dataType = std::make_unique<VecType>(vecType);
+        expr.dataType = std::make_unique<DataType>(dataType);
     }
 }
 
@@ -1339,10 +1327,10 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
         Value *tmpCmpNull = llvmTypes->CreateConstantBool(false);
 
         // store the original types before promoting
-        VecType toCompareVecType = toCompare->GetReturnType();
-        VecType argiVecType = iExpr->arguments[i]->GetReturnType();
+        DataType toCompareDataType = toCompare->GetReturnType();
+        DataType argiDataType = iExpr->arguments[i]->GetReturnType();
 
-        VecType biggerType  = toCompare->GetReturnType();
+        DataType biggerType = toCompare->GetReturnType();
         if (toCompare->GetReturnTypeId() < iExpr->arguments[i]->GetReturnTypeId()) {
             biggerType = iExpr->arguments[i]->GetReturnType();
         }
@@ -1363,10 +1351,10 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
         }
 
         switch (iExpr->arguments[0]->GetReturnTypeId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
-            case OMNI_VEC_TYPE_DECIMAL64:
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_INT:
+            case OMNI_DATE32:
+            case OMNI_DECIMAL64:
+            case OMNI_LONG: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
                 if (!argiValue->IsValidValue()) {
                     this->value = CreateInvalidCodeGenValue();
@@ -1378,15 +1366,15 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case OMNI_DOUBLE: {
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
                     builder->CreateAnd(builder->CreateNot(argiValue->isNull),
                     builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
             }
-            case OMNI_VEC_TYPE_CHAR:
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_CHAR:
+            case OMNI_VARCHAR: {
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
                     builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(
                     this->StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
@@ -1394,23 +1382,23 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
             }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                std::vector<VecTypeId> params {OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128};
+            case OMNI_DECIMAL128: {
+                std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
 
-                auto compareToScale = (Value*)static_cast<DecimalValue*>(valueToCompare.get())->GetScale();
+                auto compareToScale = (Value *)static_cast<DecimalValue *>(valueToCompare.get())->GetScale();
 
-                auto argiScale = (Value*)static_cast<DecimalValue*>(argiValue.get())->GetScale();
+                auto argiScale = (Value *)static_cast<DecimalValue *>(argiValue.get())->GetScale();
 
-                Value* scaledCompareTo = nullptr;
-                Value* scaledArgi = nullptr;
+                Value *scaledCompareTo = nullptr;
+                Value *scaledArgi = nullptr;
 
-                std::string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_VEC_TYPE_INT).ToString();
+                std::string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
 
                 decimalIRBuilder->ScaleValues(*(valueToCompare->data), *compareToScale, *(argiValue->data), *argiScale,
                     &scaledCompareTo, &scaledArgi);
 
                 tmpCmpData = builder->CreateICmpSLE(
-                    decimalIRBuilder->CallDecimalFunction(funcId, retType, {scaledCompareTo, scaledArgi}),
+                    decimalIRBuilder->CallDecimalFunction(funcId, retType, { scaledCompareTo, scaledArgi }),
                     llvmTypes->CreateConstantInt(0));
 
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
@@ -1423,8 +1411,8 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             }
         }
         // restore types
-        toCompare->dataType = std::make_unique<VecType>(toCompareVecType);
-        iExpr->arguments[i]->dataType = std::make_unique<VecType>(argiVecType);
+        toCompare->dataType = std::make_unique<DataType>(toCompareDataType);
+        iExpr->arguments[i]->dataType = std::make_unique<DataType>(argiDataType);
 
         inArray = builder->CreateAnd(builder->CreateNot(tmpCmpNull), builder->CreateOr(inArray, tmpCmpData));
         isNull = builder->CreateOr(isNull, tmpCmpNull);
@@ -1439,7 +1427,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     int32_t biggerTypeId =
         std::max(std::max(bExpr->lowerBound->GetReturnTypeId(), bExpr->upperBound->GetReturnTypeId()),
             bExpr->value->GetReturnTypeId());
-    VecType biggerType;
+    DataType biggerType;
     if (biggerTypeId == static_cast<int32_t>(bExpr->lowerBound->GetReturnTypeId())) {
         biggerType = bExpr->lowerBound->GetReturnType();
     } else {
@@ -1484,13 +1472,12 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     Type *retType = llvmTypes->ToLLVMType(bExpr->GetReturnTypeId());
     Value *cmpLeft, *cmpRight;
     bool supportedType = false;
-    if (bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_INT || bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_LONG ||
-        bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DATE32 ||
-        bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64) {
+    if (bExpr->value->GetReturnTypeId() == OMNI_INT || bExpr->value->GetReturnTypeId() == OMNI_LONG ||
+        bExpr->value->GetReturnTypeId() == OMNI_DATE32 || bExpr->value->GetReturnTypeId() == OMNI_DECIMAL64) {
         cmpLeft = builder->CreateICmpSLE(lowerValData, valData, "between_cmpleft");
         cmpRight = builder->CreateICmpSLE(valData, upperValData, "between_cmpright");
         supportedType = true;
-    } else if (bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE) {
+    } else if (bExpr->value->GetReturnTypeId() == OMNI_DOUBLE) {
         cmpLeft = builder->CreateFCmpULE(lowerValData, valData, "between_cmpleft");
         cmpRight = builder->CreateFCmpULE(valData, upperValData, "between_cmpright");
         supportedType = true;
@@ -1500,31 +1487,30 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         cmpRight = builder->CreateICmpSLE(this->StringCmp(valData, valLen, upperValData, upperValLen),
             llvmTypes->CreateConstantInt(0));
         supportedType = true;
-    } else if (bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
-        std::vector<VecTypeId> params {OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128};
+    } else if (bExpr->value->GetReturnTypeId() == OMNI_DECIMAL128) {
+        std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
 
-        auto valueScale = (Value*)static_cast<DecimalValue*>(val.get())->GetScale();
-        auto lowerScale = (Value*)static_cast<DecimalValue*>(lowerVal.get())->GetScale();
-        auto upperScale = (Value*)static_cast<DecimalValue*>(upperVal.get())->GetScale();
+        auto valueScale = (Value *)static_cast<DecimalValue *>(val.get())->GetScale();
+        auto lowerScale = (Value *)static_cast<DecimalValue *>(lowerVal.get())->GetScale();
+        auto upperScale = (Value *)static_cast<DecimalValue *>(upperVal.get())->GetScale();
 
-        Value* cmpLeftScaledLower = nullptr;
-        Value* cmpLeftScaledVal = nullptr;
+        Value *cmpLeftScaledLower = nullptr;
+        Value *cmpLeftScaledVal = nullptr;
 
-        Value* cmpRightScaledVal = nullptr;
-        Value* cmpRightScaledUpper = nullptr;
+        Value *cmpRightScaledVal = nullptr;
+        Value *cmpRightScaledUpper = nullptr;
 
-        std::string funcId = FunctionSignature(decimal128CompareStr, params,
-                                               OMNI_VEC_TYPE_INT).ToString();
+        std::string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
 
-        decimalIRBuilder->ScaleValues(*lowerValData, *lowerScale, *valData, *valueScale,
-                                      &cmpLeftScaledLower, &cmpLeftScaledVal);
-        decimalIRBuilder->ScaleValues(*valData, *valueScale, *upperValData, *upperScale,
-                                      &cmpRightScaledVal, &cmpRightScaledUpper);
+        decimalIRBuilder->ScaleValues(*lowerValData, *lowerScale, *valData, *valueScale, &cmpLeftScaledLower,
+            &cmpLeftScaledVal);
+        decimalIRBuilder->ScaleValues(*valData, *valueScale, *upperValData, *upperScale, &cmpRightScaledVal,
+            &cmpRightScaledUpper);
         cmpLeft = builder->CreateICmpSLE(
-            decimalIRBuilder->CallDecimalFunction(funcId, retType, {cmpLeftScaledLower, cmpLeftScaledVal}),
+            decimalIRBuilder->CallDecimalFunction(funcId, retType, { cmpLeftScaledLower, cmpLeftScaledVal }),
             llvmTypes->CreateConstantInt(0));
         cmpRight = builder->CreateICmpSLE(
-            decimalIRBuilder->CallDecimalFunction(funcId, retType, {cmpRightScaledVal, cmpRightScaledUpper}),
+            decimalIRBuilder->CallDecimalFunction(funcId, retType, { cmpRightScaledVal, cmpRightScaledUpper }),
             llvmTypes->CreateConstantInt(0));
         supportedType = true;
     }
@@ -1615,19 +1601,18 @@ void ExpressionCodeGen::HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v
 {
     int32_t numReservedValues = 2;
     auto precisionPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "precision");
-    auto value1Precision = (Value*)static_cast<DecimalValue&>(v1).GetPrecision();
-    auto value2Precision = (Value*)static_cast<DecimalValue&>(v2).GetPrecision();
+    auto value1Precision = (Value *)static_cast<DecimalValue &>(v1).GetPrecision();
+    auto value2Precision = (Value *)static_cast<DecimalValue &>(v2).GetPrecision();
     precisionPhi->addIncoming(value1Precision, &isNotNullBlock);
     precisionPhi->addIncoming(value2Precision, &isNullBlock);
 
     auto scalePhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "scale");
-    auto value1Scale = (Value*)static_cast<DecimalValue&>(v1).GetScale();
-    auto value2Scale = (Value*)static_cast<DecimalValue&>(v2).GetScale();
+    auto value1Scale = (Value *)static_cast<DecimalValue &>(v1).GetScale();
+    auto value2Scale = (Value *)static_cast<DecimalValue &>(v2).GetScale();
     scalePhi->addIncoming(value1Scale, &isNotNullBlock);
     scalePhi->addIncoming(value2Scale, &isNullBlock);
 
     this->value = make_shared<DecimalValue>(&pn, &pnNull, precisionPhi, scalePhi);
-
 }
 
 void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
@@ -1653,24 +1638,24 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     int numArgs = fExpr.arguments.size();
     Value *isAnyNull = llvmTypes->CreateConstantBool(false);
     bool isDecimalFunction = false;
-    VecTypeId funcRetType = fExpr.GetReturnTypeId();
+    DataTypeId funcRetType = fExpr.GetReturnTypeId();
 
     // set execution context
     if (fExpr.function->IsExecutionContextSet()) {
         argVals.push_back(this->codegenContext->executionContext);
     }
     for (int i = 0; i < numArgs; i++) {
-        Expr* argN = fExpr.arguments[i];
+        Expr *argN = fExpr.arguments[i];
         resultPtr = VisitExpr(*argN);
         argVals.push_back(resultPtr->data);
         isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
-            if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
+            if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
                 argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType().GetWidth()));
             }
             argVals.push_back(this->value->length);
         }
-        if (argN->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+        if (argN->GetReturnTypeId() == OMNI_DECIMAL128) {
             isDecimalFunction = true;
         }
         if (fExpr.funcName == mm3hashStr) {
@@ -1681,10 +1666,10 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     Value *outputLen = nullptr;
     AllocaInst *outputLenPtr = nullptr;
     // Call Decimal IR Generator for decimal functions
-    if (funcRetType == OMNI_VEC_TYPE_DECIMAL128) {
+    if (funcRetType == OMNI_DECIMAL128) {
         auto outputValuePtr = decimalIRBuilder->BuildDecimalValue(nullptr, fExpr.GetReturnType());
-        ret = decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(),
-                                                    llvmTypes->ToLLVMType(funcRetType), argVals);
+        ret =
+            decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(), llvmTypes->ToLLVMType(funcRetType), argVals);
         outputValuePtr->data = ret;
         outputValuePtr->isNull = isAnyNull;
         outputValuePtr->length = outputLen;
@@ -1699,9 +1684,10 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         auto f = module->getFunction(fExpr.function->GetId());
         if (f) {
             ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(),
-                llvmTypes->ToLLVMType(funcRetType), argVals) : builder->CreateCall(f, argVals, fExpr.function->GetId());
+                llvmTypes->ToLLVMType(funcRetType), argVals) :
+                                      builder->CreateCall(f, argVals, fExpr.function->GetId());
             InlineFunctionInfo inlineFunctionInfo;
-            auto inlinedFunction = llvm::InlineFunction(*((CallInst *) ret), inlineFunctionInfo);
+            auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
         } else {
             std::cout << "Unable to generate function " << fExpr.funcName.c_str() << std::endl;

@@ -75,32 +75,32 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
             continue;
         } else {
             switch (actualCol->GetTypeId()) {
-                case OMNI_VEC_TYPE_INT:
-                case OMNI_VEC_TYPE_DATE32:
+                case OMNI_INT:
+                case OMNI_DATE32:
                     result = (static_cast<IntVector *>(actualCol)->GetValue(actualIndex) ==
                         static_cast<IntVector *>(expectCol)->GetValue(expectIndex));
                     break;
-                case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64: {
+                case OMNI_LONG:
+                case OMNI_DECIMAL64: {
                     int64_t actual = static_cast<LongVector *>(actualCol)->GetValue(actualIndex);
                     int64_t expected = static_cast<LongVector *>(expectCol)->GetValue(expectIndex);
                     result = (actual == expected);
                     break;
                 }
-                case OMNI_VEC_TYPE_DOUBLE:
+                case OMNI_DOUBLE:
                     result = (std::fabs(static_cast<DoubleVector *>(actualCol)->GetValue(actualIndex) -
                         static_cast<DoubleVector *>(expectCol)->GetValue(expectIndex)) <= DBL_EPSILON);
                     break;
-                case OMNI_VEC_TYPE_BOOLEAN:
+                case OMNI_BOOLEAN:
                     result = (static_cast<BooleanVector *>(actualCol)->GetValue(actualIndex) ==
                         static_cast<BooleanVector *>(expectCol)->GetValue(expectIndex));
                     break;
-                case OMNI_VEC_TYPE_DECIMAL128:
+                case OMNI_DECIMAL128:
                     result = (static_cast<Decimal128Vector *>(actualCol)->GetValue(actualIndex) ==
                         static_cast<Decimal128Vector *>(expectCol)->GetValue(expectIndex));
                     break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                case OMNI_VEC_TYPE_CHAR: {
+                case OMNI_VARCHAR:
+                case OMNI_CHAR: {
                     uint8_t *actual = nullptr;
                     int32_t actualLength = static_cast<VarcharVector *>(actualCol)->GetValue(actualIndex, &actual);
                     uint8_t *expected = nullptr;
@@ -124,7 +124,7 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
     return true;
 }
 
-VarcharVector *CreateVarcharVector(VarcharVecType type, std::string *values, int32_t length)
+VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, int32_t length)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     uint32_t width = type.GetWidth();
@@ -145,60 +145,60 @@ Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
     return vector;
 }
 
-Vector *CreateVector(VecType &vecType, int32_t rowCount, va_list &args)
+Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
-    switch (vecType.GetId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+    switch (dataType.GetId()) {
+        case OMNI_INT:
+        case OMNI_DATE32:
             return CreateVector<IntVector>(va_arg(args, int32_t *), rowCount);
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
             return CreateVector<LongVector>(va_arg(args, int64_t *), rowCount);
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             return CreateVector<DoubleVector>(va_arg(args, double *), rowCount);
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             return CreateVector<BooleanVector>(va_arg(args, bool *), rowCount);
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR:
-            return CreateVarcharVector(static_cast<VarcharVecType &>(vecType), va_arg(args, std::string *), rowCount);
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            return CreateVarcharVector(static_cast<VarcharDataType &>(dataType), va_arg(args, std::string *), rowCount);
+        case OMNI_DECIMAL128:
             return CreateDecimal128Vector(va_arg(args, Decimal128 *), rowCount);
         default:
-            std::cerr << "Unsupported type : " << vecType.GetId() << std::endl;
+            std::cerr << "Unsupported type : " << dataType.GetId() << std::endl;
             return nullptr;
     }
 }
 
-DictionaryVector *CreateDictionaryVector(VecType &vecType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...)
+DictionaryVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...)
 {
     va_list args;
     va_start(args, idsCount);
-    Vector *dictionary = CreateVector(vecType, rowCount, args);
+    Vector *dictionary = CreateVector(dataType, rowCount, args);
     va_end(args);
     auto vec = std::make_unique<DictionaryVector>(dictionary, ids, idsCount).release();
     delete dictionary;
     return vec;
 }
 
-VectorBatch *CreateVectorBatch(VecTypes &types, int32_t rowCount, ...)
+VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
 {
     int32_t typesCount = types.GetSize();
     VectorBatch *vectorBatch = std::make_unique<VectorBatch>(typesCount).release();
     va_list args;
     va_start(args, rowCount);
     for (int32_t i = 0; i < typesCount; i++) {
-        VecType type = types.Get()[i];
+        DataType type = types.Get()[i];
         vectorBatch->SetVector(i, CreateVector(type, rowCount, args));
     }
     va_end(args);
     return vectorBatch;
 }
 
-VectorBatch *createEmptyVectorBatch(std::vector<VecType> &vecTypes)
+VectorBatch *createEmptyVectorBatch(std::vector<DataType> &dataTypes)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetGlobalAllocator();
-    VectorBatch *vectorBatch = new VectorBatch(vecTypes.size());
-    vectorBatch->NewVectors(allocator, vecTypes);
+    VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
+    vectorBatch->NewVectors(allocator, dataTypes);
     return vectorBatch;
 }
 
@@ -303,36 +303,37 @@ void AssertDictionaryVectorDecimal128Equals(DictionaryVector *vector, Decimal128
 
 void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
 {
-    VecTypeId vecTypeId;
+    DataTypeId dataTypeId;
+    VectorEncoding vectorEncoding;
     Vector *dictionary = vector->GetDictionary();
-    while ((vecTypeId = dictionary->GetTypeId()) == OMNI_VEC_TYPE_DICTIONARY) {
+    while ((vectorEncoding = dictionary->GetEncoding()) == OMNI_VEC_ENCODING_DICTIONARY) {
         dictionary = static_cast<DictionaryVector *>(dictionary)->GetDictionary();
     }
-
-    switch (vecTypeId) {
-        case omniruntime::vec::OMNI_VEC_TYPE_INT:
-        case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+    dataTypeId = dictionary->GetTypeId();
+    switch (dataTypeId) {
+        case omniruntime::type::OMNI_INT:
+        case omniruntime::type::OMNI_DATE32:
             AssertDictionaryVectorIntEquals(vector, va_arg(args, int32_t *));
             break;
-        case omniruntime::vec::OMNI_VEC_TYPE_LONG:
-        case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+        case omniruntime::type::OMNI_LONG:
+        case omniruntime::type::OMNI_DECIMAL64:
             AssertDictionaryVectorLongEquals(vector, va_arg(args, int64_t *));
             break;
-        case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+        case omniruntime::type::OMNI_BOOLEAN:
             AssertDictionaryVectorBooleanEquals(vector, va_arg(args, bool *));
             break;
-        case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+        case omniruntime::type::OMNI_DOUBLE:
             AssertDictionaryVectorDoubleEquals(vector, va_arg(args, double *));
             break;
-        case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
-        case omniruntime::vec::OMNI_VEC_TYPE_CHAR:
+        case omniruntime::type::OMNI_VARCHAR:
+        case omniruntime::type::OMNI_CHAR:
             AssertDictionaryVectorVarcharEquals(vector, va_arg(args, std::string *));
             break;
-        case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+        case omniruntime::type::OMNI_DECIMAL128:
             AssertDictionaryVectorDecimal128Equals(vector, va_arg(args, Decimal128 *));
             break;
         default:
-            std::cerr << "unsupported type:" << vecTypeId << std::endl;
+            std::cerr << "unsupported type:" << dataTypeId << std::endl;
             break;
     }
 }
@@ -349,30 +350,31 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *vector = vectorBatch->GetVectors()[i];
         EXPECT_EQ(vector->GetSize(), expectedRowCount);
+        if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            AssertDictionaryVectorEquals(dynamic_cast<DictionaryVector *>(vector), args);
+            break;
+        }
         switch (vector->GetTypeId()) {
-            case omniruntime::vec::OMNI_VEC_TYPE_INT:
-            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+            case omniruntime::type::OMNI_INT:
+            case omniruntime::type::OMNI_DATE32:
                 AssertVectorEquals(dynamic_cast<IntVector *>(vector), va_arg(args, int32_t *));
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+            case omniruntime::type::OMNI_LONG:
+            case omniruntime::type::OMNI_DECIMAL64:
                 AssertVectorEquals(dynamic_cast<LongVector *>(vector), va_arg(args, int64_t *));
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            case omniruntime::type::OMNI_DOUBLE:
                 AssertDoubleVectorEquals(dynamic_cast<DoubleVector *>(vector), va_arg(args, double *));
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            case omniruntime::type::OMNI_BOOLEAN:
                 AssertVectorEquals(dynamic_cast<BooleanVector *>(vector), va_arg(args, bool *));
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+            case omniruntime::type::OMNI_DECIMAL128:
                 AssertVectorEquals(dynamic_cast<Decimal128Vector *>(vector), va_arg(args, Decimal128 *));
                 break;
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
-            case omniruntime::vec::OMNI_VEC_TYPE_CHAR:
+            case omniruntime::type::OMNI_VARCHAR:
+            case omniruntime::type::OMNI_CHAR:
                 AssertVarcharVectorEquals(dynamic_cast<VarcharVector *>(vector), va_arg(args, std::string *));
-                break;
-            case omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY:
-                AssertDictionaryVectorEquals(dynamic_cast<DictionaryVector *>(vector), args);
                 break;
             default:
                 std::cerr << "Unsupported type : " << vector->GetTypeId() << std::endl;
@@ -419,17 +421,17 @@ VectorBatch *DuplicateVectorBatch(VectorBatch *input)
     return duplication;
 }
 
-void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes)
+void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataType> &dataTypes)
 {
-    for (int i = 0; i < vecTypeCount; ++i) {
-        if (vecTypeIds[i] == OMNI_VEC_TYPE_VARCHAR) {
-            vecTypes.push_back(VarcharVecType(50));
+    for (int i = 0; i < dataTypeCount; ++i) {
+        if (dataTypeIds[i] == OMNI_VARCHAR) {
+            dataTypes.push_back(VarcharDataType(50));
             continue;
-        } else if (vecTypeIds[i] == OMNI_VEC_TYPE_CHAR) {
-            vecTypes.push_back(CharVecType(50));
+        } else if (dataTypeIds[i] == OMNI_CHAR) {
+            dataTypes.push_back(CharDataType(50));
             continue;
         }
-        vecTypes.push_back(VecType(vecTypeIds[i]));
+        dataTypes.push_back(DataType(dataTypeIds[i]));
     }
 }
 
@@ -462,23 +464,22 @@ int32_t GetTestExprReturnType(std::string &expression)
     std::string returnType(chars + start + 1, chars + end);
     if (returnType.find_first_not_of("0123456789") == std::string::npos && stoi(returnType) < INT32_MAX) {
         int typeOrdinal = stoi(returnType);
-        if (OMNI_VEC_TYPE_DECIMAL64 == typeOrdinal) {
-            return OMNI_VEC_TYPE_LONG;
+        if (OMNI_DECIMAL64 == typeOrdinal) {
+            return OMNI_LONG;
         }
-        if (OMNI_VEC_TYPE_DATE32 == typeOrdinal) {
-            return OMNI_VEC_TYPE_INT;
+        if (OMNI_DATE32 == typeOrdinal) {
+            return OMNI_INT;
         }
-        if (OMNI_VEC_TYPE_SHORT == typeOrdinal ||
-            (OMNI_VEC_TYPE_DATE64 <= typeOrdinal && OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= typeOrdinal)) {
-            std::cout << "Unsupported return type: "<< static_cast<VecTypeId>(typeOrdinal) << std::endl;
+        if (OMNI_SHORT == typeOrdinal || (OMNI_DATE64 <= typeOrdinal && OMNI_INTERVAL_DAY_TIME >= typeOrdinal)) {
+            std::cout << "Unsupported return type: " << static_cast<DataTypeId>(typeOrdinal) << std::endl;
         }
-        return static_cast<VecTypeId>(stoi(returnType));
+        return static_cast<DataTypeId>(stoi(returnType));
     }
     std::cout << "Unsupported return type: " + returnType << std::endl;
-    return OMNI_VEC_TYPE_INVALID;
+    return OMNI_INVALID;
 }
 
-void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
+void GetTestTypeIds(DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols)
 {
     int32_t *inputTypeIds = const_cast<int32_t *>(inputTypes.GetIds());
@@ -497,10 +498,11 @@ void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t proj
     }
 }
 
-FuncExpr *GetFuncExpr(const std::string& funcName, std::vector<Expr*> args, VecTypePtr returnType)
+FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, DataTypePtr returnType)
 {
-    std::vector<VecTypeId> argTypes(args.size());
-    std::transform(args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    std::vector<DataTypeId> argTypes(args.size());
+    std::transform(args.begin(), args.end(), argTypes.begin(),
+        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, returnType->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {

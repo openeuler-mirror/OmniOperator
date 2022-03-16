@@ -7,11 +7,12 @@
 
 #include <string>
 #include "vector_reference.h"
-#include "vector_type.h"
+#include "../type/data_type.h"
 #include "tracer/vector_leak_detector.h"
 
 namespace omniruntime {
 namespace vec {
+using DataTypeId = omniruntime::type::DataTypeId;
 class Vector;
 class VectorAllocator {
 public:
@@ -19,7 +20,7 @@ public:
 
     ~VectorAllocator();
 
-    void NewVector(Vector *vector, int capacityInBytes, int size, VecTypeId typeId);
+    void NewVector(Vector *vector, int capacityInBytes, int size, DataTypeId dataTypeId);
 
     void SliceVector(Vector *vector, Vector *sliceVector);
 

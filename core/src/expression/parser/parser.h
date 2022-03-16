@@ -6,7 +6,7 @@
 #define __PARSER_H__
 
 #include "expression/parserhelper.h"
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 #include "codegen/func_registry.h"
 
 enum ParserFormat {
@@ -19,20 +19,20 @@ public:
     Parser();
     ~Parser();
 
-    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, omniruntime::vec::VecTypes inputTypes,
+    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, omniruntime::type::DataTypes inputTypes,
         int32_t vecCount);
 
     std::vector<omniruntime::expressions::Expr *> ParseExpressions(const std::string expressions[],
-        int32_t numberOfExpressions, omniruntime::vec::VecTypes inputTypes);
+        int32_t numberOfExpressions, omniruntime::type::DataTypes inputTypes);
 
     omniruntime::expressions::Expr *ParseRowExpressionHelper(std::string opStr,
         std::vector<omniruntime::expressions::Expr *> args);
 
     static omniruntime::expressions::FieldExpr *GenerateFieldExpr(std::string fieldStr,
-        const omniruntime::vec::VecTypes &vecTypePtr);
+        const omniruntime::type::DataTypes &vecTypePtr);
     static omniruntime::expressions::LiteralExpr *GenerateLiteralExpr(std::string literalStr);
     static omniruntime::expressions::LiteralExpr *GenerateLiteralExprHelper(const std::string &literalStr,
-        omniruntime::expressions::VecTypePtr inputType);
+        omniruntime::expressions::DataTypePtr inputType);
 
 private:
     ParserHelper ph;

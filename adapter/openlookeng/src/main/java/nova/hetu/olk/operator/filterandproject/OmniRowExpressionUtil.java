@@ -4,7 +4,7 @@
 
 package nova.hetu.olk.operator.filterandproject;
 
-import static nova.hetu.olk.tool.OperatorUtils.toVecType;
+import static nova.hetu.olk.tool.OperatorUtils.toDataType;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,11 +29,11 @@ import io.prestosql.sql.relational.VariableReferenceExpression;
 import io.prestosql.sql.relational.RowExpressionVisitor;
 
 import nova.hetu.olk.tool.OperatorUtils;
-import nova.hetu.omniruntime.type.CharVecType;
-import nova.hetu.omniruntime.type.Decimal64VecType;
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal64DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -99,7 +99,7 @@ public class OmniRowExpressionUtil {
             List<String> args = callExpression.getArguments().stream().map(OmniRowExpressionUtil::expressionStringify)
                     .collect(Collectors.toList());
             return callExpression.getSignature().getName() + ":"
-                    + typeToVecTypeId(callExpression.getType()) + "("
+                    + typeToDataTypeId(callExpression.getType()) + "("
                     + Joiner.on(", ").join(args) + ")";
         }
 
@@ -108,7 +108,7 @@ public class OmniRowExpressionUtil {
             List<String> args = specialForm.getArguments().stream().map(OmniRowExpressionUtil::expressionStringify)
                     .collect(Collectors.toList());
             return specialForm.getForm().name() + ":"
-                    + toVecType(specialForm.getType()).getId().ordinal() + "("
+                    + toDataType(specialForm.getType()).getId().ordinal() + "("
                     + Joiner.on(", ").join(args) + ")";
         }
 
@@ -132,33 +132,33 @@ public class OmniRowExpressionUtil {
             if ((type instanceof VarcharType || type instanceof CharType)
                     && constantExpression.getValue() instanceof Slice) {
                 String varcharValue = ((Slice) constantExpression.getValue()).toStringAscii();
-                return "'" + varcharValue + "':" + typeToVecTypeId(type);
+                return "'" + varcharValue + "':" + typeToDataTypeId(type);
             }
 
             if (type instanceof DecimalType && !((DecimalType) type).isShort()
                     && constantExpression.getValue() instanceof Slice) {
                 return Decimals.decodeUnscaledValue((Slice) constantExpression.getValue()) + ":"
-                        + typeToVecTypeId(type);
+                        + typeToDataTypeId(type);
             }
 
-            return constantExpression.getValue() + ":" + typeToVecTypeId(type);
+            return constantExpression.getValue() + ":" + typeToDataTypeId(type);
         }
         return rowExpression.toString();
     }
 
     /**
-     * Get VecTypeId with width from the type signature
+     * Get DataTypeId with width from the type signature
      *
      * @param type type from openLooKeng
-     * @return VecTypeId corresponding to Type
+     * @return DataTypeId corresponding to Type
      */
-    public static String typeToVecTypeId(Type type) {
+    public static String typeToDataTypeId(Type type) {
         TypeSignature signature = type.getTypeSignature();
         if ("char".equalsIgnoreCase(signature.getBase())) {
             int width = signature.getParameters().get(0).getLongLiteral().intValue();
-            return String.format("%d[%d]", toVecType(type).getId().ordinal(), width);
+            return String.format("%d[%d]", toDataType(type).getId().ordinal(), width);
         }
-        return String.valueOf(toVecType(type).getId().ordinal());
+        return String.valueOf(toDataType(type).getId().ordinal());
     }
 
     /**
@@ -192,7 +192,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             callName = callName.substring(OPERATOR_PREFIX.length());
         }
         TypeSignature callSignature = call.getType().getTypeSignature();
-        VecType returnType = OperatorUtils.toVecType(call.getType());
+        DataType returnType = OperatorUtils.toDataType(call.getType());
         int typeId = returnType.getId().ordinal();
         // Binary operator in rowExpression
         if (ARITH_BIN_OPS.contains(callName) || COM_BIN_OPS.contains(callName)) {
@@ -212,14 +212,14 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             }
             callRoot.put("exprType", "FUNCTION").put("returnType", typeId).put("function_name", callName)
                     .set("arguments", arguments);
-            if (returnType instanceof VarcharVecType ) {
-                callRoot.put("width", ((VarcharVecType) returnType).getWidth());
-            } else if (returnType instanceof Decimal64VecType) {
-                callRoot.put("precision", ((Decimal64VecType) returnType).getPrecision())
-                        .put("scale", ((Decimal64VecType) returnType).getScale());
-            } else if (returnType instanceof Decimal128VecType) {
-                callRoot.put("precision", ((Decimal128VecType) returnType).getPrecision())
-                        .put("scale", ((Decimal128VecType) returnType).getScale());
+            if (returnType instanceof VarcharDataType ) {
+                callRoot.put("width", ((VarcharDataType) returnType).getWidth());
+            } else if (returnType instanceof Decimal64DataType) {
+                callRoot.put("precision", ((Decimal64DataType) returnType).getPrecision())
+                        .put("scale", ((Decimal64DataType) returnType).getScale());
+            } else if (returnType instanceof Decimal128DataType) {
+                callRoot.put("precision", ((Decimal128DataType) returnType).getPrecision())
+                        .put("scale", ((Decimal128DataType) returnType).getScale());
             }
         }
         return callRoot;
@@ -229,7 +229,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     public ObjectNode visitSpecialForm(SpecialForm specialForm, Void context) {
         ObjectNode specialFormRoot = MAPPER.createObjectNode();
         String formName = specialForm.getForm().name();
-        int returnType = OperatorUtils.toVecType(specialForm.getType()).getId().ordinal();
+        int returnType = OperatorUtils.toDataType(specialForm.getType()).getId().ordinal();
         int size = specialForm.getArguments().size();
         switch (formName) {
             case "AND" :
@@ -283,18 +283,18 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     @Override
     public ObjectNode visitInputReference(InputReferenceExpression reference, Void context) {
         ObjectNode inputRefRoot = MAPPER.createObjectNode();
-        VecType vecType = OperatorUtils.toVecType(reference.getType());
-        inputRefRoot.put("exprType", "FIELD_REFERENCE").put("dataType", vecType.getId().ordinal()).put("colVal",
+        DataType dataType = OperatorUtils.toDataType(reference.getType());
+        inputRefRoot.put("exprType", "FIELD_REFERENCE").put("dataType", dataType.getId().ordinal()).put("colVal",
                 reference.getField());
-        if (vecType instanceof CharVecType) {
-            inputRefRoot.put("width", ((CharVecType) vecType).getWidth());
-        } else if (vecType instanceof VarcharVecType) {
-            inputRefRoot.put("width", ((VarcharVecType) vecType).getWidth());
-        } else if (vecType instanceof Decimal64VecType) {
-            Decimal64VecType type = ((Decimal64VecType) vecType);
+        if (dataType instanceof CharDataType) {
+            inputRefRoot.put("width", ((CharDataType) dataType).getWidth());
+        } else if (dataType instanceof VarcharDataType) {
+            inputRefRoot.put("width", ((VarcharDataType) dataType).getWidth());
+        } else if (dataType instanceof Decimal64DataType) {
+            Decimal64DataType type = ((Decimal64DataType) dataType);
             inputRefRoot.put("precision", type.getPrecision()).put("scale", type.getScale());
-        } else if (vecType instanceof Decimal128VecType) {
-            Decimal128VecType type = ((Decimal128VecType) vecType);
+        } else if (dataType instanceof Decimal128DataType) {
+            Decimal128DataType type = ((Decimal128DataType) dataType);
             inputRefRoot.put("precision", type.getPrecision()).put("scale", type.getScale());
         }
 
@@ -304,7 +304,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     @Override
     public ObjectNode visitConstant(ConstantExpression literal, Void context) {
         ObjectNode constantRoot = MAPPER.createObjectNode();
-        VecType literalType = OperatorUtils.toVecType(literal.getType());
+        DataType literalType = OperatorUtils.toDataType(literal.getType());
         constantRoot.put("exprType", "LITERAL").put("dataType", literalType.getId().ordinal());
         // Null check on expression value
         if (literal.getValue() == null) {
@@ -313,25 +313,25 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         }
         constantRoot.put("isNull", false);
         switch (literalType.getId()) {
-            case OMNI_VEC_TYPE_BOOLEAN :
+            case OMNI_BOOLEAN:
                 constantRoot.put("value", Boolean.valueOf(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_DOUBLE :
+            case OMNI_DOUBLE:
                 constantRoot.put("value", Double.parseDouble(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_INT :
-            case OMNI_VEC_TYPE_DATE32 :
+            case OMNI_INT:
+            case OMNI_DATE32:
                 constantRoot.put("value", Integer.parseInt(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_LONG :
+            case OMNI_LONG:
                 constantRoot.put("value", Long.parseLong(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_DECIMAL64 :
+            case OMNI_DECIMAL64:
                 constantRoot.put("value", (Long.parseLong(literal.getValue().toString())));
-                constantRoot.put("precision", ((Decimal64VecType) literalType).getPrecision());
-                constantRoot.put("scale", ((Decimal64VecType) literalType).getScale());
+                constantRoot.put("precision", ((Decimal64DataType) literalType).getPrecision());
+                constantRoot.put("scale", ((Decimal64DataType) literalType).getScale());
                 break;
-            case OMNI_VEC_TYPE_DECIMAL128 :
+            case OMNI_DECIMAL128:
                 // FIXME: Need to Support 128 bits properly
                 String d128Val;
                 if (literal.getValue() instanceof Slice) {
@@ -340,11 +340,11 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                     d128Val = literal.getValue().toString();
                 }
                 constantRoot.put("value", d128Val);
-                constantRoot.put("precision", ((Decimal128VecType) literalType).getPrecision());
-                constantRoot.put("scale", ((Decimal128VecType) literalType).getScale());
+                constantRoot.put("precision", ((Decimal128DataType) literalType).getPrecision());
+                constantRoot.put("scale", ((Decimal128DataType) literalType).getScale());
                 break;
-            case OMNI_VEC_TYPE_CHAR :
-            case OMNI_VEC_TYPE_VARCHAR :
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
                 String varcharValue;
                 if (literal.getValue() instanceof Slice) {
                     varcharValue = ((Slice) literal.getValue()).toStringAscii();
@@ -352,10 +352,10 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                     varcharValue = String.valueOf(literal.getValue());
                 }
                 constantRoot.put("value", varcharValue);
-                constantRoot.put("width", ((VarcharVecType) literalType).getWidth());
+                constantRoot.put("width", ((VarcharDataType) literalType).getWidth());
                 break;
-            case OMNI_VEC_TYPE_NONE :
-                // TODO: Support UNKNOWN presto type in VecType
+            case OMNI_NONE:
+                // TODO: Support UNKNOWN presto type in DataType
                 // omni-runtime treat NONE regardless of its value
                 constantRoot.put("value", "UNKNOWN");
                 break;
@@ -377,14 +377,14 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     @Override
     public ObjectNode visitVariableReference(VariableReferenceExpression reference, Void context) {
         ObjectNode varRefRoot = MAPPER.createObjectNode();
-        VecType vecType = OperatorUtils.toVecType(reference.getType());
+        DataType dataType = OperatorUtils.toDataType(reference.getType());
         varRefRoot.put("exprType", "VARIABLE_REFERENCE")
-                .put("dataType", OperatorUtils.toVecType(reference.getType()).getId().ordinal())
+                .put("dataType", OperatorUtils.toDataType(reference.getType()).getId().ordinal())
                 .put("varName", reference.getName());
-        if (vecType instanceof CharVecType) {
-            varRefRoot.put("width", ((CharVecType) vecType).getWidth());
-        } else if (vecType instanceof VarcharVecType) {
-            varRefRoot.put("width", ((VarcharVecType) vecType).getWidth());
+        if (dataType instanceof CharDataType) {
+            varRefRoot.put("width", ((CharDataType) dataType).getWidth());
+        } else if (dataType instanceof VarcharDataType) {
+            varRefRoot.put("width", ((VarcharDataType) dataType).getWidth());
         }
         return varRefRoot;
     }

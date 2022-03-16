@@ -211,7 +211,7 @@ import nova.hetu.olk.operator.localexchange.OmniLocalExchange;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 import nova.hetu.shuffle.PageProducer;
@@ -1283,10 +1283,10 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 FunctionType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
                         .toArray(new FunctionType[aggregations.size()]);
                 int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
-                VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
+                DataType[] aggregationOutputTypes = OperatorUtils.toDataTypes(aggregationResultTypes);
 
                 return new AggregationOmniOperator.AggregationOmniOperatorFactory(context.getNextOperatorId(),
-                        planNodeId, OperatorUtils.toVecTypes(source.getTypes()), aggregatorTypes,
+                        planNodeId, OperatorUtils.toDataTypes(source.getTypes()), aggregatorTypes,
                         aggregationInputChannels, maskChannels.build(), aggregationOutputTypes, step);
             } else if (!isWholeStageFallback(session)) {
                 return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId, step,
@@ -1370,10 +1370,10 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 if (getOmniAggEnabled(session) && !groupIdChannel.isPresent()) {
                     // when omni is turned on there is no hash channel
                     int[] groupByInputChannels = Ints.toArray(groupByChannels);
-                    VecType[] groupByInputTypes = OperatorUtils.toVecTypes(groupByTypes);
+                    DataType[] groupByInputTypes = OperatorUtils.toDataTypes(groupByTypes);
                     int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
-                    VecType[] aggregationInputTypes = OperatorUtils.toVecTypes(aggregationSourceTypes);
-                    VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
+                    DataType[] aggregationInputTypes = OperatorUtils.toDataTypes(aggregationSourceTypes);
+                    DataType[] aggregationOutputTypes = OperatorUtils.toDataTypes(aggregationResultTypes);
                     FunctionType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
                             .toArray(new FunctionType[aggregations.size()]);
 

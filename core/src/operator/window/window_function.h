@@ -93,8 +93,8 @@ public:
 
 class AggregateWindowFunction : public WindowFunction {
 public:
-    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, const VecType &inputType,
-        const VecType &outputType);
+    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, const DataType &inputType,
+        const DataType &outputType);
     ~AggregateWindowFunction();
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
@@ -107,14 +107,14 @@ private:
     std::unique_ptr<omniruntime::op::AggregatorFactory> aggregatorFactory;
     int32_t currentStart;
     int32_t currentEnd;
-    const VecType inputType;
-    const VecType outputType;
+    const DataType inputType;
+    const DataType outputType;
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
     std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
 
     void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn, int32_t index) const;
 
-    void Accumulate(VectorAllocator *vecAllocator, int32_t start, int32_t end);
+    void Accumulate(VectorAllocator *vecAllocator, VectorEncoding vectorEncoding, int32_t start, int32_t end);
 
     void AccumulateData(VectorBatch *resultVectorBatch, int32_t resultVectorPosition, Vector ***inputVectors,
         int64_t inputAddress);

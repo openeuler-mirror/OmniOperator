@@ -15,7 +15,7 @@ TEST(IntVector, newVector)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 1024);
-    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_INT);
     delete vector;
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);

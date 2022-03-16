@@ -7,6 +7,7 @@ add_subdirectory(util)
 add_subdirectory(vector)
 add_subdirectory(codegen)
 add_subdirectory(expression)
+add_subdirectory(type)
 
 set(OM_TARGET omni_runtime)
 
@@ -21,6 +22,7 @@ set(MY_LINK
         omni_vector
         codegen
         expression
+        type
         )
 # SHARED mode will compile a so file
 add_library(${OM_TARGET} SHARED ${CMAKE_CURRENT_LIST_DIR})

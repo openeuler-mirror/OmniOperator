@@ -10,12 +10,12 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
-        const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const VecTypes &sourceVecTypes,
-        const VecTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
+        const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
+        const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
 {
     uint32_t projectColNum = groupByNum + aggNum;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
@@ -26,9 +26,9 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         projectKeys[j] = aggKeys.at(i);
     }
     std::vector<int32_t> hashAggCols;
-    std::vector<VecType> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(sourceVecTypes, projectKeys, projectColNum, newSourceTypes,
-        this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
+    std::vector<DataType> newSourceTypes;
+    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
+                                             this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
 
     uint32_t groupByCols[groupByNum];
     for (int i = 0; i < groupByNum; ++i) {
@@ -39,24 +39,24 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         aggCols[i] = hashAggCols[j];
     }
 
-    std::vector<VecType> groupByTypeVec;
+    std::vector<DataType> groupByTypeVec;
     groupByTypeVec.reserve(groupByNum);
     for (int i = 0; i < groupByNum; i++) {
         groupByTypeVec.push_back(newSourceTypes[groupByCols[i]]);
     }
-    this->groupByTypes = std::make_unique<VecTypes>(groupByTypeVec);
-    std::vector<VecType> aggTypeVec;
+    this->groupByTypes = std::make_unique<DataTypes>(groupByTypeVec);
+    std::vector<DataType> aggTypeVec;
     aggTypeVec.reserve(aggNum);
     for (int i = 0; i < aggNum; i++) {
         aggTypeVec.push_back(newSourceTypes[aggCols[i]]);
     }
-    this->aggTypes = std::make_unique<VecTypes>(aggTypeVec);
+    this->aggTypes = std::make_unique<DataTypes>(aggTypeVec);
 
     PrepareContext groupByCol = { static_cast<uint32_t *>(groupByCols), groupByNum };
     PrepareContext aggCol = { static_cast<uint32_t *>(aggCols), aggNum };
     PrepareContext aggFunc = { aggFuncTypes, aggNum };
 
-    this->sourceTypes = std::make_unique<VecTypes>(newSourceTypes);
+    this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->hashAggOperatorFactory = std::make_unique<HashAggregationOperatorFactory>(groupByCol,
          *(this->groupByTypes.get()), aggCol, *(this->aggTypes.get()), aggOutputTypes, aggFunc,
           inputRaw, outputPartial).release();
@@ -77,7 +77,7 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
     return pOperator.release();
 }
 
-HashAggregationWithExprOperator::HashAggregationWithExprOperator(const vec::VecTypes &sourceTypes,
+HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,
     std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator)
     : sourceTypes(sourceTypes), projectCols(projectCols), projectFuncs(projectFuncs), hashAggOperator(hashAggOperator)
 {}

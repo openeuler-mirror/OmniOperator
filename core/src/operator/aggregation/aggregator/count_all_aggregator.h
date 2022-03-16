@@ -9,12 +9,12 @@ namespace omniruntime {
 namespace op {
 class CountAllAggregator : public Aggregator {
 public:
-    CountAllAggregator(const VecType &out)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneVecType::Instance(), out, INVALID_INPUT_COL)
+    CountAllAggregator(const DataType &out)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneDataType::Instance(), out, INVALID_INPUT_COL)
     {}
 
-    CountAllAggregator(const VecType &out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneVecType::Instance(), out, INVALID_INPUT_COL, inputRaw,
+    CountAllAggregator(const DataType &out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneDataType::Instance(), out, INVALID_INPUT_COL, inputRaw,
         outputPartial)
     {}
 

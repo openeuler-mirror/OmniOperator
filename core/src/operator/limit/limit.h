@@ -8,7 +8,7 @@
 #include <memory>
 #include "../operator.h"
 #include "../operator_factory.h"
-#include "../../vector/vector_type_serializer.h"
+#include "../../type/data_type_serializer.h"
 
 using namespace std;
 namespace omniruntime {

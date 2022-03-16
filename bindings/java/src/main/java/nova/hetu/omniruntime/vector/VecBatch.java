@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -69,16 +69,16 @@ public class VecBatch implements Closeable {
      */
     public VecBatch(long nativeVecBatch, long[] nativeVectors, long[] nativeVectorValueBufAddresses,
                     long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses,
-                    long[] nativeVectorAllocators, int[] capacityInBytes, int[] sizes, int[] offsets, int[] vecTypeIds,
-                    int rowCount) {
+                    long[] nativeVectorAllocators, int[] capacityInBytes, int[] offsets, int[] encodings,
+                    int[] dataTypeIds, int rowCount) {
         int vecCount = nativeVectors.length;
         Vec[] newVectors = new Vec[vecCount];
         for (int idx = 0; idx < vecCount; idx++) {
             long nativeVector = nativeVectors[idx];
-            VecType vecType = VecType.create(vecTypeIds[idx]);
+            DataType dataType = DataType.create(dataTypeIds[idx]);
             newVectors[idx] = VecFactory.create(nativeVector, nativeVectorValueBufAddresses[idx],
                 nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], nativeVectorAllocators[idx],
-                capacityInBytes[idx], sizes[idx], offsets[idx], vecType);
+                capacityInBytes[idx], rowCount, offsets[idx], VecEncoding.values()[encodings[idx]], dataType);
         }
         this.rowCount = rowCount;
         this.nativeVectorBatch = nativeVecBatch;

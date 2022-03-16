@@ -5,7 +5,7 @@
 package nova.hetu.olk.operator.filterandproject;
 
 import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
-import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
+import static nova.hetu.olk.tool.OperatorUtils.toDataTypes;
 
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.relational.RowExpression;
@@ -35,7 +35,7 @@ public class OmniProjection {
         this.projectLength = expressions.size();
         this.omniProjectionFactory = new OmniProjectOperatorFactory(
                 expressions.stream().map(p -> expressionStringify(p, parseFormat)).toArray(String[]::new),
-                toVecTypes(inputTypes), parseFormat.ordinal());
+                toDataTypes(inputTypes), parseFormat.ordinal());
         this.isSupported = omniProjectionFactory.isSupported();
     }
 

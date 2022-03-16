@@ -9,7 +9,7 @@
 #include "../../operator_factory.h"
 #include "../../projection/projection.h"
 #include "../../../vector/vector.h"
-#include "../../../vector/vector_types.h"
+#include "../../../type/data_types.h"
 #include "../common_join.h"
 #include "dynamic_pages_index.h"
 #include "sort_merge_join.h"
@@ -19,11 +19,11 @@ namespace op {
 class StreamedTableWithExprOperatorFactory : public OperatorFactory {
 public:
     static StreamedTableWithExprOperatorFactory *CreateStreamedTableWithExprOperatorFactory(
-        const vec::VecTypes &streamedTypes,
+        const type::DataTypes &streamedTypes,
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
         int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter);
 
-    StreamedTableWithExprOperatorFactory(const vec::VecTypes &streamedTypes,
+    StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
         int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
         std::string &filter);
@@ -35,7 +35,7 @@ public:
     SortMergeJoinOperator *GetSmjOperator();
 
 private:
-    std::unique_ptr<vec::VecTypes> streamedTypes;
+    std::unique_ptr<type::DataTypes> streamedTypes;
     std::vector<int32_t> streamedKeyCols;
     std::vector<int32_t> streamedOutputCols;
     JoinType joinType;
@@ -47,8 +47,8 @@ private:
 
 class StreamedTableWithExprOperator : public Operator {
 public:
-    StreamedTableWithExprOperator(const vec::VecTypes &streamedTypes, const std::vector<int32_t> &streamedKeyCols,
-        const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+    StreamedTableWithExprOperator(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeyCols,
+                                  const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
 
     ~StreamedTableWithExprOperator() override;
 
@@ -61,7 +61,7 @@ public:
 
 private:
     SortMergeJoinOperator *smjOperator;
-    const omniruntime::vec::VecTypes &streamedTypes;
+    const omniruntime::type::DataTypes &streamedTypes;
     std::vector<int32_t> streamedKeyCols;
     std::vector<RowProjFunc> projectFuncs;
 };
@@ -69,11 +69,11 @@ private:
 class BufferedTableWithExprOperatorFactory : public OperatorFactory {
 public:
     static BufferedTableWithExprOperatorFactory *CreateBufferedTableWithExprOperatorFactory(
-        const VecTypes &bufferedTypes,
+        const DataTypes &bufferedTypes,
         const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
         int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr);
 
-    BufferedTableWithExprOperatorFactory(const VecTypes &bufferedTypes,
+    BufferedTableWithExprOperatorFactory(const DataTypes &bufferedTypes,
         const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
         int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
         int64_t streamedTableFactoryAddr);
@@ -83,7 +83,7 @@ public:
     omniruntime::op::Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<VecTypes> bufferedTypes;
+    std::unique_ptr<DataTypes> bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<int32_t> bufferedOutputCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
@@ -93,8 +93,8 @@ private:
 
 class BufferedTableWithExprOperator : public Operator {
 public:
-    BufferedTableWithExprOperator(const vec::VecTypes &bufferedTypes, const std::vector<int32_t> &bufferedKeyCols,
-        const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+    BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes, const std::vector<int32_t> &bufferedKeyCols,
+                                  const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
 
     ~BufferedTableWithExprOperator() override;
 
@@ -107,7 +107,7 @@ public:
 
 private:
     SortMergeJoinOperator *smjOperator;
-    const omniruntime::vec::VecTypes &bufferedTypes;
+    const omniruntime::type::DataTypes &bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<RowProjFunc> projectFuncs;
 };

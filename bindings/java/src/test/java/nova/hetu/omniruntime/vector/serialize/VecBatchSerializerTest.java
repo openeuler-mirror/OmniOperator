@@ -1,21 +1,21 @@
 package nova.hetu.omniruntime.vector.serialize;
 
-import static nova.hetu.omniruntime.type.CharVecType.CHAR;
-import static nova.hetu.omniruntime.type.Date32VecType.DATE32;
-import static nova.hetu.omniruntime.type.Date64VecType.DATE64;
-import static nova.hetu.omniruntime.type.Decimal64VecType.DECIMAL64;
-import static nova.hetu.omniruntime.type.VecType.INVALID;
+import static nova.hetu.omniruntime.type.CharDataType.CHAR;
+import static nova.hetu.omniruntime.type.Date32DataType.DATE32;
+import static nova.hetu.omniruntime.type.Date64DataType.DATE64;
+import static nova.hetu.omniruntime.type.Decimal64DataType.DECIMAL64;
+import static nova.hetu.omniruntime.type.DataType.INVALID;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertTrue;
 
-import nova.hetu.omniruntime.type.ContainerVecType;
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.ContainerDataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
@@ -184,8 +184,8 @@ public class VecBatchSerializerTest {
             decimal128Vec.set(i, new long[]{i, i + 1});
         }
         long[] vecAddresses = new long[]{longVec.getNativeVector(), intVec.getNativeVector(), varCharVec.getNativeVector(), decimal128Vec.getNativeVector()};
-        ContainerVec containerVec = new ContainerVec(vecAddresses.length, ROW_COUNT, vecAddresses, new VecType[]{
-            new LongVecType(), new IntVecType(), new VarcharVecType(20), new Decimal128VecType(10, 1)
+        ContainerVec containerVec = new ContainerVec(vecAddresses.length, ROW_COUNT, vecAddresses, new DataType[]{
+            new LongDataType(), new IntDataType(), new VarcharDataType(20), new Decimal128DataType(10, 1)
         });
         VecBatch vecBatch = new VecBatch(new Vec[]{containerVec});
 
@@ -202,7 +202,7 @@ public class VecBatchSerializerTest {
         LongVec checkLongVec = new LongVec(checkContainerVec.getVector(0));
         IntVec checkIntVec = new IntVec(checkContainerVec.getVector(1));
         VarcharVec checkVarCharVec = new VarcharVec(checkContainerVec.getVector(2));
-        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3), checkContainerVec.getVecTypes()[3]);
+        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3), checkContainerVec.getDataTypes()[3]);
         for (int i = 0; i < ROW_COUNT; i++) {
             assertEquals(i, checkLongVec.get(i));
             assertEquals(i, checkIntVec.get(i));
@@ -231,11 +231,11 @@ public class VecBatchSerializerTest {
             decimal128Vec.set(i, new long[]{i, i + 1});
         }
         long[] vecAddresses = new long[]{longVec.getNativeVector(), intVec.getNativeVector(), varCharVec.getNativeVector(), decimal128Vec.getNativeVector()};
-        ContainerVec containerVec = new ContainerVec(vecAddresses.length, ROW_COUNT, vecAddresses, new VecType[]{
-            new LongVecType(), new IntVecType(), new VarcharVecType(20), new Decimal128VecType(10, 1)
+        ContainerVec containerVec = new ContainerVec(vecAddresses.length, ROW_COUNT, vecAddresses, new DataType[]{
+            new LongDataType(), new IntDataType(), new VarcharDataType(20), new Decimal128DataType(10, 1)
         });
-        ContainerVec nestedContainerVec = new ContainerVec(1, ROW_COUNT, new long[] {containerVec.getNativeVector()}, new VecType[]{
-            new ContainerVecType()
+        ContainerVec nestedContainerVec = new ContainerVec(1, ROW_COUNT, new long[] {containerVec.getNativeVector()}, new DataType[]{
+            new ContainerDataType()
         });
         VecBatch vecBatch = new VecBatch(new Vec[]{nestedContainerVec});
 
@@ -252,7 +252,7 @@ public class VecBatchSerializerTest {
         LongVec checkLongVec = new LongVec(checkContainerVec.getVector(0));
         IntVec checkIntVec = new IntVec(checkContainerVec.getVector(1));
         VarcharVec checkVarCharVec = new VarcharVec(checkContainerVec.getVector(2));
-        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3), checkContainerVec.getVecTypes()[3]);
+        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3), checkContainerVec.getDataTypes()[3]);
         for (int i = 0; i < ROW_COUNT; i++) {
             assertEquals(i, checkLongVec.get(i));
             assertEquals(i, checkIntVec.get(i));
@@ -384,20 +384,20 @@ public class VecBatchSerializerTest {
     }
 
     @Test
-    public void testSerializeWithSetVecType()
+    public void testSerializeWithSetDataType()
     {
         int row = 5;
         IntVec data32 = new IntVec(row);
-        VecUtil.setType(data32, DATE32);
+        VecUtil.setDataType(data32, DATE32);
         data32.put(new int[] {1, 2, 3, 4, 5}, 0, 0, row);
         LongVec data64 = new LongVec(row);
-        VecUtil.setType(data64, DATE64);
+        VecUtil.setDataType(data64, DATE64);
         data64.put(new long[] {1, 2, 3, 4, 5}, 0, 0, row);
         LongVec decimal64 = new LongVec(row);
-        VecUtil.setType(decimal64, DECIMAL64);
+        VecUtil.setDataType(decimal64, DECIMAL64);
         decimal64.put(new long[] {1, 2, 3, 4, 5}, 0, 0, row);
         VarcharVec charVec = new VarcharVec(1024, row);
-        VecUtil.setType(charVec, CHAR);
+        VecUtil.setDataType(charVec, CHAR);
         charVec.put(0, "12345".getBytes(StandardCharsets.UTF_8), 0,
                 new int[] {0, 1, 2, 3, 4, 5}, 0, row);
 
@@ -427,12 +427,12 @@ public class VecBatchSerializerTest {
     }
 
     @Test(expectedExceptions = IllegalStateException.class,
-            expectedExceptionsMessageRegExp = "Unexpected value: OMNI_VEC_TYPE_INVALID")
+            expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
     public void testSerializeInvalidType()
     {
         int row = 5;
         IntVec invalidType = new IntVec(row);
-        VecUtil.setType(invalidType, INVALID);
+        VecUtil.setDataType(invalidType, INVALID);
         VecBatch vecBatch = new VecBatch(new Vec[]{invalidType});
         VecBatchSerializer serializer = VecBatchSerializerFactory.create();
         try {

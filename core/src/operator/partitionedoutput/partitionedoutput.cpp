@@ -11,10 +11,11 @@ using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const VecTypes &sourceTypes, int32_t sourceTypeCount,
-    bool replicatesAnyRow, int32_t nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount,
-    int32_t partitionCount, int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed,
-    int32_t *hashChannelTypes, int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount)
+PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const DataTypes &sourceTypes,
+    int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel, int32_t *partitionChannels,
+    int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition, int32_t bucketToPartitionCount,
+    bool isHashPrecomputed, int32_t *hashChannelTypes, int32_t hashChannelTypesCount, int32_t *hashChannels,
+    int32_t hashChannelsCount)
     : sourceTypeCount(sourceTypeCount),
       partitionChannelsCount(partitionChannelsCount),
       replicatesAnyRow(replicatesAnyRow),
@@ -25,7 +26,7 @@ PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const VecType
       hashChannelTypesCount(hashChannelTypesCount),
       hashChannelsCount(hashChannelsCount)
 {
-    this->sourceTypes = std::make_unique<VecTypes>(sourceTypes);
+    this->sourceTypes = std::make_unique<DataTypes>(sourceTypes);
 
     this->partitionChannels = std::make_unique<int[]>(partitionChannelsCount).release();
     for (int i = 0; i < partitionChannelsCount; ++i) {
@@ -56,7 +57,7 @@ PartitionedOutputOperatorFactory::~PartitionedOutputOperatorFactory()
 }
 
 PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
-    const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel,
+    const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel,
     int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition,
     int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes, int32_t hashChannelTypesCount,
     int32_t *hashChannels, int32_t hashChannelsCount)
@@ -78,7 +79,7 @@ Operator *PartitionedOutputOperatorFactory::CreateOperator()
     return partitionedOutputOperator.release();
 }
 
-PartitionedOutputOperator::PartitionedOutputOperator(const VecTypes &sourceTypes, int32_t sourceTypeCount,
+PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount,
     bool replicatesAnyRow, int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount,
     int32_t partitionCount, int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed,
     int32_t *hashChannelTypes, int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount)
@@ -103,39 +104,39 @@ PartitionedOutputOperator::~PartitionedOutputOperator() {}
 static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex)
 {
     switch (origintVector->GetTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32: {
+        case OMNI_INT:
+        case OMNI_DATE32: {
             int32_t value = static_cast<IntVector *>(origintVector)->GetValue(originRowIndex);
             static_cast<IntVector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64: {
+        case OMNI_LONG:
+        case OMNI_DECIMAL64: {
             int64_t value = static_cast<LongVector *>(origintVector)->GetValue(originRowIndex);
             static_cast<LongVector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
-        case OMNI_VEC_TYPE_DOUBLE: {
+        case OMNI_DOUBLE: {
             double value = static_cast<DoubleVector *>(origintVector)->GetValue(originRowIndex);
             static_cast<DoubleVector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
-        case OMNI_VEC_TYPE_BOOLEAN: {
+        case OMNI_BOOLEAN: {
             bool value = static_cast<BooleanVector *>(origintVector)->GetValue(originRowIndex);
             static_cast<BooleanVector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
-        // OMNI_VEC_TYPE_DICTIONARY: The specific type in dictionary has been extracted before the call.
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR:
+        // OMNI_VEC_ENCODING_DICTIONARY: The specific type in dictionary has been extracted before the call.
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
             InsertVarchar(origintVector, originRowIndex, currentVector, currentRowIndex);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128: {
+        case OMNI_DECIMAL128: {
             Decimal128 value = static_cast<Decimal128Vector *>(origintVector)->GetValue(originRowIndex);
             static_cast<Decimal128Vector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
-        case OMNI_VEC_TYPE_CONTAINER:
+        case OMNI_CONTAINER:
             InsertContainer(origintVector, originRowIndex, currentVector, currentRowIndex);
             break;
         default: {
@@ -163,8 +164,8 @@ void PartitionedOutputOperator::MergeVectorBatch(VectorBatch *vecBatch, int32_t 
                 Vector *newVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(vecIdx), newRowIndex,
                     originalNewRowIndex);
                 if (oldVector->IsValueNull(originalOldRowIndex)) {
-                    if (newVector->GetTypeId() == OMNI_VEC_TYPE_VARCHAR ||
-                        newVector->GetTypeId() == OMNI_VEC_TYPE_CHAR) {
+                    if (newVector->GetTypeId() == OMNI_VARCHAR ||
+                        newVector->GetTypeId() == OMNI_CHAR) {
                         static_cast<VarcharVector *>(newVector)->SetValueNull(originalNewRowIndex);
                     } else {
                         newVector->SetValueNull(originalNewRowIndex);
@@ -203,23 +204,23 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
 long GetHash(int32_t rowIndex, int type, Vector *vector)
 {
     switch (vector->GetTypeId()) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
+        case OMNI_INT:
+        case OMNI_DATE32:
             return HashUtil::HashValue(static_cast<IntVector *>(vector)->GetValue(rowIndex));
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_SHORT:
+        case OMNI_LONG:
+        case OMNI_SHORT:
             return HashUtil::HashValue(static_cast<LongVector *>(vector)->GetValue(rowIndex));
-        case OMNI_VEC_TYPE_DOUBLE:
+        case OMNI_DOUBLE:
             return HashUtil::HashValue(static_cast<DoubleVector *>(vector)->GetValue(rowIndex));
-        case OMNI_VEC_TYPE_BOOLEAN:
+        case OMNI_BOOLEAN:
             return HashUtil::HashValue(static_cast<BooleanVector *>(vector)->GetValue(rowIndex));
-        case OMNI_VEC_TYPE_DECIMAL64:
+        case OMNI_DECIMAL64:
             return HashUtil::HashDecimal64Value(static_cast<LongVector *>(vector)->GetValue(rowIndex));
-        case OMNI_VEC_TYPE_DECIMAL128: {
+        case OMNI_DECIMAL128: {
             Decimal128 decimal128Value = static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex);
             return HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
         }
-        case OMNI_VEC_TYPE_CONTAINER: {
+        case OMNI_CONTAINER: {
             long result = 1;
             ContainerVector *containerVec = static_cast<ContainerVector *>(vector);
             auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->GetValue(0));
@@ -228,13 +229,13 @@ long GetHash(int32_t rowIndex, int type, Vector *vector)
             result = HashUtil::CombineHash(result, GetHash(rowIndex, avgCountVector->GetTypeId(), avgCountVector));
             return result;
         }
-        case OMNI_VEC_TYPE_VARCHAR:
-        case OMNI_VEC_TYPE_CHAR: {
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
             uint8_t *varcharValue = nullptr;
             int32_t valueLength = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
             return HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
         }
-        // OMNI_VEC_TYPE_DICTIONARY: The specific type in dictionary has been extracted before the call.
+        // OMNI_VEC_ENCODING_DICTIONARY: The specific type in dictionary has been extracted before the call.
         default:
             return 0;
     }

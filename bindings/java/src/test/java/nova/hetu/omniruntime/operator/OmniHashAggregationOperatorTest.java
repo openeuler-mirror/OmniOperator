@@ -11,8 +11,8 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -35,11 +35,11 @@ public class OmniHashAggregationOperatorTest {
     @Test
     public void testExecuteCountMultiplePage() {
         String[] groupByChannel = {"#0", "#1"};
-        VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
         String[] aggChannels = {"#3"};
-        VecType[] aggTypes = {LongVecType.LONG};
+        DataType[] aggTypes = {LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
 
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChannel,
                 groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
@@ -80,13 +80,13 @@ public class OmniHashAggregationOperatorTest {
     @Test
     public void testExecuteAggMultiplePage() {
         String[] groupByChanel = {"#0", "#1"};
-        VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
         String[] aggChannels = {"#2", "#3"};
-        VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggTypes = {LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
 
-        VecType[] inputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        DataType[] inputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel, groupByTypes,
                 aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
         int rowNum = 40000;
@@ -145,12 +145,12 @@ public class OmniHashAggregationOperatorTest {
             Thread thread = new Thread(() -> {
                 try {
                     String[] groupByChanel = {"#0", "#1"};
-                    VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
+                    DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
                     String[] aggChannels = {"#2", "#3"};
-                    VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG};
+                    DataType[] aggTypes = {LongDataType.LONG, LongDataType.LONG};
                     FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-                    VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
-                    VecType[] inputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+                    DataType[] inputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
                     OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel,
                             groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
@@ -180,7 +180,7 @@ public class OmniHashAggregationOperatorTest {
         }
     }
 
-    private void assertResult(int rowNum, int pageCount, VecType[] aggOutputTypes, OmniOperator omniOperator) {
+    private void assertResult(int rowNum, int pageCount, DataType[] aggOutputTypes, OmniOperator omniOperator) {
         Iterator<VecBatch> output = omniOperator.getOutput();
         while (output.hasNext()) {
             VecBatch vecBatch = output.next();

@@ -57,12 +57,12 @@ public:
         return realAggregator->GetType();
     }
 
-    VecType GetInputType() const
+    DataType GetInputType() const
     {
         return realAggregator->GetInputType();
     }
 
-    VecType GetOutputType() const
+    DataType GetOutputType() const
     {
         return realAggregator->GetOutputType();
     }

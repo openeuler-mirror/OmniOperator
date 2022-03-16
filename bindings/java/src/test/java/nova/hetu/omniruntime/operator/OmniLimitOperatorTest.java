@@ -5,9 +5,9 @@
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.limit.OmniLimitOperatorFactory;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import org.testng.annotations.Test;
@@ -20,7 +20,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 public class OmniLimitOperatorTest {
     @Test
     public void testLimitByTwoColum() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         Object[][] sourceDatas1 = {{0, 1, 2, 0, 1, 2}, {6.6, 5.5, 4.4, 3.3, 2.2, 1.1}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
@@ -42,7 +42,7 @@ public class OmniLimitOperatorTest {
 
     @Test
     public void testLimitWithNull() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         Object[][] sourceDatas1 = {{0, 1, 2, 3, 4, 5}, {6.6, 5.5, 4.4, 3.3, 2.2, 1.1}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
         Vec[] inVectors = vecBatch1.getVectors();

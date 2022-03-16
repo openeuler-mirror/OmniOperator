@@ -21,61 +21,60 @@
 #endif
 namespace omniruntime {
 namespace op {
-using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 template void HashFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash);
+
 template void HashFuncVectImpl<BooleanVector, bool>(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
+
 template void DuplicateKeyValueImpl<BooleanVector, bool>(AggregateState &state, Vector *vector, const uint32_t offset,
     ExecutionContext *context);
+
 template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, AggregateState &slot,
     bool &isSame);
 
-static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
-    {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {
-        OMNI_VEC_TYPE_INT, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
-        DuplicateKeyValueImpl<IntVector, int32_t>, SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
+static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
+    {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_INT, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>,
+     IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
+     SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
+    },
+    {OMNI_LONG, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>,
+     IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
+     SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
     },
     {
-        OMNI_VEC_TYPE_LONG, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>,
-        DuplicateKeyValueImpl<LongVector, int64_t>, SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
-    },
-    {
-        OMNI_VEC_TYPE_DOUBLE, HashFuncImpl<DoubleVector, double>, HashFuncVectImpl<DoubleVector, double>, IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
+        OMNI_DOUBLE, HashFuncImpl<DoubleVector, double>, HashFuncVectImpl<DoubleVector, double>,
+        IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
         SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>
     },
-    {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {
-        OMNI_VEC_TYPE_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
-        SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
+    {OMNI_BOOLEAN, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>,
+     IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
+     SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
     },
-    {
-        OMNI_VEC_TYPE_DECIMAL128, HashDecimalFunc, HashDecimalVectFunc, IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
-        SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>
+    {OMNI_DECIMAL128, HashDecimalFunc, HashDecimalVectFunc,
+     IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
+     SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>
     },
-    {
-        OMNI_VEC_TYPE_DATE32, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
-        SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
+    {OMNI_DATE32, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>,
+     IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
+     SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
     },
-    {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {
-        OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl,
-        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue
-    },
-    {
-        OMNI_VEC_TYPE_CHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl,
-        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue
-    },
-    {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
+    {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
+     SetVarcharVector,   FillVarcharValue },
+    {OMNI_CHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
+     SetVarcharVector,   FillVarcharValue },
+    {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
 };
 
 
@@ -142,10 +141,10 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
     uint32_t aggInputChannelIndex = 0;
     for (int32_t i = 0; i < this->aggregatorFactories.size(); ++i) {
         uint32_t aggregateType = aggFuncTypesContext.context[i];
-        VecType inputType;
+        DataType inputType;
         int32_t aggInputCol;
         if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-            inputType = VecType(OMNI_VEC_TYPE_NONE);
+            inputType = DataType(OMNI_NONE);
             aggInputCol = Aggregator::INVALID_INPUT_COL;
         } else {
             inputType = this->aggInputTypes.Get()[aggInputChannelIndex];
@@ -192,7 +191,7 @@ static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t ro
     Vector *vector = nullptr;
     for (int32_t i = 0; i < colNum; ++i) {
         vector = vectors[i];
-        if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        if (vector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
             GROUP_AGG_FUNCTIONS[vector->GetTypeId()].hashFuncVect(vector, start, rowCount, combinedHashVal);
         } else {
             int32_t newIndexes[rowCount];
@@ -330,7 +329,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
  * All the output data types are determined in this function. Following allocation for output vectors and filling
  * value should use the 'types' parameter instead of using input vector types.
  */
-int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<VecType> &types, int32_t columnCount)
+int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataType> &types, int32_t columnCount)
 {
     int32_t rowSize = 0;
     int32_t typeIndex = 0;
@@ -366,11 +365,11 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
     }
 }
 
-void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<VecType> &types,
+void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<DataType> &types,
     int32_t rowCount)
 {
     for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
-        VecType type = types[colIndex];
+        DataType type = types[colIndex];
         GROUP_AGG_FUNCTIONS[type.GetId()].setVector(vectorBatch, type, colIndex, vecAllocator, rowCount);
     }
 }
@@ -380,7 +379,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t groupByColSize = groupByCols.size();
     uint32_t aggColSize = aggregators.size();
     uint32_t colCount = groupByColSize + aggColSize;
-    std::vector<VecType> types;
+    std::vector<DataType> types;
     int32_t rowByteSize = GetRowSizeAndOutputTypes(types, colCount);
 
     // accumulate whole row count first
@@ -571,20 +570,20 @@ void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint3
 }
 
 template <typename V>
-void SetVectorImpl(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetVectorImpl(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount)
 {
     vecBatch->SetVector(columnIndex, new V(vecAllocator, rowCount));
 }
 
-void SetVarcharVector(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount)
 {
     vecBatch->SetVector(columnIndex,
-        new VarcharVector(vecAllocator, rowCount * ((VarcharVecType &)type).GetWidth(), rowCount));
+        new VarcharVector(vecAllocator, rowCount * ((VarcharDataType &)type).GetWidth(), rowCount));
 }
 
-void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount)
 {
     DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
@@ -592,11 +591,11 @@ void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnInde
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<VecType> vecTypes(2);
-    vecTypes[0] = DoubleVecType::Instance();
-    vecTypes[1] = LongVecType::Instance();
+    std::vector<DataType> dataTypes(2);
+    dataTypes[0] = DoubleDataType::Instance();
+    dataTypes[1] = LongDataType::Instance();
     ContainerVector *containerVector =
-        new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, vecTypes);
+        new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, dataTypes);
     vecBatch->SetVector(columnIndex, containerVector);
 }
 

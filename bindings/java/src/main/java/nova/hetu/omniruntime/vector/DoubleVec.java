@@ -4,9 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.DoubleVecType;
-
-import java.nio.DoubleBuffer;
+import nova.hetu.omniruntime.type.DoubleDataType;
 
 /**
  * double vec
@@ -17,21 +15,21 @@ public class DoubleVec extends FixedWidthVec {
     private static final int BYTES = Double.BYTES;
 
     public DoubleVec(int size) {
-        super(size * BYTES, size, DoubleVecType.DOUBLE);
+        super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, DoubleDataType.DOUBLE);
     }
 
     public DoubleVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, DoubleVecType.DOUBLE);
+        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, DoubleDataType.DOUBLE);
     }
 
     public DoubleVec(long nativeVector) {
-        super(nativeVector, DoubleVecType.DOUBLE);
+        super(nativeVector, DoubleDataType.DOUBLE);
     }
 
     public DoubleVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                      long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, DoubleVecType.DOUBLE);
+            size, offset, DoubleDataType.DOUBLE);
     }
 
     private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice) {

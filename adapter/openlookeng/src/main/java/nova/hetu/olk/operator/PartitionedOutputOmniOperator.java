@@ -51,7 +51,7 @@ import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -59,7 +59,6 @@ import nova.hetu.shuffle.PageProducer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -174,13 +173,13 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
         @Override
         public OperatorFactory createOutputOperator(int operatorId, PlanNodeId planNodeId, List<Type> types,
                 Function<Page, Page> pageLayoutProcessor, PagesSerdeFactory serdeFactory) {
-            VecType[] sourceTypes = OperatorUtils.toVecTypes(types);
+            DataType[] sourceTypes = OperatorUtils.toDataTypes(types);
             int[] partitionChannelsArr = new int[partitionChannels.size()];
             for (int i = 0; i < partitionChannelsArr.length; i++) {
                 partitionChannelsArr[i] = partitionChannels.get(i);
             }
 
-            VecType[] hashChannelTpyesArr = OperatorUtils.toVecTypes(hashChannelTypes);
+            DataType[] hashChannelTpyesArr = OperatorUtils.toDataTypes(hashChannelTypes);
             int[] hashChannels = new int[hashChannelTypes.size()];
             for (int i = 0; i < hashChannelTypes.size(); i++) {
                 hashChannels[i] = i;

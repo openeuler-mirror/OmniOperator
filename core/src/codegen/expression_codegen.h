@@ -79,10 +79,10 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<omniruntime::vec::VecTypeId> &params,
-        omniruntime::vec::VecTypeId &retTypeId, bool needsContext);
+    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<omniruntime::type::DataTypeId> &params,
+        omniruntime::type::DataTypeId &retTypeId, bool needsContext);
 
-    llvm::Value *GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
+    llvm::Value *GetIntToPtr(omniruntime::type::DataTypeId typeId, llvm::Value *elementAddr);
     void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
@@ -103,7 +103,7 @@ protected:
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi);
     void PromoteType(omniruntime::expressions::BinaryExpr &binaryExpr);
-    void PromoteType(omniruntime::expressions::Expr &expr, omniruntime::vec::VecType vecType);
+    void PromoteType(omniruntime::expressions::Expr &expr, omniruntime::type::DataType dataType);
     void HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v2, llvm::BasicBlock &isNotNullBlock,
         llvm::BasicBlock &isNullBlock, llvm::PHINode &pn, llvm::PHINode &pnNull);
     // Helper functions and main function for parsing constant data expressions
@@ -133,7 +133,7 @@ private:
     static void InitializeCodegenTargets();
     void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(omniruntime::vec::VecType vectorType, llvm::Value *rowIdx,
+    llvm::Value *GetDictionaryVectorValue(omniruntime::type::DataType dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
     void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
         llvm::Value *rightNull);

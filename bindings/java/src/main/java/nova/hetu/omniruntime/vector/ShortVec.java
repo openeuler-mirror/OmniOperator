@@ -4,9 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.ShortVecType;
-
-import java.nio.ShortBuffer;
+import nova.hetu.omniruntime.type.ShortDataType;
 
 /**
  * short vec
@@ -17,21 +15,21 @@ public class ShortVec extends FixedWidthVec {
     private static final int BYTES = Short.BYTES;
 
     public ShortVec(int size) {
-        super(size * BYTES, size, ShortVecType.SHORT);
+        super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, ShortDataType.SHORT);
     }
 
     public ShortVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, ShortVecType.SHORT);
+        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, ShortDataType.SHORT);
     }
 
     public ShortVec(long nativeVector) {
-        super(nativeVector, ShortVecType.SHORT);
+        super(nativeVector, ShortDataType.SHORT);
     }
 
     public ShortVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                     long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, ShortVecType.SHORT);
+            size, offset, ShortDataType.SHORT);
     }
 
     private ShortVec(ShortVec vector, int offset, int length, boolean isSlice) {

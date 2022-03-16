@@ -352,9 +352,9 @@ public class BenchmarkHashAggregationOmniOperator
         private OperatorFactory createHashAggregationOperatorFactory()
         {
             return new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(0, new PlanNodeId("test"), allTypes.get(sqlId),
-                    Ints.toArray(hashChannels.get(sqlId)), OperatorUtils.toVecTypes(hashTypes.get(sqlId)),
-                    Ints.toArray(aggChannels.get(sqlId)), OperatorUtils.toVecTypes(aggInputTypes.get(sqlId)),
-                    transferAggType(aggFuncTypes.get(sqlId)), OperatorUtils.toVecTypes(aggOutputTypes.get(sqlId)),
+                    Ints.toArray(hashChannels.get(sqlId)), OperatorUtils.toDataTypes(hashTypes.get(sqlId)),
+                    Ints.toArray(aggChannels.get(sqlId)), OperatorUtils.toDataTypes(aggInputTypes.get(sqlId)),
+                    transferAggType(aggFuncTypes.get(sqlId)), OperatorUtils.toDataTypes(aggOutputTypes.get(sqlId)),
                     AggregationNode.Step.SINGLE);
         }
 

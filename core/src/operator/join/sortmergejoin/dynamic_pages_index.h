@@ -8,21 +8,21 @@
 #include <stdint.h>
 #include <vector>
 #include <deque>
-#include "../../../vector/vector_type.h"
+#include "../../../type/data_type.h"
 #include "../../../vector/vector_batch.h"
-#include "../../../vector/vector_types.h"
+#include "../../../type/data_types.h"
 
 using namespace omniruntime::vec;
 
 class DynamicPagesIndex {
 public:
-    explicit DynamicPagesIndex(const VecTypes &types);
+    explicit DynamicPagesIndex(const DataTypes &types);
     ~DynamicPagesIndex();
     int32_t AddVecBatches(const std::vector<VectorBatch *> &vecBatches);
 
     const int32_t *GetTypes() const
     {
-        return vecTypeIds;
+        return dataTypeIds;
     }
 
     int32_t GetTypesCount() const
@@ -76,8 +76,8 @@ public:
     void FreeAllRemainingVecBatch();
 
 private:
-    const VecType *vecTypes;
-    const int32_t *vecTypeIds;
+    const DataType *dataTypes;
+    const int32_t *dataTypeIds;
     int32_t typesCount;
     int32_t lastFreedVecBatchIdx = -1;
 

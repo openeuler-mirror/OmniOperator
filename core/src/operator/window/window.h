@@ -9,31 +9,31 @@
 #include "../operator.h"
 #include "../operator_factory.h"
 #include "../pages_index.h"
-#include "../../vector/vector_types.h"
+#include "../../type/data_types.h"
 #include "window_partition.h"
 
 namespace omniruntime {
 namespace op {
 class WindowOperatorFactory : public OperatorFactory {
 public:
-    WindowOperatorFactory(const vec::VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    WindowOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
         int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
         int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-        const vec::VecTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount);
+        const type::DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount);
 
     ~WindowOperatorFactory() override;
 
-    static WindowOperatorFactory *CreateWindowOperatorFactory(const vec::VecTypes &sourceTypes, int32_t *outputCols,
+    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
         int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
         int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
         int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-        int32_t expectedPositions, const vec::VecTypes &allTypes, int32_t *argumentChannels,
+        int32_t expectedPositions, const type::DataTypes &allTypes, int32_t *argumentChannels,
         int32_t argumentChannelsCount);
 
     Operator *CreateOperator() override;
 
-    VecTypes *GetSourceTypes()
+    DataTypes *GetSourceTypes()
     {
         return sourceTypes.get();
     }
@@ -141,7 +141,7 @@ public:
     OmniStatus Init();
 
 private:
-    std::unique_ptr<vec::VecTypes> sourceTypes;
+    std::unique_ptr<type::DataTypes> sourceTypes;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;
     std::vector<int32_t> windowFunctionTypes;
@@ -156,19 +156,19 @@ private:
     int32_t sortColCount;
     int32_t preSortedChannelPrefix;
     int32_t expectedPositions;
-    std::unique_ptr<vec::VecTypes> allTypes;
+    std::unique_ptr<type::DataTypes> allTypes;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
 };
 
 class WindowOperator : public Operator {
 public:
-    WindowOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &outputCols, int32_t outputColsCount,
+    WindowOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols, int32_t outputColsCount,
         std::vector<int32_t> &windowFunctionTypes, int32_t windowFunctionCount, std::vector<int32_t> &partitionCols,
         int32_t partitionCount, std::vector<int32_t> &preGroupedCols, int32_t preGroupedCount,
         std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts,
-        int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions, const vec::VecTypes &allTypes,
-        std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount);
+        int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
+        const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount);
 
     ~WindowOperator() override;
 
@@ -181,7 +181,7 @@ public:
     OmniStatus Init() override;
 
 private:
-    const vec::VecTypes &sourceTypes;
+    const type::DataTypes &sourceTypes;
     int32_t typesCount;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;
@@ -199,7 +199,7 @@ private:
     int32_t sortColCount;
     int32_t preSortedChannelPrefix;
     int32_t expectedPositions;
-    const vec::VecTypes &allTypes;
+    const type::DataTypes &allTypes;
     std::unique_ptr<PagesIndex> pagesIndex;
     omniruntime::vec::VectorBatch *pendingInput;
     std::unique_ptr<PagesHashStrategy> preGroupedPartitionHashStrategy = nullptr;
@@ -215,10 +215,10 @@ private:
     void Initialization();
 
     void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-        std::vector<vec::VecType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
+        std::vector<type::DataType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
         int32_t &rowCount);
 
-    void InitResultVectors(const std::vector<VecType> &outputTypes, VectorBatch *&vecBatch, const int32_t &rowCount,
+    void InitResultVectors(const std::vector<DataType> &outputTypes, VectorBatch *&vecBatch, const int32_t &rowCount,
         const int32_t outputColsCount, const int finalOutputColsCount) const;
 };
 

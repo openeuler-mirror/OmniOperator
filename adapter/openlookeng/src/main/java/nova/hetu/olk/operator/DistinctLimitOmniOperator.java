@@ -22,7 +22,7 @@ import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.limit.OmniDistinctLimitOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -83,7 +83,7 @@ public class DistinctLimitOmniOperator implements Operator {
 
         private OmniDistinctLimitOperatorFactory getOmniDistinctLimitOperatorFactory(List<Type> sourceTypes,
                 List<Integer> distinctChannelLists, Optional<Integer> hashChannel, long limit) {
-            VecType[] omniSourceTypes = OperatorUtils.toVecTypes(sourceTypes);
+            DataType[] omniSourceTypes = OperatorUtils.toDataTypes(sourceTypes);
             int[] distinctChannel = distinctChannelLists.stream().mapToInt(Integer::intValue).toArray();
             int hashChannelVal = hashChannel.orElse(-1);
 

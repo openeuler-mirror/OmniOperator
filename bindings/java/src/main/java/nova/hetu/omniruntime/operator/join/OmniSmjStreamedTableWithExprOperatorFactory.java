@@ -12,8 +12,8 @@ import nova.hetu.omniruntime.constants.JoinType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,7 +34,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      * @param joinType join type
      * @param filter condition for not equal expression
      */
-    public OmniSmjStreamedTableWithExprOperatorFactory(VecType[] sourceTypes, String[] equalKeyExprs,
+    public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
             int[] outputChannels, JoinType joinType, Optional<String> filter) {
         super(new FactoryContext(new JitContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter)));
     }
@@ -49,7 +49,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         String filter = context.filter.isPresent() ? context.filter.get() : null;
-        return createSmjStreamedTableWithExprOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+        return createSmjStreamedTableWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter,
                 factoryContext.getNativeJitContext());
     }
@@ -60,7 +60,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      * @since 20211030
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final String[] equalKeyExprs;
 
@@ -79,7 +79,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
          * @param joinType join type
          * @param filter  condition for not equal expression
          */
-        public JitContext(VecType[] sourceTypes, String[] equalKeyExprs, int[] outputChannels, JoinType joinType,
+        public JitContext(DataType[] sourceTypes, String[] equalKeyExprs, int[] outputChannels, JoinType joinType,
                 Optional<String> filter) {
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes");
             this.equalKeyExprs = requireNonNull(equalKeyExprs, "equalKeyExprs");
@@ -128,7 +128,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
         @Override
         protected long createNativeJitContext(JitContext context) {
             String filter = context.filter.isPresent() ? context.filter.get() : null;
-            return createSmjStreamedTableWithExprJitContext(VecTypeSerializer.serialize(context.sourceTypes),
+            return createSmjStreamedTableWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes),
                     context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter);
         }
     }

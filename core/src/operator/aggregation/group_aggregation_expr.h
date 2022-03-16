@@ -9,26 +9,26 @@
 #include "operator/operator_factory.h"
 #include "operator/projection/projection.h"
 #include "operator/aggregation/group_aggregation.h"
-#include "vector/vector_types.h"
+#include "type/data_types.h"
 
 namespace omniruntime {
 namespace op {
 class HashAggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     HashAggregationWithExprOperatorFactory(
-        const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
-        const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum,
-        const VecTypes& sourceVecTypes, const VecTypes& aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw,
-        bool outputPartial);
+            const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+            const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum,
+            const DataTypes& sourceDataTypes, const DataTypes& aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw,
+            bool outputPartial);
 
     ~HashAggregationWithExprOperatorFactory() override;
 
     Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<vec::VecTypes> sourceTypes;
-    std::unique_ptr<vec::VecTypes> groupByTypes;
-    std::unique_ptr<vec::VecTypes> aggTypes;
+    std::unique_ptr<type::DataTypes> sourceTypes;
+    std::unique_ptr<type::DataTypes> groupByTypes;
+    std::unique_ptr<type::DataTypes> aggTypes;
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -37,7 +37,7 @@ private:
 
 class HashAggregationWithExprOperator : public Operator {
 public:
-    HashAggregationWithExprOperator(const vec::VecTypes &sourceTypes, std::vector<int32_t> &projectCols,
+    HashAggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
         std::vector<RowProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator);
 
     ~HashAggregationWithExprOperator() override;
@@ -49,7 +49,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::vec::VecTypes &sourceTypes;
+    const omniruntime::type::DataTypes &sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<RowProjFunc> projectFuncs;
     HashAggregationOperator *hashAggOperator;

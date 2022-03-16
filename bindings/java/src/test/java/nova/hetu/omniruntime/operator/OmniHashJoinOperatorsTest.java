@@ -16,14 +16,14 @@ import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
-import nova.hetu.omniruntime.type.CharVecType;
-import nova.hetu.omniruntime.type.Date32VecType;
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.Decimal64VecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.Date32DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.Decimal64DataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -41,7 +41,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testInnerEqualityJoinOneColumn1() {
-        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] buildDatas = {{1L, 2L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 1L},
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -54,7 +54,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L, 5L, 6L, 1L, 1L, 2L, 3L},
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 65L}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
@@ -62,7 +62,7 @@ public class OmniHashJoinOperatorsTest {
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
         int[] buildOutputCols = {1};
-        VecType[] buildOutputTypes = {LongVecType.LONG};
+        DataType[] buildOutputTypes = {LongDataType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
                 hashBuilderOperatorFactory);
@@ -89,7 +89,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testInnerEqualityJoinOneColumn2() {
-        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] buildDatas1 = {{1L, 1L, 3L, 6L, 7L, 1L}, {79L, 70L, 70L, 70L, 70L, 70L}};
         VecBatch buildVecBatch1 = createVecBatch(buildTypes, buildDatas1);
         Object[][] buildDatas2 = {{2L, 2L, 4L, 5L}, {79L, 70L, 70L, 70L}};
@@ -106,7 +106,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator2.addInput(buildVecBatch2);
         hashBuilderOperator2.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L, 5L, 6L, 1L, 1L, 2L, 3L},
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 65L}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
@@ -114,7 +114,7 @@ public class OmniHashJoinOperatorsTest {
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
         int[] buildOutputCols = {1};
-        VecType[] buildOutputTypes = {LongVecType.LONG};
+        DataType[] buildOutputTypes = {LongDataType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
                 hashBuilderOperatorFactory);
@@ -142,7 +142,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testLeftEqualityJoin() {
-        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {111L, 11L, 333L, 33L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -154,14 +154,14 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
                 hashBuilderOperatorFactory);
@@ -188,7 +188,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testLeftEqualityJoinVarchar() {
-        VecType[] buildTypes = {LongVecType.LONG, new VarcharVecType(3)};
+        DataType[] buildTypes = {LongDataType.LONG, new VarcharDataType(3)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {"aaa", "11", "ccc", "33"}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -200,14 +200,14 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, new VarcharVecType(2)};
+        DataType[] probeTypes = {LongDataType.LONG, new VarcharDataType(2)};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, new VarcharVecType(2)};
+        DataType[] buildOutputTypes = {LongDataType.LONG, new VarcharDataType(2)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
                 hashBuilderOperatorFactory);
@@ -234,7 +234,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testLeftEqualityJoinChar() {
-        VecType[] buildTypes = {LongVecType.LONG, new CharVecType(3)};
+        DataType[] buildTypes = {LongDataType.LONG, new CharDataType(3)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {"aaa", "11", "ccc", "33"}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -246,14 +246,14 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, new CharVecType(2)};
+        DataType[] probeTypes = {LongDataType.LONG, new CharDataType(2)};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, new CharVecType(2)};
+        DataType[] buildOutputTypes = {LongDataType.LONG, new CharDataType(2)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
                 hashBuilderOperatorFactory);
@@ -280,7 +280,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testLeftEqualityJoinDate32() {
-        VecType[] buildTypes = {LongVecType.LONG, new Date32VecType(VecType.DateUnit.DAY)};
+        DataType[] buildTypes = {LongDataType.LONG, new Date32DataType(DataType.DateUnit.DAY)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {123, 11, 321, 33}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -292,14 +292,14 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, new Date32VecType(VecType.DateUnit.DAY)};
+        DataType[] probeTypes = {LongDataType.LONG, new Date32DataType(DataType.DateUnit.DAY)};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {11, 22, 33, 44}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, new Date32VecType(VecType.DateUnit.DAY)};
+        DataType[] buildOutputTypes = {LongDataType.LONG, new Date32DataType(DataType.DateUnit.DAY)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
                 hashBuilderOperatorFactory);
@@ -325,7 +325,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testLeftEqualityJoinDecimal64() {
-        VecType[] buildTypes = {LongVecType.LONG, new Decimal64VecType(3, 0)};
+        DataType[] buildTypes = {LongDataType.LONG, new Decimal64DataType(3, 0)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {123L, 11L, 321L, 33L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -337,14 +337,14 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, new Decimal64VecType(2, 0)};
+        DataType[] probeTypes = {LongDataType.LONG, new Decimal64DataType(2, 0)};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, new Decimal64VecType(3, 0)};
+        DataType[] buildOutputTypes = {LongDataType.LONG, new Decimal64DataType(3, 0)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
                 hashBuilderOperatorFactory);
@@ -371,7 +371,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testLeftEqualityJoinDecimal128() {
-        VecType[] buildTypes = {LongVecType.LONG, new Decimal128VecType(3, 0)};
+        DataType[] buildTypes = {LongDataType.LONG, new Decimal128DataType(3, 0)};
         Vec[] buildVecs = new Vec[buildTypes.length];
         buildVecs[0] = createVec(buildTypes[0], new Object[]{1L, 2L, 3L, 4L});
         buildVecs[1] = createVec(buildTypes[1], new Object[][]{{123L, 0L}, {11L, 0L}, {321L, 0L}, {33L, 0L}});
@@ -385,7 +385,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, new Decimal128VecType(2, 0)};
+        DataType[] probeTypes = {LongDataType.LONG, new Decimal128DataType(2, 0)};
         Vec[] probeVecs = new Vec[probeTypes.length];
         probeVecs[0] = createVec(probeTypes[0], new Object[]{1L, 2L, 3L, 4L});
         probeVecs[1] = createVec(probeTypes[1], new Object[][]{{11L, 0L}, {22L, 0L}, {33L, 0L}, {44L, 0L}});
@@ -394,7 +394,7 @@ public class OmniHashJoinOperatorsTest {
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, new Decimal128VecType(3, 0)};
+        DataType[] buildOutputTypes = {LongDataType.LONG, new Decimal128DataType(3, 0)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
                 hashBuilderOperatorFactory);
@@ -422,7 +422,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testInnerEqualityJoinDictionary() {
-        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] buildDatas = {{1L, null, 3L, null}, {111L, 11L, 333L, 33L}};
         Vec[] vecs = new Vec[2];
         int[] ids = {0, 1, 2, 3};
@@ -438,7 +438,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] probeDatas = {{null, 2L, null, 4L}, {11L, 22L, 33L, 44L}};
         Vec[] probeVecs = new Vec[2];
         probeVecs[0] = createLongVec(probeDatas[0]);
@@ -448,7 +448,7 @@ public class OmniHashJoinOperatorsTest {
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {1};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
                 hashBuilderOperatorFactory);
@@ -474,7 +474,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testInnerEqualityJoinWithIntFilter() {
-        VecType[] buildTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] buildTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] buildDatas = {{19, 14, 7, 19, 1, 20, 10, 13, 20, 16},
                 {35709, 31904, 35709, 31904, 35709, null, 35709, 31904, null, 31904}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -488,7 +488,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] probeTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] probeDatas = {{20, 16, 13, 4, 20, 4, 22, 19, 8, 7},
                 {35709, 35709, 31904, 12477, null, 38721, 90419, 35709, 88371, null}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
@@ -496,7 +496,7 @@ public class OmniHashJoinOperatorsTest {
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {0};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] buildOutputTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
                 hashBuilderOperatorFactory);
@@ -522,7 +522,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testInnerEqualityJoinWithCharFilter() {
-        VecType[] buildTypes = {IntVecType.INTEGER, new VarcharVecType(5)};
+        DataType[] buildTypes = {IntDataType.INTEGER, new VarcharDataType(5)};
         Object[][] buildDatas = {{19, 14, 7, 19, 1, 20, 10, 13, 20, 16},
                 {"35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904"}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -536,7 +536,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {IntVecType.INTEGER, new VarcharVecType(5)};
+        DataType[] probeTypes = {IntDataType.INTEGER, new VarcharDataType(5)};
         Object[][] probeDatas = {{20, 16, 13, 4, 20, 4, 22, 19, 8, 7},
                 {"35709", "35709", "31904", "12477", null, "38721", "90419", "35709", "88371", null}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
@@ -544,7 +544,7 @@ public class OmniHashJoinOperatorsTest {
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {0};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {IntVecType.INTEGER, new VarcharVecType(5)};
+        DataType[] buildOutputTypes = {IntDataType.INTEGER, new VarcharDataType(5)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
                 hashBuilderOperatorFactory);
@@ -571,7 +571,7 @@ public class OmniHashJoinOperatorsTest {
      */
     @Test
     public void testInnerEqualityJoinWithNoOutput() {
-        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {111L, 11L, 333L, 33L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -583,14 +583,14 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
 
-        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] probeDatas = {{0L, 5L, 6L, 7L}, {11L, 22L, 33L, 44L}};
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
         int[] probeHashCols = {0};
         int[] buildOutputCols = {0, 1};
-        VecType[] buildOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
                 hashBuilderOperatorFactory);

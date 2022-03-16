@@ -8,31 +8,31 @@
 #include <memory>
 #include "../operator.h"
 #include "../operator_factory.h"
-#include "../../vector/vector_type_serializer.h"
+#include "../../type/data_type_serializer.h"
 
 using namespace std;
 namespace omniruntime {
 namespace op {
 class UnionOperatorFactory : public OperatorFactory {
 public:
-    UnionOperatorFactory(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
+    UnionOperatorFactory(const type::DataTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
 
     ~UnionOperatorFactory() override;
 
-    static UnionOperatorFactory *CreateUnionOperatorFactory(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount,
-        bool isDistinct);
+    static UnionOperatorFactory *CreateUnionOperatorFactory(const type::DataTypes &sourceTypes,
+        int32_t sourceTypesCount, bool isDistinct);
 
     Operator *CreateOperator() override;
 
 private:
-    const vec::VecTypes sourceTypes;
+    const type::DataTypes sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
 };
 
 class UnionOperator : public Operator {
 public:
-    UnionOperator(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
+    UnionOperator(const type::DataTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
 
     ~UnionOperator() override;
 
@@ -41,7 +41,7 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
 
 private:
-    const vec::VecTypes &sourceTypes;
+    const type::DataTypes &sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
     vector<vec::VectorBatch *> inputVecBatches;

@@ -6,7 +6,7 @@ package nova.hetu.omniruntime.vector;
 
 import com.google.common.annotations.VisibleForTesting;
 import nova.hetu.omniruntime.OmniLibs;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -39,8 +39,8 @@ public abstract class Vec implements Closeable {
     public static final byte NOT_NULL = 0;
 
     /**
-     * When a vector has been sliced,
-     * this value will point to where is the new slice {@link Vec} start.
+     * When a vector has been sliced, this value will point to where is the new
+     * slice {@link Vec} start.
      */
     protected int offset;
 
@@ -60,16 +60,6 @@ public abstract class Vec implements Closeable {
     protected final long nativeVector;
 
     /**
-     * The specialized vector allocator.
-     */
-    private final VecAllocator allocator;
-
-    /**
-     * The {@link VecType} of this vector
-     */
-    private VecType type;
-
-    /**
      * The capacity in bytes of this vector.
      */
     protected int capacityInBytes;
@@ -80,8 +70,18 @@ public abstract class Vec implements Closeable {
     protected int size;
 
     /**
-     * When a vector has been sliced.
-     * The current vector and sliced vector are unwritable.
+     * The specialized vector allocator.
+     */
+    private final VecAllocator allocator;
+
+    /**
+     * The {@link DataType} of this vector
+     */
+    private DataType dataType;
+
+    /**
+     * When a vector has been sliced. The current vector and sliced vector are
+     * unwritable.
      */
     private boolean isWritable = true;
 
@@ -89,12 +89,12 @@ public abstract class Vec implements Closeable {
 
     private AtomicBoolean isClosed = new AtomicBoolean(false);
 
-    private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, VecType type,
-                boolean isWritable) {
+    private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, DataType dataType,
+            boolean isWritable) {
         this.allocator = allocator;
         this.capacityInBytes = capacityInBytes;
         this.size = size;
-        this.type = type;
+        this.dataType = dataType;
         this.offset = offset;
         this.nativeVector = nativeVector;
         this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
@@ -103,12 +103,12 @@ public abstract class Vec implements Closeable {
     }
 
     private Vec(VecAllocator allocator, long nativeVector, long nativeVectorValueBufAddress,
-                long nativeVectorNullBufAddress, int capacityInBytes, int size, int offset, VecType type,
-                boolean isWritable) {
+            long nativeVectorNullBufAddress, int capacityInBytes, int size, int offset, DataType dataType,
+            boolean isWritable) {
         this.allocator = allocator;
         this.capacityInBytes = capacityInBytes;
         this.size = size;
-        this.type = type;
+        this.dataType = dataType;
         this.offset = offset;
         this.nativeVector = nativeVector;
         this.valuesBuf = OmniBufFactory.create(nativeVectorValueBufAddress, capacityInBytes);
@@ -116,73 +116,75 @@ public abstract class Vec implements Closeable {
         this.isWritable = isWritable;
     }
 
-    private Vec(VecAllocator allocator, long nativeVector, int size, int offset, VecType type, boolean isWritable) {
-        this(allocator, nativeVector, getCapacityInBytesNative(nativeVector), size, offset, type, isWritable);
+    private Vec(VecAllocator allocator, long nativeVector, int size, int offset, DataType dataType,
+            boolean isWritable) {
+        this(allocator, nativeVector, getCapacityInBytesNative(nativeVector), size, offset, dataType, isWritable);
     }
 
     /**
-     * The routine will use the specialized vector allocator to allocate
-     * new vector.
+     * The routine will use the specialized vector allocator to allocate new vector.
      *
      * @param capacityInBytes the capacity in bytes of vector.
-     * @param size            the actual number of value of vector.
-     * @param type            the type of this vector.
-     * @param allocator       the specialized vector allocator.
+     * @param size the actual number of value of vector.
+     * @param datatype the data type of this vector.
+     * @param allocator the specialized vector allocator.
      */
-    public Vec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
-        this(allocator, newVectorNative(allocator.getNativeAllocator(), capacityInBytes, size, type.getId().ordinal()),
-            capacityInBytes, size, 0, type, true);
+    public Vec(VecAllocator allocator, int capacityInBytes, int size, VecEncoding encoding, DataType datatype) {
+        this(allocator, newVectorNative(allocator.getNativeAllocator(), capacityInBytes, size, encoding.ordinal(),
+                datatype.getId().ordinal()), capacityInBytes, size, 0, datatype, true);
     }
 
     /**
-     * Ihe routine will use GLOBAL memory pool
-     * when there is no specialized vector allocator.
+     * Ihe routine will use GLOBAL memory pool when there is no specialized vector
+     * allocator.
      *
      * @param capacityInBytes the number of value of vector.
-     * @param size            the actual number of value of vector.
-     * @param type            the type of this vector.
+     * @param size the actual number of value of vector.
+     * @param dataType the data type of this vector.
      */
-    public Vec(int capacityInBytes, int size, VecType type) {
-        this(GLOBAL_VECTOR_ALLOCATOR, capacityInBytes, size, type);
+    public Vec(int capacityInBytes, int size, VecEncoding encoding, DataType dataType) {
+        this(GLOBAL_VECTOR_ALLOCATOR, capacityInBytes, size, encoding, dataType);
     }
 
     /**
      * The routine is just for slicing and copyRegion vector operator.
      *
-     * @param vec     the vector need to be sliced or copyRegion
-     * @param offset  When a vector has been sliced or copyRegion, this value will point to where is the new slice {@link Vec} start.
-     * @param length  the number of value.
+     * @param vec the vector need to be sliced or copyRegion
+     * @param offset When a vector has been sliced or copyRegion, this value will
+     *            point to where is the new slice {@link Vec} start.
+     * @param length the number of value.
      * @param isSlice Whether the current vector is sliced
      */
     protected Vec(Vec vec, int offset, int length, boolean isSlice) {
-        this(vec.allocator, isSlice
-                ? sliceVectorNative(vec.nativeVector, offset, length)
-                : copyRegionNative(vec.nativeVector, offset, length), length, isSlice ? offset + vec.offset : 0, vec.type,
-            !isSlice);
+        this(vec.allocator,
+                isSlice
+                        ? sliceVectorNative(vec.nativeVector, offset, length)
+                        : copyRegionNative(vec.nativeVector, offset, length),
+                length, isSlice ? offset + vec.offset : 0, vec.dataType, !isSlice);
     }
 
     /**
      * The routine is just for copyPosition vector operator.
      *
-     * @param vec       the vector need to be copy.
+     * @param vec the vector need to be copy.
      * @param positions the original vector positions
-     * @param offset    offset of positions in the input parameter
-     * @param length    number of elements copied
+     * @param offset offset of positions in the input parameter
+     * @param length number of elements copied
      */
     protected Vec(Vec vec, int[] positions, int offset, int length) {
-        this(vec.allocator, copyPositionsNative(vec.nativeVector, positions, offset, length), length, 0, vec.type,
-            true);
+        this(vec.allocator, copyPositionsNative(vec.nativeVector, positions, offset, length), length, 0, vec.dataType,
+                true);
     }
 
     /**
      * The routine will use native vector to initialize a new vector.
      *
      * @param nativeVector native vector address.
-     * @param type the type of this vector.
+     * @param dataType the type of this vector.
      */
-    protected Vec(long nativeVector, VecType type) {
+    protected Vec(long nativeVector, DataType dataType) {
         this(new VecAllocator(getAllocatorNative(nativeVector)), nativeVector, getCapacityInBytesNative(nativeVector),
-            getSizeNative(nativeVector), getOffsetNative(nativeVector), type, true);
+                getSizeNative(nativeVector), getOffsetNative(nativeVector), dataType, true);
     }
 
     /**
@@ -195,15 +197,16 @@ public abstract class Vec implements Closeable {
      * @param capacityInBytes capacity in bytes of vector.
      * @param size the actual number of value of vector.
      * @param offset offset of positions in the input parameter.
-     * @param type the type of this vector
+     * @param dataType the type of this vector
      * */
     protected Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
-                  long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType dataType) {
         this(new VecAllocator(nativeVectorAllocator), nativeVector, nativeVectorValueBufAddress,
-            nativeVectorNullBufAddress, capacityInBytes, size, offset, type, true);
+                nativeVectorNullBufAddress, capacityInBytes, size, offset, dataType, true);
     }
 
-    private static native long newVectorNative(long allocator, int capacityInBytes, int size, int typeId);
+    private static native long newVectorNative(long allocator, int capacityInBytes, int size, int vecEncodingId,
+            int dataTypeId);
 
     private static native void freeVectorNative(long allocator, long nativeVector);
 
@@ -220,7 +223,7 @@ public abstract class Vec implements Closeable {
      *
      * @param nativeVector nativeVector address
      * @return capacity of native vector
-     */
+     * */
     protected static native int getCapacityInBytesNative(long nativeVector);
 
     private static native int getSizeNative(long nativeVector);
@@ -245,18 +248,26 @@ public abstract class Vec implements Closeable {
      */
     protected static native long getValuesNative(long nativeVector);
 
+    /**
+     * get encoding of native vector
+     *
+     * @param nativeVector native vector
+     * @return encoding type id
+     */
+    protected static native int getVecEncodingNative(long nativeVector);
+
     private static native long getValueNullsNative(long nativeVector);
 
     /**
      * merge two vectors
      *
      * @param destNativeVector target native vector
-     * @param positionOffset   position offset
-     * @param srcNativeVector  source native vector
-     * @param length           the number of element
+     * @param positionOffset position offset
+     * @param srcNativeVector source native vector
+     * @param length the number of element
      */
     protected static native void appendVectorNative(long destNativeVector, int positionOffset, long srcNativeVector,
-                                                    int length);
+            int length);
 
     /**
      * get native vector
@@ -305,12 +316,21 @@ public abstract class Vec implements Closeable {
     }
 
     /**
-     * vector type
+     * vector data type
      *
-     * @return vec type
+     * @return vector data type
      */
-    public VecType getType() {
-        return type;
+    public DataType getType() {
+        return dataType;
+    }
+
+    /**
+     * vector encoding
+     *
+     * @return vector encoding
+     */
+    public VecEncoding getEncoding() {
+        return VecEncoding.OMNI_VEC_ENCODING_FLAT;
     }
 
     /**
@@ -362,16 +382,15 @@ public abstract class Vec implements Closeable {
     /**
      * set nulls in batch
      *
-     * @param index   the offset of the element
+     * @param index the offset of the element
      * @param isNulls array of null values, true is null otherwise non-null.
-     * @param start   array offset
-     * @param length  number of elements
+     * @param start array offset
+     * @param length number of elements
      */
     public void setNulls(int index, boolean[] isNulls, int start, int length) {
         byte[] values = transformBooleanToByte(isNulls, start, length);
         nullsBuf.setBytes(index, values, 0, length);
     }
-
 
     /**
      * set nulls in batch
@@ -420,7 +439,7 @@ public abstract class Vec implements Closeable {
      * transform boolean array to byte array
      *
      * @param values nulls array
-     * @param start  array offset
+     * @param start array offset
      * @param length number of elements
      * @return byte array
      */
@@ -441,7 +460,7 @@ public abstract class Vec implements Closeable {
      * transform byte array to boolean array
      *
      * @param values byte array, 1 means null, 0 means non-null
-     * @param start  array offset
+     * @param start array offset
      * @param length number of elements
      * @return boolean array
      */
@@ -470,7 +489,7 @@ public abstract class Vec implements Closeable {
     /**
      * get the specified nulls array at the specified absolute
      *
-     * @param index  the offset of element in vec
+     * @param index the offset of element in vec
      * @param length the number of element
      * @return boolean array
      */
@@ -492,7 +511,7 @@ public abstract class Vec implements Closeable {
     /**
      * split a vec into two vec according to the specified index and length
      *
-     * @param start  starting index
+     * @param start starting index
      * @param length number of elements
      * @return new vec
      */
@@ -509,8 +528,8 @@ public abstract class Vec implements Closeable {
      * copy a new vec based on the positions
      *
      * @param positions all positions in vec
-     * @param offset    position offset
-     * @param length    the number of elements to be copied
+     * @param offset position offset
+     * @param length the number of elements to be copied
      * @return new vec
      */
     public abstract Vec copyPositions(int[] positions, int offset, int length);
@@ -518,17 +537,17 @@ public abstract class Vec implements Closeable {
     /**
      * copy a vec based on the starting position and the number of elements
      *
-     * @param start  staring position
+     * @param start staring position
      * @param length the number of elements
      * @return new vec
      */
     public abstract Vec copyRegion(int start, int length);
 
     /**
-     * This method takes input a source vector to append to the destination vector only If
-     * the destination vector has enough available positions.
+     * This method takes input a source vector to append to the destination vector
+     * only If the destination vector has enough available positions.
      *
-     * @param other  Source Vector to be appended
+     * @param other Source Vector to be appended
      * @param offset Number of Positions already occupied
      * @param length Number of Positions in the Source Vector
      */
@@ -544,9 +563,8 @@ public abstract class Vec implements Closeable {
         if (isClosed.compareAndSet(false, true)) {
             freeVectorNative(this.allocator.getNativeAllocator(), this.nativeVector);
         } else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE,
-                "vec has been closed:" + this + ",threadName:" + Thread.currentThread().getName() + ",native:"
-                    + nativeVector);
+            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE, "vec has been closed:" + this
+                    + ",threadName:" + Thread.currentThread().getName() + ",native:" + nativeVector);
         }
     }
 
@@ -594,8 +612,8 @@ public abstract class Vec implements Closeable {
     }
 
     /**
-     * returns the number of bytes of the offsets, for VarcharVec
-     * returned according to size calculation, other types of vec return 0
+     * returns the number of bytes of the offsets, for VarcharVec returned according
+     * to size calculation, other types of vec return 0
      *
      * @return length in bytes
      */
@@ -604,7 +622,7 @@ public abstract class Vec implements Closeable {
     }
 
     @VisibleForTesting
-    void setType(VecType type) {
-        this.type = type;
+    void setDataType(DataType dataType) {
+        this.dataType = dataType;
     }
 }

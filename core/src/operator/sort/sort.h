@@ -9,19 +9,19 @@
 #include <memory>
 #include "../operator_factory.h"
 #include "../pages_index.h"
-#include "../../vector/vector_types.h"
-#include "../../vector/vector_type.h"
+#include "../../type/data_types.h"
+#include "../../type/data_type.h"
 
 namespace omniruntime {
 namespace op {
 class SortOperatorFactory : public OperatorFactory {
 public:
-    SortOperatorFactory(const vec::VecTypes &vecTypes, int32_t *outputCols, int32_t outputColCount, int32_t *sortCols,
-        int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
+    SortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
+        int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~SortOperatorFactory() override;
 
-    static SortOperatorFactory *CreateSortOperatorFactory(const vec::VecTypes &vecTypes, int32_t *outputCols,
+    static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols,
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount);
 
@@ -63,7 +63,7 @@ public:
     }
 
 private:
-    std::unique_ptr<vec::VecTypes> sourceTypes;
+    std::unique_ptr<type::DataTypes> sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
@@ -72,7 +72,7 @@ private:
 
 class SortOperator : public Operator {
 public:
-    SortOperator(const vec::VecTypes &vecTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
+    SortOperator(const type::DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
         std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts);
 
     ~SortOperator() override;
@@ -124,7 +124,7 @@ public:
     }
 
 private:
-    const vec::VecTypes &sourceTypes;
+    const type::DataTypes &sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;

@@ -3,8 +3,8 @@ package nova.hetu.omniruntime.vector;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.DataType;
 
 import org.testng.annotations.Test;
 
@@ -22,9 +22,9 @@ public class TestDecimal128Vec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 4096);
-        assertEquals(vec.getType().getId(), VecType.VecTypeId.OMNI_VEC_TYPE_DECIMAL128);
-        assertEquals(((Decimal128VecType) (vec.getType())).getPrecision(), 38);
-        assertEquals(((Decimal128VecType) (vec.getType())).getScale(), 0);
+        assertEquals(vec.getType().getId(), DataType.DataTypeId.OMNI_DECIMAL128);
+        assertEquals(((Decimal128DataType) (vec.getType())).getPrecision(), 38);
+        assertEquals(((Decimal128DataType) (vec.getType())).getScale(), 0);
         vec.close();
     }
 

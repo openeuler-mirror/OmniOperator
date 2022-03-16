@@ -18,8 +18,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     // bufferedTbl t2: double c, int d;
     // streamedTbl t1:  int a, Long b;
     std::string blank = "";
-    std::vector<VecType> streamTypeVector = { IntVecType::Instance(), LongVecType::Instance() };
-    VecTypes streamedTblTypes(streamTypeVector);
+    std::vector<DataType> streamTypeVector = { IntDataType::Instance(), LongDataType::Instance() };
+    DataTypes streamedTblTypes(streamTypeVector);
     FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
     int streamedOutputCols[1] = {1};
@@ -29,8 +29,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     streamedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<VecType> bufferTypesVector = { DoubleVecType::Instance(), IntVecType::Instance() };
-    VecTypes bufferedTblTypes(bufferTypesVector);
+    std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
@@ -82,8 +82,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     int32_t index = 0;
     for (auto i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_VEC_TYPE_LONG);
-        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_VEC_TYPE_DOUBLE);
+        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
+        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
         for (auto j = 0; j < result[i]->GetRowCount(); j++) {
             long longValue = (static_cast<LongVector *>(result[i]->GetVector(0)))->GetValue(j);
             ASSERT_EQ(longValue, streamedTblDataCol2[index]);
@@ -108,8 +108,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     // bufferedTbl t2:  int c21, Long c22, varchar c23;
     // streamedTbl t1:  int c11, Long c12, varchar c13;
     std::string blank = "";
-    std::vector<VecType> streamTypeVector = { IntVecType(), LongVecType() };
-    VecTypes streamedTblTypes(streamTypeVector);
+    std::vector<DataType> streamTypeVector = { IntDataType(), LongDataType() };
+    DataTypes streamedTblTypes(streamTypeVector);
     FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
@@ -120,8 +120,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     streamedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<VecType> bufferTypesVector = { DoubleVecType::Instance(), IntVecType::Instance() };
-    VecTypes bufferedTblTypes(bufferTypesVector);
+    std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
@@ -172,8 +172,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     int32_t index = 0;
     for (auto i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_VEC_TYPE_LONG);
-        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_VEC_TYPE_DOUBLE);
+        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
+        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
         for (auto j = 0; j < result[i]->GetRowCount(); j++) {
             long longValue = (static_cast<LongVector *>(result[i]->GetVector(0)))->GetValue(j);
             ASSERT_EQ(longValue, streamedTblDataCol2[index]);

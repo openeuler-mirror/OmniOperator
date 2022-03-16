@@ -7,15 +7,16 @@
 
 #include <atomic>
 #include "../memory/chunk.h"
-#include "vector_type.h"
+#include "../type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
+using namespace type;
 using Chunk = mem::Chunk;
 
 class VectorReference {
 public:
-    VectorReference(int capacityInBytes, int size, VecTypeId typeId);
+    VectorReference(int capacityInBytes, int size, DataTypeId dataTypeId);
 
     ~VectorReference();
 

@@ -34,7 +34,7 @@ JitContext *CreateTestWindowJitContextWithFactory(omniruntime::op::WindowOperato
 TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -53,7 +53,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -69,7 +69,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {3, 0, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1, 4.4};
@@ -88,7 +88,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 TEST(NativeOmniWindowOperatorTest, testRowNumber)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -108,7 +108,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -124,7 +124,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ DoubleDataType(), LongDataType(), LongDataType() }));
     double expectData1[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
@@ -141,7 +141,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
 TEST(NativeOmniWindowOperatorTest, testRankPartition)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -161,7 +161,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -177,7 +177,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
@@ -196,7 +196,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
 TEST(NativeOmniWindowOperatorTest, testRank)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -216,7 +216,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -232,7 +232,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), DoubleVecType(), IntVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), DoubleDataType(), IntDataType(), LongDataType() }));
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
     double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
     int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
@@ -252,7 +252,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -272,8 +272,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes allTypes(
+        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() }));
     int32_t argumentChannels[2] = {-1, -1};
 
     // dealing data with the operator
@@ -289,8 +289,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(
+        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
@@ -310,7 +310,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -332,8 +332,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes allTypes(
+        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() }));
     int32_t argumentChannels[2] = {-1, -1};
 
     // dealing data with the operator
@@ -349,8 +349,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(
+        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
@@ -372,7 +372,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutSort)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -394,8 +394,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes allTypes(
+        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() }));
     int32_t argumentChannels[2] = {-1, -1};
 
     // dealing data with the operator
@@ -411,8 +411,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(
+        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 1, 5};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 5.5, 1.1};
@@ -434,7 +434,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
 TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
 {
     // construct input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -452,15 +452,16 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType(),
-        DoubleVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(),
+        LongDataType(), DoubleDataType(), DoubleDataType(), LongDataType() }));
 
     int32_t argumentChannels[5] = {1, 1, 1, 2, 1};
 
@@ -477,8 +478,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(),
-        LongVecType(), DoubleVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(),
+        LongDataType(), DoubleDataType(), DoubleDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 1, 1};
     int64_t expectData2[DATA_SIZE] = {8, 4, 4, 2, 5, 1};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
@@ -504,7 +505,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
 TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
 {
     // construct input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -522,15 +523,16 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     int32_t sortCols[0] = {};
     int32_t ascendings[0] = {};
     int32_t nullFirsts[0] = {};
-    int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType(),
-        DoubleVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(),
+        LongDataType(), DoubleDataType(), DoubleDataType(), LongDataType() }));
 
     int32_t argumentChannels[5] = {1, 1, 1, 2, 1};
 
@@ -547,8 +549,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), LongVecType(),
-        LongVecType(), DoubleVecType(), DoubleVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), LongDataType(),
+        LongDataType(), DoubleDataType(), DoubleDataType(), LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 1, 1};
     int64_t expectData2[DATA_SIZE] = {8, 4, 4, 2, 1, 5};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 5.5, 1.1};
@@ -574,9 +576,9 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
 TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -599,34 +601,35 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
-                                             OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK};
+    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
+        OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
+        OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(),
-        Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI),
-        LongVecType(),
-        Decimal64VecType(1, 1),
-        DoubleVecType(),
-        BooleanVecType(),
-        VarcharVecType(3),
-        Decimal128VecType(2, 2),
-        CharVecType(3),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(),
+        Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI),
+        LongDataType(),
+        Decimal64DataType(1, 1),
+        DoubleDataType(),
+        BooleanDataType(),
+        VarcharDataType(3),
+        Decimal128DataType(2, 2),
+        CharDataType(3),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -642,26 +645,26 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(),
-        Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI),
-        LongVecType(),
-        Decimal64VecType(1, 1),
-        DoubleVecType(),
-        BooleanVecType(),
-        VarcharVecType(3),
-        Decimal128VecType(2, 2),
-        CharVecType(3),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(),
+        Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI),
+        LongDataType(),
+        Decimal64DataType(1, 1),
+        DoubleDataType(),
+        BooleanDataType(),
+        VarcharDataType(3),
+        Decimal128DataType(2, 2),
+        CharDataType(3),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -701,9 +704,9 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -726,35 +729,36 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
-                                             OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
-                                             OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
+        OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
+        OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
+        OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(),
-        Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI),
-        LongVecType(),
-        Decimal64VecType(1, 1),
-        DoubleVecType(),
-        BooleanVecType(),
-        VarcharVecType(3),
-        Decimal128VecType(2, 2),
-        CharVecType(3),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(),
+        Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI),
+        LongDataType(),
+        Decimal64DataType(1, 1),
+        DoubleDataType(),
+        BooleanDataType(),
+        VarcharDataType(3),
+        Decimal128DataType(2, 2),
+        CharDataType(3),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -770,26 +774,26 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(),
-        Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI),
-        LongVecType(),
-        Decimal64VecType(1, 1),
-        DoubleVecType(),
-        BooleanVecType(),
-        VarcharVecType(3),
-        Decimal128VecType(2, 2),
-        CharVecType(3),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType(),
-        LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(),
+        Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI),
+        LongDataType(),
+        Decimal64DataType(1, 1),
+        DoubleDataType(),
+        BooleanDataType(),
+        VarcharDataType(3),
+        Decimal128DataType(2, 2),
+        CharDataType(3),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType(),
+        LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -827,9 +831,9 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -838,7 +842,8 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 1.1, 2.2, 2.2, 3.3, 3.3};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2), Decimal128(3, 3), Decimal128(3, 3)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2),
+        Decimal128(3, 3), Decimal128(3, 3)};
     std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
 
     VectorBatch *vecBatch =
@@ -852,18 +857,19 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+        OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), IntVecType(),
-        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), IntDataType(),
+        Date32DataType(omniruntime::type::DAY), Date32DataType(omniruntime::type::MILLI), LongDataType(),
+        Decimal128DataType(1, 1), DoubleDataType(), Decimal128DataType(2, 2) }));
     int32_t argumentChannels[7] = {0, 1, 2, 3, 4, 5, 8};
 
     // dealing data with the operator
@@ -879,11 +885,11 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), IntVecType(),
-        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), IntDataType(),
+        Date32DataType(omniruntime::type::DAY), Date32DataType(omniruntime::type::MILLI), LongDataType(),
+        Decimal128DataType(1, 1), DoubleDataType(), Decimal128DataType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -892,15 +898,18 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 1.1, 2.2, 2.2, 3.3, 3.3};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2), Decimal128(3, 3), Decimal128(3, 3)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2),
+        Decimal128(3, 3), Decimal128(3, 3)};
     std::string expectData9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
     int32_t expectData10[DATA_SIZE] = {2, 2, 4, 4, 6, 6};
     int32_t expectData11[DATA_SIZE] = {22, 22, 44, 44, 66, 66};
     int32_t expectData12[DATA_SIZE] = {222, 222, 444, 444, 666, 666};
     int64_t expectData13[DATA_SIZE] = {2222, 2222, 4444, 4444, 6666, 6666};
-    Decimal128 expectData14[DATA_SIZE] = {Decimal128(22222), Decimal128(22222), Decimal128(44444), Decimal128(44444), Decimal128(66666), Decimal128(66666)};
+    Decimal128 expectData14[DATA_SIZE] = {Decimal128(22222), Decimal128(22222), Decimal128(44444), Decimal128(44444),
+        Decimal128(66666), Decimal128(66666)};
     double expectData15[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
-    Decimal128 expectData16[DATA_SIZE] = {Decimal128(2, 2), Decimal128(2, 2), Decimal128(4, 4), Decimal128(4, 4), Decimal128(6, 6), Decimal128(6, 6)};
+    Decimal128 expectData16[DATA_SIZE] = {Decimal128(2, 2), Decimal128(2, 2), Decimal128(4, 4), Decimal128(4, 4),
+        Decimal128(6, 6), Decimal128(6, 6)};
 
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
@@ -917,9 +926,9 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -928,7 +937,8 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
+        Decimal128(0, 0), Decimal128(0, 0)};
     std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
 
     VectorBatch *vecBatch =
@@ -942,17 +952,18 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
+    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
+        OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), DoubleVecType(), DoubleVecType(),
-        DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), DoubleDataType(),
+        DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType() }));
     int32_t argumentChannels[7] = {0, 1, 2, 3, 4, 5, 8};
 
     // dealing data with the operator
@@ -968,10 +979,10 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), DoubleVecType(), DoubleVecType(),
-        DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), DoubleDataType(),
+        DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -980,7 +991,8 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
+        Decimal128(0, 0), Decimal128(0, 0)};
     std::string expectData9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
     double expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     double expectData11[DATA_SIZE] = {22, 22, 44, 44, 66, 66};
@@ -1004,9 +1016,9 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1015,7 +1027,8 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     std::string data9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
 
     VectorBatch *vecBatch =
@@ -1029,18 +1042,20 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX};
+    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), IntVecType(),
-        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), IntDataType(),
+        Date32DataType(omniruntime::type::DAY), Date32DataType(omniruntime::type::MILLI), LongDataType(),
+        Decimal64DataType(1, 1), DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t argumentChannels[9] = {0, 1, 2, 3, 4, 5, 7, 8, 9};
 
     // dealing data with the operator
@@ -1056,11 +1071,11 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), IntVecType(),
-        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), IntDataType(),
+        Date32DataType(omniruntime::type::DAY), Date32DataType(omniruntime::type::MILLI), LongDataType(),
+        Decimal64DataType(1, 1), DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1069,7 +1084,8 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     std::string expectData9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
     int32_t expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData11[DATA_SIZE] = {33, 33, 55, 55, 77, 77};
@@ -1078,7 +1094,8 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     int64_t expectData14[DATA_SIZE] = {33333, 33333, 55555, 55555, 77777, 77777};
     double expectData15[DATA_SIZE] = {3.3, 3.3, 5.5, 5.5, 7.7, 7.7};
     std::string expectData16[DATA_SIZE] = {"s3", "s3", "s5", "s5", "s7", "s7"};
-    Decimal128 expectData17[DATA_SIZE] = {Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7), Decimal128(7, 7)};
+    Decimal128 expectData17[DATA_SIZE] = {Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5),
+        Decimal128(7, 7), Decimal128(7, 7)};
     std::string expectData18[DATA_SIZE] = {"c3", "c3", "c5", "c5", "c7", "c7"};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
@@ -1095,9 +1112,9 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1106,7 +1123,8 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     std::string data9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
 
     VectorBatch *vecBatch =
@@ -1120,18 +1138,20 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+        OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+        OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), IntVecType(),
-        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), IntDataType(),
+        Date32DataType(omniruntime::type::DAY), Date32DataType(omniruntime::type::MILLI), LongDataType(),
+        Decimal64DataType(1, 1), DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t argumentChannels[9] = {0, 1, 2, 3, 4, 5, 7, 8, 9};
 
     // dealing data with the operator
@@ -1147,11 +1167,11 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), IntVecType(),
-        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), IntDataType(),
+        Date32DataType(omniruntime::type::DAY), Date32DataType(omniruntime::type::MILLI), LongDataType(),
+        Decimal64DataType(1, 1), DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1160,7 +1180,8 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     std::string expectData9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
     int32_t expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData11[DATA_SIZE] = {11, 11, 33, 33, 55, 55};
@@ -1169,7 +1190,8 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     int64_t expectData14[DATA_SIZE] = {11111, 11111, 33333, 33333, 55555, 55555};
     double expectData15[DATA_SIZE] = {1.1, 1.1, 3.3, 3.3, 5.5, 5.5};
     std::string expectData16[DATA_SIZE] = {"s1", "s1", "s3", "s3", "s5", "s5"};
-    Decimal128 expectData17[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5)};
+    Decimal128 expectData17[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
+        Decimal128(5, 5), Decimal128(5, 5)};
     std::string expectData18[DATA_SIZE] = {"c1", "c1", "c3", "c3", "c5", "c5"};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
@@ -1186,9 +1208,9 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1197,7 +1219,8 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     std::string data9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
 
     VectorBatch *vecBatch =
@@ -1211,18 +1234,21 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
-                                      OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), LongVecType(), LongVecType(),
-        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), LongDataType(),
+        LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType() }));
     int32_t argumentChannels[9] = {0, 1, 2, 3, 4, 5, 7, 8, 9};
 
     // dealing data with the operator
@@ -1238,10 +1264,11 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), CharVecType(3), LongVecType(), LongVecType(),
-        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), CharDataType(3), LongDataType(),
+        LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1250,7 +1277,8 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     std::string expectData9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
     int64_t expectData10[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData11[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
@@ -1276,8 +1304,8 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
 TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
 {
     // construct the input data
-    VecTypes sourceTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), BooleanVecType(), VarcharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>(
+        { IntDataType(), LongDataType(), DoubleDataType(), BooleanDataType(), VarcharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t data1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double data2[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
@@ -1302,16 +1330,19 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[10] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    int32_t windowFunctionTypes[10] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), BooleanVecType(),
-        VarcharVecType(3), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(),
-        LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), BooleanDataType(),
+        VarcharDataType(3), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
     int32_t argumentChannels[10] = {0, -1, 1, -1, 2, -1, 3, -1, 4, -1};
 
     // dealing data with the operator
@@ -1327,9 +1358,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), BooleanVecType(),
-        VarcharVecType(3), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(),
-        LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), BooleanDataType(),
+        VarcharDataType(3), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t expectData1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double expectData2[DATA_SIZE] = {1.1, 3.3, 5.5, 5.5, 5.5, 7.7};
@@ -1370,8 +1401,8 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
 TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
 {
     // construct the input data
-    VecTypes sourceTypes(
-        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), BooleanVecType(), VarcharVecType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>(
+        { IntDataType(), LongDataType(), DoubleDataType(), BooleanDataType(), VarcharDataType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t data1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double data2[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
@@ -1396,16 +1427,19 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     int32_t sortCols[1] = {};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[10] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    int32_t windowFunctionTypes[10] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), BooleanVecType(),
-        VarcharVecType(3), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(),
-        LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), BooleanDataType(),
+        VarcharDataType(3), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
     int32_t argumentChannels[10] = {0, -1, 1, -1, 2, -1, 3, -1, 4, -1};
 
     // dealing data with the operator
@@ -1421,9 +1455,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), BooleanVecType(),
-        VarcharVecType(3), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(),
-        LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), BooleanDataType(),
+        VarcharDataType(3), LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType(), LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t expectData1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double expectData2[DATA_SIZE] = {1.1, 3.3, 5.5, 5.5, 5.5, 7.7};
@@ -1464,9 +1498,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
 TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
 {
     // construct the input data
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1475,7 +1509,8 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
 
@@ -1495,17 +1530,19 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFunctionTypes[7] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_AGGREGATION_TYPE_SUM,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
-        LongVecType(), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+    DataTypes allTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType(), DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2) }));
     int32_t argumentChannels[7] = {0, 1, 3, 4, 5, 7, 8};
 
     // dealing data with the operator
@@ -1521,10 +1558,10 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
-        LongVecType(), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::type::DAY),
+        Date32DataType(omniruntime::type::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), LongDataType(), LongDataType(), LongDataType(),
+        LongDataType(), DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1533,14 +1570,16 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     int64_t expectData9[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     int64_t expectData10[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     int64_t expectData11[DATA_SIZE] = {4444, 4444, 8888, 8888, 13332, 13332};
     int64_t expectData12[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     double expectData13[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
     std::string expectData14[DATA_SIZE] = {"s3", "s3", "s5", "s5", "s7", "s7"};
-    Decimal128 expectData15[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5)};
+    Decimal128 expectData15[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
+        Decimal128(5, 5), Decimal128(5, 5)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15);

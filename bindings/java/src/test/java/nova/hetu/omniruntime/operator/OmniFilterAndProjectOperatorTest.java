@@ -13,11 +13,11 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.DictionaryVec;
@@ -46,7 +46,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void betweenInt() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
@@ -73,7 +73,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void betweenIntDictionary() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
@@ -109,7 +109,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void doubles() {
-        VecType[] types = {DoubleVecType.DOUBLE};
+        DataType[] types = {DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
@@ -163,7 +163,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void lessThan() {
-        VecType[] types = {IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -217,7 +217,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void lessThanDictionaryVarchar() {
-        VecType[] types = {IntVecType.INTEGER, new VarcharVecType(50)};
+        DataType[] types = {IntDataType.INTEGER, new VarcharDataType(50)};
         List<String> projections = ImmutableList.of("#0", "#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN:4(#0, 6:1)", types, projections);
@@ -249,7 +249,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void greaterThan() {
-        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] types = {IntDataType.INTEGER, LongDataType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -310,7 +310,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void equalTo() {
-        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] types = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#2");
         List<String> projectionsJSON =
                         ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
@@ -373,7 +373,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void greaterThanOrEqualTo() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#1");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}");
@@ -439,7 +439,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void notEqualTo() {
-        VecType[] types = {DoubleVecType.DOUBLE};
+        DataType[] types = {DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
@@ -495,7 +495,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void allPass() {
-        VecType[] types = {IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -549,7 +549,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void multipleInputs() {
-        VecType[] types = {IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -627,7 +627,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void negativeValues() {
-        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] types = {IntDataType.INTEGER, LongDataType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -714,7 +714,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test(enabled = false)
     public void allTypes() {
-        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] types = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -799,7 +799,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test(enabled = false)
     public void compileTest() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, DoubleVecType.DOUBLE, DoubleVecType.DOUBLE};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, DoubleDataType.DOUBLE, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
@@ -839,8 +839,8 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators1() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG,
-                DoubleVecType.DOUBLE, LongVecType.LONG};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER, LongDataType.LONG,
+                DoubleDataType.DOUBLE, LongDataType.LONG};
         List<String> projections = ImmutableList.of("#0", "#2", "#4", "#5");
         String str = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52:2), AND:4($operator$LESS_THAN:4(#4, 50.8:3), "
                 + "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800:1), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990:1)), "
@@ -952,7 +952,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators2() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
         List<String> projections = ImmutableList.of("#3", "#2", "#1", "#0");
         String str = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50:1), $operator$EQUAL:4(#1, -12:1)), "
                 + "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000:2), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0:2)))";
@@ -1046,7 +1046,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators3() {
-        VecType[] types = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
+        DataType[] types = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#0");
         String expr = "AND:4($operator$NOT_EQUAL:4(#1, 0:3), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1:1), "
                 + "$operator$EQUAL:4(#0, 2:1)), $operator$EQUAL:4(#0, 3:1)), OR:4(OR:4(OR:4($operator$EQUAL:4(55:1, #0), "
@@ -1172,7 +1172,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void arithmeticAdd() {
-        VecType[] types = {IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -1248,7 +1248,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void multithreadTest() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, DoubleVecType.DOUBLE, DoubleVecType.DOUBLE};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, DoubleDataType.DOUBLE, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2", "#3");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -1332,7 +1332,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void conditional() {
-        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -1409,7 +1409,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void unsupportedExpr() {
-        VecType[] types = {DoubleVecType.DOUBLE};
+        DataType[] types = {DoubleDataType.DOUBLE};
         List<String> projectionsJSON =
                 ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
 

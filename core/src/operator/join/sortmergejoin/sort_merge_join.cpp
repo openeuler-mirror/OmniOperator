@@ -30,18 +30,18 @@ SortMergeJoinOperator::~SortMergeJoinOperator()
     delete joinResultBuilder;
 }
 
-void SortMergeJoinOperator::ConfigStreamedTblInfo(const vec::VecTypes &streamedTypes,
+void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streamedTypes,
     const std::vector<int32_t> &streamedKeysCols, const std::vector<int32_t> &streamedOutputCols)
 {
-    this->streamedTypes = std::make_unique<vec::VecTypes>(streamedTypes).release();
+    this->streamedTypes = std::make_unique<type::DataTypes>(streamedTypes).release();
     this->streamedKeysCols = streamedKeysCols;
     this->streamedOutputCols = streamedOutputCols;
 }
 
-void SortMergeJoinOperator::ConfigBufferedTblInfo(const vec::VecTypes &bufferedTypes,
+void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &bufferedTypes,
     std::vector<int32_t> &bufferedKeysCols, std::vector<int32_t> &bufferedOutputCols)
 {
-    this->bufferedTypes = std::make_unique<vec::VecTypes>(bufferedTypes).release();
+    this->bufferedTypes = std::make_unique<type::DataTypes>(bufferedTypes).release();
     this->bufferedKeysCols = bufferedKeysCols;
     this->bufferedOutputCols = bufferedOutputCols;
 }

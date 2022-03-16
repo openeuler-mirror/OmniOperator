@@ -14,10 +14,10 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 
-SortOperatorFactory::SortOperatorFactory(const VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColCount,
+SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
-    this->sourceTypes = std::make_unique<VecTypes>(sourceTypes);
+    this->sourceTypes = std::make_unique<DataTypes>(dataTypes);
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
@@ -26,10 +26,10 @@ SortOperatorFactory::SortOperatorFactory(const VecTypes &sourceTypes, int32_t *o
 
 SortOperatorFactory::~SortOperatorFactory() {}
 
-SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const VecTypes &vecTypes, int32_t *outputCols,
+SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
     int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
-    auto pOperatorFactory = std::make_unique<SortOperatorFactory>(vecTypes, outputCols, outputColCount, sortCols,
+    auto pOperatorFactory = std::make_unique<SortOperatorFactory>(dataTypes, outputCols, outputColCount, sortCols,
         sortAscendings, sortNullFirsts, sortColCount);
     return pOperatorFactory.release();
 }
@@ -42,15 +42,15 @@ Operator *SortOperatorFactory::CreateOperator()
 }
 
 // function implements for class Sort
-SortOperator::SortOperator(const VecTypes &vecTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
+SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts)
-    : sourceTypes(vecTypes)
+    : sourceTypes(dataTypes)
 {
     this->outputCols = outputCols;
     this->sortCols = sortCols;
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
-    this->pagesIndex = std::make_unique<PagesIndex>(vecTypes);
+    this->pagesIndex = std::make_unique<PagesIndex>(dataTypes);
 }
 
 SortOperator::~SortOperator() {}
