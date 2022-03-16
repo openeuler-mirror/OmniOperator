@@ -1,7 +1,0 @@
-Source: dalab
-Version: 0.1-0
-Build-Depends: libc6 (>= 2.17), libgcc-s1 (>= 3.0), libjemalloc2 (>= 5.0.0), libllvm12 (>= 1:9~svn298832-1~), libstdc++6 (>= 9)
-Package: omni-runtime
-Architecture: all
-Maintainer: Aleksandr Ovcharenko <aleksandr.ovcharenko@huawei.com>
-Description: Omni-runtime functionality.
