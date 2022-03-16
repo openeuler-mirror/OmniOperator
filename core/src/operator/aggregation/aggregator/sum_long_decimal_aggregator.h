@@ -15,11 +15,11 @@ static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
 class SumLongDecimalAggregator : public Aggregator {
 public:
     SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
     SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~SumLongDecimalAggregator() override {}

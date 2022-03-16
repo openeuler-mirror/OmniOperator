@@ -111,8 +111,8 @@ public class OmniHashAggregationOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(groupByChanel), Arrays.hashCode(groupByTypes),
-                    Arrays.hashCode(aggChannels), Arrays.hashCode(aggTypes), Arrays.hashCode(aggFunctionTypes),
-                    inputRaw, outputPartial);
+                    Arrays.hashCode(aggChannels), Arrays.hashCode(aggTypes), Arrays.hashCode(aggOutputTypes),
+                    Arrays.hashCode(aggFunctionTypes), inputRaw, outputPartial);
         }
 
         @Override
@@ -125,9 +125,10 @@ public class OmniHashAggregationOperatorFactory
             }
             JitContext that = (JitContext) obj;
             return Arrays.equals(groupByChanel, that.groupByChanel) && Arrays.equals(groupByTypes, that.groupByTypes)
-                    && Arrays.equals(aggTypes, that.aggTypes) && Arrays.equals(aggChannels, that.aggChannels)
-                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && inputRaw == that.inputRaw
-                    && outputPartial == that.outputPartial;
+                    && Arrays.equals(aggTypes, that.aggTypes) && Arrays.equals(aggOutputTypes, that.aggOutputTypes)
+                    && Arrays.equals(aggChannels, that.aggChannels)
+                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes)
+                    && inputRaw == that.inputRaw && outputPartial == that.outputPartial;
         }
     }
 

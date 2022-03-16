@@ -7,7 +7,7 @@
 #include "aggregator.h"
 namespace omniruntime {
 namespace op {
-template <typename V, typename ResultType> class MinAggregator : public Aggregator {
+template <typename InputVecType, typename OutputVecType, typename ResultType> class MinAggregator : public Aggregator {
 public:
     MinAggregator(const VecType &in, const VecType &out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel)
@@ -30,7 +30,7 @@ public:
             this->InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
-        auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
+        auto rowVal = static_cast<ResultType>((static_cast<InputVecType *>(vector))->GetValue(offset));
         auto leftVal = static_cast<ResultType *>(state.val);
         *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
     }
@@ -42,7 +42,7 @@ public:
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
-        auto rowVal = static_cast<V *>(vector)->GetValue(offset);
+        auto rowVal = static_cast<InputVecType *>(vector)->GetValue(offset);
         int32_t len = sizeof(ResultType);
         auto ptr = executionContext->getArena()->Allocate(len);
         *reinterpret_cast<ResultType *>(ptr) = rowVal;
@@ -52,7 +52,7 @@ public:
     // TODO extract common function for sum/min/max
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
     {
-        auto v = static_cast<V *>(vector);
+        auto v = static_cast<OutputVecType *>(vector);
         if (state.val == nullptr) {
             v->SetValueNull(rowIndex);
             return;

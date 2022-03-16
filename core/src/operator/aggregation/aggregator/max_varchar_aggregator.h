@@ -14,7 +14,7 @@ public:
     {}
 
     MaxVarcharAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~MaxVarcharAggregator() override {}

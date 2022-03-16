@@ -12,12 +12,12 @@ static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = 32;
 class AverageShortDecimalAggregator : public Aggregator {
 public:
     AverageShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel)
     {}
 
     AverageShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw,
         bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~AverageShortDecimalAggregator() override {}
