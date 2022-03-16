@@ -56,7 +56,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *         */
+             *          */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_VEC_TYPE_DECIMAL64:
             case OMNI_VEC_TYPE_VARCHAR: {
@@ -126,24 +126,34 @@ public:
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
+        auto outputTypeId = outputType.GetId();
+        // Adapt to openLooKeng
+        if (inputTypeId == OMNI_VEC_TYPE_INT && outputTypeId == OMNI_VEC_TYPE_LONG) {
+            return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_VEC_TYPE_LONG && outputTypeId == OMNI_VEC_TYPE_INT) {
+            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
         switch (inputTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
-                return std::make_unique<MinAggregator<IntVector, int32_t>>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
+                return std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64: {
-                return std::make_unique<MinAggregator<LongVector, int64_t>>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
+                return std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                return std::make_unique<MinAggregator<DoubleVector, double>>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
+                return std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(inputType, outputType,
+                    channel, inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                return std::make_unique<MinAggregator<Decimal128Vector, Decimal128>>(inputType, outputType, channel,
-                    inputRaw, outputPartial);
+                return std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(inputType,
+                    outputType, channel, inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_VARCHAR:
             case OMNI_VEC_TYPE_CHAR: {
@@ -165,24 +175,34 @@ public:
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
+        auto outputTypeId = outputType.GetId();
+        // Adapt to openLooKeng
+        if (inputTypeId == OMNI_VEC_TYPE_INT && outputTypeId == OMNI_VEC_TYPE_LONG) {
+            return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_VEC_TYPE_LONG && outputTypeId == OMNI_VEC_TYPE_INT) {
+            return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
         switch (inputTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
-                return std::make_unique<MaxAggregator<IntVector, int32_t>>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
+                return std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64: {
-                return std::make_unique<MaxAggregator<LongVector, int64_t>>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
+                return std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                return std::make_unique<MaxAggregator<DoubleVector, double>>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
+                return std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(inputType, outputType,
+                    channel, inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                return std::make_unique<MaxAggregator<Decimal128Vector, Decimal128>>(inputType, outputType, channel,
-                    inputRaw, outputPartial);
+                return std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(inputType,
+                    outputType, channel, inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_VARCHAR:
             case OMNI_VEC_TYPE_CHAR: {

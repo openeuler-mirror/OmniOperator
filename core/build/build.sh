@@ -39,6 +39,9 @@ append_options()
             elif [ $i = 'llvm' ]; then
               echo "-- Enable LLVM Debug"
               options="$options -DDEBUG_LLVM=ON"
+            elif [ $i = '--disable-jit' ]; then
+              echo "-- Disable JIT"
+              options="$options -DDISABLE_JIT=ON"
             fi
         fi
     done
