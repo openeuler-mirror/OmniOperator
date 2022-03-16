@@ -285,7 +285,10 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, VecType
             return e;
         }
         // Need to handle decimals properly
-        case OMNI_VEC_TYPE_DECIMAL128:
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            string *dec128String = make_unique<string>(literalStr).release();
+            return std::make_unique<LiteralExpr>(dec128String, std::move(currType)).release();
+        }
         case OMNI_VEC_TYPE_DECIMAL64:
         case OMNI_VEC_TYPE_LONG: {
             return std::make_unique<LiteralExpr>(stol(literalStr), std::move(currType)).release();

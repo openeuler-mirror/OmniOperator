@@ -41,10 +41,12 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
         }
         if (i == 0)
             EXPECT_EQ(right->intVal, i);
-        else if (i == 1 || i == 3)
-            EXPECT_EQ(right->longVal, i); // parser sets longVal for OMNI_VEC_TYPE_LONG and OMNI_VEC_TYPE_DECIMAL128
+        else if (i == 1)
+            EXPECT_EQ(right->longVal, i);
         else if (i == 2)
             EXPECT_EQ(right->doubleVal, i);
+        else if (i == 3)
+            ASSERT_EQ(stol(*right->stringVal), i);
         else if (i == 4 || i == 5)
             ASSERT_STREQ(right->stringVal->c_str(), "hello");
 
@@ -76,10 +78,12 @@ void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::ex
         }
         if (i == 0)
             EXPECT_EQ(right->intVal, i);
-        else if (i == 1 || i == 3)
-            EXPECT_EQ(right->longVal, i); // parser sets longVal for OMNI_VEC_TYPE_LONG and OMNI_VEC_TYPE_DECIMAL128
+        else if (i == 1)
+            EXPECT_EQ(right->longVal, i);
         else if (i == 2)
             EXPECT_EQ(right->doubleVal, i);
+        else if (i == 3)
+            EXPECT_EQ(stol(*right->stringVal), i);
     }
 }
 

@@ -99,12 +99,7 @@ Function *RowExpressionCodeGen::CreateFunction()
     args.push_back(llvmTypes->I1PtrType());
     args.push_back(llvmTypes->I32PtrType());
     args.push_back(llvmTypes->I64Type());
-#ifdef DEBUG_LLVM
-    std::cout << "exprtree: ";
-    ExprPrinter p;
-    expr->Accept(p);
-    std::cout << std::endl;
-#endif
+
     FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
     func = Function::Create(prototype, Function::ExternalLinkage, FUNCTION_NAME, module.get());
 
@@ -143,10 +138,18 @@ Function *RowExpressionCodeGen::CreateFunction()
 
 int64_t RowExpressionCodeGen::GetFunction()
 {
+#ifdef DEBUG
+    std::cout<<"Row Expression: "<<std::endl;
+    ExprPrinter p;
+    expr->Accept(p);
+    std::cout << std::endl;
+#endif
+
     this->CreateFunction();
 
     OptimizeFunctionsAndModule();
-#ifdef DEBUG
+
+#ifdef DEBUG_LLVM
     module->print(errs(), nullptr);
 #endif
     jit->getMainJITDylib().addGenerator(
