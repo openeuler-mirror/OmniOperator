@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
+
+#ifndef OMNI_RUNTIME_VECTOR_BATCH_H
+#define OMNI_RUNTIME_VECTOR_BATCH_H
+
+
+#include "vector.h"
+
+namespace omniruntime {
+namespace vec {
+class VectorBatch {
+public:
+    [[deprecated]] // The method will be removed in the future, and the rowCount must be specified during construction.
+    VectorBatch(int vectorCount);
+
+    VectorBatch(int vectorCount, int rowCount);
+
+    ~VectorBatch();
+
+    Vector *GetVector(int index)
+    {
+        return vectors[index];
+    }
+
+    Vector **GetVectors() const
+    {
+        return vectors;
+    }
+
+    void SetVector(int index, Vector *vector);
+
+    int GetVectorCount()
+    {
+        return vectorCount;
+    }
+
+    int GetRowCount()
+    {
+        return rowCount;
+    }
+
+    const int32_t *GetVectorTypeIds();
+
+    void NewVectors(VectorAllocator *vecAllocator, const std::vector<DataType> &types);
+
+    void ReleaseAllVectors();
+
+private:
+    void Init();
+    Vector *NewContainerVec(VectorAllocator *vecAllocator);
+
+    int vectorCount;
+    int rowCount;
+    Vector **vectors;
+    int32_t *vectorTypeIds;
+};
+} // namespace vec
+} // namespace omniruntime
+#endif // OMNI_RUNTIME_VECTOR_BATCH_H

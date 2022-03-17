@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: registry external function
+ */
+#ifndef OMNI_RUNTIME_FUNC_REGISTRY_BASE_H
+#define OMNI_RUNTIME_FUNC_REGISTRY_BASE_H
+
+namespace omniruntime {
+    class BaseFunctionRegistry {
+    public:
+        virtual std::vector<Function> GetFunctions() = 0;
+    };
+}
+
+#endif //OMNI_RUNTIME_FUNC_REGISTRY_BASE_H

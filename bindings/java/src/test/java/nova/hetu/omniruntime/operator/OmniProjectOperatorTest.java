@@ -1,0 +1,175 @@
+package nova.hetu.omniruntime.operator;
+
+import com.google.common.collect.ImmutableList;
+
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecBatch;
+
+import org.testng.annotations.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static org.testng.Assert.*;
+
+/**
+ * The type Omni project operator test.
+ */
+public class OmniProjectOperatorTest {
+    private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols) {
+        return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols)});
+    }
+
+    /**
+     * Simple test.
+     */
+    @Test
+    public void simpleTest() {
+        String[] exprs = {"$operator$ADD:1(#0, 5:1)"};
+        DataType[] inputTypes = {IntDataType.INTEGER};
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
+        final int numRows = 1000;
+        IntVec col1 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i);
+        }
+        OmniOperator op = factory.createOperator();
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches) {
+            op.addInput(vecBatch);
+        }
+
+        Iterator<VecBatch> vecBatchIterator = op.getOutput();
+        assertTrue(vecBatchIterator.hasNext());
+        VecBatch res = op.getOutput().next();
+        assertFalse(vecBatchIterator.hasNext());
+        assertEquals(res.getRowCount(), numRows);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((IntVec) res.getVector(0)).get(i), i + 5);
+        }
+
+        freeVecBatch(res);
+        op.close();
+        factory.close();
+    }
+
+    /**
+     * Complex test.
+     */
+    @Test
+    public void complexTest() {
+        String[] exprs = {"$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500:1), 4000000000:2, #2)"};
+        DataType[] inputTypes = {IntDataType.INTEGER, IntDataType.INTEGER, LongDataType.LONG};
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
+        final int numRows = 1000;
+        IntVec col1 = new IntVec(numRows);
+        IntVec col2 = new IntVec(numRows);
+        LongVec col3 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i + 1);
+            col2.set(i, i - 100);
+            col3.set(i, i + 3000000000L);
+        }
+        OmniOperator op = factory.createOperator();
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
+        for (VecBatch vecBatch : vecBatches) {
+            op.addInput(vecBatch);
+        }
+
+        assertTrue(op.getOutput().hasNext());
+        VecBatch res = op.getOutput().next();
+        assertEquals(res.getRowCount(), numRows);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((IntVec) res.getVector(0)).get(i), (i + 1) * (i - 100));
+            assertEquals(((LongVec) res.getVector(1)).get(i), (i + 1) < 500 ? 4000000000L : i + 3000000000L);
+        }
+
+        freeVecBatch(res);
+        op.close();
+        factory.close();
+    }
+
+    /**
+     * Murmur3hash&Pmod test.
+     */
+    @Test
+    public void mm3HashAndPmodTest() {
+        String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
+        DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
+        final int numRows = 3;
+        final byte[] byteVal1 = "Wednesday".getBytes(StandardCharsets.UTF_8);
+        final byte[] byteVal2 = "Hello World".getBytes(StandardCharsets.UTF_8);
+        IntVec col1 = new IntVec(numRows);
+        DoubleVec col2 = new DoubleVec(numRows);
+        VarcharVec col3 = new VarcharVec(byteVal1.length + byteVal2.length, numRows);
+
+        col1.set(0, Integer.MIN_VALUE);
+        col2.set(0, Double.MAX_VALUE);
+        col3.set(0, byteVal1);
+        col1.set(1, Integer.MAX_VALUE);
+        col2.set(1, Double.MIN_VALUE);
+        col3.set(1, byteVal2);
+        // null value
+        col1.set(2, Integer.MIN_VALUE);
+        col1.setNull(2);
+        col2.set(2, Double.MAX_VALUE);
+        col2.setNull(2);
+        col3.setNull(2);
+
+        OmniOperator op = factory.createOperator();
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
+        for (VecBatch vecBatch : vecBatches) {
+            op.addInput(vecBatch);
+        }
+
+        assertTrue(op.getOutput().hasNext());
+        VecBatch res = op.getOutput().next();
+        assertEquals(res.getRowCount(), numRows);
+        assertEquals(res.getVectors().length, exprs.length);
+        assertEquals(((IntVec) res.getVector(0)).get(0), 20);
+        assertEquals(((IntVec) res.getVector(1)).get(0), -508695674);
+        assertEquals(((IntVec) res.getVector(2)).get(0), 613818021);
+        assertEquals(((IntVec) res.getVector(0)).get(1), 25);
+        assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
+        assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
+        // null value check
+        assertEquals(((IntVec) res.getVector(0)).get(2), 15);
+        assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
+        assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
+
+        freeVecBatch(res);
+        op.close();
+        factory.close();
+    }
+
+    /**
+     * Unsupported expression.
+     */
+    @Test
+    public void unsupportedCast() {
+        DataType[] types = {};
+        String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", " +
+                "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": " +
+                "\"FUNCTION\", \"returnType\": 4, \"function_name\": \"not\", \"arguments\": " +
+                "[{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": true}]}, \"if_true\": " +
+                "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, " +
+                "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
+
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(projectionsJSON, types, 1);
+
+        assertFalse(factory.isSupported());
+        factory.close();
+    }
+}

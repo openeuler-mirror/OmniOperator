@@ -1,0 +1,78 @@
+/*
+ * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+syntax = "proto3";
+
+package nova.hetu.omniruntime.vector.serialize;
+
+message VecBatch {
+    int32 rowCount = 1;
+    int32 vecCount = 2;
+    repeated Vec vectors = 3;
+}
+
+message Vec {
+    DataTypeExt typeExt = 1;
+    VecEncoding  vecEncoding = 2;
+    int32 size = 3;
+    int32 offset = 4;
+    bytes values = 5;
+    bytes nulls = 6;
+    bytes offsets = 7;
+    repeated Vec subVectors = 8;
+}
+
+message VecEncoding{
+    int32 encodingId = 1;
+}
+
+message DataTypeExt {
+    enum DataTypeId {
+        OMNI_NONE = 0;
+        OMNI_INT = 1;
+        OMNI_LONG = 2;
+        OMNI_DOUBLE = 3;
+        OMNI_BOOLEAN = 4;
+        OMNI_SHORT = 5;
+        OMNI_DECIMAL64 = 6;
+        OMNI_DECIMAL128 = 7;
+        OMNI_DATE32 = 8;
+        OMNI_DATE64 = 9;
+        OMNI_TIME32 = 10;
+        OMNI_TIME64 = 11;
+        OMNI_TIMESTAMP = 12;
+        OMNI_INTERVAL_MONTHS = 13;
+        OMNI_INTERVAL_DAY_TIME = 14;
+        OMNI_VARCHAR = 15;
+        OMNI_CHAR = 16;
+        OMNI_CONTAINER = 17;
+        OMNI_INVALID = 18;
+    }
+    DataTypeId id = 1;
+    int32 width = 2;
+    int32 precision = 3;
+    int32 scale = 4;
+    enum DateUnit {
+        DAY = 0;
+        MILLI = 1;
+    }
+    DateUnit dateUnit = 5;
+    enum TimeUnit {
+        SEC = 0;
+        MILLISEC = 1;
+        MICROSEC = 2;
+        NANOSEC = 3;
+    }
+    TimeUnit timeUnit = 6;
+}

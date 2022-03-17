@@ -1,0 +1,244 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: FilterAndProject operator source file
+ */
+#include "filter_and_project.h"
+#include "vector/vector_helper.h"
+#include "expression/jsonparser/jsonparser.h"
+
+namespace omniruntime {
+namespace op {
+using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
+using namespace omniruntime::mem;
+using namespace std;
+
+using Uint8vec = std::vector<uint8_t>;
+
+RowFilter::RowFilter(const Expr &expr) : codegen(nullptr), expression(&expr) {}
+
+RowFilter::~RowFilter()
+{
+    delete this->expression;
+    this->codegen.reset();
+}
+
+// Return nullptr if expression is unsupported
+RowFilterFunc RowFilter::Create()
+{
+    this->codegen = FilterCodeGen::Create("single_row_filter", *this->expression);
+    int64_t fAddr = this->codegen->GetExpressionEvaluator();
+    void *refFunc = &fAddr;
+    auto castedRef = static_cast<RowFilterFunc *>(refFunc);
+    return *castedRef;
+}
+
+SimpleFilter::SimpleFilter(const Expr &expression)
+{
+    this->codegen = nullptr;
+    this->expression = &expression;
+    this->func = nullptr;
+    this->resultLength = nullptr;
+    this->isResultNull = nullptr;
+}
+
+SimpleFilter::~SimpleFilter()
+{
+    delete this->expression;
+    this->codegen.reset();
+}
+
+bool SimpleFilter::Initialize()
+{
+    if (this->expression == nullptr) {
+        LogWarn("Unable to parse expression for simple filter");
+        return false;
+    }
+
+    if (this->expression->GetReturnTypeId() != OMNI_BOOLEAN) {
+        LogWarn("Filter expression can only return boolean, current type: %d", this->expression->GetReturnTypeId());
+        return false;
+    }
+
+    this->codegen = RowExpressionCodeGen::Create("simple_row_expr_eval", *this->expression);
+    if (this->codegen == nullptr) {
+        LogWarn("Unable to generate function for simple filter");
+        return false;
+    }
+
+    int64_t fAddr = this->codegen->GetFunction();
+    void *refFunc = &fAddr;
+    this->func = *static_cast<SimpleRowExprEvalFunc *>(refFunc);
+    this->initialized = true;
+    return true;
+}
+
+set<int32_t> SimpleFilter::GetVectorIndexes()
+{
+    if (!this->initialized) {
+        LogWarn("SimpleFilter not initialized or failed to initialize.");
+        return set<int32_t> {};
+    }
+    return this->codegen->vectorIndexes;
+}
+
+bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
+{
+    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
+}
+
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
+    int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
+    : inputDataTypes(inputDataTypes)
+{
+    this->inputVecCount = inputVecCount;
+    this->projectVecCount = projectVecCount;
+    this->SetJitContext(nullptr);
+#ifdef DEBUG
+    std::cout << "String expression in Filter: " << expression << std::endl;
+    ExprPrinter printExprTree;
+    parsedExpr->Accept(printExprTree);
+    std::cout << std::endl;
+#endif
+    this->filter = make_unique<Filter>(*parsedExpr, inputDataTypes.GetIds(), inputVecCount);
+    if (!this->filter->isSupported) {
+        this->isSupportedExpr = false;
+    }
+
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        auto projection = make_unique<Projection>(inputDataTypes, inputVecCount, *(projectExprs.at(i)), true);
+        if (!projection->IsSupported()) {
+            this->isSupportedExpr = false;
+            break;
+        }
+        this->projections.push_back(move(projection));
+    }
+}
+
+
+FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
+{
+    this->filter.reset();
+    for (auto &projection : this->projections) {
+        projection.reset();
+    }
+    this->projections.clear();
+}
+
+Operator *FilterAndProjectOperatorFactory::CreateOperator()
+{
+    auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputDataTypes.GetIds(),
+        this->inputVecCount, this->projections, this->projectVecCount, new ExecutionContext());
+    return filterAndProjectOperator.release();
+}
+
+// Helper function to return data, null bitmap, offsets in vecBatch
+std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
+    std::vector<Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
+{
+    std::vector<int64_t> data;
+    int64_t valuesAddress;
+    int64_t dictVecAddress;
+
+    for (int32_t i = 0; i < vectorCount; i++) {
+        Vector *colVec = vecBatch->GetVector(i);
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
+        }
+        dictVecAddress = 0;
+        valuesAddress = 0;
+        DataTypeId typeId = colVec->GetTypeId();
+        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
+        } else {
+            valuesAddress = VectorHelper::GetValuesAddr(colVec);
+        }
+
+        // data handling
+        dictionaries[i] = dictVecAddress;
+        data.push_back(valuesAddress);
+
+        // bitmap handling
+        bitmap[i] = VectorHelper::GetNullsAddr(colVec);
+
+        // offsets handling
+        offsetsAddrs[i] = VectorHelper::GetOffsetsAddr(colVec);
+    }
+
+    return data;
+}
+
+int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
+{
+    const int rowCount = vecBatch->GetRowCount();
+    const int vectorCount = vecBatch->GetVectorCount();
+    int32_t *selectedRows = new int32_t[rowCount];
+    int64_t bitmap[vectorCount];
+    int64_t offsets[vectorCount];
+    int64_t dictionaries[vectorCount];
+
+    // when the dictionary vector is processed it will be restored to an original vector
+    // needs to be released
+    vector<Vector *> dictionaryVecs; // not used
+
+    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
+
+    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets,
+        reinterpret_cast<int64_t>(context), dictionaries);
+
+    if (numSelectedRows <= 0) {
+        for (auto &dictionaryVec : dictionaryVecs) {
+            delete dictionaryVec;
+        }
+        context->getArena()->Reset();
+        VectorHelper::FreeVecBatch(vecBatch);
+        return 0;
+    }
+    auto projectedData = make_unique<VectorBatch>(this->projectVecCount, numSelectedRows);
+
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        // vecData and bitmap won't be used for filter projection
+        Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data,
+            bitmap, offsets, context, dictionaries);
+        projectedData->SetVector(i, col);
+    }
+    this->projectedVecs = std::move(projectedData);
+
+    for (auto &dictionaryVec : dictionaryVecs) {
+        delete dictionaryVec;
+    }
+    data.clear();
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete[] selectedRows;
+    context->getArena()->Reset();
+    return numSelectedRows;
+}
+
+int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
+{
+    if (this->projectedVecs == nullptr) {
+        return 0;
+    }
+
+    int rowCount = this->projectedVecs->GetRowCount();
+    data.push_back(this->projectedVecs.release());
+
+    return rowCount;
+}
+
+Filter::Filter(const expressions::Expr &expression, const int32_t *inputTypeIds, int32_t inputVecCount)
+{
+    this->codeGen = FilterCodeGen::Create("filterFunc", expression);
+    this->expr = &expression;
+
+    auto f = this->codeGen->GetFunction();
+    if (f == 0) {
+        this->isSupported = false;
+        return;
+    }
+    this->isSupported = true;
+    void *function = &f;
+    this->Apply = *static_cast<FilterFunc *>(function);
+}
+} // end of op
+} // end of omniruntime
