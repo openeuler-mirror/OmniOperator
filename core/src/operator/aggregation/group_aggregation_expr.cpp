@@ -13,9 +13,9 @@ namespace op {
 using namespace omniruntime::type;
 
 HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
-        const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
-        const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
-        const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
+    const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+    const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
+    const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
 {
     uint32_t projectColNum = groupByNum + aggNum;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
@@ -28,7 +28,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<int32_t> hashAggCols;
     std::vector<DataType> newSourceTypes;
     OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
-                                             this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
+        this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
 
     uint32_t groupByCols[groupByNum];
     for (int i = 0; i < groupByNum; ++i) {
@@ -58,8 +58,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->hashAggOperatorFactory = std::make_unique<HashAggregationOperatorFactory>(groupByCol,
-         *(this->groupByTypes.get()), aggCol, *(this->aggTypes.get()), aggOutputTypes, aggFunc,
-          inputRaw, outputPartial).release();
+        *(this->groupByTypes.get()), aggCol, *(this->aggTypes.get()), aggOutputTypes, aggFunc,
+        inputRaw, outputPartial).release();
     this->hashAggOperatorFactory->Init();
 }
 
@@ -70,10 +70,9 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
-    auto hashAggOperator = static_cast<HashAggregationOperator *>(
-        hashAggOperatorFactory->CreateOperator());
-    auto pOperator = std::make_unique<HashAggregationWithExprOperator>(*(sourceTypes), projectCols,
-        projectFuncs, hashAggOperator);
+    auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
+    auto pOperator =
+        std::make_unique<HashAggregationWithExprOperator>(*(sourceTypes), projectCols, projectFuncs, hashAggOperator);
     return pOperator.release();
 }
 
@@ -89,8 +88,8 @@ HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectRequiredVectors(inputVecBatch, sourceTypes, projectFuncs,
-        projectCols);
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectRequiredVectors(inputVecBatch, sourceTypes, projectFuncs, projectCols);
     hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

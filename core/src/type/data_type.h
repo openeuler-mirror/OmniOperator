@@ -97,48 +97,6 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
-#define DYNAMIC_TYPE_DISPATCH(PREFIX, typeId, ...)                    \
-    [&]() {                                                           \
-        switch (typeId) {                                             \
-            case OMNI_VEC_TYPE_INT: {                                 \
-                return PREFIX<OMNI_VEC_TYPE_INT>(__VA_ARGS__);        \
-            }                                                         \
-            case OMNI_VEC_TYPE_LONG: {                                \
-                return PREFIX<OMNI_VEC_TYPE_LONG>(__VA_ARGS__);       \
-            }                                                         \
-            case OMNI_VEC_TYPE_DOUBLE: {                              \
-                return PREFIX<OMNI_VEC_TYPE_DOUBLE>(__VA_ARGS__);     \
-            }                                                         \
-            case OMNI_VEC_TYPE_BOOLEAN: {                             \
-                return PREFIX<OMNI_VEC_TYPE_BOOLEAN>(__VA_ARGS__);    \
-            }                                                         \
-            case OMNI_VEC_TYPE_SHORT: {                               \
-                return PREFIX<OMNI_VEC_TYPE_SHORT>(__VA_ARGS__);      \
-            }                                                         \
-            case OMNI_VEC_TYPE_DECIMAL64: {                           \
-                return PREFIX<OMNI_VEC_TYPE_DECIMAL64>(__VA_ARGS__);  \
-            }                                                         \
-            case OMNI_VEC_TYPE_DECIMAL128: {                          \
-                return PREFIX<OMNI_VEC_TYPE_DECIMAL128>(__VA_ARGS__); \
-            }                                                         \
-            case OMNI_VEC_TYPE_CHAR:                                  \
-            case OMNI_VEC_TYPE_VARCHAR: {                             \
-                return PREFIX<OMNI_VEC_TYPE_VARCHAR>(__VA_ARGS__);    \
-            }                                                         \
-            case OMNI_VEC_TYPE_CONTAINER: {                           \
-                return PREFIX<OMNI_VEC_TYPE_CONTAINER>(__VA_ARGS__);  \
-            }                                                         \
-            case OMNI_VEC_TYPE_DICTIONARY: {                          \
-                return PREFIX<OMNI_VEC_TYPE_DICTIONARY>(__VA_ARGS__); \
-            }                                                         \
-            case OMNI_VEC_TYPE_LAZY: {                                \
-                return PREFIX<OMNI_VEC_TYPE_LAZY>(__VA_ARGS__);       \
-            }                                                         \
-            default:                                                  \
-                LogError("Can not handle this type %d", typeId);      \
-        }                                                             \
-    }()
-
 NLOHMANN_JSON_SERIALIZE_ENUM(DataTypeId, { { OMNI_NONE, nullptr },
     { OMNI_INT, "OMNI_INT" },
     { OMNI_LONG, "OMNI_LONG" },

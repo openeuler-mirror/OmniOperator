@@ -19,7 +19,7 @@ namespace op {
 class DistinctLimitOperatorFactory : public OperatorFactory {
 public:
     DistinctLimitOperatorFactory(const type::DataTypes &sourceTypes, const int32_t *distinctCols,
-                                 int32_t distinctColsCount, int32_t hashCol, int64_t limit);
+        int32_t distinctColsCount, int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperatorFactory() override;
 
@@ -67,7 +67,7 @@ public:
 
 public:
     DistinctLimitOperator(const type::DataTypes *sourceTypes, int32_t *distinctCols, int32_t distinctColsCount,
-                          int32_t hashCol, int64_t limit);
+        int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperator() override;
 

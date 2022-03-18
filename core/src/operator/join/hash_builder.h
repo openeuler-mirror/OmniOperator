@@ -16,7 +16,7 @@ namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
     HashBuilderOperatorFactory(const type::DataTypes &buildTypes, const int32_t *buildHashCols,
-                               int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
+        int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     int32_t Init();
     ~HashBuilderOperatorFactory() override;
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const type::DataTypes &dataTypes,
@@ -38,7 +38,7 @@ private:
 class HashBuilderOperator : public Operator {
 public:
     HashBuilderOperator(const type::DataTypes &buildTypes, std::vector<int32_t> &buildHashCols,
-                        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
+        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
 
     ~HashBuilderOperator() override;
 

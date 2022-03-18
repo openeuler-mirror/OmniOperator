@@ -10,9 +10,9 @@ namespace op {
 using namespace omniruntime::vec;
 
 StreamedTableWithExprOperatorFactory *StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
-        const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
-        int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
-        std::string &filter)
+    const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
+    int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
+    std::string &filter)
 {
     auto pOperatorFactory = std::make_unique<StreamedTableWithExprOperatorFactory>(streamedTypes, streamedKeyExprCols,
         streamedKeyExprColsCnt, streamedOutputCols, streamedOutputColsCnt, joinType, filter);
@@ -93,9 +93,9 @@ OmniStatus StreamedTableWithExprOperator::Close()
 }
 
 BufferedTableWithExprOperatorFactory *BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
-        const type::DataTypes &bufferedTypes, const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols,
-        int32_t bufferedKeyExprCnt, int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
-        int64_t streamedTableFactoryAddr)
+    const type::DataTypes &bufferedTypes, const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols,
+    int32_t bufferedKeyExprCnt, int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
+    int64_t streamedTableFactoryAddr)
 {
     auto pOperatorFactory = std::make_unique<BufferedTableWithExprOperatorFactory>(bufferedTypes, bufferedKeyExprCols,
         bufferedKeyExprCnt, bufferedOutputCols, bufferedOutputColsCnt, streamedTableFactoryAddr);
