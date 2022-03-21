@@ -15,6 +15,12 @@
 namespace omniruntime {
 namespace type {
 constexpr int32_t DATA_TYPE_MAX_COUNT = 20;
+const std::string ID = "id";
+const std::string WIDTH = "width";
+const std::string PRECISION = "precision";
+const std::string SCALE = "scale";
+const std::string DATE_UNIT = "dateUnit";
+const std::string TIME_UNIT = "timeUnit";
 
 enum DataTypeId {
     OMNI_NONE = 0,
@@ -204,7 +210,23 @@ public:
         return scale;
     }
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(DataType, id, width, precision, scale, dateUnit, timeUnit);
+    friend void to_json(nlohmann::json &nlohmannJson, const DataType &dataType)
+    {
+        nlohmannJson = nlohmann::json {
+            { ID, dataType.id }, { WIDTH, dataType.width }, { PRECISION, dataType.precision },
+            { SCALE, dataType.scale }, { DATE_UNIT, dataType.dateUnit }, { TIME_UNIT, dataType.timeUnit }
+        };
+    }
+
+    friend void from_json(const nlohmann::json &nlohmannJson, DataType &dataType)
+    {
+        nlohmannJson.at(ID).get_to(dataType.id);
+        nlohmannJson.at(WIDTH).get_to(dataType.width);
+        nlohmannJson.at(PRECISION).get_to(dataType.precision);
+        nlohmannJson.at(SCALE).get_to(dataType.scale);
+        nlohmannJson.at(DATE_UNIT).get_to(dataType.dateUnit);
+        nlohmannJson.at(TIME_UNIT).get_to(dataType.timeUnit);
+    }
 
     DataType &operator = (const DataType &right)
     {
