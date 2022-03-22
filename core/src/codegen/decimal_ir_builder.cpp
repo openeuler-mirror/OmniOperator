@@ -139,13 +139,13 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
             disassembledArgs.push_back(outLowPtr);
 
             // Make call to pre-compiled IR function.
-            builder.CreateCall(f, disassembledArgs, fnName);
+            codeGenUtils.CreateCall(f, disassembledArgs, fnName);
 
             auto outHigh = builder.CreateLoad(outHighPtr);
             auto outLow = builder.CreateLoad(outLowPtr);
             result = ToInt128(outHigh, outLow);
         } else {
-            result = builder.CreateCall(f, disassembledArgs, fnName);
+            result = codeGenUtils.CreateCall(f, disassembledArgs, fnName);
         }
         llvm::InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);

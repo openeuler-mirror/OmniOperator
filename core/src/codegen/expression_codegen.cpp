@@ -159,7 +159,8 @@ void ExpressionCodeGen::Initialize()
     module->setDataLayout(jit->getDataLayout());
     // Create IR builder to create IR instructions
     builder = std::make_unique<IRBuilder<>>(*context);
-    decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder);
+    codeGenUtils = std::make_unique<CodeGenUtils>(*context, *module, *builder);
+    decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder, *codeGenUtils);
     fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
 
     ExprInfoExtractor exprInfoExtractor;
@@ -201,7 +202,7 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
     auto signature = FunctionSignature(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT);
     auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
-    auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
+    auto ret = codeGenUtils->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
     auto inlinedFunction = llvm::InlineFunction(*ret, inlineFunctionInfo);
     return ret;
@@ -754,7 +755,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
             FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
             llvmTypes->ToLLVMType(typeId), funcArgs);
     } else {
-        result = builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+        result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
         InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((CallInst *)result), inlineFunctionInfo);
     }
@@ -1685,7 +1686,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         if (f) {
             ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(),
                 llvmTypes->ToLLVMType(funcRetType), argVals) :
-                                      builder->CreateCall(f, argVals, fExpr.function->GetId());
+                                      codeGenUtils->CreateCall(f, argVals, fExpr.function->GetId());
             InlineFunctionInfo inlineFunctionInfo;
             auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
@@ -1721,11 +1722,23 @@ void ExpressionCodeGen::OptimizeFunctionsAndModule()
     fpm->add(createDeadStoreEliminationPass());
     fpm->add(createPromoteMemoryToRegisterPass());
 
+    codeGenUtils->RemoveUnusedFunctions();
+
     mpm.add(createFunctionInliningPass());
     mpm.add(createPruneEHPass());
 
     fpm->doInitialization();
     for (auto &F : *module)
         fpm->run(F);
+    mpm.run(*module);
+}
+
+void ExpressionCodeGen::OptimizeModule()
+{
+    codeGenUtils->RemoveUnusedFunctions();
+
+    mpm.add(createFunctionInliningPass());
+    mpm.add(createPruneEHPass());
+
     mpm.run(*module);
 }

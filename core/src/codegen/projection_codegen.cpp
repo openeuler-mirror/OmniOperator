@@ -101,6 +101,8 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Argument *outputAddress = funcDecl->getArg(OUTPUT_ADDRESS_INDEX);
     outputAddress->setName("OUTPUT_ADDRESS");
 
+    codeGenUtils->RecordMainFunction(funcDecl);
+
     // Only use these values if filter enabled
     Argument *selected;
     Argument *numSelected;
@@ -245,7 +247,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
-        auto call = builder->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
+        auto call = codeGenUtils->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
         InlineFunctionInfo inlineFunctionInfo;
         auto inlineFunction = InlineFunction(*call, inlineFunctionInfo);
     } else {
@@ -320,6 +322,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     FunctionType *funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
     llvm::Function *funcDecl =
         llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
+    codeGenUtils->RecordMainFunction(funcDecl);
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);
@@ -354,6 +357,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     builder->CreateStore(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"), retStore);
 
     builder->CreateRet(retStore);
+    OptimizeModule();
     llvm::verifyFunction(*func);
 #ifdef DEBUG
     module->print(errs(), nullptr);

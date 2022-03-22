@@ -44,6 +44,8 @@
 #include "util/debug.h"
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
+#include "codegen_utils.h"
+
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -111,6 +113,7 @@ protected:
 
     virtual llvm::Function *CreateFunction();
     void OptimizeFunctionsAndModule();
+    void OptimizeModule();
 
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<llvm::LLVMContext> context;
@@ -127,6 +130,7 @@ protected:
     int numGlobalValues = 0;
     std::unique_ptr<LLVMTypes> llvmTypes;
     std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
+    std::unique_ptr<CodeGenUtils> codeGenUtils;
 
 private:
     std::string funcName;
