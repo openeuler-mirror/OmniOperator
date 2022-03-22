@@ -26,7 +26,6 @@ message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 set(target_generated ${CMAKE_INSTALL_PREFIX}/libomni_runtime.so
         ${CMAKE_INSTALL_PREFIX}/libomni_vector.so
         ${CMAKE_INSTALL_PREFIX}/libcodegen.so
-        ${CMAKE_INSTALL_PREFIX}/libsecurec.so
         ${CMAKE_INSTALL_PREFIX}/ir
         ${CMAKE_INSTALL_PREFIX}/liboperator.so
         )
@@ -39,11 +38,9 @@ endforeach (file)
 
 # for header searching
 include_directories(SYSTEM src)
-include_directories(SYSTEM thirdparty)
 
 # compile library
 add_subdirectory(src)
-add_subdirectory(thirdparty/huawei_secure_c)
 
 # unit test
 enable_testing()

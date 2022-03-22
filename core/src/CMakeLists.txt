@@ -45,9 +45,7 @@ message(STATUS "Install libomni_runtime.so into ${CMAKE_INSTALL_PREFIX}")
 # compile IR files
 set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
 set(LLVM_INCLUDE -I/usr/lib/llvm-12/include)
-set(COMPILE_INCLUDE_SOURCE
-        -I${CMAKE_CURRENT_LIST_DIR}
-        -I${CMAKE_CURRENT_LIST_DIR}/../thirdparty)
+set(COMPILE_INCLUDE_SOURCE -I${CMAKE_CURRENT_LIST_DIR})
 
 # add sources file, if you have new source need compile to ir file, pls add it here.
 set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp
