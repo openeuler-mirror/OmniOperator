@@ -6,7 +6,7 @@
 #define __MURMUR3HASH_H__
 
 #include <iostream>
-#include "../../../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 
 // All extern functions go here temporarily
 #ifdef _WIN32

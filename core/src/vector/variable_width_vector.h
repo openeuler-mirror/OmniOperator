@@ -5,7 +5,7 @@
 #ifndef __VARIABLE_WIDTH_VECTOR_OPERATOR_H__
 #define __VARIABLE_WIDTH_VECTOR_OPERATOR_H__
 
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 
 #include "vector.h"
 #include "dictionary_vector.h"

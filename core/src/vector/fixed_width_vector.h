@@ -6,7 +6,7 @@
 #define __FIXED_WIDTH_VECTOR_OPERATOR_H__
 
 #include <type/data_type.h>
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 
 #include "vector.h"
 #include "../type/decimal128.h"

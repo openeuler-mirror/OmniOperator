@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include "../util/compiler_util.h"
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 namespace omniruntime {
 namespace op {
 static const int32_t ROTATE_DISTANCE_1 = 1;

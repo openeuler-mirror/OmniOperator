@@ -5,8 +5,7 @@
 #define __OMNI_JIT_LIBRARY_LOADER_H__
 
 #include "llvm/Support/FileSystem.h"
-#include "../../../thirdparty/huawei_secure_c/include/securec.h"
-
+#include <huawei_secure_c/include/securec.h>
 #include <link.h>
 #include <iostream>
 #include <fstream>

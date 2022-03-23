@@ -4,7 +4,7 @@
 #ifndef __DICTIONARY_VECTOR_H__
 #define __DICTIONARY_VECTOR_H__
 
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 
 #include "vector.h"
 #include "vector_allocator.h"

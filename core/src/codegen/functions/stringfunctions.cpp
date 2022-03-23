@@ -6,7 +6,7 @@
 #include <string>
 #include <cstring>
 #include <regex>
-#include "../../../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 #include "context_helper.h"
 
 #ifdef _WIN32

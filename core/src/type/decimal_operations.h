@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <iostream>
 #include <climits>
-#include "../thirdparty/huawei_secure_c/include/securec.h"
+#include <huawei_secure_c/include/securec.h>
 #include "util/debug.h"
 #include "decimal_base.h"
 #include "decimal128.h"
