@@ -86,7 +86,7 @@ void *OmniAllocate(uint64_t size)
 {
     uint8_t *buf = nullptr;
     uint64_t preferredSize = GetPreferredSize(size);
-#ifdef DEBUG
+#ifdef DEBUG_VECTOR
     RecordSize(preferredSize);
 #endif
     g_jemallocMemoryPool.Allocate(preferredSize, &buf);
