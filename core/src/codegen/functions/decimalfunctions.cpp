@@ -2,6 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry math function name
  */
+#include <cmath>
 #include "context_helper.h"
 #include "decimalfunctions.h"
 
@@ -90,6 +91,13 @@ extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, 
 {
     *outHighPtr = 0;
     *outLowPtr = x;
+}
+
+extern "C" DLLEXPORT int64_t DivDec64(int64_t x, int64_t y)
+{
+    if (y != 0) {
+        return round(double(x)/y);
+    }
 }
 }
 }

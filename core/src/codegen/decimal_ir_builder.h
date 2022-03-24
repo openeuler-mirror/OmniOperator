@@ -13,13 +13,14 @@
 #include "../type/data_type.h"
 #include "codegen_utils.h"
 
+
 class DecimalIRBuilder {
 public:
     explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder,
         CodeGenUtils &codeGenUtils)
         : context(context), module(module), builder(builder), codeGenUtils(codeGenUtils)
     {
-        this->AddScaleMultiplier();
+        AddGlobalVariables();
     }
     virtual ~DecimalIRBuilder() = default;
     llvm::Value *CallDecimalFunction(const std::string &function_name, llvm::Type *return_type,
@@ -30,21 +31,31 @@ public:
     DecimalSplitValue Split(llvm::Value *fullValue);
     // Combine the two parts into an i128
     llvm::Value *ToInt128(llvm::Value *high, llvm::Value *low) const;
-    void AddScaleMultiplier() const;
-    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue, llvm::Value &rightScale,
-        llvm::Value **scaledLeft, llvm::Value **scaledRight);
-    llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta);
-    llvm::Value *GetScaleMultiplier(llvm::Value &delta);
+    void AddScaleMultiplier(llvm::IntegerType *integerType, llvm::Type *type, int32_t defaultPrecision,
+    std::string multipliersName) const;
+    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+    llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight, omniruntime::type::DataTypeId typeId);
+    llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta, omniruntime::type::DataTypeId typeId);
+    llvm::Value *GetScaleMultiplier(llvm::Value &delta, std::string multipliersName);
     llvm::Value *BuildIfElse(llvm::Value &condition, llvm::Type &return_type, std::function<llvm::Value *()> then_func,
         std::function<llvm::Value *()> else_func);
+    void AddGlobalVariables();
+
     friend class ExpressionCodeGen;
 
+    const int32_t DECIMAL128_DEFAULT_PRECISION = 38;
+    const int32_t DECIMAL64_DEFAULT_PRECISION = 19;
+
 private:
+    llvm::Type * GetLLVMType(omniruntime::type::DataTypeId typeId);
+    std::string GetMultipliersName(omniruntime::type::DataTypeId typeId);
+
     llvm::LLVMContext &context;
     llvm::Module &module;
     llvm::IRBuilder<> &builder;
     CodeGenUtils &codeGenUtils;
-    const std::string scaleMultipliersName = "SCALE_MULTIPLIERS";
+    const std::string scale128MultipliersName = "SCALE_MULTIPLIERS128";
+    const std::string scale64MultipliersName = "SCALE_MULTIPLIERS64";
 };
 
 

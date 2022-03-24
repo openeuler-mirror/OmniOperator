@@ -26,7 +26,9 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(AbsDecimal128), "abs", {}, { OMNI_DECIMAL128 }, OMNI_DECIMAL128),
         // Decimal Cast Long to Decimal128
         Function(reinterpret_cast<void *>(CastInt64ToDecimal128), "CAST", {}, { OMNI_LONG }, OMNI_DECIMAL128),
-        Function(reinterpret_cast<void *>(CastInt64ToDecimal128), "CAST", {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL128) };
+        Function(reinterpret_cast<void *>(CastInt64ToDecimal128), "CAST", {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL128),
+        Function(reinterpret_cast<void *>(DivDec64), "Div_decimal64", {}, {OMNI_DECIMAL64, OMNI_DECIMAL64},
+            OMNI_DECIMAL64)};
 
     return decimalFnRegistry;
 }

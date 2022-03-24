@@ -110,6 +110,19 @@ protected:
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 
+
+    std::pair<llvm::Value*, llvm::Value*> RescaleDecimals(omniruntime::expressions::Expr &expr, CodeGenValue &left,
+        CodeGenValue &right, int scaleDiff, omniruntime::type::DataTypeId typeId);
+
+    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, std::shared_ptr<CodeGenValue> val,
+        std::shared_ptr<CodeGenValue> lowerVal, std::shared_ptr<CodeGenValue> upperVal,
+        std::pair<llvm::Value**, llvm::Value**> cmpPair);
+
+    void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+
+
+
     virtual llvm::Function *CreateFunction();
     void OptimizeFunctionsAndModule();
     void OptimizeModule();
@@ -138,6 +151,9 @@ private:
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::type::DataType dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
+    void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
+        llvm::Value *rightNull);
+
 };
 
 #endif
