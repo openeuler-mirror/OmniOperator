@@ -2,8 +2,8 @@
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
-import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
@@ -11,11 +11,10 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
-
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -142,12 +141,14 @@ public class OmniAggregationOperatorTest {
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+                    DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                            LongDataType.LONG};
                     FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                             OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
                     int[] aggInputChannels = {0, 1, 2, 3};
                     int[] maskChannels = {-1, -1, -1, -1};
-                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                            LongDataType.LONG};
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
                             aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
 

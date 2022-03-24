@@ -7,13 +7,10 @@
 
 using namespace omniruntime::type;
 
-FunctionSignature::FunctionSignature()
-{
-}
+FunctionSignature::FunctionSignature() {}
 
-FunctionSignature::FunctionSignature(
-        const std::string name, std::vector<DataTypeId> params,
-        const omniruntime::type::DataTypeId &returnType, void *address)
+FunctionSignature::FunctionSignature(const std::string name, std::vector<DataTypeId> params,
+    const omniruntime::type::DataTypeId &returnType, void *address)
 {
     this->funcName = name;
     this->paramTypes = params;
@@ -22,13 +19,11 @@ FunctionSignature::FunctionSignature(
 }
 
 // Copy constructor
-FunctionSignature::FunctionSignature(const FunctionSignature &fs) : funcName(fs.funcName), paramTypes(fs.paramTypes),
-    retType(fs.retType), funcAddress(fs.funcAddress)
-{
-}
+FunctionSignature::FunctionSignature(const FunctionSignature &fs)
+    : funcName(fs.funcName), paramTypes(fs.paramTypes), retType(fs.retType), funcAddress(fs.funcAddress)
+{}
 
-FunctionSignature::~FunctionSignature() {
-}
+FunctionSignature::~FunctionSignature() {}
 
 std::string FunctionSignature::GetName() const
 {
@@ -42,15 +37,15 @@ const std::vector<DataTypeId> &FunctionSignature::GetParams() const
 
 DataTypeId FunctionSignature::GetReturnType() const
 {
-    return this-> retType;
+    return this->retType;
 }
 
-void* FunctionSignature::GetFunctionAddress() const
+void *FunctionSignature::GetFunctionAddress() const
 {
     return this->funcAddress;
 }
 
-FunctionSignature &FunctionSignature::operator=(FunctionSignature other)
+FunctionSignature &FunctionSignature::operator = (FunctionSignature other)
 {
     std::swap(funcName, other.funcName);
     std::swap(paramTypes, other.paramTypes);
@@ -59,10 +54,9 @@ FunctionSignature &FunctionSignature::operator=(FunctionSignature other)
     return *this;
 }
 
-bool FunctionSignature::operator==(const FunctionSignature& other) const
+bool FunctionSignature::operator == (const FunctionSignature &other) const
 {
-    if (this->funcName != other.funcName ||
-        this->retType != other.retType ||
+    if (this->funcName != other.funcName || this->retType != other.retType ||
         this->paramTypes.size() != other.paramTypes.size()) {
         return false;
     }
@@ -90,7 +84,7 @@ size_t FunctionSignature::HashCode() const
 std::string FunctionSignature::ToString() const
 {
     auto result = this->funcName;
-    for (auto const &param : this->paramTypes) {
+    for (auto const & param : this->paramTypes) {
         result += "_";
         result += TypeUtil::TypeToString(param);
     }

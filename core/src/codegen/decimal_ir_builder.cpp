@@ -23,7 +23,8 @@ void DecimalIRBuilder::AddScaleMultiplier() const
     auto initializer = llvm::ConstantArray::get(arrayType, llvm::ArrayRef<llvm::Constant *>(scale_multipliers));
 
     auto globalScaleMultipliers = std::make_unique<llvm::GlobalVariable>(this->module, arrayType, true,
-        llvm::GlobalValue::LinkOnceAnyLinkage, initializer, this->scaleMultipliersName).release();
+        llvm::GlobalValue::LinkOnceAnyLinkage, initializer, this->scaleMultipliersName)
+                                      .release();
     int32_t alignment = 16;
     globalScaleMultipliers->setAlignment(llvm::MaybeAlign(alignment));
 }

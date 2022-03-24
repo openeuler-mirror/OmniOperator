@@ -4,6 +4,8 @@
 
 package nova.hetu.omniruntime.operator.limit;
 
+import static java.util.Objects.requireNonNull;
+
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
@@ -12,8 +14,6 @@ import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * The type Omni distinct limit operator factory.

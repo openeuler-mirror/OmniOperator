@@ -17,13 +17,13 @@ import static org.testng.Assert.assertTrue;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Date32DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.Decimal64DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 

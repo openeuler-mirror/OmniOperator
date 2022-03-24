@@ -1,13 +1,14 @@
+
 package nova.hetu.omniruntime.vector;
+
+import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_INT;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
-import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_INT;
 import java.util.Arrays;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
 
 /**
  * test int vec
@@ -107,16 +108,14 @@ public class TestIntVec {
         for (int i = 0; i < vec.getSize(); i++) {
             if (i % 5 == 0) {
                 vec.setNull(i);
-            }
-            else {
+            } else {
                 vec.set(i, i);
             }
         }
         for (int i = 0; i < vec.getSize(); i++) {
             if (i % 5 == 0) {
                 assertTrue(vec.isNull(i));
-            }
-            else {
+            } else {
                 assertEquals(vec.get(i), i);
             }
         }

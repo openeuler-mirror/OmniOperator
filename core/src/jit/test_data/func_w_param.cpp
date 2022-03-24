@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <vector>
 
-__attribute__((noinline)) int Process(
-    const int rowData[],const int y[], int z)
+__attribute__((noinline)) int Process(const int rowData[], const int y[], int z)
 {
     int sum = 0;
     printf("hello %d\n", z);

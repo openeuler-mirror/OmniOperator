@@ -7,8 +7,8 @@ import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
-import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;

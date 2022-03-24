@@ -22,8 +22,8 @@ class ContainerVector : public Vector {
     using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
 
 public:
-    ContainerVector(VectorAllocator *allocator, int32_t positionCount, std::vector<uintptr_t>& fieldVectors,
-        int32_t vectorCount, std::vector<DataType>& dataTypes);
+    ContainerVector(VectorAllocator *allocator, int32_t positionCount, std::vector<uintptr_t> &fieldVectors,
+        int32_t vectorCount, std::vector<DataType> &dataTypes);
 
     ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount);
 

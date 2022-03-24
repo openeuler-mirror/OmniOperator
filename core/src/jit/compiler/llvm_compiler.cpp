@@ -67,7 +67,7 @@ bool LLVMCompiler::LoadModule(std::string templatePath)
         return false;
     }
 
-    for (auto const &function : module->getFunctionList()) {
+    for (auto const & function : module->getFunctionList()) {
         this->functionSymbols.push_back(function.getName().str());
     }
 
@@ -158,7 +158,7 @@ uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMan
             return 0;
         }
     } else {
-        for (auto const &function : this->functionSymbols) {
+        for (auto const & function : this->functionSymbols) {
             if (function.find(functionName) == string::npos) {
                 continue;
             }
@@ -502,4 +502,3 @@ string build_param_key(llvm::Function &func, int arg_pos)
 }
 }
 }
-

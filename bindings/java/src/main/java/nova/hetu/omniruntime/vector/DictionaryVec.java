@@ -31,8 +31,8 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     public DictionaryVec(Vec dictionary, int[] ids) {
-        super(dictionary.getAllocator(), ids.length * BYTES, ids.length,
-                VecEncoding.OMNI_VEC_ENCODING_DICTIONARY, dictionary.getType());
+        super(dictionary.getAllocator(), ids.length * BYTES, ids.length, VecEncoding.OMNI_VEC_ENCODING_DICTIONARY,
+                dictionary.getType());
         // set ids
         valuesBuf.setIntArray(0, ids, 0, ids.length * BYTES);
         // set dictionary vector

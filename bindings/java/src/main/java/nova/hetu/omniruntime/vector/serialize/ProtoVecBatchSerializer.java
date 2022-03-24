@@ -7,13 +7,12 @@ package nova.hetu.omniruntime.vector.serialize;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import java.nio.ByteBuffer;
 import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Date32DataType;
 import nova.hetu.omniruntime.type.Date64DataType;
 import nova.hetu.omniruntime.type.DecimalDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -30,8 +29,10 @@ import nova.hetu.omniruntime.vector.VariableWidthVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
-import nova.hetu.omniruntime.vector.VecFactory;
 import nova.hetu.omniruntime.vector.VecEncoding;
+import nova.hetu.omniruntime.vector.VecFactory;
+
+import java.nio.ByteBuffer;
 
 /**
  * VecBatchSerializer implementation of protobuf

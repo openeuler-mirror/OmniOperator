@@ -40,10 +40,9 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     public VarcharVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                      long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size,
-                      int offset) {
+            long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorOffsetBufAddress,
-            nativeVectorAllocator, capacityInBytes, size, offset, VarcharDataType.VARCHAR);
+                nativeVectorAllocator, capacityInBytes, size, offset, VarcharDataType.VARCHAR);
     }
 
     /**
@@ -61,7 +60,7 @@ public class VarcharVec extends VariableWidthVec {
     /**
      * Batch gets the specified bytes at the specified absolute
      *
-     * @param index  the element offset in vec
+     * @param index the element offset in vec
      * @param length the number of element
      * @return byte array
      */
@@ -75,7 +74,7 @@ public class VarcharVec extends VariableWidthVec {
      * according to the specified offset and length, read data from the buffer
      *
      * @param offsetInBytes offset bytes in buffer
-     * @param length        the length of the data to be read
+     * @param length the length of the data to be read
      * @return byte array
      */
     public byte[] getData(int offsetInBytes, int length) {
@@ -117,12 +116,12 @@ public class VarcharVec extends VariableWidthVec {
     /**
      * Batch sets the specified bytes at the specified absolute
      *
-     * @param index         the value of the element to be written
-     * @param values        the bytes array
+     * @param index the value of the element to be written
+     * @param values the bytes array
      * @param offsetInArray the element offset in bytes array
-     * @param offsets       offsets array
-     * @param offsetsIndex  the offset of the offsets array
-     * @param length        the number of elements
+     * @param offsets offsets array
+     * @param offsetsIndex the offset of the offsets array
+     * @param length the number of elements
      */
     public void put(int index, byte[] values, int offsetInArray, int[] offsets, int offsetsIndex, int length) {
         if (values == null || length == 0) {
@@ -134,7 +133,7 @@ public class VarcharVec extends VariableWidthVec {
         int dataLength = offsets[offsetsIndex + length] - offsets[offsetsIndex];
         // set offsets
         offsetsBuf.setIntArray((index + 1) * Integer.BYTES, newOffsets, Integer.BYTES,
-            (newOffsets.length - 1) * Integer.BYTES);
+                (newOffsets.length - 1) * Integer.BYTES);
         // set data
         setData(startOffset, values, offsetInArray + offsets[offsetsIndex], dataLength);
         lastOffsetPosition = index + length - 1;

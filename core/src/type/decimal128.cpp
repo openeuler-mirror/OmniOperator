@@ -230,7 +230,7 @@ static inline void ShiftArrayRight(uint32_t *array, int64_t length, int64_t bits
 
 // Fix the signs of the result and remainder at the end of the division based on
 // the signs of the dividend and divisor.
-template<class DecimalClass>
+template <class DecimalClass>
 static inline void FixDivisionSigns(DecimalClass &result, DecimalClass &remainder, bool dividendWasNegative,
     bool divisorWasNegative)
 {
@@ -244,7 +244,7 @@ static inline void FixDivisionSigns(DecimalClass &result, DecimalClass &remainde
 }
 
 // Build a little endian array of uint64_t from a big endian array of uint32_t.
-template<size_t N>
+template <size_t N>
 static OpStatus BuildFromArray(std::array<uint64_t, N> &resultArray, const uint32_t *array, int64_t length)
 {
     for (int64_t i = length - 2 * N - 1; i >= 0; i--) {
@@ -282,7 +282,7 @@ static OpStatus BuildFromArray(Decimal128 &value, const uint32_t *array, int64_t
 }
 
 // Do a division where the divisor fits into a single 32 bit value.
-template<class DecimalClass>
+template <class DecimalClass>
 static OpStatus SingleDivide(const uint32_t *dividend, int64_t dividendLength, uint32_t divisor,
     DecimalClass &remainder, DecimalClass &result)
 {
@@ -357,7 +357,7 @@ static uint32_t GuessResult(uint32_t *dividendArray, uint32_t *divisorArray, uin
     return guess;
 }
 
-template<class DecimalClass>
+template <class DecimalClass>
 static OpStatus ComplexDivide(uint32_t *dividendArray, int64_t dividendLength, uint32_t *divisorArray,
     uint32_t divisorLength, DecimalClass &remainder, DecimalClass &result)
 {
@@ -395,7 +395,7 @@ static OpStatus ComplexDivide(uint32_t *dividendArray, int64_t dividendLength, u
     return OpStatus::SUCCESS;
 }
 // / \brief Do a decimal division with remainder.
-template<class DecimalClass>
+template <class DecimalClass>
 static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &divisor, DecimalClass &result,
     DecimalClass &remainder)
 {

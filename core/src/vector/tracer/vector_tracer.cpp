@@ -41,7 +41,7 @@ void VectorTracer::Print(const char *message)
 void VectorTracer::PrepareTracerHeaderLog(std::stringstream &ss, const char *message) const
 {
     ss << "[scope:" << scope << "][" << message << "][vecAddr:" << vec << "][dataTypeId:" << vec->GetTypeId() <<
-       "][vecSize:" << vec->GetSize() << "]";
+        "][vecSize:" << vec->GetSize() << "]";
     ss << "\n\t";
 }
 }

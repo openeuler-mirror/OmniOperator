@@ -27,7 +27,7 @@ public class IntVec extends FixedWidthVec {
     }
 
     public IntVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                  long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
                 size, offset, IntDataType.INTEGER);
     }
@@ -53,7 +53,7 @@ public class IntVec extends FixedWidthVec {
     /**
      * get int values from the specified position
      *
-     * @param index  the position of element
+     * @param index the position of element
      * @param length the number of element
      * @return int value array
      */
@@ -78,7 +78,7 @@ public class IntVec extends FixedWidthVec {
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start  the element index in values
+     * @param start the element index in values
      * @param length the number of elements that need to written
      */
     public void put(int[] values, int offset, int start, int length) {

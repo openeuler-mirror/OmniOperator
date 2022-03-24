@@ -11,7 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package nova.hetu.omniruntime.vector;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -30,8 +33,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.concurrent.TimeUnit;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -234,13 +235,10 @@ public class BenchmarkVecWithPool {
         }
     }
 
-    public static void main(String[] args)
-            throws RunnerException {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
+    public static void main(String[] args) throws RunnerException {
+        Options options = new OptionsBuilder().verbosity(VerboseMode.NORMAL)
                 .include(".*" + BenchmarkVecWithPool.class.getSimpleName() + ".test_.*_with_initial_all_page*")
-                .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g")
-                .build();
+                .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g").build();
 
         new Runner(options).run();
     }
@@ -310,7 +308,7 @@ public class BenchmarkVecWithPool {
             }
 
             /**
-             * executor 
+             * executor
              */
             public ExecutorWithHeapPageInitial executor(int loopReadCount) {
                 // test read, get vec all data
@@ -389,7 +387,8 @@ public class BenchmarkVecWithPool {
          * testOmniVecWithInitialAllPage
          */
         public void testOmniVecWithInitialAllPage(int pageCount, int pageSize, int readLoopCount) {
-            ExecutorWithOmniPagesInitial executorWithOmniPagesInitial = new ExecutorWithOmniPagesInitial(pageCount, pageSize);
+            ExecutorWithOmniPagesInitial executorWithOmniPagesInitial = new ExecutorWithOmniPagesInitial(pageCount,
+                    pageSize);
             executorWithOmniPagesInitial.executor(readLoopCount).release();
         }
 
@@ -397,7 +396,8 @@ public class BenchmarkVecWithPool {
          * testHeapVecWithInitialAllPage
          */
         public void testHeapVecWithInitialAllPage(int pageCount, int pageSize, int readLoopCount) {
-            ExecutorWithHeapPageInitial executorWithHeapPagesInitial = new ExecutorWithHeapPageInitial(pageCount, pageSize);
+            ExecutorWithHeapPageInitial executorWithHeapPagesInitial = new ExecutorWithHeapPageInitial(pageCount,
+                    pageSize);
             executorWithHeapPagesInitial.executor(readLoopCount).release();
         }
 
@@ -416,7 +416,7 @@ public class BenchmarkVecWithPool {
                 value2.set(i, i);
             }
 
-            return new LongVec[] {key1, key2, value1, value2};
+            return new LongVec[]{key1, key2, value1, value2};
         }
 
         /**
@@ -433,7 +433,7 @@ public class BenchmarkVecWithPool {
                 value1.set(i, i);
                 value2.set(i, i);
             }
-            return new HeapLongVec[] {key1, key2, value1, value2};
+            return new HeapLongVec[]{key1, key2, value1, value2};
         }
 
         /**
@@ -450,7 +450,7 @@ public class BenchmarkVecWithPool {
                 value1.set(i, 1);
                 value2.set(i, 1);
             }
-            return new UnsafeLongVec[] {key1, key2, value1, value2};
+            return new UnsafeLongVec[]{key1, key2, value1, value2};
         }
 
         /**

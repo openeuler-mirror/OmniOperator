@@ -14,14 +14,14 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.DataType;
-
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
+
 import org.testng.annotations.Test;
 
 import java.util.Iterator;

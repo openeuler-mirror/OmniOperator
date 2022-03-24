@@ -27,9 +27,9 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     public DoubleVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                     long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, DoubleDataType.DOUBLE);
+                size, offset, DoubleDataType.DOUBLE);
     }
 
     private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice) {
@@ -53,7 +53,7 @@ public class DoubleVec extends FixedWidthVec {
     /**
      * get double values from the specified position
      *
-     * @param index  the position of element
+     * @param index the position of element
      * @param length the number of element
      * @return double value array
      */
@@ -78,7 +78,7 @@ public class DoubleVec extends FixedWidthVec {
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start  the element index in values
+     * @param start the element index in values
      * @param length the number of elements that need to written
      */
     public void put(double[] values, int offset, int start, int length) {

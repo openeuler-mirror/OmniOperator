@@ -10,7 +10,7 @@
 
 class FilterCodeGen : public ExpressionCodeGen {
 public:
-    /**
+    /* *
      * Method to create and initialize a FilterCodeGen instance
      *
      * @param name Name for FilterCodeGen module
@@ -27,7 +27,8 @@ public:
 
 private:
     FilterCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
-        : ExpressionCodeGen(std::move(name), expression) {}
+        : ExpressionCodeGen(std::move(name), expression)
+    {}
     int64_t CreateWrapper(llvm::Function &filter);
 };
 #endif

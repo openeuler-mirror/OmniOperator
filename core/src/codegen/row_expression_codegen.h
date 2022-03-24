@@ -12,15 +12,15 @@
 
 class RowExpressionCodeGen : public ExpressionCodeGen {
 public:
-    /**
+    /* *
      * Method to create and initialize a RowExpressionCodeGen instance
      *
      * @param name Name for RowExpressionCodeGen module
      * @param expression the expression
      * @return unique_ptr to the RowExpressionCodeGen instance
      */
-    static std::unique_ptr<RowExpressionCodeGen> Create(
-        std::string name, const omniruntime::expressions::Expr &expression);
+    static std::unique_ptr<RowExpressionCodeGen> Create(std::string name,
+        const omniruntime::expressions::Expr &expression);
 
     ~RowExpressionCodeGen() override = default;
 
@@ -30,8 +30,9 @@ public:
 
 private:
     RowExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
-        : ExpressionCodeGen(std::move(name), expression) {}
-    llvm::Function* CreateFunction() override;
+        : ExpressionCodeGen(std::move(name), expression)
+    {}
+    llvm::Function *CreateFunction() override;
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
 };
 

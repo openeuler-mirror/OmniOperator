@@ -7,6 +7,7 @@ namespace omniruntime {
 namespace op {
 AggregationCommonOperator::AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw,
     bool outputPartial)
-    : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial) {}
+    : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial)
+{}
 }
 }

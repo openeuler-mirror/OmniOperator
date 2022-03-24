@@ -18,7 +18,8 @@ public:
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumLongDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw, bool outputPartial)
+    SumLongDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw,
+        bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 

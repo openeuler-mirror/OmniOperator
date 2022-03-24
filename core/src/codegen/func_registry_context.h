@@ -8,10 +8,10 @@
 #include "func_registry_base.h"
 
 namespace omniruntime {
-    class ContextFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class ContextFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_CONTEXT_H

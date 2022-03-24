@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.vector;
 
-import java.nio.ByteOrder;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import sun.misc.Unsafe;
@@ -13,6 +12,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -32,7 +32,7 @@ public final class JvmUtils {
     private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
         if (actualIndexScale != expectedIndexScale) {
             throw new IllegalStateException(
-                name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
+                    name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
         }
     }
 
@@ -82,7 +82,7 @@ public final class JvmUtils {
                     }
                 } else {
                     throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                        "get the director byte buffer constructor failed.");
+                            "get the director byte buffer constructor failed.");
                 }
             } finally {
                 if (address != -1) {
@@ -103,19 +103,18 @@ public final class JvmUtils {
     public static ByteBuffer directBuffer(OmniBuf omniBuf) {
         if (omniBuf.getCapacity() < 0) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
-                "Capacity is negative, has to be positive or 0");
+                    "Capacity is negative, has to be positive or 0");
         }
 
         if (DIRECT_BUFFER_CONSTRUCTOR == null) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                "DirectByteBuffer.<ini>(long, int) not available");
+                    "DirectByteBuffer.<ini>(long, int) not available");
         }
         try {
-            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(),
-                omniBuf.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
+            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(), omniBuf.getCapacity()))
+                    .order(ByteOrder.LITTLE_ENDIAN);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }
     }
-
 }

@@ -40,7 +40,7 @@ Vector *VectorBatch::NewContainerVec(VectorAllocator *vecAllocator)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataType> dataTypes = {DoubleDataType(), LongDataType()};
+    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
     return new ContainerVector(vecAllocator, rowCount, vectorAddresses, 2, dataTypes);
 }
 

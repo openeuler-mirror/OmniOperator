@@ -11,10 +11,10 @@
 const std::string WrapVarcharVectorStr = "WrapVarcharVector";
 
 namespace omniruntime {
-    class VarcharVectorFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class VarcharVectorFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_VARCHAR_VECTOR_H

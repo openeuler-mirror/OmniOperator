@@ -9,20 +9,17 @@ using namespace omniruntime::type;
 
 std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
 {
-    std::vector<DataTypeId> paramTypes = {OMNI_LONG, OMNI_INT};
-    std::vector<Function> dictionaryFnRegistry = {
-        Function(reinterpret_cast<void*>(GetIntFromDictionaryVector), "DictionaryGetInt", {}, paramTypes,
-                 OMNI_INT),
-        Function(reinterpret_cast<void*>(GetLongFromDictionaryVector), "DictionaryGetLong", {}, paramTypes,
-                 OMNI_LONG),
-        Function(reinterpret_cast<void*>(GetDoubleFromDictionaryVector), "DictionaryGetDouble", {},
-                 paramTypes, OMNI_DOUBLE),
-        Function(reinterpret_cast<void*>(GetBooleanFromDictionaryVector), "DictionaryGetBoolean", {},
-                 paramTypes, OMNI_BOOLEAN),
-        Function(reinterpret_cast<void*>(GetVarcharFromDictionaryVector),
-                 "DictionaryGetVarchar", {}, paramTypes, OMNI_VARCHAR),
-        Function(reinterpret_cast<void*>(GetDecimalFromDictionaryVector),
-                 "DictionaryGetDecimal", {}, paramTypes, OMNI_DECIMAL128)
-    };
+    std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT };
+    std::vector<Function> dictionaryFnRegistry = { Function(reinterpret_cast<void *>(GetIntFromDictionaryVector),
+        "DictionaryGetInt", {}, paramTypes, OMNI_INT),
+        Function(reinterpret_cast<void *>(GetLongFromDictionaryVector), "DictionaryGetLong", {}, paramTypes, OMNI_LONG),
+        Function(reinterpret_cast<void *>(GetDoubleFromDictionaryVector), "DictionaryGetDouble", {}, paramTypes,
+        OMNI_DOUBLE),
+        Function(reinterpret_cast<void *>(GetBooleanFromDictionaryVector), "DictionaryGetBoolean", {}, paramTypes,
+        OMNI_BOOLEAN),
+        Function(reinterpret_cast<void *>(GetVarcharFromDictionaryVector), "DictionaryGetVarchar", {}, paramTypes,
+        OMNI_VARCHAR),
+        Function(reinterpret_cast<void *>(GetDecimalFromDictionaryVector), "DictionaryGetDecimal", {}, paramTypes,
+        OMNI_DECIMAL128) };
     return dictionaryFnRegistry;
 }

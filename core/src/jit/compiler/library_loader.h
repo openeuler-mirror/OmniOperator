@@ -19,7 +19,8 @@
 class StringOrNull {
 public:
     StringOrNull(std::string mssg = "", bool present = false) : mssg(mssg), present(present) {}
-    StringOrNull(char* ca) {
+    StringOrNull(char *ca)
+    {
         if (ca != nullptr) {
             this->mssg = ca;
             this->present = true;
@@ -28,7 +29,8 @@ public:
         }
     }
     ~StringOrNull() {}
-    StringOrNull operator=(char* ca) {
+    StringOrNull operator = (char *ca)
+    {
         StringOrNull son;
         if (ca != nullptr) {
             son.mssg = ca;
@@ -36,12 +38,15 @@ public:
         }
         return son;
     }
-    std::string msg() {
+    std::string msg()
+    {
         return mssg;
     }
-    bool isPresent() {
+    bool isPresent()
+    {
         return present;
     }
+
 private:
     std::string mssg;
     bool present;
@@ -57,10 +62,11 @@ public:
     std::string PreferredPath() const;
     int32_t Priority() const;
     void SetPreferredPath(std::string path);
+
 private:
-    std::string fileName{};
-    std::string libName{};
-    std::string preferredPath{};
+    std::string fileName {};
+    std::string libName {};
+    std::string preferredPath {};
     int32_t priority = 0;
 };
 
@@ -71,14 +77,15 @@ public:
     std::vector<std::string> LoadLibraries(std::string envStr);
     bool FinishedLoading();
     static std::string ExtractFileName(std::string path);
+
 private:
-    void SearchPath(std::string path, std::unordered_map<std::string, std::vector<std::string>>& candidates);
-    std::string ValidateLibrary(const std::string& path, const std::string& realPath,
-                                std::unordered_map<std::string, std::vector<std::string>>& candidates);
+    void SearchPath(std::string path, std::unordered_map<std::string, std::vector<std::string>> &candidates);
+    std::string ValidateLibrary(const std::string &path, const std::string &realPath,
+        std::unordered_map<std::string, std::vector<std::string>> &candidates);
 
-    std::vector<CoreLibrary> neededLibs{};
+    std::vector<CoreLibrary> neededLibs {};
 
-    static std::string ResolveSymlink(const std::string& path);
+    static std::string ResolveSymlink(const std::string &path);
 };
 
 #endif

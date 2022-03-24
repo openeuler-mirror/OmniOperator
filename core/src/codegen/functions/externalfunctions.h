@@ -16,8 +16,7 @@
 // Example functions
 extern DLLEXPORT int32_t StringLength(char *str, int32_t length);
 
-template<typename T>
-extern DLLEXPORT T Increment(T x)
+template <typename T> extern DLLEXPORT T Increment(T x)
 {
     return x + 1;
 }

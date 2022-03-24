@@ -56,7 +56,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *          */
+             *           */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64:
             case OMNI_VARCHAR: {

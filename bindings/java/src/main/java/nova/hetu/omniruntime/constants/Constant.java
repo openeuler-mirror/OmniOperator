@@ -7,9 +7,10 @@ package nova.hetu.omniruntime.constants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import nova.hetu.omniruntime.OmniLibs;
+
 import java.io.Serializable;
 import java.util.Objects;
-import nova.hetu.omniruntime.OmniLibs;
 
 /**
  * The type Constant.

@@ -12,9 +12,10 @@
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT {
-char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
-bool ArenaAllocatorReset(int64_t contextPtr);
+extern "C" DLLEXPORT
+{
+    char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
+    bool ArenaAllocatorReset(int64_t contextPtr);
 }
 
 #endif

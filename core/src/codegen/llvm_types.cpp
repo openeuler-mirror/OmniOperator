@@ -20,8 +20,7 @@ const int INT128_VALUE = 128;
 
 LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
 {
-    VectorToLLVMTypeMap = {
-        { OMNI_INT, I32Type() },
+    VectorToLLVMTypeMap = { { OMNI_INT, I32Type() },
         { OMNI_LONG, I64Type() },
         { OMNI_DOUBLE, DoubleType() },
         { OMNI_BOOLEAN, I1Type() },
@@ -34,8 +33,7 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
         { OMNI_INTERVAL_MONTHS, I32Type() },
         { OMNI_INTERVAL_DAY_TIME, I32Type() },
         { OMNI_VARCHAR, I8PtrType() },
-        { OMNI_CHAR, I8PtrType() }
-    };
+        { OMNI_CHAR, I8PtrType() } };
 }
 
 LLVMTypes::~LLVMTypes() = default;

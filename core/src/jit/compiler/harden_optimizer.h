@@ -86,10 +86,8 @@ private:
         Optimization::DEAD_STORE_ELIMINATION,
     };
 
-    std::vector<ModuleOptimization> defaultModuleOptimizations = {
-        ModuleOptimization::PRUNE_EH,
-        ModuleOptimization::FUNCTION_INLINING
-    };
+    std::vector<ModuleOptimization> defaultModuleOptimizations = { ModuleOptimization::PRUNE_EH,
+                                                                   ModuleOptimization::FUNCTION_INLINING };
 
     void populatePass(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM);
 };

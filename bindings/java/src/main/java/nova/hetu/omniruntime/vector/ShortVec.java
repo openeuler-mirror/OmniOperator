@@ -27,9 +27,9 @@ public class ShortVec extends FixedWidthVec {
     }
 
     public ShortVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                    long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, ShortDataType.SHORT);
+                size, offset, ShortDataType.SHORT);
     }
 
     private ShortVec(ShortVec vector, int offset, int length, boolean isSlice) {
@@ -61,7 +61,7 @@ public class ShortVec extends FixedWidthVec {
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start  the element index in values
+     * @param start the element index in values
      * @param length the number of elements that need to written
      */
     public void put(short[] values, int offset, int start, int length) {

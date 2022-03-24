@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
@@ -6,9 +7,9 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.operator.topn.OmniTopNWithExprOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
@@ -16,7 +17,6 @@ import org.testng.annotations.Test;
 import java.util.Iterator;
 
 public class OmniTopNWithExprOperatorTest {
-
     @Test
     public void testTopNWithAllExpr() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
@@ -27,11 +27,11 @@ public class OmniTopNWithExprOperatorTest {
         int expectedRowSize = 5;
 
         OmniTopNWithExprOperatorFactory omniTopNOperatorFactory = new OmniTopNWithExprOperatorFactory(sourceTypes,
-            expectedRowSize, sortKeys, sortAsc, nullFirst);
+                expectedRowSize, sortKeys, sortAsc, nullFirst);
         OmniOperator operator = omniTopNOperatorFactory.createOperator();
 
         Object[][] sourceDatas = {{5, 8, 8, 6, 8, 4, 13, 15}, {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L},
-            {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L}};
+                {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         operator.addInput(vecBatch);
@@ -44,7 +44,7 @@ public class OmniTopNWithExprOperatorTest {
         assertEquals(resultVecBatch.getVectorCount(), sourceTypes.length + sortKeys.length);
 
         Object[][] expectedDatas = {{15, 13, 8, 8, 8}, {23L, 0L, 5L, 4L, 3L}, {8L, 7L, 3L, 1L, 2L},
-            {20, 18, 13, 13, 13}, {2L, 1L, 0L, 1L, 2L}};
+                {20, 18, 13, 13, 13}, {2L, 1L, 0L, 1L, 2L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
@@ -78,7 +78,7 @@ public class OmniTopNWithExprOperatorTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
 
         Object[][] expectedDatas = {{15, 13, 8, 8, 8}, {23L, 0L, 5L, 4L, 3L}, {8L, 7L, 3L, 1L, 2L},
-            {2L, 1L, 0L, 1L, 2L}};
+                {2L, 1L, 0L, 1L, 2L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
@@ -95,11 +95,11 @@ public class OmniTopNWithExprOperatorTest {
         int expectedRowSize = 5;
 
         OmniTopNWithExprOperatorFactory omniTopNOperatorFactory = new OmniTopNWithExprOperatorFactory(sourceTypes,
-            expectedRowSize, sortKeys, sortAsc, nullFirst);
+                expectedRowSize, sortKeys, sortAsc, nullFirst);
         OmniOperator operator = omniTopNOperatorFactory.createOperator();
 
         Object[][] sourceDatas = {{5, 8, 8, 6, 8, 4, 13, 15}, {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L},
-            {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L}};
+                {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         operator.addInput(vecBatch);

@@ -60,7 +60,7 @@ public:
         this->buildTypes = buildTypes;
     }
 
-    omniruntime::type::DataTypes* GetBuildDataTypes()
+    omniruntime::type::DataTypes *GetBuildDataTypes()
     {
         return this->buildTypes;
     }

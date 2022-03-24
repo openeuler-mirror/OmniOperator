@@ -10,10 +10,10 @@ import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinWithExprOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;

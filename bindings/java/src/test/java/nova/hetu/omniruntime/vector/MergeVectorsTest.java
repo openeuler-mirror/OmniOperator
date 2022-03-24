@@ -1,8 +1,9 @@
+
 package nova.hetu.omniruntime.vector;
 
-import org.testng.annotations.Test;
-
 import static org.testng.Assert.assertEquals;
+
+import org.testng.annotations.Test;
 
 /**
  * merge vector test
@@ -23,7 +24,8 @@ public class MergeVectorsTest {
         for (int i = vec1.getSize(), j = 0; i < vec2.getSize() + vec1.getSize(); i++, j++) {
             vec2.set(j, i);
         }
-        for (int i = vec1.getSize() + vec2.getSize(), j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
+        for (int i = vec1.getSize() + vec2.getSize(),
+                j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
             vec3.set(j, i);
         }
         vec.append(vec1, 0, vec1.getSize());
@@ -54,7 +56,8 @@ public class MergeVectorsTest {
         }
         vec.append(vec2, vec1.getSize(), vec2.getSize());
         // Creating and appending Vector 3
-        for (int i = vec1.getSize() + vec2.getSize(), j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
+        for (int i = vec1.getSize() + vec2.getSize(),
+                j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
             vec3.set(j, (double) i);
         }
         vec.append(vec3, vec1.getSize() + vec2.getSize(), vec3.getSize());
@@ -84,7 +87,8 @@ public class MergeVectorsTest {
         }
         vec.append(vec2, vec1.getSize(), vec2.getSize());
         // Creating and appending Vector 3
-        for (int i = vec1.getSize() + vec2.getSize(), j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
+        for (int i = vec1.getSize() + vec2.getSize(),
+                j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
             vec3.set(j, (long) i);
         }
         vec.append(vec3, vec1.getSize() + vec2.getSize(), vec3.getSize());

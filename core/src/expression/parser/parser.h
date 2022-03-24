@@ -19,8 +19,8 @@ public:
     Parser();
     ~Parser();
 
-    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, omniruntime::type::DataTypes inputTypes,
-        int32_t vecCount);
+    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input,
+        omniruntime::type::DataTypes inputTypes, int32_t vecCount);
 
     std::vector<omniruntime::expressions::Expr *> ParseExpressions(const std::string expressions[],
         int32_t numberOfExpressions, omniruntime::type::DataTypes inputTypes);

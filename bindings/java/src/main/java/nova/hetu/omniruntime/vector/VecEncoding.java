@@ -4,10 +4,9 @@
 
 package nova.hetu.omniruntime.vector;
 
-
 /**
  * vec encoding
- * */
+ */
 public enum VecEncoding {
     OMNI_VEC_ENCODING_FLAT,
     OMNI_VEC_ENCODING_DICTIONARY,

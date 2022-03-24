@@ -809,8 +809,7 @@ TEST(JSONParserTest, InExpr)
 TEST(JSONParserTest, SwitchExpr)
 {
     string whenJson = getWhenTestJson(OMNI_INT, getInt64TestJson(int64Val), getInt32TestJSON(int32Val));
-    string unparsedSwitchJson =
-        getSwitchTestJson(OMNI_INT, getInt32TestJSON(int32Val), whenJson, getInt32TestJSON(4));
+    string unparsedSwitchJson = getSwitchTestJson(OMNI_INT, getInt32TestJSON(int32Val), whenJson, getInt32TestJSON(4));
     Expr *switchExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedSwitchJson));
     auto condition = new TestBinaryExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
         make_unique<TestLiteralExpr>(int64Val, *LongType()).release(), BooleanType());

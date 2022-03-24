@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <vector>
 
-__attribute__((noinline)) int Preloop(
-    const int rowData[], const int y[], int z /* column count */)
+__attribute__((noinline)) int Preloop(const int rowData[], const int y[], int z /* column count */)
 {
     int p1[] = {1, 2, 3};
     int p2[] = {1, 2, 3};

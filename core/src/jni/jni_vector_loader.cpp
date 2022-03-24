@@ -9,8 +9,7 @@ namespace omniruntime {
 namespace vec {
 Vector *JniVectorLoader::Load()
 {
-    jobject nativeVector =
-        jniEnv->CallStaticObjectMethod(lazyVectorCls, lazyVectorLoaderMethodId, jLoader);
+    jobject nativeVector = jniEnv->CallStaticObjectMethod(lazyVectorCls, lazyVectorLoaderMethodId, jLoader);
     return reinterpret_cast<Vector *>(nativeVector);
 }
 }

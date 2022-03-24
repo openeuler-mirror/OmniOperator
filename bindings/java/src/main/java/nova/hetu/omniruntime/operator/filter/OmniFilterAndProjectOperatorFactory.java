@@ -23,7 +23,8 @@ import java.util.stream.Collectors;
  * @since 20210630
  */
 public class OmniFilterAndProjectOperatorFactory
-    extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.FactoryContext> {
+        extends
+            OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.FactoryContext> {
     private boolean isSupported;
 
     /**
@@ -38,31 +39,32 @@ public class OmniFilterAndProjectOperatorFactory
     }
 
     /**
-     * Instantiates a new Omni filter and project operator factory with configured expression parsing format.
+     * Instantiates a new Omni filter and project operator factory with configured
+     * expression parsing format.
      *
-     * @param expression     the expression
-     * @param inputTypes     the input types
-     * @param projections    the projections
-     * @param parseFormat    the format to parse expression into
+     * @param expression the expression
+     * @param inputTypes the input types
+     * @param projections the projections
+     * @param parseFormat the format to parse expression into
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
-        int parseFormat) {
+            int parseFormat) {
         super(new FactoryContext(new JitContext(expression, inputTypes, projections, parseFormat)));
     }
 
     private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
-        String expression, Object[] projections, int projectLength, long jitContext, int parseFormat);
+            String expression, Object[] projections, int projectLength, long jitContext, int parseFormat);
 
     private static native long createFilterAndProjectJitContext(String inputTypes, int inputLength, String expression,
-        int[] projectIndices, int projectLength);
+            int[] projectIndices, int projectLength);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         // long nativeOperatorFactory is 0 if operations/data-types are unsupported
         JitContext context = factoryContext.getJitContext();
         long factoryAddr = createFilterAndProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
-            context.inputTypes.length, context.expression, context.projections.toArray(), context.projections.size(),
-            factoryContext.getNativeJitContext(), context.parseFormat);
+                context.inputTypes.length, context.expression, context.projections.toArray(),
+                context.projections.size(), factoryContext.getNativeJitContext(), context.parseFormat);
         if (factoryAddr != 0) {
             isSupported = true;
         }
@@ -128,11 +130,10 @@ public class OmniFilterAndProjectOperatorFactory
             }
             JitContext that = (JitContext) obj;
             return Objects.equals(expression, that.expression) && Arrays.equals(inputTypes, that.inputTypes)
-                && Objects.equals(projections.stream().sorted().collect(Collectors.toList()),
-                that.projections.stream().sorted().collect(Collectors.toList()))
-                && parseFormat == that.parseFormat;
+                    && Objects.equals(projections.stream().sorted().collect(Collectors.toList()),
+                            that.projections.stream().sorted().collect(Collectors.toList()))
+                    && parseFormat == that.parseFormat;
         }
-
     }
 
     /**
@@ -152,9 +153,12 @@ public class OmniFilterAndProjectOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            // todo: use createProjectAndProjectJitContext when there is a jit optimization in future.
-            // return createFilterAndProjectJitContext(VecTypeSerializer.serialize(context.inputTypes),
-            //     context.inputTypes.length, context.expression, context.projectIndices, context.projectIndices.length);
+            // todo: use createProjectAndProjectJitContext when there is a jit optimization
+            // in future.
+            // return
+            // createFilterAndProjectJitContext(VecTypeSerializer.serialize(context.inputTypes),
+            // context.inputTypes.length, context.expression, context.projectIndices,
+            // context.projectIndices.length);
             return 0;
         }
     }

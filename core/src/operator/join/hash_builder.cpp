@@ -27,11 +27,11 @@ HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
-        const type::DataTypes &dataTypes, const int32_t *buildHashCols, int32_t buildHashColsCount,
-        std::string &filterExpr, int32_t operatorCount)
+    const type::DataTypes &dataTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr,
+    int32_t operatorCount)
 {
     auto pOperatorFactory = std::make_unique<HashBuilderOperatorFactory>(dataTypes, buildHashCols, buildHashColsCount,
-                                                                         filterExpr, operatorCount);
+        filterExpr, operatorCount);
     return pOperatorFactory.release();
 }
 
@@ -74,9 +74,11 @@ int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch
 
     // build JoinHashTable
     PagesHashStrategy *pagesHashStrategy = std::make_unique<PagesHashStrategy>(pagesIndex->GetColumns(),
-        buildTypes.GetIds(), buildTypes.GetSize(), &buildHashCols[0], buildHashCols.size()).release();
+        buildTypes.GetIds(), buildTypes.GetSize(), &buildHashCols[0], buildHashCols.size())
+                                               .release();
     JoinHashTable *joinHashTable = std::make_unique<JoinHashTable>(pagesHashStrategy, pagesIndex->GetValueAddresses(),
-        pagesIndex->GetPositionCount()).release();
+        pagesIndex->GetPositionCount())
+                                       .release();
     hashTables->AddHashTable(partitionIndex, joinHashTable);
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;

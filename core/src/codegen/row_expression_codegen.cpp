@@ -10,13 +10,13 @@ using namespace llvm::orc;
 using namespace omniruntime::expressions;
 
 namespace {
-    const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
+const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
 }
 
-std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(
-    std::string name, const omniruntime::expressions::Expr &expression)
+std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(std::string name,
+    const omniruntime::expressions::Expr &expression)
 {
-    std::unique_ptr<RowExpressionCodeGen> codegen {new RowExpressionCodeGen(std::move(name), expression)};
+    std::unique_ptr<RowExpressionCodeGen> codegen { new RowExpressionCodeGen(std::move(name), expression) };
     codegen->Initialize();
     return codegen;
 }
@@ -141,7 +141,7 @@ Function *RowExpressionCodeGen::CreateFunction()
 int64_t RowExpressionCodeGen::GetFunction()
 {
 #ifdef DEBUG
-    std::cout<<"Row Expression: "<<std::endl;
+    std::cout << "Row Expression: " << std::endl;
     ExprPrinter p;
     expr->Accept(p);
     std::cout << std::endl;

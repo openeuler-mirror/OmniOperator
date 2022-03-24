@@ -171,7 +171,7 @@ public:
     friend void to_json(nlohmann::json &nlohmannJson, const DataType &dataType)
     {
         nlohmannJson = nlohmann::json {
-            { ID, dataType.id }, { WIDTH, dataType.width }, { PRECISION, dataType.precision },
+            { ID, dataType.id },       { WIDTH, dataType.width },        { PRECISION, dataType.precision },
             { SCALE, dataType.scale }, { DATE_UNIT, dataType.dateUnit }, { TIME_UNIT, dataType.timeUnit }
         };
     }

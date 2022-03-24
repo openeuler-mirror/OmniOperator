@@ -46,7 +46,7 @@ bool IsBigEndian()
     union {
         int32_t m;
         char n;
-    } uval = {0};
+    } uval = { 0 };
     uval.m = MM3_INT_ONE;
     if (uval.n == MM3_INT_ONE) {
         return false;
@@ -57,10 +57,8 @@ bool IsBigEndian()
 
 int32_t ReverseBytes(int32_t x)
 {
-    return ((x >> REVERSE_SHIFT_M) & REVERSE_AND_A) |
-           ((x << REVERSE_SHIFT_N) & REVERSE_AND_B) |
-           ((x >> REVERSE_SHIFT_N) & REVERSE_AND_C) |
-           ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
+    return ((x >> REVERSE_SHIFT_M) & REVERSE_AND_A) | ((x << REVERSE_SHIFT_N) & REVERSE_AND_B) |
+        ((x >> REVERSE_SHIFT_N) & REVERSE_AND_C) | ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
 }
 
 int32_t HashBytesByInt(const string base, int32_t lengthInBytes, int32_t seed)
@@ -140,7 +138,7 @@ extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isNull, int32_t seed)
     union {
         int64_t lVal;
         double dVal;
-    } uVal = {0};
+    } uVal = { 0 };
     uVal.dVal = val * !isNull;
     return HashLong(uVal.lVal, seed);
 }

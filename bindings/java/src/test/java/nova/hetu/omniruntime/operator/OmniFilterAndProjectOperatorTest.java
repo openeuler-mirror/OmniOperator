@@ -13,12 +13,12 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.DoubleVec;
@@ -111,15 +111,15 @@ public class OmniFilterAndProjectOperatorTest {
     public void doubles() {
         DataType[] types = {DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN:4(#0, 1.0:3)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\"" +
-            ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
+                        + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
+                types, projectionsJSON, 1);
         final int numRows = 5000;
         DoubleVec col1 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -165,15 +165,15 @@ public class OmniFilterAndProjectOperatorTest {
     public void lessThan() {
         DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN:4(#0, 2000:1)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":2000}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":2000}}",
+                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -251,16 +251,16 @@ public class OmniFilterAndProjectOperatorTest {
     public void greaterThan() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN:4(#0, 20:1)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":20}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":20}}",
+                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -312,16 +312,16 @@ public class OmniFilterAndProjectOperatorTest {
     public void equalTo() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#2");
-        List<String> projectionsJSON =
-                        ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
-                                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$EQUAL:4(#1, 50:2)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":50}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":50}}",
+                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -375,15 +375,15 @@ public class OmniFilterAndProjectOperatorTest {
     public void greaterThanOrEqualTo() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#1");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30:1)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":" +
-            "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1," +
-            "\"colVal\":1},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":30}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                        + "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,"
+                        + "\"colVal\":1},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":30}}",
+                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -441,15 +441,15 @@ public class OmniFilterAndProjectOperatorTest {
     public void notEqualTo() {
         DataType[] types = {DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$NOT_EQUAL:4(#0, 0:3)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"NOT_EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":0}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"NOT_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":0}}",
+                types, projectionsJSON, 1);
         final int numRows = 5000;
         DoubleVec col1 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -497,15 +497,15 @@ public class OmniFilterAndProjectOperatorTest {
     public void allPass() {
         DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$EQUAL:4(#0, 9348:1)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":9348}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":9348}}",
+                types, projectionsJSON, 1);
         final int numRows = 20000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -551,15 +551,15 @@ public class OmniFilterAndProjectOperatorTest {
     public void multipleInputs() {
         DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN_OR_EQUAL:4(#0, 4:1)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN_OR_EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}",
+                types, projectionsJSON, 1);
         final int numRows = 1000;
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
@@ -629,23 +629,22 @@ public class OmniFilterAndProjectOperatorTest {
     public void negativeValues() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1:1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1:2))", types,
                 projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\"," +
-                "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                    "\"operator\":\"LESS_THAN_OR_EQUAL\"," +
-                    "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-                    "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":-1}}," +
-                "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                    "\"operator\":\"LESS_THAN_OR_EQUAL\"," +
-                    "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}," +
-                    "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":-1}}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\","
+                        + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":-1}},"
+                        + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                        + "\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":-1}}}",
+                types, projectionsJSON, 1);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
@@ -716,33 +715,28 @@ public class OmniFilterAndProjectOperatorTest {
     public void allTypes() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND:4($operator$EQUAL:4(#0, 0:1), AND:4($operator$EQUAL:4(#1, 3000000000:2), "
                         + "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4:3)))",
                 types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\"," +
-                "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                    "\"operator\":\"EQUAL\"," +
-                        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-                        "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":0}}," +
-                "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                    "\"operator\":\"AND\"," +
-                        "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                            "\"operator\":\"EQUAL\"," +
-                                "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"+
-                                "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false," +
-                                    "\"value\":3000000000}}," +
-                        "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                            "\"operator\":\"GREATER_THAN_OR_EQUAL\"," +
-                                "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2},"+
-                                "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false," +
-                    "\"value\":0.4}}}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\","
+                        + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":0}},"
+                        + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"AND\","
+                        + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,"
+                        + "\"value\":3000000000}}," + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                        + "\"operator\":\"GREATER_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false," + "\"value\":0.4}}}}",
+                types, projectionsJSON, 1);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
@@ -845,39 +839,38 @@ public class OmniFilterAndProjectOperatorTest {
         String str = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52:2), AND:4($operator$LESS_THAN:4(#4, 50.8:3), "
                 + "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800:1), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990:1)), "
                 + "AND:4($operator$NOT_EQUAL:4(#0, 1:1), $operator$EQUAL:4(#3, 3000000000:2)))))";
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 1,\"colVal\":0}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 1,\"colVal\":2}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 3,\"colVal\":4}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 2,\"colVal\":5}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 1,\"colVal\":2}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 3,\"colVal\":4}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 2,\"colVal\":5}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
-        String strJSON =
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":" +
-            "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2," +
-            "\"colVal\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false," +
-            "\"value\":52}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"LESS_THAN\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3," +
-            "\"colVal\":4},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false," +
-            "\"value\":50.8}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"GREATER_THAN\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1," +
-            "\"colVal\":2},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false," +
-            "\"value\":4800}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"LESS_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":" +
-            "1,\"colVal\":1},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false," +
-            "\"value\":9990}}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":" +
-            "4,\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":" +
-            "4,\"operator\":\"NOT_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":" +
-            "1,\"colVal\":0},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false," +
-            "\"value\":1}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":" +
-            "4,\"operator\":\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":" +
-            "2,\"colVal\":3},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false," +
-            "\"value\":3000000000}}}}}}";
-        OmniFilterAndProjectOperatorFactory factoryJSON =
-                new OmniFilterAndProjectOperatorFactory(strJSON, types, projectionsJSON, 1);
+        String strJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                + "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,"
+                + "\"colVal\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,"
+                + "\"value\":52}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"LESS_THAN\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,"
+                + "\"colVal\":4},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,"
+                + "\"value\":50.8}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"GREATER_THAN\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,"
+                + "\"colVal\":2},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,"
+                + "\"value\":4800}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"LESS_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":"
+                + "1,\"colVal\":1},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,"
+                + "\"value\":9990}}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":"
+                + "4,\"operator\":\"AND\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":"
+                + "4,\"operator\":\"NOT_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":"
+                + "1,\"colVal\":0},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,"
+                + "\"value\":1}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":"
+                + "4,\"operator\":\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":"
+                + "2,\"colVal\":3},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,"
+                + "\"value\":3000000000}}}}}}";
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(strJSON, types,
+                projectionsJSON, 1);
 
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -937,7 +930,8 @@ public class OmniFilterAndProjectOperatorTest {
         LongVec resJSON3 = ((LongVec) resJSON.getVector(3));
         for (int i = 0; i < res.getRowCount(); i++) {
             assertTrue((res0.get(i) != 1 && res1.get(i) > 4800 && res2.get(i) < 50.8) || res3.get(i) >= 52);
-            assertTrue((resJSON0.get(i) != 1 && resJSON1.get(i) > 4800 && resJSON2.get(i) < 50.8) || resJSON3.get(i) >= 52);
+            assertTrue((resJSON0.get(i) != 1 && resJSON1.get(i) > 4800 && resJSON2.get(i) < 50.8)
+                    || resJSON3.get(i) >= 52);
         }
 
         freeVecBatch(res);
@@ -956,31 +950,30 @@ public class OmniFilterAndProjectOperatorTest {
         List<String> projections = ImmutableList.of("#3", "#2", "#1", "#0");
         String str = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50:1), $operator$EQUAL:4(#1, -12:1)), "
                 + "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000:2), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0:2)))";
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":3}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":2}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":3}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":2}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
-        String strJSON =
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\",\"left\":" +
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\",\"left\":" +
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":50}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":" +
-            "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":-12}}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":" +
-            "\"OR\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":" +
-            "\"LESS_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2," +
-            "\"colVal\":2},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false," +
-            "\"value\":-3000000000}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":" +
-            "4,\"operator\":\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":" +
-            "\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":3},\"right\":{\"exprType\":\"LITERAL\"," +
-            "\"dataType\":2,\"isNull\":false,\"value\":0}}}}";
-        OmniFilterAndProjectOperatorFactory factoryJSON =
-                new OmniFilterAndProjectOperatorFactory(strJSON, types, projectionsJSON, 1);
+        String strJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\",\"left\":"
+                + "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\",\"left\":"
+                + "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":50}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                + "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":-12}}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                + "\"OR\",\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                + "\"LESS_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,"
+                + "\"colVal\":2},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,"
+                + "\"value\":-3000000000}},\"right\":{\"exprType\":\"BINARY\",\"returnType\":"
+                + "4,\"operator\":\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":"
+                + "\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":3},\"right\":{\"exprType\":\"LITERAL\","
+                + "\"dataType\":2,\"isNull\":false,\"value\":0}}}}";
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(strJSON, types,
+                projectionsJSON, 1);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
@@ -1031,7 +1024,8 @@ public class OmniFilterAndProjectOperatorTest {
         IntVec resJSON3 = ((IntVec) resJSON.getVector(3));
         for (int i = 0; i < res.getRowCount(); i++) {
             assertTrue((res0.get(i) >= 0 || res1.get(i) <= -3000000000L) && (res2.get(i) == -12 || res3.get(i) < 50));
-            assertTrue((resJSON0.get(i) >= 0 || resJSON1.get(i) <= -3000000000L) && (resJSON2.get(i) == -12 || resJSON3.get(i) < 50));
+            assertTrue((resJSON0.get(i) >= 0 || resJSON1.get(i) <= -3000000000L)
+                    && (resJSON2.get(i) == -12 || resJSON3.get(i) < 50));
         }
 
         freeVecBatch(res);
@@ -1051,58 +1045,41 @@ public class OmniFilterAndProjectOperatorTest {
         String expr = "AND:4($operator$NOT_EQUAL:4(#1, 0:3), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1:1), "
                 + "$operator$EQUAL:4(#0, 2:1)), $operator$EQUAL:4(#0, 3:1)), OR:4(OR:4(OR:4($operator$EQUAL:4(55:1, #0), "
                 + "$operator$EQUAL:4(5:1, #0)), $operator$EQUAL:4(#0, 8:1)), $operator$EQUAL:4(#0, 13:1))))";
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":1}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types,
-            projections);
-        String exprJSON =
-            "{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"AND\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"NOT_EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":1}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":0}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":1}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":2}}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"OR\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":55}," +
-            "\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":5}," +
-            "\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":8}}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":13}}}}}";
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types, projections);
+        String exprJSON = "{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"AND\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"NOT_EQUAL\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":1},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":0}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":1}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":2}}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"OR\","
+                + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":55},"
+                + "\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":5},"
+                + "\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":8}}},"
+                + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":13}}}}}";
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(exprJSON, types,
                 projectionsJSON, 1);
         final int numRows = 10000;
@@ -1174,18 +1151,17 @@ public class OmniFilterAndProjectOperatorTest {
     public void arithmeticAdd() {
         DataType[] types = {IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN:4(ADD:1(#0, 1:1), 4:1)", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\"," +
-            "\"left\":{\"exprType\":\"BINARY\",\"returnType\":1," +
-                "\"operator\":\"ADD\"," +
-                "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-                "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":1}}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\","
+                        + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":1," + "\"operator\":\"ADD\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":1}},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}",
+                types, projectionsJSON, 1);
         final int numRows = 10000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -1250,19 +1226,18 @@ public class OmniFilterAndProjectOperatorTest {
     public void multithreadTest() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, DoubleDataType.DOUBLE, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2", "#3");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":3}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":3}");
         String str = "$operator$LESS_THAN_OR_EQUAL:4(#0, 500:1)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4," +
-            "\"operator\":\"LESS_THAN_OR_EQUAL\"," +
-            "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-            "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":500}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":500}}",
+                types, projectionsJSON, 1);
         final int numRows = 1000;
         for (int i = 0; i < 1000; i++) {
             Thread thread = new Thread(() -> {
@@ -1334,34 +1309,30 @@ public class OmniFilterAndProjectOperatorTest {
     public void conditional() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
-                        "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":2}");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":2}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND:4(IF:4($operator$EQUAL:4(#0, 0:1), $operator$LESS_THAN:4(#1, 3:1), $operator$EQUAL:4(#1, 4:1)), "
                         + "$operator$GREATER_THAN:4(#2, 3:1))",
                 types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-            "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\"," +
-            "\"left\":{\"exprType\":\"IF\",\"returnType\":4," +
-            "\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                "\"operator\":\"EQUAL\"," +
-                    "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}," +
-                    "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":0}}," +
-            "\"if_true\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                "\"operator\":\"LESS_THAN\"," +
-                    "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}," +
-                    "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}}," +
-            "\"if_false\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                "\"operator\":\"EQUAL\"," +
-                    "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}," +
-                    "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}}," +
-            "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," +
-                "\"operator\":\"GREATER_THAN\"," +
-                    "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":2}," +
-                    "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}}}",
-            types, projectionsJSON, 1);
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\","
+                        + "\"left\":{\"exprType\":\"IF\",\"returnType\":4,"
+                        + "\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":0}},"
+                        + "\"if_true\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}},"
+                        + "\"if_false\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}},"
+                        + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"GREATER_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":2},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}}}",
+                types, projectionsJSON, 1);
         final int numRows = 10000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -1410,13 +1381,13 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void unsupportedExpr() {
         DataType[] types = {DoubleDataType.DOUBLE};
-        List<String> projectionsJSON =
-                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
 
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\"," +
-                        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\"" +
-                        ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
+                        + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
                 types, projectionsJSON, 1);
 
         assertFalse(factory.isSupported());

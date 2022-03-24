@@ -33,7 +33,7 @@ extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, i
     int32_t bWidth, int32_t bpLen, int32_t *outLen);
 extern DLLEXPORT const char *CastString(const char *str, int32_t strLen);
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, T startIdx, T length,
     int32_t *outLen)
 {
@@ -71,14 +71,14 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     return ret;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, T startIdx,
     T length, int32_t *outLen)
 {
     return Substr<T>(contextPtr, str, strLen, startIdx, length, outLen);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
     int32_t *outLen)
 {
@@ -104,7 +104,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     return ret;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
     T startIdx, int32_t *outLen)
 {

@@ -77,7 +77,7 @@ void TestGroupbyPrimitiveArg(int func, int mod)
     int groupbyNum = 2;
     int aggColIdx[] = {0, 1};
     int aggColNum = 2;
-    ParamValue p_col_type = ParamValue(col_type, 2);  // 2
+    ParamValue p_col_type = ParamValue(col_type, 2); // 2
     ParamValue p_col_count = ParamValue(&col_count);
     ParamValue p_groupByColNum = ParamValue(groupByColNum, 2); // 2
     ParamValue p_group_num = ParamValue(&groupbyNum);
@@ -87,20 +87,20 @@ void TestGroupbyPrimitiveArg(int func, int mod)
     std::map<std::string, omni::Specialization> hashGroupbySp;
 
     omni::Specialization *specialization = new omni::Specialization();
-    specialization->AddSpecializedParam(3, p_col_type); // 3
-    specialization->AddSpecializedParam(4, p_col_count); // 4
+    specialization->AddSpecializedParam(3, p_col_type);      // 3
+    specialization->AddSpecializedParam(4, p_col_count);     // 4
     specialization->AddSpecializedParam(5, p_groupByColNum); // 5
-    specialization->AddSpecializedParam(6, p_group_num); // 6
-    specialization->AddSpecializedParam(7, p_aggColIdx); // 7
-    specialization->AddSpecializedParam(8, p_agg_num); // 8
+    specialization->AddSpecializedParam(6, p_group_num);     // 6
+    specialization->AddSpecializedParam(7, p_aggColIdx);     // 7
+    specialization->AddSpecializedParam(8, p_agg_num);       // 8
     hashGroupbySp.insert(std::make_pair(OMNIJIT_HASH_GROUPBY_INLOOP, *specialization));
 
-    omni::JitContext *hashGroupbyContext = new omni::JitContext("hash_groupby", hashGroupbySp, std::vector<string>(),
-                                                                std::vector<string>(), true);
+    omni::JitContext *hashGroupbyContext =
+        new omni::JitContext("hash_groupby", hashGroupbySp, std::vector<string>(), std::vector<string>(), true);
     omni::JitContext *aggContext = new omni::JitContext("aggregator", std::map<std::string, omni::Specialization>(),
-                                                        std::vector<string>(), std::vector<string>());
+        std::vector<string>(), std::vector<string>());
     omni::JitContext *mpContext = new omni::JitContext("memory_pool", std::map<std::string, omni::Specialization>(),
-                                                       std::vector<string>(), std::vector<string>());
+        std::vector<string>(), std::vector<string>());
 
     contexts.insert(*hashGroupbyContext);
     contexts.insert(*aggContext);

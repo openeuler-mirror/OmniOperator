@@ -127,8 +127,8 @@ public class OmniHashAggregationOperatorFactory
             return Arrays.equals(groupByChanel, that.groupByChanel) && Arrays.equals(groupByTypes, that.groupByTypes)
                     && Arrays.equals(aggTypes, that.aggTypes) && Arrays.equals(aggOutputTypes, that.aggOutputTypes)
                     && Arrays.equals(aggChannels, that.aggChannels)
-                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes)
-                    && inputRaw == that.inputRaw && outputPartial == that.outputPartial;
+                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && inputRaw == that.inputRaw
+                    && outputPartial == that.outputPartial;
         }
     }
 

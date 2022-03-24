@@ -29,22 +29,23 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
      * @param sortNullFirsts the sort null firsts
      */
     public OmniSortOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortColumns,
-        int[] sortAscendings, int[] sortNullFirsts) {
+            int[] sortAscendings, int[] sortNullFirsts) {
         super(new FactoryContext(
-            new JitContext(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts)));
+                new JitContext(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts)));
     }
 
     private static native long createSortOperatorFactory(String sourceTypes, int[] outputCols, String[] sortCols,
-        int[] ascendings, int[] nullFirsts, long jitContext);
+            int[] ascendings, int[] nullFirsts, long jitContext);
 
     private static native long createSortJitContext(String sourceTypes, int[] outputCols, String[] sortCols,
-        int[] ascendings, int[] nullFirsts);
+            int[] ascendings, int[] nullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createSortOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
-            context.sortColumns, context.sortAscendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
+                context.sortColumns, context.sortAscendings, context.sortNullFirsts,
+                factoryContext.getNativeJitContext());
     }
 
     /**
@@ -73,7 +74,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
          * @param sortNullFirsts the sort null firsts
          */
         public JitContext(DataType[] sourceTypes, int[] outputColumns, String[] sortColumns, int[] sortAscendings,
-            int[] sortNullFirsts) {
+                int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
             this.sortColumns = sortColumns;
@@ -84,7 +85,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns),
-                Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -97,8 +98,9 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
             }
             JitContext that = (JitContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
-                && Arrays.equals(sortColumns, that.sortColumns) && Arrays.equals(sortAscendings, that.sortAscendings)
-                && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
+                    && Arrays.equals(sortColumns, that.sortColumns)
+                    && Arrays.equals(sortAscendings, that.sortAscendings)
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
 
@@ -120,8 +122,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
         @Override
         protected long createNativeJitContext(JitContext context) {
             return createSortJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
-                context.sortColumns, context.sortAscendings, context.sortNullFirsts);
+                    context.sortColumns, context.sortAscendings, context.sortNullFirsts);
         }
-
     }
 }

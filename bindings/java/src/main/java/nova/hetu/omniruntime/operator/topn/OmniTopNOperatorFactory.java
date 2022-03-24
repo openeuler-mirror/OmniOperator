@@ -29,21 +29,21 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
      * @param sortNullFirsts the sort null firsts
      */
     public OmniTopNOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings,
-        int[] sortNullFirsts) {
+            int[] sortNullFirsts) {
         super(new FactoryContext(new JitContext(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts)));
     }
 
     private static native long createTopNOperatorFactory(String sourceTypes, int limitN, String[] sortCols,
-        int[] sortAssendings, int[] sortNullFirsts, long nativeJitContext);
+            int[] sortAssendings, int[] sortNullFirsts, long nativeJitContext);
 
     private static native long createTopNJitContext(String sourceTypes, int limitN, String[] sortCols,
-        int[] sortAssendings, int[] sortNullFirsts);
+            int[] sortAssendings, int[] sortNullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createTopNOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-            context.sortCols, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
+                context.sortCols, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
     }
 
     /**
@@ -72,7 +72,7 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
          * @param sortNullFirsts the sort null firsts
          */
         public JitContext(DataType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings,
-            int[] sortNullFirsts) {
+                int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
             this.sortCols = sortCols;
@@ -83,7 +83,7 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), limitN, Arrays.hashCode(sortCols),
-                Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -95,9 +95,10 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
                 return false;
             }
             JitContext context = (JitContext) obj;
-            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(
-                sortCols, context.sortCols) && Arrays.equals(sortAssendings, context.sortAssendings) && Arrays.equals(
-                sortNullFirsts, context.sortNullFirsts);
+            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes)
+                    && Arrays.equals(sortCols, context.sortCols)
+                    && Arrays.equals(sortAssendings, context.sortAssendings)
+                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts);
         }
     }
 
@@ -119,7 +120,7 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
         @Override
         protected long createNativeJitContext(JitContext context) {
             return createTopNJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-                context.sortCols, context.sortAssendings, context.sortNullFirsts);
+                    context.sortCols, context.sortAssendings, context.sortNullFirsts);
         }
     }
 }

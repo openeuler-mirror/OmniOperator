@@ -30,7 +30,8 @@
 #endif
 
 #ifndef OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS
-#define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS "hash-strategy-position-equals-position-ignore-nulls"
+#define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS \
+    "hash-strategy-position-equals-position-ignore-nulls"
 #endif
 
 #ifndef OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS

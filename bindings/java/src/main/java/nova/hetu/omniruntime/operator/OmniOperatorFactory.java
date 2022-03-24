@@ -22,9 +22,7 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> {
     private static final Cache<OmniOperatorFactoryContext, Long> FACTORY_CACHE = CacheBuilder.newBuilder()
-        .expireAfterAccess(java.time.Duration.ofHours(24))
-        .maximumSize(100000)
-        .build();
+            .expireAfterAccess(java.time.Duration.ofHours(24)).maximumSize(100000).build();
 
     static {
         OmniLibs.load();
@@ -99,7 +97,6 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
 
     /**
      * release operator factory
-     *
      */
     public void close() {
         if (context.isNeedCache()) {

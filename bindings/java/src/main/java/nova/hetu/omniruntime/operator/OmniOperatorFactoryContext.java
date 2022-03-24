@@ -18,9 +18,7 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
     private static final Cache<OmniJitContext, Long> JIT_CONTEXT_CACHE = CacheBuilder.newBuilder()
-        .expireAfterAccess(java.time.Duration.ofHours(24))
-        .maximumSize(100000)
-        .build();
+            .expireAfterAccess(java.time.Duration.ofHours(24)).maximumSize(100000).build();
 
     /**
      * Whether the omni operator factory needs to be cached.

@@ -12,11 +12,10 @@ std::vector<Function> HashFunctionRegistry::GetFunctions()
 {
     DataTypeId retType = OMNI_INT;
     std::string mm3fnStr = "mm3hash";
-    std::vector<Function> hashRegistry = {
-        Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {}, {OMNI_INT, OMNI_INT}, retType),
-        Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, {OMNI_LONG, OMNI_INT}, retType),
-        Function(reinterpret_cast<void *>(Mm3Double), mm3fnStr, {}, {OMNI_DOUBLE, OMNI_INT}, retType),
-        Function(reinterpret_cast<void *>(Mm3String), mm3fnStr, {}, {OMNI_VARCHAR, OMNI_INT}, retType)
-    };
+    std::vector<Function> hashRegistry = { Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {},
+        { OMNI_INT, OMNI_INT }, retType),
+        Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, { OMNI_LONG, OMNI_INT }, retType),
+        Function(reinterpret_cast<void *>(Mm3Double), mm3fnStr, {}, { OMNI_DOUBLE, OMNI_INT }, retType),
+        Function(reinterpret_cast<void *>(Mm3String), mm3fnStr, {}, { OMNI_VARCHAR, OMNI_INT }, retType) };
     return hashRegistry;
 }

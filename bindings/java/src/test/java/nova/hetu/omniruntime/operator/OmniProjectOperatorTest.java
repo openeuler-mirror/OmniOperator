@@ -1,13 +1,17 @@
+
 package nova.hetu.omniruntime.operator;
+
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static org.testng.Assert.*;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -20,15 +24,12 @@ import org.testng.annotations.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
-import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-import static org.testng.Assert.*;
-
 /**
  * The type Omni project operator test.
  */
 public class OmniProjectOperatorTest {
     private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols) {
-        return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols)});
+        return ImmutableList.copyOf(new VecBatch[]{new VecBatch(cols)});
     }
 
     /**
@@ -160,12 +161,12 @@ public class OmniProjectOperatorTest {
     @Test
     public void unsupportedCast() {
         DataType[] types = {};
-        String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", " +
-                "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": " +
-                "\"FUNCTION\", \"returnType\": 4, \"function_name\": \"not\", \"arguments\": " +
-                "[{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": true}]}, \"if_true\": " +
-                "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, " +
-                "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
+        String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", "
+                + "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": "
+                + "\"FUNCTION\", \"returnType\": 4, \"function_name\": \"not\", \"arguments\": "
+                + "[{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": true}]}, \"if_true\": "
+                + "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, "
+                + "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
 
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(projectionsJSON, types, 1);
 

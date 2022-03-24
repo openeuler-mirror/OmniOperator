@@ -4,9 +4,9 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.DataType;
-
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_FLAT;
+
+import nova.hetu.omniruntime.type.DataType;
 
 /**
  * base class of variable width vec
@@ -39,8 +39,8 @@ public abstract class VariableWidthVec extends Vec {
         int offsetsBufCapacityInBytes;
         if (isSlice) {
             offsetsBufCapacityInBytes = vec instanceof VariableWidthVec
-                ? ((VariableWidthVec) vec).offsetsBuf.getCapacity()
-                : 0;
+                    ? ((VariableWidthVec) vec).offsetsBuf.getCapacity()
+                    : 0;
         } else {
             offsetsBufCapacityInBytes = (length + 1) * Integer.BYTES;
         }
@@ -59,10 +59,10 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     protected VariableWidthVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                               long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes,
-                               int size, int offset, DataType dataType) {
+            long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
+            DataType dataType) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, dataType);
+                size, offset, dataType);
         this.offsetsBuf = OmniBufFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
     }
 
@@ -87,7 +87,7 @@ public abstract class VariableWidthVec extends Vec {
     /**
      * set the offset value of the specified position
      *
-     * @param index  the element offset in vec
+     * @param index the element offset in vec
      * @param offset offset value
      */
     public void setValueOffset(int index, int offset) {
@@ -120,7 +120,7 @@ public abstract class VariableWidthVec extends Vec {
     /**
      * get the value offset of the specified position
      *
-     * @param index  the offset of element
+     * @param index the offset of element
      * @param length the number of element
      * @return the offsets
      */

@@ -53,12 +53,14 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder()
 
     this->smjScanner = std::make_unique<SortMergeJoinScanner>(*this->streamedTypes, this->streamedKeysCols.data(),
         this->streamedKeysCols.size(), this->streamedTblPagesIndex, *this->bufferedTypes, this->bufferedKeysCols.data(),
-        this->bufferedTblPagesIndex, this->joinType, false).release();
+        this->bufferedTblPagesIndex, this->joinType, false)
+                           .release();
 
     this->joinResultBuilder = std::make_unique<JoinResultBuilder>(*this->streamedTypes, this->streamedOutputCols.data(),
         this->streamedOutputCols.size(), this->streamedTblPagesIndex, *this->bufferedTypes,
         this->bufferedOutputCols.data(), this->bufferedOutputCols.size(), this->bufferedTblPagesIndex, this->filter,
-        this->vecAllocator).release();
+        this->vecAllocator)
+                                  .release();
 }
 
 int32_t SortMergeJoinOperator::GetJoinResult()

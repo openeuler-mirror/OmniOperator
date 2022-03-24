@@ -16,7 +16,7 @@ public class OmniBufFactory {
     /**
      * create a new omnibuf object
      *
-     * @param address  the address of buffer object
+     * @param address the address of buffer object
      * @param capacity the capacity of buffer object
      * @return omnibuf object
      */

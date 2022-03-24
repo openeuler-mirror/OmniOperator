@@ -13,7 +13,7 @@
 #define DLLEXPORT
 #endif
 namespace {
-    const int COMBINE_HASH_VALUE = 31;
+const int COMBINE_HASH_VALUE = 31;
 }
 
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)

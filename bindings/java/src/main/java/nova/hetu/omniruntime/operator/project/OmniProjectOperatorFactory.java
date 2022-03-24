@@ -34,7 +34,8 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     }
 
     /**
-     * Instantiates a new Omni project operator factory with configured expression parsing format.
+     * Instantiates a new Omni project operator factory with configured expression
+     * parsing format.
      *
      * @param expressions the expressions
      * @param inputTypes the input types
@@ -44,17 +45,17 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
-        int expressionsLength, long jitContext, int parseFormat);
+            int expressionsLength, long jitContext, int parseFormat);
 
     private static native long createProjectJitContext(String inputTypes, int inputLength, Object[] expressions,
-        int expressionsLength);
+            int expressionsLength);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        long factoryAddr = createProjectOperatorFactory(
-            DataTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
-            context.expressions, context.expressions.length, factoryContext.getNativeJitContext(), context.parseFormat);
+        long factoryAddr = createProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
+                context.inputTypes.length, context.expressions, context.expressions.length,
+                factoryContext.getNativeJitContext(), context.parseFormat);
         if (factoryAddr != 0) {
             isSupported = true;
         }
@@ -137,8 +138,8 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
         protected long createNativeJitContext(JitContext context) {
             // todo: use createProjectJitContext when there is a jit optimization in future.
             // return createProjectJitContext(
-            //     VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
-            //     context.expressions, context.expressions.length);
+            // VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
+            // context.expressions, context.expressions.length);
             return 0;
         }
     }

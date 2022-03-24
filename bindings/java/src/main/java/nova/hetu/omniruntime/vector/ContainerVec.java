@@ -4,12 +4,13 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.type.ContainerDataType;
-import nova.hetu.omniruntime.type.DataTypeSerializer;
-import java.nio.ByteBuffer;
-
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_CONTAINER;
+
+import nova.hetu.omniruntime.type.ContainerDataType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
+
+import java.nio.ByteBuffer;
 
 /**
  * container vec
@@ -24,9 +25,8 @@ public class ContainerVec extends FixedWidthVec {
     private DataType[] dataTypes;
 
     public ContainerVec(VecAllocator allocator, int vectorCount, int positionCount, long[] vectorAddresses,
-                        DataType[] dataTypes) {
-        super(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER,
-                ContainerDataType.CONTAINER);
+            DataType[] dataTypes) {
+        super(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
         this.positionCount = positionCount;
         this.dataTypes = dataTypes;
         put(vectorAddresses, 0, 0, vectorAddresses.length);
@@ -153,14 +153,12 @@ public class ContainerVec extends FixedWidthVec {
         return OMNI_VEC_ENCODING_CONTAINER;
     }
 
-
     /**
      * get the encoding of vector at index position
      *
      * @param index vector index
-     *
      * @return encoding of vector at index position
-     * */
+     */
     public VecEncoding getVecEncoding(int index) {
         return VecEncoding.values()[getVecEncodingNative(getVector(index))];
     }

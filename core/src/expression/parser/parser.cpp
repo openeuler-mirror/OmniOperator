@@ -31,7 +31,7 @@ string DemangleOperator(string opStr)
 OperatorType GetBinaryOperatorType(string opStr)
 {
     vector<string> allCmpOps { "LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL",
-        "EQUAL", "NOT_EQUAL" };
+        "EQUAL",     "NOT_EQUAL" };
     vector<string> allLogOps { "AND", "OR" };
     vector<string> allArithOps { "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS" };
     for (const string &cmpOp : allCmpOps) {
