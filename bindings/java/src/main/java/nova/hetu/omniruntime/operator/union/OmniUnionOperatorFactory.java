@@ -33,7 +33,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createUnionOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.isDistinct,
-            factoryContext.getNativeJitContext());
+                factoryContext.getNativeJitContext());
     }
 
     private static native long createUnionOperatorFactory(String sourceTypes, boolean isDistinct, long jitcontext);
@@ -99,9 +99,9 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            //todo: use createUnionJitContext when there is a jit optimization in future.
+            // todo: use createUnionJitContext when there is a jit optimization in future.
             // return createUnionJitContext(
-            //     VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct);
+            // VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct);
             return 0;
         }
     }

@@ -58,11 +58,11 @@ void VectorAllocator::DeleteVector(Vector *vector)
     }
 }
 
-    void VectorAllocator::ResizeVectorData(Vector *vector, int32_t toCapacityInBytes)
-    {
-        VectorReference *reference = vector->GetVectorReference();
-        reference->ResizeValueChunk(vector->GetCapacityInBytes(), toCapacityInBytes);
-    }
+void VectorAllocator::ResizeVectorData(Vector *vector, int32_t toCapacityInBytes)
+{
+    VectorReference *reference = vector->GetVectorReference();
+    reference->ResizeValueChunk(vector->GetCapacityInBytes(), toCapacityInBytes);
+}
 
 std::string VectorAllocator::GetScope() const
 {

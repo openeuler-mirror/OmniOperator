@@ -4,9 +4,7 @@
 
 package nova.hetu.omniruntime.operator.join;
 
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
+import static java.util.Objects.requireNonNull;
 
 import nova.hetu.omniruntime.constants.JoinType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
@@ -15,7 +13,9 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
-import static java.util.Objects.requireNonNull;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The type Omni sort merge streamed table with expression operator factory.
@@ -29,7 +29,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      * Instantiates a new Omni sort merge streamed table factory.
      *
      * @param sourceTypes the all input vector types
-     * @param equalKeyExprs  equal condition key expressions
+     * @param equalKeyExprs equal condition key expressions
      * @param outputChannels output of streamed table
      * @param joinType join type
      * @param filter condition for not equal expression
@@ -74,10 +74,10 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param sourceTypes the all input vector types
-         * @param equalKeyExprs  equal condition key expressions
-         * @param outputChannels  output of streamed table
+         * @param equalKeyExprs equal condition key expressions
+         * @param outputChannels output of streamed table
          * @param joinType join type
-         * @param filter  condition for not equal expression
+         * @param filter condition for not equal expression
          */
         public JitContext(DataType[] sourceTypes, String[] equalKeyExprs, int[] outputChannels, JoinType joinType,
                 Optional<String> filter) {

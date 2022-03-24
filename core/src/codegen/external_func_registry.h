@@ -9,10 +9,10 @@
 #include "func_registry_base.h"
 
 namespace omniruntime {
-    class ExternalFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class ExternalFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif

@@ -21,57 +21,55 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace omniruntime {
-    namespace jit {
-        using namespace llvm;
-        using namespace llvm::orc;
+namespace jit {
+using namespace llvm;
+using namespace llvm::orc;
 
-        void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
-        {
-            conf->populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
-        }
+void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
+{
+    conf->populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
+}
 
-        Expected<ThreadSafeModule> HardenOptimizer::operator()(ThreadSafeModule TSM,
-            const MaterializationResponsibility &)
-        {
+Expected<ThreadSafeModule> HardenOptimizer::operator () (ThreadSafeModule TSM, const MaterializationResponsibility &)
+{
+    Module &M = *TSM.getModuleUnlocked();
+    if (this->specializedModules.count(M.getName().str()) == 0) {
+        return std::move(TSM);
+    }
 
-            Module &M = *TSM.getModuleUnlocked();
-            if (this->specializedModules.count(M.getName().str()) == 0) {
-                return std::move(TSM);
-            }
+    using llvm::Function;
+    std::set<std::string> specializedFuncNames = this->specializedModules.at(M.getName().str());
 
-            using llvm::Function;
-            std::set<std::string> specializedFuncNames = this->specializedModules.at(M.getName().str());
+    legacy::FunctionPassManager FPM(&M);
+    legacy::PassManager MPM;
 
-            legacy::FunctionPassManager FPM(&M);
-            legacy::PassManager MPM;
+    populatePass(FPM, MPM);
 
-            populatePass(FPM, MPM);
+    pmb.populateFunctionPassManager(FPM);
+    pmb.populateModulePassManager(MPM);
 
-            pmb.populateFunctionPassManager(FPM);
-            pmb.populateModulePassManager(MPM);
-
-            FPM.doInitialization();
-            for (Function &F : M) {
-                if (specializedFuncNames.count(F.getName().str()) > 0) {
-                    bool optimized = FPM.run(F);
-                    if (optimized) {
-#ifdef DEBUG_LLVM
-                        outs() << "Specialized function optimized: " + F.getName().str() << "\n";
-#endif
-                    }
-                }
-            }
-            FPM.doFinalization();
-
-            bool optimized = MPM.run(M);
+    FPM.doInitialization();
+    for (Function &F : M) {
+        if (specializedFuncNames.count(F.getName().str()) > 0) {
+            bool optimized = FPM.run(F);
             if (optimized) {
 #ifdef DEBUG_LLVM
-                outs() << "Module optimized: " + M.getName().str() << "\n";
-                M.print(outs(), nullptr);
+                outs() << "Specialized function optimized: " + F.getName().str() << "\n";
 #endif
             }
-
-            return std::move(TSM);
         }
     }
+    FPM.doFinalization();
+
+    bool optimized = MPM.run(M);
+    if (optimized) {
+#ifdef DEBUG_LLVM
+        outs() << "Module optimized: " + M.getName().str() << "\n";
+        M.print(outs(), nullptr);
+#endif
+    }
+
+    return std::move(TSM);
+}
+}
 }

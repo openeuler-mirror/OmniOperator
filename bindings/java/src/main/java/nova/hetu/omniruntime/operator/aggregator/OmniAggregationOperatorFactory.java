@@ -34,8 +34,9 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
      * @param inputRaw the input raw
      * @param outputPartial the output partial
      */
-    public OmniAggregationOperatorFactory(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
-            int[] maskChannels, DataType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+    public OmniAggregationOperatorFactory(DataType[] sourceTypes, FunctionType[] aggFunctionTypes,
+            int[] aggInputChannels, int[] maskChannels, DataType[] aggOutputTypes, boolean inputRaw,
+            boolean outputPartial) {
         super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
                 aggOutputTypes, inputRaw, outputPartial)));
     }
@@ -86,8 +87,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
          * @param inputRaw the input raw
          * @param outputPartial the output partial
          */
-        public JitContext(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels, int[] maskChannels,
-                DataType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+        public JitContext(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
+                int[] maskChannels, DataType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes is null");
             this.aggInputChannels = requireNonNull(aggInputChannels, "aggInputChannels is null");

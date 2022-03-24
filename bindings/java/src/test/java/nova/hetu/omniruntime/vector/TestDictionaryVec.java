@@ -1,13 +1,15 @@
+
 package nova.hetu.omniruntime.vector;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 import nova.hetu.omniruntime.util.TestUtils;
+
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
 
 /**
  * test dictionary vec
@@ -54,7 +56,7 @@ public class TestDictionaryVec {
 
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
         DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
-        int[] nestedIds = {1,1,2,2,4,4,7,7};
+        int[] nestedIds = {1, 1, 2, 2, 4, 4, 7, 7};
         DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, nestedIds);
 
         originalVec.close();
@@ -74,7 +76,7 @@ public class TestDictionaryVec {
 
         nestedDictionaryVec.close();
 
-        int[] copyIds = {0,1,2,3};
+        int[] copyIds = {0, 1, 2, 3};
         DictionaryVec copy = slice.copyPositions(copyIds, 0, 4);
         assertEquals(copy.getSize(), 4);
         v = copy.getLong(0);
@@ -159,7 +161,6 @@ public class TestDictionaryVec {
         nested.close();
     }
 
-
     @Test
     public void testGetDouble() {
         DoubleVec originalVec = new DoubleVec(10);
@@ -230,7 +231,6 @@ public class TestDictionaryVec {
         dictionaryVec.close();
         nested.close();
     }
-
 
     /**
      * test copy position

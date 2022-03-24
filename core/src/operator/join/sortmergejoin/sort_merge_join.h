@@ -23,10 +23,10 @@ public:
     ~SortMergeJoinOperator() override;
 
     void ConfigStreamedTblInfo(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeysCols,
-                               const std::vector<int32_t> &streamedOutputCols);
+        const std::vector<int32_t> &streamedOutputCols);
 
     void ConfigBufferedTblInfo(const type::DataTypes &bufferedTypes, std::vector<int32_t> &bufferedKeysCols,
-                               std::vector<int32_t> &bufferedOutputCols);
+        std::vector<int32_t> &bufferedOutputCols);
     // see SortMergeJoinAddInputCode
     int32_t AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch);
 

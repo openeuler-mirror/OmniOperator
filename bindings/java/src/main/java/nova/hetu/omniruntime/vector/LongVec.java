@@ -29,9 +29,9 @@ public class LongVec extends FixedWidthVec {
     }
 
     public LongVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                   long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, LongDataType.LONG);
+                size, offset, LongDataType.LONG);
     }
 
     private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
@@ -43,9 +43,10 @@ public class LongVec extends FixedWidthVec {
     }
 
     /**
-     * This constructor of vector is just for shuffle compilation to pass, it will be removed later
+     * This constructor of vector is just for shuffle compilation to pass, it will
+     * be removed later
      *
-     * @param data            data of vector
+     * @param data data of vector
      * @param capacityInBytes size in bytes of data
      */
     @Deprecated
@@ -66,7 +67,7 @@ public class LongVec extends FixedWidthVec {
     /**
      * get long values from the specified position
      *
-     * @param index  the position of element
+     * @param index the position of element
      * @param length the number of element
      * @return long value array
      */
@@ -91,7 +92,7 @@ public class LongVec extends FixedWidthVec {
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start  the element index in values
+     * @param start the element index in values
      * @param length the number of elements that need to written
      */
     public void put(long[] values, int offset, int start, int length) {

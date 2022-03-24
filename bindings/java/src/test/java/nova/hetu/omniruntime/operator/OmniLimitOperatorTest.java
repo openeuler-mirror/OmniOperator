@@ -4,18 +4,19 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+
 import nova.hetu.omniruntime.operator.limit.OmniLimitOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+
 import org.testng.annotations.Test;
 
 import java.util.Iterator;
-
-import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
-import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 
 public class OmniLimitOperatorTest {
     @Test

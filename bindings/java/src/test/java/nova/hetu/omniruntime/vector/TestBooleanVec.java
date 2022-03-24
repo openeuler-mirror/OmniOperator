@@ -1,12 +1,13 @@
-package nova.hetu.omniruntime.vector;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_BOOLEAN;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.Test;
 
 /**
  * test boolean vec
@@ -80,8 +81,7 @@ public class TestBooleanVec {
         for (int i = 0; i < size; i++) {
             if (i % 2 == 0) {
                 assertTrue(vec1.get(i));
-            }
-            else {
+            } else {
                 assertFalse(vec1.get(i));
             }
         }
@@ -118,16 +118,14 @@ public class TestBooleanVec {
         for (int i = 0; i < vector1.getSize(); i++) {
             if (i % 5 == 0) {
                 vector1.setNull(i);
-            }
-            else {
+            } else {
                 vector1.set(i, i % 2 == 0);
             }
         }
         for (int i = 0; i < vector1.getSize(); i++) {
             if (i % 5 == 0) {
                 assertTrue(vector1.isNull(i));
-            }
-            else {
+            } else {
                 assertEquals(vector1.get(i), i % 2 == 0);
             }
         }

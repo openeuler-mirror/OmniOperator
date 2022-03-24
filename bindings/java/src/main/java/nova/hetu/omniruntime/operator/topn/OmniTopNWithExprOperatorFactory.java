@@ -19,7 +19,8 @@ import java.util.Objects;
  * @since 20211026
  */
 public class OmniTopNWithExprOperatorFactory
-    extends OmniOperatorFactory<OmniTopNWithExprOperatorFactory.FactoryContext> {
+        extends
+            OmniOperatorFactory<OmniTopNWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni top n with expression operator factory.
      *
@@ -30,21 +31,21 @@ public class OmniTopNWithExprOperatorFactory
      * @param sortNullFirsts the sort null firsts
      */
     public OmniTopNWithExprOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
-        int[] sortNullFirsts) {
+            int[] sortNullFirsts) {
         super(new FactoryContext(new JitContext(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts)));
     }
 
     private static native long createTopNWithExprOperatorFactory(String sourceTypes, int limitN, String[] sortKeys,
-        int[] sortAssendings, int[] sortNullFirsts, long nativeJitContext);
+            int[] sortAssendings, int[] sortNullFirsts, long nativeJitContext);
 
     private static native long createTopNWithExprJitContext(String sourceTypes, int limitN, String[] sortKeys,
-        int[] sortAssendings, int[] sortNullFirsts);
+            int[] sortAssendings, int[] sortNullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createTopNWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-            context.sortKeys, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
+                context.sortKeys, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
     }
 
     /**
@@ -73,7 +74,7 @@ public class OmniTopNWithExprOperatorFactory
          * @param sortNullFirsts the sort null firsts
          */
         public JitContext(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
-            int[] sortNullFirsts) {
+                int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
             this.sortKeys = sortKeys;
@@ -84,7 +85,7 @@ public class OmniTopNWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), limitN, Arrays.hashCode(sortKeys),
-                Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -96,9 +97,10 @@ public class OmniTopNWithExprOperatorFactory
                 return false;
             }
             JitContext context = (JitContext) obj;
-            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(
-                sortKeys, context.sortKeys) && Arrays.equals(sortAssendings, context.sortAssendings) && Arrays.equals(
-                sortNullFirsts, context.sortNullFirsts);
+            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes)
+                    && Arrays.equals(sortKeys, context.sortKeys)
+                    && Arrays.equals(sortAssendings, context.sortAssendings)
+                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts);
         }
     }
 
@@ -120,7 +122,7 @@ public class OmniTopNWithExprOperatorFactory
         @Override
         protected long createNativeJitContext(JitContext context) {
             return createTopNWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-                context.sortKeys, context.sortAssendings, context.sortNullFirsts);
+                    context.sortKeys, context.sortAssendings, context.sortNullFirsts);
         }
     }
 }

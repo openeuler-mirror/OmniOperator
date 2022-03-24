@@ -1,7 +1,10 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
+
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VarCharVector;
@@ -29,18 +32,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
 @State(Scope.Thread)
 @OutputTimeUnit(MICROSECONDS)
 @Fork(1)
 @Warmup(iterations = 1, batchSize = 1)
 @Measurement(iterations = 10, batchSize = 1)
 @BenchmarkMode(Mode.AverageTime)
-public class BenchmarkVarcharVec
-{
+public class BenchmarkVarcharVec {
     private static final int ALLOCATOR_CAPACITY = 1024 * 1024;
-    private final static int COUNT = 1000;
+    private static final int COUNT = 1000;
 
     @Param({"1024"})
     private int rows = 1024;
@@ -78,8 +78,7 @@ public class BenchmarkVarcharVec
     }
 
     @Setup(Level.Iteration)
-    public void init()
-    {
+    public void init() {
         // for varchar set/put
         vecPutData = new VarcharVec(rows * 8, rows);
         putDataSource = new VarcharVecTest(rows * 8, rows);
@@ -113,7 +112,6 @@ public class BenchmarkVarcharVec
         arrowVecSet.allocateNew(rows * 8);
         arrowVecSet.setValueCount(rows);
 
-
         // arrow get
         allocator2 = new RootAllocator(ALLOCATOR_CAPACITY);
         arrowVecGet = new VarCharVector("longVector2", allocator2);
@@ -123,8 +121,7 @@ public class BenchmarkVarcharVec
     }
 
     @TearDown(Level.Iteration)
-    public void tearDown()
-    {
+    public void tearDown() {
         vecPutData.close();
         vecSetData.close();
         vecGetData.close();
@@ -136,32 +133,26 @@ public class BenchmarkVarcharVec
         allocator2.close();
     }
 
-    private void initValues(VarcharVec vec, int rowCount)
-    {
-        for (int i = 0; i < rowCount; i++)
-        {
+    private void initValues(VarcharVec vec, int rowCount) {
+        for (int i = 0; i < rowCount; i++) {
             vec.set(i, String.valueOf(i * 1000).getBytes(StandardCharsets.UTF_8));
         }
     }
 
-    private void initValues(VarcharVecTest heapByteBuf, int rowCount)
-    {
-        for (int i = 0; i < rowCount; i++)
-        {
+    private void initValues(VarcharVecTest heapByteBuf, int rowCount) {
+        for (int i = 0; i < rowCount; i++) {
             heapByteBuf.set(i, String.valueOf(i * 1000).getBytes(StandardCharsets.UTF_8));
         }
     }
 
-    private void initValues(VarCharVector arrayVec, int rowCount)
-    {
+    private void initValues(VarCharVector arrayVec, int rowCount) {
         for (int i = 0; i < rowCount; i++) {
             arrayVec.set(i, String.valueOf(i * 1000).getBytes(StandardCharsets.UTF_8));
         }
     }
 
     @Benchmark
-    public void createVarcharVecBenchmark(Blackhole blackhole)
-    {
+    public void createVarcharVecBenchmark(Blackhole blackhole) {
         List<VarcharVec> vecs = new ArrayList<>();
         for (int i = 0; i < COUNT; i++) {
             VarcharVec vec = new VarcharVec(rows, rows);
@@ -172,8 +163,7 @@ public class BenchmarkVarcharVec
     }
 
     @Benchmark
-    public void createArrowVecBenchmark(Blackhole blackhole)
-    {
+    public void createArrowVecBenchmark(Blackhole blackhole) {
         List<VarCharVector> vecs = new ArrayList<>();
         RootAllocator rootAllocator = new RootAllocator(Long.MAX_VALUE);
         for (int i = 0; i < COUNT; i++) {
@@ -187,60 +177,51 @@ public class BenchmarkVarcharVec
     }
 
     @Benchmark
-    public void putVarcharVecBenchmark(Blackhole blackhole)
-    {
+    public void putVarcharVecBenchmark(Blackhole blackhole) {
         vecPutData.put(0, putDataSource.getData(), 0, putDataSource.offsets, 0, rows);
     }
 
     @Benchmark
-    public void setArrowVecBenchmark(Blackhole blackhole)
-    {
+    public void setArrowVecBenchmark(Blackhole blackhole) {
         for (int i = 0; i < rows; i++) {
             arrowVecSet.set(i, byteValues[i].array());
         }
     }
 
     @Benchmark
-    public void setHeapBytebufferBenchmark(Blackhole blackhole)
-    {
+    public void setHeapBytebufferBenchmark(Blackhole blackhole) {
         for (int i = 0; i < rows; i++) {
             vecTestSetData.set(i, byteValues[i].array());
         }
     }
 
     @Benchmark
-    public void setVarcharVecBenchmark()
-    {
+    public void setVarcharVecBenchmark() {
         for (int i = 0; i < rows; i++) {
             vecSetData.set(i, byteValues[i].array());
         }
     }
 
     @Benchmark
-    public long getHeapBytebufferBenchmark()
-    {
+    public long getHeapBytebufferBenchmark() {
         long sum = 0;
-        for (int i = 0; i < rows; i++)
-        {
+        for (int i = 0; i < rows; i++) {
             sum += varcharVecTest.get(i).length;
         }
         return sum;
     }
 
     @Benchmark
-    public long getVarcharVecBenchmark()
-    {
+    public long getVarcharVecBenchmark() {
         long sum = 0;
-        for (int i = 0; i < rows; i++)
-        {
+        for (int i = 0; i < rows; i++) {
             sum += vecGetData.get(i).length;
         }
         return sum;
     }
 
     @Benchmark
-    public long getArrowVecBenchmark()
-    {
+    public long getArrowVecBenchmark() {
         long sum = 0;
         for (int i = 0; i < rows; i++) {
             sum += arrowVecGet.get(i).length;
@@ -249,39 +230,33 @@ public class BenchmarkVarcharVec
     }
 
     @Benchmark
-    public int sliceVarcharVecBenchmark()
-    {
+    public int sliceVarcharVecBenchmark() {
         VarcharVec slice = vecGetData.slice(2, rows / 2);
-        return  slice.getSize();
+        return slice.getSize();
     }
 
     @Benchmark
-    public int copyRegionVarcharVecBenchmark()
-    {
+    public int copyRegionVarcharVecBenchmark() {
         VarcharVec copyRegion = vecGetData.copyRegion(2, rows / 2);
         return copyRegion.getSize();
     }
 
     @Benchmark
-    public int copyPositionVarcharVecBenchmark()
-    {
+    public int copyPositionVarcharVecBenchmark() {
         VarcharVec copyPosition = vecGetData.copyPositions(positions, 0, positions.length);
         return copyPosition.getSize();
     }
 
-    static class VarcharVecTest
-    {
+    static class VarcharVecTest {
         int[] offsets;
         ByteBuffer byteBuffer;
 
-        public VarcharVecTest(int capacityInBytes, int size)
-        {
+        public VarcharVecTest(int capacityInBytes, int size) {
             offsets = new int[size + 1];
             byteBuffer = ByteBuffer.allocate(capacityInBytes);
         }
 
-        public byte[] get(int index)
-        {
+        public byte[] get(int index) {
             int startOffset = offsets[index];
             int dataLen = offsets[index + 1] - offsets[index];
             byteBuffer.position(startOffset);
@@ -290,41 +265,33 @@ public class BenchmarkVarcharVec
             return data;
         }
 
-        public void set(int index, byte[] value)
-        {
+        public void set(int index, byte[] value) {
             int startOffset = offsets[index];
             offsets[index + 1] = startOffset + value.length;
             byteBuffer.position(startOffset);
             byteBuffer.put(value, 0, value.length);
         }
 
-        public byte[] getData()
-        {
+        public byte[] getData() {
             return byteBuffer.array();
         }
     }
 
-    private void closeArrowVec(List<VarCharVector> vecs)
-    {
+    private void closeArrowVec(List<VarCharVector> vecs) {
         for (VarCharVector vec : vecs) {
             vec.close();
         }
     }
 
-    private void closeVec(List<VarcharVec> vecs)
-    {
+    private void closeVec(List<VarcharVec> vecs) {
         for (Vec vec : vecs) {
             vec.close();
         }
     }
 
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkVarcharVec.class.getSimpleName() + ".*")
-                .build();
+    public static void main(String[] args) throws Throwable {
+        Options options = new OptionsBuilder().verbosity(VerboseMode.NORMAL)
+                .include(".*" + BenchmarkVarcharVec.class.getSimpleName() + ".*").build();
 
         new Runner(options).run();
     }

@@ -15,10 +15,10 @@ const std::string mulDec128Str = "Mul_decimal128";
 const std::string divDec128Str = "Div_decimal128";
 
 namespace omniruntime {
-    class DecimalFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class DecimalFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_DECIMAL_H

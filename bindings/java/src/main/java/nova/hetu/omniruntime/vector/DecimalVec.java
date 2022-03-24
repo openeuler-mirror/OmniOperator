@@ -4,10 +4,10 @@
 
 package nova.hetu.omniruntime.vector;
 
+import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
+
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
-
-import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
 
 /**
  * base class of decimal vec
@@ -33,8 +33,7 @@ public abstract class DecimalVec extends FixedWidthVec {
     }
 
     public DecimalVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                      long nativeVectorAllocator, int capacityInBytes, int size, int offset, int typeLength,
-                      DataType type) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset, int typeLength, DataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
                 size, offset, type);
         this.typeWidth = getTypeWidth(typeLength);
@@ -87,7 +86,7 @@ public abstract class DecimalVec extends FixedWidthVec {
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start  the element index in values
+     * @param start the element index in values
      * @param length the number of elements that need to written
      */
     public void put(long[] values, int offset, int start, int length) {

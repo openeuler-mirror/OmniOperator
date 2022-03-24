@@ -59,7 +59,7 @@ public:
     }
 
     static int32_t GetOutputRowSize(const std::vector<DataType> &dataTypes, const int32_t *outputCols,
-                                    int32_t outputColsCount)
+        int32_t outputColsCount)
     {
         int32_t rowSize = 0;
         for (int32_t i = 0; i < outputColsCount; i++) {
@@ -83,7 +83,7 @@ public:
     }
 
     static int32_t GetMaxRowCount(const std::vector<DataType> &dataTypes, const int32_t *outputCols,
-                                  int32_t outputColsCount)
+        int32_t outputColsCount)
     {
         int32_t rowSize = GetOutputRowSize(dataTypes, outputCols, outputColsCount);
         return GetMaxRowCount(rowSize);

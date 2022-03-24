@@ -113,7 +113,7 @@ void ContainerVector::Append(Vector *other, int positionOffset, int length)
     auto *otherContainer = reinterpret_cast<ContainerVector *>(other);
     if (otherContainer->GetVectorCount() != vectorCount) {
         LogError("this vec count %d is not equal other vec count %d, container vec append failed.", vectorCount,
-                 otherContainer->GetVectorCount());
+            otherContainer->GetVectorCount());
         return;
     }
     if (other->GetTypeId() != dataTypeId) {

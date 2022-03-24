@@ -1,10 +1,11 @@
+
 package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
 
 import org.testng.annotations.Test;
 
@@ -12,7 +13,6 @@ import org.testng.annotations.Test;
  * test decimal 128-bit vec
  */
 public class TestDecimal128Vec {
-
     /**
      * test new vector
      */

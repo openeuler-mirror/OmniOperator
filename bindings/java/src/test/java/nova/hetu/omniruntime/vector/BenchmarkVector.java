@@ -1,4 +1,7 @@
+
 package nova.hetu.omniruntime.vector;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import net.openhft.affinity.AffinityLock;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -21,8 +24,6 @@ import java.nio.LongBuffer;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @State(Scope.Thread)
 @OutputTimeUnit(MILLISECONDS)
@@ -47,8 +48,7 @@ public class BenchmarkVector {
             try (AffinityLock lock = AffinityLock.acquireLock(data.cpuUsed.getAndIncrement() % 16)) {
                 fn.executor(data);
             }
-        }
-        else {
+        } else {
             fn.executor(data);
         }
     }
@@ -696,13 +696,10 @@ public class BenchmarkVector {
         }
     }
 
-    public static void main(String[] args)
-            throws Throwable {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
+    public static void main(String[] args) throws Throwable {
+        Options options = new OptionsBuilder().verbosity(VerboseMode.NORMAL)
                 .include(".*" + BenchmarkVector.class.getSimpleName() + ".test_.*_filter_copy.*")
-                .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g")
-                .build();
+                .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g").build();
 
         new Runner(options).run();
     }

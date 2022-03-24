@@ -20,8 +20,7 @@ template <DataTypeId TYPE_ID> class FixedWidthVector : public Vector {
     using FixedWidthVectorImpl = FixedWidthVector<TYPE_ID>;
 
 public:
-    FixedWidthVector(VectorAllocator *allocator, int size) : Vector(allocator, BYTES * size, size, TYPE_ID)
-    {}
+    FixedWidthVector(VectorAllocator *allocator, int size) : Vector(allocator, BYTES * size, size, TYPE_ID) {}
 
     FixedWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {}
 

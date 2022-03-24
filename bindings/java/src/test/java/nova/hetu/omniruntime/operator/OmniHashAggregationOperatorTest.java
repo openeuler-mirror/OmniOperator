@@ -2,8 +2,8 @@
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
-import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
@@ -11,9 +11,9 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -149,8 +149,10 @@ public class OmniHashAggregationOperatorTest {
                     String[] aggChannels = {"#2", "#3"};
                     DataType[] aggTypes = {LongDataType.LONG, LongDataType.LONG};
                     FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
-                    DataType[] inputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                            LongDataType.LONG};
+                    DataType[] inputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                            LongDataType.LONG};
                     OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel,
                             groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 

@@ -81,7 +81,7 @@ public class OmniBufUnsafeV8 implements OmniBuf {
     @Override
     public void getIntArray(int index, int[] target, int targetIndex, int length) {
         JvmUtils.UNSAFE.copyMemory(null, addr((long) index), target, Unsafe.ARRAY_INT_BASE_OFFSET + targetIndex,
-            length);
+                length);
     }
 
     @Override

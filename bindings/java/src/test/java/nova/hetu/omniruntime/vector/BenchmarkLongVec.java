@@ -1,7 +1,10 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
+
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
@@ -28,16 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
 @State(Scope.Thread)
 @OutputTimeUnit(MICROSECONDS)
 @Fork(1)
 @Warmup(iterations = 1, batchSize = 1)
 @Measurement(iterations = 10, batchSize = 1)
 @BenchmarkMode(Mode.AverageTime)
-public class BenchmarkLongVec
-{
+public class BenchmarkLongVec {
     private static final int ALLOCATOR_CAPACITY = 1024 * 1024;
     private static final int COUNT = 1000;
 
@@ -78,8 +78,7 @@ public class BenchmarkLongVec
     }
 
     @Setup(Level.Iteration)
-    public void init()
-    {
+    public void init() {
         // for vec set/put
         vecPutData = new LongVec(rows);
         vecSetData = new LongVec(rows);
@@ -117,8 +116,7 @@ public class BenchmarkLongVec
     }
 
     @TearDown(Level.Iteration)
-    public void tearDown()
-    {
+    public void tearDown() {
         vecPutData.close();
         vecSetData.close();
         vecGetData.close();
@@ -130,32 +128,26 @@ public class BenchmarkLongVec
         allocator2.close();
     }
 
-    private void initValues(LongVec vec, int rowCount)
-    {
-        for (int i = 0; i < rowCount; i++)
-        {
+    private void initValues(LongVec vec, int rowCount) {
+        for (int i = 0; i < rowCount; i++) {
             vec.set(i, random.nextLong());
         }
     }
 
-    private void initValues(long[] array, int rowCount)
-    {
-        for (int i = 0; i < rowCount; i++)
-        {
+    private void initValues(long[] array, int rowCount) {
+        for (int i = 0; i < rowCount; i++) {
             array[i] = random.nextLong();
         }
     }
 
-    private void initValues(BigIntVector arrayVec, int rowCount)
-    {
+    private void initValues(BigIntVector arrayVec, int rowCount) {
         for (int i = 0; i < rowCount; i++) {
             arrayVec.set(i, random.nextLong());
         }
     }
 
     @Benchmark
-    public void createLongVecBenchmark(Blackhole blackhole)
-    {
+    public void createLongVecBenchmark(Blackhole blackhole) {
         List<LongVec> vecs = new ArrayList<>();
         for (int i = 0; i < COUNT; i++) {
             LongVec vec = new LongVec(rows);
@@ -166,8 +158,7 @@ public class BenchmarkLongVec
     }
 
     @Benchmark
-    public void createArrowVecBenchmark(Blackhole blackhole)
-    {
+    public void createArrowVecBenchmark(Blackhole blackhole) {
         List<BigIntVector> vecs = new ArrayList<>();
         RootAllocator rootAllocator = new RootAllocator(Long.MAX_VALUE);
         for (int i = 0; i < COUNT; i++) {
@@ -181,83 +172,71 @@ public class BenchmarkLongVec
     }
 
     @Benchmark
-    public void createLongArrayBenchmark(Blackhole benchmarkData)
-    {
+    public void createLongArrayBenchmark(Blackhole benchmarkData) {
         for (int i = 0; i < COUNT; i++) {
             benchmarkData.consume(new long[rows]);
         }
     }
 
     @Benchmark
-    public void setLongVecBenchmark()
-    {
+    public void setLongVecBenchmark() {
         for (int i = 0; i < rows; i++) {
             vecSetData.set(i, randomData[i]);
         }
     }
 
     @Benchmark
-    public void copyArrayBenchmark()
-    {
+    public void copyArrayBenchmark() {
         long[] data = new long[rows];
         System.arraycopy(randomData, 0, data, 0, rows);
     }
 
     @Benchmark
-    public void newPutReleaseLongVecBenchmark()
-    {
+    public void newPutReleaseLongVecBenchmark() {
         LongVec vec = new LongVec(rows);
-        vec.put(randomData,0 ,0 , randomData.length);
+        vec.put(randomData, 0, 0, randomData.length);
         vec.close();
     }
 
     @Benchmark
-    public void putLongVecBenchmark()
-    {
-        vecPutData.put(randomData,0 ,0 , randomData.length);
+    public void putLongVecBenchmark() {
+        vecPutData.put(randomData, 0, 0, randomData.length);
     }
 
     @Benchmark
-    public void setLongArrayBenchmark()
-    {
+    public void setLongArrayBenchmark() {
         for (int i = 0; i < rows; i++) {
             arraySetData[i] = randomData[i];
         }
     }
 
     @Benchmark
-    public void setArrowVecBenchmark()
-    {
+    public void setArrowVecBenchmark() {
         for (int i = 0; i < rows; i++) {
             arrowLongVecSet.set(i, randomData[i]);
         }
     }
 
     @Benchmark
-    public long getLongArrayBenchmark()
-    {
+    public long getLongArrayBenchmark() {
         long sum = 0;
-        for (int i = 0; i < rows; i++)
-        {
+        for (int i = 0; i < rows; i++) {
             sum += arrayGetData[i];
         }
         return sum;
     }
 
     @Benchmark
-    public long getLongVecBenchmark()
-    {
+    public long getLongVecBenchmark() {
         long sum = 0;
-        for (int i = 0; i < rows; i++)
-        {
+        for (int i = 0; i < rows; i++) {
             sum += vecGetData.get(i);
         }
         return sum;
     }
 
     @Benchmark
-    public long getsLongVecBenchmark()
-    {
+    public long getsLongVecBenchmark() {
         long sum = 0;
         long[] result = vecGetDatas.get(0, rows);
         for (long datum : result) {
@@ -267,8 +246,7 @@ public class BenchmarkLongVec
     }
 
     @Benchmark
-    public long getArrowVecBenchmark()
-    {
+    public long getArrowVecBenchmark() {
         long sum = 0;
         int rows = this.rows;
         for (int i = 0; i < rows; i++) {
@@ -278,47 +256,38 @@ public class BenchmarkLongVec
     }
 
     @Benchmark
-    public int sliceLongVecBenchmark()
-    {
+    public int sliceLongVecBenchmark() {
         LongVec slice = vecGetData.slice(2, rows / 2);
-        return  slice.getSize();
+        return slice.getSize();
     }
 
     @Benchmark
-    public int copyRegionLongVecBenchmark()
-    {
+    public int copyRegionLongVecBenchmark() {
         LongVec copyRegion = vecGetData.copyRegion(2, rows / 2);
         return copyRegion.getSize();
     }
 
     @Benchmark
-    public int copyPositionLongVecBenchmark()
-    {
+    public int copyPositionLongVecBenchmark() {
         LongVec copyPosition = vecGetData.copyPositions(positions, 0, positions.length);
         return copyPosition.getSize();
     }
 
-    private void closeArrowVec(List<BigIntVector> vecs)
-    {
+    private void closeArrowVec(List<BigIntVector> vecs) {
         for (BigIntVector vec : vecs) {
             vec.close();
         }
     }
 
-    private void closeVec(List<LongVec> vecs)
-    {
+    private void closeVec(List<LongVec> vecs) {
         for (Vec vec : vecs) {
             vec.close();
         }
     }
 
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkLongVec.class.getSimpleName() + ".*")
-                .build();
+    public static void main(String[] args) throws Throwable {
+        Options options = new OptionsBuilder().verbosity(VerboseMode.NORMAL)
+                .include(".*" + BenchmarkLongVec.class.getSimpleName() + ".*").build();
 
         new Runner(options).run();
     }

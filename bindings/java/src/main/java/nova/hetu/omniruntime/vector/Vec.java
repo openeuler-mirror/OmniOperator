@@ -4,7 +4,10 @@
 
 package nova.hetu.omniruntime.vector;
 
+import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
+
 import com.google.common.annotations.VisibleForTesting;
+
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
@@ -15,15 +18,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
-
 /**
  * base class of vec
  *
  * @since 2021-07-17
  */
 @NotThreadSafe
-public abstract class Vec implements Closeable {
+public abstract class Vec implements Closeable
+{
     static {
         OmniLibs.load();
     }
@@ -198,7 +200,7 @@ public abstract class Vec implements Closeable {
      * @param size the actual number of value of vector.
      * @param offset offset of positions in the input parameter.
      * @param dataType the type of this vector
-     * */
+     */
     protected Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
             long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType dataType) {
         this(new VecAllocator(nativeVectorAllocator), nativeVector, nativeVectorValueBufAddress,
@@ -223,7 +225,7 @@ public abstract class Vec implements Closeable {
      *
      * @param nativeVector nativeVector address
      * @return capacity of native vector
-     * */
+     */
     protected static native int getCapacityInBytesNative(long nativeVector);
 
     private static native int getSizeNative(long nativeVector);
@@ -590,7 +592,7 @@ public abstract class Vec implements Closeable {
      * return the allocator of vector
      *
      * @return allocator of the vector
-     * */
+     */
     public VecAllocator getAllocator() {
         return allocator;
     }

@@ -10,31 +10,30 @@
 #include <vector>
 
 namespace omniruntime {
-    namespace jit {
-        class Context {
-        public:
-            Context(std::string jitTemplate,
-                    std::map<std::string, Specialization> specializations)
-                : jitTemplate(jitTemplate), specializations(specializations) {
-            }
+namespace jit {
+class Context {
+public:
+    Context(std::string jitTemplate, std::map<std::string, Specialization> specializations)
+        : jitTemplate(jitTemplate), specializations(specializations)
+    {}
 
-            ~Context(){}
+    ~Context() {}
 
-            std::string getJitTemplate()
-            {
-                return this->jitTemplate;
-            }
-
-            std::map<std::string, Specialization> getSpecializations()
-            {
-                return this->specializations;
-            }
-
-        private:
-            std::string jitTemplate;
-            std::map<std::string, Specialization> specializations;
-        };
+    std::string getJitTemplate()
+    {
+        return this->jitTemplate;
     }
+
+    std::map<std::string, Specialization> getSpecializations()
+    {
+        return this->specializations;
+    }
+
+private:
+    std::string jitTemplate;
+    std::map<std::string, Specialization> specializations;
+};
+}
 }
 
 #endif

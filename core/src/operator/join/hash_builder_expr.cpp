@@ -13,8 +13,8 @@ namespace op {
 using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
-        const DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-        int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
+    const DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+    int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
 {
     auto operatorFactory = std::make_unique<HashBuilderWithExprOperatorFactory>(buildTypes, buildHashKeys,
         buildHashKeysCount, filter, hashTableCount);

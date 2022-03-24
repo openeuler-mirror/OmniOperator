@@ -16,10 +16,10 @@ const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
 const std::string dictionaryGetDecimalStr = "DictionaryGetDecimal";
 
 namespace omniruntime {
-    class DictionaryFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class DictionaryFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_DICTIONARY_H

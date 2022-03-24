@@ -9,12 +9,9 @@ using namespace omniruntime;
 
 std::vector<Function> ContextFunctionRegistry::GetFunctions()
 {
-    std::vector<Function> contextFnRegistry = {
-        Function(reinterpret_cast<void*>(ArenaAllocatorMalloc), "ArenaAllocatorMalloc", {},
-                 {OMNI_LONG, OMNI_INT},
-                 OMNI_CHAR),
-        Function(reinterpret_cast<void*>(ArenaAllocatorReset), "ArenaAllocatorReset", {}, {OMNI_LONG},
-                 OMNI_BOOLEAN)
-    };
+    std::vector<Function> contextFnRegistry = { Function(reinterpret_cast<void *>(ArenaAllocatorMalloc),
+        "ArenaAllocatorMalloc", {}, { OMNI_LONG, OMNI_INT }, OMNI_CHAR),
+        Function(reinterpret_cast<void *>(ArenaAllocatorReset), "ArenaAllocatorReset", {}, { OMNI_LONG },
+        OMNI_BOOLEAN) };
     return contextFnRegistry;
 }

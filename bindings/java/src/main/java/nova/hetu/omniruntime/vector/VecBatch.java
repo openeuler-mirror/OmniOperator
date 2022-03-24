@@ -68,17 +68,16 @@ public class VecBatch implements Closeable {
      * @param nativeVecBatch
      */
     public VecBatch(long nativeVecBatch, long[] nativeVectors, long[] nativeVectorValueBufAddresses,
-                    long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses,
-                    long[] nativeVectorAllocators, int[] capacityInBytes, int[] offsets, int[] encodings,
-                    int[] dataTypeIds, int rowCount) {
+            long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses, long[] nativeVectorAllocators,
+            int[] capacityInBytes, int[] offsets, int[] encodings, int[] dataTypeIds, int rowCount) {
         int vecCount = nativeVectors.length;
         Vec[] newVectors = new Vec[vecCount];
         for (int idx = 0; idx < vecCount; idx++) {
             long nativeVector = nativeVectors[idx];
             DataType dataType = DataType.create(dataTypeIds[idx]);
             newVectors[idx] = VecFactory.create(nativeVector, nativeVectorValueBufAddresses[idx],
-                nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], nativeVectorAllocators[idx],
-                capacityInBytes[idx], rowCount, offsets[idx], VecEncoding.values()[encodings[idx]], dataType);
+                    nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], nativeVectorAllocators[idx],
+                    capacityInBytes[idx], rowCount, offsets[idx], VecEncoding.values()[encodings[idx]], dataType);
         }
         this.rowCount = rowCount;
         this.nativeVectorBatch = nativeVecBatch;
@@ -89,7 +88,7 @@ public class VecBatch implements Closeable {
      * create vector batch based on the number of vectors
      *
      * @param nativeVectors native vector array.
-     * @param rowCount      the row count of vector batch
+     * @param rowCount the row count of vector batch
      * @return vector batch address
      */
     public static native long newVectorBatchNative(long[] nativeVectors, int rowCount);
@@ -145,9 +144,8 @@ public class VecBatch implements Closeable {
         if (isClosed.compareAndSet(false, true)) {
             freeVectorBatchNative(nativeVectorBatch);
         } else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE,
-                "vec batch has been closed:" + this + ",threadName:" + Thread.currentThread().getName() + ",native:"
-                    + nativeVectorBatch);
+            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE, "vec batch has been closed:" + this
+                    + ",threadName:" + Thread.currentThread().getName() + ",native:" + nativeVectorBatch);
         }
     }
 }

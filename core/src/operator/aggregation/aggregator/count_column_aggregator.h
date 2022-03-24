@@ -14,7 +14,8 @@ public:
     {}
 
     CountColumnAggregator(const DataType &out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneDataType::Instance(), out, channel, inputRaw, outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneDataType::Instance(), out, channel, inputRaw,
+        outputPartial)
     {}
 
     ~CountColumnAggregator() override {}

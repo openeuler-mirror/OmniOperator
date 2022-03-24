@@ -894,8 +894,7 @@ TEST(CodeGenTest, Operators1)
     BinaryExpr *expr = new BinaryExpr(AND, gteExpr, andLeft, BooleanType());
 
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT),
-        DataType(OMNI_INT) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
@@ -987,8 +986,7 @@ TEST(CodeGenTest, MathFunctions1)
     auto eq2 = new BinaryExpr(EQ, abs3, abs4, BooleanType());
     auto expr = new BinaryExpr(AND, eq1, eq2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT),
-        DataType(OMNI_INT) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
@@ -1061,8 +1059,7 @@ TEST(CodeGenTest, MathFunctions2)
     FieldExpr *upperExpr = new FieldExpr(2, IntType());
     BetweenExpr *expr = new BetweenExpr(valueExpr, lowerExpr, upperExpr);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT),
-        DataType(OMNI_INT) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
@@ -1155,8 +1152,7 @@ TEST(CodeGenTest, MathFunctions3)
     BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT),
-        DataType(OMNI_INT) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1253,8 +1249,7 @@ TEST(CodeGenTest, MathFunctions4)
     }
     InExpr *expr = new InExpr(args);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT),
-        DataType(OMNI_INT) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1376,8 +1371,7 @@ TEST(CodeGenTest, CastNumbers1)
 
     auto expr = new BinaryExpr(EQ, abs0, abs1, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG),
-        DataType(OMNI_DOUBLE) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1463,8 +1457,7 @@ TEST(CodeGenTest, CastNumbers2)
     auto col2 = new FieldExpr(2, DoubleType());
     auto expr = new BinaryExpr(GT, cast, col2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG),
-        DataType(OMNI_DOUBLE) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1550,8 +1543,7 @@ TEST(CodeGenTest, Like)
     args.push_back(data);
     auto expr = GetFuncExpr(funcStr, args, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR),
-        DataType(OMNI_VARCHAR) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1635,8 +1627,7 @@ TEST(CodeGenTest, DateCast)
     auto col0 = new FieldExpr(0, IntType());
     auto expr = new BinaryExpr(GT, cast, col0, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR),
-        DataType(OMNI_VARCHAR) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1748,8 +1739,7 @@ TEST(CodeGenTest, SubstrIn)
 
     InExpr *expr = new InExpr(args);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR),
-        DataType(OMNI_VARCHAR) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1851,8 +1841,7 @@ TEST(CodeGenTest, ConcatStr)
     auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarcharType(11));
     auto expr = new BinaryExpr(EQ, concatExpr, helloWorldExpr, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR),
-        DataType(OMNI_VARCHAR) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2192,8 +2181,7 @@ TEST(CodeGenTest, StringWithOps)
 
     BinaryExpr *expr = new BinaryExpr(OR, eqExpr1, eqExpr2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR),
-        DataType(OMNI_VARCHAR) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2290,8 +2278,7 @@ TEST(CodeGenTest, Coalesce)
     right->dataType = LongType();
     BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG),
-        DataType(OMNI_LONG) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG), DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -3191,8 +3178,7 @@ TEST(CodeGenTest, CastNumbers3)
     FieldExpr *col2 = new FieldExpr(2, DoubleType());
     BinaryExpr *expr = new BinaryExpr(LT, col1, col2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DOUBLE) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE) };
     DataTypes types(vecOfTypes);
     Parser parser {};
     ExprPrinter printExprTree;
@@ -3741,8 +3727,7 @@ TEST(CodeGenTest, CombineHash)
     FieldExpr *col2 = new FieldExpr(2, LongType());
     BinaryExpr *expr = new BinaryExpr(EQ, combineHash, col2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG),
-        DataType(OMNI_LONG) };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG), DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);

@@ -16,8 +16,6 @@
 #endif
 
 
-
-
 // Put all declarations for external functions here
 // If function types need to be separated, create new .h and .cpp files with the declarations and C++ implementations
 // Make sure that they are included in external_func_registry.h

@@ -4,8 +4,8 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -30,9 +30,9 @@ public class Decimal128Vec extends DecimalVec {
     }
 
     public Decimal128Vec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType type) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, BYTES, type);
+                size, offset, BYTES, type);
     }
 
     private Decimal128Vec(Decimal128Vec vector, int offset, int length, boolean isSlice) {
@@ -47,7 +47,7 @@ public class Decimal128Vec extends DecimalVec {
      * split a vec into two vec according to the specified index and length
      *
      * @param start starting index
-     * @param end   ending index
+     * @param end ending index
      * @return new vec
      */
     @Override
@@ -69,8 +69,8 @@ public class Decimal128Vec extends DecimalVec {
      * copy a new vec based on the positions
      *
      * @param positions all positions in vec
-     * @param offset    position offset
-     * @param length    the number of elements to be copied
+     * @param offset position offset
+     * @param length the number of elements to be copied
      * @return new vec
      */
     @Override
@@ -82,7 +82,7 @@ public class Decimal128Vec extends DecimalVec {
      * copy a vec based on the starting position and the number of elements
      *
      * @param positionOffset staring position
-     * @param length         the number of elements
+     * @param length the number of elements
      * @return new vec
      */
     @Override

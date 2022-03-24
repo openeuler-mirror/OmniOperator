@@ -9,11 +9,11 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.constants.FunctionType;
+import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
@@ -24,7 +24,6 @@ import java.util.Iterator;
  * The type Omni hash aggregation with expression operator test.
  */
 public class OmniHashAggregationWithExprOperatorTest {
-
     @Test
     public void testHashAggWithPartialExpr() {
         String[] groupByChanel = {"MODULUS:2(#0, 3:2)", "#2"};

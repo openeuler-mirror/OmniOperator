@@ -7,4 +7,5 @@ package nova.hetu.omniruntime.operator;
 /**
  * The interface Omni jit context.
  */
-public interface OmniJitContext { }
+public interface OmniJitContext {
+}

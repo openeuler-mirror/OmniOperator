@@ -30,8 +30,8 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
             return std::make_unique<LiteralExpr>(BOOL_DEFAULT_VALUE, std::move(destType)).release();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
-            return std::make_unique<LiteralExpr>(
-                    make_unique<string>(CHAR_DEFAULT_VALUE).release(), std::move(destType)).release();
+            return std::make_unique<LiteralExpr>(make_unique<string>(CHAR_DEFAULT_VALUE).release(), std::move(destType))
+                .release();
         case OMNI_DECIMAL128:
             return std::make_unique<LiteralExpr>(make_unique<string>(DECIMAL128_DEFAULT_VALUE).release(),
                                                  std::move(destType)).release();

@@ -33,10 +33,11 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
 std::vector<Function> FunctionRegistry::Initialize()
 {
     std::vector<Function> allFunctions;
-    functionRegistry = std::make_unique<std::unordered_map<const FunctionSignature*, const Function*, Hash, Equals>>();
+    functionRegistry =
+        std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
 
     auto registries = GetFunctionRegistries();
-    for (auto const &registry : registries) {
+    for (auto const & registry : registries) {
         auto functions = registry->GetFunctions();
         allFunctions.insert(std::end(allFunctions), functions.begin(), functions.end());
     }

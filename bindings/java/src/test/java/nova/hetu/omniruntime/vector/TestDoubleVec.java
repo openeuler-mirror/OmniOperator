@@ -1,14 +1,16 @@
-package nova.hetu.omniruntime.vector;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
-import java.math.BigDecimal;
-import java.util.Arrays;
+package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_DOUBLE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.Test;
+
+import java.math.BigDecimal;
+import java.util.Arrays;
 
 /**
  * test double vec
@@ -110,16 +112,14 @@ public class TestDoubleVec {
         for (int i = 0; i < doubleVec.getSize(); i++) {
             if (i % 5 == 0) {
                 doubleVec.setNull(i);
-            }
-            else {
+            } else {
                 doubleVec.set(i, (double) i / 3);
             }
         }
         for (int i = 0; i < doubleVec.getSize(); i++) {
             if (i % 5 == 0) {
                 assertTrue(doubleVec.isNull(i));
-            }
-            else {
+            } else {
                 assertEquals(doubleVec.get(i), (double) i / 3);
             }
         }

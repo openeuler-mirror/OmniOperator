@@ -69,7 +69,7 @@ private:
 };
 
 inline SimpleArenaAllocator::SimpleArenaAllocator(int64_t minChunkSize)
-    :minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL)
+    : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL)
 {}
 
 inline SimpleArenaAllocator::~SimpleArenaAllocator()

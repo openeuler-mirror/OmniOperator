@@ -6,10 +6,10 @@
 #define OMNI_RUNTIME_FUNC_REGISTRY_BASE_H
 
 namespace omniruntime {
-    class BaseFunctionRegistry {
-    public:
-        virtual std::vector<Function> GetFunctions() = 0;
-    };
+class BaseFunctionRegistry {
+public:
+    virtual std::vector<Function> GetFunctions() = 0;
+};
 }
 
-#endif //OMNI_RUNTIME_FUNC_REGISTRY_BASE_H
+#endif // OMNI_RUNTIME_FUNC_REGISTRY_BASE_H

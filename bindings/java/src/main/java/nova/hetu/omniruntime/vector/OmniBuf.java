@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.vector;
 
-import java.nio.ByteBuffer;
 
 /**
  * encapsulate the ByteBuffer data interface and provide them to all vec.
@@ -31,17 +30,17 @@ public interface OmniBuf {
     /**
      * Batch setting bytes
      *
-     * @param index    the byte offset of the element
-     * @param src      byte array
+     * @param index the byte offset of the element
+     * @param src byte array
      * @param srcStart array start index
-     * @param length   byte size
+     * @param length byte size
      */
     void setBytes(int index, byte[] src, int srcStart, int length);
 
     /**
      * get bytes in batch
      *
-     * @param index  the byte offset of the element
+     * @param index the byte offset of the element
      * @param length byte size
      * @return byte array
      */
@@ -50,10 +49,10 @@ public interface OmniBuf {
     /**
      * get bytes in batch
      *
-     * @param index       the byte offset of the element
-     * @param target      target byte array
+     * @param index the byte offset of the element
+     * @param target target byte array
      * @param targetIndex the offset of the target byte array
-     * @param length      byte size
+     * @param length byte size
      */
     void getBytes(int index, byte[] target, int targetIndex, int length);
 
@@ -68,10 +67,10 @@ public interface OmniBuf {
     /**
      * set short array
      *
-     * @param index    the byte offset of the element
-     * @param src      short array
+     * @param index the byte offset of the element
+     * @param src short array
      * @param srcIndex the starting byte offset of the array
-     * @param length   byte size
+     * @param length byte size
      */
     void setShortArray(int index, short[] src, int srcIndex, int length);
 
@@ -102,20 +101,20 @@ public interface OmniBuf {
     /**
      * set int array
      *
-     * @param index    the byte offset of the element
-     * @param src      int array
+     * @param index the byte offset of the element
+     * @param src int array
      * @param srcIndex the starting byte offset of the array
-     * @param length   byte size
+     * @param length byte size
      */
     void setIntArray(int index, int[] src, int srcIndex, int length);
 
     /**
      * get int array
      *
-     * @param index       the byte offset of the element
-     * @param target      target int array
+     * @param index the byte offset of the element
+     * @param target target int array
      * @param targetIndex the starting byte offset of the array
-     * @param length      byte size
+     * @param length byte size
      */
     void getIntArray(int index, int[] target, int targetIndex, int length);
 
@@ -138,20 +137,20 @@ public interface OmniBuf {
     /**
      * set long array
      *
-     * @param index    the byte offset of the element
-     * @param src      long array
+     * @param index the byte offset of the element
+     * @param src long array
      * @param srcIndex the starting byte offset of the array
-     * @param length   byte size
+     * @param length byte size
      */
     void setLongArray(int index, long[] src, int srcIndex, int length);
 
     /**
      * get long array
      *
-     * @param index       the byte offset of the element
-     * @param target      target long array
+     * @param index the byte offset of the element
+     * @param target target long array
      * @param targetIndex the starting byte offset of the array
-     * @param length      byte size
+     * @param length byte size
      */
     void getLongArray(int index, long[] target, int targetIndex, int length);
 
@@ -174,20 +173,20 @@ public interface OmniBuf {
     /**
      * set double array
      *
-     * @param index    the byte offset of the element
-     * @param src      source double array
+     * @param index the byte offset of the element
+     * @param src source double array
      * @param srcIndex the starting byte offset of the array
-     * @param length   byte size
+     * @param length byte size
      */
     void setDoubleArray(int index, double[] src, int srcIndex, int length);
 
     /**
      * get double array
      *
-     * @param index       the byte offset of the element
-     * @param target      target double array
+     * @param index the byte offset of the element
+     * @param target target double array
      * @param targetIndex the starting byte offset of the array
-     * @param length      byte size
+     * @param length byte size
      */
     void getDoubleArray(int index, double[] target, int targetIndex, int length);
 

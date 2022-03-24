@@ -8,10 +8,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class VecAllocatorFactory {
-
     public static Map<String, VecAllocator> vecAllocators = new HashMap<>();
 
-    synchronized public static VecAllocator create(String scope, CallBack createCallback) {
+    public static synchronized VecAllocator create(String scope, CallBack createCallback) {
         VecAllocator allocator = vecAllocators.get(scope);
         if (allocator == null) {
             allocator = new VecAllocator(scope);
@@ -23,14 +22,14 @@ public class VecAllocatorFactory {
         return allocator;
     }
 
-    synchronized public static VecAllocator get(String scope) {
+    public static synchronized VecAllocator get(String scope) {
         if (vecAllocators.containsKey(scope)) {
             return vecAllocators.get(scope);
         }
         return VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
     }
 
-    synchronized public static void delete(String scope) {
+    public static synchronized void delete(String scope) {
         VecAllocator allocator = vecAllocators.get(scope);
         if (allocator != null) {
             allocator.close();

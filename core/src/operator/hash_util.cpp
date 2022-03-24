@@ -39,7 +39,3 @@ int64_t NextPowerOfTwo(int64_t x)
 }
 }
 }
-
-
-
-

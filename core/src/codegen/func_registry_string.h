@@ -13,10 +13,10 @@ const std::string mm3hashStr = "mm3hash";
 const std::string strCompareStr = "compare";
 
 namespace omniruntime {
-    class StringFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class StringFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_STRING_H

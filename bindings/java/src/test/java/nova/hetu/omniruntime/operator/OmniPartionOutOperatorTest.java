@@ -1,20 +1,21 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+import static org.testng.Assert.assertEquals;
+
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
 import nova.hetu.omniruntime.type.CharDataType;
-import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.VecBatch;
+
 import org.testng.annotations.Test;
 
 import java.util.Iterator;
 import java.util.OptionalInt;
-
-import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
-import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
-import static org.testng.Assert.assertEquals;
 
 public class OmniPartionOutOperatorTest {
     @Test

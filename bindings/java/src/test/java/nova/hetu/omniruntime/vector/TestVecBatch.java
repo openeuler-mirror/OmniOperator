@@ -1,11 +1,12 @@
+
 package nova.hetu.omniruntime.vector;
+
+import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.testng.Assert.assertEquals;
 
 /**
  * test vec batch
@@ -28,8 +29,7 @@ public class TestVecBatch {
     }
 
     @Test
-    public void testNewVecBatchWithEmptyVectors()
-    {
+    public void testNewVecBatchWithEmptyVectors() {
         // for load libomni_runtime.so
         LongVec vec = new LongVec(1);
         List<Vec> emptyVecs = new ArrayList<>();

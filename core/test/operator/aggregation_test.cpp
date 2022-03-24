@@ -662,8 +662,8 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 1, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(), DoubleDataType::Instance(),
-        2, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(),
+        DoubleDataType::Instance(), 2, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<CountColumnAggregator>(LongDataType::Instance(), 3, INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 4, INPUT_MODE, OUTPUT_MODE));
@@ -934,8 +934,8 @@ TEST(AggregationOperatorTest, verify_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 0, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(), DoubleDataType::Instance(),
-        1, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(),
+        DoubleDataType::Instance(), 1, false, false));
     aggs1.push_back(std::make_unique<CountColumnAggregator>(LongDataType::Instance(), 2, false, false));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 3, false, false));
@@ -1029,8 +1029,8 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
     aggs1.push_back(std::make_unique<CountColumnAggregator>(LongDataType::Instance(), 0, false, false));
     aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 1, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(), DoubleDataType::Instance(),
-        2, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(),
+        DoubleDataType::Instance(), 2, false, false));
     aggs1.push_back(std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 3, false, false));
     aggs1.push_back(std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),

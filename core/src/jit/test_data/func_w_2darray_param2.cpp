@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <vector>
 
-__attribute__((noinline)) double Process(
-    void **columns, const int y[], int z, int rowCount)
+__attribute__((noinline)) double Process(void **columns, const int y[], int z, int rowCount)
 {
     double sum = 0;
     for (int i = 0; i < z; i++) {

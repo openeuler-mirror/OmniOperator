@@ -19,14 +19,13 @@ namespace op {
 class StreamedTableWithExprOperatorFactory : public OperatorFactory {
 public:
     static StreamedTableWithExprOperatorFactory *CreateStreamedTableWithExprOperatorFactory(
-        const type::DataTypes &streamedTypes,
-        const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
-        int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter);
+        const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
+        int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
+        std::string &filter);
 
     StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
-        int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
-        std::string &filter);
+        int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter);
 
     ~StreamedTableWithExprOperatorFactory() override;
 
@@ -48,7 +47,7 @@ private:
 class StreamedTableWithExprOperator : public Operator {
 public:
     StreamedTableWithExprOperator(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeyCols,
-                                  const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+        const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
 
     ~StreamedTableWithExprOperator() override;
 
@@ -69,14 +68,13 @@ private:
 class BufferedTableWithExprOperatorFactory : public OperatorFactory {
 public:
     static BufferedTableWithExprOperatorFactory *CreateBufferedTableWithExprOperatorFactory(
-        const DataTypes &bufferedTypes,
-        const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
-        int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr);
+        const DataTypes &bufferedTypes, const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols,
+        int32_t bufferedKeyExprCnt, int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
+        int64_t streamedTableFactoryAddr);
 
     BufferedTableWithExprOperatorFactory(const DataTypes &bufferedTypes,
         const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
-        int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
-        int64_t streamedTableFactoryAddr);
+        int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr);
 
     ~BufferedTableWithExprOperatorFactory() override;
 
@@ -94,7 +92,7 @@ private:
 class BufferedTableWithExprOperator : public Operator {
 public:
     BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes, const std::vector<int32_t> &bufferedKeyCols,
-                                  const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+        const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
 
     ~BufferedTableWithExprOperator() override;
 

@@ -30,16 +30,15 @@ double Agg(const double column[], int size)
     return sum;
 }
 
-__attribute__((noinline)) double Process(
-    void **columns, const int y[], int z, int rowCount)
+__attribute__((noinline)) double Process(void **columns, const int y[], int z, int rowCount)
 {
     double sum = 0;
     for (int i = 0; i < z; i++) {
         if (y[i] == 1) {
-            sum = sum + Agg((int *) columns[i], rowCount);
+            sum = sum + Agg((int *)columns[i], rowCount);
         }
         if (y[i] == 2) { // 2
-            sum = sum + Agg((double *) columns[i], rowCount);
+            sum = sum + Agg((double *)columns[i], rowCount);
         }
     }
     return sum;
@@ -60,8 +59,8 @@ int main(int argc, char *argv[])
 
     void *columns[] = {v1, v2, v3};
 
-    int columnType[] = {1, 2, 1};      // type of each column, should be 1, or 2 for testing now
-    int columnCount = 3; // 3
+    int columnType[] = {1, 2, 1}; // type of each column, should be 1, or 2 for testing now
+    int columnCount = 3;            // 3
     int rowCount = count;
 
 
@@ -73,7 +72,7 @@ int main(int argc, char *argv[])
 
     double result = 0;
     for (int i = 0; i < 10000; i++) { // 10000
-        result = process((void **) columns, columnType, columnCount, rowCount);
+        result = process((void **)columns, columnType, columnCount, rowCount);
     }
 
     auto t0 = Time::now();

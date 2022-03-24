@@ -9,8 +9,7 @@
 
 using namespace omniruntime::codegen;
 
-void createOperatorFactory(
-    SortOperatorFactory &sortOperatorFactory, omniruntime::op::Operator &sortOperator)
+void createOperatorFactory(SortOperatorFactory &sortOperatorFactory, omniruntime::op::Operator &sortOperator)
 {
     int32_t sourceTypes[] = {1, 1};
     int32_t outputCols[] = {0, 1};
@@ -20,36 +19,34 @@ void createOperatorFactory(
     int sortNullFirsts[] = {1, 1};
     int sortColCount = 2;
 
-    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::CreateOperatorFactory(
-            sourceTypes, 2, outputCols, 2, // 2 2
-            sortCols, sortAscendings, sortNullFirsts, sortColCount);
+    SortOperatorFactory *sortOperatorFactory =
+        SortOperatorFactory::CreateOperatorFactory(sourceTypes, 2, outputCols, 2, // 2 2
+        sortCols, sortAscendings, sortNullFirsts, sortColCount);
     if (harden) {
-        auto p_sortCols = ParamValue(sortCols, 2); // 2
-        auto p_sortColTypes = ParamValue(sortColTypes, 2); // 2
+        auto p_sortCols = ParamValue(sortCols, 2);             // 2
+        auto p_sortColTypes = ParamValue(sortColTypes, 2);     // 2
         auto p_sortAscendings = ParamValue(sortAscendings, 2); // 2
         auto p_sortNullFirsts = ParamValue(sortNullFirsts, 2); // 2
         auto p_sortColCount = ParamValue(&sortColCount);
 
         auto *compareToSp = new Specialization();
-        compareToSp->AddSpecializedParam(1, &p_sortCols); // 1
-        compareToSp->AddSpecializedParam(2, &p_sortColTypes); // 2
+        compareToSp->AddSpecializedParam(1, &p_sortCols);       // 1
+        compareToSp->AddSpecializedParam(2, &p_sortColTypes);   // 2
         compareToSp->AddSpecializedParam(3, &p_sortAscendings); // 3
         compareToSp->AddSpecializedParam(4, &p_sortNullFirsts); // 4
-        compareToSp->AddSpecializedParam(5, &p_sortColCount); // 5
+        compareToSp->AddSpecializedParam(5, &p_sortColCount);   // 5
 
-        std::map<std::string, Specialization> pagesIndexSps = {
-                {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp}
-        };
+        std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp } };
 
         auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
-                                                          std::vector<std::string>(), true);
+            std::vector<std::string>(), true);
         auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>());
         auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps);
 
         auto start = Time::now();
 
-        Jit *jit = new Jit(
-                std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
+        Jit *jit =
+            new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *memoryPoolContext, *pagesIndexContext });
         auto createOperatorFunc = jit->specialize();
 
         auto t_created_jitter = Time::now();
@@ -93,7 +90,7 @@ void TestSort(bool harden)
     omniruntime::op::Operator *sortOperator = nullptr;
     createOperatorFactory(&sortOperatorFactory, &sortOperator)
 
-    sortOperator->AddInput(datas, rowCounts, 1);
+        sortOperator->AddInput(datas, rowCounts, 1);
     vector<VectorBatch *> outputPages;
     auto t1 = Time::now();
     sortOperator->GetOutput(outputPages);
@@ -107,10 +104,12 @@ void TestSort(bool harden)
     delete vecBatch;
 }
 
-TEST(JitPerf, test_sort_original) {
+TEST(JitPerf, test_sort_original)
+{
     TestSort(false);
 }
 
-TEST(JitPerf, test_sort_harden) {
+TEST(JitPerf, test_sort_harden)
+{
     TestSort(true);
 }

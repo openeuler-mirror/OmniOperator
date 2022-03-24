@@ -1,13 +1,12 @@
 
 package nova.hetu.omniruntime.util;
 
-
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_DICTIONARY;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
@@ -22,7 +21,6 @@ import nova.hetu.omniruntime.vector.VecEncoding;
 import java.nio.charset.StandardCharsets;
 
 public class TestUtils {
-
     public static VecBatch createBlankVecBatch(DataType[] types) {
         Object[] data = {};
         Vec[] vecs = new Vec[types.length];
@@ -57,7 +55,7 @@ public class TestUtils {
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return createVarcharVec((VarcharDataType) type, data);
-            default :
+            default:
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
         }
     }
@@ -66,7 +64,7 @@ public class TestUtils {
         switch (type.getId()) {
             case OMNI_DECIMAL128:
                 return createDecimal128Vec(data);
-            default :
+            default:
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
         }
     }
@@ -192,7 +190,7 @@ public class TestUtils {
                 case OMNI_CHAR:
                     assertEquals(new String(((VarcharVec) vec).get(i)), expectedData[i]);
                     break;
-                default :
+                default:
                     throw new UnsupportedOperationException("Unsupported type : " + vec.getType().getId());
             }
         }
@@ -209,7 +207,7 @@ public class TestUtils {
                     assertEquals(((Decimal128Vec) vec).get(i),
                             new long[]{(long) expectedData[i][0], (long) expectedData[i][1]});
                     break;
-                default :
+                default:
                     throw new UnsupportedOperationException("Unsupported type : " + vec.getType().getId());
             }
         }
@@ -250,7 +248,7 @@ public class TestUtils {
                     assertEquals(vec.getDecimal128(i),
                             new long[]{(long) expectedData[i * 2], (long) expectedData[i * 2 + 1]});
                     break;
-                default :
+                default:
                     throw new UnsupportedOperationException("Unsupported type : " + typeId);
             }
         }

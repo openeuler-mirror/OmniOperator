@@ -10,31 +10,31 @@
 #include <map>
 
 namespace omniruntime {
-    namespace jit {
-        class Stats {
-        public:
-        private:
-        };
+namespace jit {
+class Stats {
+public:
+private:
+};
 
-        class Specialization {
-        public:
-            Specialization();
+class Specialization {
+public:
+    Specialization();
 
-            ~Specialization();
+    ~Specialization();
 
-            void AddSpecializedParam(int paramIndex, ParamValue *paramValue);
+    void AddSpecializedParam(int paramIndex, ParamValue *paramValue);
 
-            bool HasSpecializedParam(int paramIndex) const;
+    bool HasSpecializedParam(int paramIndex) const;
 
-            ParamValue *GetSpecializedParam(int paramIndex) const;
+    ParamValue *GetSpecializedParam(int paramIndex) const;
 
-            void AddSpecializedStats(Stats stats) const;
+    void AddSpecializedStats(Stats stats) const;
 
-        private:
-            std::string id;
-            std::map<int, ParamValue *> specializedParams;
-        };
-    }
+private:
+    std::string id;
+    std::map<int, ParamValue *> specializedParams;
+};
+}
 }
 
 #endif

@@ -14,7 +14,7 @@
 
 namespace omniruntime {
 namespace vec {
-using DataTypeId  = type::DataTypeId;
+using DataTypeId = type::DataTypeId;
 class Vector {
 public:
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);

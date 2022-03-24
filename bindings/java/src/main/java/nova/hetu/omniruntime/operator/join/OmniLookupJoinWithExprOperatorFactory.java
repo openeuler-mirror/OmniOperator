@@ -20,7 +20,8 @@ import java.util.Objects;
  * The Omni lookup join with expression operator factory.
  */
 public class OmniLookupJoinWithExprOperatorFactory
-        extends OmniOperatorFactory<OmniLookupJoinWithExprOperatorFactory.FactoryContext> {
+        extends
+            OmniOperatorFactory<OmniLookupJoinWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni lookup join with expression operator factory.
      *
@@ -32,56 +33,28 @@ public class OmniLookupJoinWithExprOperatorFactory
      * @param joinType the join type
      * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
      */
-    public OmniLookupJoinWithExprOperatorFactory(
-            DataType[] probeTypes,
-            int[] probeOutputCols,
-            String[] probeHashKeys,
-            int[] buildOutputCols,
-            DataType[] buildOutputTypes,
-            JoinType joinType,
+    public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
+            int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory) {
-        super(
-                new FactoryContext(
-                        new JitContext(
-                                probeTypes,
-                                probeOutputCols,
-                                probeHashKeys,
-                                buildOutputCols,
-                                buildOutputTypes,
-                                joinType),
-                        hashBuilderWithExprOperatorFactory));
+        super(new FactoryContext(
+                new JitContext(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, joinType),
+                hashBuilderWithExprOperatorFactory));
     }
 
-    private static native long createLookupJoinWithExprOperatorFactory(
-            String probeTypes,
-            int[] probeOutputCols,
-            String[] probeHashKeys,
-            int[] buildOutputCols,
-            String buildOutputTypes,
-            int joinType,
-            long hashBuilderWithExprOperatorFactory,
-            long jitContext);
+    private static native long createLookupJoinWithExprOperatorFactory(String probeTypes, int[] probeOutputCols,
+            String[] probeHashKeys, int[] buildOutputCols, String buildOutputTypes, int joinType,
+            long hashBuilderWithExprOperatorFactory, long jitContext);
 
-    private static native long createLookupJoinWithExprJitContext(
-            String probeTypes,
-            int[] probeOutputCols,
-            String[] probeHashKeys,
-            int[] buildOutputCols,
-            String buildOutputTypes,
-            int joinType);
+    private static native long createLookupJoinWithExprJitContext(String probeTypes, int[] probeOutputCols,
+            String[] probeHashKeys, int[] buildOutputCols, String buildOutputTypes, int joinType);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createLookupJoinWithExprOperatorFactory(
-                DataTypeSerializer.serialize(context.probeTypes),
-                context.probeOutputCols,
-                context.probeHashKeys,
-                context.buildOutputCols,
-                DataTypeSerializer.serialize(context.buildOutputTypes),
-                context.joinType.getValue(),
-                factoryContext.getHashBuilderWithExprOperatorFactory(),
-                factoryContext.getNativeJitContext());
+        return createLookupJoinWithExprOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
+                context.probeOutputCols, context.probeHashKeys, context.buildOutputCols,
+                DataTypeSerializer.serialize(context.buildOutputTypes), context.joinType.getValue(),
+                factoryContext.getHashBuilderWithExprOperatorFactory(), factoryContext.getNativeJitContext());
     }
 
     /**
@@ -100,13 +73,8 @@ public class OmniLookupJoinWithExprOperatorFactory
 
         private final JoinType joinType;
 
-        public JitContext(
-                DataType[] probeTypes,
-                int[] probeOutputCols,
-                String[] probeHashKeys,
-                int[] buildOutputCols,
-                DataType[] buildOutputTypes,
-                JoinType joinType) {
+        public JitContext(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys, int[] buildOutputCols,
+                DataType[] buildOutputTypes, JoinType joinType) {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
             this.probeOutputCols = requireNonNull(probeOutputCols, "probeOutputCols");
             this.probeHashKeys = requireNonNull(probeHashKeys, "probeHashKeys");
@@ -117,12 +85,8 @@ public class OmniLookupJoinWithExprOperatorFactory
 
         @Override
         public int hashCode() {
-            return Objects.hash(
-                    Arrays.hashCode(probeTypes),
-                    Arrays.hashCode(probeOutputCols),
-                    Arrays.hashCode(probeHashKeys),
-                    Arrays.hashCode(buildOutputCols),
-                    Arrays.hashCode(buildOutputTypes),
+            return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
+                    Arrays.hashCode(probeHashKeys), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
                     joinType);
         }
 
@@ -135,8 +99,7 @@ public class OmniLookupJoinWithExprOperatorFactory
                 return false;
             }
             JitContext that = (JitContext) obj;
-            return joinType.equals(that.joinType)
-                    && Arrays.equals(probeTypes, that.probeTypes)
+            return joinType.equals(that.joinType) && Arrays.equals(probeTypes, that.probeTypes)
                     && Arrays.equals(probeOutputCols, that.probeOutputCols)
                     && Arrays.equals(probeHashKeys, that.probeHashKeys)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
@@ -150,8 +113,8 @@ public class OmniLookupJoinWithExprOperatorFactory
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         private final long hashBuilderWithExprOperatorFactory;
 
-        public FactoryContext(
-                JitContext jitContext, OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory) {
+        public FactoryContext(JitContext jitContext,
+                OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory) {
             super(jitContext);
             setNeedCache(false);
             this.hashBuilderWithExprOperatorFactory = hashBuilderWithExprOperatorFactory.getNativeOperatorFactory();
@@ -159,13 +122,9 @@ public class OmniLookupJoinWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createLookupJoinWithExprJitContext(
-                    DataTypeSerializer.serialize(context.probeTypes),
-                    context.probeOutputCols,
-                    context.probeHashKeys,
-                    context.buildOutputCols,
-                    DataTypeSerializer.serialize(context.buildOutputTypes),
-                    context.joinType.getValue());
+            return createLookupJoinWithExprJitContext(DataTypeSerializer.serialize(context.probeTypes),
+                    context.probeOutputCols, context.probeHashKeys, context.buildOutputCols,
+                    DataTypeSerializer.serialize(context.buildOutputTypes), context.joinType.getValue());
         }
 
         public long getHashBuilderWithExprOperatorFactory() {

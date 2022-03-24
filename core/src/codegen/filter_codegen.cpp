@@ -11,26 +11,25 @@ using namespace orc;
 using namespace omniruntime::expressions;
 
 namespace {
-    const int INPUT_INDEX = 0;
-    const int ARGUMENT_ONE = 1;
-    const int ARGUMENT_TWO = 2;
-    const int ARGUMENT_THREE = 3;
-    const int OFFSETS_INDEX = 4;
-    const int EXECUTION_CONTEXT_IDX = 5;
-    const int DICTIONARY_VECTORS_IDX = 6;
+const int INPUT_INDEX = 0;
+const int ARGUMENT_ONE = 1;
+const int ARGUMENT_TWO = 2;
+const int ARGUMENT_THREE = 3;
+const int OFFSETS_INDEX = 4;
+const int EXECUTION_CONTEXT_IDX = 5;
+const int DICTIONARY_VECTORS_IDX = 6;
 
-    const int ROW_FILTER_INPUT_INDEX = 0;
-    const int ROW_FILTER_OFFSETS_INDEX = 2;
-    const int ROW_FILTER_ROW_IDX_INDEX = 3;
-    const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
-    const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
-    const int ROW_FILTER_IS_NULL_INDEX = 6;
+const int ROW_FILTER_INPUT_INDEX = 0;
+const int ROW_FILTER_OFFSETS_INDEX = 2;
+const int ROW_FILTER_ROW_IDX_INDEX = 3;
+const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
+const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
+const int ROW_FILTER_IS_NULL_INDEX = 6;
 }
 
-std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(
-    std::string name, const omniruntime::expressions::Expr &expression)
+std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
 {
-    std::unique_ptr<FilterCodeGen> codegen {new FilterCodeGen(std::move(name), expression)};
+    std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression) };
     codegen->Initialize();
     return codegen;
 }
@@ -51,18 +50,18 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     std::vector<Type *> args;
     Type *ptrArg = llvmTypes->I64PtrType(); // table
     args.push_back(ptrArg);
-    args.push_back(llvmTypes->I32Type()); // no of rows
+    args.push_back(llvmTypes->I32Type());    // no of rows
     args.push_back(llvmTypes->I32PtrType()); // output array
     // bitmap is a 2d array of booleans
     Type *bitmapArg = llvmTypes->I64PtrType(); // record nullk values
     args.push_back(bitmapArg);
     args.push_back(llvmTypes->I64PtrType()); // offsets
-    args.push_back(llvmTypes->I64Type()); // execution_context address
+    args.push_back(llvmTypes->I64Type());    // execution_context address
     args.push_back(llvmTypes->I64PtrType()); // dictionary vectors
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
-    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
-        "FILTER_WRAPPER", module.get());
+    llvm::Function *funcDecl =
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);
@@ -88,7 +87,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     Value *zero = llvmTypes->CreateConstantInt(0);
     Value *one = llvmTypes->CreateConstantInt(1);
-    std::vector<Value*> filterFuncArgs;
+    std::vector<Value *> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
     // value*, bitmap*, offset*, rowIdx, length*, execution_context_ptr, dictionary_vectors*, isNull
     int32_t argsSize = 8;
@@ -181,27 +180,22 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     return sym.getAddress();
 }
 
-std::vector<Type*> GetSingleFilterArguments(LLVMContext &context)
+std::vector<Type *> GetSingleFilterArguments(LLVMContext &context)
 {
-    std::vector<Type*> args = {
-        Type::getInt64PtrTy(context),
-        Type::getInt64PtrTy(context),
-        Type::getInt64PtrTy(context),
-        Type::getInt32Ty(context),
-        Type::getInt64Ty(context),
-        Type::getInt64PtrTy(context)
-    };
+    std::vector<Type *> args = { Type::getInt64PtrTy(context), Type::getInt64PtrTy(context),
+                                 Type::getInt64PtrTy(context), Type::getInt32Ty(context),
+                                 Type::getInt64Ty(context),    Type::getInt64PtrTy(context) };
     return args;
 }
 
 int64_t FilterCodeGen::GetExpressionEvaluator()
 {
     // Array of addresses, bitmap, row index
-    std::vector<Type*> args = GetSingleFilterArguments(*context);
-    llvm::Function* baseFunc = this->CreateFunction();
-    FunctionType* funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
-    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
-        "FUNC_WRAPPER", module.get());
+    std::vector<Type *> args = GetSingleFilterArguments(*context);
+    llvm::Function *baseFunc = this->CreateFunction();
+    FunctionType *funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
+    llvm::Function *funcDecl =
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
     codeGenUtils->RecordMainFunction(funcDecl);
 
@@ -220,7 +214,7 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     Argument *dictionaryVectors = funcDecl->getArg(ROW_FILTER_DICT_VECTORS_INDEX);
     dictionaryVectors->setName("DICTIONARY_VECTOR_ADDRESSES");
 
-    std::vector<Value*> funcArgs;
+    std::vector<Value *> funcArgs;
     funcArgs.push_back(inputData);
     funcArgs.push_back(nulls);
     funcArgs.push_back(offsets);

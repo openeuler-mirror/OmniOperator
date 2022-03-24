@@ -1,13 +1,15 @@
+
 package nova.hetu.omniruntime.vector;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 import nova.hetu.omniruntime.type.LongDataType;
+
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
 
 /**
  * test long vec
@@ -107,16 +109,14 @@ public class TestLongVec {
         for (int i = 0; i < longVec.getSize(); i++) {
             if (i % 5 == 0) {
                 longVec.setNull(i);
-            }
-            else {
+            } else {
                 longVec.set(i, i);
             }
         }
         for (int i = 0; i < longVec.getSize(); i++) {
             if (i % 5 == 0) {
                 assertTrue(longVec.isNull(i));
-            }
-            else {
+            } else {
                 assertEquals(longVec.get(i), i);
             }
         }
