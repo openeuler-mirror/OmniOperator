@@ -84,6 +84,8 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
     offsets->setName("DICTIONARY_VECTORS");
 
+    codeGenUtils->RecordMainFunction(funcDecl);
+
     Value *zero = llvmTypes->CreateConstantInt(0);
     Value *one = llvmTypes->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
@@ -201,6 +203,8 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
         "FUNC_WRAPPER", module.get());
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
+    codeGenUtils->RecordMainFunction(funcDecl);
+
     builder->SetInsertPoint(wrapperBody);
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_FILTER_INPUT_INDEX);
@@ -233,6 +237,7 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(isNullPtr);
 
     builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
+    OptimizeModule();
 #ifdef DEBUG
     module->print(errs(), nullptr);
 #endif

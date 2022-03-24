@@ -11,11 +11,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "codegen_value.h"
 #include "../type/data_type.h"
+#include "codegen_utils.h"
 
 class DecimalIRBuilder {
 public:
-    explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder)
-        : context(context), module(module), builder(builder)
+    explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder, CodeGenUtils
+    &codeGenUtils) : context(context), module(module), builder(builder), codeGenUtils(codeGenUtils)
     {
         this->AddScaleMultiplier();
     }
@@ -29,7 +30,7 @@ public:
     // Combine the two parts into an i128
     llvm::Value *ToInt128(llvm::Value *high, llvm::Value *low) const;
     void AddScaleMultiplier() const;
-    llvm::Value *ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
         llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight);
     llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta);
     llvm::Value *GetScaleMultiplier(llvm::Value &delta);
@@ -41,6 +42,7 @@ private:
     llvm::LLVMContext &context;
     llvm::Module &module;
     llvm::IRBuilder<> &builder;
+    CodeGenUtils &codeGenUtils;
     const std::string scaleMultipliersName = "scaleMultipliers";
 };
 

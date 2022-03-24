@@ -116,19 +116,6 @@ BinaryExpr::BinaryExpr()
     dataType = BooleanType();
 }
 
-BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
-{
-    op = bop;
-    left = leftExpr;
-    right = rightExpr;
-    // use the more encompassing DataType
-    if (leftExpr->GetReturnTypeId() <= rightExpr->GetReturnTypeId()) {
-        dataType = std::make_unique<DataType>(rightExpr->GetReturnType());
-    } else {
-        dataType = std::make_unique<DataType>(leftExpr->GetReturnType());
-    }
-}
-
 BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt)
 {
     op = bop;

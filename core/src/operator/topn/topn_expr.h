@@ -15,8 +15,8 @@ namespace op {
 class TopNWithExprOperatorFactory : public OperatorFactory {
 public:
     TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
-                                const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
-                                int32_t *sortNullFirsts, int32_t sortKeyCount);
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortKeyCount);
 
     ~TopNWithExprOperatorFactory() override;
 
@@ -33,7 +33,7 @@ private:
 class TopNWithExprOperator : public Operator {
 public:
     TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
-                         std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator);
+        std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator);
 
     ~TopNWithExprOperator() override;
 

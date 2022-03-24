@@ -28,7 +28,7 @@ void DecimalIRBuilder::AddScaleMultiplier() const
     globalScaleMultipliers->setAlignment(llvm::MaybeAlign(alignment));
 }
 
-llvm::Value *DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
+void DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
     llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight)
 {
     llvm::Value *le = this->builder.CreateICmpSLE(&leftScale, &rightScale);
@@ -139,13 +139,13 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
             disassembledArgs.push_back(outLowPtr);
 
             // Make call to pre-compiled IR function.
-            builder.CreateCall(f, disassembledArgs, fnName);
+            codeGenUtils.CreateCall(f, disassembledArgs, fnName);
 
             auto outHigh = builder.CreateLoad(outHighPtr);
             auto outLow = builder.CreateLoad(outLowPtr);
             result = ToInt128(outHigh, outLow);
         } else {
-            result = builder.CreateCall(f, disassembledArgs, fnName);
+            result = codeGenUtils.CreateCall(f, disassembledArgs, fnName);
         }
         llvm::InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);

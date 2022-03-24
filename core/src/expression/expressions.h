@@ -152,9 +152,7 @@ public:
 
     BinaryExpr();
     ~BinaryExpr() override;
-    BinaryExpr(Operator op, Expr *leftExpr, Expr *rightExpr);
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt);
-
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };

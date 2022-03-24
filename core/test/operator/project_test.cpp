@@ -387,8 +387,7 @@ TEST(ProjectTest, Longs)
     int64_t *col = MakeLongs(numRows, -5000);
     const int32_t numCols = 1;
     FieldExpr *mulLeft = new FieldExpr(0, LongType());
-    LiteralExpr *mulRight = new LiteralExpr(5000000, LongType());
-    mulRight->longVal = 5000000;
+    LiteralExpr *mulRight = new LiteralExpr(5000000L, LongType());
     BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, LongType());
     std::vector<Expr *> exprs = { mulExpr };
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
@@ -421,8 +420,7 @@ TEST(ProjectTest, Doubles)
     const int32_t numCols = 1;
 
     FieldExpr *divLeft = new FieldExpr(0, DoubleType());
-    LiteralExpr *divRight = new LiteralExpr(2, IntType());
-    divRight->doubleVal = 2;
+    LiteralExpr *divRight = new LiteralExpr(2.0, DoubleType());
     BinaryExpr *divExpr = new BinaryExpr(DIV, divLeft, divRight, DoubleType());
     std::vector<Expr *> exprs = { divExpr };
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE) };
@@ -462,8 +460,7 @@ TEST(ProjectTest, MultipleColumns)
     BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, IntType());
 
     FieldExpr *addLeft = new FieldExpr(2, LongType());
-    LiteralExpr *addRight = new LiteralExpr(1, LongType());
-    addRight->longVal = 1;
+    LiteralExpr *addRight = new LiteralExpr(1L, LongType());
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, LongType());
 
     std::vector<Expr *> exprs = { subExpr, addExpr };
@@ -525,8 +522,7 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, IntType());
 
     FieldExpr *addLeft = new FieldExpr(2, LongType());
-    LiteralExpr *addRight = new LiteralExpr(1, LongType());
-    addRight->longVal = 1;
+    LiteralExpr *addRight = new LiteralExpr(1L, LongType());
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, LongType());
 
     std::vector<Expr *> exprs = { subExpr, addExpr };
@@ -620,8 +616,7 @@ TEST(ProjectTest, DependOtherColumn)
     LiteralExpr *conditionRight = new LiteralExpr(500, IntType());
     BinaryExpr *condition = new BinaryExpr(LT, conditionLeft, conditionRight, BooleanType());
 
-    LiteralExpr *texp = new LiteralExpr(4000000000, LongType());
-    texp->longVal = 4000000000;
+    LiteralExpr *texp = new LiteralExpr(4000000000L, LongType());
 
     FieldExpr *fexp = new FieldExpr(2, LongType());
 
@@ -631,7 +626,7 @@ TEST(ProjectTest, DependOtherColumn)
     const int32_t numCols = 3;
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_LONG) };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
@@ -820,8 +815,7 @@ TEST(ProjectTest, DictionaryVecDoubleTest)
     batch->SetVector(0, doubleDicVector);
 
     const int32_t numProject = 1;
-    LiteralExpr *addRight = new LiteralExpr(10, DoubleType());
-    addRight->doubleVal = 10;
+    LiteralExpr *addRight = new LiteralExpr(10.0, DoubleType());
     std::vector<Expr *> exprs = { new BinaryExpr(ADD, new FieldExpr(0, DoubleType()), addRight, DoubleType()) };
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -932,9 +926,7 @@ TEST(ProjectTest, DictionaryVecDecimal128Test)
     batch->SetVector(0, decimal128DicVector);
 
     const int32_t numProject = 1;
-    LiteralExpr *addRight = new LiteralExpr(20, IntType());
-    addRight->longVal = 20;
-    addRight->doubleVal = 20;
+    LiteralExpr *addRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *addExpr = new BinaryExpr(ADD, new FieldExpr(0, Decimal128Type(38, 0)), addRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { addExpr };
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols);
@@ -1033,9 +1025,7 @@ TEST(ProjectTest, Decimal128Arithmetic)
     int64_t *col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *addRight = new LiteralExpr(20, IntType());
-    addRight->longVal = 20;
-    addRight->doubleVal = 20;
+    LiteralExpr *addRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr };
@@ -1074,14 +1064,10 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
 
     FieldExpr *subLeft0 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *subRight0 = new LiteralExpr(new string("1"), Decimal128Type(38, 0));
-    subRight0->longVal = 1;
-    subRight0->doubleVal = 1;
     BinaryExpr *subExpr0 = new BinaryExpr(SUB, subLeft0, subRight0, Decimal128Type(38, 0));
 
     FieldExpr *subLeft1 = new FieldExpr(1, Decimal128Type(38, 0));
     LiteralExpr *subRight1 = new LiteralExpr(-1, IntType());
-    subRight1->longVal = -1;
-    subRight1->doubleVal = -1;
     BinaryExpr *subExpr1 = new BinaryExpr(SUB, subLeft1, subRight1, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { subExpr0, subExpr1 };
@@ -1132,14 +1118,10 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
 
     FieldExpr *addLeft0 = new FieldExpr(0, Decimal128Type(38, 1));
     LiteralExpr *addRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
-    addRight0->longVal = -1;
-    addRight0->doubleVal = -1;
     BinaryExpr *addExpr0 = new BinaryExpr(ADD, addLeft0, addRight0, Decimal128Type(38, 0));
 
     FieldExpr *addLeft1 = new FieldExpr(1, Decimal128Type(38, 0));
     LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
-    addRight1->longVal = 1;
-    addRight1->doubleVal = 1;
     BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr0, addExpr1 };
@@ -1188,9 +1170,7 @@ TEST(ProjectTest, Decimal128Multiply)
     int64_t *col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
     FieldExpr *mulLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *mulRight = new LiteralExpr(3, IntType());
-    mulRight->longVal = 3;
-    mulRight->doubleVal = 3;
+    LiteralExpr *mulRight = new LiteralExpr(new std::string("3"), Decimal128Type(38, 0));
     BinaryExpr *addExpr = new BinaryExpr(MUL, mulLeft, mulRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr };
@@ -1224,9 +1204,7 @@ TEST(ProjectTest, Decimal128Divide)
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
-    LiteralExpr *divRight = new LiteralExpr(20, IntType());
-    divRight->longVal = 20;
-    divRight->doubleVal = 20;
+    LiteralExpr *divRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *divExpr = new BinaryExpr(DIV, new FieldExpr(0, Decimal128Type(38, 0)), divRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { divExpr };
 
@@ -1262,15 +1240,11 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     int64_t *col2 = MakeDecimals(numRows, 100);
     const int32_t numProject = 2;
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
-    LiteralExpr *addRight = new LiteralExpr(50, IntType());
-    addRight->longVal = 50;
-    addRight->doubleVal = 50;
+    LiteralExpr *addRight = new LiteralExpr(new std::string("50"), Decimal128Type(38, 0));
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     FieldExpr *mulLeft = new FieldExpr(1, Decimal128Type(38, 0));
-    LiteralExpr *mulRight = new LiteralExpr(20, IntType());
-    mulRight->longVal = 20;
-    mulRight->doubleVal = 20;
+    LiteralExpr *mulRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr, mulExpr };
@@ -1491,7 +1465,6 @@ TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
     input->SetVector(0, slicedCol1);
     DataTypes inputVecTypes(inputTypes);
     const int32_t numProject = 1;
-    // string exprs[numProject] = {"$operator$ADD:1(#0, #0)"};
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     FieldExpr *addRight = new FieldExpr(0, IntType());

@@ -18,7 +18,7 @@
         for (int32_t i = 0; i < group_by_num; ++i) {                                                                   \
             auto vector = vector_batch->GetVector(group_by_idx[i]);                                                    \
             auto typeId = vector->GetTypeId();                                                                         \
-            if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                                  \
+            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {                                               \
                 typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                           \
             }                                                                                                          \
             if (typeId != operator_types[group_by_idx[i]]) {                                                           \
@@ -34,7 +34,7 @@
                 auto typeId = vector->GetTypeId();                                                                     \
                 auto operatorType = operator_types[agg_idx[aggInputIndex]];                                            \
                 aggInputIndex++;                                                                                       \
-                if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                              \
+                if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {                                           \
                     typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                       \
                 }                                                                                                      \
                 if (typeId != operatorType) {                                                                          \

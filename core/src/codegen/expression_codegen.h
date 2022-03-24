@@ -44,6 +44,8 @@
 #include "util/debug.h"
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
+#include "codegen_utils.h"
+
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -102,15 +104,15 @@ protected:
     void DivExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi);
-    void PromoteType(omniruntime::expressions::BinaryExpr &binaryExpr);
-    void PromoteType(omniruntime::expressions::Expr &expr, omniruntime::type::DataType dataType);
     void HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v2, llvm::BasicBlock &isNotNullBlock,
         llvm::BasicBlock &isNullBlock, llvm::PHINode &pn, llvm::PHINode &pnNull);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
+    static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 
     virtual llvm::Function *CreateFunction();
     void OptimizeFunctionsAndModule();
+    void OptimizeModule();
 
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<llvm::LLVMContext> context;
@@ -127,6 +129,7 @@ protected:
     int numGlobalValues = 0;
     std::unique_ptr<LLVMTypes> llvmTypes;
     std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
+    std::unique_ptr<CodeGenUtils> codeGenUtils;
 
 private:
     std::string funcName;

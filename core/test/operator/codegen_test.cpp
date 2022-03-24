@@ -168,8 +168,7 @@ TEST(CodeGenTest, SimpleProject)
 TEST(CodeGenTest, SingleCaseSwitch)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
-    gtRight->longVal = 3000000000;
+    LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
@@ -258,13 +257,11 @@ TEST(CodeGenTest, SingleCaseSwitch)
 TEST(CodeGenTest, DoubleCaseSwitch)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
-    gtRight->longVal = 3000000000;
+    LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *ltLeft = new FieldExpr(1, LongType());
-    LiteralExpr *ltRight = new LiteralExpr(3000000000, LongType());
-    ltRight->longVal = 3000000000;
+    LiteralExpr *ltRight = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *ltExpr = new BinaryExpr(LT, ltLeft, ltRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
@@ -362,18 +359,15 @@ TEST(CodeGenTest, DoubleCaseSwitch)
 TEST(CodeGenTest, ThreeCaseSwitch)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
-    gtRight->longVal = 3000000000;
+    LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *gtLeft1 = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight1 = new LiteralExpr(3000000001, LongType());
-    gtRight1->longVal = 3000000001;
+    LiteralExpr *gtRight1 = new LiteralExpr(3000000001L, LongType());
     BinaryExpr *gtExpr1 = new BinaryExpr(GT, gtLeft1, gtRight1, BooleanType());
 
     FieldExpr *gtLeft2 = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight2 = new LiteralExpr(3000000002, LongType());
-    gtRight2->longVal = 3000000002;
+    LiteralExpr *gtRight2 = new LiteralExpr(3000000002L, LongType());
     BinaryExpr *gtExpr2 = new BinaryExpr(GT, gtLeft2, gtRight2, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
@@ -474,8 +468,7 @@ TEST(CodeGenTest, ThreeCaseSwitch)
 TEST(CodeGenTest, SwitchElseNull)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
-    gtRight->longVal = 3000000000;
+    LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
@@ -561,8 +554,7 @@ TEST(CodeGenTest, SwitchElseNull)
 TEST(CodeGenTest, SingleProject)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
-    LiteralExpr *gtRight = new LiteralExpr(3000000000, LongType());
-    gtRight->longVal = 3000000000;
+    LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
@@ -2291,12 +2283,10 @@ TEST(CodeGenTest, Coalesce)
     // create expression objects
     FieldExpr *value1 = new FieldExpr(0, LongType());
     LiteralExpr *value2 = new LiteralExpr(0, LongType());
-    value2->longVal = 0;
     value2->dataType = LongType();
     CoalesceExpr *coalesceExpr = new CoalesceExpr(value1, value2);
 
-    LiteralExpr *right = new LiteralExpr(123, LongType());
-    right->longVal = 123;
+    LiteralExpr *right = new LiteralExpr(123L, LongType());
     right->dataType = LongType();
     BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
 
@@ -2362,13 +2352,11 @@ TEST(CodeGenTest, ProjectionCoalesce)
 {
     // create expression objects
     FieldExpr *value1 = new FieldExpr(0, LongType());
-    LiteralExpr *value2 = new LiteralExpr(100, LongType());
-    value2->longVal = 100;
+    LiteralExpr *value2 = new LiteralExpr(100L, LongType());
     value2->dataType = LongType();
     CoalesceExpr *coalesceExpr = new CoalesceExpr(value1, value2);
 
-    LiteralExpr *right = new LiteralExpr(100, LongType());
-    right->longVal = 100;
+    LiteralExpr *right = new LiteralExpr(100L, LongType());
     right->dataType = LongType();
     BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
 
@@ -2612,13 +2600,9 @@ TEST(CodeGenTest, DecimalOperators1)
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new string("5"), Decimal128Type(38, 0));
-    addRight->doubleVal = 5;
-    addRight->longVal = 5;
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     LiteralExpr *equalRight = new LiteralExpr(new string("15"), Decimal128Type(38, 0));
-    equalRight->doubleVal = 15;
-    equalRight->longVal = 15;
     BinaryExpr *expr = new BinaryExpr(EQ, addExpr, equalRight, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
@@ -2735,20 +2719,14 @@ TEST(CodeGenTest, DecimalOperators3)
     // create expression objects
     FieldExpr *col01 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *data01 = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
-    data01->longVal = 100;
-    data01->doubleVal = 100;
     BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
 
     FieldExpr *col02 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *data02 = new LiteralExpr(new string("200"), Decimal128Type(38, 0));
-    data02->longVal = 200;
-    data02->doubleVal = 200;
     BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
 
     FieldExpr *col03 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *data03 = new LiteralExpr(new string("0"), Decimal128Type(38, 0));
-    data03->longVal = 0;
-    data03->doubleVal = 0;
     BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
 
     IfExpr *expr = new IfExpr(condition, texp, fexp);
@@ -2814,12 +2792,8 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *col1 = new FieldExpr(1, Decimal128Type(38, 0));
     LiteralExpr *mulRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
-    mulRight0->doubleVal = -1;
-    mulRight0->longVal = -1;
 
     LiteralExpr *mulRight1 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
-    mulRight1->doubleVal = -1;
-    mulRight1->longVal = -1;
 
     BinaryExpr *mulExpr0 = new BinaryExpr(MUL, col0, mulRight0, Decimal128Type(38, 0));
     BinaryExpr *mulExpr1 = new BinaryExpr(MUL, col1, mulRight1, Decimal128Type(38, 0));
@@ -2956,8 +2930,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
 {
     // create expression objects
     FieldExpr *subLeft = new FieldExpr(0, LongType());
-    LiteralExpr *subRight = new LiteralExpr(100, LongType());
-    subRight->longVal = 100;
+    LiteralExpr *subRight = new LiteralExpr(100L, LongType());
 
     BinaryExpr *expr = new BinaryExpr(SUB, subLeft, subRight, LongType());
 
@@ -3032,8 +3005,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
-    addRight->longVal = 100;
-    addRight->doubleVal = 100;
 
     BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
 
@@ -3121,8 +3092,7 @@ TEST(CodeGenTest, TestRowProjectLong)
 
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, LongType());
-    LiteralExpr *addRight = new LiteralExpr(100, LongType());
-    addRight->longVal = 100;
+    LiteralExpr *addRight = new LiteralExpr(100L, LongType());
 
     BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, LongType());
 
@@ -3420,7 +3390,6 @@ TEST(CodeGenTest, Mm3HashInt)
     auto mhash = GetFuncExpr(funcStr, hashArgs, IntType());
 
     auto equalRight = new LiteralExpr(723455942, IntType());
-    equalRight->longVal = 723455942;
 
     auto expr = new BinaryExpr(EQ, mhash, equalRight, BooleanType());
 
@@ -3634,7 +3603,6 @@ TEST(CodeGenTest, Pmod)
     auto pmod = GetFuncExpr(pmodStr, pmodArgs, IntType());
 
     auto equalRight = new LiteralExpr(20, IntType());
-    equalRight->longVal = 20;
 
     auto expr = new BinaryExpr(EQ, pmod, equalRight, BooleanType());
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };

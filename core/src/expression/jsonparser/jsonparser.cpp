@@ -12,30 +12,6 @@ using namespace omniruntime::type;
 
 using Json = nlohmann::json;
 
-OperatorType JSONParser::GetOperatorType(Operator op)
-{
-    vector<Operator> allCmpOps { LT, LTE, GT, GTE, EQ, NEQ };
-    vector<Operator> allLogOps { AND, OR, NOT };
-    vector<Operator> allArithOps { ADD, SUB, MUL, DIV, MOD };
-    for (Operator cmpOp : allCmpOps) {
-        if (op == cmpOp) {
-            return OperatorType::COMPARISON;
-        }
-    }
-    for (Operator logOp : allLogOps) {
-        if (op == logOp) {
-            return OperatorType::LOGICAL;
-        }
-    }
-    for (Operator arithOp : allArithOps) {
-        if (op == arithOp) {
-            return OperatorType::ARITHMETIC;
-        }
-    }
-    return OperatorType::INVALIDOPTTYPE;
-}
-
-
 Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
 {
     DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
@@ -65,7 +41,6 @@ Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
 Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
 {
     DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
-
     // Null check on Literals
     if (jsonExpr["isNull"].get<bool>()) {
         auto expr = ParserHelper::GetDefaultValueForType(typeId);
@@ -119,11 +94,8 @@ Expr *JSONParser::ParseJSONBinary(Json jsonExpr)
         return nullptr;
     }
 
-    OperatorType retType = GetOperatorType(op);
-    if (retType == COMPARISON || retType == LOGICAL) {
-        return make_unique<BinaryExpr>(op, leftExpr, rightExpr, make_unique<BooleanDataType>()).release();
-    }
-    return make_unique<BinaryExpr>(op, leftExpr, rightExpr).release();
+    DataTypePtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
+    return make_unique<BinaryExpr>(op, leftExpr, rightExpr, std::move(dataType)).release();
 }
 
 Expr *JSONParser::ParseJSONUnary(Json jsonExpr)

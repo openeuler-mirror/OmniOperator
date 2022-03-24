@@ -113,6 +113,8 @@ Function *RowExpressionCodeGen::CreateFunction()
         idx++;
     }
 
+    codeGenUtils->RecordMainFunction(func);
+
     BasicBlock *body = BasicBlock::Create(*context, "FUNC_BODY", func);
     builder->SetInsertPoint(body);
 

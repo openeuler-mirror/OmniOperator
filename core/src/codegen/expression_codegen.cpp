@@ -159,7 +159,8 @@ void ExpressionCodeGen::Initialize()
     module->setDataLayout(jit->getDataLayout());
     // Create IR builder to create IR instructions
     builder = std::make_unique<IRBuilder<>>(*context);
-    decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder);
+    codeGenUtils = std::make_unique<CodeGenUtils>(*context, *module, *builder);
+    decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder, *codeGenUtils);
     fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
 
     ExprInfoExtractor exprInfoExtractor;
@@ -201,7 +202,7 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
     auto signature = FunctionSignature(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT);
     auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
-    auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
+    auto ret = codeGenUtils->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
     auto inlinedFunction = llvm::InlineFunction(*ret, inlineFunctionInfo);
     return ret;
@@ -509,6 +510,11 @@ std::string ExpressionCodeGen::DumpCode()
     return ir;
 }
 
+bool ExpressionCodeGen::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
+{
+    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2));
+}
+
 bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<llvm::Function::arg_iterator> args)
 {
     this->codegenContext = std::make_unique<CodegenContext>();
@@ -754,7 +760,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
             FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
             llvmTypes->ToLLVMType(typeId), funcArgs);
     } else {
-        result = builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+        result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
         InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((CallInst *)result), inlineFunctionInfo);
     }
@@ -880,68 +886,16 @@ CodeGenValuePtr CreateInvalidCodeGenValue()
     return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
 }
 
-void ExpressionCodeGen::PromoteType(BinaryExpr &binaryExpr)
-{
-    // precision and scale of the original type has to be maintained while type promotion
-    if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL128 &&
-        binaryExpr.right->GetReturnTypeId() == OMNI_DECIMAL64) {
-        binaryExpr.right->dataType = std::make_unique<Decimal128DataType>(binaryExpr.right->dataType->GetPrecision(),
-            binaryExpr.right->dataType->GetScale());
-        // decimal128 accepts string literals
-        if (binaryExpr.right->GetType() == LITERAL_E) {
-            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr *>(binaryExpr.right);
-            literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
-        }
-    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL64 &&
-        binaryExpr.right->GetReturnTypeId() == OMNI_DECIMAL128) {
-        binaryExpr.left->dataType = std::make_unique<Decimal128DataType>(binaryExpr.left->dataType->GetPrecision(),
-            binaryExpr.left->dataType->GetScale());
-        if (binaryExpr.left->GetType() == LITERAL_E) {
-            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr *>(binaryExpr.left);
-            literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
-        }
-    } else {
-        Expr *smallerExpr = nullptr;
-        DataType biggerType;
-        if (binaryExpr.left->GetReturnTypeId() < binaryExpr.right->GetReturnTypeId()) {
-            biggerType = binaryExpr.right->GetReturnType();
-            smallerExpr = binaryExpr.left;
-        } else {
-            biggerType = binaryExpr.left->GetReturnType();
-            smallerExpr = binaryExpr.right;
-        }
-        if (biggerType.GetId() == OMNI_DECIMAL128 && smallerExpr->GetType() == LITERAL_E) {
-            basic_string<char> decVal;
-            LiteralExpr *literalExpr = dynamic_cast<LiteralExpr *>(smallerExpr);
-            if (literalExpr->GetReturnTypeId() == OMNI_INT) {
-                decVal = to_string(literalExpr->intVal);
-            } else if (literalExpr->GetReturnTypeId() == OMNI_LONG) {
-                decVal = to_string(literalExpr->longVal);
-            } else if (literalExpr->GetReturnTypeId() == OMNI_DOUBLE) {
-                decVal = to_string(literalExpr->doubleVal);
-            }
-            literalExpr->stringVal = make_unique<string>(decVal).release();
-        }
-        auto lType = std::make_unique<DataType>(biggerType);
-        auto rType = std::make_unique<DataType>(biggerType);
-        binaryExpr.left->dataType = std::move(lType);
-        binaryExpr.right->dataType = std::move(rType);
-    }
-}
-
 void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 {
     auto *bExpr = const_cast<BinaryExpr *>(&binaryExpr);
 
-    auto leftId = static_cast<int32_t>(bExpr->left->GetReturnTypeId());
-    auto rightId = static_cast<int32_t>(bExpr->right->GetReturnTypeId());
-
-    if (bExpr->left->GetType() == ExprType::LITERAL_E || bExpr->right->GetType() == ExprType::LITERAL_E ||
-        bExpr->left->GetType() == ExprType::FIELD_E || bExpr->right->GetType() == ExprType::FIELD_E) {
-        if (leftId != rightId) {
-            PromoteType(*bExpr);
-        }
+    if (AreInvalidDataTypes(bExpr->left->GetReturnTypeId(), bExpr->right->GetReturnTypeId())) {
+        LogError("return type and args must have the same data types");
+        this->value = CreateInvalidCodeGenValue();
+        return;
     }
+        
     CodeGenValuePtr left = VisitExpr(*(bExpr->left));
     if (!left->IsValidValue()) {
         this->value = CreateInvalidCodeGenValue();
@@ -1092,7 +1046,6 @@ void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
         }
     }
 }
-
 
 void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
 {
@@ -1281,37 +1234,6 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
 
     this->value = make_shared<CodeGenValue>(pn, phiNull, lengthPhi);
 }
-
-void ExpressionCodeGen::PromoteType(Expr &expr, DataType dataType)
-{
-    if (dataType.GetId() == OMNI_DECIMAL128) {
-        DataTypeId exprReturnDataId = expr.GetReturnTypeId();
-        if (exprReturnDataId == OMNI_DECIMAL64) {
-            expr.dataType =
-                std::make_unique<Decimal128DataType>(expr.dataType->GetPrecision(), expr.dataType->GetScale());
-        }
-        int32_t decimal128Precision = 38;
-        int32_t defaultDecimalScale = 0;
-        if (expr.GetType() == LITERAL_E) {
-            auto literalExpr = static_cast<LiteralExpr *>(&expr);
-            if (exprReturnDataId == OMNI_INT || exprReturnDataId == OMNI_DATE32) {
-                literalExpr->stringVal = make_unique<string>(to_string(literalExpr->intVal)).release();
-                literalExpr->dataType = std::make_unique<Decimal128DataType>(decimal128Precision, defaultDecimalScale);
-            } else if (exprReturnDataId == OMNI_LONG) {
-                literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
-                literalExpr->dataType = std::make_unique<Decimal128DataType>(decimal128Precision, defaultDecimalScale);
-            } else if (exprReturnDataId == OMNI_DOUBLE) {
-                literalExpr->stringVal = make_unique<string>(to_string(literalExpr->doubleVal)).release();
-                literalExpr->dataType = std::make_unique<Decimal128DataType>(decimal128Precision, defaultDecimalScale);
-            } else if (exprReturnDataId == OMNI_DECIMAL64) {
-                literalExpr->stringVal = make_unique<string>(to_string(literalExpr->longVal)).release();
-            }
-        }
-    } else {
-        expr.dataType = std::make_unique<DataType>(dataType);
-    }
-}
-
 void ExpressionCodeGen::Visit(const InExpr &inExpr)
 {
     const InExpr *iExpr = &inExpr;
@@ -1326,18 +1248,11 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
         Value *tmpCmpData = llvmTypes->CreateConstantBool(false);
         Value *tmpCmpNull = llvmTypes->CreateConstantBool(false);
 
-        // store the original types before promoting
-        DataType toCompareDataType = toCompare->GetReturnType();
-        DataType argiDataType = iExpr->arguments[i]->GetReturnType();
-
-        DataType biggerType = toCompare->GetReturnType();
-        if (toCompare->GetReturnTypeId() < iExpr->arguments[i]->GetReturnTypeId()) {
-            biggerType = iExpr->arguments[i]->GetReturnType();
+        if (AreInvalidDataTypes(toCompare->GetReturnTypeId(), iExpr->arguments[i]->GetReturnTypeId())) {
+            LogError("Arg 1 and arg %d have different data types", i + 1);
+            this->value = CreateInvalidCodeGenValue();
+            return;
         }
-
-        PromoteType(*toCompare, biggerType);
-        PromoteType(*iExpr->arguments[i], biggerType);
-
         auto valueToCompare = VisitExpr(*toCompare);
         if (!valueToCompare->IsValidValue()) {
             this->value = CreateInvalidCodeGenValue();
@@ -1411,9 +1326,6 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             }
         }
         // restore types
-        toCompare->dataType = std::make_unique<DataType>(toCompareDataType);
-        iExpr->arguments[i]->dataType = std::make_unique<DataType>(argiDataType);
-
         inArray = builder->CreateAnd(builder->CreateNot(tmpCmpNull), builder->CreateOr(inArray, tmpCmpData));
         isNull = builder->CreateOr(isNull, tmpCmpNull);
     }
@@ -1424,29 +1336,22 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
 void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
 {
     const BetweenExpr *bExpr = &btExpr;
-    int32_t biggerTypeId =
-        std::max(std::max(bExpr->lowerBound->GetReturnTypeId(), bExpr->upperBound->GetReturnTypeId()),
-            bExpr->value->GetReturnTypeId());
-    DataType biggerType;
-    if (biggerTypeId == static_cast<int32_t>(bExpr->lowerBound->GetReturnTypeId())) {
-        biggerType = bExpr->lowerBound->GetReturnType();
-    } else {
-        if (biggerTypeId == static_cast<int32_t>(bExpr->upperBound->GetReturnTypeId())) {
-            biggerType = bExpr->upperBound->GetReturnType();
-        } else {
-            biggerType = bExpr->value->GetReturnType();
-        }
-    }
-
-    PromoteType(*bExpr->lowerBound, biggerType);
-    PromoteType(*bExpr->upperBound, biggerType);
-    PromoteType(*bExpr->value, biggerType);
 
     auto val = VisitExpr(*(bExpr->value));
     if (!val->IsValidValue()) {
         this->value = CreateInvalidCodeGenValue();
         return;
     }
+
+    DataTypeId valueTypeId = bExpr->value->GetReturnTypeId();
+
+    if (AreInvalidDataTypes(valueTypeId, bExpr->lowerBound->GetReturnTypeId()) &&
+        AreInvalidDataTypes(valueTypeId, bExpr->upperBound->GetReturnTypeId())) {
+        LogError("Value, lower bound, and upper bound must have the same type");
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+
     auto valData = val->data;
     auto valLen = val->length;
     auto valNull = val->isNull;
@@ -1481,7 +1386,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         cmpLeft = builder->CreateFCmpULE(lowerValData, valData, "between_cmpleft");
         cmpRight = builder->CreateFCmpULE(valData, upperValData, "between_cmpright");
         supportedType = true;
-    } else if (TypeUtil::IsStringType(bExpr->value->GetReturnTypeId())) {
+    } else if (TypeUtil::IsStringType(valueTypeId)) {
         cmpLeft = builder->CreateICmpSLE(this->StringCmp(lowerValData, lowerValLen, valData, valLen),
             llvmTypes->CreateConstantInt(0));
         cmpRight = builder->CreateICmpSLE(this->StringCmp(valData, valLen, upperValData, upperValLen),
@@ -1489,7 +1394,6 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         supportedType = true;
     } else if (bExpr->value->GetReturnTypeId() == OMNI_DECIMAL128) {
         std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
-
         auto valueScale = (Value *)static_cast<DecimalValue *>(val.get())->GetScale();
         auto lowerScale = (Value *)static_cast<DecimalValue *>(lowerVal.get())->GetScale();
         auto upperScale = (Value *)static_cast<DecimalValue *>(upperVal.get())->GetScale();
@@ -1525,7 +1429,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         return;
     }
 
-    LLVM_DEBUG_LOG("Error: unsupported data type for between %d", bExpr->value->GetReturnTypeId());
+    LLVM_DEBUG_LOG("Error: unsupported data type for between %d", valueTypeId);
     this->value = CreateInvalidCodeGenValue();
 }
 
@@ -1685,7 +1589,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         if (f) {
             ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(),
                 llvmTypes->ToLLVMType(funcRetType), argVals) :
-                                      builder->CreateCall(f, argVals, fExpr.function->GetId());
+                                      codeGenUtils->CreateCall(f, argVals, fExpr.function->GetId());
             InlineFunctionInfo inlineFunctionInfo;
             auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
@@ -1721,11 +1625,23 @@ void ExpressionCodeGen::OptimizeFunctionsAndModule()
     fpm->add(createDeadStoreEliminationPass());
     fpm->add(createPromoteMemoryToRegisterPass());
 
+    codeGenUtils->RemoveUnusedFunctions();
+
     mpm.add(createFunctionInliningPass());
     mpm.add(createPruneEHPass());
 
     fpm->doInitialization();
     for (auto &F : *module)
         fpm->run(F);
+    mpm.run(*module);
+}
+
+void ExpressionCodeGen::OptimizeModule()
+{
+    codeGenUtils->RemoveUnusedFunctions();
+
+    mpm.add(createFunctionInliningPass());
+    mpm.add(createPruneEHPass());
+
     mpm.run(*module);
 }

@@ -12,7 +12,7 @@ constexpr int64_t LONG_DEFAULT_VALUE = 0L;
 constexpr double DOUBLE_DEFAULT_VALUE = 0.000;
 constexpr bool BOOL_DEFAULT_VALUE = true;
 constexpr char *CHAR_DEFAULT_VALUE = "NULL";
-constexpr int64_t DECIMAL128_DEFAULT_VALUE = 0L;
+constexpr char *DECIMAL128_DEFAULT_VALUE = "0";
 
 omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId)
 {
@@ -33,10 +33,51 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
             return std::make_unique<LiteralExpr>(
                     make_unique<string>(CHAR_DEFAULT_VALUE).release(), std::move(destType)).release();
         case OMNI_DECIMAL128:
-            return std::make_unique<LiteralExpr>(DECIMAL128_DEFAULT_VALUE, std::move(destType)).release();
+            return std::make_unique<LiteralExpr>(make_unique<string>(DECIMAL128_DEFAULT_VALUE).release(),
+                                                 std::move(destType)).release();
         case OMNI_NONE:
             return std::make_unique<LiteralExpr>(INT_DEFAULT_VALUE, std::move(destType)).release();
         default:
+            return nullptr;
+    }
+}
+
+DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
+{
+    DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
+    int precision = 0;
+    int scale = 0;
+    int width = 0;
+    switch (typeId) {
+        case OMNI_BOOLEAN:
+            return make_unique<BooleanDataType>();
+        case OMNI_INT:
+            return make_unique<IntDataType>();
+        case OMNI_DATE32:
+            return make_unique<DataType>(OMNI_DATE32);
+        case OMNI_LONG:
+            return make_unique<LongDataType>();
+        case OMNI_DOUBLE:
+            return make_unique<DoubleDataType>();
+        case OMNI_DECIMAL64:
+            precision = jsonExpr["precision"].get<int32_t>();
+            scale = jsonExpr["scale"].get<int32_t>();
+            return make_unique<Decimal64DataType>(precision, scale);
+        case OMNI_DECIMAL128:
+            precision = jsonExpr["precision"].get<int32_t>();
+            scale = jsonExpr["scale"].get<int32_t>();
+            return make_unique<Decimal128DataType>(precision, scale);
+        case OMNI_VARCHAR:
+            width = jsonExpr["width"].get<int32_t>();
+            return make_unique<VarcharDataType>(width);
+        case OMNI_CHAR:
+            width = jsonExpr["width"].get<int32_t>();
+            return make_unique<CharDataType>(width);
+        case OMNI_NONE:
+            return make_unique<DataType>();
+        default:
+            LLVM_DEBUG_LOG("Unsupported data type  %d", typeId);
+            LogError("Unsupported data type %d ", typeId);
             return nullptr;
     }
 }
