@@ -68,10 +68,10 @@ public:
         return lowBits;
     }
 
-    void SetValue(int64_t highBits, uint64_t lowBits)
+    void SetValue(int64_t highBitsField, uint64_t lowBitsField)
     {
-        this->highBits = highBits;
-        this->lowBits = lowBits;
+        this->highBits = highBitsField;
+        this->lowBits = lowBitsField;
     }
 
     int64_t Sign() const

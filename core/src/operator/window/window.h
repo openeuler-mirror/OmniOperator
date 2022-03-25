@@ -24,12 +24,12 @@ public:
 
     ~WindowOperatorFactory() override;
 
-    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
-        int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
-        int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
-        int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-        int32_t expectedPositions, const type::DataTypes &allTypes, int32_t *argumentChannels,
-        int32_t argumentChannelsCount);
+    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypesField, int32_t *outputColsField,
+        int32_t outputColsCountField, int32_t *windowFunctionTypesField, int32_t windowFunctionCountField, int32_t *partitionColsField,
+        int32_t partitionCountField, int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
+        int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
+        int32_t expectedPositionsField, const type::DataTypes &allTypesField, int32_t *argumentChannelsField,
+        int32_t argumentChannelsCountField);
 
     Operator *CreateOperator() override;
 
@@ -218,13 +218,13 @@ private:
         std::vector<type::DataType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
         int32_t &rowCount);
 
-    void InitResultVectors(const std::vector<DataType> &outputTypes, VectorBatch *&vecBatch, const int32_t &rowCount,
-        const int32_t outputColsCount, const int finalOutputColsCount) const;
+    void InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField, const int32_t &rowCountField,
+        const int32_t outputColsCountField, const int finalOutputColsCountField) const;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);
 }
 }
 
-const static int MID_SEARCH_FACTOR = 2;
+const int MID_SEARCH_FACTOR = 2;
 #endif

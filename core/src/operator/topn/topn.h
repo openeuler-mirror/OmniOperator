@@ -77,7 +77,7 @@ public:
 
     ~TopNOperator() override;
 
-    int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vectorBatch) override;
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
@@ -115,7 +115,7 @@ void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch,
 }
 
 template <typename T>
-static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
     int32_t position)
 {
     static_cast<T *>(singleRowVecBatch->GetVector(colIndex))
@@ -124,7 +124,7 @@ static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVec
         ->SetValue(0, (static_cast<T *>(vector))->GetValue(position));
 }
 
-static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
     Vector *vector, int32_t position)
 {
     VarcharVector *single = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));

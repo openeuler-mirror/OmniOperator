@@ -10,27 +10,20 @@ using namespace omniruntime::op;
 using namespace std;
 
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
+    : pagesIndex(pagesIndex), start(start), size(end - start)
 {
-    this->pagesIndex = pagesIndex;
-    this->start = start;
-    this->size = (end - start);
 };
 
 WindowIndex::~WindowIndex() = default;
 
-RankingWindowFunction::RankingWindowFunction()
+RankingWindowFunction::RankingWindowFunction() : windowIndex(nullptr), currentPeerGroupStart(0), currentPosition(0)
 {
-    this->windowIndex = nullptr;
-    this->currentPeerGroupStart = 0;
-    this->currentPosition = 0;
 }
 
 RankingWindowFunction::~RankingWindowFunction() = default;
 
-RankFunction::RankFunction()
+RankFunction::RankFunction() : rank(0), count(1)
 {
-    this->rank = 0;
-    this->count = 1;
 }
 
 RankFunction::~RankFunction() = default;
@@ -85,13 +78,10 @@ AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
     const DataType &inputType, const DataType &outputType)
-    : inputType(inputType), outputType(outputType)
+    : windowIndex(nullptr), argumentChannels(argumentChannels), currentStart(0), currentEnd(0),
+    inputType(inputType), outputType(outputType)
 {
-    this->windowIndex = nullptr;
-    this->argumentChannels = argumentChannels;
     this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
-    this->currentStart = 0;
-    this->currentEnd = 0;
 }
 
 void AggregateWindowFunction::Reset(WindowIndex *pWindowIndex)

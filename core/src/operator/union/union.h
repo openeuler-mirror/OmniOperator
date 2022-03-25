@@ -10,7 +10,6 @@
 #include "../operator_factory.h"
 #include "../../type/data_type_serializer.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
 class UnionOperatorFactory : public OperatorFactory {
@@ -19,8 +18,8 @@ public:
 
     ~UnionOperatorFactory() override;
 
-    static UnionOperatorFactory *CreateUnionOperatorFactory(const type::DataTypes &sourceTypes,
-        int32_t sourceTypesCount, bool isDistinct);
+    static UnionOperatorFactory *CreateUnionOperatorFactory(const type::DataTypes &sourceTypesField,
+        int32_t sourceTypesCountField, bool distinct);
 
     Operator *CreateOperator() override;
 
@@ -44,7 +43,7 @@ private:
     const type::DataTypes &sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
-    vector<vec::VectorBatch *> inputVecBatches;
+    std::vector<vec::VectorBatch *> inputVecBatches;
 };
 }
 }

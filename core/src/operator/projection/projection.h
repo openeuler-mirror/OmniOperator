@@ -102,7 +102,7 @@ private:
 
 class ProjectionOperator : public Operator {
 public:
-    ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t inputTypes[], int32_t nCols,
+    explicit ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t inputTypes[], int32_t nCols,
         int32_t nProj, ExecutionContext *context)
         : proj(proj), nCols(nCols), nProj(nProj), context(context)
     {

@@ -12,17 +12,11 @@ using namespace std;
 
 WindowPartition::WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd,
     int32_t *outputChannels, int32_t outputChannelsCount, vector<unique_ptr<WindowFunction>> &windowFunctions,
-    PagesHashStrategy *peerGroupHashStrategy)
+    PagesHashStrategy *peerGroupHashStrategy) : pagesIndex(pagesIndex), partitionStart(partitionStart),
+    partitionEnd(partitionEnd), outputChannels(outputChannels), outputChannelsCount(outputChannelsCount),
+    peerGroupHashStrategy(peerGroupHashStrategy), currentPosition(partitionStart), peerGroupStart(0),
+    peerGroupEnd(0)
 {
-    this->pagesIndex = pagesIndex;
-    this->partitionStart = partitionStart;
-    this->partitionEnd = partitionEnd;
-    this->outputChannels = outputChannels;
-    this->outputChannelsCount = outputChannelsCount;
-    this->peerGroupHashStrategy = peerGroupHashStrategy;
-    this->currentPosition = partitionStart;
-    this->peerGroupStart = 0;
-    this->peerGroupEnd = 0;
     for (auto &windowFunction : windowFunctions) {
         this->windowFunctions.push_back(windowFunction.get());
     }

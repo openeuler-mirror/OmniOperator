@@ -15,10 +15,11 @@ UnionOperatorFactory::UnionOperatorFactory(const type::DataTypes &sourceTypes, i
 
 UnionOperatorFactory::~UnionOperatorFactory() {}
 
-UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const type::DataTypes &sourceTypes,
-    int32_t sourceTypesCount, bool isDistinct)
+UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(
+    const type::DataTypes &sourceTypesField,
+    int32_t sourceTypesCountField, bool distinct)
 {
-    auto uOperatorFactory = new UnionOperatorFactory(sourceTypes, sourceTypesCount, isDistinct);
+    auto uOperatorFactory = new UnionOperatorFactory(sourceTypesField, sourceTypesCountField, distinct);
     return uOperatorFactory;
 }
 

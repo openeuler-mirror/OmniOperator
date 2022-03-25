@@ -12,10 +12,8 @@
 
 class Range {
 public:
-    Range(int32_t start, int32_t end)
+    Range(int32_t start, int32_t end) : start(start), end(end)
     {
-        this->start = start;
-        this->end = end;
     }
 
     ~Range() = default;

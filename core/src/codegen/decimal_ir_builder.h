@@ -44,7 +44,7 @@ private:
     llvm::Module &module;
     llvm::IRBuilder<> &builder;
     CodeGenUtils &codeGenUtils;
-    const std::string scaleMultipliersName = "scaleMultipliers";
+    const std::string scaleMultipliersName = "SCALE_MULTIPLIERS";
 };
 
 
