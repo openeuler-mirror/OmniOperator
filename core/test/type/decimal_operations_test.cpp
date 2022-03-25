@@ -10,6 +10,7 @@
 
 using namespace omniruntime::type;
 
+namespace DecimalOperationsTest {
 TEST(DecimalOperations, sum_encode_and_decode_decimal)
 {
     using namespace omniruntime::op;
@@ -144,4 +145,5 @@ TEST(DecimalOperations, roundUp)
     newDec4 = 0;
     DecimalOperations::RoundUp(newDec1, newDec2, newDec3, newDec4);
     EXPECT_EQ(newDec3, expectValue);
+}
 }

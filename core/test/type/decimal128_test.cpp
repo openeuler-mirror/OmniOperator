@@ -7,6 +7,7 @@
 
 using namespace omniruntime::type;
 
+namespace Decimal128Test {
 TEST(Decimal128, abs_negate)
 {
     auto value = new Decimal128(-12, 2);
@@ -287,4 +288,5 @@ TEST(Decimal128, compare_gt)
     EXPECT_EQ(result, true);
     delete left;
     delete right;
+}
 }

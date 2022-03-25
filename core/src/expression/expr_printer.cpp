@@ -177,8 +177,7 @@ void PrintDecimal128Val(const LiteralExpr &e, bool printWithTypes, string &inden
         printf("d128_");
     }
     printf(indent.append("'%s':%s(%d, %d)").c_str(), (e.stringVal)->c_str(),
-           TypeUtil::TypeToString(e.GetReturnTypeId()).c_str(),
-           e.dataType->GetPrecision(), e.dataType->GetScale());
+        TypeUtil::TypeToString(e.GetReturnTypeId()).c_str(), e.dataType->GetPrecision(), e.dataType->GetScale());
 }
 
 void ExprPrinter::Visit(const LiteralExpr &e)
@@ -242,7 +241,7 @@ void ExprPrinter::Visit(const InExpr &e)
     string indent = GenerateIndentation();
     printf((indent + "In:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
-    for (int i = 0; i < e.arguments.size(); i++) {
+    for (uint32_t i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
             printf("\n%s)", indent.c_str());
@@ -272,10 +271,10 @@ void ExprPrinter::Visit(const SwitchExpr &e)
     string indent = GenerateIndentation();
     printf((indent + "Switch:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
-    for (int i = 0; i < e.whenClause.size(); i++) {
-        (e.whenClause[i].first)->Accept(*this);
+    for (const auto &i : e.whenClause) {
+        (i.first)->Accept(*this);
         printf(",\n");
-        (e.whenClause[i].second)->Accept(*this);
+        (i.second)->Accept(*this);
         printf(",\n");
     }
 
@@ -402,7 +401,7 @@ void ExprPrinter::Visit(const FuncExpr &e)
     string indent = GenerateIndentation();
     printf((indent + "%s:%s(\n").c_str(), e.funcName.c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
-    for (int i = 0; i < e.arguments.size(); i++) {
+    for (uint32_t i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
             printf("\n%s)", indent.c_str());

@@ -9,9 +9,9 @@ namespace vec {
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount,
     std::vector<uintptr_t> &fieldVectors, int32_t vectorCount, std::vector<DataType> &dataTypes)
     : Vector(allocator, vectorCount * BYTES, positionCount, type::OMNI_CONTAINER),
+      dataTypes(dataTypes),
       vectorCount(vectorCount),
-      positionCount(positionCount),
-      dataTypes(dataTypes)
+      positionCount(positionCount)
 {
     for (int32_t i = 0; i < vectorCount; ++i) {
         SetValue(i, fieldVectors[i]);
@@ -19,9 +19,9 @@ ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCou
 }
 
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount)
-    : vectorCount(capacityInBytes / BYTES),
-      positionCount(positionCount),
-      Vector(allocator, capacityInBytes, positionCount, type::OMNI_CONTAINER)
+    : Vector(allocator, capacityInBytes, positionCount, type::OMNI_CONTAINER),
+      vectorCount(capacityInBytes / BYTES),
+      positionCount(positionCount)
 {
     // init vec is null in container
     for (int i = 0; i < vectorCount; i++) {

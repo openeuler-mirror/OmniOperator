@@ -3,11 +3,12 @@
  */
 
 #include <sstream>
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
 
+namespace VacharVectorTest {
 TEST(VarcharVector, newVector)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
@@ -371,4 +372,5 @@ TEST(VarcharVector, appendExpand)
     delete appended;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
+}
 }

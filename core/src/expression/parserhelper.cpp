@@ -11,8 +11,8 @@ constexpr int32_t INT_DEFAULT_VALUE = 0;
 constexpr int64_t LONG_DEFAULT_VALUE = 0L;
 constexpr double DOUBLE_DEFAULT_VALUE = 0.000;
 constexpr bool BOOL_DEFAULT_VALUE = true;
-constexpr char *CHAR_DEFAULT_VALUE = "NULL";
-constexpr char *DECIMAL128_DEFAULT_VALUE = "0";
+constexpr char CHAR_DEFAULT_VALUE[] = "NULL";
+constexpr char DECIMAL128_DEFAULT_VALUE[] = "0";
 
 omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId)
 {
@@ -34,7 +34,8 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
                 .release();
         case OMNI_DECIMAL128:
             return std::make_unique<LiteralExpr>(make_unique<string>(DECIMAL128_DEFAULT_VALUE).release(),
-                                                 std::move(destType)).release();
+                std::move(destType))
+                .release();
         case OMNI_NONE:
             return std::make_unique<LiteralExpr>(INT_DEFAULT_VALUE, std::move(destType)).release();
         default:

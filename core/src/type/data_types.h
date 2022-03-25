@@ -15,7 +15,7 @@ public:
     DataTypes(const DataTypes &types) : DataTypes(types.dataTypes) {}
 
     explicit DataTypes(const std::vector<DataType> &dataTypes)
-        : dataTypes(dataTypes), dataTypesSize(dataTypes.size()), dataTypeIds(nullptr)
+        : dataTypesSize(dataTypes.size()), dataTypes(dataTypes), dataTypeIds(nullptr)
     {
         InitDataTypeIds();
     }

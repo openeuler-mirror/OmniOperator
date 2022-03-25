@@ -624,7 +624,7 @@ std::vector<std::tuple<int32_t, int32_t>> GetRanges(uint64_t *valueAddresses, Ve
     bool currentIsNull = column->IsValueNull(originalColumnPosition);
     bool valueIsNull = false;
     Vector *currentColumn = nullptr;
-    int32_t currentColumnPosition;
+    int32_t currentColumnPosition = -1;
     if (!currentIsNull) {
         currentColumn = column;
         currentColumnPosition = originalColumnPosition;

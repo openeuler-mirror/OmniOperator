@@ -2,22 +2,24 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: ...
  */
-#include "gtest/gtest.h"
-#include "../util/test_util.h"
-#include "../../src/operator/projection/projection.h"
+
 #include <string>
 #include <vector>
+#include "gtest/gtest.h"
+#include "test/util/test_util.h"
+#include "operator/projection/projection.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
+
 namespace project_test {
-void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op,
-    const int PROJECT_COUNT, bool isBoolResult = false)
+void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op, const int projectCount,
+    bool isBoolResult = false)
 {
     std::vector<DataTypeId> dataTypes = { OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL128, OMNI_VARCHAR, OMNI_CHAR };
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    for (int i = 0; i < projectCount; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         if (isBoolResult) {
             EXPECT_EQ(binaryExpr->GetReturnTypeId(), OMNI_BOOLEAN);
@@ -48,6 +50,9 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
             ASSERT_EQ(stol(*right->stringVal), i);
         else if (i == 4 || i == 5)
             ASSERT_STREQ(right->stringVal->c_str(), "hello");
+        else {
+            // explicit branch
+        }
 
         if (i == 5) {
             EXPECT_EQ(right->dataType->GetWidth(), 6);
@@ -56,10 +61,10 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
 }
 
 void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op,
-    const int PROJECT_COUNT)
+    const int projectCount)
 {
     std::vector<DataTypeId> dataTypes = { OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL128 };
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    for (int i = 0; i < projectCount; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
         EXPECT_EQ(binaryExpr->op, op);
@@ -82,13 +87,15 @@ void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::ex
             EXPECT_EQ(right->doubleVal, i);
         else if (i == 3)
             EXPECT_EQ(stol(*right->stringVal), i);
+        else {
+            // explicit braces
+        };
     }
 }
 
 // Test Not expression
 TEST(ParseTest, parseNotOperation)
 {
-    const int PROJECT_COUNT = 1;
     int vecTypeCount = 1;
     string expr = "$operator$NOT:4(#0)";
     std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN) };
@@ -106,85 +113,80 @@ TEST(ParseTest, parseNotOperation)
 // Test Arithmetic Binary Operations
 TEST(ParseTest, parseAddOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$ADD:1(#0, 0:1)", "$operator$ADD:2(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$ADD:1(#0, 0:1)", "$operator$ADD:2(#1, 1:2)",
                                        "$operator$ADD:3(#2, 2:3)", "$operator$ADD:7(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testArithmeticBinaryExpressions(result, ADD, PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testArithmeticBinaryExpressions(result, ADD, projectCount);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseSubtractOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$SUBTRACT:1(#0, 0:1)", "$operator$SUBTRACT:2(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$SUBTRACT:1(#0, 0:1)", "$operator$SUBTRACT:2(#1, 1:2)",
                                        "$operator$SUBTRACT:3(#2, 2:3)", "$operator$SUBTRACT:7(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testArithmeticBinaryExpressions(result, SUB, PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testArithmeticBinaryExpressions(result, SUB, projectCount);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseMultiplyOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$MULTIPLY:1(#0, 0:1)", "$operator$MULTIPLY:2(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$MULTIPLY:1(#0, 0:1)", "$operator$MULTIPLY:2(#1, 1:2)",
                                        "$operator$MULTIPLY:3(#2, 2:3)", "$operator$MULTIPLY:7(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testArithmeticBinaryExpressions(result, MUL, PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testArithmeticBinaryExpressions(result, MUL, projectCount);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseDivideOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$DIVIDE:1(#0, 0:1)", "$operator$DIVIDE:2(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$DIVIDE:1(#0, 0:1)", "$operator$DIVIDE:2(#1, 1:2)",
                                        "$operator$DIVIDE:3(#2, 2:3)", "$operator$DIVIDE:7(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testArithmeticBinaryExpressions(result, DIV, PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testArithmeticBinaryExpressions(result, DIV, projectCount);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseModulusOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$MODULUS:1(#0, 0:1)", "$operator$MODULUS:2(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$MODULUS:1(#0, 0:1)", "$operator$MODULUS:2(#1, 1:2)",
                                        "$operator$MODULUS:3(#2, 2:3)", "$operator$MODULUS:7(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testArithmeticBinaryExpressions(result, MOD, PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testArithmeticBinaryExpressions(result, MOD, projectCount);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
@@ -192,26 +194,24 @@ TEST(ParseTest, parseModulusOperation)
 // Test Compare Binary Operations
 TEST(ParseTest, parseLTOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$LESS_THAN:4(#0, 0:1)", "$operator$LESS_THAN:4(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$LESS_THAN:4(#0, 0:1)", "$operator$LESS_THAN:4(#1, 1:2)",
                                        "$operator$LESS_THAN:4(#2, 2:3)", "$operator$LESS_THAN:4(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testCmpBinaryExpressions(result, LT, PROJECT_COUNT, true);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testCmpBinaryExpressions(result, LT, projectCount, true);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseLTEOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$LESS_THAN_OR_EQUAL:4(#0, 0:1)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$LESS_THAN_OR_EQUAL:4(#0, 0:1)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#1, 1:2)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#2, 2:3)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#3, 3:7)"};
@@ -219,35 +219,33 @@ TEST(ParseTest, parseLTEOperation)
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testCmpBinaryExpressions(result, LTE, PROJECT_COUNT, true);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testCmpBinaryExpressions(result, LTE, projectCount, true);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseGTOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$GREATER_THAN:4(#0, 0:1)", "$operator$GREATER_THAN:4(#1, 1:2)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$GREATER_THAN:4(#0, 0:1)", "$operator$GREATER_THAN:4(#1, 1:2)",
                                        "$operator$GREATER_THAN:4(#2, 2:3)", "$operator$GREATER_THAN:4(#3, 3:7)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testCmpBinaryExpressions(result, GT, PROJECT_COUNT, true);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testCmpBinaryExpressions(result, GT, projectCount, true);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseGTEOperation)
 {
-    const int PROJECT_COUNT = 4;
-    int vecTypeCount = 4;
-    string exprs[PROJECT_COUNT] = {"$operator$GREATER_THAN_OR_EQUAL:4(#0, 0:1)",
+    const int projectCount = 4;
+    string exprs[projectCount] = {"$operator$GREATER_THAN_OR_EQUAL:4(#0, 0:1)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#1, 1:2)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#2, 2:3)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#3, 3:7)"};
@@ -255,36 +253,34 @@ TEST(ParseTest, parseGTEOperation)
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testCmpBinaryExpressions(result, GTE, PROJECT_COUNT, true);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testCmpBinaryExpressions(result, GTE, projectCount, true);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseEQOperation)
 {
-    const int PROJECT_COUNT = 6;
-    int vecTypeCount = 6;
-    string exprs[PROJECT_COUNT] = {"$operator$EQUAL:4(#0, 0:1)", "$operator$EQUAL:4(#1, 1:2)",
+    const int projectCount = 6;
+    string exprs[projectCount] = {"$operator$EQUAL:4(#0, 0:1)", "$operator$EQUAL:4(#1, 1:2)",
                                        "$operator$EQUAL:4(#2, 2:3)", "$operator$EQUAL:4(#3, 3:7)",
                                        "$operator$EQUAL:4(#4, 'hello':15)", "$operator$EQUAL:4(#5, 'hello':16[6])"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT),        DataType(OMNI_LONG),    DataType(OMNI_DOUBLE),
         DataType(OMNI_DECIMAL128), DataType(OMNI_VARCHAR), DataType(OMNI_CHAR) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testCmpBinaryExpressions(result, EQ, PROJECT_COUNT, true);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testCmpBinaryExpressions(result, EQ, projectCount, true);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
 
 TEST(ParseTest, parseNEQOperation)
 {
-    const int PROJECT_COUNT = 6;
-    int vecTypeCount = 6;
-    string exprs[PROJECT_COUNT] = {"$operator$NOT_EQUAL:4(#0, 0:1)", "$operator$NOT_EQUAL:4(#1, 1:2)",
+    const int projectCount = 6;
+    string exprs[projectCount] = {"$operator$NOT_EQUAL:4(#0, 0:1)", "$operator$NOT_EQUAL:4(#1, 1:2)",
                                        "$operator$NOT_EQUAL:4(#2, 2:3)", "$operator$NOT_EQUAL:4(#3, 3:7)",
                                        "$operator$NOT_EQUAL:4(#4, 'hello':15)",
                                        "$operator$NOT_EQUAL:4(#5, 'hello':16[6])"};
@@ -292,9 +288,9 @@ TEST(ParseTest, parseNEQOperation)
         DataType(OMNI_DECIMAL128), DataType(OMNI_VARCHAR), DataType(OMNI_CHAR) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    testCmpBinaryExpressions(result, NEQ, PROJECT_COUNT, true);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    testCmpBinaryExpressions(result, NEQ, projectCount, true);
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }
@@ -302,15 +298,14 @@ TEST(ParseTest, parseNEQOperation)
 // Test Logic Operations
 TEST(ParseTest, parseLogicOperations)
 {
-    const int PROJECT_COUNT = 2;
-    int vecTypeCount = 2;
-    string exprs[PROJECT_COUNT] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
+    const int projectCount = 2;
+    string exprs[projectCount] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN) };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    EXPECT_EQ(result.size(), PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
+    EXPECT_EQ(result.size(), projectCount);
+    for (int i = 0; i < projectCount; i++) {
         BinaryExpr *logExpr = static_cast<BinaryExpr *>(result.at(i));
         EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_BOOLEAN);
         FieldExpr *logLeft = static_cast<FieldExpr *>(logExpr->left);
@@ -328,7 +323,7 @@ TEST(ParseTest, parseLogicOperations)
         }
     }
 
-    for (int i = 0; i < PROJECT_COUNT; i++) {
+    for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
 }

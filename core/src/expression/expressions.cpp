@@ -21,7 +21,7 @@ bool IsNullLiteral(const std::string &value)
     if (value.size() != loweredNullValue.size()) {
         return false;
     }
-    for (int i = 0; i < loweredNullValue.size(); i++) {
+    for (uint32_t i = 0; i < loweredNullValue.size(); i++) {
         if (tolower(value[i]) != loweredNullValue[i]) {
             return false;
         }

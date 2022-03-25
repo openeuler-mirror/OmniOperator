@@ -7,7 +7,7 @@
 
 namespace omniruntime {
 namespace mem {
-Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes)) {}
+Chunk::Chunk(int64_t sizeInBytes) : address(OmniAllocate(sizeInBytes)), sizeInBytes(sizeInBytes) {}
 
 Chunk::~Chunk()
 {

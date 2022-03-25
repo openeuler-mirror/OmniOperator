@@ -15,8 +15,9 @@
 
 class DecimalIRBuilder {
 public:
-    explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder, CodeGenUtils
-    &codeGenUtils) : context(context), module(module), builder(builder), codeGenUtils(codeGenUtils)
+    explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder,
+        CodeGenUtils &codeGenUtils)
+        : context(context), module(module), builder(builder), codeGenUtils(codeGenUtils)
     {
         this->AddScaleMultiplier();
     }
@@ -30,8 +31,8 @@ public:
     // Combine the two parts into an i128
     llvm::Value *ToInt128(llvm::Value *high, llvm::Value *low) const;
     void AddScaleMultiplier() const;
-    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
-        llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight);
+    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue, llvm::Value &rightScale,
+        llvm::Value **scaledLeft, llvm::Value **scaledRight);
     llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta);
     llvm::Value *GetScaleMultiplier(llvm::Value &delta);
     llvm::Value *BuildIfElse(llvm::Value &condition, llvm::Type &return_type, std::function<llvm::Value *()> then_func,

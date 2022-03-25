@@ -80,7 +80,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
 
     // check the join result
     int32_t index = 0;
-    for (auto i = 0; i < result.size(); i++) {
+    for (uint32_t i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
         ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
         ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
@@ -169,7 +169,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
 
     // check the join result
     int32_t index = 0;
-    for (auto i = 0; i < result.size(); i++) {
+    for (uint32_t i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
         ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
         ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);

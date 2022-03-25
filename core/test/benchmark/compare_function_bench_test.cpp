@@ -46,8 +46,8 @@ static int32_t CompareVarchar(Vector *leftColumn, int32_t leftColumnPosition, Ve
 
 int64_t ReverseBytes(int64_t var0)
 {
-    var0 = (var0 & 71777214294589695L) << 8 | ((uint64_t)var0) >> 8 & 71777214294589695L;
-    return var0 << 48 | (var0 & 4294901760L) << 16 | ((uint64_t)var0) >> 16 & 4294901760L | ((uint64_t)var0) >> 48;
+    var0 = (var0 & 71777214294589695L) << 8 | (((uint64_t)var0) >> 8 & 71777214294589695L);
+    return var0 << 48 | (var0 & 4294901760L) << 16 | (((uint64_t)var0) >> 16 & 4294901760L) | ((uint64_t)var0) >> 48;
 }
 
 int64_t LongBytesToLong(int64_t bytes)
@@ -57,8 +57,8 @@ int64_t LongBytesToLong(int64_t bytes)
 
 int32_t CmpByLong(uint8_t *var1, uint8_t *var2, int32_t compareLength)
 {
-    int64_t *left = reinterpret_cast<int64_t *>(var1);
-    int64_t *right = reinterpret_cast<int64_t *>(var2);
+    auto *left = reinterpret_cast<int64_t *>(var1);
+    auto *right = reinterpret_cast<int64_t *>(var2);
     while (compareLength >= 8) {
         int64_t leftVal = *left;
         int64_t rightVal = *right;

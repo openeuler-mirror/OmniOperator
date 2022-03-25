@@ -121,7 +121,6 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
         }
         dictVecAddress = 0;
         valuesAddress = 0;
-        DataTypeId typeId = colVec->GetTypeId();
         if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
             dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
         } else {

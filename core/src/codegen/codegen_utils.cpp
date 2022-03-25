@@ -22,8 +22,7 @@ void CodeGenUtils::RecordMainFunction(llvm::Function *func)
 void CodeGenUtils::RemoveUnusedFunctions()
 {
     llvm::Function *preserved = function;
-    mpm.add(llvm::createInternalizePass([preserved](const llvm::GlobalValue& func) {
-                return (func.getName().str() == preserved->getName().str());
-            }));
+    mpm.add(llvm::createInternalizePass(
+        [preserved](const llvm::GlobalValue &func) { return (func.getName().str() == preserved->getName().str()); }));
     mpm.add(llvm::createGlobalDCEPass());
 }

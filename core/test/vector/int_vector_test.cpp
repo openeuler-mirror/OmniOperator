@@ -2,11 +2,12 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
 
+namespace IntVectorTest {
 TEST(IntVector, newVector)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
@@ -223,4 +224,5 @@ TEST(IntVector, jniFreeVector)
     Vector *vector = (Vector *)originalVector;
     std::cout << typeid(*vector).hash_code() << std::endl;
     delete vector;
+}
 }

@@ -47,7 +47,7 @@ void GetTypeIds(DataTypes &inputTypes, const vector<Expr *> &projectKeys, vector
 
     int32_t newProjectCol = inputTypesCount;
     auto projectKeysCount = projectKeys.size();
-    for (int32_t i = 0; i < projectKeysCount; i++) {
+    for (uint32_t i = 0; i < projectKeysCount; i++) {
         auto projectCol = GetProjectCol(projectKeys[i]);
         projectCols[i] = projectCol;
         if (projectCol == -1) {
@@ -67,7 +67,7 @@ void GetRequiredTypeIds(DataTypes &inputTypes, const vector<Expr *> &projectKeys
     int32_t newProjectCol = 0;
     map<int32_t, int32_t> colIdMap;
     auto projectKeysCount = projectKeys.size();
-    for (int32_t i = 0; i < projectKeysCount; i++) {
+    for (uint32_t i = 0; i < projectKeysCount; i++) {
         auto projectCol = GetProjectCol(projectKeys[i]);
         if (projectCol == -1) {
             // expression col
@@ -514,16 +514,6 @@ JitContext *CreateWindowJitContext(omniruntime::type::DataTypes &sourceDataTypes
     for (int32_t i = 0; i < finalSortColsCount; i++) {
         finalSortColTypes[i] = sourceTypes[finalSortCols[i]];
     }
-    int32_t finalOutputCols[allCount];
-    int32_t finalOutputColsCount = 0;
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        finalOutputCols[finalOutputColsCount] = outputCols[i];
-        finalOutputColsCount++;
-    }
-    for (int32_t i = typesCount; i < allCount; i++) {
-        finalOutputCols[finalOutputColsCount] = i;
-        finalOutputColsCount++;
-    }
 
     ParamValue pSortCols = ParamValue(finalSortCols, finalSortColsCount);
     ParamValue pSortColTypes = ParamValue(finalSortColTypes, finalSortColsCount);
@@ -592,17 +582,6 @@ JitContext *CreateWindowWithExprJitContext(DataTypes &sourceDataTypes, int32_t *
     int32_t finalSortColTypes[finalSortColsCount];
     for (int32_t i = 0; i < finalSortColsCount; i++) {
         finalSortColTypes[i] = inputTypes[finalSortCols[i]];
-    }
-    auto allCount = allTypes.GetSize();
-    int32_t finalOutputCols[allCount];
-    int32_t finalOutputColsCount = 0;
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        finalOutputCols[finalOutputColsCount] = outputCols[i];
-        finalOutputColsCount++;
-    }
-    for (int32_t i = typesCount; i < allCount; i++) {
-        finalOutputCols[finalOutputColsCount] = i;
-        finalOutputColsCount++;
     }
 
     ParamValue pSortCols = ParamValue(finalSortCols, finalSortColsCount);

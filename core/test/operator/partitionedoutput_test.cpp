@@ -268,7 +268,6 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
     string expectData0[3] = {"abe", "de", "f"};
-    int32_t expectData1[DATA_SIZE] = {1, 3, 5};
     DataTypes expectedTypes(std::vector<DataType>({ VarcharDataType(3) }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
     expectVecBatch->GetVector(0)->SetValueNull(0);

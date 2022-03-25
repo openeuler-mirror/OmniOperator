@@ -5,22 +5,23 @@
 #ifndef __TEST_UTIL_H__
 #define __TEST_UTIL_H__
 
-#include <time.h>
-#include "../../src/vector/vector_common.h"
-#include "../../src/operator/operator.h"
-#include "../../src/operator/operator_factory.h"
-#include "../../src/type/data_types.h"
-#include "../../src/type/data_type.h"
-#include "../../src/vector/vector_allocator_factory.h"
+#include <ctime>
+#include <cstdint>
+#include <string>
+#include <gtest/gtest.h>
+#include "vector/vector_common.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "type/data_types.h"
+#include "type/data_type.h"
+#include "vector/vector_allocator_factory.h"
 #include "codegen/func_signature.h"
 #include "codegen/func_registry.h"
 #include "expression/expressions.h"
 
-using namespace omniruntime::vec;
-
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::type::DataTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<DataType> &dataTypes);
+omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<omniruntime::vec::DataType> &dataTypes);
 omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::VarcharDataType type, std::string *values,
     int32_t length);
 omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
@@ -111,7 +112,7 @@ private:
 
 template <typename T, typename V> T *CreateVector(V *values, int32_t length)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocatorFactory::GetGlobalAllocator();
     auto vector = new T(vecAllocator, length);
     vector->SetValues(0, values, length);
     return vector;
@@ -120,7 +121,6 @@ template <typename T, typename V> T *CreateVector(V *values, int32_t length)
 template <typename T, typename E> void AssertVectorEquals(T *vector, E *expectedValues)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        // TODO: need to find a better way to compare NULLs
         if (vector->IsValueNull(i)) {
             continue;
         }
@@ -128,9 +128,10 @@ template <typename T, typename E> void AssertVectorEquals(T *vector, E *expected
     }
 }
 
-void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataType> &dataTypes);
+void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount,
+    std::vector<omniruntime::vec::DataType> &dataTypes);
 
-void GetTestTypeIds(DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
+void GetTestTypeIds(omniruntime::vec::DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,

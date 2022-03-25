@@ -9,12 +9,12 @@
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId)
-    : allocator(allocator),
-      reference(nullptr),
-      size(size),
-      positionOffset(0),
+    : positionOffset(0),
       capacityInBytes(capacityInBytes),
-      dataTypeId(dataTypeId)
+      size(size),
+      dataTypeId(dataTypeId),
+      reference(nullptr),
+      allocator(allocator)
 {
     ASSERT(allocator != nullptr);
     allocator->NewVector(this, capacityInBytes, size, dataTypeId);
@@ -24,12 +24,12 @@ Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTy
 }
 
 Vector::Vector(Vector *vector, int size, int positionOffset)
-    : allocator(vector->allocator),
-      reference(vector->reference),
-      size(size),
-      positionOffset(vector->positionOffset + positionOffset),
+    : positionOffset(vector->positionOffset + positionOffset),
       capacityInBytes(vector->GetCapacityInBytes()),
-      dataTypeId(vector->dataTypeId)
+      size(size),
+      dataTypeId(vector->dataTypeId),
+      reference(vector->reference),
+      allocator(vector->allocator)
 {
     allocator->SliceVector(vector, this);
     valuesAddress = reference->GetValuesAddress();

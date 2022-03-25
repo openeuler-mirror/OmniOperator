@@ -210,14 +210,14 @@ void GenerateCombinedHash(Vector **inputVectors, const int32_t start, int32_t ro
 
 DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, int32_t hashCol, int64_t limit)
-    : sourceTypes(sourceTypes),
+    : executionContext(new ExecutionContext()),
+      sourceTypes(sourceTypes),
       distinctCols(distinctCols),
       distinctColsCount(distinctColsCount),
       hashCol(hashCol),
       outColsCount(distinctColsCount + ((hashCol == INVALID_DISTINCT_COL_ID) ? 0 : 1)),
-      limit(limit),
       remainingLimit(limit),
-      executionContext(new ExecutionContext())
+      limit(limit)
 {
     auto &sourceDataType = sourceTypes.Get();
     for (int i = 0; i < distinctColsCount; ++i) {
@@ -246,7 +246,7 @@ bool IsExistSameRow(type::DataTypes &inputTypes, Vector **inputVectors, std::vec
     Vector *inputVector = nullptr;
     const int32_t *dataTypeIds = inputTypes.GetIds();
 
-    for (int32_t i = 0; i < bucket.size(); i++) {
+    for (uint32_t i = 0; i < bucket.size(); i++) {
         isSame = true;
 
         std::vector<AggregateState> &rowVector = bucket[i];

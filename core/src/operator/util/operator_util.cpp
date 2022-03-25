@@ -17,7 +17,6 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputT
     std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
 {
     newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
-    const int32_t *inputTypeIds = inputTypes.GetIds();
     int32_t inputTypesCount = inputTypes.GetSize();
     for (int32_t i = 0; i < projectKeysCount; i++) {
         auto rowProjection = std::make_unique<RowProjection>(*(projectKeys[i]));

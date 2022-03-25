@@ -2,13 +2,14 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "../../config.h"
 #include <thread>
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include "../../config.h"
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
 
+namespace VectorAllocatorTest {
 #ifdef DEBUG_VECTOR
 
 TEST(VectorAllocatorManager, getOrCreateAllocator)
@@ -238,3 +239,4 @@ TEST(VectorAllocator, recycleDeletedTracer)
     EXPECT_TRUE(allocator == nullptr);
 }
 #endif
+}

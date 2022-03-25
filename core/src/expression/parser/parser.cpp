@@ -86,7 +86,7 @@ string Parser::StripString(const string &input)
 DataTypeId ParseReturnType(const string &typeString)
 {
     int endIdx = 2;
-    int widthIdx = typeString.find('[');
+    auto widthIdx = typeString.find('[');
     if (widthIdx != string::npos) {
         if (stoi(typeString.substr(0, endIdx)) == OMNI_CHAR) {
             return OMNI_CHAR;
@@ -116,7 +116,7 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
 Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
-    int firstParenInd = input.find('(');
+    auto firstParenInd = input.find('(');
     // Check if it is just data (i.e. 123, #4, 34.4)
     if (firstParenInd == string::npos) {
         if (input[0] == '#') {
@@ -135,7 +135,7 @@ Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes inputTypes, i
     int numCommas = 0;
     int parenCount = 0;
     bool outsideQuotes = true;
-    for (int i = 0; i < exprStr.size(); i++) {
+    for (uint32_t i = 0; i < exprStr.size(); i++) {
         if (exprStr[i] == ',' && parenCount == 0 && outsideQuotes) {
             commaPositions.push_back(i);
             numCommas++;
@@ -173,7 +173,7 @@ Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes inputTypes, i
 
 Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 {
-    int typeIdx = opStr.find(':');
+    auto typeIdx = opStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
     unique_ptr<DataType> type;
@@ -319,7 +319,7 @@ FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const DataTypes &inputType
 
 LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 {
-    int typeIdx = literalStr.find(':');
+    auto typeIdx = literalStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
     DataTypePtr currType;

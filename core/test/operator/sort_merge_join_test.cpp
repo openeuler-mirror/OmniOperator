@@ -189,7 +189,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
 
     // check the join result
     int32_t index = 0;
-    for (auto i = 0; i < result.size(); i++) {
+    for (uint32_t i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
         ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
         ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
@@ -210,7 +210,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
 void ExpectVectorEqual(std::vector<int64_t> expected, std::vector<int64_t> actual)
 {
     EXPECT_EQ(expected.size(), actual.size());
-    for (int i = 0; i < expected.size(); ++i) {
+    for (uint32_t i = 0; i < expected.size(); ++i) {
         EXPECT_EQ(expected[i], actual[i]);
     }
 }
@@ -295,6 +295,8 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner2)
     auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     auto ret = scan->FindNextJoinRows();
+    EXPECT_NE(ret, -1);
+
     std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
@@ -1217,6 +1219,7 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner7)
     auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     auto ret = scan->FindNextJoinRows();
+    EXPECT_NE(ret, -1);
 
     // get output
     std::vector<bool> isPreMatched;

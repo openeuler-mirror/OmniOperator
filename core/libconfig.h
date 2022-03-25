@@ -21,7 +21,7 @@ static std::string GetLibPath()
     }
 }
 
-static std::string GenerateOperatorTemplatePath(std::string operatorName)
+static std::string GenerateOperatorTemplatePath(const std::string &operatorName)
 {
     return GetLibPath() + IR_FOLDER + operatorName + IR_SUFFIX;
 }

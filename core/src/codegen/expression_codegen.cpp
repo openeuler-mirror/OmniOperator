@@ -112,7 +112,7 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     builder->CreateCall(codegenContext->print, args, "printfCall");
 }
 
-ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr) : funcName(std::move(name)), expr(&cpExpr) {}
+ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr) : expr(&cpExpr), funcName(std::move(name)) {}
 
 ExpressionCodeGen::~ExpressionCodeGen()
 {
@@ -1241,7 +1241,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
     Value *isNull = llvm::ConstantInt::get(*context, APInt(1, 0));
     Type *retType = llvmTypes->ToLLVMType(iExpr->GetReturnTypeId());
     // Handle types correctly
-    for (int i = 1; i < iExpr->arguments.size(); i++) {
+    for (auto i = 1; i < iExpr->arguments.size(); i++) {
         // initialize tmpCmpData
         Value *tmpCmpData = llvmTypes->CreateConstantBool(false);
         Value *tmpCmpNull = llvmTypes->CreateConstantBool(false);

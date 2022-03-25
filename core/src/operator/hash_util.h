@@ -266,10 +266,10 @@ public:
 
     static ALWAYS_INLINE int64_t Reverse(uint64_t i)
     {
-        i = (i & 0x5555555555555555UL) << ROTATE_DISTANCE_1 | (i >> ROTATE_DISTANCE_1) & 0x5555555555555555UL;
-        i = (i & 0x3333333333333333UL) << ROTATE_DISTANCE_2 | (i >> ROTATE_DISTANCE_2) & 0x3333333333333333UL;
-        i = (i & 0x0f0f0f0f0f0f0f0fUL) << ROTATE_DISTANCE_4 | (i >> ROTATE_DISTANCE_4) & 0x0f0f0f0f0f0f0f0fUL;
-        i = (i & 0x00ff00ff00ff00ffUL) << ROTATE_DISTANCE_8 | (i >> ROTATE_DISTANCE_8) & 0x00ff00ff00ff00ffUL;
+        i = (i & 0x5555555555555555UL) << ROTATE_DISTANCE_1 | ((i >> ROTATE_DISTANCE_1) & 0x5555555555555555UL);
+        i = (i & 0x3333333333333333UL) << ROTATE_DISTANCE_2 | ((i >> ROTATE_DISTANCE_2) & 0x3333333333333333UL);
+        i = (i & 0x0f0f0f0f0f0f0f0fUL) << ROTATE_DISTANCE_4 | ((i >> ROTATE_DISTANCE_4) & 0x0f0f0f0f0f0f0f0fUL);
+        i = (i & 0x00ff00ff00ff00ffUL) << ROTATE_DISTANCE_8 | ((i >> ROTATE_DISTANCE_8) & 0x00ff00ff00ff00ffUL);
         i = (i << ROTATE_DISTANCE_48) | ((i & 0xffff0000UL) << ROTATE_DISTANCE_16) |
             ((i >> ROTATE_DISTANCE_16) & 0xffff0000UL) | (i >> ROTATE_DISTANCE_48);
         return i;

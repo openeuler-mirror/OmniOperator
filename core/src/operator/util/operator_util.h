@@ -71,8 +71,8 @@ public:
     static int32_t GetRowSize(const std::vector<DataType> &dataTypes)
     {
         int32_t rowSize = 0;
-        for (int32_t i = 0; i < dataTypes.size(); i++) {
-            rowSize += OperatorUtil::GetTypeSize(dataTypes[i]);
+        for (const auto &dataType : dataTypes) {
+            rowSize += OperatorUtil::GetTypeSize(dataType);
         }
         return rowSize;
     }

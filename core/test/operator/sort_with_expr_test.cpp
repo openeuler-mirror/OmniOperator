@@ -13,6 +13,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 
+namespace SortWithExprTest {
 TEST(SortWithExprTest, TestSortZeroExprColumns)
 {
     const int32_t dataSize = 5;
@@ -62,7 +63,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     auto addCol = new FieldExpr(0, IntType());
     auto addLiteral = new LiteralExpr(50, IntType());
     auto addExpr = new BinaryExpr(ADD, addCol, addLiteral, IntType());
-    std::vector<Expr *> sortExprs{col0, addExpr};
+    std::vector<Expr *> sortExprs { col0, addExpr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -102,7 +103,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal, IntType());
     auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col, LongType());
-    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+    std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -151,7 +152,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal, IntType());
     auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col, LongType());
-    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+    std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
@@ -265,7 +266,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal, IntType());
     auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col, LongType());
-    std::vector<Expr *> sortExprs{add1Expr, add2Expr};
+    std::vector<Expr *> sortExprs { add1Expr, add2Expr };
 
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
@@ -292,4 +293,5 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+}
 }

@@ -109,14 +109,14 @@ LibraryLoader::LibraryLoader() : neededLibs()
         [](const CoreLibrary &a, const CoreLibrary &b) { return a.Priority() < b.Priority(); });
 }
 
-LibraryLoader::~LibraryLoader() {}
+LibraryLoader::~LibraryLoader() = default;
 
-vector<string> SplitPaths(string aggregate)
+vector<string> SplitPaths(const string &aggregate)
 {
     vector<string> paths;
-    int32_t start = 0;
-    int32_t idx;
-    while ((idx = aggregate.find(":", start)) != string::npos) {
+    uint64_t start = 0;
+    uint64_t idx = 0;
+    while ((idx = aggregate.find(':', start)) != string::npos) {
         paths.push_back(aggregate.substr(start, idx - start));
         start = idx + 1;
     }
@@ -181,11 +181,11 @@ static int LibCallback(struct dl_phdr_info *info, size_t size, void *data)
     if (name.length() == 0) {
         return 0;
     }
-    int32_t endIdx = name.find_last_of("/");
+    auto endIdx = name.find_last_of("/");
     if (endIdx == string::npos || LibraryLoader::ExtractFileName(name).find("libstdc++.so") == string::npos) {
         return 0;
     }
-    vector<string> *vec = static_cast<vector<string> *>(data);
+    auto *vec = static_cast<vector<string> *>(data);
     name = name.substr(0, endIdx);
     vec->push_back(name);
     return 0;
@@ -227,7 +227,7 @@ string LibraryLoader::ValidateLibrary(const string &path, unordered_map<string, 
     auto targets = neededLibs;
     string fileName = ExtractFileName(path);
     // Limit search to .so files
-    int32_t ext = fileName.rfind(".so");
+    auto ext = fileName.rfind(".so");
     if (ext == string::npos) {
         return "";
     }

@@ -183,15 +183,15 @@ TEST(HashUtilTest, TestHashValueDecimal64)
 TEST(HashUtilTest, TestHashValueDecimal128)
 {
     // "1.2", "1.0", "2.0", "1.5", "-1.2", "-1.0", "-2.0", "-1.5"
-    uint64_t values[][2] = {
+    int64_t values[][2] = {
             {12, 0},
             {10, 0},
             {20, 0},
             {15, 0},
-            {12, (uint64_t)-9223372036854775808},
-            {10, (uint64_t)-9223372036854775808},
-            {20, (uint64_t)-9223372036854775808},
-            {15, (uint64_t)-9223372036854775808}};
+            {12, INT64_MIN},
+            {10, INT64_MIN},
+            {20, INT64_MIN},
+            {15, INT64_MIN}};
     int64_t expectedHashes[] = {
         -7175125149685805438,
         3211658658053674137,

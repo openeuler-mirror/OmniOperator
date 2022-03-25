@@ -400,6 +400,7 @@ TEST(ProjectTest, Longs)
     op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
     for (int32_t i = 0; i < 1; i++) {
         int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, (int64_t)(i - 5000) * 5000000);
@@ -433,6 +434,7 @@ TEST(ProjectTest, Doubles)
     op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
     for (int32_t i = 0; i < 1; i++) {
         double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
         double expected = (i - 5000.5) / 2;
@@ -542,6 +544,7 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
         op->AddInput(copy);
         vector<VectorBatch *> ret;
         int32_t numReturned = op->GetOutput(ret);
+        EXPECT_EQ(numReturned, numRows);
         VectorHelper::FreeVecBatches(ret);
 
         auto end = std::chrono::system_clock::now();
@@ -580,6 +583,7 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
         op->AddInput(copy);
         vector<VectorBatch *> ret;
         int32_t numReturned = op->GetOutput(ret);
+        EXPECT_EQ(numReturned, numRows);
         VectorHelper::FreeVecBatches(ret);
 
         auto end = std::chrono::system_clock::now();
@@ -867,7 +871,7 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     const int32_t numProject = 1;
     std::string funcStr = "substr";
     DataTypePtr retType = VarcharType();
-std:
+
     vector<Expr *> args;
     args.push_back(new FieldExpr(0, VarcharType()));
     args.push_back(new LiteralExpr(1, IntType()));
@@ -1798,7 +1802,7 @@ TEST(ProjectTest, varcharExpand)
     FieldExpr *substrData = new FieldExpr(0, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(5, IntType());
-    ParserHelper ph;
+
     std::string substrStr = "substr";
     DataTypePtr retType = VarcharType();
     std::vector<Expr *> args;
@@ -1830,6 +1834,7 @@ TEST(ProjectTest, varcharExpand)
     op->AddInput(copy);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
 
     EXPECT_GT(ret[0]->GetVector(0)->GetCapacityInBytes(), avgStrLen * numReturned);
     string expected1 = "hello" + baseStr;
@@ -1880,6 +1885,7 @@ TEST(ProjectTest, testDivDecimal)
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 1);
     Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0.LowBits(), 11);
     EXPECT_EQ(val0.HighBits(), 0);
@@ -1910,6 +1916,7 @@ TEST(ProjectTest, testADDDecimal)
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 1);
     Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0.LowBits(), 102176083);
     EXPECT_EQ(val0.HighBits(), 0);
@@ -1940,6 +1947,7 @@ TEST(ProjectTest, testDecinalBetween)
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 1);
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
     VectorHelper::FreeVecBatches(ret);
@@ -1972,6 +1980,7 @@ TEST(ProjectTest, testDecinmalIn)
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 1);
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
     VectorHelper::FreeVecBatches(ret);
@@ -2010,6 +2019,8 @@ TEST(ProjectTest, trstDecimalComprehensive)
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 1);
+
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
     VectorHelper::FreeVecBatches(ret);

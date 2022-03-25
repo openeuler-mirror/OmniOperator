@@ -70,7 +70,7 @@ void DynamicPagesIndex::FreeBeforeVecBatch(int32_t vecBatchIdx)
 
 void DynamicPagesIndex::FreeAllRemainingVecBatch()
 {
-    for (int idx = lastFreedVecBatchIdx + 1; idx < vectorBatchDeque.size(); idx++) {
+    for (uint32_t idx = lastFreedVecBatchIdx + 1; idx < vectorBatchDeque.size(); idx++) {
         this->vecBatchFreeFlagDeque[idx] = true;
         VectorHelper::FreeVecBatch(this->vectorBatchDeque[idx]);
     }
