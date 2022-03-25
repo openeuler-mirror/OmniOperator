@@ -12,6 +12,9 @@ using JitContext = struct JitContext {
     uintptr_t func;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 JitContext *CreateSortJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortColsCount);
@@ -60,5 +63,8 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::type::DataTypes
 
 JitContext *CreateAggregationJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *aggCols,
     int32_t *aggMaskCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, omniruntime::type::DataTypes &outputDataTypes);
+#ifdef __cplusplus
+}
+#endif
 
 #endif // OMNI_RUNTIME_JIT_CONTEXT_H

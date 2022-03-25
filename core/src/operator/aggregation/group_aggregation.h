@@ -12,41 +12,6 @@
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
-#ifdef DEBUG_OPERATOR
-#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types, agg_func_types) \
-    do {                                                                                                               \
-        for (int32_t i = 0; i < group_by_num; ++i) {                                                                   \
-            auto vector = vector_batch->GetVector(group_by_idx[i]);                                                    \
-            auto typeId = vector->GetTypeId();                                                                         \
-            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {                                               \
-                typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                           \
-            }                                                                                                          \
-            if (typeId != operator_types[group_by_idx[i]]) {                                                           \
-                LogWarn("Group by vector type %d != operator column type %d!", typeId,                                 \
-                    operator_types[group_by_idx[i]]);                                                                  \
-            }                                                                                                          \
-        }                                                                                                              \
-        uint32_t aggInputIndex = 0;                                                                                    \
-        for (int32_t i = 0; i < agg_num; ++i) {                                                                        \
-            uint32_t aggregateType = agg_func_types[i];                                                                \
-            if (aggregateType != OMNI_AGGREGATION_TYPE_COUNT_ALL) {                                                    \
-                auto vector = vector_batch->GetVector(agg_idx[aggInputIndex]);                                         \
-                auto typeId = vector->GetTypeId();                                                                     \
-                auto operatorType = operator_types[agg_idx[aggInputIndex]];                                            \
-                aggInputIndex++;                                                                                       \
-                if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {                                           \
-                    typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryTypeId();                       \
-                }                                                                                                      \
-                if (typeId != operatorType) {                                                                          \
-                    LogWarn("Aggregate vector type %d != operator column type %d!", typeId, operatorType);             \
-                }                                                                                                      \
-            }                                                                                                          \
-        }                                                                                                              \
-    } while (0)
-#else
-#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types, agg_func_types)
-#endif
-
 namespace omniruntime {
 namespace op {
 using namespace vec;

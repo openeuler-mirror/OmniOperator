@@ -6,8 +6,8 @@
 #define OMNI_RUNTIME_JNI_VECTOR_LOADER_H
 
 #include <jni.h>
-#include "../vector/lazy_vector.h"
-#include "../vector/loader/vector_loader.h"
+#include "vector/lazy_vector.h"
+#include "vector/loader/vector_loader.h"
 
 namespace omniruntime {
 namespace vec {
@@ -17,7 +17,7 @@ public:
         : VectorLoader(), jniEnv(jniEnv), jLoader(jniEnv->NewGlobalRef(jLoader))
     {}
 
-    ~JniVectorLoader()
+    ~JniVectorLoader() override
     {
         jniEnv->DeleteGlobalRef(jLoader);
     }

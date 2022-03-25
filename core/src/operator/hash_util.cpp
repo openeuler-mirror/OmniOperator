@@ -3,27 +3,12 @@
  * @Description: hash util implementations
  */
 #include "hash_util.h"
-#include <stdint.h>
+#include <cstdint>
 #include <cmath>
 
 namespace omniruntime {
 namespace op {
-int64_t NextPowerOfTwo(int64_t x);
-int32_t HashUtil::HashArraySize(int32_t expected, float f)
-{
-    double result = static_cast<double>(expected) / static_cast<double>(f);
-    int64_t s = static_cast<int64_t>(std::ceil(result));
-    s = NextPowerOfTwo(s);
-
-    if (s > MAX_ARRAY_SIZE) {
-        // TODO:
-        return expected;
-    } else {
-        return static_cast<int32_t>(s);
-    }
-}
-
-int64_t NextPowerOfTwo(int64_t x)
+uint64_t NextPowerOfTwo(uint64_t x)
 {
     if (x == 0) {
         return 1;
@@ -34,7 +19,19 @@ int64_t NextPowerOfTwo(int64_t x)
         x |= x >> ROTATE_DISTANCE_4;
         x |= x >> ROTATE_DISTANCE_8;
         x |= x >> ROTATE_DISTANCE_16;
-        return (x | x >> ROTATE_DISTANCE_32) + 1;
+        return (x | (x >> ROTATE_DISTANCE_32)) + 1;
+    }
+}
+
+uint32_t HashUtil::HashArraySize(uint32_t expected, float f)
+{
+    double result = static_cast<double>(expected) / static_cast<double>(f);
+    auto s = static_cast<uint64_t>(std::ceil(result));
+    s = NextPowerOfTwo(s);
+    if (s > MAX_ARRAY_SIZE) {
+        return expected;
+    } else {
+        return static_cast<uint32_t>(s);
     }
 }
 }

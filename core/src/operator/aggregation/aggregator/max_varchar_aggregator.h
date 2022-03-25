@@ -51,7 +51,7 @@ public:
         }
         uint8_t *data = nullptr;
         int valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
-        auto ptr = executionContext->getArena()->Allocate(valLen);
+        auto ptr = executionContext->GetArena()->Allocate(valLen);
         auto err = memcpy_s(ptr, valLen, data, valLen);
         if (err != EOK) {
             LogError("set data failed in variable vector. %d", err);

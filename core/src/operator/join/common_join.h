@@ -8,7 +8,7 @@
 
 namespace omniruntime {
 namespace op {
-using JoinType = enum JoinType {
+enum JoinType {
     OMNI_JOIN_TYPE_INNER = 0,
     OMNI_JOIN_TYPE_LEFT,
     OMNI_JOIN_TYPE_RIGHT,
@@ -16,7 +16,7 @@ using JoinType = enum JoinType {
 };
 
 
-enum SortMergeJoinAddInputCode {
+enum class SortMergeJoinAddInputCode {
     SMJ_NEED_STREAM_TBL_INFO = 0,
     SMJ_NEED_BUFFER_TBL_INFO = 1,
     SMJ_NEED_ADD_STREAM_TBL_DATA = 2,

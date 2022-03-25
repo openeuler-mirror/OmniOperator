@@ -8,23 +8,21 @@ using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-LimitOperatorFactory::LimitOperatorFactory(int64_t limitVal) : limit(limitVal) {}
+LimitOperatorFactory::LimitOperatorFactory(int64_t limit) : limit(limit) {}
 
 LimitOperatorFactory::~LimitOperatorFactory() {}
 
-LimitOperatorFactory *LimitOperatorFactory::CreateLimitOperatorFactory(int64_t limit)
+LimitOperatorFactory *LimitOperatorFactory::CreateLimitOperatorFactory(int64_t limitNum)
 {
-    auto operatorFactory = std::make_unique<LimitOperatorFactory>(limit);
-    return operatorFactory.release();
+    return new LimitOperatorFactory(limitNum);
 }
 
 Operator *LimitOperatorFactory::CreateOperator()
 {
-    LimitOperator *limitOperator = std::make_unique<LimitOperator>(limit).release();
-    return limitOperator;
+    return new LimitOperator(limit);
 }
 
-LimitOperator::LimitOperator(int64_t limitVal) : remainingLimit(limitVal), outputVecBatch(nullptr) {}
+LimitOperator::LimitOperator(int64_t limit) : remainingLimit(limit), outputVecBatch(nullptr) {}
 
 LimitOperator::~LimitOperator() {}
 
@@ -42,7 +40,7 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     int32_t rowCount = vecBatch->GetRowCount();
     int32_t fetchSize = (remainingLimit >= rowCount) ? rowCount : remainingLimit;
 
-    outputVecBatch = std::make_unique<VectorBatch>(vectorCount, fetchSize).release();
+    outputVecBatch = new VectorBatch(vectorCount, fetchSize);
     for (int32_t i = 0; i < vectorCount; ++i) {
         Vector *inputVector = vecBatch->GetVector(i);
         outputVecBatch->SetVector(i, inputVector->Slice(0, fetchSize));
@@ -67,8 +65,7 @@ int32_t LimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 OmniStatus LimitOperator::Close()
 {
     if (outputVecBatch != nullptr) {
-        outputVecBatch->ReleaseAllVectors();
-        delete outputVecBatch;
+        VectorHelper::FreeVecBatch(outputVecBatch);
         outputVecBatch = nullptr;
     }
 

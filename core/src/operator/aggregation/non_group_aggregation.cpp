@@ -100,9 +100,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
         aggs.push_back(std::move(aggregator));
     }
 
-    AggregationOperator *aggOp =
-        new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggOutputTypes, inputRaw, outputPartial);
-    return aggOp;
+    return new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggOutputTypes, inputRaw, outputPartial);
 }
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)

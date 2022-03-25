@@ -2,7 +2,6 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
 
-
 #ifndef __OMNI_OPERATOR_FACTORY_H__
 #define __OMNI_OPERATOR_FACTORY_H__
 
@@ -34,6 +33,7 @@ private:
     JitContext *jitContext = nullptr;
 };
 
-typedef omniruntime::op::Operator *(*opt_module)(OperatorFactory *);
+using OptModule = omniruntime::op::Operator *(*)(OperatorFactory *);
+using opt_module = omniruntime::op::Operator *(*)(OperatorFactory *);
 
 #endif // __OMNI_OPERATOR_FACTORY_H__

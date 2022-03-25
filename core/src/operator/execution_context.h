@@ -4,7 +4,7 @@
 #ifndef EXECUTION_CONTEXT_H
 #define EXECUTION_CONTEXT_H
 
-#include "../memory/simple_arena_allocator.h"
+#include "memory/simple_arena_allocator.h"
 
 namespace omniruntime {
 namespace op {
@@ -15,7 +15,7 @@ public:
 
     ~ExecutionContext() {}
 
-    mem::SimpleArenaAllocator *getArena()
+    mem::SimpleArenaAllocator *GetArena()
     {
         return &arena;
     }

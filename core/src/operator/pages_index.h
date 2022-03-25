@@ -5,14 +5,14 @@
 #ifndef __PAGES_INDEX_H__
 #define __PAGES_INDEX_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
-#include "../type/data_type.h"
-#include "../vector/vector_batch.h"
-#include "../type/data_types.h"
+#include "type/data_type.h"
+#include "type/data_types.h"
+#include "vector/vector_batch.h"
 #include "operator.h"
 #include "operator_factory.h"
-#include "../vector/vector_helper.h"
+#include "vector/vector_helper.h"
 #include "util/operator_util.h"
 
 class PagesIndex {
@@ -34,7 +34,7 @@ public:
     {
         return typesCount;
     }
-    int64_t *GetValueAddresses() const
+    uint64_t *GetValueAddresses() const
     {
         return this->valueAddresses;
     }
@@ -51,33 +51,33 @@ public:
 private:
     const omniruntime::type::DataType *dataTypes;
     const int32_t *dataTypeIds;
-    int32_t typesCount;
+    uint32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
-    int64_t *valueAddresses;
-    int32_t positionCount;
+    uint64_t *valueAddresses;
+    uint32_t positionCount;
 };
 
-const int32_t SHIFT_SIZE_32 = 32;
-inline int64_t EncodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset)
+constexpr uint32_t SHIFT_SIZE_32 = 32;
+inline uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32_t sliceOffset)
 {
-    return (static_cast<int64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
+    return (static_cast<uint64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
 }
 
-inline int32_t DecodeSliceIndex(int64_t sliceAddress)
+inline uint32_t DecodeSliceIndex(uint64_t sliceAddress)
 {
-    return static_cast<int32_t>(sliceAddress >> SHIFT_SIZE_32);
+    return static_cast<uint32_t>(sliceAddress >> SHIFT_SIZE_32);
 }
 
-inline int32_t DecodePosition(int64_t sliceAddress)
+inline uint32_t DecodePosition(uint64_t sliceAddress)
 {
-    return static_cast<int32_t>(sliceAddress);
+    return static_cast<uint32_t>(sliceAddress);
 }
 
 using CompareFunc = int32_t (*)(omniruntime::vec::Vector *leftVector, int32_t leftPosition,
     omniruntime::vec::Vector *rightVector, int32_t rightPosition);
 
 static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts,
-    const int64_t *valueAddresses, omniruntime::vec::Vector **columns, int32_t leftPosition, int32_t rightPosition,
+    const uint64_t *valueAddresses, omniruntime::vec::Vector **columns, int32_t leftPosition, int32_t rightPosition,
     CompareFunc compareFunc)
 {
     int64_t leftValueAddress = valueAddresses[leftPosition];

@@ -3,7 +3,7 @@
  * Description: Sort merge join interface layer implementations
  */
 #include "sort_merge_join_expr.h"
-#include "../../util/operator_util.h"
+#include "operator/util/operator_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -11,46 +11,42 @@ using namespace omniruntime::vec;
 
 StreamedTableWithExprOperatorFactory *StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
     const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
-    int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
-    std::string &filter)
+    int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType inputJoinType,
+    std::string &filterExpression)
 {
-    auto pOperatorFactory = std::make_unique<StreamedTableWithExprOperatorFactory>(streamedTypes, streamedKeyExprCols,
-        streamedKeyExprColsCnt, streamedOutputCols, streamedOutputColsCnt, joinType, filter);
-    return pOperatorFactory.release();
+    return new StreamedTableWithExprOperatorFactory(streamedTypes, streamedKeyExprCols,
+        streamedKeyExprColsCnt, streamedOutputCols, streamedOutputColsCnt, inputJoinType, filterExpression);
 }
 
 StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
     const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
     int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter)
+    : joinType(joinType), filter(filter), smjOperator(new SortMergeJoinOperator(joinType, filter))
 {
     std::vector<DataType> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(streamedTypes, streamedKeyExprCols, streamedKeyExprColsCnt, newBuildTypes,
-        this->rowProjections, this->streamedKeyCols, this->projectFuncs);
+        rowProjections, streamedKeyCols, projectFuncs);
     this->streamedTypes = std::make_unique<type::DataTypes>(newBuildTypes);
     this->streamedOutputCols.insert(this->streamedOutputCols.end(), streamedOutputCols,
         streamedOutputCols + streamedOutputColsCnt);
-    this->joinType = joinType;
-    this->filter = filter;
-    this->smjOperator = std::make_unique<SortMergeJoinOperator>(joinType, filter).release();
-    this->smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes.get()), this->streamedKeyCols,
+    smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes.get()), streamedKeyCols,
         this->streamedOutputCols);
 }
 
 StreamedTableWithExprOperatorFactory::~StreamedTableWithExprOperatorFactory()
 {
-    delete this->smjOperator;
+    delete smjOperator;
 }
 
 Operator *StreamedTableWithExprOperatorFactory::CreateOperator()
 {
-    auto pOperatorItf = std::make_unique<StreamedTableWithExprOperator>(*(streamedTypes.get()), streamedKeyCols,
+    return new StreamedTableWithExprOperator(*(streamedTypes.get()), streamedKeyCols,
         projectFuncs, smjOperator);
-    return pOperatorItf.release();
 }
 
 SortMergeJoinOperator *StreamedTableWithExprOperatorFactory::GetSmjOperator()
 {
-    return this->smjOperator;
+    return smjOperator;
 }
 
 StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTypes &streamedTypes,
@@ -72,7 +68,7 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     }
 
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, this->streamedTypes, this->projectFuncs, this->streamedKeyCols);
+        OperatorUtil::ProjectVectors(vecBatch, streamedTypes, projectFuncs, streamedKeyCols);
     if (newInputVecBatch != nullptr) {
         retCode = smjOperator->AddStreamedTableInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);
@@ -97,9 +93,8 @@ BufferedTableWithExprOperatorFactory *BufferedTableWithExprOperatorFactory::Crea
     int32_t bufferedKeyExprCnt, int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
     int64_t streamedTableFactoryAddr)
 {
-    auto pOperatorFactory = std::make_unique<BufferedTableWithExprOperatorFactory>(bufferedTypes, bufferedKeyExprCols,
+    return new BufferedTableWithExprOperatorFactory(bufferedTypes, bufferedKeyExprCols,
         bufferedKeyExprCnt, bufferedOutputCols, bufferedOutputColsCnt, streamedTableFactoryAddr);
-    return pOperatorFactory.release();
 }
 
 BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const type::DataTypes &bufferedTypes,
@@ -108,28 +103,26 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
 {
     std::vector<DataType> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(bufferedTypes, bufferedKeyExprCols, bufferedKeyExprCnt, newBuildTypes,
-        this->rowProjections, this->bufferedKeyCols, this->projectFuncs);
+        rowProjections, bufferedKeyCols, projectFuncs);
     this->bufferedTypes = std::make_unique<type::DataTypes>(newBuildTypes);
     this->bufferedOutputCols.insert(this->bufferedOutputCols.end(), bufferedOutputCols,
         bufferedOutputCols + bufferedOutputColsCnt);
 
-    this->streamTblWithExprOperatorFactory =
+    streamTblWithExprOperatorFactory =
         reinterpret_cast<StreamedTableWithExprOperatorFactory *>(streamedTableFactoryAddr);
 
-    this->streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes.get()),
-        this->bufferedKeyCols, this->bufferedOutputCols);
-    this->streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder();
+    streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes.get()),
+        bufferedKeyCols, this->bufferedOutputCols);
+    streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder();
 }
 
 BufferedTableWithExprOperatorFactory::~BufferedTableWithExprOperatorFactory() {}
 
 Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 {
-    auto smjOperator = this->streamTblWithExprOperatorFactory->GetSmjOperator();
-
-    auto pOperatorItf = std::make_unique<BufferedTableWithExprOperator>(*(bufferedTypes.get()), bufferedKeyCols,
+    auto smjOperator = streamTblWithExprOperatorFactory->GetSmjOperator();
+    return new BufferedTableWithExprOperator(*(bufferedTypes.get()), bufferedKeyCols,
         projectFuncs, smjOperator);
-    return pOperatorItf.release();
 }
 
 BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes,
@@ -151,7 +144,7 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
         return retCode;
     }
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, this->bufferedTypes, this->projectFuncs, this->bufferedKeyCols);
+        OperatorUtil::ProjectVectors(vecBatch, bufferedTypes, projectFuncs, bufferedKeyCols);
     if (newInputVecBatch != nullptr) {
         retCode = smjOperator->AddBufferedTableInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

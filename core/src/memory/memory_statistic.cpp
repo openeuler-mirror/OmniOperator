@@ -3,6 +3,7 @@
  */
 
 #include <iostream>
+#include <unistd.h>
 #include "memory_statistic.h"
 
 MemoryStatistic::MemoryStatistic() {}
@@ -17,8 +18,8 @@ void MemoryStatistic::Print()
 {
     while (running) {
         std::shared_lock<std::shared_timed_mutex> lock(mutex);
-        std::map<uint64_t, uint64_t>::iterator it = sizeStatistic.begin();
-        for (; it != sizeStatistic.end(); it++) {
+        auto it = sizeStatistic.cbegin();
+        for (; it != sizeStatistic.cend(); it++) {
             std::cout << "[" << it->first << "]\t" << it->second << std::endl;
         }
         lock.unlock();

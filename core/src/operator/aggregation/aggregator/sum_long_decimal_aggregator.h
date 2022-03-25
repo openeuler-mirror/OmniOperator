@@ -83,7 +83,7 @@ public:
             // input vector is expected as LongVec
             auto curVal = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
 
-            state.val = executionContext->getArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
+            state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
             int64_t overflow = 0;
             Decimal128 initState(curVal);
             DecimalOperations::EncodeSumDecimal(state.val, initState, overflow);
@@ -94,7 +94,7 @@ public:
             if (length != PARTIAL_SUM_OUTPUT_LENGTH) {
                 LogError("Intermediate decimal length should be 24 bytes");
             }
-            state.val = executionContext->getArena()->Allocate(length);
+            state.val = executionContext->GetArena()->Allocate(length);
             memcpy_s(state.val, length, otherState, length);
         }
     }

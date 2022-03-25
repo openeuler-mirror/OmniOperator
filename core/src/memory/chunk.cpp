@@ -1,12 +1,9 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
-//
-// Created by root on 6/1/21.
-//
 
 #include "chunk.h"
-#include "../memory/memory_pool.h"
+#include "memory/memory_pool.h"
 
 namespace omniruntime {
 namespace mem {

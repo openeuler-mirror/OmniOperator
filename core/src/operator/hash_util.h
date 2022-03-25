@@ -5,28 +5,29 @@
 #ifndef __HASH_UTIL_H__
 #define __HASH_UTIL_H__
 
-#include <stdint.h>
-#include "../util/compiler_util.h"
+#include <cstdint>
 #include <huawei_secure_c/include/securec.h>
+#include "util/compiler_util.h"
+
 namespace omniruntime {
 namespace op {
-static const int32_t ROTATE_DISTANCE_1 = 1;
-static const int32_t ROTATE_DISTANCE_2 = 2;
-static const int32_t ROTATE_DISTANCE_4 = 4;
-static const int32_t ROTATE_DISTANCE_7 = 7;
-static const int32_t ROTATE_DISTANCE_8 = 8;
-static const int32_t ROTATE_DISTANCE_11 = 11;
-static const int32_t ROTATE_DISTANCE_12 = 12;
-static const int32_t ROTATE_DISTANCE_16 = 16;
-static const int32_t ROTATE_DISTANCE_18 = 18;
-static const int32_t ROTATE_DISTANCE_23 = 23;
-static const int32_t ROTATE_DISTANCE_27 = 27;
-static const int32_t ROTATE_DISTANCE_29 = 29;
-static const int32_t ROTATE_DISTANCE_31 = 31;
-static const int32_t ROTATE_DISTANCE_32 = 32;
-static const int32_t ROTATE_DISTANCE_33 = 33;
-static const int32_t ROTATE_DISTANCE_48 = 48;
-static const int32_t MAX_ROTATE_DISTANCE = 64;
+static const uint32_t ROTATE_DISTANCE_1 = 1;
+static const uint32_t ROTATE_DISTANCE_2 = 2;
+static const uint32_t ROTATE_DISTANCE_4 = 4;
+static const uint32_t ROTATE_DISTANCE_7 = 7;
+static const uint32_t ROTATE_DISTANCE_8 = 8;
+static const uint32_t ROTATE_DISTANCE_11 = 11;
+static const uint32_t ROTATE_DISTANCE_12 = 12;
+static const uint32_t ROTATE_DISTANCE_16 = 16;
+static const uint32_t ROTATE_DISTANCE_18 = 18;
+static const uint32_t ROTATE_DISTANCE_23 = 23;
+static const uint32_t ROTATE_DISTANCE_27 = 27;
+static const uint32_t ROTATE_DISTANCE_29 = 29;
+static const uint32_t ROTATE_DISTANCE_31 = 31;
+static const uint32_t ROTATE_DISTANCE_32 = 32;
+static const uint32_t ROTATE_DISTANCE_33 = 33;
+static const uint32_t ROTATE_DISTANCE_48 = 48;
+static const uint32_t MAX_ROTATE_DISTANCE = 64;
 static const int64_t DEFAULT_SEED = 0;
 static const int32_t SIZE_OF_LONG = 8;
 static const int64_t SIGN_LONG_MASK = 1L << 63;
@@ -50,7 +51,7 @@ constexpr int32_t PTR_STEP_4 = 4;
 
 class HashUtil {
 public:
-    static int32_t HashArraySize(int32_t expected, float f);
+    static uint32_t HashArraySize(uint32_t expected, float f);
 
     static ALWAYS_INLINE int64_t HashValue(int32_t value)
     {
@@ -108,16 +109,16 @@ public:
     /*
      * it is used to get position for rawHash when reading or writing join hash vecBatch
      */
-    static ALWAYS_INLINE int32_t GetRawHashPosition(int64_t rawHash, int64_t mask)
+    static ALWAYS_INLINE uint32_t GetRawHashPosition(int64_t rawHash, uint64_t mask)
     {
         uint64_t hash = static_cast<uint64_t>(rawHash);
         hash ^= hash >> ROTATE_DISTANCE_33;
-        hash *= 0xff51afd7ed558ccdL;
+        hash *= 0xff51afd7ed558ccdUL;
         hash ^= hash >> ROTATE_DISTANCE_33;
-        hash *= 0xc4ceb9fe1a85ec53L;
+        hash *= 0xc4ceb9fe1a85ec53UL;
         hash ^= hash >> ROTATE_DISTANCE_33;
 
-        return static_cast<int32_t>(hash & mask);
+        return static_cast<uint32_t>(hash & mask);
     }
 
     /*
@@ -133,7 +134,7 @@ public:
         return static_cast<int32_t>(hash) & mask;
     }
 
-    static ALWAYS_INLINE int64_t RotateLeft(uint64_t i, int32_t distance)
+    static ALWAYS_INLINE int64_t RotateLeft(uint64_t i, uint32_t distance)
     {
         return (i << distance) | (i >> (MAX_ROTATE_DISTANCE - distance));
     }
@@ -251,12 +252,11 @@ public:
     {
         uint64_t bits;
         memcpy_s(&bits, sizeof(bits), &value, sizeof(value));
-        int64_t var2 = bits;
-        if ((var2 & 9218868437227405312L) == 9218868437227405312L && (var2 & 4503599627370495L) != 0L) {
-            var2 = 9221120237041090560L;
+        if ((bits & 9218868437227405312UL) == 9218868437227405312UL && (bits & 4503599627370495UL) != 0UL) {
+            bits = 9221120237041090560L;
         }
 
-        return var2;
+        return bits;
     }
 
     static ALWAYS_INLINE long UnpackUnsignedLong(int64_t value)
@@ -266,12 +266,12 @@ public:
 
     static ALWAYS_INLINE int64_t Reverse(uint64_t i)
     {
-        i = (i & 0x5555555555555555L) << ROTATE_DISTANCE_1 | (i >> ROTATE_DISTANCE_1) & 0x5555555555555555L;
-        i = (i & 0x3333333333333333L) << ROTATE_DISTANCE_2 | (i >> ROTATE_DISTANCE_2) & 0x3333333333333333L;
-        i = (i & 0x0f0f0f0f0f0f0f0fL) << ROTATE_DISTANCE_4 | (i >> ROTATE_DISTANCE_4) & 0x0f0f0f0f0f0f0f0fL;
-        i = (i & 0x00ff00ff00ff00ffL) << ROTATE_DISTANCE_8 | (i >> ROTATE_DISTANCE_8) & 0x00ff00ff00ff00ffL;
-        i = (i << ROTATE_DISTANCE_48) | ((i & 0xffff0000L) << ROTATE_DISTANCE_16) |
-            ((i >> ROTATE_DISTANCE_16) & 0xffff0000L) | (i >> ROTATE_DISTANCE_48);
+        i = (i & 0x5555555555555555UL) << ROTATE_DISTANCE_1 | (i >> ROTATE_DISTANCE_1) & 0x5555555555555555UL;
+        i = (i & 0x3333333333333333UL) << ROTATE_DISTANCE_2 | (i >> ROTATE_DISTANCE_2) & 0x3333333333333333UL;
+        i = (i & 0x0f0f0f0f0f0f0f0fUL) << ROTATE_DISTANCE_4 | (i >> ROTATE_DISTANCE_4) & 0x0f0f0f0f0f0f0f0fUL;
+        i = (i & 0x00ff00ff00ff00ffUL) << ROTATE_DISTANCE_8 | (i >> ROTATE_DISTANCE_8) & 0x00ff00ff00ff00ffUL;
+        i = (i << ROTATE_DISTANCE_48) | ((i & 0xffff0000UL) << ROTATE_DISTANCE_16) |
+            ((i >> ROTATE_DISTANCE_16) & 0xffff0000UL) | (i >> ROTATE_DISTANCE_48);
         return i;
     }
 };

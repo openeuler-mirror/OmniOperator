@@ -91,7 +91,7 @@ public:
             // input vector is expected as LongVec
             auto curVal = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
 
-            state.val = executionContext->getArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
+            state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
             DecimalOperations::EncodeAvgDecimal(state.val, curVal, 0, 1);
         } else {
             if (vector->GetTypeId() != OMNI_VARCHAR) {
@@ -103,7 +103,7 @@ public:
             if (length != PARTIAL_AVG_OUTPUT_LENGTH) {
                 LogError("Intermediate decimal length should be 24 bytes");
             }
-            state.val = executionContext->getArena()->Allocate(length);
+            state.val = executionContext->GetArena()->Allocate(length);
             memcpy_s(state.val, length, otherState, length);
         }
     }

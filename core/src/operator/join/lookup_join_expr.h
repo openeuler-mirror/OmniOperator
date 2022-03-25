@@ -6,10 +6,11 @@
 #ifndef __LOOKUP_JOIN_EXPR_H__
 #define __LOOKUP_JOIN_EXPR_H__
 
-#include "../operator_factory.h"
-#include "../projection/projection.h"
-#include "../join/lookup_join.h"
-#include "../../type/data_types.h"
+#include "common_join.h"
+#include "operator/operator_factory.h"
+#include "operator/projection/projection.h"
+#include "operator/join/lookup_join.h"
+#include "type/data_types.h"
 
 namespace omniruntime {
 namespace op {

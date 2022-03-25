@@ -57,9 +57,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     PrepareContext aggFunc = { aggFuncTypes, aggNum };
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->hashAggOperatorFactory = std::make_unique<HashAggregationOperatorFactory>(groupByCol,
-        *(this->groupByTypes.get()), aggCol, *(this->aggTypes.get()), aggOutputTypes, aggFunc,
-        inputRaw, outputPartial).release();
+    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *(this->groupByTypes.get()), aggCol,
+        *(this->aggTypes.get()), aggOutputTypes, aggFunc, inputRaw, outputPartial);
     this->hashAggOperatorFactory->Init();
 }
 
@@ -71,9 +70,7 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    auto pOperator =
-        std::make_unique<HashAggregationWithExprOperator>(*(sourceTypes), projectCols, projectFuncs, hashAggOperator);
-    return pOperator.release();
+    return new HashAggregationWithExprOperator(*(sourceTypes), projectCols, projectFuncs, hashAggOperator);
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,

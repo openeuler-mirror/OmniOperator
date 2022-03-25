@@ -6,13 +6,15 @@
 #ifndef __SORT_MERGE_JOIN_H__
 #define __SORT_MERGE_JOIN_H__
 
-#include "../../operator_factory.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "operator/status.h"
 #include "sort_merge_join_resultBuilder.h"
 #include "sort_merge_join_scanner.h"
 #include "dynamic_pages_index.h"
-#include "../../../vector/vector.h"
-#include "../../../type/data_types.h"
-#include "../common_join.h"
+#include "vector/vector.h"
+#include "type/data_types.h"
+#include "operator/join/common_join.h"
 
 namespace omniruntime {
 namespace op {

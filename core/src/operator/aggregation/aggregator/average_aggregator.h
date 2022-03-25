@@ -66,7 +66,7 @@ public:
         if (inputRaw == true) {
             auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
             auto len = sizeof(ResultType);
-            auto ptr = executionContext->getArena()->Allocate(len);
+            auto ptr = executionContext->GetArena()->Allocate(len);
             *reinterpret_cast<ResultType *>(ptr) = rowVal;
             state.avgVal = ptr;
             state.avgCnt = 1;
@@ -80,7 +80,7 @@ public:
                 // Fixme use error code
                 LogError("Divisor should not be zero! Offset = %d", offset);
             }
-            auto ptr = executionContext->getArena()->Allocate(sizeof(double));
+            auto ptr = executionContext->GetArena()->Allocate(sizeof(double));
             *reinterpret_cast<double *>(ptr) = avgVal;
             state.avgVal = ptr;
             state.avgCnt = avgCnt;

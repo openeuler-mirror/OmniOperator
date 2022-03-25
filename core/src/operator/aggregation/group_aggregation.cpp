@@ -23,6 +23,39 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::type;
 
+static void VerifyInputTypes(omniruntime::vec::VectorBatch *vectorBatch, int32_t *groupByIdx, int32_t groupByNum,
+    int32_t *aggIdx, int32_t aggNum, int32_t *sourceTypes, int32_t *aggFuncTypes)
+{
+#ifdef DEBUG_OPERATOR
+    for (int32_t i = 0; i < groupByNum; ++i) {
+        auto vector = vectorBatch->GetVector(groupByIdx[i]);
+        auto typeId = vector->GetTypeId();
+        if (vector->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+            typeId = static_cast<omniruntime::vec::DictionaryVector *>(vector)->ExtractDictionaryTypeId();
+        }
+        if (typeId != sourceTypes[groupByIdx[i]]) {
+            LogWarn("Group by vector type %d != operator column type %d!", typeId, sourceTypes[groupByIdx[i]]);
+        }
+    }
+    uint32_t aggInputIndex = 0;
+    for (int32_t i = 0; i < aggNum; ++i) {
+        uint32_t aggregateType = aggFuncTypes[i];
+        if (aggregateType != OMNI_AGGREGATION_TYPE_COUNT_ALL) {
+            auto vector = vectorBatch->GetVector(aggIdx[aggInputIndex]);
+            auto typeId = vector->GetTypeId();
+            if (vector->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+                typeId = static_cast<omniruntime::vec::DictionaryVector *>(vector)->ExtractDictionaryTypeId();
+            }
+            if (typeId != sourceTypes[aggIdx[aggInputIndex]]) {
+                LogWarn("Aggregate vector type %d != operator column type %d!", typeId,
+                    sourceTypes[aggIdx[aggInputIndex]]);
+            }
+            aggInputIndex++;
+        }
+    }
+#endif
+}
+
 template void HashFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash);
 
@@ -168,7 +201,7 @@ OmniStatus HashAggregationOperator::Init()
     int32_t groupByColsSize = groupByCols.size();
     int32_t aggInputColsSize = aggInputCols.size();
     int32_t colSize = groupByColsSize + aggInputColsSize;
-    sourceTypes = std::make_unique<int32_t[]>(colSize).release();
+    sourceTypes = new int32_t[colSize];
     for (auto &c : groupByCols) {
         sourceTypes[c.idx] = static_cast<int32_t>(c.input.GetId());
     }
@@ -177,7 +210,7 @@ OmniStatus HashAggregationOperator::Init()
         sourceTypes[idx + groupByColsSize] = static_cast<int32_t>(aggInputTypes.Get()[idx].GetId());
     }
     executionContext = std::make_unique<ExecutionContext>();
-    executionContext->getArena()->Allocate(DEFAULT_TEMP_MEM_SIZE);
+    executionContext->GetArena()->Allocate(DEFAULT_TEMP_MEM_SIZE);
     return OMNI_STATUS_NORMAL;
 }
 
@@ -310,8 +343,8 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
     // verify whether input types match operator's types
-    VERIFY_INPUT_TYPES(vecBatch, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggNum, this->sourceTypes,
-        aggFuncTypes);
+    VerifyInputTypes(vecBatch, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggNum, this->sourceTypes,
+        aggFuncTypes.get());
 
     uint32_t rowCount = vecBatch->GetRowCount();
 
@@ -354,7 +387,7 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
     }
 }
 
-// TODO currently we need to traverse ColumnNum * RowNum times to build the output.
+// currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
 void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
@@ -392,7 +425,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
         return 0;
     }
 
-    int32_t rowsPerBatch = std::ceil(MAX_TABLE_SIZE_IN_BYTES / static_cast<double>(rowByteSize));
+    int32_t rowsPerBatch = std::ceil(OperatorUtil::MAX_VEC_BATCH_SIZE_IN_BYTES / static_cast<double>(rowByteSize));
     int32_t expectedBatchSize = std::ceil(totalRowCount / static_cast<double>(rowsPerBatch));
     int32_t leftRowCount = totalRowCount;
 
@@ -510,7 +543,6 @@ void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &s
 {
     bool isIntermediateNull = static_cast<D *>(slot.val) == nullptr;
     bool isInputNull = vector->IsValueNull(offset);
-
     if (!isInputNull && !isIntermediateNull) {
         auto intTmp = static_cast<V *>(vector)->GetValue(offset);
         isSame = intTmp == *static_cast<D *>(slot.val);
@@ -528,7 +560,6 @@ void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, AggregateS
 {
     bool isIntermediateNull = slot.strVal == nullptr;
     bool isInputNull = vector->IsValueNull(offset);
-
     if (!isInputNull && !isIntermediateNull) {
         uint8_t *data = nullptr;
         int32_t valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
@@ -550,7 +581,7 @@ void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t
         return;
     }
     int32_t len = sizeof(D);
-    uint8_t *ptr = context->getArena()->Allocate(len);
+    uint8_t *ptr = context->GetArena()->Allocate(len);
     D data = static_cast<V *>(vector)->GetValue(offset);
     memcpy_s(ptr, len, &data, len);
     state.val = ptr;
@@ -563,7 +594,7 @@ void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint3
     }
     uint8_t *tmp = nullptr;
     int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
-    uint8_t *data = context->getArena()->Allocate(valLen);
+    uint8_t *data = context->GetArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, valLen);
     state.strVal = data;
     state.strLen = valLen;
@@ -588,10 +619,10 @@ void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnInd
 {
     DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
     LongVector *longVector = new LongVector(vecAllocator, rowCount);
-    std::vector<uintptr_t> vectorAddresses(2);
+    std::vector<uintptr_t> vectorAddresses(op::AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataType> dataTypes(2);
+    std::vector<DataType> dataTypes(op::AVG_VECTOR_COUNT);
     dataTypes[0] = DoubleDataType::Instance();
     dataTypes[1] = LongDataType::Instance();
     ContainerVector *containerVector =

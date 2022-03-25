@@ -15,7 +15,7 @@ TEST(DecimalOperations, sum_encode_and_decode_decimal)
     using namespace omniruntime::op;
     AggregateState state;
     ExecutionContext executionContext;
-    state.val = executionContext.getArena()->Allocate(24);
+    state.val = executionContext.GetArena()->Allocate(24);
 
     // encode phase
     Decimal128 oldDec;
@@ -104,7 +104,7 @@ TEST(DecimalOperations, decode_avg_decimal)
     using namespace omniruntime::op;
     AggregateState state;
     ExecutionContext executionContext;
-    state.val = executionContext.getArena()->Allocate(24);
+    state.val = executionContext.GetArena()->Allocate(24);
 
     Decimal128 oldDec;
     int64_t oldOther = 1;

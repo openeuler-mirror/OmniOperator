@@ -169,33 +169,33 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
 
     DataTypeId outTypeId = expr->GetReturnTypeId();
-    std::unique_ptr<Vector> outVec;
+    Vector *outVec = nullptr;
     int32_t avgStringLength = 200;
     switch (outTypeId) {
         case type::OMNI_INT:
-            outVec = std::make_unique<IntVector>(vecAllocator, numSelectedRows);
+            outVec = new IntVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_LONG:
-            outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
+            outVec = new LongVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_DOUBLE:
-            outVec = std::make_unique<DoubleVector>(vecAllocator, numSelectedRows);
+            outVec = new DoubleVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_VARCHAR:
         case type::OMNI_CHAR:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
-            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
+            outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
         case type::OMNI_DECIMAL64:
             // FIXME: Support Decimal64Vector in the future
-            outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
+            outVec = new LongVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_DECIMAL128:
-            outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
+            outVec = new Decimal128Vector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_BOOLEAN:
-            outVec = std::make_unique<BooleanVector>(vecAllocator, numSelectedRows);
+            outVec = new BooleanVector(vecAllocator, numSelectedRows);
             break;
         default: {
             LogError("No such data type %d", outTypeId);
@@ -205,13 +205,13 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
 
     Vector *projectedVec = nullptr;
     if (outTypeId == OMNI_VARCHAR || outTypeId == OMNI_CHAR) {
-        projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
-            selectedRows, context, dictionaryVectors);
+        projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec, numSelectedRows, selectedRows,
+            context, dictionaryVectors);
     } else {
-        projectedVec = ProjectHelperFixedWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
+        projectedVec = ProjectHelperFixedWidth(*vecBatch, vecData, bitmap, offsets, outVec, numSelectedRows,
             selectedRows, context, dictionaryVectors);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     return projectedVec;
 }
 
@@ -259,12 +259,12 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     // contents of bitmap are modified in getProjData method
     std::vector<int64_t> vecData = GetProjData(*vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
 
-    auto outBatch = std::make_unique<VectorBatch>(nProj, resultRowCount);
+    auto outBatch = new VectorBatch(nProj, resultRowCount);
     for (int32_t i = 0; i < nProj; i++) {
         Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap, offsets, context, dictionaries);
         outBatch->SetVector(i, outCol);
     }
-    this->mutated = outBatch.release();
+    this->mutated = outBatch;
     vecData.clear();
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;
@@ -301,17 +301,15 @@ ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &
 
 ProjectionOperatorFactory::~ProjectionOperatorFactory()
 {
-    for (auto &projection : this->proj) {
+    for (auto &projection : proj) {
         projection.reset();
     }
-    this->proj.clear();
+    proj.clear();
 }
 
 omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 {
-    auto projectionOperator = std::make_unique<ProjectionOperator>(this->proj, this->inputTypeIds, this->nCols,
-        this->nProj, new ExecutionContext());
-    return projectionOperator.release();
+    return new ProjectionOperator(proj, inputTypeIds, nCols, nProj, new ExecutionContext());
 }
 
 bool ProjectionOperatorFactory::IsSupported()

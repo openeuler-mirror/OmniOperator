@@ -3,9 +3,9 @@
  * @Description: hash table implementations
  */
 #include "join_hash_table.h"
-#include "../pages_hash_strategy.h"
-#include "../optimization.h"
-#include "../../jit/annotation.h"
+#include "operator/pages_hash_strategy.h"
+#include "operator/optimization.h"
+#include "jit/annotation.h"
 
 #include <algorithm>
 #include <memory>
@@ -16,14 +16,14 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 const int32_t BLOCK_SIZE = 1024;
 
-int32_t NumberOfTrailingZeros(int32_t value)
+uint32_t NumberOfTrailingZeros(uint32_t value)
 {
     if (value == 0) {
         return ROTATE_DISTANCE_32;
     }
 
-    int32_t y;
-    int32_t n = ROTATE_DISTANCE_31;
+    uint32_t y;
+    uint32_t n = ROTATE_DISTANCE_31;
     y = value << ROTATE_DISTANCE_16;
     if (y != 0) {
         n = n - ROTATE_DISTANCE_16;
@@ -48,7 +48,7 @@ int32_t NumberOfTrailingZeros(int32_t value)
         value = y;
     }
 
-    uint32_t temp = static_cast<uint32_t>(value << ROTATE_DISTANCE_1);
+    uint32_t temp = value << ROTATE_DISTANCE_1;
     temp = temp >> ROTATE_DISTANCE_31;
     return n - temp;
 }
@@ -61,15 +61,15 @@ void ArraysFill(int32_t *array, int32_t size, int32_t value)
 }
 
 JoinHashTables::JoinHashTables(int32_t hashTableCount)
+    : hashTableCount(hashTableCount),
+      hashTableSize(0),
+      partitionMask(hashTableCount - 1),
+      shiftSize(NumberOfTrailingZeros(hashTableCount) + 1)
 {
-    this->hashTables = std::make_unique<JoinHashTable *[]>(hashTableCount).release();
+    this->hashTables = new JoinHashTable *[hashTableCount];
     for (int32_t idx = 0; idx < hashTableCount; idx++) {
         this->hashTables[idx] = nullptr;
     }
-    this->hashTableCount = hashTableCount;
-    this->hashTableSize = 0;
-    this->partitionMask = hashTableCount - 1;
-    this->shiftSize = NumberOfTrailingZeros(hashTableCount) + 1;
 }
 
 JoinHashTables::~JoinHashTables()
@@ -192,11 +192,10 @@ int64_t JoinHashTables::GetJoinPosition(int32_t position, Vector **joinColumns, 
     }
 }
 
-JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, int64_t *addresses, int32_t addressesCount)
-{
-    positionLinks = std::make_unique<ArrayPositionLinks>(addressesCount).release();
-    pagesHash = std::make_unique<PagesHash>(addresses, addressesCount, pagesHashStrategy, positionLinks).release();
-}
+JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, uint64_t *addresses, uint32_t addressesCount)
+    : positionLinks(new ArrayPositionLinks(addressesCount)),
+      pagesHash(new PagesHash(addresses, addressesCount, pagesHashStrategy, positionLinks))
+{}
 
 JoinHashTable::~JoinHashTable()
 {
@@ -236,25 +235,24 @@ int32_t JoinHashTable::StartJoinPosition(int32_t currentJoinPosition, int32_t pr
 
 void JoinHashTable::PrintHashTable(int32_t partitionIndex) const
 {
-    int32_t *key = pagesHash->GetKey();
-    int32_t keySize = pagesHash->GetKeySize();
-    int8_t *positionToHash = pagesHash->GetPositionToHashes();
-    int64_t *addresses = pagesHash->GetAddresses();
-    int32_t positionCount = pagesHash->GetAddressesCount();
-    int32_t *positionLinks = this->positionLinks->GetPositionLinks();
-    for (int32_t i = 0; i < keySize; i++) {
+    auto key = pagesHash->GetKey();
+    auto keySize = pagesHash->GetKeySize();
+    auto positionToHash = pagesHash->GetPositionToHashes();
+    auto addresses = pagesHash->GetAddresses();
+    auto positionCount = pagesHash->GetAddressesCount();
+    auto links = this->positionLinks->GetPositionLinks();
+    for (uint32_t i = 0; i < keySize; i++) {
         std::cout << "partitionIndex=" << partitionIndex << ", key[" << i << "]=" << key[i] << std::endl;
     }
-    for (int32_t i = 0; i < positionCount; i++) {
+    for (uint32_t i = 0; i < positionCount; i++) {
         int32_t hash = static_cast<int32_t>(positionToHash[i]);
         std::cout << "partitionIndex=" << partitionIndex << ", addresses[" << i << "]=" << addresses[i] <<
-            ", positionToHash[" << i << "]=" << hash << ", positionLinks[" << i << "]=" << positionLinks[i] <<
-            std::endl;
+            ", positionToHash[" << i << "]=" << hash << ", positionLinks[" << i << "]=" << links[i] << std::endl;
     }
 }
 
 template <typename T>
-void ReadColumnHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns, int64_t *hashes,
+void ReadColumnHashes(int32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns, int64_t *hashes,
     bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -290,7 +288,7 @@ void ReadColumnHashes(int32_t offset, int32_t addressesCount, int64_t *addresses
     }
 }
 
-static void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnDecimal64Hashes(int32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -326,7 +324,7 @@ static void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, in
     }
 }
 
-static void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnDecimal128Hashes(int32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -364,7 +362,7 @@ static void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, i
     }
 }
 
-static void ReadColumnCharHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnCharHashes(int32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -402,59 +400,66 @@ static void ReadColumnCharHashes(int32_t offset, int32_t addressesCount, int64_t
 }
 
 SPECIALIZE(OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS)
-static void ProcessColumns(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector ***columns,
+static void ProcessColumns(int32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector ***columns,
     int32_t *types, int32_t colCount, int64_t *hashes, bool *nullPositions)
 {
     for (int32_t columnIdx = 0; columnIdx < colCount; ++columnIdx) {
         switch (types[columnIdx]) {
             case omniruntime::type::OMNI_INT:
-            case omniruntime::type::OMNI_DATE32:
+            case omniruntime::type::OMNI_DATE32: {
                 ReadColumnHashes<IntVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::type::OMNI_LONG:
+            }
+            case omniruntime::type::OMNI_LONG: {
                 ReadColumnHashes<LongVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::type::OMNI_DOUBLE:
+            }
+            case omniruntime::type::OMNI_DOUBLE: {
                 ReadColumnHashes<DoubleVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::type::OMNI_BOOLEAN:
+            }
+            case omniruntime::type::OMNI_BOOLEAN: {
                 ReadColumnHashes<BooleanVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
-            case omniruntime::type::OMNI_DECIMAL64:
+            }
+            case omniruntime::type::OMNI_DECIMAL64: {
                 ReadColumnDecimal64Hashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
                 break;
-            case omniruntime::type::OMNI_DECIMAL128:
+            }
+            case omniruntime::type::OMNI_DECIMAL128: {
                 ReadColumnDecimal128Hashes(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);
                 break;
+            }
             case omniruntime::type::OMNI_VARCHAR:
-            case omniruntime::type::OMNI_CHAR:
+            case omniruntime::type::OMNI_CHAR: {
                 ReadColumnCharHashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
                 break;
-            default:
+            }
+            default: {
                 break;
+            }
         }
     }
 }
 
-PagesHash::PagesHash(int64_t *addresses, int32_t addressesCount, PagesHashStrategy *pagesHashStrategy,
+PagesHash::PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStrategy *pagesHashStrategy,
     ArrayPositionLinks *positionLinks)
+    : pagesHashStrategy(pagesHashStrategy),
+      addresses(addresses),
+      addressesCount(addressesCount),
+      keySize(HashUtil::HashArraySize(addressesCount, 0.75f)),
+      key(new int32_t[keySize]),
+      mask(keySize - 1),
+      positionToHashes(new int8_t[addressesCount])
 {
-    this->pagesHashStrategy = pagesHashStrategy;
-    this->addresses = addresses;
-    this->addressesCount = addressesCount;
-
-    keySize = HashUtil::HashArraySize(addressesCount, 0.75f);
-    mask = keySize - 1;
-    key = std::make_unique<int32_t[]>(keySize).release();
     ArraysFill(key, keySize, -1);
-    positionToHashes = std::make_unique<int8_t[]>(addressesCount).release();
 
-    int64_t hashCollisionsLocal = 0;
+    uint64_t hashCollisionsLocal = 0;
     auto columns = pagesHashStrategy->GetBuildHashColumns();
     auto types = pagesHashStrategy->GetBuildHashColTypes();
     auto colCount = pagesHashStrategy->GetBuildHashColsCount();
@@ -477,9 +482,9 @@ PagesHash::PagesHash(int64_t *addresses, int32_t addressesCount, PagesHashStrate
 }
 
 void PagesHash::SetAddressIndex(ArrayPositionLinks *positionLinks, int32_t realPosition, int64_t hash,
-    int64_t *totalHashCollisions) const
+    uint64_t *totalHashCollisions) const
 {
-    int64_t hashCollisionsLocal = 0;
+    uint64_t hashCollisionsLocal = 0;
     int32_t pos = HashUtil::GetRawHashPosition(hash, mask);
     // look for an empty slot or a slot containing this key
     while (key[pos] != -1) {
@@ -511,7 +516,7 @@ PagesHash::~PagesHash()
 int32_t PagesHash::GetAddressIndex(int probePosition, Vector **joinColumns, int32_t joinColumnsCount,
     int64_t rawHash) const
 {
-    int32_t pos = HashUtil::GetRawHashPosition(rawHash, mask);
+    auto pos = HashUtil::GetRawHashPosition(rawHash, mask);
     while (key[pos] != -1) {
         if (PositionEqualsCurrentRowIgnoreNulls(key[pos], static_cast<int8_t>(rawHash), probePosition, joinColumns)) {
             return key[pos];
@@ -555,11 +560,9 @@ bool PagesHash::PositionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_
 }
 
 ArrayPositionLinks::ArrayPositionLinks(int32_t capacity)
+    : capacity(capacity), size(0), positionLinks(new int32_t[capacity])
 {
-    this->positionLinks = std::make_unique<int32_t[]>(capacity).release();
-    this->capacity = capacity;
     ArraysFill(this->positionLinks, capacity, -1);
-    this->size = 0;
 }
 
 ArrayPositionLinks::~ArrayPositionLinks()
