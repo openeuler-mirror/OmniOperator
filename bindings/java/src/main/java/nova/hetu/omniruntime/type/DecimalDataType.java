@@ -9,11 +9,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * Decimal data type
+ * Decimal data type.
  *
  * @since 2022-03-10
  */
 public class DecimalDataType extends DataType {
+    private static final long serialVersionUID = -3389964658615782592L;
+
     @JsonProperty
     private final int precision;
 
@@ -21,7 +23,7 @@ public class DecimalDataType extends DataType {
     private final int scale;
 
     /**
-     * Construct of decimal data type
+     * Construct of decimal data type.
      *
      * @param precision the precision of decimal
      * @param scale the scale of decimal

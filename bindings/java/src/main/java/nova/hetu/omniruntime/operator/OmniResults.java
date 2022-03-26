@@ -12,7 +12,7 @@ import java.io.Closeable;
 /**
  * The type Omni results.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniResults implements Closeable {
     private final VecBatch[] vecBatches;

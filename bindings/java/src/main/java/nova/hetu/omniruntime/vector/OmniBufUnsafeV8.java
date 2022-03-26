@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import sun.misc.Unsafe;
 
 /**
- * jdk8 unsafe interface implementation
+ * jdk8 unsafe interface implementation.
  *
  * @since 2021-08-10
  */

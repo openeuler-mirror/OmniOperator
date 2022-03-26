@@ -22,8 +22,7 @@ import java.util.Objects;
  * @since 20210630
  */
 public class OmniWindowWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniWindowWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniWindowWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni window operator factory.
      *

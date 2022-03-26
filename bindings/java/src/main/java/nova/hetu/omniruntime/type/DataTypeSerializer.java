@@ -21,15 +21,15 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
  */
 public class DataTypeSerializer {
     /**
-     * Object mapper singleton
+     * Object mapper singleton.
      */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * Serialize a single data type.
      *
-     * @param dataType serialize a single data type.
-     * @return return the string after serialization.
+     * @param dataType serialize a single data type
+     * @return return the string after serialization
      */
     public static String serializeSingle(DataType dataType) {
         DataTypeExt dataTypeExt = toDataTypeExt(dataType);
@@ -44,8 +44,8 @@ public class DataTypeSerializer {
     /**
      * Serialize data types.
      *
-     * @param dataTypes serialize data types.
-     * @return return the string after serialization.
+     * @param dataTypes serialize data types
+     * @return return the string after serialization
      */
     public static String serialize(DataType[] dataTypes) {
         DataTypeExt[] dataTypeExts = new DataTypeExt[dataTypes.length];
@@ -63,7 +63,7 @@ public class DataTypeSerializer {
     /**
      * Deserialize a single data type.
      *
-     * @param type the string need to be deserialization.
+     * @param type the string need to be deserialization
      * @return return the vector type
      */
     public static DataType deserializeSingle(String type) {
@@ -78,8 +78,8 @@ public class DataTypeSerializer {
     /**
      * Deserialize data types.
      *
-     * @param types the string need to be deserialization.
-     * @return return the vector types.
+     * @param types the string need to be deserialization
+     * @return return the vector types
      */
     public static DataType[] deserialize(String types) {
         try {

@@ -17,27 +17,17 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 /**
- * jvm utils
+ * jvm utils.
  *
  * @since 2021-08-05
  */
 public final class JvmUtils {
     /**
-     * jvm unsafe
+     * jvm unsafe.
      */
     public static final Unsafe UNSAFE;
 
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
-
-    private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
-        if (actualIndexScale != expectedIndexScale) {
-            throw new IllegalStateException(
-                    name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
-        }
-    }
-
-    private JvmUtils() {
-    }
 
     static {
         try {
@@ -94,8 +84,18 @@ public final class JvmUtils {
         }
     }
 
+    private JvmUtils() {
+    }
+
+    private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
+        if (actualIndexScale != expectedIndexScale) {
+            throw new IllegalStateException(
+                    name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
+        }
+    }
+
     /**
-     * construct a director byte buffer by address and capacity
+     * construct a director byte buffer by address and capacity.
      *
      * @param omniBuf the address of byte buffer
      * @return director byte buffer

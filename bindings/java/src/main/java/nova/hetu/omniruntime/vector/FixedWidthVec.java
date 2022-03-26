@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.DataType;
 
 /**
- * base class of fixed width vec
+ * base class of fixed width vec.
  *
  * @since 2021-07-17
  */

@@ -10,7 +10,7 @@ import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 /**
- * 128-bit decimal vec
+ * 128-bit decimal vec.
  *
  * @since 2021-07-17
  */
@@ -44,7 +44,7 @@ public class Decimal128Vec extends DecimalVec {
     }
 
     /**
-     * split a vec into two vec according to the specified index and length
+     * split a vec into two vec according to the specified index and length.
      *
      * @param start starting index
      * @param end ending index
@@ -56,7 +56,7 @@ public class Decimal128Vec extends DecimalVec {
     }
 
     /**
-     * copy a new vec according to the vec
+     * copy a new vec according to the vec.
      *
      * @return new vec
      */
@@ -66,7 +66,7 @@ public class Decimal128Vec extends DecimalVec {
     }
 
     /**
-     * copy a new vec based on the positions
+     * copy a new vec based on the positions.
      *
      * @param positions all positions in vec
      * @param offset position offset
@@ -79,7 +79,7 @@ public class Decimal128Vec extends DecimalVec {
     }
 
     /**
-     * copy a vec based on the starting position and the number of elements
+     * copy a vec based on the starting position and the number of elements.
      *
      * @param positionOffset staring position
      * @param length the number of elements

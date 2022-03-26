@@ -9,15 +9,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * date32 data type
+ * date32 data type.
  *
  * @since 2021-08-05
  */
 public class Date32DataType extends DataType {
     /**
-     * Date32 singleton
+     * Date32 singleton.
      */
     public static final Date32DataType DATE32 = new Date32DataType(DateUnit.DAY);
+
+    private static final long serialVersionUID = 8120887624931817382L;
 
     @JsonProperty
     private final DateUnit dateUnit;

@@ -15,10 +15,11 @@ import java.util.Objects;
 
 /**
  * The Omni sort with expression operator factory.
+ *
+ * @since 2021-10-16
  */
 public class OmniSortWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniSortWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniSortWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni sort with expression operator factory.
      *
@@ -49,6 +50,8 @@ public class OmniSortWithExprOperatorFactory
 
     /**
      * The type Context.
+     *
+     * @since 2021-10-16
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
@@ -102,6 +105,8 @@ public class OmniSortWithExprOperatorFactory
 
     /**
      * The Factory context.
+     *
+     * @since 2021-10-16
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

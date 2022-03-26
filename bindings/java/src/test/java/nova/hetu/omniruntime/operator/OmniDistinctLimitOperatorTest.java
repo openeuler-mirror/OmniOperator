@@ -19,6 +19,11 @@ import org.testng.annotations.Test;
 
 import java.util.Iterator;
 
+/**
+ * The type Omni distinct limit operator test.
+ *
+ * @since 2021-11-27
+ */
 public class OmniDistinctLimitOperatorTest {
     @Test
     public void testDistinctLimitBasic() {
@@ -27,7 +32,7 @@ public class OmniDistinctLimitOperatorTest {
                 {"abc", "hello", "world", "abc", "helle", "test"}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
-        int distinctCols[] = {0, 1, 2};
+        int[] distinctCols = {0, 1, 2};
         OmniDistinctLimitOperatorFactory distinctLimitOperatorFactory = new OmniDistinctLimitOperatorFactory(
                 sourceTypes, distinctCols, -1, sourceDatas1[0].length - 1);
         OmniOperator distinctLimitOperator = distinctLimitOperatorFactory.createOperator();
@@ -48,17 +53,13 @@ public class OmniDistinctLimitOperatorTest {
 
     @Test
     public void testDistinctLimitColTypesCover() {
-        /*
-         * 0: hash col 3&4&5: distinct col normal cols are different but hash cols has
-         * conflict(repeat data)
-         */
         DataType[] sourceTypes = {LongDataType.LONG, IntDataType.INTEGER, VarcharDataType.VARCHAR, IntDataType.INTEGER,
                 DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
         Object[][] sourceDatas1 = {{10000L, 20000L, 10000L}, {3, 4, 5}, {"aaa", "bbb", "ccc"}, {0, 1, 0},
                 {6.6, 5.5, 6.6}, {"hello", "world", "hello"}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
-        int distinctCols[] = {3, 4, 5};
+        int[] distinctCols = {3, 4, 5};
         OmniDistinctLimitOperatorFactory distinctLimitOperatorFactory = new OmniDistinctLimitOperatorFactory(
                 sourceTypes, distinctCols, 0, sourceDatas1[0].length);
         OmniOperator distinctLimitOperator = distinctLimitOperatorFactory.createOperator();
@@ -85,7 +86,7 @@ public class OmniDistinctLimitOperatorTest {
                 {"abc", "hello", "world", null, "hello", "world", null, "hello", "world", null}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
-        int distinctCols[] = {0, 1, 2};
+        int[] distinctCols = {0, 1, 2};
         OmniDistinctLimitOperatorFactory distinctLimitOperatorFactory = new OmniDistinctLimitOperatorFactory(
                 sourceTypes, distinctCols, -1, sourceDatas1[0].length);
         OmniOperator distinctLimitOperator = distinctLimitOperatorFactory.createOperator();
@@ -111,7 +112,7 @@ public class OmniDistinctLimitOperatorTest {
                 {100000L, 110000L, 120000L, 100000L, 110000L}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
-        int distinctCols[] = {0, 1};
+        int[] distinctCols = {0, 1};
         OmniDistinctLimitOperatorFactory distinctLimitOperatorFactory = new OmniDistinctLimitOperatorFactory(
                 sourceTypes, distinctCols, 2, sourceDatas1[0].length);
         OmniOperator distinctLimitOperator = distinctLimitOperatorFactory.createOperator();

@@ -8,13 +8,13 @@ import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 /**
- * define the serialization interface of VecBatch
+ * define the serialization interface of VecBatch.
  *
  * @since 2021-09-13
  */
 public interface VecBatchSerializer {
     /**
-     * serialize vecbatch
+     * serialize vecbatch.
      *
      * @param vecBatch the vecbatch to be serialized
      * @return byte array
@@ -22,7 +22,7 @@ public interface VecBatchSerializer {
     byte[] serialize(VecBatch vecBatch);
 
     /**
-     * deserialize vecbatch
+     * deserialize vecbatch.
      *
      * @param bytes serialized vecbatch
      * @return vec batch
@@ -30,8 +30,9 @@ public interface VecBatchSerializer {
     VecBatch deserialize(byte[] bytes);
 
     /**
-     * deserialize vecbatch
+     * deserialize vecbatch.
      *
+     * @param vecAllocator the allocator of vector
      * @param bytes serialized vecbatch
      * @return vec batch
      */

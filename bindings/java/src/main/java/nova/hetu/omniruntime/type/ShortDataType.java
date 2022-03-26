@@ -5,18 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * short data type
+ * short data type.
  *
  * @since 2021-08-05
  */
 public class ShortDataType extends DataType {
     /**
-     * Short singleton
+     * Short singleton.
      */
     public static final ShortDataType SHORT = new ShortDataType();
 
+    private static final long serialVersionUID = -1938040225939461L;
+
     /**
-     * The construct
+     * The construct.
      */
     public ShortDataType() {
         super(DataTypeId.OMNI_SHORT);

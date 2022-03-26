@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.type;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Decimal64 data type
+ * Decimal64 data type.
  *
  * @since 2021-08-05
  */
@@ -23,12 +23,14 @@ public class Decimal64DataType extends DecimalDataType {
     public static final int DEFAULT_SCALE = 0;
 
     /**
-     * Decimal64 singleton
+     * Decimal64 singleton.
      */
     public static final Decimal64DataType DECIMAL64 = new Decimal64DataType(DEFAULT_PRECISION, DEFAULT_SCALE);
 
+    private static final long serialVersionUID = -1858555622202917305L;
+
     /**
-     * Construct of decimal64 data type
+     * Construct of decimal64 data type.
      *
      * @param precision the precision of decimal
      * @param scale the scale of decimal

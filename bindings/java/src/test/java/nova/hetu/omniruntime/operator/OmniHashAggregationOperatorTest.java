@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -27,6 +30,8 @@ import java.util.concurrent.CountDownLatch;
 
 /**
  * The type Omni hash aggregation operator test.
+ *
+ * @since 2021-07-21
  */
 public class OmniHashAggregationOperatorTest {
     /**
@@ -203,8 +208,6 @@ public class OmniHashAggregationOperatorTest {
     }
 
     private List<Vec> build4Columns(int rowNum) {
-        List<Vec> columns = new ArrayList<>();
-
         LongVec c1 = new LongVec(rowNum);
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
@@ -219,6 +222,7 @@ public class OmniHashAggregationOperatorTest {
             c4.set(i, 1);
         }
 
+        List<Vec> columns = new ArrayList<>();
         columns.add(c1);
         columns.add(c2);
         columns.add(c3);
@@ -228,26 +232,24 @@ public class OmniHashAggregationOperatorTest {
     }
 
     private List<Vec> build2Columns(int rowNum) {
-        List<Vec> columns = new ArrayList<>();
-
         LongVec c1 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
             c1.set(i, 0);
         }
-        columns.add(c1);
 
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
             c2.set(i, 1);
         }
+
+        List<Vec> columns = new ArrayList<>();
+        columns.add(c1);
         columns.add(c2);
 
         return columns;
     }
 
     private List<Vec> buildDataForCount(int rowNum) {
-        List<Vec> columns = new ArrayList<>();
-
         LongVec c1 = new LongVec(rowNum);
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
@@ -267,6 +269,7 @@ public class OmniHashAggregationOperatorTest {
             }
         }
 
+        List<Vec> columns = new ArrayList<>();
         columns.add(c1);
         columns.add(c2);
         columns.add(c3);

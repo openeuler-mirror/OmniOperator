@@ -9,31 +9,56 @@ import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_FLAT;
 import nova.hetu.omniruntime.type.DataType;
 
 /**
- * base class of variable width vec
+ * base class of variable width vec.
  *
  * @since 2021-07-17
  */
 public abstract class VariableWidthVec extends Vec {
     /**
-     * offsets buffer
+     * offsets buffer.
      */
     protected OmniBuf offsetsBuf;
 
     /**
-     * last set index
+     * last set index.
      */
     protected int lastOffsetPosition = -1;
 
+    /**
+     * Ihe routine will use GLOBAL memory pool when there is no specialized vector
+     * allocator.
+     *
+     * @param capacityInBytes the number of value of vector
+     * @param size the actual number of value of vector
+     * @param type the data type of this vector
+     */
     public VariableWidthVec(int capacityInBytes, int size, DataType type) {
         super(capacityInBytes, size, OMNI_VEC_ENCODING_FLAT, type);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
+    /**
+     * The routine will use the specialized vector allocator to allocate new vector.
+     *
+     * @param capacityInBytes the capacity in bytes of vector
+     * @param size the actual number of value of vector
+     * @param type the data type of this vector
+     * @param allocator the specialized vector allocator
+     */
     public VariableWidthVec(VecAllocator allocator, int capacityInBytes, int size, DataType type) {
         super(allocator, capacityInBytes, size, OMNI_VEC_ENCODING_FLAT, type);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
+    /**
+     * The routine is just for slicing and copyRegion vector operator.
+     *
+     * @param vec the vector need to be sliced or copyRegion
+     * @param offset When a vector has been sliced or copyRegion, this value will
+     *            point to where is the new slice {@link Vec} start
+     * @param length the number of value
+     * @param isSlice Whether the current vector is sliced
+     */
     protected VariableWidthVec(Vec vec, int offset, int length, boolean isSlice) {
         super(vec, offset, length, isSlice);
         int offsetsBufCapacityInBytes;
@@ -48,16 +73,43 @@ public abstract class VariableWidthVec extends Vec {
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), offsetsBufCapacityInBytes);
     }
 
+    /**
+     * The routine is just for copyPosition vector operator.
+     *
+     * @param vec the vector need to be copy
+     * @param positions the original vector positions
+     * @param offset offset of positions in the input parameter
+     * @param length number of elements copied
+     */
     protected VariableWidthVec(Vec vec, int[] positions, int offset, int length) {
         super(vec, positions, offset, length);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (length + 1) * Integer.BYTES);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address
+     * @param dataType the type of this vector
+     */
     protected VariableWidthVec(long nativeVector, DataType dataType) {
         super(nativeVector, dataType);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address
+     * @param nativeValueBufAddress valueBuf address of native vector
+     * @param nativeVectorNullBufAddress nullBuf address of native vector
+     * @param nativeVectorOffsetBufAddress offsetBuf address of native vector
+     * @param nativeVectorAllocator allocator address of native vector
+     * @param capacityInBytes capacity in bytes of vector
+     * @param size the actual number of value of vector
+     * @param offset offset of positions in the input parameter
+     * @param dataType the type of this vector
+     */
     protected VariableWidthVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
             long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
             DataType dataType) {
@@ -67,7 +119,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * get value offset buffer from native vector
+     * get value offset buffer from native vector.
      *
      * @param nativeVector native vector address
      * @return value offset buffer
@@ -75,7 +127,7 @@ public abstract class VariableWidthVec extends Vec {
     protected static native long getValueOffsetsNative(long nativeVector);
 
     /**
-     * get the offset value of the specified position
+     * get the offset value of the specified position.
      *
      * @param index the element offset in vec
      * @return offset value
@@ -85,7 +137,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * set the offset value of the specified position
+     * set the offset value of the specified position.
      *
      * @param index the element offset in vec
      * @param offset offset value
@@ -95,7 +147,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * get the data length of the specified position
+     * get the data length of the specified position.
      *
      * @param index the element offset in vec
      * @return data length in bytes
@@ -105,7 +157,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * return null value array from 0 to size + offset length
+     * return null value array from 0 to size + offset length.
      *
      * @return raw value of offsets
      */
@@ -118,7 +170,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * get the value offset of the specified position
+     * get the value offset of the specified position.
      *
      * @param index the offset of element
      * @param length the number of element
@@ -134,7 +186,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * get the offsets of variablewidthvec
+     * get the offsets of variablewidthvec.
      *
      * @return offsets byte buffer
      */
@@ -143,7 +195,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * set offsets buffer
+     * set offsets buffer.
      *
      * @param buf buf of offset
      */
@@ -160,7 +212,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * fill offset
+     * fill offset.
      *
      * @param index index of want to set
      */
@@ -177,7 +229,7 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * returns the number of bytes of the offsets
+     * returns the number of bytes of the offsets.
      *
      * @return length in bytes
      */

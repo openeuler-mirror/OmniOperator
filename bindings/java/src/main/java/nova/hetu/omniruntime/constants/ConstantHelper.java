@@ -9,7 +9,7 @@ import java.util.Arrays;
 /**
  * The type Constant helper.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class ConstantHelper {
     private ConstantHelper() {

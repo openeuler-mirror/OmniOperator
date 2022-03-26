@@ -16,7 +16,7 @@ import java.util.Objects;
 /**
  * The type Omni sort operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperatorFactory.FactoryContext> {
     /**
@@ -51,7 +51,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
@@ -107,7 +107,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
     /**
      * The type Factory context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

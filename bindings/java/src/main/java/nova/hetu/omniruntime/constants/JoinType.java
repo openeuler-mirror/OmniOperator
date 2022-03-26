@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * The Join type.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 @SuppressWarnings("StaticVariableName")
 public class JoinType extends Constant {
@@ -33,6 +33,8 @@ public class JoinType extends Constant {
      * The constant OMNI_JOIN_TYPE_FULL.
      */
     public static JoinType OMNI_JOIN_TYPE_FULL;
+
+    private static final long serialVersionUID = -4086671645951741450L;
 
     /**
      * Instantiates a new Join type.

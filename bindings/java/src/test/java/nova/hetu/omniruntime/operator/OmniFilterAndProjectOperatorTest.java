@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -35,6 +38,8 @@ import java.util.List;
 
 /**
  * The type Omni filter and project operator test.
+ *
+ * @since 2021-06-01
  */
 public class OmniFilterAndProjectOperatorTest {
     private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols) {
@@ -47,12 +52,13 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void betweenInt() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
+        Object[][] datas = {{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {0, 1, 2, 3, 4, 5, 6, 6, 6, 6}};
+
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
 
-        Object[][] datas = {{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
-                {0, 1, 2, 3, 4, 5, 6, 6, 6, 6}};
         VecBatch vecBatch = createVecBatch(types, datas);
         OmniOperator op = factory.createOperator();
         op.addInput(vecBatch);
@@ -74,13 +80,9 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void betweenIntDictionary() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
-        List<String> projections = ImmutableList.of("#0", "#1", "#2");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
-
         Object[][] datas = {{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
                 {-3, -2, -1, 0, 1, 2, 3, 4, 5, 6}};
-        Vec vecs[] = new Vec[3];
+        Vec[] vecs = new Vec[3];
         vecs[0] = TestUtils.createIntVec(datas[0]);
         vecs[1] = TestUtils.createIntVec(datas[1]);
 
@@ -89,8 +91,12 @@ public class OmniFilterAndProjectOperatorTest {
         dicVec = new DictionaryVec(dicVec, ids);
         vecs[2] = dicVec;
 
-        VecBatch vecBatch = new VecBatch(vecs);
+        List<String> projections = ImmutableList.of("#0", "#1", "#2");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
+
         OmniOperator op = factory.createOperator();
+        VecBatch vecBatch = new VecBatch(vecs);
         op.addInput(vecBatch);
 
         Iterator<VecBatch> results = op.getOutput();
@@ -110,6 +116,16 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void doubles() {
         DataType[] types = {DoubleDataType.DOUBLE};
+        final int numRows = 5000;
+        DoubleVec col1 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
+        }
+        DoubleVec col2 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, i % 2 == 0 ? 0.5 : 1.5);
+        }
+
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
@@ -120,15 +136,7 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
                         + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
                 types, projectionsJSON, 1);
-        final int numRows = 5000;
-        DoubleVec col1 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
-        }
-        DoubleVec col2 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col2.set(i, i % 2 == 0 ? 0.5 : 1.5);
-        }
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
@@ -164,6 +172,16 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void lessThan() {
         DataType[] types = {IntDataType.INTEGER};
+        final int numRows = 5000;
+        IntVec col1 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i);
+        }
+        IntVec col2 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, i);
+        }
+
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -174,15 +192,7 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":2000}}",
                 types, projectionsJSON, 1);
-        final int numRows = 5000;
-        IntVec col1 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i);
-        }
-        IntVec col2 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col2.set(i, i);
-        }
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
@@ -218,17 +228,17 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void lessThanDictionaryVarchar() {
         DataType[] types = {IntDataType.INTEGER, new VarcharDataType(50)};
-        List<String> projections = ImmutableList.of("#0", "#1");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$LESS_THAN:4(#0, 6:1)", types, projections);
-
         Object[][] datas = {{0, 3, 9}, {"hello", "world", "friends"}};
-        Vec vecs[] = new Vec[2];
+        Vec[] vecs = new Vec[2];
         vecs[0] = createIntVec(datas[0]);
         int[] ids = {0, 1, 2};
         DictionaryVec dicVec = TestUtils.createDictionaryVec(types[1], datas[1], ids);
         vecs[1] = dicVec;
         VecBatch vecBatch = new VecBatch(vecs);
+
+        List<String> projections = ImmutableList.of("#0", "#1");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$LESS_THAN:4(#0, 6:1)", types, projections);
 
         OmniOperator op = factory.createOperator();
         op.addInput(vecBatch);
@@ -250,17 +260,6 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void greaterThan() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG};
-        List<String> projections = ImmutableList.of("#0", "#1");
-        List<String> projectionsJSON = ImmutableList.of(
-                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$GREATER_THAN:4(#0, 20:1)", types, projections);
-        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\","
-                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
-                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":20}}",
-                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -274,6 +273,19 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 25);
             col4.set(i, 3000000000L);
         }
+
+        List<String> projections = ImmutableList.of("#0", "#1");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":20}}",
+                types, projectionsJSON, 1);
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$GREATER_THAN:4(#0, 20:1)", types, projections);
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
@@ -311,17 +323,6 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void equalTo() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
-        List<String> projections = ImmutableList.of("#1", "#2");
-        List<String> projectionsJSON = ImmutableList.of(
-                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
-                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$EQUAL:4(#1, 50:2)", types, projections);
-        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\","
-                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
-                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":50}}",
-                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -337,6 +338,19 @@ public class OmniFilterAndProjectOperatorTest {
             col5.set(i, i % 100);
             col6.set(i, i % 100);
         }
+
+        List<String> projections = ImmutableList.of("#1", "#2");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$EQUAL:4(#1, 50:2)", types, projections);
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":50}}",
+                types, projectionsJSON, 1);
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3);
@@ -374,16 +388,6 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void greaterThanOrEqualTo() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER};
-        List<String> projections = ImmutableList.of("#1");
-        List<String> projectionsJSON = ImmutableList
-                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30:1)", types, projections);
-        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
-                        + "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,"
-                        + "\"colVal\":1},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":30}}",
-                types, projectionsJSON, 1);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -405,6 +409,18 @@ public class OmniFilterAndProjectOperatorTest {
             }
             col4.set(i, value);
         }
+
+        List<String> projections = ImmutableList.of("#1");
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30:1)", types, projections);
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                        + "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,"
+                        + "\"colVal\":1},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":30}}",
+                types, projectionsJSON, 1);
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
@@ -440,6 +456,16 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void notEqualTo() {
         DataType[] types = {DoubleDataType.DOUBLE};
+        final int numRows = 5000;
+        DoubleVec col1 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i);
+        }
+        DoubleVec col2 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, i);
+        }
+
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
@@ -450,15 +476,7 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":0}}",
                 types, projectionsJSON, 1);
-        final int numRows = 5000;
-        DoubleVec col1 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i);
-        }
-        DoubleVec col2 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col2.set(i, i);
-        }
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
@@ -476,7 +494,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecBatch resJSON = opJSON.getOutput().next();
         assertEquals(res.getRowCount(), 4999);
         assertEquals(resJSON.getRowCount(), 4999);
-        double cnt = 1;
+        double cnt = 1d;
         for (int i = 0; i < res.getRowCount(); i++) {
             assertEquals(((DoubleVec) res.getVector(0)).get(i), cnt);
             assertEquals(((DoubleVec) resJSON.getVector(0)).get(i), cnt);
@@ -496,6 +514,16 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void allPass() {
         DataType[] types = {IntDataType.INTEGER};
+        final int numRows = 20000;
+        IntVec col1 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, 9348);
+        }
+        IntVec col2 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, 9348);
+        }
+
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -506,15 +534,7 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":9348}}",
                 types, projectionsJSON, 1);
-        final int numRows = 20000;
-        IntVec col1 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, 9348);
-        }
-        IntVec col2 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col2.set(i, 9348);
-        }
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
@@ -550,6 +570,20 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void multipleInputs() {
         DataType[] types = {IntDataType.INTEGER};
+        final int numRows = 1000;
+        IntVec col1 = new IntVec(numRows);
+        IntVec col2 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i % 10);
+            col2.set(i, i % 6 + 1);
+        }
+        IntVec col3 = new IntVec(numRows);
+        IntVec col4 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col3.set(i, i % 10);
+            col4.set(i, i % 6 + 1);
+        }
+
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -560,27 +594,15 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}",
                 types, projectionsJSON, 1);
-        final int numRows = 1000;
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        IntVec col1 = new IntVec(numRows);
-        IntVec col2 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 10);
-            col2.set(i, i % 6 + 1);
-        }
-        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
-        IntVec col3 = new IntVec(numRows);
-        IntVec col4 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col3.set(i, i % 10);
-            col4.set(i, i % 6 + 1);
-        }
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col3);
-        for (VecBatch vecBatch : vecBatches1) {
+        ImmutableList<VecBatch> vecBatches01 = makeInput(numRows, col1);
+        ImmutableList<VecBatch> vecBatches02 = makeInput(numRows, col3);
+        for (VecBatch vecBatch : vecBatches01) {
             op.addInput(vecBatch);
         }
-        for (VecBatch vecBatch : vecBatches2) {
+        for (VecBatch vecBatch : vecBatches02) {
             opJSON.addInput(vecBatch);
         }
 
@@ -596,12 +618,12 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         // Test multiple inputs
-        ImmutableList<VecBatch> vecBatches1_ = makeInput(numRows, col2);
-        ImmutableList<VecBatch> vecBatches2_ = makeInput(numRows, col4);
-        for (VecBatch vecBatch : vecBatches1_) {
+        ImmutableList<VecBatch> vecBatches11 = makeInput(numRows, col2);
+        ImmutableList<VecBatch> vecBatches12 = makeInput(numRows, col4);
+        for (VecBatch vecBatch : vecBatches11) {
             op.addInput(vecBatch);
         }
-        for (VecBatch vecBatch : vecBatches2_) {
+        for (VecBatch vecBatch : vecBatches12) {
             opJSON.addInput(vecBatch);
         }
         assertTrue(op.getOutput().hasNext());
@@ -628,27 +650,7 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void negativeValues() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG};
-        List<String> projections = ImmutableList.of("#0", "#1");
-        List<String> projectionsJSON = ImmutableList.of(
-                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
-                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1:1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1:2))", types,
-                projections);
-        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\","
-                        + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN_OR_EQUAL\","
-                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
-                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":-1}},"
-                        + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
-                        + "\"operator\":\"LESS_THAN_OR_EQUAL\","
-                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
-                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":-1}}}",
-                types, projectionsJSON, 1);
         final int numRows = 10000;
-        OmniOperator op = factory.createOperator();
-        OmniOperator opJSON = factoryJSON.createOperator();
-
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -679,6 +681,26 @@ public class OmniFilterAndProjectOperatorTest {
             col4.set(i, val2);
         }
 
+        List<String> projections = ImmutableList.of("#0", "#1");
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}");
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\","
+                        + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":-1}},"
+                        + "\"right\":{\"exprType\":\"BINARY\",\"returnType\":4,"
+                        + "\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":-1}}}",
+                types, projectionsJSON, 1);
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1:1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1:2))", types,
+                projections);
+
+        OmniOperator op = factory.createOperator();
+        OmniOperator opJSON = factoryJSON.createOperator();
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
         ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col3, col4);
         for (VecBatch vecBatch : vecBatches1) {
@@ -714,6 +736,24 @@ public class OmniFilterAndProjectOperatorTest {
     @Test(enabled = false)
     public void allTypes() {
         DataType[] types = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
+        final int numRows = 10000;
+        IntVec col1 = new IntVec(numRows);
+        LongVec col2 = new LongVec(numRows);
+        DoubleVec col3 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i % 3);
+            col2.set(i, i % 2 == 0 ? (long) 3e9 : 0);
+            col3.set(i, i % 10 / 10D);
+        }
+        IntVec col4 = new IntVec(numRows);
+        LongVec col5 = new LongVec(numRows);
+        DoubleVec col6 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col4.set(i, i % 3);
+            col5.set(i, i % 2 == 0 ? (long) 3e9 : 0);
+            col6.set(i, i % 10 / 10D);
+        }
+
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         List<String> projectionsJSON = ImmutableList.of(
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -737,26 +777,9 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false," + "\"value\":0.4}}}}",
                 types, projectionsJSON, 1);
-        final int numRows = 10000;
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        IntVec col1 = new IntVec(numRows);
-        LongVec col2 = new LongVec(numRows);
-        DoubleVec col3 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 3);
-            col2.set(i, i % 2 == 0 ? (long) 3e9 : 0);
-            col3.set(i, i % 10 / 10D);
-        }
-        IntVec col4 = new IntVec(numRows);
-        LongVec col5 = new LongVec(numRows);
-        DoubleVec col6 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col4.set(i, i % 3);
-            col5.set(i, i % 2 == 0 ? (long) 3e9 : 0);
-            col6.set(i, i % 10 / 10D);
-        }
-
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3);
         ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col4, col5, col6);
         for (VecBatch vecBatch : vecBatches1) {
@@ -794,7 +817,6 @@ public class OmniFilterAndProjectOperatorTest {
     @Test(enabled = false)
     public void compileTest() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, DoubleDataType.DOUBLE, DoubleDataType.DOUBLE};
-        List<String> projections = ImmutableList.of("#0");
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -807,10 +829,12 @@ public class OmniFilterAndProjectOperatorTest {
             col4.set(i, i);
         }
 
+        List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND:4(AND:4($operator$GREATER_THAN:4(#3, 8766:3), $operator$LESS_THAN:4(#3, 9131:3)), "
                         + "AND:4($operator$BETWEEN:4(#2, 0.05:3, 0.07:3), $operator$LESS_THAN:4(#0, 24.0:3)))",
                 types, projections);
+
         OmniOperator op = factory.createOperator();
         ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4);
         for (VecBatch vecBatch : vecBatches) {
@@ -835,6 +859,36 @@ public class OmniFilterAndProjectOperatorTest {
     public void logicalOperators1() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER, LongDataType.LONG,
                 DoubleDataType.DOUBLE, LongDataType.LONG};
+        final int numRows = 10000;
+        IntVec col01 = new IntVec(numRows);
+        IntVec col02 = new IntVec(numRows);
+        IntVec col03 = new IntVec(numRows);
+        LongVec col04 = new LongVec(numRows);
+        DoubleVec col05 = new DoubleVec(numRows);
+        LongVec col06 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col01.set(i, i % 3 == 0 ? 0 : 1);
+            col02.set(i, i);
+            col03.set(i, i);
+            col04.set(i, i % 2 == 0 ? 3000000000L : 2999999999L);
+            col05.set(i, 50 + i / 10D);
+            col06.set(i, i % 55);
+        }
+        IntVec col11 = new IntVec(numRows);
+        IntVec col12 = new IntVec(numRows);
+        IntVec col13 = new IntVec(numRows);
+        LongVec col14 = new LongVec(numRows);
+        DoubleVec col15 = new DoubleVec(numRows);
+        LongVec col16 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col11.set(i, i % 3 == 0 ? 0 : 1);
+            col12.set(i, i);
+            col13.set(i, i);
+            col14.set(i, i % 2 == 0 ? 3000000000L : 2999999999L);
+            col15.set(i, 50 + i / 10D);
+            col16.set(i, i % 55);
+        }
+
         List<String> projections = ImmutableList.of("#0", "#2", "#4", "#5");
         String str = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52:2), AND:4($operator$LESS_THAN:4(#4, 50.8:3), "
                 + "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800:1), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990:1)), "
@@ -844,7 +898,6 @@ public class OmniFilterAndProjectOperatorTest {
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 1,\"colVal\":2}",
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 3,\"colVal\":4}",
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\": 2,\"colVal\":5}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         String strJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\","
                 + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
                 + "\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,"
@@ -869,44 +922,14 @@ public class OmniFilterAndProjectOperatorTest {
                 + "4,\"operator\":\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":"
                 + "2,\"colVal\":3},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,"
                 + "\"value\":3000000000}}}}}}";
+
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(strJSON, types,
                 projectionsJSON, 1);
-
-        final int numRows = 10000;
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-
-        IntVec col1 = new IntVec(numRows);
-        IntVec col2 = new IntVec(numRows);
-        IntVec col3 = new IntVec(numRows);
-        LongVec col4 = new LongVec(numRows);
-        DoubleVec col5 = new DoubleVec(numRows);
-        LongVec col6 = new LongVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 3 == 0 ? 0 : 1);
-            col2.set(i, i);
-            col3.set(i, i);
-            col4.set(i, i % 2 == 0 ? 3000000000L : 2999999999L);
-            col5.set(i, 50 + i / 10D);
-            col6.set(i, i % 55);
-        }
-        IntVec col1_ = new IntVec(numRows);
-        IntVec col2_ = new IntVec(numRows);
-        IntVec col3_ = new IntVec(numRows);
-        LongVec col4_ = new LongVec(numRows);
-        DoubleVec col5_ = new DoubleVec(numRows);
-        LongVec col6_ = new LongVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1_.set(i, i % 3 == 0 ? 0 : 1);
-            col2_.set(i, i);
-            col3_.set(i, i);
-            col4_.set(i, i % 2 == 0 ? 3000000000L : 2999999999L);
-            col5_.set(i, 50 + i / 10D);
-            col6_.set(i, i % 55);
-        }
-
-        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3, col4, col5, col6);
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_, col3_, col4_, col5_, col6_);
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col01, col02, col03, col04, col05, col06);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col11, col12, col13, col14, col15, col16);
         for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
         }
@@ -947,6 +970,28 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void logicalOperators2() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
+        final int numRows = 10000;
+        IntVec col01 = new IntVec(numRows);
+        IntVec col02 = new IntVec(numRows);
+        LongVec col03 = new LongVec(numRows);
+        LongVec col04 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col01.set(i, i % 100);
+            col02.set(i, i % 7 == 0 ? -12 : i);
+            col03.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
+            col04.set(i, i % 9 - 4);
+        }
+        IntVec col11 = new IntVec(numRows);
+        IntVec col12 = new IntVec(numRows);
+        LongVec col13 = new LongVec(numRows);
+        LongVec col14 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col11.set(i, i % 100);
+            col12.set(i, i % 7 == 0 ? -12 : i);
+            col13.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
+            col14.set(i, i % 9 - 4);
+        }
+
         List<String> projections = ImmutableList.of("#3", "#2", "#1", "#0");
         String str = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50:1), $operator$EQUAL:4(#1, -12:1)), "
                 + "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000:2), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0:2)))";
@@ -955,7 +1000,6 @@ public class OmniFilterAndProjectOperatorTest {
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":2}",
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":1}",
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         String strJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\",\"left\":"
                 + "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\",\"left\":"
                 + "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
@@ -972,35 +1016,14 @@ public class OmniFilterAndProjectOperatorTest {
                 + "4,\"operator\":\"GREATER_THAN_OR_EQUAL\",\"left\":{\"exprType\":"
                 + "\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":3},\"right\":{\"exprType\":\"LITERAL\","
                 + "\"dataType\":2,\"isNull\":false,\"value\":0}}}}";
+
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(strJSON, types,
                 projectionsJSON, 1);
-        final int numRows = 10000;
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-
-        IntVec col1 = new IntVec(numRows);
-        IntVec col2 = new IntVec(numRows);
-        LongVec col3 = new LongVec(numRows);
-        LongVec col4 = new LongVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 100);
-            col2.set(i, i % 7 == 0 ? -12 : i);
-            col3.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
-            col4.set(i, i % 9 - 4);
-        }
-        IntVec col1_ = new IntVec(numRows);
-        IntVec col2_ = new IntVec(numRows);
-        LongVec col3_ = new LongVec(numRows);
-        LongVec col4_ = new LongVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1_.set(i, i % 100);
-            col2_.set(i, i % 7 == 0 ? -12 : i);
-            col3_.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
-            col4_.set(i, i % 9 - 4);
-        }
-
-        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3, col4);
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_, col3_, col4_);
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col01, col02, col03, col04);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col11, col12, col13, col14);
         for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
         }
@@ -1041,6 +1064,38 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void logicalOperators3() {
         DataType[] types = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
+        final int numRows = 10000;
+        IntVec col01 = new IntVec(numRows);
+        DoubleVec col02 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col01.set(i, 0);
+            col02.set(i, 1.5);
+        }
+        col01.set(0, 0);
+        col01.set(1, 1);
+        col01.set(2, 1);
+        col01.set(3, 2);
+        col01.set(4, 3);
+        col01.set(5, 5);
+        col01.set(6, 8);
+        col01.set(7, 13);
+        col02.set(2, 0);
+        IntVec col11 = new IntVec(numRows);
+        DoubleVec col12 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col11.set(i, 0);
+            col12.set(i, 1.5);
+        }
+        col11.set(0, 0);
+        col11.set(1, 1);
+        col11.set(2, 1);
+        col11.set(3, 2);
+        col11.set(4, 3);
+        col11.set(5, 5);
+        col11.set(6, 8);
+        col11.set(7, 13);
+        col12.set(2, 0);
+
         List<String> projections = ImmutableList.of("#1", "#0");
         String expr = "AND:4($operator$NOT_EQUAL:4(#1, 0:3), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1:1), "
                 + "$operator$EQUAL:4(#0, 2:1)), $operator$EQUAL:4(#0, 3:1)), OR:4(OR:4(OR:4($operator$EQUAL:4(55:1, #0), "
@@ -1048,7 +1103,6 @@ public class OmniFilterAndProjectOperatorTest {
         List<String> projectionsJSON = ImmutableList.of(
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":1}",
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types, projections);
         String exprJSON = "{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"AND\","
                 + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"NOT_EQUAL\","
                 + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":1},"
@@ -1082,43 +1136,12 @@ public class OmniFilterAndProjectOperatorTest {
                 + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":13}}}}}";
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(exprJSON, types,
                 projectionsJSON, 1);
-        final int numRows = 10000;
+
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types, projections);
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-
-        IntVec col1 = new IntVec(numRows);
-        DoubleVec col2 = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, 0);
-            col2.set(i, 1.5);
-        }
-        col1.set(0, 0);
-        col1.set(1, 1);
-        col1.set(2, 1);
-        col1.set(3, 2);
-        col1.set(4, 3);
-        col1.set(5, 5);
-        col1.set(6, 8);
-        col1.set(7, 13);
-        col2.set(2, 0);
-        IntVec col1_ = new IntVec(numRows);
-        DoubleVec col2_ = new DoubleVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1_.set(i, 0);
-            col2_.set(i, 1.5);
-        }
-        col1_.set(0, 0);
-        col1_.set(1, 1);
-        col1_.set(2, 1);
-        col1_.set(3, 2);
-        col1_.set(4, 3);
-        col1_.set(5, 5);
-        col1_.set(6, 8);
-        col1_.set(7, 13);
-        col2_.set(2, 0);
-
-        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_);
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col01, col02);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col11, col12);
         for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
         }
@@ -1131,7 +1154,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecBatch res = op.getOutput().next();
         VecBatch resJSON = opJSON.getOutput().next();
         assertEquals(res.getRowCount(), 6);
-        int vals[] = {1, 2, 3, 5, 8, 13};
+        int[] vals = {1, 2, 3, 5, 8, 13};
         for (int i = 0; i < res.getRowCount(); i++) {
             assertEquals(((IntVec) res.getVector(1)).get(i), vals[i]);
             assertEquals(((IntVec) resJSON.getVector(1)).get(i), vals[i]);
@@ -1150,6 +1173,16 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void arithmeticAdd() {
         DataType[] types = {IntDataType.INTEGER};
+        final int numRows = 10000;
+        IntVec col01 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col01.set(i, i % 5);
+        }
+        IntVec col11 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col11.set(i, i % 5);
+        }
+
         List<String> projections = ImmutableList.of("#0");
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}");
@@ -1162,19 +1195,11 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":1}},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":4}}",
                 types, projectionsJSON, 1);
-        final int numRows = 10000;
-        IntVec col1 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 5);
-        }
-        IntVec col1_ = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1_.set(i, i % 5);
-        }
+
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_);
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col01);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col11);
         for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
         }
@@ -1221,9 +1246,11 @@ public class OmniFilterAndProjectOperatorTest {
 
     /**
      * Multithread test.
+     *
+     * @throws InterruptedException thread interrupt exception
      */
     @Test
-    public void multithreadTest() {
+    public void multithreadTest() throws InterruptedException {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, DoubleDataType.DOUBLE, DoubleDataType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2", "#3");
         List<String> projectionsJSON = ImmutableList.of(
@@ -1233,11 +1260,7 @@ public class OmniFilterAndProjectOperatorTest {
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":3}");
         String str = "$operator$LESS_THAN_OR_EQUAL:4(#0, 500:1)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
-        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN_OR_EQUAL\","
-                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
-                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":500}}",
-                types, projectionsJSON, 1);
+
         final int numRows = 1000;
         for (int i = 0; i < 1000; i++) {
             Thread thread = new Thread(() -> {
@@ -1246,7 +1269,6 @@ public class OmniFilterAndProjectOperatorTest {
                 op.addInput(vecBatch);
                 assertTrue(op.getOutput().hasNext());
                 VecBatch res = op.getOutput().next();
-                // System.out.println(res.getLength());
                 assertEquals(res.getRowCount(), 501);
 
                 freeVecBatch(res);
@@ -1264,10 +1286,15 @@ public class OmniFilterAndProjectOperatorTest {
         try {
             // Wait for all to finish
             Thread.sleep(10000);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new InterruptedException("current thread is interrupted");
         }
 
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4," + "\"operator\":\"LESS_THAN_OR_EQUAL\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+                        + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":500}}",
+                types, projectionsJSON, 1);
         // test in JSON format
         for (int i = 0; i < 1000; i++) {
             Thread thread = new Thread(() -> {
@@ -1276,7 +1303,6 @@ public class OmniFilterAndProjectOperatorTest {
                 opJSON.addInput(vecBatch);
                 assertTrue(opJSON.getOutput().hasNext());
                 VecBatch resJSON = opJSON.getOutput().next();
-                // System.out.println(resJSON.getLength());
                 assertEquals(resJSON.getRowCount(), 501);
 
                 freeVecBatch(resJSON);
@@ -1294,8 +1320,8 @@ public class OmniFilterAndProjectOperatorTest {
         try {
             // Wait for all to finish
             Thread.sleep(10000);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new InterruptedException("current thread is interrupted");
         }
 
         factory.close();
@@ -1308,6 +1334,24 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void conditional() {
         DataType[] types = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
+        final int numRows = 10000;
+        IntVec col01 = new IntVec(numRows);
+        IntVec col02 = new IntVec(numRows);
+        IntVec col03 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col01.set(i, i % 2);
+            col02.set(i, i % 5);
+            col03.set(i, i % 10);
+        }
+        IntVec col11 = new IntVec(numRows);
+        IntVec col12 = new IntVec(numRows);
+        IntVec col13 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col11.set(i, i % 2);
+            col12.set(i, i % 5);
+            col13.set(i, i % 10);
+        }
+
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         List<String> projectionsJSON = ImmutableList.of(
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0}",
@@ -1333,28 +1377,11 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":2},"
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":3}}}",
                 types, projectionsJSON, 1);
-        final int numRows = 10000;
-        IntVec col1 = new IntVec(numRows);
-        IntVec col2 = new IntVec(numRows);
-        IntVec col3 = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1.set(i, i % 2);
-            col2.set(i, i % 5);
-            col3.set(i, i % 10);
-        }
-        IntVec col1_ = new IntVec(numRows);
-        IntVec col2_ = new IntVec(numRows);
-        IntVec col3_ = new IntVec(numRows);
-        for (int i = 0; i < numRows; i++) {
-            col1_.set(i, i % 2);
-            col2_.set(i, i % 5);
-            col3_.set(i, i % 10);
-        }
 
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3);
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_, col3_);
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col01, col02, col03);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col11, col12, col13);
         for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
         }

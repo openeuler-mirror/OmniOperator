@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * The type Agg type.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 @SuppressWarnings("StaticVariableName")
 public class FunctionType extends Constant {
@@ -58,6 +58,8 @@ public class FunctionType extends Constant {
      * The constant OMNI_WINDOW_TYPE_RANK.
      */
     public static FunctionType OMNI_WINDOW_TYPE_RANK;
+
+    private static final long serialVersionUID = 5337378607473315604L;
 
     /**
      * Instantiates a new Agg type.

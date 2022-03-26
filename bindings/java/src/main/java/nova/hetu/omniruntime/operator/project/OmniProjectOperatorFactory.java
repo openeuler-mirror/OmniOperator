@@ -18,7 +18,7 @@ import java.util.Objects;
 /**
  * The type Omni project operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectOperatorFactory.FactoryContext> {
     private boolean isSupported;
@@ -39,6 +39,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      *
      * @param expressions the expressions
      * @param inputTypes the input types
+     * @param parseFormat the parse format
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat) {
         super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat)));
@@ -69,7 +70,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] inputTypes;
@@ -93,6 +94,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          *
          * @param expressions the expressions
          * @param inputTypes the input types
+         * @param parseFormat the parse format
          */
         public JitContext(String[] expressions, DataType[] inputTypes, int parseFormat) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
@@ -122,7 +124,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     /**
      * The type Factory context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**
@@ -136,10 +138,6 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            // todo: use createProjectJitContext when there is a jit optimization in future.
-            // return createProjectJitContext(
-            // VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
-            // context.expressions, context.expressions.length);
             return 0;
         }
     }

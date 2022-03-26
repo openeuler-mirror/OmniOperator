@@ -18,10 +18,11 @@ import java.util.Objects;
 
 /**
  * The Omni lookup join with expression operator factory.
+ *
+ * @since 2021-10-16
  */
 public class OmniLookupJoinWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniLookupJoinWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniLookupJoinWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni lookup join with expression operator factory.
      *
@@ -109,10 +110,18 @@ public class OmniLookupJoinWithExprOperatorFactory
 
     /**
      * The Factory context.
+     *
+     * @since 2021-10-16
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         private final long hashBuilderWithExprOperatorFactory;
 
+        /**
+         * Instantiates a new Context.
+         *
+         * @param jitContext the jit context
+         * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
+         */
         public FactoryContext(JitContext jitContext,
                 OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory) {
             super(jitContext);

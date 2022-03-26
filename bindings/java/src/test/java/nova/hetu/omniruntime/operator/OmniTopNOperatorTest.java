@@ -132,9 +132,9 @@ public class OmniTopNOperatorTest {
         VecBatch result = output.next();
         assertEquals(result.getRowCount(), expectedRowSize);
         Vec[] vector = result.getVectors();
-        List resultList1 = new ArrayList<Integer>();
-        List resultList2 = new ArrayList<Long>();
-        List resultList3 = new ArrayList<Double>();
+        List<Integer> resultList1 = new ArrayList<>();
+        List<Long> resultList2 = new ArrayList<>();
+        List<Double> resultList3 = new ArrayList<>();
 
         for (int i = 0; i < vector[0].getSize(); i++) {
             resultList1.add(((IntVec) vector[0]).get(i));

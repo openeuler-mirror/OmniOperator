@@ -17,16 +17,15 @@ import java.util.OptionalInt;
 /**
  * The type Omni partitionedoutput operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniPartitionedOutPutOperatorFactory
-        extends
-            OmniOperatorFactory<OmniPartitionedOutPutOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniPartitionedOutPutOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni partitioned out put operator factory.
      *
      * @param sourceTypes the source types
-     * @param replicatesAnyRow the replicates any row
+     * @param isReplicatesAnyRow the replicates any row
      * @param nullChannel the null channel
      * @param partitionChannels the partition channels
      * @param partitionCount the partition count
@@ -35,18 +34,18 @@ public class OmniPartitionedOutPutOperatorFactory
      * @param hashChannelTypes the hash channel types
      * @param hashChannels the hash channels
      */
-    public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean replicatesAnyRow,
+    public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean isReplicatesAnyRow,
             OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels) {
-        super(new FactoryContext(new JitContext(sourceTypes, replicatesAnyRow, nullChannel, partitionChannels,
+        super(new FactoryContext(new JitContext(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels,
                 partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels)));
     }
 
-    private static native long createPartitionedOutputOperatorFactory(String sourceTypes, boolean replicatesAnyRow,
+    private static native long createPartitionedOutputOperatorFactory(String sourceTypes, boolean isReplicatesAnyRow,
             int nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, String hashChannelTypes, int[] hashChannels, long jitContext);
 
-    private static native long createPartitionedOutputJitContext(String sourceTypes, boolean replicatesAnyRow,
+    private static native long createPartitionedOutputJitContext(String sourceTypes, boolean isReplicatesAnyRow,
             int nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, String hashChannelTypes, int[] hashChannels);
 
@@ -55,7 +54,7 @@ public class OmniPartitionedOutPutOperatorFactory
         JitContext context = factoryContext.getJitContext();
         int nullChannel = context.nullChannel.isPresent() ? context.nullChannel.getAsInt() : -1;
         return createPartitionedOutputOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
-                context.replicatesAnyRow, nullChannel, context.partitionChannels, context.partitionCount,
+                context.isReplicatesAnyRow, nullChannel, context.partitionChannels, context.partitionCount,
                 context.bucketToPartition, context.isHashPrecomputed,
                 DataTypeSerializer.serialize(context.hashChannelTypes), context.hashChannels,
                 factoryContext.getNativeJitContext());
@@ -64,12 +63,12 @@ public class OmniPartitionedOutPutOperatorFactory
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
 
-        private final boolean replicatesAnyRow;
+        private final boolean isReplicatesAnyRow;
 
         private final OptionalInt nullChannel;
 
@@ -89,7 +88,7 @@ public class OmniPartitionedOutPutOperatorFactory
          * Instantiates a new Jit context.
          *
          * @param sourceTypes the source types
-         * @param replicatesAnyRow the replicates any row
+         * @param isReplicatesAnyRow the replicates any row
          * @param nullChannel the null channel
          * @param partitionChannels the partition channels
          * @param partitionCount the partition count
@@ -98,11 +97,11 @@ public class OmniPartitionedOutPutOperatorFactory
          * @param hashChannelTypes the hash channel types
          * @param hashChannels the hash channels
          */
-        public JitContext(DataType[] sourceTypes, boolean replicatesAnyRow, OptionalInt nullChannel,
+        public JitContext(DataType[] sourceTypes, boolean isReplicatesAnyRow, OptionalInt nullChannel,
                 int[] partitionChannels, int partitionCount, int[] bucketToPartition, boolean isHashPrecomputed,
                 DataType[] hashChannelTypes, int[] hashChannels) {
             this.sourceTypes = sourceTypes;
-            this.replicatesAnyRow = replicatesAnyRow;
+            this.isReplicatesAnyRow = isReplicatesAnyRow;
             this.nullChannel = nullChannel;
             this.partitionChannels = partitionChannels;
             this.partitionCount = partitionCount;
@@ -124,7 +123,7 @@ public class OmniPartitionedOutPutOperatorFactory
             if (obj instanceof JitContext) {
                 context = (JitContext) obj;
             }
-            return replicatesAnyRow == context.replicatesAnyRow && partitionCount == context.partitionCount
+            return isReplicatesAnyRow == context.isReplicatesAnyRow && partitionCount == context.partitionCount
                     && Arrays.equals(sourceTypes, context.sourceTypes)
                     && Objects.equals(nullChannel, context.nullChannel)
                     && Arrays.equals(partitionChannels, context.partitionChannels)
@@ -136,7 +135,7 @@ public class OmniPartitionedOutPutOperatorFactory
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(sourceTypes), replicatesAnyRow, nullChannel,
+            return Objects.hash(Arrays.hashCode(sourceTypes), isReplicatesAnyRow, nullChannel,
                     Arrays.hashCode(partitionChannels), partitionCount, Arrays.hashCode(bucketToPartition),
                     isHashPrecomputed, Arrays.hashCode(hashChannelTypes), Arrays.hashCode(hashChannels));
         }
@@ -145,7 +144,7 @@ public class OmniPartitionedOutPutOperatorFactory
     /**
      * The type Factory context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**
@@ -159,7 +158,6 @@ public class OmniPartitionedOutPutOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            // todo: use createPartitionedOutputJitContext when there is a jit optimization
             return 0;
         }
     }

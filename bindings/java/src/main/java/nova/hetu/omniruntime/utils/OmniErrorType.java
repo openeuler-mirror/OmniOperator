@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.utils;
 /**
  * The enum Omni error type.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public enum OmniErrorType {
     /**

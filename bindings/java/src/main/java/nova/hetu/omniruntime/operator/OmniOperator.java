@@ -14,7 +14,7 @@ import java.util.Iterator;
 /**
  * The type Omni operator.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public final class OmniOperator implements AutoCloseable {
     /**
@@ -68,6 +68,9 @@ public final class OmniOperator implements AutoCloseable {
         return outputIterator;
     }
 
+    /**
+     * Close native operator.
+     */
     public void close() {
         closeNative(nativeOperator);
     }
@@ -134,7 +137,6 @@ public final class OmniOperator implements AutoCloseable {
         }
 
         private boolean isFinished() {
-            // TODO: Handle error.
             return !OMNI_STATUS_NORMAL.equals(results.getStatus());
         }
     }

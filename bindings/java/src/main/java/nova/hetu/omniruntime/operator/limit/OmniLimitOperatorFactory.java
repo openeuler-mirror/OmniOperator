@@ -13,7 +13,7 @@ import java.util.Objects;
 /**
  * The type Omni limit operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOperatorFactory.FactoryContext> {
     /**
@@ -36,7 +36,7 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private long limit;
@@ -66,7 +66,7 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
     /**
      * The type Factory context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

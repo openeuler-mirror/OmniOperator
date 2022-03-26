@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.DoubleDataType;
 
 /**
- * double vec
+ * double vec.
  *
  * @since 2021-07-17
  */
@@ -41,7 +41,7 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified double at the specified absolute
+     * get the specified double at the specified absolute.
      *
      * @param index the element offset in vec
      * @return double value
@@ -51,7 +51,7 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     /**
-     * get double values from the specified position
+     * get double values from the specified position.
      *
      * @param index the position of element
      * @param length the number of element
@@ -64,7 +64,7 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     /**
-     * Sets the specified double at the specified absolute
+     * Sets the specified double at the specified absolute.
      *
      * @param index the element offset in vec
      * @param value the value of vec
@@ -74,7 +74,7 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     /**
-     * Batch sets the specified double at the specified absolute
+     * Batch sets the specified double at the specified absolute.
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec

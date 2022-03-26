@@ -16,7 +16,7 @@ import java.util.Objects;
 /**
  * The type Omni union operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOperatorFactory.FactoryContext> {
     /**
@@ -43,7 +43,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
@@ -85,7 +85,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
     /**
      * The type Factory context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**
@@ -99,9 +99,6 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            // todo: use createUnionJitContext when there is a jit optimization in future.
-            // return createUnionJitContext(
-            // VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct);
             return 0;
         }
     }

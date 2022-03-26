@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutionException;
  * The type Omni operator factory.
  *
  * @param <T> the type parameter
- * @since 20210630
+ * @since 2021-06-30
  */
 public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> {
     private static final Cache<OmniOperatorFactoryContext, Long> FACTORY_CACHE = CacheBuilder.newBuilder()
@@ -70,7 +70,6 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      */
     public OmniOperator createOperator(VecAllocator vecAllocator) {
         if (vecAllocator == null) {
-            System.out.println(Thread.getAllStackTraces());
             return createOperator();
         }
         long nativeOperator = createOperatorNative(nativeOperatorFactory, vecAllocator.getNativeAllocator());
@@ -100,7 +99,6 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      */
     public void close() {
         if (context.isNeedCache()) {
-            // todo:: when the cache invalidate,need release the native factory
             FACTORY_CACHE.invalidate(context);
         } else {
             closeNativeOperatorFactory(nativeOperatorFactory);

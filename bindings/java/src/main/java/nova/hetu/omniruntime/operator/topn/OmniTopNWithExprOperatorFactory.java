@@ -16,11 +16,10 @@ import java.util.Objects;
 /**
  * The type Omni top n with expression operator factory.
  *
- * @since 20211026
+ * @since 2021-10-26
  */
 public class OmniTopNWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniTopNWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniTopNWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni top n with expression operator factory.
      *
@@ -51,7 +50,7 @@ public class OmniTopNWithExprOperatorFactory
     /**
      * The type Jit context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
@@ -107,7 +106,7 @@ public class OmniTopNWithExprOperatorFactory
     /**
      * The type Context.
      *
-     * @since 20211026
+     * @since 2021-10-26
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -11,6 +14,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
+
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -20,6 +24,7 @@ import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
+import org.testng.internal.thread.ThreadUtil;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,6 +33,8 @@ import java.util.concurrent.CountDownLatch;
 
 /**
  * The type Omni aggregation operator test.
+ *
+ * @since 2021-06-09
  */
 public class OmniAggregationOperatorTest {
     /**
@@ -36,11 +43,11 @@ public class OmniAggregationOperatorTest {
     @Test
     public void testExecuteCountMultiplePage() {
         DataType[] sourceTypes = {LongDataType.LONG};
-        FunctionType[] agggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
         int[] aggInputChannels = {1};
         int[] maskChannels = {-1, -1};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
-        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, agggFunctionTypes,
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
                 aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
         ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
@@ -138,6 +145,7 @@ public class OmniAggregationOperatorTest {
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
         CountDownLatch downLatch = new CountDownLatch(threadCount);
+        ThreadUtil threadUtil = new ThreadUtil();
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
@@ -206,13 +214,10 @@ public class OmniAggregationOperatorTest {
     }
 
     private List<Vec> buildDataForCount(int rowNum) {
-        List<Vec> columns = new ArrayList<>();
-
         LongVec c1 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
             c1.set(i, 0);
         }
-        columns.add(c1);
 
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
@@ -222,14 +227,15 @@ public class OmniAggregationOperatorTest {
                 c2.setNull(i);
             }
         }
+
+        List<Vec> columns = new ArrayList<>();
+        columns.add(c1);
         columns.add(c2);
 
         return columns;
     }
 
     private List<Vec> build4Columns(int rowNum) {
-        List<Vec> columns = new ArrayList<>();
-
         LongVec c1 = new LongVec(rowNum);
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
@@ -244,6 +250,7 @@ public class OmniAggregationOperatorTest {
             c4.set(i, 1);
         }
 
+        List<Vec> columns = new ArrayList<>();
         columns.add(c1);
         columns.add(c2);
         columns.add(c3);

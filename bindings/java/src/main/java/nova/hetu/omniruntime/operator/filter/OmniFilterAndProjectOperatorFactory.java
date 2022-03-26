@@ -20,11 +20,10 @@ import java.util.stream.Collectors;
 /**
  * The type Omni filter and project operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniFilterAndProjectOperatorFactory
-        extends
-            OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.FactoryContext> {
     private boolean isSupported;
 
     /**
@@ -78,7 +77,7 @@ public class OmniFilterAndProjectOperatorFactory
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] inputTypes;
@@ -153,12 +152,6 @@ public class OmniFilterAndProjectOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            // todo: use createProjectAndProjectJitContext when there is a jit optimization
-            // in future.
-            // return
-            // createFilterAndProjectJitContext(VecTypeSerializer.serialize(context.inputTypes),
-            // context.inputTypes.length, context.expression, context.projectIndices,
-            // context.projectIndices.length);
             return 0;
         }
     }

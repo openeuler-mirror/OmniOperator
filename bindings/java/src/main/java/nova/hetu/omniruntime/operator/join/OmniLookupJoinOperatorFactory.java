@@ -19,7 +19,7 @@ import java.util.Objects;
 /**
  * The type Omni lookup join operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLookupJoinOperatorFactory.FactoryContext> {
     /**
@@ -60,7 +60,7 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] probeTypes;

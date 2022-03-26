@@ -13,7 +13,7 @@ import nova.hetu.omniruntime.type.DataTypeSerializer;
 import java.nio.ByteBuffer;
 
 /**
- * container vec
+ * container vec.
  *
  * @since 2021-08-05
  */
@@ -24,6 +24,15 @@ public class ContainerVec extends FixedWidthVec {
 
     private DataType[] dataTypes;
 
+    /**
+     * The routine will use the specialized vector allocator to allocate new vector.
+     *
+     * @param allocator the specialized vector allocator
+     * @param vectorCount the number of vector
+     * @param positionCount the actual number of value of vector
+     * @param vectorAddresses the address of vector
+     * @param dataTypes the data type of this vector
+     */
     public ContainerVec(VecAllocator allocator, int vectorCount, int positionCount, long[] vectorAddresses,
             DataType[] dataTypes) {
         super(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
@@ -32,6 +41,14 @@ public class ContainerVec extends FixedWidthVec {
         put(vectorAddresses, 0, 0, vectorAddresses.length);
     }
 
+    /**
+     * The routine will use the specialized vector allocator to allocate new vector.
+     *
+     * @param vectorCount the number of vector
+     * @param positionCount the actual number of value of vector
+     * @param vectorAddresses the address of vector
+     * @param dataTypes the data type of this vector
+     */
     public ContainerVec(int vectorCount, int positionCount, long[] vectorAddresses, DataType[] dataTypes) {
         super(vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
         this.positionCount = positionCount;
@@ -53,6 +70,17 @@ public class ContainerVec extends FixedWidthVec {
         this.dataTypes = DataTypeSerializer.deserialize(getDataTypesNative(nativeVector));
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address
+     * @param nativeValueBufAddress valueBuf address of native vector
+     * @param nativeVectorNullBufAddress nullBuf address of native vector
+     * @param nativeVectorAllocator allocator address of native vector
+     * @param capacityInBytes capacity in bytes of vector
+     * @param size the actual number of value of vector
+     * @param offset offset of positions in the input parameter
+     */
     public ContainerVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
             long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
@@ -60,6 +88,18 @@ public class ContainerVec extends FixedWidthVec {
         // get other attributes from native
         this.positionCount = getPositionNative(nativeVector);
         this.dataTypes = DataTypeSerializer.deserialize(getDataTypesNative(nativeVector));
+    }
+
+    /**
+     * This constructor of vector is just for shuffle compilation to pass, it will
+     * be removed later.
+     *
+     * @param data data of vector
+     * @param capacityInBytes size in bytes of data
+     */
+    @Deprecated
+    public ContainerVec(ByteBuffer data, int capacityInBytes) {
+        super(capacityInBytes, data.limit(), OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
     }
 
     private ContainerVec(ContainerVec containerVec, int start, int length, boolean isSlice, DataType[] dataTypes) {
@@ -76,47 +116,73 @@ public class ContainerVec extends FixedWidthVec {
         this.dataTypes = dataTypes;
     }
 
-    /**
-     * This constructor of vector is just for shuffle compilation to pass, it will
-     * be removed later
-     *
-     * @param data data of vector
-     * @param capacityInBytes size in bytes of data
-     */
-    @Deprecated
-    public ContainerVec(ByteBuffer data, int capacityInBytes) {
-        super(capacityInBytes, data.limit(), OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
-    }
-
     private static native int getPositionNative(long nativeVector);
 
     private static native String getDataTypesNative(long nativeVector);
 
+    /**
+     * get the specified long at the specified absolute.
+     *
+     * @param index the element offset in vec
+     * @return the value of long
+     */
     public long get(int index) {
         return valuesBuf.getLong((index + getOffset()) * BYTES);
     }
 
+    /**
+     * Sets the specified long at the specified absolute.
+     *
+     * @param index the element offset in vec
+     * @param value the value of vec
+     */
     public void set(int index, long value) {
         valuesBuf.setLong((index + getOffset()) * BYTES, value);
     }
 
+    /**
+     * Batch sets the specified long at the specified absolute.
+     *
+     * @param values the value of the element to be written
+     * @param offset the element offset in vec
+     * @param start the element index in values
+     * @param length the number of elements that need to written
+     */
     public void put(long[] values, int offset, int start, int length) {
         valuesBuf.setLongArray(offset, values, start, length * BYTES);
     }
 
+    /**
+     * get position count.
+     *
+     * @return positionCount
+     */
     public int getPositionCount() {
         return this.positionCount;
     }
 
+    /**
+     * get data types.
+     *
+     * @return dataTypes
+     */
     public DataType[] getDataTypes() {
         return this.dataTypes;
     }
 
+    /**
+     * get the specified long at the specified absolute.
+     *
+     * @param index the element offset in vec
+     * @return get(index)
+     */
     public long getVector(int index) {
         return get(index);
     }
 
     /**
+     * get position count.
+     *
      * @return positionCount
      */
     public int getSize() {
@@ -154,9 +220,9 @@ public class ContainerVec extends FixedWidthVec {
     }
 
     /**
-     * get the encoding of vector at index position
+     * get the encoding of vector at index position.
      *
-     * @param index vector index
+     * @param index the element offset in vec
      * @return encoding of vector at index position
      */
     public VecEncoding getVecEncoding(int index) {
