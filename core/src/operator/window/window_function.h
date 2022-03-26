@@ -45,7 +45,7 @@ private:
 class WindowFunction {
 public:
     WindowFunction() = default;
-    ~WindowFunction() = default;
+    virtual ~WindowFunction() = default;
     virtual void Reset(WindowIndex *windowIndex) {};
     virtual void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
         int32_t frameStart, int32_t frameEnd) {};
@@ -60,7 +60,7 @@ public:
     virtual void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) {};
     RankingWindowFunction();
-    ~RankingWindowFunction();
+    ~RankingWindowFunction() override;
 
 protected:
     WindowIndex *windowIndex;
@@ -73,7 +73,7 @@ private:
 class RankFunction : public RankingWindowFunction {
 public:
     RankFunction();
-    ~RankFunction();
+    ~RankFunction() override;
     void Reset() override;
     void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
@@ -86,7 +86,7 @@ private:
 class RowNumberFunction : public RankingWindowFunction {
 public:
     RowNumberFunction() = default;
-    ~RowNumberFunction() = default;
+    ~RowNumberFunction() override = default;
     void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
 };
@@ -95,7 +95,7 @@ class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, const DataType &inputType,
         const DataType &outputType);
-    ~AggregateWindowFunction();
+    ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
         int32_t frameEnd) override;
