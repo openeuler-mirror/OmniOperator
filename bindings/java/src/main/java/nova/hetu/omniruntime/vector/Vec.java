@@ -497,7 +497,7 @@ public abstract class Vec implements Closeable {
      */
     public boolean[] getValuesNulls(int index, int length) {
         byte[] nullsArray = new byte[length];
-        nullsBuf.getBytes(index, nullsArray, 0, length);
+        nullsBuf.getBytes(index + offset, nullsArray, 0, length);
         return transformByteToBoolean(nullsArray, 0, length);
     }
 
