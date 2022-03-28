@@ -7,7 +7,7 @@
 
 #include <string>
 #include "vector_reference.h"
-#include "../type/data_type.h"
+#include "type/data_type.h"
 #include "tracer/vector_leak_detector.h"
 
 namespace omniruntime {

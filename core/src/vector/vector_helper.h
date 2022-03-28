@@ -14,7 +14,7 @@
 #include "container_vector.h"
 #include "dictionary_vector.h"
 #include "lazy_vector.h"
-#include "../type/data_type.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
@@ -189,7 +189,6 @@ public:
             originalIndex = index;
             return vector;
         }
-        // TODO: add RLE type.
 
         return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndId(index, originalIndex);
     }
@@ -202,7 +201,6 @@ public:
             }
             return vector;
         }
-        // TODO: add RLE type.
 
         return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(offset, length, originalIndexes);
     }

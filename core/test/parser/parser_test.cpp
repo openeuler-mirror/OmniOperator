@@ -14,7 +14,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
 
-namespace project_test {
+namespace ParserTest {
 void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op, const int projectCount,
     bool isBoolResult = false)
 {

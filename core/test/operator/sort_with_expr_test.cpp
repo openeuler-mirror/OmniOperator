@@ -6,8 +6,8 @@
 #include "gtest/gtest.h"
 #include "operator/sort/sort_expr.h"
 #include "vector/vector_helper.h"
-#include "../util/test_util.h"
 #include "jit_context/jit_context.h"
+#include "../util/test_util.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;

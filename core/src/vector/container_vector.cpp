@@ -70,9 +70,8 @@ ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset
     // get new fieldVec
     std::vector<uintptr_t> vecAddr(vectorCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
-        vecAddr[i] =
-            reinterpret_cast<uintptr_t>((reinterpret_cast<Vector *>(GetValue(i)))
-                                            ->CopyPositions(fieldVecPositions.data(), 0, fieldVecPositions.size()));
+        vecAddr[i] = reinterpret_cast<uintptr_t>((reinterpret_cast<Vector *>(GetValue(i)))->CopyPositions(
+            fieldVecPositions.data(), 0, fieldVecPositions.size()));
     }
 
     auto newContainerVec = new ContainerVector(GetAllocator(), length, vecAddr, vectorCount, dataTypes);

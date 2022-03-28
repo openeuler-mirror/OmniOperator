@@ -5,7 +5,7 @@
 #ifndef OMNI_RUNTIME_TYPE_INFER_H
 #define OMNI_RUNTIME_TYPE_INFER_H
 
-#include <stdint.h>
+#include <cstdint>
 #include "type/data_type.h"
 #include "debug.h"
 

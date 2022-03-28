@@ -3,7 +3,6 @@
  */
 
 #include "vector.h"
-
 #include <huawei_secure_c/include/securec.h>
 
 namespace omniruntime {
@@ -61,9 +60,9 @@ void Vector::RecordStack(std::string &stack, VecOpType opType)
     tracer->Record(stack, opType);
 }
 
-void Vector::SetVectorTracer(VectorTracer *tracer)
+void Vector::SetVectorTracer(VectorTracer *vectorTracer)
 {
-    this->tracer = tracer;
+    this->tracer = vectorTracer;
 }
 
 VectorTracer *Vector::GetVectorTracer()

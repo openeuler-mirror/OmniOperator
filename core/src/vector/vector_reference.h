@@ -6,8 +6,8 @@
 #define __VECTOR_REFERENCE_H__
 
 #include <atomic>
-#include "../memory/chunk.h"
-#include "../type/data_type.h"
+#include "memory/chunk.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace vec {

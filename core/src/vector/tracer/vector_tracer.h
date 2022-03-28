@@ -31,23 +31,22 @@ class VecOpTypeName {
 public:
     static std::string GetName(int vecOpType)
     {
-        static std::string nameMap[MAX_OP_TYPE + 1] =
-                        {
-                            "NEW",
-                            "SLICE",
-                            "FREE",
-                            "JNI_NEW",
-                            "JNI_SLICE",
-                            "JNI_SLICE_SRC",
-                            "JNI_COPY_POSITIONS",
-                            "JNI_COPY_POSITIONS_SRC",
-                            "JNI_COPY_REGION",
-                            "JNI_COPY_REGION_SRC",
-                            "JNI_FREE",
-                            "JNI_ADD_INPUT",
-                            "JNI_GET_OUTPUT",
-                            "INVALID_TYPE"
-                        };
+        static std::string nameMap[MAX_OP_TYPE + 1] = {
+            "NEW",
+            "SLICE",
+            "FREE",
+            "JNI_NEW",
+            "JNI_SLICE",
+            "JNI_SLICE_SRC",
+            "JNI_COPY_POSITIONS",
+            "JNI_COPY_POSITIONS_SRC",
+            "JNI_COPY_REGION",
+            "JNI_COPY_REGION_SRC",
+            "JNI_FREE",
+            "JNI_ADD_INPUT",
+            "JNI_GET_OUTPUT",
+            "INVALID_TYPE"
+        };
         return nameMap[vecOpType];
     }
 };

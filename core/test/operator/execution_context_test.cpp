@@ -3,7 +3,7 @@
  * Description: ...
  */
 #include "gtest/gtest.h"
-#include "../../src/operator/execution_context.h"
+#include "operator/execution_context.h"
 
 using namespace omniruntime::op;
 using namespace std;

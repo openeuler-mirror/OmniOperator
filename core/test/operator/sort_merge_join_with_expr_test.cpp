@@ -4,9 +4,9 @@
  */
 #include <vector>
 #include "gtest/gtest.h"
-#include "../../src/vector/vector_helper.h"
+#include "vector/vector_helper.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include "../util/test_util.h"
-#include "../../src/operator/join/sortmergejoin/sort_merge_join_expr.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
@@ -34,14 +34,14 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
-    int64_t streamedWithExprOperatorFactoryAddr = (int64_t)streamedWithExprOperatorFactory;
+    int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
         bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr);
     bufferedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
 
-    // construct data;
+    // construct data
     const int32_t streamedTblDataSize = 6;
     int32_t streamedTblDataCol1[streamedTblDataSize] = {  0,   1,   2,   3,   4,   5};
     long streamedTblDataCol2[streamedTblDataSize] =  {6600, 5500, 4400, 3300, 2200, 1100};
@@ -125,14 +125,14 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
-    int64_t streamedWithExprOperatorFactoryAddr = (int64_t)streamedWithExprOperatorFactory;
+    int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
         bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr);
     bufferedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
 
-    // construct data;
+    // construct data
     const int32_t streamedTblDataSize = 6;
     int32_t streamedTblDataCol1[streamedTblDataSize] = {  0,   1,   2,   3,   4,   5};
     long streamedTblDataCol2[streamedTblDataSize] =  {6600, 5500, 4400, 3300, 2200, 1100};

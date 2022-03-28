@@ -152,7 +152,7 @@ public:
 
 protected:
     // this method is mainly used for vector slice
-    Vector(Vector *vector, int size, int offset);
+    Vector(Vector *vector, int size, int positionOffset);
 
     // this method does not apply for memory for chunk,it is mainly used for dictionary vector or other vector
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataType type, int32_t positionOffset);

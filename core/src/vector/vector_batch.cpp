@@ -3,7 +3,6 @@
  */
 
 #include "vector_batch.h"
-
 #include "fixed_width_vector.h"
 #include "variable_width_vector.h"
 #include "container_vector.h"

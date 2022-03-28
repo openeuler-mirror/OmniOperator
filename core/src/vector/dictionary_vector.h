@@ -8,8 +8,8 @@
 
 #include "vector.h"
 #include "vector_allocator.h"
-#include "../type/decimal128.h"
-#include "../type/data_type.h"
+#include "type/decimal128.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
@@ -87,13 +87,13 @@ public:
     // / Append Ids. Vectors must use the same dictionary
     void Append(Vector *other, int positionOffset, int length) override;
 
-    void SetDictionary(Vector *dictionary)
+    void SetDictionary(Vector *dictionaryVector)
     {
-        this->dictionary = dictionary;
+        this->dictionary = dictionaryVector;
         // when set dictionary, means we slice a dictionary vector, we need set nulls here.
         bool *nulls = new bool[size];
         for (int32_t i = 0; i < size; i++) {
-            nulls[i] = dictionary->IsValueNull(GetId(i));
+            nulls[i] = dictionaryVector->IsValueNull(GetId(i));
         }
         errno_t ret = memcpy_s(valueNullsAddress, size * sizeof(bool), nulls, size * sizeof(bool));
         if (ret != EOK) {

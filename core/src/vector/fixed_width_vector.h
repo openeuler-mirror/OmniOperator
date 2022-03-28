@@ -9,8 +9,8 @@
 #include <huawei_secure_c/include/securec.h>
 
 #include "vector.h"
-#include "../type/decimal128.h"
-#include "../type/data_type.h"
+#include "type/decimal128.h"
+#include "type/data_type.h"
 #include "dictionary_vector.h"
 
 namespace omniruntime {
@@ -24,7 +24,7 @@ public:
 
     FixedWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {}
 
-    ~FixedWidthVector() {}
+    ~FixedWidthVector() override {}
 
     const T ALWAYS_INLINE GetValue(int index) const
     {

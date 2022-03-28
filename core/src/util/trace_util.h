@@ -15,16 +15,16 @@ public:
     {
         static int size = 16;
         void *array[size];
-        int stack_num = backtrace(array, size);
-        if (stack_num < 1) {
+        int stackNum = backtrace(array, size);
+        if (stackNum < 1) {
             return "";
         }
         std::stringstream ss;
-        char **stacktrace = backtrace_symbols(array, stack_num);
-        for (int i = 1; i < stack_num - 1; ++i) {
+        char **stacktrace = backtrace_symbols(array, stackNum);
+        for (int i = 1; i < stackNum - 1; ++i) {
             ss << stacktrace[i] << std::endl << "\t";
         }
-        ss << stacktrace[stack_num - 1];
+        ss << stacktrace[stackNum - 1];
         free(stacktrace);
         return ss.str();
     }

@@ -3,20 +3,19 @@
  */
 
 #include "vector_leak_detector.h"
-
 #include <map>
-#include "../vector.h"
+#include "vector/vector.h"
 
 namespace omniruntime {
 namespace vec {
 VectorLeakDetector::VectorLeakDetector(const std::string scope) : scope(scope), deletedCount(0), recycling(false)
 {
-    buckets = std::make_unique<std::atomic<VectorTracer *>[]>(BUCKET_NUM);
+    buckets = std::make_unique<std::atomic<VectorTracer *>[]>(bucketNum);
 }
 
 VectorLeakDetector::~VectorLeakDetector()
 {
-    for (int i = 0; i < BUCKET_NUM; ++i) {
+    for (int i = 0; i < bucketNum; ++i) {
         auto &head = buckets[i];
         VectorTracer *tracer = RemoveTracer(head);
         while (tracer != nullptr) {
@@ -33,7 +32,7 @@ int32_t VectorLeakDetector::HashBucket(const Vector *vec)
 {
     std::hash<int64_t> hashFunc;
     uint64_t hash = hashFunc(reinterpret_cast<int64_t>(vec));
-    return hash % BUCKET_NUM;
+    return hash % bucketNum;
 }
 
 VectorTracer *VectorLeakDetector::NewTracer(const Vector *vec)
@@ -52,7 +51,7 @@ VectorTracer *VectorLeakDetector::NewTracer(const Vector *vec)
 void VectorLeakDetector::CloseTracer(VectorTracer *tracer)
 {
     tracer->Close();
-    if (deletedCount.fetch_add(1) >= RECYCLE_THRESHOLD) {
+    if (deletedCount.fetch_add(1) >= recycleThreshold) {
         RecycleDeletedTracer();
     }
 }
@@ -90,7 +89,7 @@ void VectorLeakDetector::RecycleDeletedTracer()
     }
     // lock the buckets and remove all closed tracer.
     std::unique_lock<std::shared_timed_mutex> lock(mutex);
-    for (int i = 0; i < BUCKET_NUM; ++i) {
+    for (int i = 0; i < bucketNum; ++i) {
         auto &head = buckets[i];
         VectorTracer *tracer = head.load();
         // if head is closed, then head move to next tracer.

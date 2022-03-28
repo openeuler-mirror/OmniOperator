@@ -15,7 +15,7 @@ const int32_t ROUNDS = 10;
 
 const std::string STRING = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-static string getString(int32_t index, int32_t offset, int32_t width)
+static string GetString(int32_t index, int32_t offset, int32_t width)
 {
     std::string str;
     for (int j = 0; j < width; j++) {
@@ -69,7 +69,7 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string str = getString(i, 10, VAR_LEN);
+        std::string str = GetString(i, 10, VAR_LEN);
         vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
@@ -91,17 +91,17 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "isEqual: " << isEqual << std::endl;
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
 
     VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string str = getString(i, 20, VAR_LEN);
+        std::string str = GetString(i, 20, VAR_LEN);
         vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
@@ -115,10 +115,10 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "isEqual: " << isEqual << std::endl;
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
@@ -136,7 +136,7 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string str = getString(i, 10, VAR_LEN);
+        std::string str = GetString(i, 10, VAR_LEN);
         vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector1->SetValueNotNull(i);
@@ -161,17 +161,17 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "isEqual: " << isEqual << std::endl;
 
     VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
-        std::string str = getString(i, 20, VAR_LEN);
+        std::string str = GetString(i, 20, VAR_LEN);
         vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         vector3->SetValueNotNull(i);
     }
@@ -186,10 +186,10 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "isEqual: " << isEqual << std::endl;

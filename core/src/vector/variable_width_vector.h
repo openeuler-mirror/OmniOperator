@@ -24,7 +24,7 @@ public:
     {}
 
     VariableWidthVector(VectorAllocator *pAllocator, int size)
-        : Vector(pAllocator, INI_CAPACITY_IN_BYTES, size, TYPE_ID)
+        : Vector(pAllocator, initCapacityInBytes, size, TYPE_ID)
     {}
 
     int ALWAYS_INLINE GetValue(int index, T **dst)
@@ -182,18 +182,18 @@ public:
     }
 
 private:
-    static const int32_t INI_CAPACITY_IN_BYTES = 32 * 1024; // 32K
+    static const int32_t initCapacityInBytes = 32 * 1024; // 32K
 
-    static const int32_t EXPAND_FACTOR = 2;
+    static const int32_t expandFactor = 2;
 
     void CheckCapacity(int32_t needCapacityInBytes)
     {
         if (needCapacityInBytes <= 0) {
             return;
         }
-        int32_t toCapacityInBytes = (capacityInBytes > 0) ? capacityInBytes : INI_CAPACITY_IN_BYTES;
+        int32_t toCapacityInBytes = (capacityInBytes > 0) ? capacityInBytes : initCapacityInBytes;
         while (toCapacityInBytes < needCapacityInBytes) {
-            toCapacityInBytes = toCapacityInBytes * EXPAND_FACTOR;
+            toCapacityInBytes = toCapacityInBytes * expandFactor;
         }
         if (toCapacityInBytes != capacityInBytes) {
             ExpandDataCapacity(toCapacityInBytes);
