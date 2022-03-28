@@ -112,6 +112,11 @@ public:
         return channel;
     }
 
+    void SetExecutionContextAllocator(BaseAllocator *allocator)
+    {
+        executionContext->getArena()->SetAllocator(allocator);
+    }
+
 public:
     static const int32_t INVALID_MASK_COL = -1;
     static const int32_t INVALID_INPUT_COL = -1;

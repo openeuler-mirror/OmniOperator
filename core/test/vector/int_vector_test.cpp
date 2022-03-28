@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 #include "vector_common.h"
-#include "../../core/src/memory/base_allocator.h"
 
 using namespace omniruntime::vec;
 

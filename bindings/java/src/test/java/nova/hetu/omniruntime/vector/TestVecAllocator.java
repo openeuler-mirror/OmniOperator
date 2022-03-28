@@ -1,9 +1,10 @@
-
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ */
 package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
 
-import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import org.testng.annotations.Test;
@@ -16,7 +17,7 @@ public class TestVecAllocator {
     public void testAllocatorBasic() {
         long limit = 4096;
         long subLimit = 2048;
-        int size = 100;
+        int size = 8;
 
         VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("parent", limit, 0);
         vecAllocator.setLimit(limit);
@@ -31,25 +32,24 @@ public class TestVecAllocator {
             assertEquals(subVecAllocator.getScope(), "operator");
         }
 
-        DecimalVec decimal128Vec = new Decimal128Vec(vecAllocator, size);
-        LongVec longVec = new LongVec(subVecAllocator1, size);
         IntVec intVec = new IntVec(subVecAllocator2, size);
-
-        assertEquals(vecAllocator.getAllocatedMemory(), (Long.BYTES * 2 + 1) * size
-                + subVecAllocator1.getAllocatedMemory() + subVecAllocator2.getAllocatedMemory());
-        assertEquals(subVecAllocator1.getAllocatedMemory(), (long) (Long.BYTES + 1) * size);
-        assertEquals(subVecAllocator2.getAllocatedMemory(), (long) (Integer.BYTES + 1) * size);
-        assertEquals(vecAllocator.getPeakAllocated(), vecAllocator.getAllocatedMemory());
+        assertEquals(subVecAllocator2.getAllocatedMemory(), 40); // size * 4 + size
+        LongVec longVec = new LongVec(subVecAllocator1, size);
+        assertEquals(subVecAllocator1.getAllocatedMemory(), 72); // size * 8 + size
+        assertEquals(vecAllocator.getAllocatedMemory(), 112); // 40 + 72
+        assertEquals(vecAllocator.getPeakAllocated(), 112);
 
         intVec.close();
+        assertEquals(subVecAllocator2.getAllocatedMemory(), 0);
         longVec.close();
-        decimal128Vec.close();
+        assertEquals(subVecAllocator1.getAllocatedMemory(), 0);
+        assertEquals(vecAllocator.getAllocatedMemory(), 0);
         subVecAllocator1.close();
         subVecAllocator2.close();
         vecAllocator.close();
     }
 
-    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "newAllocator failed")
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "memory cap exceeded")
     public void testVecAllocatorBeyondLimit() {
         long limit = 2048;
         long subLimit = 1024;
@@ -59,14 +59,17 @@ public class TestVecAllocator {
         vecAllocator.setLimit(limit);
         VecAllocator subVecAllocator = vecAllocator.newChildAllocator("operator", subLimit, 0);
 
-        LongVec longVec = new LongVec(vecAllocator, size);
+        LongVec longVec = null;
         try {
-            IntVec intVec = new IntVec(subVecAllocator, size);
+            longVec = new LongVec(subVecAllocator, size);
         } catch (OmniRuntimeException e) {
-            longVec.close();
-            vecAllocator.close();
+            throw new OmniRuntimeException("memory cap exceeded");
+        } finally {
+            if (longVec != null) {
+                longVec.close();
+            }
             subVecAllocator.close();
-            throw new OmniRuntimeException(OmniErrorType.OMNI_INNER_ERROR, "newAllocator failed");
+            vecAllocator.close();
         }
     }
 }

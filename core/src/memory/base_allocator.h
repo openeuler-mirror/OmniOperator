@@ -35,10 +35,7 @@ public:
         TryAllocate(preferredSize);
         uint8_t *data = nullptr;
         pool->Allocate(preferredSize, &data);
-        if (data != nullptr) {
-            return data;
-        }
-        return nullptr;
+        return data;
     }
 
     void free(void *addr, int64_t size)
@@ -105,11 +102,6 @@ public:
     {
         std::lock_guard<std::mutex> l(mutex);
         const int64_t newAllocated = allocatedBytes.fetch_add(-size, std::memory_order_relaxed) - size;
-        int64_t oldAllocated = allocatedBytes.load(std::memory_order_relaxed);
-        if (oldAllocated < 0 || newAllocated < 0) {
-            auto msg = "oldAllocated is native" + std::to_string(1);
-            std::cout << "allocated is native:" << newAllocated << ",size:" << size << std::endl;
-        }
         const int64_t originalSize = newAllocated + size;
         if (originalSize > reservation && parentAllocator) {
             // release memory to  parent

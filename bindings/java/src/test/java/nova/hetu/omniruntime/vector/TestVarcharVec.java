@@ -305,6 +305,7 @@ public class TestVarcharVec {
         }
 
         varcharVec.close();
+        vec2.close();
         sliceEmpty.close();
         copyRegionEmpty.close();
         copyPosition.close();

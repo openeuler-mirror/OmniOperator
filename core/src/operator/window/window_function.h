@@ -92,7 +92,8 @@ public:
 class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-        const omniruntime::type::DataType &inputType, const omniruntime::type::DataType &outputType);
+        const omniruntime::type::DataType &inputType, const omniruntime::type::DataType &outputType,
+        omniruntime::vec::VectorAllocator *allocator);
     ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
@@ -109,6 +110,7 @@ private:
     const omniruntime::type::DataType outputType;
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
     std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
+    omniruntime::vec::VectorAllocator *allocator;
 
     void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, omniruntime::vec::Vector *pColumn,
         int32_t index) const;

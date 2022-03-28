@@ -211,6 +211,7 @@ TEST(VectorAllocator, recycleDeletedTracer)
 
     delete allocator;
 }
+#endif
 
 TEST(VectorAllocator, basic)
 {
@@ -218,7 +219,7 @@ TEST(VectorAllocator, basic)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VectorAllocator_basic");
     int64_t limit = 4096;
     int64_t subLimit = 2048;
-    int size = 100;
+    int size = 8;
     vectorAllocator->SetLimit(limit);
     VectorAllocator *subAllocator1 = vectorAllocator->NewChildAllocator("subVectorAllocator", subLimit, 0);
     VectorAllocator *subAllocator2 = vectorAllocator->NewChildAllocator("subVectorAllocator", subLimit, 0);
@@ -226,28 +227,28 @@ TEST(VectorAllocator, basic)
     EXPECT_EQ(vectorAllocator->GetScope(), "VectorAllocator_basic");
     EXPECT_EQ(vectorAllocator->GetLimit(), limit);
     std::vector<BaseAllocator *> subAllocators = vectorAllocator->GetChildAllocators();
-    for (int i = 0; i < subAllocators.size(); i++) {
-        EXPECT_EQ(subAllocators[i]->GetParentAllocator(), vectorAllocator);
-        EXPECT_EQ(subAllocators[i]->GetLimit(), subLimit);
-        EXPECT_EQ(subAllocators[i]->GetScope(), "subVectorAllocator");
+    for (auto & subAllocator : subAllocators) {
+        EXPECT_EQ(subAllocator->GetParentAllocator(), vectorAllocator);
+        EXPECT_EQ(subAllocator->GetLimit(), subLimit);
+        EXPECT_EQ(subAllocator->GetScope(), "subVectorAllocator");
     }
 
-    DoubleVector *doubleVector = new DoubleVector(vectorAllocator, size);
-    LongVector *longVector = new LongVector(subAllocator1, size);
-    IntVector *intVector = new IntVector(subAllocator2, size);
-
-    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(),
-        (sizeof(int64_t) + 1) * size + subAllocator1->GetAllocatedMemory() + subAllocator2->GetAllocatedMemory());
-    EXPECT_EQ(subAllocator1->GetAllocatedMemory(), (sizeof(int64_t) + 1) * size);
-    EXPECT_EQ(subAllocator2->GetAllocatedMemory(), (sizeof(int32_t) + 1) * size);
+    auto *longVector = new LongVector(subAllocator1, size);
+    EXPECT_EQ(subAllocator1->GetAllocatedMemory(), 72); // size * 8 + size
+    auto *intVector = new IntVector(subAllocator2, size);
+    EXPECT_EQ(subAllocator2->GetAllocatedMemory(), 40); // size * 4 + size
+    auto *doubleVector = new DoubleVector(vectorAllocator, size); // size * 8 + size
+    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(), 184); // 72 + 40 + 72
     EXPECT_EQ(vectorAllocator->GetPeakAllocated(), vectorAllocator->GetAllocatedMemory());
 
-    delete intVector;
     delete longVector;
+    EXPECT_EQ(subAllocator1->GetAllocatedMemory(), 0);
+    delete intVector;
+    EXPECT_EQ(subAllocator2->GetAllocatedMemory(), 0);
     delete doubleVector;
+    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(), 0);
     delete subAllocator1;
     delete subAllocator2;
     delete vectorAllocator;
 }
-#endif
 }

@@ -51,5 +51,6 @@ public class TestVecBatch {
         assertEquals(vecBatch1.getVectorCount(), 0);
         vecBatch1.releaseAllVectors();
         vecBatch1.close();
+        vec.close();
     }
 }

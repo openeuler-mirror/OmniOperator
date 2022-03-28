@@ -45,7 +45,8 @@ TopNWithExprOperator::~TopNWithExprOperator()
 
 int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols,
+                                                                 vecAllocator);
     if (newInputVecBatch != nullptr) {
         topNOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);

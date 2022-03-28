@@ -11,6 +11,7 @@ import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -58,6 +59,11 @@ public class OmniTopNOperatorTest {
         }
         long[] expectedArray = {2, 2, 1, 1, 0};
         assertEquals(resultArray, expectedArray);
+
+        TestUtils.freeVecBatch(result);
+
+        operator.close();
+        omniTopNOperatorFactory.close();
     }
 
     @Test
@@ -108,6 +114,11 @@ public class OmniTopNOperatorTest {
         assertEquals(resultArray1, expectedArray1);
         assertEquals(resultArray2, expectedArray2);
         assertEquals(resultArray3, expectedArray3);
+
+        TestUtils.freeVecBatch(result);
+
+        operator.close();
+        omniTopNOperatorFactory.close();
     }
 
     @Test
@@ -160,5 +171,10 @@ public class OmniTopNOperatorTest {
         assertEquals(expectList1, resultList1);
         assertEquals(expectList2, resultList2);
         assertEquals(expectList3, resultList3);
+
+        TestUtils.freeVecBatch(result);
+
+        operator.close();
+        omniTopNOperatorFactory.close();
     }
 }

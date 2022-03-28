@@ -123,7 +123,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
     Operator *nativeOperator = (Operator *)jOperatorAddress;
     RecordInputVectorsStack(vecBatch, env);
     errNo = nativeOperator->AddInput(vecBatch);
-    JNI_METHOD_END(errNo);
+    JNI_METHOD_END(errNo)
     return errNo;
 }
 

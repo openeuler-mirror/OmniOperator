@@ -211,19 +211,19 @@ public:
         std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols);
+        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
 
     static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols);
+        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
 
 private:
     static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-        int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch);
+        int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 
     static void ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-        int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch);
+        int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 };
 }
 }

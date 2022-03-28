@@ -69,6 +69,11 @@ public:
         this->allocator = allocator;
     }
 
+    BaseAllocator *GetAllocator()
+    {
+        return this->allocator;
+    }
+
 private:
     void AllocateChunk(int64_t sizeInBytes)
     {

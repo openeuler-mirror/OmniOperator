@@ -12,6 +12,7 @@
 #include "vector/vector_common.h"
 #include "type/data_types.h"
 #include "expression/expressions.h"
+#include "projection.h"
 #include "operator/execution_context.h"
 
 using vec64 = std::vector<int64_t>;
@@ -106,7 +107,9 @@ public:
     {
         this->sourceTypes = inputTypes;
         this->mutated = nullptr;
+        this->context->getArena()->SetAllocator(vecAllocator);
     }
+
     ~ProjectionOperator() override
     {
         delete context;
@@ -120,7 +123,6 @@ private:
     const std::vector<std::unique_ptr<Projection>> &proj;
     int32_t nCols = 0;
     int32_t nProj = 0;
-    ExecutionContext *context;
     VectorBatch *mutated = nullptr;
 };
 

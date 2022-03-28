@@ -59,7 +59,8 @@ SortWithExprOperator::~SortWithExprOperator()
 
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols,
+                                                                 vecAllocator);
     if (newInputVecBatch != nullptr) {
         sortOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);

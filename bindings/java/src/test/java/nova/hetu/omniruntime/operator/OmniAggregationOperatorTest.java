@@ -131,8 +131,10 @@ public class OmniAggregationOperatorTest {
             assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
             assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
 
-            releaseVecMemory(vecBatch.getVectors());
+            freeVecBatch(vecBatch);
         }
+        omniOperator.close();
+        factory.close();
     }
 
     /**
@@ -213,7 +215,7 @@ public class OmniAggregationOperatorTest {
             assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
             assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
 
-            releaseVecMemory(vecBatch.getVectors());
+            freeVecBatch(vecBatch);
         }
     }
 

@@ -34,30 +34,6 @@ int64_t BaseAllocator::AllocatedBytesInternal(int64_t size)
     return UNLIMIT;
 }
 
-void BaseAllocator::UpdateInternal(int64_t size)
-{
-    if (parentAllocator != nullptr) {
-        parentAllocator->UpdateInternal(size);
-    }
-    int64_t newAllocated = allocatedBytes.fetch_add(size, std::memory_order_relaxed) + size;
-    if (newAllocated < 0) {
-        std::cout << "newAllocated:" << newAllocated << std::endl;
-    }
-    // check memory usage
-    if (size > 0 && allocationLimit != UNLIMIT && newAllocated > allocationLimit) {
-        if (parentAllocator != nullptr) {
-            parentAllocator->UpdateInternal(-size);
-        }
-        allocatedBytes.fetch_add(-size, std::memory_order_relaxed);
-        // throw memory cap exceeded exception
-        int64_t limit = allocationLimit.load(std::memory_order_relaxed);
-        auto message = "Exceeded memory cap of MB:" + std::to_string(limit / 1024 / 1024);
-        throw OmniException(kMemCapExceeded, message);
-    }
-    // set peakAllocated
-    UpdatePeak();
-}
-
 void BaseAllocator::UpdatePeak()
 {
     int64_t newAllocated = allocatedBytes.load(std::memory_order_relaxed);
@@ -77,10 +53,7 @@ void BaseAllocator::Close()
 
     // release current allocator
     int64_t currentAllocated = allocatedBytes.load(std::memory_order_relaxed);
-    if (currentAllocated > 0 || currentAllocated < 0) {
-        //        if (parentAllocator) {
-        //            parentAllocator->UpdateInternal(-currentAllocated);
-        //        }
+    if (currentAllocated > 0) {
         ReleaseBytes(currentAllocated);
         LogError("Memory leak in allocator:%s,leak size in bytes is:%ld, stack is:%s", scope.c_str(), currentAllocated,
             TraceUtil::GetStack().c_str());
