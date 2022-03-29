@@ -24,6 +24,6 @@ private:
     std::thread thread;
     bool running = true;
 };
-}
-}
+} // namespace mem
+} // namespace omniruntimne
 #endif // OMNI_RUNTIME_MEMORY_STATISTIC_H

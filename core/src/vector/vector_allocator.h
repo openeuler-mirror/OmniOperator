@@ -9,15 +9,17 @@
 #include "vector_reference.h"
 #include "type/data_type.h"
 #include "tracer/vector_leak_detector.h"
+#include "memory/base_allocator.h"
+
+const static std::string GLOBAL_SCOPE_NAME = "___GLOBAL_SCOPE___";
 
 namespace omniruntime {
+using namespace omniruntime::mem;
 namespace vec {
 using DataTypeId = omniruntime::type::DataTypeId;
 class Vector;
-class VectorAllocator {
+class VectorAllocator final : public BaseAllocator {
 public:
-    explicit VectorAllocator(const std::string scope);
-
     ~VectorAllocator();
 
     void NewVector(Vector *vector, int capacityInBytes, int size, DataTypeId dataTypeId);
@@ -28,19 +30,25 @@ public:
 
     void ResizeVectorData(Vector *vector, int32_t toCapacityInBytes);
 
-    std::string GetScope() const;
-
-    int64_t GetAllocatedBytes() const;
-
     VectorLeakDetector &GetLeakDetector()
     {
         return leakDetector;
     }
 
+    VectorAllocator *NewChildAllocator(const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0) override;
+
+    static VectorAllocator *GetGlobalAllocator()
+    {
+        static auto *globalAllocator =
+            new VectorAllocator(omniruntime::mem::BaseAllocator::GetRootAllocator(), GLOBAL_SCOPE_NAME);
+        return globalAllocator;
+    }
+
+protected:
+    VectorAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0);
+
 private:
-    const std::string scope;
     VectorLeakDetector leakDetector;
-    std::atomic<int64_t> allocatedBytes;
 };
 }
 }

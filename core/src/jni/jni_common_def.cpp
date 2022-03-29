@@ -10,6 +10,7 @@ jclass vecBatchCls;
 jclass omniResultsCls;
 jclass traceUtilCls;
 jclass lazyVectorCls;
+jclass omniRuntimeExceptionClass;
 
 jmethodID vecBatchInitMethodId;
 jmethodID omniResultsInitMethodId;
@@ -42,6 +43,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     traceUtilStackMethodId = env->GetStaticMethodID(traceUtilCls, "stack", "()Ljava/lang/String;");
     lazyVectorCls = createGlobalClassRef(env, "nova/hetu/omniruntime/vector/LazyVec");
     lazyVectorLoaderMethodId = env->GetStaticMethodID(lazyVectorCls, "load", "(Ljava/lang/Object;)J");
+    omniRuntimeExceptionClass = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/OmniRuntimeException");
     return JNI_VERSION;
 }
 
@@ -54,4 +56,5 @@ void JNI_OnUnload(JavaVM *vm, const void *reserved)
     env->DeleteGlobalRef(omniResultsCls);
     env->DeleteGlobalRef(traceUtilCls);
     env->DeleteGlobalRef(lazyVectorCls);
+    env->DeleteGlobalRef(omniRuntimeExceptionClass);
 }

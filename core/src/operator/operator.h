@@ -10,6 +10,7 @@
 #include "vector/vector_allocator.h"
 #include "vector/vector_allocator_factory.h"
 #include "status.h"
+#include "execution_context.h"
 
 namespace omniruntime {
 namespace op {
@@ -52,6 +53,9 @@ public:
     void SetVecAllocator(vec::VectorAllocator *vectorAllocator)
     {
         this->vecAllocator = vectorAllocator;
+        if (context != nullptr) {
+            context->GetArena()->SetAllocator(vectorAllocator);
+        }
     }
 
     vec::VectorAllocator ALWAYS_INLINE *GetVecAllocator() const
@@ -62,6 +66,7 @@ public:
 protected:
     int32_t *sourceTypes;
     vec::VectorAllocator *vecAllocator;
+    ExecutionContext *context = nullptr;
 
 private:
     int status;

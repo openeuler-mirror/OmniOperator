@@ -46,6 +46,9 @@ void VectorAllocatorFactory::DeleteAllocator(VectorAllocator **allocator)
     mutex.unlock();
 #else
     if (allocator != nullptr) {
+        if (reinterpret_cast<int64_t>(*allocator) != reinterpret_cast<int64_t>( VectorAllocator::GetGlobalAllocator())) {
+            delete *allocator;
+        }
         *allocator = nullptr;
     }
 #endif
@@ -53,12 +56,7 @@ void VectorAllocatorFactory::DeleteAllocator(VectorAllocator **allocator)
 
 VectorAllocator *VectorAllocatorFactory::GetGlobalAllocator()
 {
-#ifdef DEBUG_VECTOR
-    static VectorAllocator *globalAllocator = VectorAllocatorFactory::GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
-#else
-    static VectorAllocator *globalAllocator = new VectorAllocator(GLOBAL_SCOPE_NAME);
-#endif
-    return globalAllocator;
+    return VectorAllocator::GetGlobalAllocator();
 }
 }
 }

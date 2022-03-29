@@ -66,7 +66,7 @@ static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVect
 
 TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
@@ -128,12 +128,13 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()
+            ->NewChildAllocator("IsSameNodeFuncVarcharImplPerf");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
@@ -199,6 +200,6 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 }

@@ -9,15 +9,15 @@
 
 namespace omniruntime {
 namespace vec {
-using Chunk = omniruntime::mem::Chunk;
-
-VectorAllocator::VectorAllocator(std::string scope) : scope(scope), leakDetector(scope) {}
+VectorAllocator::VectorAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit, int64_t reservation)
+    : BaseAllocator(parent, scope, limit, reservation), leakDetector(scope)
+{}
 
 VectorAllocator::~VectorAllocator() {}
 
 void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, DataTypeId dataTypeId)
 {
-    VectorReference *reference = new VectorReference(capacityInBytes, size, dataTypeId);
+    VectorReference *reference = new VectorReference(this, capacityInBytes, size, dataTypeId);
     vector->SetVectorReference(reference);
 #ifdef DEBUG_VECTOR
     VectorTracer *tracer = leakDetector.NewTracer(vector);
@@ -64,14 +64,9 @@ void VectorAllocator::ResizeVectorData(Vector *vector, int32_t toCapacityInBytes
     reference->ResizeValueChunk(vector->GetCapacityInBytes(), toCapacityInBytes);
 }
 
-std::string VectorAllocator::GetScope() const
+VectorAllocator *VectorAllocator::NewChildAllocator(const std::string &scope, int64_t limit, int64_t reservation)
 {
-    return scope;
-}
-
-int64_t VectorAllocator::GetAllocatedBytes() const
-{
-    return allocatedBytes;
+    return new VectorAllocator(this, scope, limit, reservation);
 }
 }
 }

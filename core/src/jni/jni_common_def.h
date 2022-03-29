@@ -6,6 +6,19 @@
 #define JNI_COMMON_DEF_H
 
 #include <jni.h>
+#include "../util/omni_exception.h"
+
+#define JNI_METHOD_START try {
+// macro end
+
+#define JNI_METHOD_END(fallBackExpr)                        \
+    }                                                       \
+    catch (omniruntime::exception::OmniException & e)       \
+    {                                                       \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what()); \
+        return fallBackExpr;                                \
+    }                                                       \
+    // macro end
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +29,7 @@ extern jclass vecBatchCls;
 extern jclass omniResultsCls;
 extern jclass traceUtilCls;
 extern jclass lazyVectorCls;
+extern jclass omniRuntimeExceptionClass;
 extern jmethodID vecBatchInitMethodId;
 extern jmethodID omniResultsInitMethodId;
 extern jmethodID traceUtilStackMethodId;

@@ -38,6 +38,10 @@ template <typename Allocator> class BaseMemoryPoolImpl : public MemoryPool {
 public:
     int Allocate(int64_t size, uint8_t **buffer) override
     {
+#ifdef DEBUG_VECTOR
+        static omniruntime::mem::MemoryStatistic statistic;
+        statistic.RecordSize(size);
+#endif
         Allocator::Allocate(size, buffer);
         return 0;
     }
@@ -49,56 +53,46 @@ public:
     }
 
     ~BaseMemoryPoolImpl() override = default;
+
+    uint64_t GetPreferredSize(uint64_t size) override
+    {
+        return size;
+    }
 };
 
+class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {
+public:
+    uint64_t GetPreferredSize(uint64_t size) override
+    {
+        if (size == 0) {
+            return size;
+        }
 
-class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {};
-}
-}
+        const uint64_t smallSize = 8;
+        if (size < smallSize) {
+            return smallSize;
+        }
+        uint32_t bits = 63 - __builtin_clzll(size);
+        size_t lower = 1U << bits;
+        // Size is a power of 2.
+        if (lower == size) {
+            return size;
+        }
+        // If size is below 1.5 * previous power of two, return 1.5 *
+        // the previous power of two, else the next power of 2.
+        uint64_t preferredSize = lower + (lower / 2);
+        if (preferredSize >= size) {
+            return preferredSize;
+        }
+        return (lower + lower);
+    }
+};
 
 static omniruntime::mem::JemallocMemoryPool g_jemallocMemoryPool;
 
-static uint64_t GetPreferredSize(uint64_t size)
+MemoryPool *GetMemoryPool()
 {
-    const uint64_t smallSize = 8;
-    if (size < smallSize) {
-        return smallSize;
-    }
-    uint32_t bits = 63 - __builtin_clzll(size);
-    size_t lower = 1U << bits;
-    // Size is a power of 2.
-    if (lower == size) {
-        return size;
-    }
-    // If size is below 1.5 * previous power of two, return 1.5 *
-    // the previous power of two, else the next power of 2.
-    uint64_t preferredSize = lower + (lower / 2);
-    if (preferredSize >= size) {
-        return preferredSize;
-    }
-    return (lower + lower);
+    return &g_jemallocMemoryPool;
 }
-
-static void RecordSize(int size)
-{
-    static omniruntime::mem::MemoryStatistic statistic;
-    statistic.RecordSize(size);
 }
-
-void *OmniAllocate(uint64_t size)
-{
-    uint8_t *buf = nullptr;
-    uint64_t preferredSize = GetPreferredSize(size);
-#ifdef DEBUG_VECTOR
-    RecordSize(preferredSize);
-#endif
-    g_jemallocMemoryPool.Allocate(preferredSize, &buf);
-
-    return reinterpret_cast<void *>(buf);
-}
-
-void OmniRelease(unsigned long address)
-{
-    uintptr_t ptr = reinterpret_cast<uintptr_t>(address);
-    g_jemallocMemoryPool.Release(reinterpret_cast<uint8_t *>(ptr));
 }
