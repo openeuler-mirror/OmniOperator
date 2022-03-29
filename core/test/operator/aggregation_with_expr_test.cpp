@@ -35,13 +35,15 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     // groupByKeys
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, new FieldExpr(0, LongType()), modRight, LongType());
+    BinaryExpr *modExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MOD, new FieldExpr(0, LongType()), modRight, LongType());
     std::vector<Expr *> groupByKeys = { modExpr, new FieldExpr(2, IntType()) };
 
     // aggKeys
     LiteralExpr *mulRight = new LiteralExpr(5, LongType());
     mulRight->longVal = 5;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, new FieldExpr(1, LongType()), mulRight, LongType());
+    BinaryExpr *mulExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(1, LongType()), mulRight, LongType());
     std::vector<Expr *> aggKeys = { mulExpr, new FieldExpr(3, IntType()) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
@@ -98,19 +100,19 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     FieldExpr *modLeft = new FieldExpr(0, LongType());
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     FieldExpr *addLeft = new FieldExpr(2, IntType());
     LiteralExpr *addRight = new LiteralExpr(5, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
     std::vector<Expr *> groupByKeys = { modExpr, addExpr };
 
     FieldExpr *mulLeft = new FieldExpr(1, LongType());
     LiteralExpr *mulRight = new LiteralExpr(5, LongType());
     mulRight->longVal = 5;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, LongType());
+    BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, LongType());
     FieldExpr *addLeft2 = new FieldExpr(3, IntType());
     LiteralExpr *addRight2 = new LiteralExpr(5, IntType());
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft2, addRight2, IntType());
     std::vector<Expr *> aggKeys = { mulExpr, addExpr2 };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};

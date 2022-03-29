@@ -30,7 +30,7 @@ constexpr int32_t PARAM_INDEX_9 = 9;
 int32_t GetProjectCol(Expr *expr)
 {
     // #0 or #5 is not expression
-    if (expr->GetType() == FIELD_E) {
+    if (expr->GetType() == ExprType::FIELD_E) {
         auto fieldExpr = static_cast<FieldExpr *>(expr);
         return fieldExpr->colVal;
     }

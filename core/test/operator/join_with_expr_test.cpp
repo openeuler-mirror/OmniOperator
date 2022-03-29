@@ -30,8 +30,8 @@ std::vector<omniruntime::expressions::Expr *> CreateBuildHashKeys()
 {
     omniruntime::expressions::FieldExpr *addLeft = new omniruntime::expressions::FieldExpr(1, LongType());
     omniruntime::expressions::LiteralExpr *addRight = new omniruntime::expressions::LiteralExpr(50L, LongType());
-    omniruntime::expressions::BinaryExpr *addExpr =
-        new omniruntime::expressions::BinaryExpr(omniruntime::expressions::ADD, addLeft, addRight, LongType());
+    omniruntime::expressions::BinaryExpr *addExpr = new omniruntime::expressions::BinaryExpr(
+        omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
     std::vector<omniruntime::expressions::Expr *> buildHashKeysExprs = { addExpr };
     return buildHashKeysExprs;
 }
@@ -41,7 +41,7 @@ std::vector<omniruntime::expressions::Expr *> CreateProbeHashKeys()
     omniruntime::expressions::LiteralExpr *addLeftProbe = new omniruntime::expressions::LiteralExpr(50L, LongType());
     omniruntime::expressions::FieldExpr *addRightProbe = new omniruntime::expressions::FieldExpr(1, LongType());
     omniruntime::expressions::BinaryExpr *addExprProbe = new omniruntime::expressions::BinaryExpr(
-        omniruntime::expressions::ADD, addLeftProbe, addRightProbe, LongType());
+        omniruntime::expressions::Operator::ADD, addLeftProbe, addRightProbe, LongType());
     std::vector<omniruntime::expressions::Expr *> probeHashKeysExprs = { addExprProbe };
     return probeHashKeysExprs;
 }

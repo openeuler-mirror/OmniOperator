@@ -169,8 +169,8 @@ TEST(FilterTest, LessThan)
 
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()) };
-    BinaryExpr *filterExpr =
-        new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(2000, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+        new LiteralExpr(2000, IntType()), BooleanType());
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -207,7 +207,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
     FieldExpr *column = new FieldExpr(0, IntType());
     FieldExpr *left = new FieldExpr(0, IntType());
     LiteralExpr *right = new LiteralExpr(2000, IntType());
-    BinaryExpr *LTExpr = new BinaryExpr(LT, left, right, BooleanType());
+    BinaryExpr *LTExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, left, right, BooleanType());
 
     std::vector<Expr *> projections = { column };
     OperatorFactory *factory =
@@ -251,7 +251,7 @@ TEST(FilterTest, GreaterThan)
 
     FieldExpr *gtLeft = new FieldExpr(0, IntType());
     LiteralExpr *gtRight = new LiteralExpr(20, IntType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(gtExpr, inputTypes, numCols, projections, projectCount);
@@ -298,7 +298,7 @@ TEST(FilterTest, EqualTo)
     FieldExpr *eqLeft = new FieldExpr(2, DoubleType());
     LiteralExpr *eqRight = new LiteralExpr(50.0, DoubleType());
 
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
+    BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols, projections, projectCount);
@@ -347,7 +347,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
 
     FieldExpr *gteLeft = new FieldExpr(1, IntType());
     LiteralExpr *gteRight = new LiteralExpr(30, IntType());
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, gteLeft, gteRight, BooleanType());
+    BinaryExpr *gteExpr = new BinaryExpr(omniruntime::expressions::Operator::GTE, gteLeft, gteRight, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(gteExpr, inputTypes, numCols, projections, projectCount);
@@ -388,7 +388,7 @@ TEST(FilterTest, NotEqualTo)
     FieldExpr *neqLeft = new FieldExpr(0, DoubleType());
     LiteralExpr *neqRight = new LiteralExpr(0, DoubleType());
 
-    BinaryExpr *neqExpr = new BinaryExpr(NEQ, neqLeft, neqRight, BooleanType());
+    BinaryExpr *neqExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, neqLeft, neqRight, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(neqExpr, inputTypes, numCols, projections, projectCount);
@@ -429,7 +429,7 @@ TEST(FilterTest, AllPass)
 
     FieldExpr *eqLeft = new FieldExpr(0, IntType());
     LiteralExpr *eqRight = new LiteralExpr(9348, IntType());
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
+    BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -467,7 +467,7 @@ TEST(FilterTest, MultipleInputs)
 
     FieldExpr *lteLeft = new FieldExpr(0, IntType());
     LiteralExpr *lteRight = new LiteralExpr(4, IntType());
-    BinaryExpr *lteExpr = new BinaryExpr(LTE, lteLeft, lteRight, BooleanType());
+    BinaryExpr *lteExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lteLeft, lteRight, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(lteExpr, inputTypes, numCols, projections, projectCount);
@@ -523,13 +523,13 @@ TEST(FilterTest, NegativeValues)
     // create the filter expression object
     FieldExpr *lte1Left = new FieldExpr(0, IntType());
     LiteralExpr *lte1Right = new LiteralExpr(-1, IntType());
-    BinaryExpr *lte1Expr = new BinaryExpr(LTE, lte1Left, lte1Right, BooleanType());
+    BinaryExpr *lte1Expr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lte1Left, lte1Right, BooleanType());
 
     FieldExpr *lte2Left = new FieldExpr(1, LongType());
     LiteralExpr *lte2Right = new LiteralExpr(-1L, LongType());
-    BinaryExpr *lte2Expr = new BinaryExpr(LTE, lte2Left, lte2Right, BooleanType());
+    BinaryExpr *lte2Expr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lte2Left, lte2Right, BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(AND, lte1Expr, lte2Expr, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, lte1Expr, lte2Expr, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -576,19 +576,19 @@ TEST(FilterTest, AllTypes)
     // create the filter expression object
     FieldExpr *eq2Left = new FieldExpr(1, LongType());
     LiteralExpr *eq2Right = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *eq2Expr = new BinaryExpr(EQ, eq2Left, eq2Right, BooleanType());
+    BinaryExpr *eq2Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eq2Left, eq2Right, BooleanType());
 
     FieldExpr *gteLeft = new FieldExpr(2, DoubleType());
     LiteralExpr *gteRight = new LiteralExpr(0.4, DoubleType());
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, gteLeft, gteRight, BooleanType());
+    BinaryExpr *gteExpr = new BinaryExpr(omniruntime::expressions::Operator::GTE, gteLeft, gteRight, BooleanType());
 
-    BinaryExpr *innerAndExpr = new BinaryExpr(AND, eq2Expr, gteExpr, BooleanType());
+    BinaryExpr *innerAndExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eq2Expr, gteExpr, BooleanType());
 
     FieldExpr *eq1Left = new FieldExpr(0, IntType());
     LiteralExpr *eq1Right = new LiteralExpr(0, IntType());
-    BinaryExpr *eq1Expr = new BinaryExpr(EQ, eq1Left, eq1Right, BooleanType());
+    BinaryExpr *eq1Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eq1Left, eq1Right, BooleanType());
 
-    Expr *filterExpr = new BinaryExpr(AND, eq1Expr, innerAndExpr, BooleanType());
+    Expr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eq1Expr, innerAndExpr, BooleanType());
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -632,23 +632,29 @@ TEST(FilterTest, Compile)
     std::vector<Expr *> projections = { col0Expr };
 
     LiteralExpr *gtRight = new LiteralExpr(8766.0, DoubleType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, new FieldExpr(3, DoubleType()), gtRight, BooleanType());
+    BinaryExpr *gtExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::GT, new FieldExpr(3, DoubleType()), gtRight, BooleanType());
 
     LiteralExpr *lt1Right = new LiteralExpr(9131.0, DoubleType());
-    BinaryExpr *lt1Expr = new BinaryExpr(LT, new FieldExpr(3, DoubleType()), lt1Right, BooleanType());
-    BinaryExpr *and1Expression = new BinaryExpr(AND, gtExpr, lt1Expr, BooleanType());
+    BinaryExpr *lt1Expr =
+        new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(3, DoubleType()), lt1Right, BooleanType());
+    BinaryExpr *and1Expression =
+        new BinaryExpr(omniruntime::expressions::Operator::AND, gtExpr, lt1Expr, BooleanType());
 
     LiteralExpr *lt2Right = new LiteralExpr(24.0, DoubleType());
-    BinaryExpr *lt2expr = new BinaryExpr(LT, new FieldExpr(0, DoubleType()), lt2Right, BooleanType());
+    BinaryExpr *lt2expr =
+        new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, DoubleType()), lt2Right, BooleanType());
 
     FieldExpr *data = new FieldExpr(2, DoubleType());
     LiteralExpr *lower = new LiteralExpr(0.05, DoubleType());
     LiteralExpr *upper = new LiteralExpr(0.07, DoubleType());
     std::vector<Expr *> args;
     BetweenExpr *betweenExpr = new BetweenExpr(data, lower, upper);
-    BinaryExpr *and2Expression = new BinaryExpr(AND, betweenExpr, lt2expr, BooleanType());
+    BinaryExpr *and2Expression =
+        new BinaryExpr(omniruntime::expressions::Operator::AND, betweenExpr, lt2expr, BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(AND, and1Expression, and2Expression, BooleanType());
+    BinaryExpr *filterExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::AND, and1Expression, and2Expression, BooleanType());
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, 1);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -699,26 +705,29 @@ TEST(FilterTest, LogicalOperators1)
     std::vector<Expr *> projections = { col0Expr, col2Expr, col4Expr, col5Expr };
 
     LiteralExpr *eqRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, new FieldExpr(3, LongType()), eqRight, BooleanType());
-    BinaryExpr *neqExpr =
-        new BinaryExpr(NEQ, new FieldExpr(0, IntType()), new LiteralExpr(1, IntType()), BooleanType());
-    BinaryExpr *andExpr1 = new BinaryExpr(AND, neqExpr, eqExpr, BooleanType());
+    BinaryExpr *eqExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(3, LongType()), eqRight, BooleanType());
+    BinaryExpr *neqExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(1, IntType()), BooleanType());
+    BinaryExpr *andExpr1 = new BinaryExpr(omniruntime::expressions::Operator::AND, neqExpr, eqExpr, BooleanType());
 
-    BinaryExpr *gtExpr =
-        new BinaryExpr(GT, new FieldExpr(2, IntType()), new LiteralExpr(4800, IntType()), BooleanType());
-    BinaryExpr *lteExpr =
-        new BinaryExpr(LTE, new FieldExpr(1, IntType()), new LiteralExpr(9990, IntType()), BooleanType());
-    BinaryExpr *andExpr2 = new BinaryExpr(AND, gtExpr, lteExpr, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, new FieldExpr(2, IntType()),
+        new LiteralExpr(4800, IntType()), BooleanType());
+    BinaryExpr *lteExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE, new FieldExpr(1, IntType()),
+        new LiteralExpr(9990, IntType()), BooleanType());
+    BinaryExpr *andExpr2 = new BinaryExpr(omniruntime::expressions::Operator::AND, gtExpr, lteExpr, BooleanType());
 
-    BinaryExpr *andExpr3 = new BinaryExpr(AND, andExpr2, andExpr1, BooleanType());
+    BinaryExpr *andExpr3 = new BinaryExpr(omniruntime::expressions::Operator::AND, andExpr2, andExpr1, BooleanType());
 
     LiteralExpr *ltRight = new LiteralExpr(50.8, DoubleType());
-    BinaryExpr *ltExpr = new BinaryExpr(LT, new FieldExpr(4, DoubleType()), ltRight, BooleanType());
-    BinaryExpr *andExpr4 = new BinaryExpr(AND, ltExpr, andExpr3, BooleanType());
+    BinaryExpr *ltExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(4, DoubleType()), ltRight, BooleanType());
+    BinaryExpr *andExpr4 = new BinaryExpr(omniruntime::expressions::Operator::AND, ltExpr, andExpr3, BooleanType());
 
     LiteralExpr *gteRight = new LiteralExpr(52L, LongType());
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, new FieldExpr(5, LongType()), gteRight, BooleanType());
-    BinaryExpr *filterExpr = new BinaryExpr(OR, gteExpr, andExpr4, BooleanType());
+    BinaryExpr *gteExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::GTE, new FieldExpr(5, LongType()), gteRight, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, gteExpr, andExpr4, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -769,17 +778,20 @@ TEST(FilterTest, LogicalOperators2)
     std::vector<Expr *> projections = { col3Expr, col2Expr, col1Expr, col0Expr };
 
     LiteralExpr *lteRight = new LiteralExpr(-3000000000L, LongType());
-    BinaryExpr *lteExpr = new BinaryExpr(LTE, new FieldExpr(2, LongType()), lteRight, BooleanType());
+    BinaryExpr *lteExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::LTE, new FieldExpr(2, LongType()), lteRight, BooleanType());
     LiteralExpr *gteRight = new LiteralExpr(0L, LongType());
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, new FieldExpr(3, LongType()), gteRight, BooleanType());
-    BinaryExpr *orExpr1 = new BinaryExpr(OR, lteExpr, gteExpr, BooleanType());
+    BinaryExpr *gteExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::GTE, new FieldExpr(3, LongType()), gteRight, BooleanType());
+    BinaryExpr *orExpr1 = new BinaryExpr(omniruntime::expressions::Operator::OR, lteExpr, gteExpr, BooleanType());
 
-    BinaryExpr *ltExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(50, IntType()), BooleanType());
-    BinaryExpr *eqExpr =
-        new BinaryExpr(EQ, new FieldExpr(1, IntType()), new LiteralExpr(-12, IntType()), BooleanType());
-    BinaryExpr *orExpr2 = new BinaryExpr(OR, ltExpr, eqExpr, BooleanType());
+    BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+        new LiteralExpr(50, IntType()), BooleanType());
+    BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(1, IntType()),
+        new LiteralExpr(-12, IntType()), BooleanType());
+    BinaryExpr *orExpr2 = new BinaryExpr(omniruntime::expressions::Operator::OR, ltExpr, eqExpr, BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(AND, orExpr1, orExpr2, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, orExpr1, orExpr2, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -828,32 +840,38 @@ TEST(FilterTest, LogicalOperators3)
     FieldExpr *col1Expr = new FieldExpr(1, IntType());
     std::vector<Expr *> projections = { col1Expr, col0Expr };
 
-    BinaryExpr *eq1Expr =
-        new BinaryExpr(EQ, new LiteralExpr(55, IntType()), new FieldExpr(0, IntType()), BooleanType());
-    BinaryExpr *eq2Expr = new BinaryExpr(EQ, new LiteralExpr(5, IntType()), new FieldExpr(0, IntType()), BooleanType());
-    BinaryExpr *or1Expr = new BinaryExpr(OR, eq1Expr, eq2Expr, BooleanType());
+    BinaryExpr *eq1Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(55, IntType()),
+        new FieldExpr(0, IntType()), BooleanType());
+    BinaryExpr *eq2Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(5, IntType()),
+        new FieldExpr(0, IntType()), BooleanType());
+    BinaryExpr *or1Expr = new BinaryExpr(omniruntime::expressions::Operator::OR, eq1Expr, eq2Expr, BooleanType());
 
-    BinaryExpr *eq3Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(8, IntType()), BooleanType());
-    BinaryExpr *or2Expr = new BinaryExpr(OR, or1Expr, eq3Expr, BooleanType());
+    BinaryExpr *eq3Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(8, IntType()), BooleanType());
+    BinaryExpr *or2Expr = new BinaryExpr(omniruntime::expressions::Operator::OR, or1Expr, eq3Expr, BooleanType());
 
-    BinaryExpr *eq4Expr =
-        new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(13, IntType()), BooleanType());
-    BinaryExpr *or3Expr = new BinaryExpr(OR, or2Expr, eq4Expr, BooleanType());
+    BinaryExpr *eq4Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(13, IntType()), BooleanType());
+    BinaryExpr *or3Expr = new BinaryExpr(omniruntime::expressions::Operator::OR, or2Expr, eq4Expr, BooleanType());
 
 
-    BinaryExpr *eq5Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(1, IntType()), BooleanType());
-    BinaryExpr *eq6Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(2, IntType()), BooleanType());
-    BinaryExpr *or4Expr = new BinaryExpr(OR, eq5Expr, eq6Expr, BooleanType());
+    BinaryExpr *eq5Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(1, IntType()), BooleanType());
+    BinaryExpr *eq6Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(2, IntType()), BooleanType());
+    BinaryExpr *or4Expr = new BinaryExpr(omniruntime::expressions::Operator::OR, eq5Expr, eq6Expr, BooleanType());
 
-    BinaryExpr *eq7Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(3, IntType()), BooleanType());
-    BinaryExpr *or5Expr = new BinaryExpr(OR, or4Expr, eq7Expr, BooleanType());
+    BinaryExpr *eq7Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(3, IntType()), BooleanType());
+    BinaryExpr *or5Expr = new BinaryExpr(omniruntime::expressions::Operator::OR, or4Expr, eq7Expr, BooleanType());
 
-    BinaryExpr *or6Expr = new BinaryExpr(OR, or5Expr, or3Expr, BooleanType());
+    BinaryExpr *or6Expr = new BinaryExpr(omniruntime::expressions::Operator::OR, or5Expr, or3Expr, BooleanType());
 
     LiteralExpr *neqRight = new LiteralExpr(0L, LongType());
-    BinaryExpr *neqExpr = new BinaryExpr(NEQ, new FieldExpr(1, LongType()), neqRight, BooleanType());
+    BinaryExpr *neqExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::NEQ, new FieldExpr(1, LongType()), neqRight, BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(AND, neqExpr, or6Expr, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, neqExpr, or6Expr, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -893,8 +911,10 @@ TEST(FilterTest, ArithmeticAdd)
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()) };
 
     // filter
-    BinaryExpr *addExpr = new BinaryExpr(ADD, new FieldExpr(0, IntType()), new LiteralExpr(1, IntType()), IntType());
-    BinaryExpr *filterExpr = new BinaryExpr(GT, addExpr, new LiteralExpr(4, IntType()), BooleanType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(0, IntType()),
+        new LiteralExpr(1, IntType()), IntType());
+    BinaryExpr *filterExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::GT, addExpr, new LiteralExpr(4, IntType()), BooleanType());
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -930,8 +950,10 @@ TEST(FilterTest, ArithmeticSubtract)
     const int32_t projectCount = 2;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()) };
 
-    BinaryExpr *subExpr = new BinaryExpr(SUB, new FieldExpr(0, IntType()), new LiteralExpr(5, IntType()), IntType());
-    BinaryExpr *filterExpr = new BinaryExpr(LT, new LiteralExpr(0, IntType()), subExpr, BooleanType());
+    BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, new FieldExpr(0, IntType()),
+        new LiteralExpr(5, IntType()), IntType());
+    BinaryExpr *filterExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::LT, new LiteralExpr(0, IntType()), subExpr, BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -969,14 +991,17 @@ TEST(FilterTest, ArithmeticMultiply)
 
     const int32_t projectCount = 2;
 
-    BinaryExpr *mul1Expr = new BinaryExpr(MUL, new FieldExpr(0, IntType()), new FieldExpr(0, IntType()), IntType());
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, new LiteralExpr(0, IntType()), mul1Expr, BooleanType());
+    BinaryExpr *mul1Expr = new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(0, IntType()),
+        new FieldExpr(0, IntType()), IntType());
+    BinaryExpr *eqExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(0, IntType()), mul1Expr, BooleanType());
 
     LiteralExpr *mulLeft = new LiteralExpr(2L, LongType());
-    BinaryExpr *mul2Expr = new BinaryExpr(MUL, mulLeft, new FieldExpr(1, LongType()), LongType());
+    BinaryExpr *mul2Expr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, new FieldExpr(1, LongType()), LongType());
     LiteralExpr *gtLeft = new LiteralExpr(7L, LongType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, mul2Expr, BooleanType());
-    BinaryExpr *filterExpr = new BinaryExpr(AND, eqExpr, gtExpr, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, mul2Expr, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eqExpr, gtExpr, BooleanType());
 
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()) };
 
@@ -1022,14 +1047,16 @@ TEST(FilterTest, Conditional)
         new FieldExpr(2, IntType()) };
 
     // filters
-    BinaryExpr *condition =
-        new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(0, IntType()), BooleanType());
-    BinaryExpr *texp = new BinaryExpr(ADD, new FieldExpr(1, IntType()), new LiteralExpr(5, IntType()), IntType());
+    BinaryExpr *condition = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(0, IntType()), BooleanType());
+    BinaryExpr *texp = new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(1, IntType()),
+        new LiteralExpr(5, IntType()), IntType());
     FieldExpr *fexp = new FieldExpr(2, IntType());
 
     IfExpr *eqLeft = new IfExpr(condition, texp, fexp);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(55, IntType()), BooleanType());
+    BinaryExpr *filterExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, new LiteralExpr(55, IntType()), BooleanType());
 
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1065,15 +1092,18 @@ TEST(FilterTest, Conditional2)
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     // filters
-    BinaryExpr *condition =
-        new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(0, IntType()), BooleanType());
-    BinaryExpr *texp = new BinaryExpr(LT, new FieldExpr(1, IntType()), new LiteralExpr(3, IntType()), BooleanType());
-    BinaryExpr *fexp = new BinaryExpr(EQ, new FieldExpr(1, IntType()), new LiteralExpr(4, IntType()), BooleanType());
+    BinaryExpr *condition = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new LiteralExpr(0, IntType()), BooleanType());
+    BinaryExpr *texp = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(1, IntType()),
+        new LiteralExpr(3, IntType()), BooleanType());
+    BinaryExpr *fexp = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(1, IntType()),
+        new LiteralExpr(4, IntType()), BooleanType());
     IfExpr *ifExpr = new IfExpr(condition, texp, fexp);
 
-    BinaryExpr *gtExpr = new BinaryExpr(GT, new FieldExpr(2, IntType()), new LiteralExpr(3, IntType()), BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, new FieldExpr(2, IntType()),
+        new LiteralExpr(3, IntType()), BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(AND, ifExpr, gtExpr, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, ifExpr, gtExpr, BooleanType());
 
     // filters
     const int32_t projectCount = 3;
@@ -1210,7 +1240,8 @@ TEST(FilterTest, NotEqualToAbs)
     args.push_back(new FieldExpr(0, IntType()));
     auto absExpr = GetFuncExpr(funcStr, args, IntType());
 
-    auto filterExpr = new BinaryExpr(NEQ, absExpr, new LiteralExpr(4, IntType()), BooleanType());
+    auto filterExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::NEQ, absExpr, new LiteralExpr(4, IntType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()) };
 
@@ -1258,7 +1289,7 @@ TEST(FilterTest, MathFunctionFilter1)
     std::vector<Expr *> args2;
     args2.push_back(new FieldExpr(2, IntType()));
     auto abs2Expr = GetFuncExpr(funcStr, args2, IntType());
-    auto eq1Expr = new BinaryExpr(EQ, abs1Expr, abs2Expr, BooleanType());
+    auto eq1Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs1Expr, abs2Expr, BooleanType());
 
     std::vector<Expr *> args3;
     args3.push_back(new FieldExpr(0, IntType()));
@@ -1267,9 +1298,9 @@ TEST(FilterTest, MathFunctionFilter1)
     std::vector<Expr *> args4;
     args4.push_back(new FieldExpr(1, IntType()));
     auto abs4Expr = GetFuncExpr(funcStr, args4, IntType());
-    auto eq2Expr = new BinaryExpr(EQ, abs3Expr, abs4Expr, BooleanType());
+    auto eq2Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs3Expr, abs4Expr, BooleanType());
 
-    auto filterExpr = new BinaryExpr(AND, eq1Expr, eq2Expr, BooleanType());
+    auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eq1Expr, eq2Expr, BooleanType());
 
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
@@ -1329,7 +1360,7 @@ TEST(FilterTest, MathFunctionFilter2)
     args2.push_back(new FieldExpr(1, LongType()));
     auto cast2 = GetFuncExpr(castStr, args2, DoubleType());
 
-    auto filterExpr = new BinaryExpr(EQ, cast1, cast2, BooleanType());
+    auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, cast1, cast2, BooleanType());
 
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
@@ -1375,7 +1406,7 @@ TEST(FilterTest, FilterString1)
     DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarcharType()),
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, VarcharType()),
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
@@ -1438,7 +1469,8 @@ TEST(FilterTest, Coalesce1)
     }
 
     CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()));
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new LiteralExpr(21, IntType()), coalesceExpr, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(21, IntType()),
+        coalesceExpr, BooleanType());
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
@@ -1485,8 +1517,8 @@ TEST(FilterTest, Coalesce2)
     }
     CoalesceExpr *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, VarcharType()), new LiteralExpr(new std::string("bye"), VarcharType()));
-    BinaryExpr *filterExpr =
-        new BinaryExpr(EQ, coalesceExpr, new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr,
+        new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
 
@@ -1533,7 +1565,7 @@ TEST(FilterTest, ExternalMathFunc)
     auto eqLeft = GetFuncExpr(funcStr, vector<Expr *> { add1Int1Expr }, IntType());
     auto eqRight = new FieldExpr(1, IntType());
 
-    auto filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
+    auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
 
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()) };
     OperatorFactory *factory =
@@ -1588,7 +1620,8 @@ TEST(FilterTest, ExternalStringFunc)
     std::vector<Expr *> args;
     args.push_back(new FieldExpr(0, VarcharType()));
     auto eqLeft = GetFuncExpr(funcStr, args, IntType());
-    auto filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
+    auto filterExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
 
     const int32_t PROJECT_COUNT = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
@@ -1672,7 +1705,7 @@ TEST(FilterTest, Multithreading)
     args4.push_back(cast2Expr);
     auto eqRight = GetFuncExpr(absStr, args4, DoubleType());
 
-    auto filterExpr1 = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
+    auto filterExpr1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
 
     const int32_t PROJECT_COUNT = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
@@ -1684,7 +1717,8 @@ TEST(FilterTest, Multithreading)
 
     // filter2
     auto eqRight2 = new LiteralExpr(4L, LongType());
-    auto filterExpr2 = new BinaryExpr(EQ, new FieldExpr(1, LongType()), eqRight2, BooleanType());
+    auto filterExpr2 =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(1, LongType()), eqRight2, BooleanType());
     std::vector<Expr *> projections2 = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
 
@@ -1795,8 +1829,8 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     batch->SetVector(0, col1);
     batch->SetVector(1, dictionaryVector);
 
-    BinaryExpr *filterExpr =
-        new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(6, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+        new LiteralExpr(6, IntType()), BooleanType());
     const int32_t projectCount = 2;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, VarcharType()) };
     OperatorFactory *factory =
@@ -1905,7 +1939,8 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, Decimal128Type(38, 0)) };
     LiteralExpr *lteRight = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 0));
-    BinaryExpr *filterExpr = new BinaryExpr(LTE, new FieldExpr(0, Decimal128Type(38, 0)), lteRight, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE,
+        new FieldExpr(0, Decimal128Type(38, 0)), lteRight, BooleanType());
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1968,7 +2003,7 @@ TEST(FilterTest, DecimalFilterAbsTest)
     args2.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
     auto absExpr2 = GetFuncExpr(absStr, args2, Decimal128Type(38, 0));
 
-    BinaryExpr *eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2, BooleanType());
+    BinaryExpr *eqExpr1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, absExpr1, absExpr2, BooleanType());
 
     std::vector<Expr *> args3;
     args3.push_back(new FieldExpr(1, Decimal128Type(38, 0)));
@@ -1978,8 +2013,8 @@ TEST(FilterTest, DecimalFilterAbsTest)
     args4.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
     auto absExpr4 = GetFuncExpr(absStr, args4, Decimal128Type(38, 0));
 
-    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4, BooleanType());
-    BinaryExpr *filterExpr = new BinaryExpr(AND, eqExpr1, eqExpr2, BooleanType());
+    BinaryExpr *eqExpr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, absExpr3, absExpr4, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eqExpr1, eqExpr2, BooleanType());
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2017,7 +2052,7 @@ TEST(FilterTest, FilterStringWithNull)
     batch->NewVectors(vecAllocator, inputTypes.Get());
     batch->SetVector(0, col0);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarcharType()),
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, VarcharType()),
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
@@ -2140,8 +2175,8 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
     intput->SetVector(1, slicedCol2);
     intput->SetVector(2, slicedCol3);
 
-    BinaryExpr *filterExpr =
-        new BinaryExpr(EQ, new FieldExpr(2, IntType()), new LiteralExpr(6, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(2, IntType()),
+        new LiteralExpr(6, IntType()), BooleanType());
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
@@ -2181,8 +2216,8 @@ TEST(FilterTest, SimpleFilter)
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BinaryExpr *filterExpr =
-        new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(2000, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+        new LiteralExpr(2000, IntType()), BooleanType());
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();
     EXPECT_TRUE(initialized);
@@ -2217,8 +2252,8 @@ TEST(FilterTest, SimpleFilterWithNulls)
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BinaryExpr *filterExpr =
-        new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(2000, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+        new LiteralExpr(2000, IntType()), BooleanType());
 
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();
@@ -2256,8 +2291,8 @@ TEST(FilterTest, SimpleFilterIntWithNulls)
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType() }));
     auto vecBatch = CreateVectorBatch(inputTypes, numRows, data0, data1);
 
-    BinaryExpr *filterExpr =
-        new BinaryExpr(EQ, new FieldExpr(0, IntType()), new FieldExpr(1, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
+        new FieldExpr(1, IntType()), BooleanType());
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();
     EXPECT_TRUE(initialized);
@@ -2319,7 +2354,7 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     args2.push_back(new LiteralExpr(1, IntType()));
     args2.push_back(new LiteralExpr(5, IntType()));
     auto substrExpr2 = GetFuncExpr(funcStr, args2, VarcharType());
-    auto filterExpr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
+    auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, substrExpr1, substrExpr2, BooleanType());
 
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();

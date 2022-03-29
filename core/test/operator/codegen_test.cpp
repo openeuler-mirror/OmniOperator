@@ -42,7 +42,8 @@ TEST(CodeGenTest, SimpleFilter)
     // create expression objects
     FieldExpr *lessThanLeft = new FieldExpr(0, IntType());
     LiteralExpr *lessThanRight = new LiteralExpr(50, IntType());
-    BinaryExpr *lessThanExpr = new BinaryExpr(LT, lessThanLeft, lessThanRight, BooleanType());
+    BinaryExpr *lessThanExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::LT, lessThanLeft, lessThanRight, BooleanType());
 
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
@@ -106,7 +107,7 @@ TEST(CodeGenTest, SimpleProject)
 {
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(50, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
@@ -168,15 +169,15 @@ TEST(CodeGenTest, SingleCaseSwitch)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
     LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     FieldExpr *mulLeft = new FieldExpr(0, IntType());
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, IntType());
 
     std::vector<std::pair<Expr *, Expr *>> whenClause;
     std::pair<Expr *, Expr *> when;
@@ -255,23 +256,23 @@ TEST(CodeGenTest, DoubleCaseSwitch)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
     LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *ltLeft = new FieldExpr(1, LongType());
     LiteralExpr *ltRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *ltExpr = new BinaryExpr(LT, ltLeft, ltRight, BooleanType());
+    BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, ltLeft, ltRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     FieldExpr *addLeft1 = new FieldExpr(0, IntType());
     LiteralExpr *addRight1 = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft1, addRight1, IntType());
 
     FieldExpr *mulLeft = new FieldExpr(0, IntType());
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, IntType());
 
     std::vector<std::pair<Expr *, Expr *>> whenClause;
     std::pair<Expr *, Expr *> when1;
@@ -355,31 +356,31 @@ TEST(CodeGenTest, ThreeCaseSwitch)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
     LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *gtLeft1 = new FieldExpr(1, LongType());
     LiteralExpr *gtRight1 = new LiteralExpr(3000000001L, LongType());
-    BinaryExpr *gtExpr1 = new BinaryExpr(GT, gtLeft1, gtRight1, BooleanType());
+    BinaryExpr *gtExpr1 = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft1, gtRight1, BooleanType());
 
     FieldExpr *gtLeft2 = new FieldExpr(1, LongType());
     LiteralExpr *gtRight2 = new LiteralExpr(3000000002L, LongType());
-    BinaryExpr *gtExpr2 = new BinaryExpr(GT, gtLeft2, gtRight2, BooleanType());
+    BinaryExpr *gtExpr2 = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft2, gtRight2, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     FieldExpr *addLeft1 = new FieldExpr(0, IntType());
     LiteralExpr *addRight1 = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, IntType());
+    BinaryExpr *addExpr1 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft1, addRight1, IntType());
 
     FieldExpr *addLeft2 = new FieldExpr(0, IntType());
     LiteralExpr *addRight2 = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft2, addRight2, IntType());
 
     FieldExpr *mulLeft = new FieldExpr(0, IntType());
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, IntType());
 
     std::vector<std::pair<Expr *, Expr *>> whenClause;
     std::pair<Expr *, Expr *> when1;
@@ -462,11 +463,11 @@ TEST(CodeGenTest, SwitchElseNull)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
     LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     DataTypePtr destType = make_unique<DataType>(OMNI_INT);
     LiteralExpr *nullExpr = new LiteralExpr();
@@ -546,15 +547,15 @@ TEST(CodeGenTest, SingleProject)
 {
     FieldExpr *gtLeft = new FieldExpr(1, LongType());
     LiteralExpr *gtRight = new LiteralExpr(3000000000L, LongType());
-    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     FieldExpr *mulLeft = new FieldExpr(0, IntType());
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, IntType());
+    BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, IntType());
 
     IfExpr *ifExpr = new IfExpr(gtExpr, addExpr, mulExpr);
 
@@ -688,7 +689,8 @@ TEST(CodeGenTest, RowFilter)
 {
     FieldExpr *equalLeft = new FieldExpr(0, IntType());
     LiteralExpr *equalRight = new LiteralExpr(0, IntType());
-    BinaryExpr *equalExpr = new BinaryExpr(EQ, equalLeft, equalRight, BooleanType());
+    BinaryExpr *equalExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, equalLeft, equalRight, BooleanType());
 
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
@@ -783,7 +785,7 @@ TEST(CodeGenTest, RowFilterString)
 
     auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     auto helloExpr = new LiteralExpr(new std::string("hello"), VarcharType(6));
-    auto eqExpr = new BinaryExpr(EQ, substrExpr, helloExpr, BooleanType());
+    auto eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExpr, helloExpr, BooleanType());
 
     auto filter = new RowFilter(*eqExpr);
     EXPECT_FALSE(filter == nullptr);
@@ -806,7 +808,7 @@ TEST(CodeGenTest, RowFilterString)
 
     auto helloExpr2 = new LiteralExpr(new std::string("hello"), VarcharType(6));
 
-    auto eqExpr2 = new BinaryExpr(EQ, substrExpr2, helloExpr2, BooleanType());
+    auto eqExpr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExpr2, helloExpr2, BooleanType());
     filter = new RowFilter(*eqExpr2);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
@@ -836,7 +838,7 @@ TEST(CodeGenTest, RowFilterString)
     args4.push_back(substrLen4);
     auto substrExpr4 = GetFuncExpr(funcStr, args4, VarcharType());
 
-    auto eqExpr3 = new BinaryExpr(EQ, substrExpr3, substrExpr4, BooleanType());
+    auto eqExpr3 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExpr3, substrExpr4, BooleanType());
     filter = new RowFilter(*eqExpr3);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
@@ -864,19 +866,19 @@ TEST(CodeGenTest, Operators1)
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(2, IntType());
 
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, addLeft, addRight, BooleanType());
+    BinaryExpr *gteExpr = new BinaryExpr(omniruntime::expressions::Operator::GTE, addLeft, addRight, BooleanType());
 
     FieldExpr *ltLeft = new FieldExpr(1, IntType());
     LiteralExpr *ltRight = new LiteralExpr(4, IntType());
-    BinaryExpr *ltExpr = new BinaryExpr(LT, ltLeft, ltRight, BooleanType());
+    BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, ltLeft, ltRight, BooleanType());
 
     FieldExpr *eqLeft = new FieldExpr(2, IntType());
     LiteralExpr *eqRight = new LiteralExpr(2, IntType());
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
+    BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
 
-    BinaryExpr *andLeft = new BinaryExpr(AND, ltExpr, eqExpr, BooleanType());
+    BinaryExpr *andLeft = new BinaryExpr(omniruntime::expressions::Operator::AND, ltExpr, eqExpr, BooleanType());
 
-    BinaryExpr *expr = new BinaryExpr(AND, gteExpr, andLeft, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::AND, gteExpr, andLeft, BooleanType());
 
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
@@ -958,7 +960,7 @@ TEST(CodeGenTest, MathFunctions1)
     std::vector<Expr *> args2;
     args2.push_back(col2);
     auto abs2 = GetFuncExpr(funcStr, args2, IntType());
-    auto eq1 = new BinaryExpr(EQ, abs1, abs2, BooleanType());
+    auto eq1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs1, abs2, BooleanType());
 
     auto col02 = new FieldExpr(0, IntType());
     auto col1 = new FieldExpr(1, IntType());
@@ -968,8 +970,8 @@ TEST(CodeGenTest, MathFunctions1)
     auto abs3 = GetFuncExpr(funcStr, args3, IntType());
     args4.push_back(col1);
     auto abs4 = GetFuncExpr(funcStr, args4, IntType());
-    auto eq2 = new BinaryExpr(EQ, abs3, abs4, BooleanType());
-    auto expr = new BinaryExpr(AND, eq1, eq2, BooleanType());
+    auto eq2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs3, abs4, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::AND, eq1, eq2, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
@@ -1126,15 +1128,15 @@ TEST(CodeGenTest, MathFunctions3)
     // create expression objects
     FieldExpr *col01 = new FieldExpr(0, IntType());
     LiteralExpr *data01 = new LiteralExpr(100, IntType());
-    BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
+    BinaryExpr *condition = new BinaryExpr(omniruntime::expressions::Operator::GT, col01, data01, BooleanType());
 
     FieldExpr *col02 = new FieldExpr(0, IntType());
     LiteralExpr *data02 = new LiteralExpr(200, IntType());
-    BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
+    BinaryExpr *texp = new BinaryExpr(omniruntime::expressions::Operator::GT, col02, data02, BooleanType());
 
     FieldExpr *col03 = new FieldExpr(0, IntType());
     LiteralExpr *data03 = new LiteralExpr(0, IntType());
-    BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
+    BinaryExpr *fexp = new BinaryExpr(omniruntime::expressions::Operator::LT, col03, data03, BooleanType());
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
@@ -1354,7 +1356,7 @@ TEST(CodeGenTest, CastNumbers1)
     args12.push_back(cast1);
     auto abs1 = GetFuncExpr(absStr, args12, DoubleType());
 
-    auto expr = new BinaryExpr(EQ, abs0, abs1, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs0, abs1, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE) };
     DataTypes types(vecOfTypes);
@@ -1440,7 +1442,7 @@ TEST(CodeGenTest, CastNumbers2)
     args.push_back(col1);
     auto cast = GetFuncExpr(castStr, args, DoubleType());
     auto col2 = new FieldExpr(2, DoubleType());
-    auto expr = new BinaryExpr(GT, cast, col2, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, cast, col2, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE) };
     DataTypes types(vecOfTypes);
@@ -1610,7 +1612,7 @@ TEST(CodeGenTest, DateCast)
     DataTypePtr retType = IntType();
     auto cast = GetFuncExpr(funcStr, args, IntType());
     auto col0 = new FieldExpr(0, IntType());
-    auto expr = new BinaryExpr(GT, cast, col0, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, cast, col0, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
@@ -1824,7 +1826,7 @@ TEST(CodeGenTest, ConcatStr)
     auto concatExpr = GetFuncExpr(funcStr, concatArgs, VarcharType());
 
     auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarcharType(11));
-    auto expr = new BinaryExpr(EQ, concatExpr, helloWorldExpr, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, concatExpr, helloWorldExpr, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
@@ -1931,7 +1933,7 @@ TEST(CodeGenTest, ConcatChars)
     auto outerConcat = GetFuncExpr(funcStr, outerArgs, CharType(52));
 
     auto helloExpr = new LiteralExpr(new std::string("hello                         , world"), CharType(52));
-    auto expr = new BinaryExpr(EQ, outerConcat, helloExpr, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, outerConcat, helloExpr, BooleanType());
 
     auto charTypeA = new CharDataType(30);
     auto charTypeB = new CharDataType(20);
@@ -2036,7 +2038,7 @@ TEST(CodeGenTest, ToUpper)
     auto upperTestExpr = new LiteralExpr(
         new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
         VarcharType(80));
-    auto expr = new BinaryExpr(EQ, toUpperExpr, upperTestExpr, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, toUpperExpr, upperTestExpr, BooleanType());
 
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2100,7 +2102,8 @@ TEST(CodeGenTest, ToUpperChar)
     auto upperCharTestExpr = new LiteralExpr(
         new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
         CharType(80));
-    auto expr = new BinaryExpr(EQ, toUpperCharExpr, upperCharTestExpr, BooleanType());
+    auto expr =
+        new BinaryExpr(omniruntime::expressions::Operator::EQ, toUpperCharExpr, upperCharTestExpr, BooleanType());
 
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -2158,13 +2161,13 @@ TEST(CodeGenTest, StringWithOps)
     // create expression objects
     FieldExpr *col21 = new FieldExpr(2, VarcharType());
     LiteralExpr *sunday = new LiteralExpr(new std::string("Sunday"), VarcharType(7));
-    BinaryExpr *eqExpr1 = new BinaryExpr(EQ, col21, sunday, BooleanType());
+    BinaryExpr *eqExpr1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, col21, sunday, BooleanType());
 
     FieldExpr *col22 = new FieldExpr(2, VarcharType());
     LiteralExpr *saturday = new LiteralExpr(new std::string("Saturday"), VarcharType(9));
-    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, col22, saturday, BooleanType());
+    BinaryExpr *eqExpr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, col22, saturday, BooleanType());
 
-    BinaryExpr *expr = new BinaryExpr(OR, eqExpr1, eqExpr2, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::OR, eqExpr1, eqExpr2, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
     DataTypes types(vecOfTypes);
@@ -2261,7 +2264,7 @@ TEST(CodeGenTest, Coalesce)
 
     LiteralExpr *right = new LiteralExpr(123L, LongType());
     right->dataType = LongType();
-    BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr, right, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG), DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
@@ -2330,7 +2333,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
 
     LiteralExpr *right = new LiteralExpr(100L, LongType());
     right->dataType = LongType();
-    BinaryExpr *expr = new BinaryExpr(EQ, coalesceExpr, right, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr, right, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
@@ -2522,7 +2525,7 @@ TEST(CodeGenTest, IsNotNull)
 {
     FieldExpr *col0 = new FieldExpr(0, LongType());
     IsNullExpr *isNull = new IsNullExpr(col0);
-    UnaryExpr *expr = new UnaryExpr(NOT, isNull, BooleanType());
+    UnaryExpr *expr = new UnaryExpr(omniruntime::expressions::Operator::NOT, isNull, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
@@ -2576,10 +2579,11 @@ TEST(CodeGenTest, DecimalOperators1)
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new string("5"), Decimal128Type(38, 0));
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
+    BinaryExpr *addExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     LiteralExpr *equalRight = new LiteralExpr(new string("15"), Decimal128Type(38, 0));
-    BinaryExpr *expr = new BinaryExpr(EQ, addExpr, equalRight, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, addExpr, equalRight, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
     DataTypes types(vecOfTypes);
@@ -2695,15 +2699,15 @@ TEST(CodeGenTest, DecimalOperators3)
     // create expression objects
     FieldExpr *col01 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *data01 = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
-    BinaryExpr *condition = new BinaryExpr(GT, col01, data01, BooleanType());
+    BinaryExpr *condition = new BinaryExpr(omniruntime::expressions::Operator::GT, col01, data01, BooleanType());
 
     FieldExpr *col02 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *data02 = new LiteralExpr(new string("200"), Decimal128Type(38, 0));
-    BinaryExpr *texp = new BinaryExpr(GT, col02, data02, BooleanType());
+    BinaryExpr *texp = new BinaryExpr(omniruntime::expressions::Operator::GT, col02, data02, BooleanType());
 
     FieldExpr *col03 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *data03 = new LiteralExpr(new string("0"), Decimal128Type(38, 0));
-    BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BooleanType());
+    BinaryExpr *fexp = new BinaryExpr(omniruntime::expressions::Operator::LT, col03, data03, BooleanType());
 
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
@@ -2771,16 +2775,18 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
 
     LiteralExpr *mulRight1 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
 
-    BinaryExpr *mulExpr0 = new BinaryExpr(MUL, col0, mulRight0, Decimal128Type(38, 0));
-    BinaryExpr *mulExpr1 = new BinaryExpr(MUL, col1, mulRight1, Decimal128Type(38, 0));
+    BinaryExpr *mulExpr0 =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, col0, mulRight0, Decimal128Type(38, 0));
+    BinaryExpr *mulExpr1 =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, col1, mulRight1, Decimal128Type(38, 0));
 
     FieldExpr *col2 = new FieldExpr(2, Decimal128Type(38, 0));
     FieldExpr *col3 = new FieldExpr(3, Decimal128Type(38, 0));
 
-    BinaryExpr *gteExpr = new BinaryExpr(EQ, mulExpr0, col2, BooleanType());
-    BinaryExpr *lteExpr = new BinaryExpr(EQ, mulExpr1, col3, BooleanType());
+    BinaryExpr *gteExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, mulExpr0, col2, BooleanType());
+    BinaryExpr *lteExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, mulExpr1, col3, BooleanType());
 
-    BinaryExpr *expr = new BinaryExpr(AND, lteExpr, gteExpr, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::AND, lteExpr, gteExpr, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
     DataTypes types(vecOfTypes);
@@ -2852,7 +2858,7 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
 
     LiteralExpr *eqRight = new LiteralExpr(0, IntType());
 
-    BinaryExpr *expr = new BinaryExpr(EQ, compExpr, eqRight, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, compExpr, eqRight, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128), DataType(OMNI_DECIMAL128) };
     DataTypes types(vecOfTypes);
@@ -2908,7 +2914,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     FieldExpr *subLeft = new FieldExpr(0, LongType());
     LiteralExpr *subRight = new LiteralExpr(100L, LongType());
 
-    BinaryExpr *expr = new BinaryExpr(SUB, subLeft, subRight, LongType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, LongType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
@@ -2983,7 +2989,8 @@ TEST(CodeGenTest, ProjectionCodeGen)
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new string("100"), Decimal128Type(38, 0));
 
-    BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, Decimal128Type(38, 0));
+    BinaryExpr *expr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
     DataTypes types(vecOfTypes);
@@ -3072,7 +3079,7 @@ TEST(CodeGenTest, TestRowProjectLong)
     FieldExpr *addLeft = new FieldExpr(0, LongType());
     LiteralExpr *addRight = new LiteralExpr(100L, LongType());
 
-    BinaryExpr *expr = new BinaryExpr(ADD, addLeft, addRight, LongType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);
@@ -3167,7 +3174,7 @@ TEST(CodeGenTest, CastNumbers3)
     std::vector<Expr *> args;
     FieldExpr *col1 = new FieldExpr(1, DoubleType());
     FieldExpr *col2 = new FieldExpr(2, DoubleType());
-    BinaryExpr *expr = new BinaryExpr(LT, col1, col2, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::LT, col1, col2, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE) };
     DataTypes types(vecOfTypes);
@@ -3290,7 +3297,7 @@ TEST(CodeGenTest, Substr)
     auto substrExp1 = GetFuncExpr(funcStr, args1, VarcharType());
 
     auto ctionExpr = new LiteralExpr(new std::string("ction"), VarcharType(6));
-    auto expr1 = new BinaryExpr(EQ, substrExp1, ctionExpr, BooleanType());
+    auto expr1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExp1, ctionExpr, BooleanType());
 
     int64_t dictionaries[numCols] = {};
 
@@ -3312,7 +3319,7 @@ TEST(CodeGenTest, Substr)
     auto substrExp2 = GetFuncExpr(funcStr, args2, VarcharType());
 
     auto ubsterExpr = new LiteralExpr(new std::string("UBSTR"), VarcharType(6));
-    auto expr2 = new BinaryExpr(EQ, substrExp2, ubsterExpr, BooleanType());
+    auto expr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExp2, ubsterExpr, BooleanType());
 
     filter = new RowFilter(*expr2);
     EXPECT_FALSE(filter == nullptr);
@@ -3331,7 +3338,7 @@ TEST(CodeGenTest, Substr)
     auto substrExp3 = GetFuncExpr(funcStr, args3, VarcharType());
 
     auto STRExpr = new LiteralExpr(new std::string("STR Function"), VarcharType(13));
-    auto expr3 = new BinaryExpr(EQ, substrExp3, STRExpr, BooleanType());
+    auto expr3 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExp3, STRExpr, BooleanType());
 
     filter = new RowFilter(*expr3);
     EXPECT_FALSE(filter == nullptr);
@@ -3368,7 +3375,7 @@ TEST(CodeGenTest, Mm3HashInt)
 
     auto equalRight = new LiteralExpr(723455942, IntType());
 
-    auto expr = new BinaryExpr(EQ, mhash, equalRight, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, mhash, equalRight, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
@@ -3580,7 +3587,7 @@ TEST(CodeGenTest, Pmod)
 
     auto equalRight = new LiteralExpr(20, IntType());
 
-    auto expr = new BinaryExpr(EQ, pmod, equalRight, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, pmod, equalRight, BooleanType());
     std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
     DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
@@ -3677,7 +3684,7 @@ TEST(CodeGenTest, SubstrWithChars)
     args2.push_back(substrLen2);
     auto substrExpr2 = GetFuncExpr(funcStr, args2, CharType(10));
 
-    auto expr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, substrExpr1, substrExpr2, BooleanType());
 
     int64_t dictionaries[numCols] = {};
     auto filter = new RowFilter(*expr);
@@ -3715,7 +3722,7 @@ TEST(CodeGenTest, CombineHash)
     auto combineHash = GetFuncExpr(funcStr, args, LongType());
 
     FieldExpr *col2 = new FieldExpr(2, LongType());
-    BinaryExpr *expr = new BinaryExpr(EQ, combineHash, col2, BooleanType());
+    BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, combineHash, col2, BooleanType());
 
     std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG), DataType(OMNI_LONG) };
     DataTypes types(vecOfTypes);

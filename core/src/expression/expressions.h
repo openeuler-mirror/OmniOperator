@@ -19,8 +19,7 @@ namespace expressions {
 // place holder context class here
 class Context {};
 
-
-enum Operator {
+enum class Operator {
     // Comparison
     EQ,
     NEQ,
@@ -41,14 +40,14 @@ enum Operator {
     INVALIDOP
 };
 
-enum OperatorType {
+enum class OperatorType {
     COMPARISON,
     LOGICAL,
     ARITHMETIC,
     INVALIDOPTTYPE
 };
 
-enum ExprType {
+enum class ExprType {
     LITERAL_E,
     FIELD_E,
     BINARY_E,
@@ -131,7 +130,7 @@ public:
 
 class UnaryExpr : public Expr {
 public:
-    Operator op = EQ;
+    Operator op = Operator::EQ;
     Expr *exp = nullptr;
 
     UnaryExpr();
@@ -143,10 +142,9 @@ public:
     ExprType GetType() const override;
 };
 
-
 class BinaryExpr : public Expr {
 public:
-    Operator op = EQ;
+    Operator op = Operator::EQ;
     Expr *left = nullptr;
     Expr *right = nullptr;
 
@@ -156,7 +154,6 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
-
 
 class InExpr : public Expr {
 public:
@@ -170,7 +167,6 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
-
 
 class BetweenExpr : public Expr {
 public:
@@ -211,7 +207,6 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
-
 
 class CoalesceExpr : public Expr {
 public:

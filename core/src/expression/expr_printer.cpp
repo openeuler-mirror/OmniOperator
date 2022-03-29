@@ -17,31 +17,31 @@ using namespace std;
 string ExprPrinter::BinaryExprPrinterHelper(const Operator &op) const
 {
     switch (op) {
-        case EQ:
+        case Operator::EQ:
             return "Cmp:%s(EQ, ";
-        case NEQ:
+        case Operator::NEQ:
             return "Cmp:%s(NEQ, ";
-        case LT:
+        case Operator::LT:
             return "Cmp:%s(LT, ";
-        case LTE:
+        case Operator::LTE:
             return "Cmp:%s(LTE, ";
-        case GT:
+        case Operator::GT:
             return "Cmp:%s(GT, ";
-        case GTE:
+        case Operator::GTE:
             return "Cmp:%s(GTE, ";
-        case AND:
+        case Operator::AND:
             return "Bin:%s(AND, ";
-        case OR:
+        case Operator::OR:
             return "Bin:%s(OR, ";
-        case ADD:
+        case Operator::ADD:
             return "Arith:%s(ADD, ";
-        case SUB:
+        case Operator::SUB:
             return "Arith:%s(SUB, ";
-        case MUL:
+        case Operator::MUL:
             return "Arith:%s(MUL, ";
-        case DIV:
+        case Operator::DIV:
             return "Arith:%s(DIV, ";
-        case MOD:
+        case Operator::MOD:
             return "Arith:%s(MOD, ";
         default:
             return "Invalid";
@@ -104,7 +104,7 @@ void ExprPrinter::Visit(const UnaryExpr &e)
 {
     string indent = GenerateIndentation();
     switch (e.op) {
-        case NOT:
+        case Operator::NOT:
             printf((indent + "Unary:%s(NOT,\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
             break;
         default:
