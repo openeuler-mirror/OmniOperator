@@ -1,11 +1,10 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
 
-__attribute__((noinline)) double Process(void **columns, const int y[], int z, int rowCount)
+namespace omniruntime {
+namespace jit {
+__attribute__((noinline)) double Process(void **columns, const int y[], int z)
 {
     double sum = 0;
     for (int i = 0; i < z; i++) {
@@ -17,4 +16,6 @@ __attribute__((noinline)) double Process(void **columns, const int y[], int z, i
         }
     }
     return sum;
+}
+}
 }

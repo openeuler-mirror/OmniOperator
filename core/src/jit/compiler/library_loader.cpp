@@ -3,7 +3,7 @@
  */
 #include "library_loader.h"
 #include "../../../libconfig.h"
-#include "../../util/debug.h"
+#include "util/debug.h"
 
 using namespace std;
 
@@ -40,12 +40,12 @@ int32_t CoreLibrary::Priority() const
     return priority;
 }
 
-void CoreLibrary::SetPreferredPath(string path)
+void CoreLibrary::SetPreferredPath(std::string path)
 {
     this->preferredPath = path;
 }
 
-string LibraryLoader::ExtractFileName(string path)
+string LibraryLoader::ExtractFileName(std::string path)
 {
     int32_t idx = path.find_last_of("/");
     return path.substr(idx + 1);
@@ -191,7 +191,7 @@ static int LibCallback(struct dl_phdr_info *info, size_t size, void *data)
     return 0;
 }
 
-vector<string> LibraryLoader::LoadLibraries(string allPaths)
+vector<string> LibraryLoader::LoadLibraries(string allPaths) noexcept
 {
     unordered_map<string, vector<string>> candidates;
     for (auto &lib : neededLibs) {
@@ -214,7 +214,7 @@ bool LibraryLoader::FinishedLoading()
     return neededLibs.size() == 0;
 }
 
-string LibraryLoader::ResolveSymlink(const string &path)
+string LibraryLoader::ResolveSymlink(const std::string &path)
 {
     llvm::SmallString<512> realPathRef;
     fs::real_path(path, realPathRef);
@@ -222,8 +222,7 @@ string LibraryLoader::ResolveSymlink(const string &path)
     return realPath;
 }
 
-string LibraryLoader::ValidateLibrary(const string &path, const string &realPath,
-    unordered_map<string, vector<string>> &candidates)
+string LibraryLoader::ValidateLibrary(const string &path, unordered_map<string, vector<string>> &candidates)
 {
     auto targets = neededLibs;
     string fileName = ExtractFileName(path);
@@ -263,7 +262,7 @@ void LibraryLoader::SearchPath(string path, unordered_map<string, vector<string>
         // Resolve symlinks to destination file
         string realPath = (file.type() == fs::file_type::symlink_file) ? ResolveSymlink(file.path()) : file.path();
         string fileName;
-        if ((fileName = ValidateLibrary(file.path(), realPath, candidates)) == "") {
+        if ((fileName = ValidateLibrary(file.path(), candidates)) == "") {
             continue;
         }
         LLVM_DEBUG_LOG("Found candidate library at %s", realPath.c_str());

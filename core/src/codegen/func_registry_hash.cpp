@@ -7,6 +7,7 @@
 #include "functions/murmur3_hash.h"
 using namespace omniruntime;
 using namespace omniruntime::type;
+using namespace omniruntime::codegen;
 
 std::vector<Function> HashFunctionRegistry::GetFunctions()
 {

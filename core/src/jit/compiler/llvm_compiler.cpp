@@ -1,27 +1,26 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include "harden_optimizer.h"
-#include "../annotation.h"
-#include "../../util/debug.h"
 #include "llvm_compiler.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
-
 #include <set>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
+#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+#include <llvm/ExecutionEngine/Orc/ObjectTransformLayer.h>
+#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
+#include <llvm/IR/Attributes.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/TargetSelect.h>
+#include "harden_optimizer.h"
+#include "jit/annotation.h"
+#include "util/debug.h"
 
 using llvm::Module;
 using llvm::outs;
@@ -43,7 +42,6 @@ LLVMCompiler::LLVMCompiler()
     this->layout = std::make_unique<llvm::StringRef>();
     this->builder = std::make_unique<llvm::IRBuilder<>>(*context);
 
-    // TODO: load needed libraries for each module
     LoadExtraLibraries();
 }
 
@@ -57,13 +55,11 @@ LLVMCompiler::~LLVMCompiler()
 
 bool LLVMCompiler::LoadModule(std::string templatePath)
 {
-    // TODO: have a proper registry for all the operators instead of loading from /opt/lib/ir
     llvm::SMDiagnostic error;
     auto module = llvm::parseIRFile(templatePath, error, *context);
 
     if (!module) {
         error.print("error loadding module", llvm::errs());
-        // FIXME: proper error handling using exceptions?
         return false;
     }
 
@@ -496,9 +492,9 @@ map<string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<Module> &m
     return annotFuncs;
 }
 
-string build_param_key(llvm::Function &func, int arg_pos)
+string build_param_key(llvm::Function &func, int argPos)
 {
-    return func.getName().str() + "@" + std::to_string(arg_pos);
+    return func.getName().str() + "@" + std::to_string(argPos);
 }
 }
 }

@@ -141,16 +141,10 @@ UnaryExpr::UnaryExpr()
     dataType = BooleanType();
 }
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr)
-{
-    op = uop;
-    exp = expr;
-}
+UnaryExpr::UnaryExpr(Operator logOp, Expr *bodyexp) : op(logOp), exp(bodyexp) {}
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt)
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt) : op(uop), exp(expr)
 {
-    op = uop;
-    exp = expr;
     dataType = std::move(dt);
 }
 
@@ -188,7 +182,6 @@ ExprType InExpr::GetType() const
     return ExprType::IN_E;
 }
 
-
 BetweenExpr::BetweenExpr()
 {
     dataType = BooleanType();
@@ -213,7 +206,6 @@ ExprType BetweenExpr::GetType() const
 {
     return ExprType::BETWEEN_E;
 }
-
 
 SwitchExpr::SwitchExpr() : whenClause(), falseExpr() {}
 SwitchExpr::~SwitchExpr()
@@ -256,7 +248,6 @@ ExprType IfExpr::GetType() const
 {
     return ExprType::IF_E;
 }
-
 
 CoalesceExpr::CoalesceExpr() : value1(), value2() {}
 

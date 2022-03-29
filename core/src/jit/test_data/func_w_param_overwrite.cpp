@@ -1,10 +1,10 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
+#include <cstdio>
 
+namespace omniruntime {
+namespace jit {
 __attribute__((noinline)) int Preloop(const int rowData[], const int y[], int z /* column count */)
 {
     int p1[] = {1, 2, 3};
@@ -27,4 +27,6 @@ __attribute__((noinline)) int Preloop(const int rowData[], const int y[], int z 
         }
     }
     return sum;
+}
+}
 }

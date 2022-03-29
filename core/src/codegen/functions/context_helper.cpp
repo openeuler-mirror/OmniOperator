@@ -4,14 +4,16 @@
  */
 #include "context_helper.h"
 
+using namespace std;
+using namespace omniruntime::op;
+
+namespace omniruntime {
+namespace codegen {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
 #endif
-
-using namespace std;
-using namespace omniruntime::op;
 
 extern "C" DLLEXPORT
 {
@@ -27,4 +29,6 @@ extern "C" DLLEXPORT
         context->GetArena()->Reset();
         return true;
     }
+}
+}
 }

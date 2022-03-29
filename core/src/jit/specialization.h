@@ -4,10 +4,9 @@
 #ifndef __OMNI_JIT_SPECIALIZATION_H__
 #define __OMNI_JIT_SPECIALIZATION_H__
 
-#include "./param_value.h"
-
 #include <string>
 #include <map>
+#include "param_value.h"
 
 namespace omniruntime {
 namespace jit {
@@ -27,8 +26,6 @@ public:
     bool HasSpecializedParam(int paramIndex) const;
 
     ParamValue *GetSpecializedParam(int paramIndex) const;
-
-    void AddSpecializedStats(Stats stats) const;
 
 private:
     std::string id;

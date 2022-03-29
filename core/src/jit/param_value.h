@@ -1,22 +1,22 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#ifndef __PARAM_H__
-#define __PARAM_H__
+#ifndef __OMNI_RUNTIME_JIT_PARAM_H__
+#define __OMNI_RUNTIME_JIT_PARAM_H__
 
 #include <list>
 #include <vector>
-#include "../util/debug.h"
+#include "util/debug.h"
 
 namespace omniruntime {
 namespace jit {
-typedef enum ParamType {
+enum class ParamType {
     INT32,
     INT64,
     FP32,
     FP64,
     ARRAY2D,
-} ParamType;
+};
 
 // Use this struct to encapsulate information to be hardened
 class ParamValue {
@@ -47,51 +47,51 @@ public:
 
     ~ParamValue() {}
 
-    std::vector<int> *ToInt32Vec()
+    const std::vector<int> *ToInt32Vec()
     {
         ASSERT(size >= 0 && type == INT32 && vector);
-        return (std::vector<int> *)value;
+        return static_cast<const std::vector<int> *>(value);
     }
 
-    int *ToInt32Array()
+    const int *ToInt32Array()
     {
         ASSERT(size >= 0 && type == INT32);
-        return (int *)value;
+        return static_cast<const int *>(value);
     };
 
-    int ToInt32() const
+    const int ToInt32() const
     {
         ASSERT(size == -1 && type == INT32);
-        return *(int *)value;
+        return *static_cast<const int *>(value);
     };
 
-    long *ToInt64Array() const
+    const long *ToInt64Array() const
     {
         ASSERT(size >= 0 && type == INT64);
-        return (long *)value;
+        return static_cast<const long *>(value);
     };
 
     long ToInt64() const
     {
         ASSERT(size == -1 && type == INT64);
-        return *(long *)value;
+        return *(static_cast<const long *>(value));
     };
 
-    double *ToFp64Array() const
+    const double *ToFp64Array() const
     {
         ASSERT(size >= 0 && type == FP64);
-        return (double *)value;
+        return static_cast<const double *>(value);
     };
 
     double ToFp64() const
     {
         ASSERT(size == -1 && type == FP64);
-        return *(double *)value;
+        return *(static_cast<const double *>(value));
     };
 
-    std::list<ParamValue> *ToParamList()
+    const std::list<ParamValue> *ToParamList()
     {
-        return (std::list<ParamValue> *)value;
+        return static_cast<const std::list<ParamValue> *>(value);
     }
 
     bool IsScalar()

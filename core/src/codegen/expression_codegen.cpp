@@ -8,13 +8,13 @@
 #include <chrono>
 #include <utility>
 
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Utils.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/Utils.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include "vector"
 #include "expr_info_extractor.h"
 #include "codegen_context.h"
@@ -41,7 +41,6 @@ CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Exp
     return this->value;
 }
 
-// TODO:: define size of a vector
 std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<DataTypeId> &params, DataTypeId &retTypeId,
     bool needsContext)
 {
@@ -121,7 +120,6 @@ ExpressionCodeGen::~ExpressionCodeGen()
         eoe(rt->remove());
     }
 }
-
 
 llvm::IRBuilder<> &ExpressionCodeGen::GetIRBuilder()
 {
@@ -756,8 +754,8 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
     }
     Value *result = nullptr;
     if (typeId == OMNI_DECIMAL128) {
-        result = decimalIRBuilder->CallDecimalFunction(
-            FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
+        result =
+            decimalIRBuilder->CallDecimalFunction(FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
             llvmTypes->ToLLVMType(typeId), funcArgs);
     } else {
         result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
@@ -895,7 +893,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         this->value = CreateInvalidCodeGenValue();
         return;
     }
-        
+
     CodeGenValuePtr left = VisitExpr(*(bExpr->left));
     if (!left->IsValidValue()) {
         this->value = CreateInvalidCodeGenValue();
@@ -1332,7 +1330,6 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
     this->value = make_shared<CodeGenValue>(inArray, isNull);
 }
 
-
 void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
 {
     const BetweenExpr *bExpr = &btExpr;
@@ -1432,7 +1429,6 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     LLVM_DEBUG_LOG("Error: unsupported data type for between %d", valueTypeId);
     this->value = CreateInvalidCodeGenValue();
 }
-
 
 void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
 {

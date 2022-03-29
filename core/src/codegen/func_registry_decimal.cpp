@@ -6,6 +6,7 @@
 #include "functions/decimalfunctions.h"
 using namespace omniruntime;
 using namespace omniruntime::type;
+using namespace omniruntime::codegen;
 
 std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 {

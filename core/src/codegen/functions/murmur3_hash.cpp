@@ -9,12 +9,48 @@
 
 using namespace std;
 
-int32_t RotateLeft(int32_t i, int8_t distance)
+namespace omniruntime {
+namespace codegen {
+static const uint32_t MM3_C1 = 0xcc9e2d51;
+static const uint32_t MM3_C2 = 0x1b873593;
+
+static const uint32_t MM3_BITS_INT = 32;
+
+static const uint32_t MIXK1_ROTATE_LEFT_NUM = 15;
+
+static const uint32_t MIXH1_ROTATE_LEFT_NUM = 13;
+static const uint32_t MIXH1_MULTIPLY_M = 5;
+static const uint32_t MIXH1_ADD_N = 0xe6546b64;
+
+static const uint32_t FMIX_RIGHT_SHIFT_M = 16;
+static const uint32_t FMIX_RIGHT_SHIFT_N = 13;
+static const uint32_t FMIX_MULTIPLY_M = 0x85ebca6b;
+static const uint32_t FMIX_MULTIPLY_N = 0xc2b2ae35;
+
+static const uint32_t HASH_LONG_RIGHT_SHIFT = 32;
+
+static const uint32_t MM3_SIZE_INT = 4;
+static const uint32_t MM3_SIZE_LONG = 8;
+
+static const uint32_t HASH_BYTES_MEMCPY_CNT = 1;
+
+static const uint32_t MM3_INT_ONE = 1;
+
+static const uint32_t REVERSE_SHIFT_M = 24;
+static const uint32_t REVERSE_SHIFT_N = 8;
+static const uint32_t REVERSE_AND_A = 0xff;
+static const uint32_t REVERSE_AND_B = 0xff0000;
+static const uint32_t REVERSE_AND_C = 0xff00;
+static const uint32_t REVERSE_AND_D = 0xff000000;
+
+static const uint32_t MM3_HALFWORD_INIT = 0;
+
+uint32_t RotateLeft(uint32_t i, uint32_t distance)
 {
-    return (i << distance) | (static_cast<uint32_t>(i) >> (MM3_BITS_INT - distance));
+    return (i << distance) | (i >> (MM3_BITS_INT - distance));
 }
 
-int32_t MixK1(int32_t k1)
+uint32_t MixK1(uint32_t k1)
 {
     k1 *= MM3_C1;
     k1 = RotateLeft(k1, MIXK1_ROTATE_LEFT_NUM);
@@ -22,7 +58,7 @@ int32_t MixK1(int32_t k1)
     return k1;
 }
 
-int32_t MixH1(int32_t h1, int32_t k1)
+uint32_t MixH1(uint32_t h1, uint32_t k1)
 {
     h1 ^= k1;
     h1 = RotateLeft(h1, MIXH1_ROTATE_LEFT_NUM);
@@ -30,21 +66,21 @@ int32_t MixH1(int32_t h1, int32_t k1)
     return h1;
 }
 
-int32_t Fmix(int32_t h1, int32_t length)
+uint32_t Fmix(uint32_t h1, uint32_t length)
 {
     h1 ^= length;
-    h1 ^= static_cast<uint32_t>(h1) >> FMIX_RIGHT_SHIFT_M;
+    h1 ^= h1 >> FMIX_RIGHT_SHIFT_M;
     h1 *= FMIX_MULTIPLY_M;
-    h1 ^= static_cast<uint32_t>(h1) >> FMIX_RIGHT_SHIFT_N;
+    h1 ^= h1 >> FMIX_RIGHT_SHIFT_N;
     h1 *= FMIX_MULTIPLY_N;
-    h1 ^= static_cast<uint32_t>(h1) >> FMIX_RIGHT_SHIFT_M;
+    h1 ^= h1 >> FMIX_RIGHT_SHIFT_M;
     return h1;
 }
 
 bool IsBigEndian()
 {
     union {
-        int32_t m;
+        uint32_t m;
         char n;
     } uval = { 0 };
     uval.m = MM3_INT_ONE;
@@ -55,17 +91,17 @@ bool IsBigEndian()
     }
 }
 
-int32_t ReverseBytes(int32_t x)
+uint32_t ReverseBytes(uint32_t x)
 {
     return ((x >> REVERSE_SHIFT_M) & REVERSE_AND_A) | ((x << REVERSE_SHIFT_N) & REVERSE_AND_B) |
         ((x >> REVERSE_SHIFT_N) & REVERSE_AND_C) | ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
 }
 
-int32_t HashBytesByInt(const string base, int32_t lengthInBytes, int32_t seed)
+uint32_t HashBytesByInt(const string base, uint32_t lengthInBytes, uint32_t seed)
 {
-    int32_t h1 = seed;
-    for (int i = 0; i < lengthInBytes; i += MM3_SIZE_INT) {
-        int32_t halfWord;
+    uint32_t h1 = seed;
+    for (uint i = 0; i < lengthInBytes; i += MM3_SIZE_INT) {
+        uint32_t halfWord;
         errno_t ret = memcpy_s(&halfWord, sizeof(halfWord), base.c_str() + i, MM3_SIZE_INT);
         if (ret != EOK) {
             cerr << "Error memcpy in HashBytesByInt!" << endl;
@@ -79,21 +115,21 @@ int32_t HashBytesByInt(const string base, int32_t lengthInBytes, int32_t seed)
 }
 
 
-int32_t HashInt(int32_t input, uint32_t seed)
+uint32_t HashInt(uint32_t input, uint32_t seed)
 {
-    int32_t k1 = MixK1(input);
-    int32_t h1 = MixH1(seed, k1);
+    uint32_t k1 = MixK1(input);
+    uint32_t h1 = MixH1(seed, k1);
 
     return Fmix(h1, MM3_SIZE_INT);
 }
 
-int32_t HashLong(int64_t input, int32_t seed)
+uint32_t HashLong(uint64_t input, uint32_t seed)
 {
-    auto low = static_cast<int32_t>(input);
-    auto high = static_cast<int32_t>(static_cast<uint64_t>(input) >> HASH_LONG_RIGHT_SHIFT);
+    auto low = static_cast<uint32_t>(input);
+    auto high = static_cast<uint32_t>(input >> HASH_LONG_RIGHT_SHIFT);
 
-    int32_t k1 = MixK1(low);
-    int32_t h1 = MixH1(seed, k1);
+    uint32_t k1 = MixK1(low);
+    uint32_t h1 = MixH1(seed, k1);
 
     k1 = MixK1(high);
     h1 = MixH1(h1, k1);
@@ -101,17 +137,17 @@ int32_t HashLong(int64_t input, int32_t seed)
     return Fmix(h1, MM3_SIZE_LONG);
 }
 
-int32_t HashUnsafeBytes(const string base, int32_t lengthInBytes, int32_t seed)
+uint32_t HashUnsafeBytes(const string base, uint32_t lengthInBytes, uint32_t seed)
 {
-    int32_t lengthAligned = lengthInBytes - lengthInBytes % MM3_SIZE_INT;
-    int32_t h1 = HashBytesByInt(base, lengthAligned, seed);
-    for (int i = lengthAligned; i < lengthInBytes; i++) {
-        int32_t halfWord = MM3_HALFWORD_INIT;
+    uint32_t lengthAligned = lengthInBytes - lengthInBytes % MM3_SIZE_INT;
+    uint32_t h1 = HashBytesByInt(base, lengthAligned, seed);
+    for (uint i = lengthAligned; i < lengthInBytes; i++) {
+        uint32_t halfWord = MM3_HALFWORD_INIT;
         errno_t ret = memcpy_s(&halfWord, sizeof(halfWord), base.c_str() + i, HASH_BYTES_MEMCPY_CNT);
         if (ret != EOK) {
             cout << "Error memcpy in HashUnsafeBytes!" << endl;
         }
-        int32_t k1 = MixK1(halfWord);
+        uint32_t k1 = MixK1(halfWord);
         h1 = MixH1(h1, k1);
     }
     return Fmix(h1, lengthInBytes);
@@ -119,26 +155,28 @@ int32_t HashUnsafeBytes(const string base, int32_t lengthInBytes, int32_t seed)
 
 extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isNull, int32_t seed)
 {
-    return HashInt(val * !isNull, seed);
+    return static_cast<int32_t>(HashInt(static_cast<uint32_t>(val * !isNull), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isNull, int32_t seed)
 {
-    return HashLong(val * !isNull, seed);
+    return static_cast<int32_t>(HashLong(static_cast<uint64_t>(val * !isNull), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isNull, int32_t seed)
 {
     string as = string(val, valLen * !isNull);
-    return HashUnsafeBytes(as, valLen, seed);
+    return static_cast<int32_t>(HashUnsafeBytes(as, static_cast<uint32_t>(valLen), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isNull, int32_t seed)
 {
     union {
-        int64_t lVal;
+        uint64_t lVal;
         double dVal;
     } uVal = { 0 };
     uVal.dVal = val * !isNull;
-    return HashLong(uVal.lVal, seed);
+    return static_cast<int32_t>(HashLong(uVal.lVal, static_cast<uint32_t>(seed)));
+}
+}
 }

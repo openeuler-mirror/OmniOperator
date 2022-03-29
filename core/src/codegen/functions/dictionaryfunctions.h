@@ -6,13 +6,15 @@
 #ifndef OMNI_RUNTIME_DICTIONARYFUNCTIONS_H
 #define OMNI_RUNTIME_DICTIONARYFUNCTIONS_H
 
+#include <cstdint>
+
+namespace omniruntime {
+namespace codegen {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
 #endif
-
-#include <cstdint>
 
 extern DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
@@ -27,5 +29,6 @@ extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVecto
 
 extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int64_t *outHighPtr,
     uint64_t *outLowPtr);
-
+}
+}
 #endif // OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

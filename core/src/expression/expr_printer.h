@@ -2,8 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: print expression tree visitor for expressions
  */
-#ifndef __EXPRESSION_PRINTER_H__
-#define __EXPRESSION_PRINTER_H__
+#ifndef __OMNI_RUNTIME_EXPRESSION_PRINTER_H__
+#define __OMNI_RUNTIME_EXPRESSION_PRINTER_H__
 
 #include "expr_visitor.h"
 #include "util/type_util.h"

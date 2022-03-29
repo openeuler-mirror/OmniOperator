@@ -110,8 +110,8 @@ void Config::populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::Pass
         int optimizationIndex = static_cast<int>(optimization);
         if (optimization == Optimization::LOOP_UNROLL) {
             // find a better way to handle params
-            FPM.add(createLoopUnrollPass(DEFAULT_OPT_LEVEL, false, false, DEFAULT_LOOP_UNROLL_THRESHOLD,
-                DEFAULT_LOOP_UNROLL_COUNT, true));
+            FPM.add(createLoopUnrollPass(defaultOptLevel, false, false, defaultLoopUnrollThreshold,
+                defaultLoopUnrollCount, true));
         } else {
             FPM.add(func_pass[optimizationIndex]());
         }

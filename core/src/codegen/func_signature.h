@@ -10,7 +10,6 @@
 #include <string>
 #include <type/data_type.h>
 
-
 class FunctionSignature {
 public:
     FunctionSignature();

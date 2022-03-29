@@ -11,8 +11,8 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include "context_helper.h"
 #include <huawei_secure_c/include/securec.h>
+#include "context_helper.h"
 
 // All extern functions go here temporarily
 #ifdef _WIN32
@@ -63,7 +63,7 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     }
 
     *outLen = endIdx - startIdx;
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
     if (res != EOK) {
         std::cerr << "Substring failed" << std::endl;
@@ -96,7 +96,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
 
     *outLen = strLen - startIdx;
 
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
     if (res != EOK) {
         std::cerr << "Substring failed" << std::endl;

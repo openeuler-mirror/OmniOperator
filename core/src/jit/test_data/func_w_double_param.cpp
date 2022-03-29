@@ -1,10 +1,12 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <vector>
 
+namespace omniruntime {
+namespace jit {
 __attribute__((noinline)) double Process(const double rowData[], const int y[], int z)
 {
     double sum = 0;
@@ -20,4 +22,6 @@ __attribute__((noinline)) double Process(const double rowData[], const int y[], 
         printf("sum=%f\n", sum);
     }
     return sum;
+}
+}
 }

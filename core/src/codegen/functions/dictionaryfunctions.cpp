@@ -4,12 +4,14 @@
  */
 
 #include "dictionaryfunctions.h"
-#include "../../vector/dictionary_vector.h"
+#include "vector/dictionary_vector.h"
 #include "context_helper.h"
 
 using namespace omniruntime::vec;
 using namespace std;
 
+namespace omniruntime {
+namespace codegen {
 extern DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -52,4 +54,6 @@ extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAdd
     *outLowPtr = value.LowBits();
     *outHighPtr = value.HighBits();
     return;
+}
+}
 }
