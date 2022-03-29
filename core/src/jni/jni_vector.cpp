@@ -14,6 +14,7 @@
 #include "memory/base_allocator.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::mem;
 
 static Vector *TransformVector(long vectorAddr)
 {
@@ -227,8 +228,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getLimitN
 JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getScopeNative
         (JNIEnv *env, jclass jcls, jlong jNativeAllocator)
 {
-    // TODO::get scope
-    return nullptr;
+    std::string nativeScope = TransformAllocator(jNativeAllocator)->GetScope();
+    jstring scope = env->NewStringUTF(nativeScope.c_str());
+    return scope;
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setRootAllocatorLimitNative
@@ -250,10 +252,18 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getParent
 }
 
 JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getChildAllocatorsNative
-        (JNIEnv *emv, jclass jcls, jlong jNativeParent)
+        (JNIEnv *env, jclass jcls, jlong jNativeParent)
 {
-    // TODO::create array
-    return nullptr;
+    std::vector<BaseAllocator *> childAllocators = TransformAllocator(jNativeParent)->GetChildAllocators();
+    auto length = static_cast<int32_t>(childAllocators.size());
+    jlongArray nativeChilds = (env)->NewLongArray(length);
+    long childAddrs[length];
+    for (int32_t i = 0; i < length; i++)
+    {
+        childAddrs[i] = reinterpret_cast<uintptr_t>(childAllocators[i]);;
+    }
+    env->SetLongArrayRegion(nativeChilds, 0, length, childAddrs);
+    return nativeChilds;
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator

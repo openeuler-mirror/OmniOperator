@@ -74,7 +74,7 @@ template <typename T, typename V>
 static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,
     int64_t *dictVectorAddrs, int32_t rowCount)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
     T *result = new T(vecAllocator, rowCount);
     bool isNull = false;
     int32_t length = 0;
@@ -97,7 +97,7 @@ static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *val
 static VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc func, int64_t *valuesAddresses,
     int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount)
 {
-    VectorAllocator *vectorAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator();
     VarcharDataType vecType = static_cast<VarcharDataType &>(type);
     VarcharVector *result = new VarcharVector(vectorAllocator, vecType.GetWidth() * rowCount, rowCount);
 

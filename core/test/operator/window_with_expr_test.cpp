@@ -1112,6 +1112,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         DictionaryVector *dictionaryVector = new DictionaryVector(vecBatch->GetVector(i), ids, DATA_SIZE);
+        delete vecBatch->GetVector(i);
         vecBatch->SetVector(i, dictionaryVector);
     }
 

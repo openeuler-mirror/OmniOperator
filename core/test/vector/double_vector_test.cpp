@@ -10,7 +10,7 @@ using namespace omniruntime::vec;
 namespace DoubleVectorTest {
 TEST(DoubleVector, newVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_newVector");
     EXPECT_TRUE(allocator != nullptr);
     DoubleVector *vector = new DoubleVector(allocator, 256);
     EXPECT_EQ(vector->GetSize(), 256);
@@ -19,13 +19,12 @@ TEST(DoubleVector, newVector)
     EXPECT_EQ(vector->GetTypeId(), OMNI_DOUBLE);
     delete vector;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DoubleVector, sliceVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_sliceVector");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *originalVector = new DoubleVector(allocator, 10);
@@ -53,13 +52,13 @@ TEST(DoubleVector, sliceVector)
     EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test set/get
 TEST(DoubleVector, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_setAndGetValue");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -71,13 +70,13 @@ TEST(DoubleVector, setAndGetValue)
         EXPECT_EQ(vector->GetValue(i), i * 2.3);
     }
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test SetValues
 TEST(DoubleVector, SetValues)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_setValues");
     EXPECT_TRUE(allocator != NULL);
 
     const int size = 5;
@@ -97,13 +96,13 @@ TEST(DoubleVector, SetValues)
 
     delete doubleVector1;
     delete doubleVector2;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test SetValues/get
 TEST(DoubleVector, SetValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_SetValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -118,13 +117,13 @@ TEST(DoubleVector, SetValuesWithoutOffset)
 
     delete[] value;
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test SetValues/get with offset
 TEST(DoubleVector, SetValuesWithOffset)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_SetValuesWithOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -139,13 +138,13 @@ TEST(DoubleVector, SetValuesWithOffset)
 
     delete[] value;
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is null
 TEST(DoubleVector, SetValueNull)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_SetValueNull");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -164,13 +163,13 @@ TEST(DoubleVector, SetValueNull)
         }
     }
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyPosition
 TEST(DoubleVector, copyPositions)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("doubleVector");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_copyPositions");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *originalVector = new DoubleVector(allocator, 4);
@@ -189,13 +188,13 @@ TEST(DoubleVector, copyPositions)
 
     delete originalVector;
     delete copyPostionVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyRegion
 TEST(DoubleVector, copyRegion)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("doubleVector");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_copyPosition");
     EXPECT_TRUE(allocator != NULL);
 
     DoubleVector *originalVector = new DoubleVector(allocator, 4);
@@ -211,6 +210,6 @@ TEST(DoubleVector, copyRegion)
 
     delete originalVector;
     delete copyRegionVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 }

@@ -10,7 +10,6 @@
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
 #include "vector/vector_common.h"
-#include "vector/vector_allocator_factory.h"
 #include "type/data_types.h"
 #include "expression/expressions.h"
 #include "operator/execution_context.h"

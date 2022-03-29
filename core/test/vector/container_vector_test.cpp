@@ -14,7 +14,7 @@ const int32_t POSITION_COUNT = 100;
 const int32_t VECTOR_COUNT = 2;
 TEST(ContainerVector, sliceVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 10;
@@ -39,13 +39,13 @@ TEST(ContainerVector, sliceVector)
 
     delete originalVector;
     delete slice1;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test set/get
 TEST(ContainerVector, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -68,13 +68,13 @@ TEST(ContainerVector, setAndGetValue)
     delete vector;
     delete doubleVector;
     delete longVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyPosition
 TEST(ContainerVector, copyPositions)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 10;
@@ -104,13 +104,13 @@ TEST(ContainerVector, copyPositions)
 
     delete originalVector;
     delete copyPositioned;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyRegion
 TEST(ContainerVector, copyRegion)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
     EXPECT_TRUE(allocator != NULL);
 
     int32_t rows = 10;
@@ -135,12 +135,12 @@ TEST(ContainerVector, copyRegion)
 
     delete originalVector;
     delete copyRegionedVec;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(ContainerVector, jniFreeVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -154,13 +154,13 @@ TEST(ContainerVector, jniFreeVector)
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
     Vector *vec = (Vector *)vector;
     delete vec;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(ContainerVector, getVectorAllocator)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    (allocator != nullptr);
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    EXPECT_TRUE(allocator != nullptr);
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
 
@@ -176,12 +176,12 @@ TEST(ContainerVector, getVectorAllocator)
     EXPECT_TRUE(doubleVec->GetValueNulls() != nullptr);
 
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(ContainerVector, appendVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test1");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 5;
@@ -228,7 +228,6 @@ TEST(ContainerVector, appendVector)
     delete vector;
     delete vector2;
     delete appended;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 }

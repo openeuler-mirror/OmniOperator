@@ -8,7 +8,6 @@
 #include <vector>
 #include "vector/vector_batch.h"
 #include "vector/vector_allocator.h"
-#include "vector/vector_allocator_factory.h"
 #include "status.h"
 #include "execution_context.h"
 
@@ -16,7 +15,7 @@ namespace omniruntime {
 namespace op {
 class Operator {
 public:
-    Operator() : sourceTypes(nullptr), vecAllocator(vec::VectorAllocatorFactory::GetGlobalAllocator()), status(0) {}
+    Operator() : sourceTypes(nullptr), vecAllocator(vec::VectorAllocator::GetGlobalAllocator()), status(0) {}
 
     virtual ~Operator() {}
 

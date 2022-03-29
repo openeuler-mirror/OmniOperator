@@ -32,7 +32,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     }
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
+    IntVector *column0 = new IntVector(
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnPerformance"), dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
@@ -59,7 +60,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {1, 2, 3, 4, 5};
-    IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
+    IntVector *expectCol1 = new IntVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnPerformance"), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -86,7 +87,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     }
 
     VectorBatch *inputVecBatch1 = new VectorBatch(1);
-    IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
+    IntVector *column0 =
+        new IntVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNInstruct"), dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch1->SetVector(0, column0);
     VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
@@ -138,7 +140,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     cout << "topn performance takes: " << (double)(e2 - s) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
-    IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
+    IntVector *expectCol1 = new IntVector(
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNInstruct"), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -161,7 +164,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
 
     // prepare data
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    VarcharVector *column0 = new VarcharVector(
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnPerformanceVarChar"),
+        dataSize, dataSize);
     for (int i = 0; i < dataSize; ++i) {
         std::string str = std::to_string(i % 10);
         column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -191,8 +196,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
     cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     string expectData1[expectedDataSize] = {"0", "0", "0", "0", "0"};
-    VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+    VarcharVector *expectCol1 = new VarcharVector(
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnPerformanceVarChar"),
+        expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -218,7 +224,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     int32_t data0[dataSize] = {0, 1, 2, 4, 5, 2, 3};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
+    IntVector *column0 =
+        new IntVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumn"), dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
@@ -239,7 +246,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {0, 1, 2, 2, 3};
-    IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
+    IntVector *expectCol1 = new IntVector(
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumn"), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -262,7 +270,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     string data0[dataSize] = {"0", "1", "2", "4", "5", "2", "3"};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    VarcharVector *column0 =
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnVarChar"),
+        dataSize, dataSize);
     for (int i = 0; i < dataSize; ++i) {
         string str = data0[i];
         column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -287,7 +297,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     topNOperator->GetOutput(outputVecorBatchs);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnVarChar"),
+        expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -313,7 +324,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     string data0[dataSize] = {"0", "1", "2", "4", "5", "2", "3"};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    VarcharVector *column0 = new VarcharVector(
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnChar"), dataSize, dataSize);
     for (int i = 0; i < dataSize; ++i) {
         string str = data0[i];
         column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -338,7 +350,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     topNOperator->GetOutput(outputVecorBatchs);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnChar"),
+        expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -364,7 +377,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumn");
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
@@ -408,7 +422,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     // prepare data
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnVarChar");
+    VarcharVector *column0 = new VarcharVector(vecAllocator, dataSize, dataSize);
     for (int i = 0; i < dataSize; ++i) {
         std::string str = data0[i];
         column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -433,7 +449,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     topNOperator->GetOutput(outputVecorBatchs);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnVarChar"),
+        expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         std::string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -458,7 +475,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     // prepare data
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnChar");
+    VarcharVector *column0 = new VarcharVector(vecAllocator, dataSize, dataSize);
     for (int i = 0; i < dataSize; ++i) {
         std::string str = data0[i];
         column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -483,7 +502,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     topNOperator->GetOutput(outputVecorBatchs);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnChar"),
+        expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         std::string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -509,7 +529,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscMultiColumn");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -570,7 +591,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscMultiColumnVarChar");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -637,7 +659,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscMultiColumnChar");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -704,7 +727,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescMultiColumn");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -765,7 +789,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescMultiColumnVarChar");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -832,7 +857,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescMultiColumnChar");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -899,7 +925,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+        "topn_TestTopNAscMultiColumnNullFirstAndDictionaryVecVarChar");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -925,6 +952,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     DataType dataType = sourceTypes.Get()[2];
+    delete inputVecBatch->GetVector(2);
     inputVecBatch->SetVector(2, CreateDictionaryVector(dataType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
@@ -964,6 +992,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
+    delete vecAllocator;
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryChar)
@@ -976,7 +1005,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+        "topn_TestTopNAscMultiColumnNullFirstAndDictionaryChar");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -1002,6 +1032,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     DataType dataType = sourceTypes.Get()[2];
+    delete inputVecBatch->GetVector(2);
     inputVecBatch->SetVector(2, CreateDictionaryVector(dataType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
@@ -1041,6 +1072,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
+    delete vecAllocator;
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
@@ -1053,7 +1085,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescMultiColumnSortOnlyOneColumn");
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
@@ -1126,6 +1159,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     DataType dataType = sourceTypes.Get()[2];
+    delete inputVecBatch->GetVector(2);
     inputVecBatch->SetVector(2, CreateDictionaryVector(dataType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
@@ -1135,7 +1169,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+        "topn_TestTopNAscMultiColumnNullFirstAndDictionaryVec");
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVectorBatches;
     topNOperator->GetOutput(outputVectorBatches);
@@ -1192,7 +1227,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscMultiColumnNullFirst");
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVectorBatches;
     topNOperator->GetOutput(outputVectorBatches);
@@ -1252,7 +1288,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscMultiColumnNullLast");
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVectorBatches;
     topNOperator->GetOutput(outputVectorBatches);

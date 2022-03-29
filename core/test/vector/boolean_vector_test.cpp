@@ -10,7 +10,7 @@ using namespace omniruntime::vec;
 namespace BooleanVectorTest {
 TEST(BooleanVector, newVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
     BooleanVector *vector = new BooleanVector(allocator, 256);
     EXPECT_EQ(vector->GetSize(), 256);
@@ -26,13 +26,12 @@ TEST(BooleanVector, newVector)
     EXPECT_EQ(vector1->GetTypeId(), OMNI_BOOLEAN);
     delete vector1;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(BooleanVector, sliceVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *originalVector = new BooleanVector(allocator, 10);
@@ -61,13 +60,13 @@ TEST(BooleanVector, sliceVector)
     EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test set/get
 TEST(BooleanVector, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *vector = new BooleanVector(allocator, 256);
@@ -79,13 +78,13 @@ TEST(BooleanVector, setAndGetValue)
         EXPECT_EQ(vector->GetValue(i), i % 2);
     }
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test setValues
 TEST(BooleanVector, setValues)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
@@ -105,13 +104,13 @@ TEST(BooleanVector, setValues)
 
     delete boolVector1;
     delete boolVector2;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is null
 TEST(BooleanVector, setValueNull)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *vector = new BooleanVector(allocator, 256);
@@ -130,13 +129,13 @@ TEST(BooleanVector, setValueNull)
         }
     }
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyPosition
 TEST(BooleanVector, copyPositions)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *originalVector = new BooleanVector(allocator, 4);
@@ -155,13 +154,13 @@ TEST(BooleanVector, copyPositions)
 
     delete originalVector;
     delete copyPostionVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyRegion
 TEST(BooleanVector, copyRegion)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("boolean_vector");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *originalVector = new BooleanVector(allocator, 4);
@@ -177,6 +176,6 @@ TEST(BooleanVector, copyRegion)
 
     delete originalVector;
     delete copyRegionVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 }

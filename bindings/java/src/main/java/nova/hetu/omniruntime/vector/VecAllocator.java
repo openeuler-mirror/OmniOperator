@@ -113,6 +113,11 @@ public class VecAllocator implements AutoCloseable {
         return getAllocatedMemoryNative(nativeAllocator);
     }
 
+    /**
+     * get peak allocated memory of current allocator
+     *
+     * @return peak allocated memory in bytes
+     * */
     public long getPeakAllocated()
     {
         return getPeakAllocatedNative(nativeAllocator);

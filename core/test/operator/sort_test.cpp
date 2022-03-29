@@ -44,7 +44,7 @@ void BuildSortTestData(VectorBatch **vecBatches, int32_t columnCount)
     for (int32_t i = 0; i < VEC_BATCH_COUNT; i++) {
         VectorBatch *vecBatch = new VectorBatch(columnCount);
         for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
-            LongVector *vector = new LongVector(VectorAllocatorFactory::GetGlobalAllocator(), positionCount);
+            LongVector *vector = new LongVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort"), positionCount);
             BuildVectorValues(vector);
             vecBatch->SetVector(colIdx, vector);
         }
@@ -831,7 +831,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
         ascendings[i] = 1;
         nullFirsts[i] = 0;
     }
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort");
     auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 10, vecAllocator, false, false);
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
@@ -880,7 +880,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
         ascendings[i] = 1;
         nullFirsts[i] = 0;
     }
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort");
     auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, false, true);
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
@@ -929,7 +929,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
         ascendings[i] = 1;
         nullFirsts[i] = 0;
     }
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort");
     auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,

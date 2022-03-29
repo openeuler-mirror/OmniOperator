@@ -23,7 +23,7 @@ VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int
     auto *vecBatch = new VectorBatch(numCols, numRows);
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    vecBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
+    vecBatch->NewVectors(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_createInput"), inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypeIds[i]) {
             case OMNI_INT:
@@ -741,7 +741,7 @@ TEST(ParserTest, DictionaryVecTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DictionaryVecTest");
     IntVector *col1 = new IntVector(vecAllocator, numRows);
     IntVector *col2 = new IntVector(vecAllocator, numRows);
     IntVector *col3 = new IntVector(vecAllocator, numRows);
@@ -759,7 +759,6 @@ TEST(ParserTest, DictionaryVecTest)
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     DataTypes dataTypes(inputTypes);
-    batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryVector);
@@ -806,7 +805,7 @@ TEST(ParserTest, DictionaryVecDoubleTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DictionaryVecDoubleTest");
     DoubleVector *col1 = new DoubleVector(vecAllocator, numRows);
 
     int32_t ids1[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
@@ -821,7 +820,6 @@ TEST(ParserTest, DictionaryVecDoubleTest)
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     DataTypes dataTypes(inputTypes);
-    batch->NewVectors(vecAllocator, inputTypes);
 
     batch->SetVector(0, doubleDicVector);
 
@@ -852,7 +850,7 @@ TEST(ParserTest, DictionaryVecVarcharTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DictionaryVecVarcharTest");
     VarcharVector *col1 = new VarcharVector(vecAllocator, 5 * numRows, numRows);
 
     int32_t ids1[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
@@ -872,7 +870,6 @@ TEST(ParserTest, DictionaryVecVarcharTest)
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     DataTypes dataTypes(inputTypes);
-    batch->NewVectors(vecAllocator, inputTypes);
 
     batch->SetVector(0, varCharDicVector);
 
@@ -917,7 +914,7 @@ TEST(ParserTest, DictionaryVecDecimal128Test)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DictionaryVecDecimal128Test");
     Decimal128Vector *col1 = new Decimal128Vector(vecAllocator, numRows);
 
     int32_t ids1[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
@@ -933,7 +930,6 @@ TEST(ParserTest, DictionaryVecDecimal128Test)
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     DataTypes dataTypes(inputTypes);
-    batch->NewVectors(vecAllocator, inputTypes);
 
     batch->SetVector(0, decimal128DicVector);
 
@@ -967,7 +963,7 @@ TEST(ParserTest, DictionaryVecNestedTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DictionaryVecNestedTest");
     IntVector *col1 = new IntVector(vecAllocator, numRows);
     IntVector *col2 = new IntVector(vecAllocator, numRows);
     IntVector *col3 = new IntVector(vecAllocator, 3);
@@ -987,7 +983,7 @@ TEST(ParserTest, DictionaryVecNestedTest)
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     DataTypes dataTypes(inputTypes);
-    batch->NewVectors(vecAllocator, inputTypes);
+
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryNested);
@@ -1393,7 +1389,7 @@ TEST(ProjectTest, SlicedDictionaryVecTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_SlicedDictionaryVecTest");
     IntVector *col1 = new IntVector(vecAllocator, numRows);
     IntVector *col2 = new IntVector(vecAllocator, numRows);
     IntVector *col3 = new IntVector(vecAllocator, numRows);
@@ -1418,7 +1414,7 @@ TEST(ProjectTest, SlicedDictionaryVecTest)
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     DataTypes inputDataTypes(inputTypes);
-    input->NewVectors(vecAllocator, inputTypes);
+
     input->SetVector(0, slicedCol1);
     input->SetVector(1, slicedCol2);
     input->SetVector(2, slicedCol3);
@@ -1464,7 +1460,8 @@ TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
     const int32_t numCols = 1;
     const int32_t numRows = 10;
 
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_SlicedDictionaryVecWithNullTest");
     IntVector *col1 = new IntVector(vecAllocator, numRows);
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
@@ -1483,7 +1480,7 @@ TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
     int32_t inputTypeIds[numCols] = {1};
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    input->NewVectors(vecAllocator, inputTypes);
+
     input->SetVector(0, slicedCol1);
     DataTypes inputVecTypes(inputTypes);
     const int32_t numProject = 1;
