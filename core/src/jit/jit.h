@@ -14,13 +14,13 @@
 
 namespace omniruntime {
 namespace jit {
-enum CompilerType {
+enum class CompilerType {
     LLVM
 };
 
 class Jit {
 public:
-    explicit Jit(std::vector<Context> contexts, CompilerType compilerType = LLVM);
+    explicit Jit(std::vector<Context> contexts, CompilerType compilerType = CompilerType::LLVM);
 
     ~Jit() {}
 

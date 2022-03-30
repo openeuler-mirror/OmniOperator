@@ -1,21 +1,24 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 #include <iostream>
 #include <chrono>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdlib>
+#include <cmath>
 #include <openssl/bio.h>
 #include <openssl/rand.h>
 
+namespace omniruntime {
+namespace jit {
 int Agg(const int column[], int size)
 {
     int sum = 0;
     unsigned char out[20]; // 20
+    int num = sizeof(out) / sizeof(out[0]);
     for (int i = 0; i < size; ++i) {
-        sum += column[i] + RAND_bytes(out, 20) + sqrt((10 * RAND_bytes(out, 20))); // 10 20 20
+        sum += column[i] + RAND_bytes(out, num) + sqrt((10 * RAND_bytes(out, num))); // 10 20 20
     }
     return sum;
 }
@@ -25,7 +28,7 @@ double Agg(const double column[], int size)
     double sum = 0;
     unsigned char out[20]; // 20
     for (int i = 0; i < size; ++i) {
-        sum += column[i] + RAND_bytes(out, 20);
+        sum += column[i] + RAND_bytes(out, sizeof(out) / sizeof(out[0]));
     }
     return sum;
 }
@@ -63,7 +66,6 @@ int main(int argc, char *argv[])
     int columnCount = 3;            // 3
     int rowCount = count;
 
-
     using Time = int;
     using ms = int;
     typedef std::chrono::duration<float> fsec;
@@ -72,7 +74,7 @@ int main(int argc, char *argv[])
 
     double result = 0;
     for (int i = 0; i < 10000; i++) { // 10000
-        result = process((void **)columns, columnType, columnCount, rowCount);
+        result = process(static_cast<void **>(columns), columnType, columnCount, rowCount);
     }
 
     auto t0 = Time::now();
@@ -80,4 +82,6 @@ int main(int argc, char *argv[])
     ms d = std::chrono::duration_cast<ms>(fs);
     std::cout << " duration time: " << d.count() << "ms\n";
     printf("result: %f\n", result);
+}
+}
 }

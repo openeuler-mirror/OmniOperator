@@ -5,12 +5,13 @@
 #ifndef OMNI_RUNTIME_DECIMALFUNCTIONS_H
 #define OMNI_RUNTIME_DECIMALFUNCTIONS_H
 
-
 #include <iostream>
+#include <vector>
 #include "type/decimal128.h"
 #include "type/decimal_operations.h"
-#include <vector>
 
+namespace omniruntime {
+namespace codegen {
 // All extern functions go here temporarily
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -35,5 +36,6 @@ extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
 extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr);
-
+}
+}
 #endif // OMNI_RUNTIME_DECIMALFUNCTIONS_H

@@ -6,6 +6,7 @@
 namespace omniruntime {
 namespace jit {
 Specialization::Specialization() = default;
+
 Specialization::~Specialization() = default;
 
 void Specialization::AddSpecializedParam(int paramIndex, ParamValue *paramValue)
@@ -22,7 +23,5 @@ ParamValue *Specialization::GetSpecializedParam(int paramIndex) const
 {
     return this->specializedParams.at(paramIndex);
 }
-
-void Specialization::AddSpecializedStats(Stats stats) const {}
 }
 }

@@ -89,15 +89,15 @@ public:
     };
 
 private:
-    static const int NUM_FUNC_OPTIMIZATIONS = 35;
-    static const int NUM_MODULE_OPTIMIZATIONS = 20;
-    static const int DEFAULT_OPT_LEVEL = 2;
-    static const int DEFAULT_LOOP_UNROLL_COUNT = 10;
-    static const int DEFAULT_LOOP_UNROLL_THRESHOLD = -1;
+    static const int numFuncOptimizations = 35;
+    static const int numModuleOptimizations = 20;
+    static const int defaultOptLevel = 2;
+    static const int defaultLoopUnrollCount = 10;
+    static const int defaultLoopUnrollThreshold = -1;
 
-    llvm::Pass *(*func_pass[NUM_FUNC_OPTIMIZATIONS])();
+    llvm::Pass *(*func_pass[numFuncOptimizations])();
 
-    llvm::Pass *(*module_pass[NUM_MODULE_OPTIMIZATIONS])();
+    llvm::Pass *(*module_pass[numModuleOptimizations])();
 
     void InitFuncPass();
 

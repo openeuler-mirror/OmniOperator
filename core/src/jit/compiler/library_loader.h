@@ -4,7 +4,6 @@
 #ifndef __OMNI_JIT_LIBRARY_LOADER_H__
 #define __OMNI_JIT_LIBRARY_LOADER_H__
 
-#include "llvm/Support/FileSystem.h"
 #include <huawei_secure_c/include/securec.h>
 #include <link.h>
 #include <iostream>
@@ -15,6 +14,7 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>
+#include "llvm/Support/FileSystem.h"
 
 class StringOrNull {
 public:
@@ -74,13 +74,13 @@ class LibraryLoader {
 public:
     LibraryLoader();
     ~LibraryLoader();
-    std::vector<std::string> LoadLibraries(std::string envStr);
+    std::vector<std::string> LoadLibraries(std::string envStr) noexcept;
     bool FinishedLoading();
     static std::string ExtractFileName(std::string path);
 
 private:
     void SearchPath(std::string path, std::unordered_map<std::string, std::vector<std::string>> &candidates);
-    std::string ValidateLibrary(const std::string &path, const std::string &realPath,
+    std::string ValidateLibrary(const std::string &path,
         std::unordered_map<std::string, std::vector<std::string>> &candidates);
 
     std::vector<CoreLibrary> neededLibs {};

@@ -2,6 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Extract essential information from the expression tree
  */
+#ifndef __OMNI_RUNTIME_EXPR_INFO_EXTRACTOR__
+#define __OMNI_RUNTIME_EXPR_INFO_EXTRACTOR__
+
 #include "expression/expr_visitor.h"
 #include "func_registry_string.h"
 #include "func_registry_dictionary.h"
@@ -28,3 +31,4 @@ public:
 private:
     std::set<int32_t> vectorIndexes;
 };
+#endif

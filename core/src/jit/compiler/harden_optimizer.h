@@ -1,17 +1,16 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#ifndef __OPTIMIZER_H__
-#define __OPTIMIZER_H__
+#ifndef __OMNI_RUNTIME_JIT_OPTIMIZER_H__
+#define __OMNI_RUNTIME_JIT_OPTIMIZER_H__
 
 #include <llvm/ExecutionEngine/Orc/Core.h>
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
-#include "../config.h"
-
 #include <set>
+#include "jit/config.h"
 
 namespace omniruntime {
 namespace jit {
@@ -20,16 +19,16 @@ public:
     HardenOptimizer(unsigned optLevel, const std::vector<Optimization> &optimizations,
         const std::vector<ModuleOptimization> &moduleOptimizations,
         std::map<std::string, std::set<std::string>> &specializedModules)
+        : conf(Config::GetConf()),
+          specializedModules(specializedModules),
+          optimizations(optimizations),
+          moduleOptimizations(moduleOptimizations)
     {
         pmb.OptLevel = optLevel;
-        conf = Config::GetConf();
-        this->specializedModules = specializedModules;
 
-        this->optimizations = optimizations;
         if (optimizations.empty()) {
             this->optimizations = defaultOptimizations;
         }
-        this->moduleOptimizations = moduleOptimizations;
         if (moduleOptimizations.empty()) {
             this->moduleOptimizations = defaultModuleOptimizations;
         }
@@ -38,16 +37,16 @@ public:
     HardenOptimizer(unsigned optLevel, const std::vector<Optimization> &optimizations,
         const std::vector<ModuleOptimization> &moduleOptimizations, Config &optConfig,
         std::map<std::string, std::set<std::string>> &specializedModules)
+        : conf(&optConfig),
+          specializedModules(specializedModules),
+          optimizations(optimizations),
+          moduleOptimizations(moduleOptimizations)
     {
         pmb.OptLevel = optLevel;
-        conf = &optConfig;
-        this->specializedModules = specializedModules;
 
-        this->optimizations = optimizations;
         if (optimizations.empty()) {
             this->optimizations = defaultOptimizations;
         }
-        this->moduleOptimizations = moduleOptimizations;
         if (moduleOptimizations.empty()) {
             this->moduleOptimizations = defaultModuleOptimizations;
         }

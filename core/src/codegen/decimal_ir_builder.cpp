@@ -2,10 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Expression code generator
  */
-#include <llvm/Transforms/Utils/Cloning.h>
 #include "decimal_ir_builder.h"
+#include <llvm/Transforms/Utils/Cloning.h>
 #include "llvm_types.h"
-
 
 void DecimalIRBuilder::AddScaleMultiplier() const
 {

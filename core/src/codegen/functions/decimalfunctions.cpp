@@ -2,18 +2,19 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry math function name
  */
-
-
 #include "context_helper.h"
 #include "decimalfunctions.h"
 
+using namespace omniruntime::type;
+using namespace std;
+
+namespace omniruntime {
+namespace codegen {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
 #endif
-using namespace omniruntime::type;
-using namespace std;
 
 extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow)
 {
@@ -92,4 +93,6 @@ extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, 
 {
     *outHighPtr = 0;
     *outLowPtr = x;
+}
+}
 }

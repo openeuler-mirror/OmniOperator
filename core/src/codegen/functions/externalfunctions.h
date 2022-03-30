@@ -7,6 +7,8 @@
 #define OMNI_RUNTIME_EXTERNALFUNCTIONS_H
 #include <iostream>
 
+namespace omniruntime {
+namespace codegen {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -20,5 +22,6 @@ template <typename T> extern DLLEXPORT T Increment(T x)
 {
     return x + 1;
 }
-
+}
+}
 #endif // OMNI_RUNTIME_EXTERNALFUNCTIONS_H

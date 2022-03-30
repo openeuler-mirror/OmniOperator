@@ -4,11 +4,10 @@
 #ifndef __OMNI_JIT_COMPILER_H__
 #define __OMNI_JIT_COMPILER_H__
 
-#include "../specialization.h"
-#include "../config.h"
-
 #include <string>
 #include <map>
+#include "jit/specialization.h"
+#include "jit/config.h"
 
 namespace omniruntime {
 namespace jit {

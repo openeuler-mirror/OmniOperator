@@ -1,10 +1,12 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <vector>
 
+namespace omniruntime {
+namespace jit {
 // we expect the call to this function to be:
 // 1. hardened
 // 2. inlined to its caller
@@ -40,4 +42,6 @@ __attribute__((noinline)) int Process(const int rowData[], const int y[], int z)
         printf("sum=%d\n", sum);
     }
     return sum;
+}
+}
 }

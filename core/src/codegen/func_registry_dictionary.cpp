@@ -6,6 +6,7 @@
 #include "functions/dictionaryfunctions.h"
 using namespace omniruntime;
 using namespace omniruntime::type;
+using namespace omniruntime::codegen;
 
 std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
 {

@@ -15,6 +15,7 @@
 #endif
 
 using namespace std;
+using namespace omniruntime::codegen;
 
 namespace {
 const int THOUSANDS = 1000;
@@ -168,9 +169,11 @@ extern DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
     // Should be ok just for dates
     int32_t i1 = 5;
     int32_t i2 = 8;
-    int yr = THOUSANDS * (str[THOU] - '0') + HUNDREDS * (str[HUN] - '0') + TENS * (str[TEN] - '0') + (str[ONE] - '0');
-    int mnth = TENS * (str[i1] - '0') + (str[i1 + 1] - '0'); // compute mnth
-    int day = TENS * (str[i2] - '0') + (str[i2 + 1] - '0');  // compute day
+    int base = static_cast<int32_t>('0');
+    int yr =
+        THOUSANDS * (str[THOU] - base) + HUNDREDS * (str[HUN] - base) + TENS * (str[TEN] - base) + (str[ONE] - base);
+    int mnth = TENS * (str[i1] - base) + (str[i1 + 1] - base); // compute mnth
+    int day = TENS * (str[i2] - base) + (str[i2 + 1] - base);  // compute day
 
     struct std::tm epoch = { 0, 0, 0, 1, 1, 70 };
     struct std::tm t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
@@ -182,9 +185,10 @@ extern DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
 extern DLLEXPORT const char *ToUpper(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen)
 {
     auto ret = ArenaAllocatorMalloc(contextPtr, strLen);
+    int step = static_cast<int>('a') - static_cast<int>('A');
     for (int i = 0; i < strLen; i++) {
-        if (*(str + i) > 96 && *(str + i) < 123) {
-            *(ret + i) = *(str + i) - 32;
+        if (*(str + i) >= static_cast<int>('a') && *(str + i) <= static_cast<int>('z')) {
+            *(ret + i) = *(str + i) - step;
         } else {
             *(ret + i) = *(str + i);
         }

@@ -2,23 +2,22 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
 #include "harden_optimizer.h"
-
-#include "llvm/Transforms/Scalar.h"
+#include <llvm/Transforms/Scalar.h>
 #include <llvm/Analysis/SparsePropagation.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 
 namespace omniruntime {
 namespace jit {

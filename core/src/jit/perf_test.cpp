@@ -1,14 +1,16 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include "jit.h"
 #include "gtest/gtest.h"
+#include "jit.h"
 
-#include "../operator/aggregation/group_aggregation.h"
-#include "../operator/sort/sort.h"
+#include "operator/aggregation/group_aggregation.h"
+#include "operator/sort/sort.h"
 
 using namespace omniruntime::codegen;
 
+namespace omniruntime {
+namespace jit {
 void createOperatorFactory(SortOperatorFactory &sortOperatorFactory, omniruntime::op::Operator &sortOperator)
 {
     int32_t sourceTypes[] = {1, 1};
@@ -23,18 +25,18 @@ void createOperatorFactory(SortOperatorFactory &sortOperatorFactory, omniruntime
         SortOperatorFactory::CreateOperatorFactory(sourceTypes, 2, outputCols, 2, // 2 2
         sortCols, sortAscendings, sortNullFirsts, sortColCount);
     if (harden) {
-        auto p_sortCols = ParamValue(sortCols, 2);             // 2
-        auto p_sortColTypes = ParamValue(sortColTypes, 2);     // 2
-        auto p_sortAscendings = ParamValue(sortAscendings, 2); // 2
-        auto p_sortNullFirsts = ParamValue(sortNullFirsts, 2); // 2
-        auto p_sortColCount = ParamValue(&sortColCount);
+        auto pSortCols = ParamValue(sortCols, 2);             // 2
+        auto pSortColTypes = ParamValue(sortColTypes, 2);     // 2
+        auto pSortAscendings = ParamValue(sortAscendings, 2); // 2
+        auto pSortNullFirsts = ParamValue(sortNullFirsts, 2); // 2
+        auto pSortColCount = ParamValue(&sortColCount);
 
         auto *compareToSp = new Specialization();
-        compareToSp->AddSpecializedParam(1, &p_sortCols);       // 1
-        compareToSp->AddSpecializedParam(2, &p_sortColTypes);   // 2
-        compareToSp->AddSpecializedParam(3, &p_sortAscendings); // 3
-        compareToSp->AddSpecializedParam(4, &p_sortNullFirsts); // 4
-        compareToSp->AddSpecializedParam(5, &p_sortColCount);   // 5
+        compareToSp->AddSpecializedParam(1, &pSortCols);       // 1
+        compareToSp->AddSpecializedParam(2, &pSortColTypes);   // 2
+        compareToSp->AddSpecializedParam(3, &pSortAscendings); // 3
+        compareToSp->AddSpecializedParam(4, &pSortNullFirsts); // 4
+        compareToSp->AddSpecializedParam(5, &pSortColCount);   // 5
 
         std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp } };
 
@@ -49,8 +51,8 @@ void createOperatorFactory(SortOperatorFactory &sortOperatorFactory, omniruntime
             new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *memoryPoolContext, *pagesIndexContext });
         auto createOperatorFunc = jit->specialize();
 
-        auto t_created_jitter = Time::now();
-        fsec fs = t_created_jitter - start;
+        auto tCreatedJitter = Time::now();
+        fsec fs = tCreatedJitter - start;
         ms d = std::chrono::duration_cast<ms>(fs);
         std::cout << " create_jitter: " << d.count() << "ms\n";
 
@@ -68,6 +70,7 @@ int32_t *BuildData()
         data1[i] = i;
     }
 }
+
 void TestSort(bool harden)
 {
     // build input data
@@ -112,4 +115,6 @@ TEST(JitPerf, test_sort_original)
 TEST(JitPerf, test_sort_harden)
 {
     TestSort(true);
+}
+}
 }

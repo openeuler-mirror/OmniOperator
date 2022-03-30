@@ -4,10 +4,10 @@
 #ifndef __OMNI_JIT_CONTEXT_H__
 #define __OMNI_JIT_CONTEXT_H__
 
-#include "specialization.h"
 #include <map>
 #include <string>
 #include <vector>
+#include "specialization.h"
 
 namespace omniruntime {
 namespace jit {
@@ -19,12 +19,12 @@ public:
 
     ~Context() {}
 
-    std::string getJitTemplate()
+    std::string GetJitTemplate()
     {
         return this->jitTemplate;
     }
 
-    std::map<std::string, Specialization> getSpecializations()
+    std::map<std::string, Specialization> GetSpecializations()
     {
         return this->specializations;
     }

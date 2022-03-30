@@ -9,6 +9,7 @@
 using namespace std;
 using namespace omniruntime;
 using namespace omniruntime::type;
+using namespace omniruntime::codegen;
 
 vector<Function> ExternalFunctionRegistry::GetFunctions()
 {

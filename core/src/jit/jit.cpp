@@ -3,7 +3,7 @@
  */
 #include "jit.h"
 #include "compiler/llvm_compiler.h"
-#include "../util/debug.h"
+#include "util/debug.h"
 
 #include <iostream>
 #include <utility>
@@ -20,12 +20,12 @@ Jit::Jit(std::vector<Context> contexts, CompilerType compilerType)
     this->contexts = std::move(contexts);
 
     switch (compilerType) {
-        case LLVM:
+        case CompilerType::LLVM:
             this->compiler = nullptr;
             InitCompile();
             break;
         default:
-            std::cerr << "Error: Compiler type not supported: " << compilerType << std::endl;
+            std::cerr << "Error: Compiler type not supported: " << static_cast<int>(compilerType) << std::endl;
             break;
     }
 }
@@ -34,14 +34,14 @@ bool Jit::Specialize(const std::vector<Optimization> &optimizations,
     const std::vector<ModuleOptimization> &moduleOptimizations)
 {
     for (auto &context : this->contexts) {
-        bool loaded = this->compiler->LoadModule(context.getJitTemplate());
+        bool loaded = this->compiler->LoadModule(context.GetJitTemplate());
         if (!loaded) {
-            std::cerr << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
+            std::cerr << "Error: Failed to load template: " + context.GetJitTemplate() << std::endl;
             return false;
         }
-        LLVM_DEBUG_LOG("Loaded template: %s", context.getJitTemplate().c_str());
+        LLVM_DEBUG_LOG("Loaded template: %s", context.GetJitTemplate().c_str());
 
-        for (auto &specializationPair : context.getSpecializations()) {
+        for (auto &specializationPair : context.GetSpecializations()) {
             this->compiler->AddSpecialization(specializationPair.first, specializationPair.second);
         }
         LLVM_DEBUG_LOG("Added specializations");

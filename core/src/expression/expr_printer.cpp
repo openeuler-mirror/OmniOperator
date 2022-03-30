@@ -184,32 +184,32 @@ void PrintDecimal128Val(const LiteralExpr &e, bool printWithTypes, string &inden
 void ExprPrinter::Visit(const LiteralExpr &e)
 {
     string indent = GenerateIndentation();
-    const bool printWithTypes = false; // for debugging types
+    const bool PRINT_WITH_TYPES = false; // for debugging types
     switch (e.GetReturnTypeId()) {
         case OMNI_BOOLEAN:
-            PrintBoolVal(e, printWithTypes, indent);
+            PrintBoolVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_INT:
         case OMNI_DATE32:
-            PrintIntVal(e, printWithTypes, indent);
+            PrintIntVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_LONG:
-            PrintLongVal(e, printWithTypes, indent);
+            PrintLongVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_DOUBLE:
-            PrintDoubleVal(e, printWithTypes, indent);
+            PrintDoubleVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_CHAR:
-            PrintCharVal(e, printWithTypes, indent);
+            PrintCharVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_VARCHAR:
-            PrintCharVal(e, printWithTypes, indent);
+            PrintCharVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_DECIMAL64:
-            PrintDecimal64Val(e, printWithTypes, indent);
+            PrintDecimal64Val(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_DECIMAL128:
-            PrintDecimal128Val(e, printWithTypes, indent);
+            PrintDecimal128Val(e, PRINT_WITH_TYPES, indent);
             break;
         default:
             printf("invalid DataType %d", e.GetReturnTypeId());

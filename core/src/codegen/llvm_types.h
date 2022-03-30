@@ -2,13 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Expression code generator
  */
+#ifndef OMNI_RUNTIME_LLVM_TYPES_H
+#define OMNI_RUNTIME_LLVM_TYPES_H
+
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
 #include "util/type_util.h"
-#include "../type/data_type.h"
-
-#ifndef OMNI_RUNTIME_LLVM_TYPES_H
-#define OMNI_RUNTIME_LLVM_TYPES_H
+#include "type/data_type.h"
 
 class LLVMTypes {
 public:

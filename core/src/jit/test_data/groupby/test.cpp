@@ -4,8 +4,10 @@
 //
 // Created by kkrazy on 2021-03-09.
 //
-#include "../../../operator/group_aggregation.h"
+#include "operator/aggregation/group_aggregation.h"
 
+namespace omniruntime {
+namespace jit {
 int TestGroupBy()
 {
     // create 10 vecBatches
@@ -63,4 +65,6 @@ int TestGroupBy()
         delete col;
     }
     delete result;
+}
+}
 }
