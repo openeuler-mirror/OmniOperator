@@ -114,7 +114,6 @@ OmniStatus WindowOperator::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
     pagesIndex = std::move(make_unique<PagesIndex>(sourceTypes));
-    int32_t sourceTypeIdx = 0;
     for (int32_t i = 0; i < windowFunctionCount; i++) {
         auto type = windowFunctionTypes[i];
         switch (type) {

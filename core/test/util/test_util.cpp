@@ -2,17 +2,18 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Type Util Class
  */
+
+#include "test_util.h"
 #include <cmath>
 #include <cfloat>
 #include <gtest/gtest.h>
-#include "test_util.h"
-#include "../../src/vector/vector_helper.h"
+#include "vector/vector_helper.h"
 #include <cstdarg>
 
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
-bool TypesMatch(const int32_t *actualTypes, const int32_t *expectTypes, int32_t columnNumber);
+bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber);
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
 bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
@@ -251,7 +252,6 @@ void AssertDictionaryVectorLongEquals(DictionaryVector *vector, int64_t *values)
 
 void AssertDictionaryVectorBooleanEquals(DictionaryVector *vector, bool *values)
 {
-    // TODO::handle null
     for (int32_t i = 0; i < vector->GetSize(); i++) {
         int32_t rowIndex;
         Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
@@ -423,12 +423,13 @@ VectorBatch *DuplicateVectorBatch(VectorBatch *input)
 
 void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataType> &dataTypes)
 {
+    uint32_t defaultVarcharLength = 50;
     for (int i = 0; i < dataTypeCount; ++i) {
         if (dataTypeIds[i] == OMNI_VARCHAR) {
-            dataTypes.push_back(VarcharDataType(50));
+            dataTypes.push_back(VarcharDataType(defaultVarcharLength));
             continue;
         } else if (dataTypeIds[i] == OMNI_CHAR) {
-            dataTypes.push_back(CharDataType(50));
+            dataTypes.push_back(CharDataType(defaultVarcharLength));
             continue;
         }
         dataTypes.push_back(DataType(dataTypeIds[i]));
@@ -448,10 +449,10 @@ int32_t GetTestProjectCol(std::string &expression)
 int32_t GetTestExprReturnType(std::string &expression)
 {
     const char *chars = expression.data();
-    int32_t length = expression.size();
-    int32_t start = -1;
-    int32_t end;
-    for (int32_t i = 0; i < length; i++) {
+    auto length = expression.size();
+    auto start = -1;
+    auto end = 0;
+    for (uint32_t i = 0; i < length; i++) {
         if (start == -1 && chars[i] == ':') {
             start = i;
         }
@@ -508,4 +509,5 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
     if (function != nullptr) {
         return new FuncExpr(funcName, args, std::move(returnType), function);
     }
+    return nullptr;
 }

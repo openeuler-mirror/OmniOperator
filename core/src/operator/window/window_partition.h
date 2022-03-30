@@ -59,8 +59,6 @@ public:
 
     std::unique_ptr<Range> GetFrameRange()
     {
-        int32_t rowPosition = currentPosition - partitionStart;
-        int32_t endPosition = partitionEnd - partitionStart - 1;
         return std::make_unique<Range>(0, peerGroupEnd - partitionStart - 1);
     }
 

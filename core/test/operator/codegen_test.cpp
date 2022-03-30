@@ -56,8 +56,6 @@ TEST(CodeGenTest, SimpleFilter)
     int64_t *table = new int64_t[numCols];
     table[0] = (int64_t)col1;
 
-    const int32_t entries = numRows * numCols;
-
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -207,8 +205,6 @@ TEST(CodeGenTest, SingleCaseSwitch)
     table[0] = (int64_t)col1;
     table[1] = (int64_t)col2;
 
-    const int32_t entries = numRows * numCols;
-
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -307,8 +303,6 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     int64_t *table = new int64_t[numCols];
     table[0] = (int64_t)col1;
     table[1] = (int64_t)col2;
-
-    const int32_t entries = numRows * numCols;
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -422,8 +416,6 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     table[0] = (int64_t)col1;
     table[1] = (int64_t)col2;
 
-    const int32_t entries = numRows * numCols;
-
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -508,8 +500,6 @@ TEST(CodeGenTest, SwitchElseNull)
     table[0] = (int64_t)col1;
     table[1] = (int64_t)col2;
 
-    const int32_t entries = numRows * numCols;
-
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -586,8 +576,6 @@ TEST(CodeGenTest, SingleProject)
     table[0] = (int64_t)col1;
     table[1] = (int64_t)col2;
 
-    const int32_t entries = numRows * numCols;
-
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -652,7 +640,6 @@ TEST(CodeGenTest, ShortCircuitProject)
     table[0] = (int64_t)col1;
     table[1] = (int64_t)col2;
 
-    const int32_t entries = numRows * numCols;
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -715,7 +702,6 @@ TEST(CodeGenTest, RowFilter)
     int64_t *table = new int64_t[numCols];
     table[0] = (int64_t)col1;
 
-    const int32_t entries = numRows * numCols;
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
         bitmap[col] = new bool[numRows];
@@ -877,8 +863,6 @@ TEST(CodeGenTest, Operators1)
     // create expression objects
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(2, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
-    LiteralExpr *gteRight = new LiteralExpr(4, IntType());
 
     BinaryExpr *gteExpr = new BinaryExpr(GTE, addLeft, addRight, BooleanType());
 
@@ -2377,6 +2361,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
 
     int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_NE(r, 0);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2390,6 +2375,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
     }
     r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
         reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_NE(r, 0);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2444,6 +2430,7 @@ TEST(CodeGenTest, ProjectionIsNull)
 
     int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_NE(r, 0);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2457,6 +2444,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     }
     r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
         reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_NE(r, 0);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -2956,6 +2944,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_NE(r, 0);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -3031,6 +3020,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_NE(r, 0);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -3573,7 +3563,6 @@ TEST(CodeGenTest, Pmod)
     // create expression objects
     FieldExpr *col0 = new FieldExpr(0, IntType());
     LiteralExpr *data1 = new LiteralExpr(42, IntType());
-    LiteralExpr *data2 = new LiteralExpr(20, IntType());
 
     std::string hashStr = "mm3hash";
     DataTypePtr retType = IntType();

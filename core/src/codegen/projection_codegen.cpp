@@ -104,8 +104,8 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     codeGenUtils->RecordMainFunction(funcDecl);
 
     // Only use these values if filter enabled
-    Argument *selected;
-    Argument *numSelected;
+    Argument *selected = nullptr;
+    Argument *numSelected = nullptr;
     if (filter) {
         selected = funcDecl->getArg(SELECTED);
         selected->setName("SELECTED_ARRAY");
@@ -162,7 +162,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     // Type of output column
     Type *outPtrType = nullptr;
-    Function *varcharVectorFunc;
+    Function *varcharVectorFunc = nullptr;
     switch (this->expr->GetReturnTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:

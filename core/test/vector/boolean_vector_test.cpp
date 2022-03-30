@@ -2,11 +2,12 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
 
+namespace BooleanVectorTest {
 TEST(BooleanVector, newVector)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
@@ -177,4 +178,5 @@ TEST(BooleanVector, copyRegion)
     delete originalVector;
     delete copyRegionVector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
+}
 }

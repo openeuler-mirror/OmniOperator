@@ -74,7 +74,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                     */
+ *                                                                      */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -107,7 +107,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                     */
+ *                                                                      */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -171,7 +171,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                     */
+ *                                                                      */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
@@ -196,7 +196,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
 /**
  * Return an AggregationFactory object address.
- *                                                                      */
+ *                                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
@@ -213,7 +213,6 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggOutputTypes = Deserialize(aggOutputTypesCharPtr);
     env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
 
-    auto sourceTypeIds = sourceTypes.GetIds();
     auto aggInputColsCount = static_cast<size_t>(env->GetArrayLength(jAggInputCols));
     auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
@@ -300,26 +299,18 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
-    jint *windowFunction = env->GetIntArrayElements(jWindowFunction, JNI_FALSE);
     jint *partitionChannels = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
-    jint *preGroupedChannels = env->GetIntArrayElements(JPreGroupedChannels, JNI_FALSE);
     jint *sortChannels = env->GetIntArrayElements(jSortChannels, JNI_FALSE);
     jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
-    jint *argumentChannels = env->GetIntArrayElements(jArgumentChannels, JNI_FALSE);
     auto windowFunctionReturnTypeCharPtr = env->GetStringUTFChars(jWindowFunctionReturnType, JNI_FALSE);
 
     auto inputDataTypes = Deserialize(sourceTypesCharPtr);
     auto outputDataTypes = Deserialize(windowFunctionReturnTypeCharPtr);
 
-    jint inputTypesCount = inputDataTypes.GetSize();
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
-    jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
-    jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
     jint sortColCount = env->GetArrayLength(jSortChannels);
-    jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
-    jint outputTypesCount = outputDataTypes.GetSize();
 
     std::vector<DataType> allTypesVec;
     allTypesVec.insert(allTypesVec.end(), inputDataTypes.Get().begin(), inputDataTypes.Get().end());
@@ -356,14 +347,12 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     auto inputDataTypes = Deserialize(sourceTypesCharPtr);
     auto outputDataTypes = Deserialize(windowFunctionReturnTypeCharPtr);
 
-    jint inputTypesCount = inputDataTypes.GetSize();
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
     jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
     jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
-    jint outputTypesCount = outputDataTypes.GetSize();
 
     std::vector<DataType> allTypesVec;
     allTypesVec.insert(allTypesVec.end(), inputDataTypes.Get().begin(), inputDataTypes.Get().end());
@@ -433,7 +422,6 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     std::string filterExpression = std::string(expressionCharPtr);
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputDataTypes = Deserialize(inputTypesCharPtr);
-    auto inputTypeIds = const_cast<int32_t *>(inputDataTypes.GetIds());
     auto inputLength = (int32_t)jInputLength;
 
     auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
@@ -899,9 +887,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
-    jint *windowFunction = env->GetIntArrayElements(jWindowFunction, JNI_FALSE);
     jint *partitionChannels = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
-    jint *preGroupedChannels = env->GetIntArrayElements(JPreGroupedChannels, JNI_FALSE);
     jint *sortChannels = env->GetIntArrayElements(jSortChannels, JNI_FALSE);
     jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
@@ -913,13 +899,9 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     auto inputDataTypes = Deserialize(sourceTypesCharPtr);
     auto outputDataTypes = Deserialize(windowFunctionReturnTypeCharPtr);
 
-    jint inputTypesCount = inputDataTypes.GetSize();
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
-    jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
-    jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
     jint sortColCount = env->GetArrayLength(jSortChannels);
-    jint outputTypesCount = outputDataTypes.GetSize();
 
     // parse the expressions
     Parser parser;
@@ -957,14 +939,12 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     auto inputDataTypes = Deserialize(sourceTypesCharPtr);
     auto outputDataTypes = Deserialize(windowFunctionReturnTypeCharPtr);
 
-    jint inputTypesCount = inputDataTypes.GetSize();
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
     jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
     jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentKeysCount = env->GetArrayLength(jArgumentKeys);
-    jint outputTypesCount = outputDataTypes.GetSize();
 
     Parser parser;
     std::vector<omniruntime::expressions::Expr *> argumentKeysArrExprs =
@@ -1067,7 +1047,6 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     GetExpressions(env, jSortKeys, sortKeysArr, sortKeysCount);
     jint *sortAscendings = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
-    int32_t n = (int32_t)jN;
 
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
@@ -1092,7 +1071,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
-    int32_t n = (int32_t)jN;
+    auto n = (int32_t)jN;
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
 
     Parser parser;

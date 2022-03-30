@@ -292,15 +292,9 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
 TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
 {
-    int32_t rowNum = DISTINCT_VALUE_COUNT * REPEAT_COUNT;
     VectorBatch *vecBatches[VEC_BATCH_COUNT];
     BuildSortTestData(vecBatches, COLUMN_COUNT_2);
     std::cout << "finish build sort data" << endl;
-
-    int32_t rowCounts[VEC_BATCH_COUNT];
-    for (int32_t i = 0; i < VEC_BATCH_COUNT; i++) {
-        rowCounts[i] = rowNum;
-    }
 
     DataTypes sourceTypes(std::vector<DataType> { LongDataType(), LongDataType() });
     int32_t outputCols[] = {0, 1};
@@ -409,15 +403,15 @@ TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
 
     const auto processorCount = std::thread::hardware_concurrency();
     std::cout << "core number: " << processorCount << std::endl;
-    int threadNums[] = {1};
-    for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
-        auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
+    uint32_t threadNums[] = {1};
+    for (uint32_t i : threadNums) {
+        auto t = i < processorCount ? processorCount / i : 1;
 
-        int32_t threadNum = threadNums[i];
+        uint32_t threadNum = i;
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
-        for (int32_t i = 0; i < threadNum; ++i) {
+        for (uint32_t i = 0; i < threadNum; ++i) {
             std::thread t(TestOrderBy, &threadArgs);
             vecOfThreads.push_back(std::move(t));
         }
@@ -457,15 +451,15 @@ TEST(NativeOmniSortTest, TestSortJITMultiThreads)
 
     const auto processorCount = std::thread::hardware_concurrency();
     std::cout << "core number: " << processorCount << std::endl;
-    int threadNums[] = {1};
-    for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
-        auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
+    uint32_t threadNums[] = {1};
+    for (auto i : threadNums) {
+        auto t = i < processorCount ? processorCount / i : 1;
 
-        int32_t threadNum = threadNums[i];
+        uint32_t threadNum = i;
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
-        for (int32_t i = 0; i < threadNum; ++i) {
+        for (uint32_t i = 0; i < threadNum; ++i) {
             std::thread t(TestOrderBy, &threadArgs);
             vecOfThreads.push_back(std::move(t));
         }

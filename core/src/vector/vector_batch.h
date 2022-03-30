@@ -12,7 +12,6 @@ namespace omniruntime {
 namespace vec {
 class VectorBatch {
 public:
-    [[deprecated]] // The method will be removed in the future, and the rowCount must be specified during construction.
     VectorBatch(int vectorCount);
 
     VectorBatch(int vectorCount, int rowCount);

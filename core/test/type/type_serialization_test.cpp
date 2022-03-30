@@ -13,6 +13,7 @@ using LongDataType = omniruntime::type::LongDataType;
 using DoubleDataType = omniruntime::type::DoubleDataType;
 using Decimal128DataType = omniruntime::type::Decimal128DataType;
 
+namespace TypeSerializationTest {
 TEST(DataTypeSerializer, serialization)
 {
     Decimal128DataType decimal(10, 2);
@@ -60,4 +61,5 @@ TEST(DataTypeSerializer, serialization)
     std::string typeJson = omniruntime::type::SerializeSingle(IntDataType());
     auto vecType = omniruntime::type::DeserializeSingle(typeJson);
     EXPECT_EQ(vecType.GetId(), OMNI_INT);
+}
 }

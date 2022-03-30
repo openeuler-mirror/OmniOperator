@@ -2,12 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
 
+namespace ContainerVectorTest {
 const int32_t POSITION_COUNT = 100;
 const int32_t VECTOR_COUNT = 2;
 TEST(ContainerVector, sliceVector)
@@ -158,7 +159,7 @@ TEST(ContainerVector, jniFreeVector)
 TEST(ContainerVector, getVectorAllocator)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
+    (allocator != nullptr);
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
 
@@ -171,6 +172,7 @@ TEST(ContainerVector, getVectorAllocator)
 
     int64_t doubleVecAddr = vector->GetValue(0);
     auto doubleVec = reinterpret_cast<Vector *>(doubleVecAddr);
+    EXPECT_TRUE(doubleVec->GetValueNulls() != nullptr);
 
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
@@ -227,4 +229,5 @@ TEST(ContainerVector, appendVector)
     delete appended;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
+}
 }

@@ -2,12 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "../util/test_util.h"
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
 
+namespace LongVectorTest {
 TEST(LongVector, sliceVector)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
@@ -212,10 +213,7 @@ TEST(Vector, jniFreeVector)
 
 class LongVectorTest {
 public:
-    LongVectorTest()
-    {
-        values = new long[100000000];
-    }
+    LongVectorTest() : values(new long[100000000]) {}
 
     void SetValue(int index, int64_t value)
     {
@@ -235,14 +233,14 @@ private:
 TEST(LongVector, performanceCompare)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    int ROW_COUNT = 100000000;
+    int rowCount = 100000000;
 
     Timer timer;
 
     // test long vector set value
     auto *vectorTest2 = new LongVectorTest();
     timer.start("point test vector set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest2->SetValue(i, i);
     }
     timer.end();
@@ -250,56 +248,56 @@ TEST(LongVector, performanceCompare)
     // test long vector set value
     LongVectorTest vectorTest1;
     timer.start("stack test vector set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest1.SetValue(i, i);
     }
     timer.end();
 
     // test long vector get value
     timer.start("point test vector get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest2->GetValue(i);
     }
     timer.end();
 
     // test long vector get value
     timer.start("stack test vector get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest1.GetValue(i);
     }
     timer.end();
 
     // vector set value
-    LongVector longVector(allocator, ROW_COUNT);
+    LongVector longVector(allocator, rowCount);
     timer.start("vector set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         longVector.SetValue(i, i);
     }
     timer.end();
 
     // original set value
-    void *longVector2 = new long[ROW_COUNT];
+    void *longVector2 = new long[rowCount];
     timer.start("original set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         ((long *)longVector2)[i] = i;
     }
     timer.end();
 
     // vector get value
+    long value = 0;
     timer.start("vector get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
-        long value = longVector.GetValue(i);
+    for (int i = 0; i < rowCount; ++i) {
+        value = longVector.GetValue(i);
     }
     timer.end();
-
+    value = value + 1;
     // original get value
     timer.start("original get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
-        long value = *((int64_t *)(longVector2) + i);
+    for (int i = 0; i < rowCount; ++i) {
+        value = *((int64_t *)(longVector2) + i);
     }
     timer.end();
 
-    //    delete longVector;
     delete[](long *) longVector2;
     delete vectorTest2;
 }
@@ -337,7 +335,7 @@ TEST(LongVector, appendVector)
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
-
+}
 // Test is not writable
 
 // Test multi thread

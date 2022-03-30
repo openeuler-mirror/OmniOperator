@@ -57,7 +57,7 @@ const Decimal128 Decimal128::SCALE_MULTIPLIERS[] = {
     Decimal128(5421010862427522170LL, 687399551400673280ULL)
 };
 
-Decimal128::Decimal128(int64_t highBits, uint64_t lowBits) : highBits(highBits), lowBits(lowBits) {}
+Decimal128::Decimal128(int64_t highBits, uint64_t lowBits) : lowBits(lowBits), highBits(highBits) {}
 
 Decimal128 &Decimal128::operator += (const Decimal128 &right)
 {

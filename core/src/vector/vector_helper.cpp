@@ -25,9 +25,9 @@ void VectorHelper::FreeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCoun
 
 void VectorHelper::FreeVecBatches(std::vector<VectorBatch *> &vecBatches)
 {
-    for (int i = 0; i < vecBatches.size(); ++i) {
-        vecBatches[i]->ReleaseAllVectors();
-        delete vecBatches[i];
+    for (auto &vecBatche : vecBatches) {
+        vecBatche->ReleaseAllVectors();
+        delete vecBatche;
     }
 }
 

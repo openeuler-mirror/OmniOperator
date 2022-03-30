@@ -21,7 +21,7 @@ public:
           maskCols(maskColIds),
           aggOutputTypes(aggOutputTypes)
     {
-        for (int32_t i = 0; i < aggregators.size(); i++) {
+        for (uint32_t i = 0; i < aggregators.size(); i++) {
             aggStates.push_back(AggregateState());
         }
     }
@@ -45,12 +45,12 @@ public:
     AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, PrepareContext aggFuncTypesContext,
         PrepareContext aggInputColsContext, PrepareContext maskColsContext,
         omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
-        : sourceTypes(sourceTypes),
+        : AggregationCommonOperatorFactory(inputRaw, outputPartial),
+          sourceTypes(sourceTypes),
           aggFuncTypesContext(aggFuncTypesContext),
           aggInputColsContext(aggInputColsContext),
           maskColsContext(maskColsContext),
-          aggOutputTypes(aggOutputTypes),
-          AggregationCommonOperatorFactory(inputRaw, outputPartial)
+          aggOutputTypes(aggOutputTypes)
     {}
 
     ~AggregationOperatorFactory() override {}

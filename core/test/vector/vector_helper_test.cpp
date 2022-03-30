@@ -2,12 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
 
+namespace VectorHelperTest {
 TEST(VectorHelper, setAndGetValue)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper1");
@@ -218,4 +219,5 @@ TEST(VectorHelper, createVector)
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
+}
 }

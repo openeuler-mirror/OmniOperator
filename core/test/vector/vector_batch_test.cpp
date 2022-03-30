@@ -2,11 +2,12 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
 
+namespace VectorBatchTest {
 void VectorBatchTestInitDataTypes(std::vector<DataType> &types)
 {
     types.push_back(IntDataType::Instance());
@@ -73,4 +74,5 @@ TEST(VectorBatch, getVectorTypes)
         EXPECT_EQ(types[i].GetId(), vectorTypeIds[i]);
     }
     delete vectorBatch;
+}
 }

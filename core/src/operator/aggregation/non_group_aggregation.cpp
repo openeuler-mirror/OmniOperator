@@ -27,16 +27,16 @@ OmniStatus AggregationOperatorFactory::Init()
     OmniStatus ret = OMNI_STATUS_NORMAL;
     uint32_t *aggInputColsPtr = aggInputColsContext.context;
     std::vector<DataType> types = sourceTypes.Get();
-    for (int32_t i = 0; i < aggInputColsContext.len; i++) {
+    for (uint32_t i = 0; i < aggInputColsContext.len; i++) {
         aggInputCols.push_back(aggInputColsPtr[i]);
         aggInputTypes.push_back(types[aggInputColsPtr[i]]);
     }
-    for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
+    for (uint32_t i = 0; i < aggFuncTypesContext.len; i++) {
         maskCols.push_back(maskColsContext.context[i]);
     }
 
     uint32_t *aggFuncTypesPtr = aggFuncTypesContext.context;
-    for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
+    for (uint32_t i = 0; i < aggFuncTypesContext.len; i++) {
         switch (aggFuncTypesPtr[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
                 CreateAggregatorFactory<SumAggregatorFactory>(maskCols[i]);
@@ -107,7 +107,6 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     int32_t aggCount = aggregators.size();
     int32_t rowCount = vecBatch->GetRowCount();
-    auto vectors = vecBatch->GetVectors();
     for (int32_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggStates[aggIdx];

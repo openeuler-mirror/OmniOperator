@@ -78,11 +78,11 @@ public:
     HashAggregationOperator(std::vector<ColumnIndex> groupByCols, std::vector<int32_t> &aggInputCols,
         omniruntime::type::DataTypes &aggInputTypes, omniruntime::type::DataTypes &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
-        : groupByCols(groupByCols),
+        : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
+          groupByCols(groupByCols),
           aggInputCols(aggInputCols),
           aggInputTypes(aggInputTypes),
-          aggOutputTypes(aggOutputTypes),
-          AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
+          aggOutputTypes(aggOutputTypes)
     {
         groupedRows.reserve(DEFAULT_HASHTABLE_SIZE);
     }
@@ -142,13 +142,13 @@ public:
     HashAggregationOperatorFactory(PrepareContext groupByCol, DataTypes groupInputTypes, PrepareContext aggCol,
         DataTypes aggInputTypes, DataTypes aggOutputTypes, PrepareContext aggFuncTypes, bool inputRaw,
         bool outputPartial)
-        : groupByColsContext(groupByCol),
+        : AggregationCommonOperatorFactory(inputRaw, outputPartial),
+          groupByColsContext(groupByCol),
           groupByTypes(groupInputTypes),
           aggInputColsContext(aggCol),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
-          aggFuncTypesContext(aggFuncTypes),
-          AggregationCommonOperatorFactory(inputRaw, outputPartial)
+          aggFuncTypesContext(aggFuncTypes)
     {}
 
     ~HashAggregationOperatorFactory() override {}

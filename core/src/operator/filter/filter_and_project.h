@@ -132,12 +132,12 @@ public:
     FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const * inputDataTypes, int32_t vecCount,
         const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount, ExecutionContext *context)
         : filter(filter),
-          inputTypes(inputDataTypes),
-          vecCount(vecCount),
           projections(projections),
           projectVecCount(projectVecCount),
-          projectedVecs(nullptr),
-          context(context)
+          inputTypes(inputDataTypes),
+          vecCount(vecCount),
+          context(context),
+          projectedVecs(nullptr)
     {}
 
     ~FilterAndProjectOperator() override

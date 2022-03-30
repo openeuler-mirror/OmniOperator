@@ -11,8 +11,8 @@ set(CMAKE_CXX_COMPILER "g++")
 # this is used to generate LLVM IR for jitting
 set(IR_COMPILER "clang++-12")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -s -Wall -fPIC -fno-omit-frame-pointer -ftrapv -fstack-check")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -s -Wall -Wtrampolines -fPIC -finline-functions -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -Wl,-z,noexecstack -Wl,-z,relro,-z,now -Wl,--disable-new-dtags,--rpath,/usr/local/lib/ -Wl,--enable-new-dtags,--rpath,/usr/local/lib/")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -pipe -g -Wall -fPIC -fno-omit-frame-pointer -ftrapv -fstack-check -s")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now -Wl,--disable-new-dtags,--rpath,/usr/local/lib/ -Wl,--enable-new-dtags,--rpath,/usr/local/lib/")
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 

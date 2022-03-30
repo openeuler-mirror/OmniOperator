@@ -2,7 +2,7 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: window operator implementations
  */
-#include <time.h>
+#include <ctime>
 #include <vector>
 #include <iostream>
 #include <chrono>
@@ -19,6 +19,7 @@ using namespace std;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 
+namespace WindowTest {
 const int32_t DATA_SIZE = 6;
 
 JitContext *CreateTestWindowJitContextWithFactory(omniruntime::op::WindowOperatorFactory *windowOperatorFactory)
@@ -40,8 +41,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
@@ -94,9 +93,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[2] = {2, 1};
     int32_t sortCols[0] = {};
     int32_t ascendings[0] = {};
@@ -146,9 +142,6 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -202,9 +195,6 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[3] = {1, 2, 0};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
@@ -257,9 +247,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -317,9 +304,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -379,9 +363,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[0] = {};
@@ -444,9 +425,6 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     vecBatch->GetVector(0)->SetValueNull(5);
 
     vecBatch->GetVector(1)->SetValueNull(3);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -513,11 +491,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
 
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
-
     vecBatch->GetVector(1)->SetValueNull(3);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[0] = {};
@@ -592,9 +566,6 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -721,9 +692,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int32_t sortCols[1] = {0};
@@ -849,9 +817,6 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int32_t sortCols[1] = {0};
@@ -944,9 +909,6 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int32_t sortCols[1] = {0};
@@ -1033,9 +995,6 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1130,9 +1089,6 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int32_t sortCols[1] = {0};
@@ -1225,9 +1181,6 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1322,8 +1275,6 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     vecBatch->GetVector(3)->SetValueNull(0);
     vecBatch->GetVector(4)->SetValueNull(1);
     vecBatch->GetVector(4)->SetValueNull(5);
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     const int32_t colCount = 5;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4 };
@@ -1419,8 +1370,6 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     vecBatch->GetVector(3)->SetValueNull(0);
     vecBatch->GetVector(4)->SetValueNull(1);
     vecBatch->GetVector(4)->SetValueNull(5);
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     const int32_t colCount = 5;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4 };
@@ -1523,9 +1472,6 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
         vecBatch->SetVector(i, dictionaryVector);
     }
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
@@ -1590,4 +1536,5 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
+}
 }

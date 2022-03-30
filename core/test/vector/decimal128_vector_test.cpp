@@ -2,12 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "vector_common.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
 
+namespace Decimal128VectorTest {
 TEST(Decimal128Vector, SliceVector)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
@@ -67,9 +68,9 @@ TEST(Decimal128Vector, SetValues)
     EXPECT_TRUE(allocator != NULL);
 
     const int size = 5;
-    int64_t values[size * 2] = {0, 1, 0, 3, 0, 4, 0, 6, 0, 7};
-    int64_t *p = values;
-    Decimal128Vector *Decimal128Vector1 = new Decimal128Vector(allocator, size);
+    uint64_t values[size * 2] = {0, 1, 0, 3, 0, 4, 0, 6, 0, 7};
+    uint64_t *p = values;
+    auto *Decimal128Vector1 = new Decimal128Vector(allocator, size);
     Decimal128Vector1->SetValues(0, p, size);
     for (int i = 0; i < size; i++) {
         Decimal128 decimal128 = Decimal128Vector1->GetValue(i);
@@ -77,7 +78,7 @@ TEST(Decimal128Vector, SetValues)
         EXPECT_TRUE(decimal128.HighBits() == values[i * 2 + 1]);
     }
 
-    Decimal128Vector *Decimal128Vector2 = new Decimal128Vector(allocator, size);
+    auto *Decimal128Vector2 = new Decimal128Vector(allocator, size);
     Decimal128Vector2->SetValues(1, p + 2 * 2, 3);
     for (int i = 0; i < 3; i++) {
         Decimal128 decimal128 = Decimal128Vector2->GetValue(i + 1);
@@ -96,7 +97,7 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
+    auto *vector = new Decimal128Vector(allocator, 256);
     long *value = new long[256 * 2];
     for (int i = 0; i < 256; i++) {
         value[i * 2] = 12;
@@ -212,10 +213,7 @@ TEST(Decimal128Vector, CopyRegion)
 
 class Decimal128VectorTest {
 public:
-    Decimal128VectorTest()
-    {
-        values = new long[100000000];
-    }
+    Decimal128VectorTest() : values(new long[100000000]) {}
 
     void SetValue(int index, int64_t value)
     {
@@ -235,14 +233,13 @@ private:
 TEST(Decimal128Vector, PerformanceCompare)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    int ROW_COUNT = 100000000;
-
+    int rowCount = 100000000;
     Timer timer;
 
     // test long vector set value
     auto *vectorTest2 = new Decimal128VectorTest();
     timer.start("point test vector set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest2->SetValue(i, i);
     }
     timer.end();
@@ -250,58 +247,59 @@ TEST(Decimal128Vector, PerformanceCompare)
     // test long vector set value
     Decimal128VectorTest vectorTest1;
     timer.start("stack test vector set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest1.SetValue(i, i);
     }
     timer.end();
 
     // test long vector get value
     timer.start("point test vector get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest2->GetValue(i);
     }
     timer.end();
 
     // test long vector get value
     timer.start("stack test vector get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         vectorTest1.GetValue(i);
     }
     timer.end();
 
     // vector set value
-    Decimal128Vector decimal128Vector(allocator, ROW_COUNT);
+    Decimal128Vector decimal128Vector(allocator, rowCount);
     timer.start("vector set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         decimal128Vector.SetValue(i, i);
     }
     timer.end();
 
     // original set value
-    void *Decimal128Vector2 = new long[ROW_COUNT];
+    void *decimal128Vector2 = new long[rowCount];
     timer.start("original set value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
-        ((long *)Decimal128Vector2)[i] = i;
+    for (int i = 0; i < rowCount; ++i) {
+        ((long *)decimal128Vector2)[i] = i;
     }
     timer.end();
 
     // vector get value
     timer.start("vector get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
+    for (int i = 0; i < rowCount; ++i) {
         Decimal128 value = decimal128Vector.GetValue(i);
     }
     timer.end();
 
     // original get value
+    long value = 0;
     timer.start("original get value");
-    for (int i = 0; i < ROW_COUNT; ++i) {
-        long value = *((int64_t *)(Decimal128Vector2) + i);
+    for (int i = 0; i < rowCount; ++i) {
+        value = *((int64_t *)(decimal128Vector2) + i);
     }
     timer.end();
+    value = value + 1;
 
-    //    delete Decimal128Vector;
-    delete[](long *) Decimal128Vector2;
+    delete[](long *) decimal128Vector2;
     delete vectorTest2;
 }
-
+}
 // Test is not writable

@@ -52,10 +52,10 @@ SortMergeJoinOperator *StreamedTableWithExprOperatorFactory::GetSmjOperator()
 StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTypes &streamedTypes,
     const std::vector<int32_t> &streamedKeyCols, const std::vector<RowProjFunc> &projectFuncs,
     SortMergeJoinOperator *smjOperator)
-    : streamedTypes(streamedTypes),
+    : smjOperator(smjOperator),
+      streamedTypes(streamedTypes),
       streamedKeyCols(streamedKeyCols),
-      projectFuncs(projectFuncs),
-      smjOperator(smjOperator)
+      projectFuncs(projectFuncs)
 {}
 
 StreamedTableWithExprOperator::~StreamedTableWithExprOperator() {}
@@ -128,10 +128,10 @@ Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes,
     const std::vector<int32_t> &bufferedKeyCols, const std::vector<RowProjFunc> &projectFuncs,
     SortMergeJoinOperator *smjOperator)
-    : bufferedTypes(bufferedTypes),
+    : smjOperator(smjOperator),
+      bufferedTypes(bufferedTypes),
       bufferedKeyCols(bufferedKeyCols),
-      projectFuncs(projectFuncs),
-      smjOperator(smjOperator)
+      projectFuncs(projectFuncs)
 {}
 
 BufferedTableWithExprOperator::~BufferedTableWithExprOperator() {}

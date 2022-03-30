@@ -76,8 +76,8 @@ bool Filter1(VectorBatch *t, int32_t index)
 // Expects 2 columns of type int32, int64
 bool Filter2(VectorBatch *t, int32_t index)
 {
-    int32_t val1 = ((IntVector *) t->GetVector(0))->GetValue(index);
-    int64_t val2 = ((LongVector *) t->GetVector(1))->GetValue(index);
+    int32_t val1 = ((IntVector *)t->GetVector(0))->GetValue(index);
+    int64_t val2 = ((LongVector *)t->GetVector(1))->GetValue(index);
     // true if both values are negative
     return val1 < 0 && val2 < 0;
 }
@@ -526,7 +526,7 @@ TEST(FilterTest, NegativeValues)
     BinaryExpr *lte1Expr = new BinaryExpr(LTE, lte1Left, lte1Right, BooleanType());
 
     FieldExpr *lte2Left = new FieldExpr(1, LongType());
-    LiteralExpr * lte2Right = new LiteralExpr( -1L, LongType());
+    LiteralExpr *lte2Right = new LiteralExpr(-1L, LongType());
     BinaryExpr *lte2Expr = new BinaryExpr(LTE, lte2Left, lte2Right, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(AND, lte1Expr, lte2Expr, BooleanType());
@@ -575,11 +575,11 @@ TEST(FilterTest, AllTypes)
 
     // create the filter expression object
     FieldExpr *eq2Left = new FieldExpr(1, LongType());
-    LiteralExpr * eq2Right = new LiteralExpr(3000000000L, LongType());
+    LiteralExpr *eq2Right = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *eq2Expr = new BinaryExpr(EQ, eq2Left, eq2Right, BooleanType());
 
     FieldExpr *gteLeft = new FieldExpr(2, DoubleType());
-    LiteralExpr * gteRight = new LiteralExpr(0.4, DoubleType());
+    LiteralExpr *gteRight = new LiteralExpr(0.4, DoubleType());
     BinaryExpr *gteExpr = new BinaryExpr(GTE, gteLeft, gteRight, BooleanType());
 
     BinaryExpr *innerAndExpr = new BinaryExpr(AND, eq2Expr, gteExpr, BooleanType());
@@ -972,10 +972,10 @@ TEST(FilterTest, ArithmeticMultiply)
     BinaryExpr *mul1Expr = new BinaryExpr(MUL, new FieldExpr(0, IntType()), new FieldExpr(0, IntType()), IntType());
     BinaryExpr *eqExpr = new BinaryExpr(EQ, new LiteralExpr(0, IntType()), mul1Expr, BooleanType());
 
-    LiteralExpr *mulLeft= new LiteralExpr(2L, LongType());
+    LiteralExpr *mulLeft = new LiteralExpr(2L, LongType());
     BinaryExpr *mul2Expr = new BinaryExpr(MUL, mulLeft, new FieldExpr(1, LongType()), LongType());
-    LiteralExpr *gtLeft= new LiteralExpr(7L, LongType());
-    BinaryExpr *gtExpr=  new BinaryExpr(GT, gtLeft, mul2Expr, BooleanType());
+    LiteralExpr *gtLeft = new LiteralExpr(7L, LongType());
+    BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, mul2Expr, BooleanType());
     BinaryExpr *filterExpr = new BinaryExpr(AND, eqExpr, gtExpr, BooleanType());
 
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()) };
@@ -1903,7 +1903,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new FieldExpr(0, Decimal128Type(38, 0))};
+    std::vector<Expr *> projections = { new FieldExpr(0, Decimal128Type(38, 0)) };
     LiteralExpr *lteRight = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 0));
     BinaryExpr *filterExpr = new BinaryExpr(LTE, new FieldExpr(0, Decimal128Type(38, 0)), lteRight, BooleanType());
     OperatorFactory *factory =
@@ -2108,8 +2108,6 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
 TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
 {
     const int32_t numCols = 3;
-    int32_t inputTypeIds[] = {1, 1, 1};
-
     const int32_t numRows = 10;
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     IntVector *col1 = new IntVector(vecAllocator, numRows);

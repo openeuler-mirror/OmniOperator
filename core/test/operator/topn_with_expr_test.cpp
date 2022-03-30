@@ -13,6 +13,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 using namespace std;
 
+namespace TopnWithExprTest {
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
 {
     // construct input data
@@ -169,4 +170,5 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
 
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+}
 }

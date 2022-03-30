@@ -7,6 +7,7 @@
 
 using namespace omniruntime::type;
 
+namespace Date32Test {
 TEST(Date32, add_normal)
 {
     auto left = new Date32(20210302);
@@ -126,4 +127,5 @@ TEST(Date32, compare_gt)
     EXPECT_EQ(result, true);
     delete left;
     delete right;
+}
 }

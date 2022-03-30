@@ -36,7 +36,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     for (int32_t i = 0; i < outputColsCount; i++) {
         newOutputCols[i] = outputCols[i];
     }
-    for (int32_t i = 0; i < this->projectFuncs.size(); i++) {
+    for (uint32_t i = 0; i < this->projectFuncs.size(); i++) {
         auto index = outputColsCount + i;
         newOutputCols[index] = sourceTypes.GetSize() + i;
     }

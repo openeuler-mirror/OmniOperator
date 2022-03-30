@@ -11,6 +11,7 @@
 using namespace std;
 using namespace omniruntime::vec;
 
+namespace WindowWithExprTest {
 const int32_t DATA_SIZE = 6;
 
 TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
@@ -91,8 +92,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
@@ -151,9 +150,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[2] = {2, 1};
     int32_t sortCols[0] = {};
     int32_t ascendings[0] = {};
@@ -208,9 +204,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -269,9 +262,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[3] = {1, 2, 0};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
@@ -329,9 +319,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -397,9 +384,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -475,15 +459,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
-                                      OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK};
+    int32_t windowFunctionTypes[9] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
+                                      OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
+                                      OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -566,9 +548,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
@@ -654,19 +633,18 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 1.1, 2.2, 2.2, 3.3, 3.3};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2), Decimal128(3, 3), Decimal128(3, 3)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2),
+        Decimal128(3, 3), Decimal128(3, 3)};
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+        OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -710,15 +688,18 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 1.1, 2.2, 2.2, 3.3, 3.3};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2), Decimal128(3, 3), Decimal128(3, 3)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2),
+        Decimal128(3, 3), Decimal128(3, 3)};
     int32_t expectData9[DATA_SIZE] = {3, 3, 4, 4, 5, 5};
     int32_t expectData10[DATA_SIZE] = {6, 6, 8, 8, 10, 10};
     int32_t expectData11[DATA_SIZE] = {22, 22, 44, 44, 66, 66};
     int32_t expectData12[DATA_SIZE] = {222, 222, 444, 444, 666, 666};
     int64_t expectData13[DATA_SIZE] = {2222, 2222, 4444, 4444, 6666, 6666};
-    Decimal128 expectData14[DATA_SIZE] = {Decimal128(22222), Decimal128(22222), Decimal128(44444), Decimal128(44444), Decimal128(66666), Decimal128(66666)};
+    Decimal128 expectData14[DATA_SIZE] = {Decimal128(22222), Decimal128(22222), Decimal128(44444), Decimal128(44444),
+        Decimal128(66666), Decimal128(66666)};
     double expectData15[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
-    Decimal128 expectData16[DATA_SIZE] = {Decimal128(2, 2), Decimal128(2, 2), Decimal128(4, 4), Decimal128(4, 4), Decimal128(6, 6), Decimal128(6, 6)};
+    Decimal128 expectData16[DATA_SIZE] = {Decimal128(2, 2), Decimal128(2, 2), Decimal128(4, 4), Decimal128(4, 4),
+        Decimal128(6, 6), Decimal128(6, 6)};
 
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
@@ -749,19 +730,18 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
+        Decimal128(0, 0), Decimal128(0, 0)};
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
+    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
+        OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -802,7 +782,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
+         Decimal128(0, 0), Decimal128(0, 0)};
     int32_t expectData9[DATA_SIZE] = {13, 35, 35, 57, 57, 79};
     double expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     double expectData11[DATA_SIZE] = {24, 24, 46, 46, 68, 68};
@@ -839,19 +820,19 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX};
+    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MAX};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -894,7 +875,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     int64_t expectData9[DATA_SIZE] = {1113, 3335, 3335, 5557, 5557, 7779};
     int32_t expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData11[DATA_SIZE] = {33, 33, 55, 55, 77, 77};
@@ -903,7 +885,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     int64_t expectData14[DATA_SIZE] = {33333, 33333, 55555, 55555, 77777, 77777};
     double expectData15[DATA_SIZE] = {3.3, 3.3, 5.5, 5.5, 7.7, 7.7};
     std::string expectData16[DATA_SIZE] = {"s3", "s3", "s5", "s5", "s7", "s7"};
-    Decimal128 expectData17[DATA_SIZE] = {Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7), Decimal128(7, 7)};
+    Decimal128 expectData17[DATA_SIZE] = {Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5),
+        Decimal128(7, 7), Decimal128(7, 7)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
@@ -933,19 +916,19 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+        OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+        OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -959,7 +942,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
     Parser parser;
     std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes);
-
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
@@ -988,7 +970,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+       Decimal128(5, 5), Decimal128(7, 7)};
     int64_t expectData9[DATA_SIZE] = {1113, 3335, 3335, 5557, 5557, 7779};
     int32_t expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData11[DATA_SIZE] = {11, 11, 33, 33, 55, 55};
@@ -997,7 +980,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     int64_t expectData14[DATA_SIZE] = {11111, 11111, 33333, 33333, 55555, 55555};
     double expectData15[DATA_SIZE] = {1.1, 1.1, 3.3, 3.3, 5.5, 5.5};
     std::string expectData16[DATA_SIZE] = {"s1", "s1", "s3", "s3", "s5", "s5"};
-    Decimal128 expectData17[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5)};
+    Decimal128 expectData17[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
+        Decimal128(5, 5), Decimal128(5, 5)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
@@ -1027,19 +1011,19 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
 
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1078,7 +1062,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     int32_t expectData9[DATA_SIZE] = {109, 331, 331, 553, 553, 775};
     int64_t expectData10[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData11[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
@@ -1116,7 +1101,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     double data5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 data8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
 
@@ -1127,14 +1113,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
         vecBatch->SetVector(i, dictionaryVector);
     }
 
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
-
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFunctionTypes[7] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_AGGREGATION_TYPE_SUM,
+        OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1174,7 +1159,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     double expectData5[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool expectData6[DATA_SIZE] = {false, false, true, true, false, false};
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
-    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5), Decimal128(7, 7)};
+    Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
+        Decimal128(5, 5), Decimal128(7, 7)};
     int64_t expectData9[DATA_SIZE] = {1113, 3335, 3335, 5557, 5557, 7779};
     int64_t expectData10[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     int64_t expectData11[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
@@ -1182,7 +1168,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     int64_t expectData13[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     double expectData14[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
     std::string expectData15[DATA_SIZE] = {"s3", "s3", "s5", "s5", "s7", "s7"};
-    Decimal128 expectData16[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5)};
+    Decimal128 expectData16[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
+        Decimal128(5, 5), Decimal128(5, 5)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
@@ -1193,4 +1180,5 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
+}
 }

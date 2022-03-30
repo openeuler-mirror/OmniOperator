@@ -12,7 +12,7 @@ Chunk *VectorReference::zeroChunk = new Chunk(0);
 /*
  * Encoding : values | nulls | offsets(option)
  */
-VectorReference::VectorReference(int capacityInBytes, int size, DataTypeId dataTypeId) : reference(1), writable(true)
+VectorReference::VectorReference(int capacityInBytes, int size, DataTypeId dataTypeId) : writable(true), reference(1)
 {
     // for empty vector, like lazy vector.
     if (capacityInBytes == -1) {
