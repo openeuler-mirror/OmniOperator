@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.VarcharDataType;
 
 /**
- * varchar vec
+ * varchar vec.
  *
  * @since 2021-07-17
  */
@@ -27,14 +27,6 @@ public class VarcharVec extends VariableWidthVec {
         super(allocator, capacityInBytes, size, VarcharDataType.VARCHAR);
     }
 
-    private VarcharVec(VarcharVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
-    }
-
-    private VarcharVec(VarcharVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
-    }
-
     public VarcharVec(long nativeVector) {
         super(nativeVector, VarcharDataType.VARCHAR);
     }
@@ -45,8 +37,16 @@ public class VarcharVec extends VariableWidthVec {
                 nativeVectorAllocator, capacityInBytes, size, offset, VarcharDataType.VARCHAR);
     }
 
+    private VarcharVec(VarcharVec vector, int offset, int length, boolean isSlice) {
+        super(vector, offset, length, isSlice);
+    }
+
+    private VarcharVec(VarcharVec vector, int[] positions, int offset, int length) {
+        super(vector, positions, offset, length);
+    }
+
     /**
-     * get the specified bytes at the specified absolute
+     * get the specified bytes at the specified absolute.
      *
      * @param index the element offset in vec
      * @return byte array
@@ -58,7 +58,7 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     /**
-     * Batch gets the specified bytes at the specified absolute
+     * Batch gets the specified bytes at the specified absolute.
      *
      * @param index the element offset in vec
      * @param length the number of element
@@ -71,7 +71,7 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     /**
-     * according to the specified offset and length, read data from the buffer
+     * according to the specified offset and length, read data from the buffer.
      *
      * @param offsetInBytes offset bytes in buffer
      * @param length the length of the data to be read
@@ -82,7 +82,7 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     /**
-     * Sets the specified bytes at the specified absolute
+     * Sets the specified bytes at the specified absolute.
      *
      * @param index the element offset in vec
      * @param value byte array
@@ -114,7 +114,7 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     /**
-     * Batch sets the specified bytes at the specified absolute
+     * Batch sets the specified bytes at the specified absolute.
      *
      * @param index the value of the element to be written
      * @param values the bytes array

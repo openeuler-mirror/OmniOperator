@@ -20,11 +20,10 @@ import java.util.Objects;
 /**
  * The type Omni aggregation with expression operator factory.
  *
- * @since 20211021
+ * @since 2021-10-21
  */
 public class OmniHashAggregationWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniHashAggregationWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniHashAggregationWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni hash aggregation with expression operator factory.
      *
@@ -33,29 +32,30 @@ public class OmniHashAggregationWithExprOperatorFactory
      * @param sourceTypes the source types
      * @param aggFunctionTypes the agg function types
      * @param aggOutputTypes the agg output types
-     * @param inputRaw the input raw
-     * @param outputPartial the output partial
+     * @param isInputRaw the input raw
+     * @param isOutputPartial the output partial
      */
     public OmniHashAggregationWithExprOperatorFactory(String[] groupByChanel, String[] aggChannels,
-            DataType[] sourceTypes, FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean inputRaw,
-            boolean outputPartial) {
+            DataType[] sourceTypes, FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
+            boolean isOutputPartial) {
         super(new FactoryContext(new JitContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
-                aggOutputTypes, inputRaw, outputPartial)));
+                aggOutputTypes, isInputRaw, isOutputPartial)));
     }
 
     private static native long createHashAggregationWithExprOperatorFactory(String[] groupByChanel,
-            String[] aggChannels, String sourceTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw,
-            boolean outputPartial, long JitContext);
+            String[] aggChannels, String sourceTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean isInputRaw,
+            boolean isOutputPartial, long jitContext);
 
     private static native long createHashAggregationWithExprJitContext(String[] groupByChanel, String[] aggChannels,
-            String sourceTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw, boolean outputPartial);
+            String sourceTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean isInputRaw,
+            boolean isOutputPartial);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createHashAggregationWithExprOperatorFactory(context.groupByChanel, context.aggChannels,
                 DataTypeSerializer.serialize(context.sourceTypes), toNativeConstants(context.aggFunctionTypes),
-                DataTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial,
+                DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial,
                 factoryContext.getNativeJitContext());
     }
 
@@ -75,9 +75,9 @@ public class OmniHashAggregationWithExprOperatorFactory
 
         private final DataType[] aggOutputTypes;
 
-        private final boolean inputRaw;
+        private final boolean isInputRaw;
 
-        private final boolean outputPartial;
+        private final boolean isOutputPartial;
 
         /**
          * Instantiates a new Context.
@@ -87,24 +87,25 @@ public class OmniHashAggregationWithExprOperatorFactory
          * @param sourceTypes the source types
          * @param aggFunctionTypes the agg function types
          * @param aggOutputTypes the agg output types
-         * @param inputRaw the input raw
-         * @param outputPartial the output partial
+         * @param isInputRaw the input raw
+         * @param isOutputPartial the output partial
          */
         public JitContext(String[] groupByChanel, String[] aggChannels, DataType[] sourceTypes,
-                FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+                FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
+                boolean isOutputPartial) {
             this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
             this.aggChannels = requireNonNull(aggChannels, "aggChannels");
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
             this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
-            this.inputRaw = inputRaw;
-            this.outputPartial = outputPartial;
+            this.isInputRaw = isInputRaw;
+            this.isOutputPartial = isOutputPartial;
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(groupByChanel), Arrays.hashCode(aggChannels),
-                    Arrays.hashCode(sourceTypes), Arrays.hashCode(aggFunctionTypes), inputRaw, outputPartial);
+                    Arrays.hashCode(sourceTypes), Arrays.hashCode(aggFunctionTypes), isInputRaw, isOutputPartial);
         }
 
         @Override
@@ -118,8 +119,8 @@ public class OmniHashAggregationWithExprOperatorFactory
             JitContext that = (JitContext) obj;
             return Arrays.equals(groupByChanel, that.groupByChanel) && Arrays.equals(sourceTypes, that.sourceTypes)
                     && Arrays.equals(aggChannels, that.aggChannels)
-                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && inputRaw == that.inputRaw
-                    && outputPartial == that.outputPartial;
+                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && isInputRaw == that.isInputRaw
+                    && isOutputPartial == that.isOutputPartial;
         }
     }
 
@@ -142,7 +143,7 @@ public class OmniHashAggregationWithExprOperatorFactory
         protected long createNativeJitContext(JitContext context) {
             return createHashAggregationWithExprJitContext(context.groupByChanel, context.aggChannels,
                     DataTypeSerializer.serialize(context.sourceTypes), toNativeConstants(context.aggFunctionTypes),
-                    DataTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial);
+                    DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial);
         }
     }
 }

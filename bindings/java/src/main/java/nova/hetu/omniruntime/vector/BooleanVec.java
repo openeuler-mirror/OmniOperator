@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.BooleanDataType;
 
 /**
- * boolean vec
+ * boolean vec.
  *
  * @since 2021-07-17
  */
@@ -41,7 +41,7 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     /**
-     * Sets the specified boolean at the specified absolute
+     * Sets the specified boolean at the specified absolute.
      *
      * @param index the element offset in vec
      * @param value the value of vec
@@ -51,7 +51,7 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified boolean at the specified absolute
+     * get the specified boolean at the specified absolute.
      *
      * @param index the element offset in vec
      * @return if the value of 1 returns true, otherwise it returns false
@@ -61,7 +61,7 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     /**
-     * get boolean values from the specified position
+     * get boolean values from the specified position.
      *
      * @param index the position of element
      * @param length the number of element
@@ -73,7 +73,7 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     /**
-     * Batch sets the specified boolean at the specified absolute
+     * Batch sets the specified boolean at the specified absolute.
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec

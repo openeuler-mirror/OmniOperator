@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.constant;
 
@@ -14,6 +17,8 @@ import org.testng.annotations.Test;
 
 /**
  * The type Constant load test.
+ *
+ * @since 2021-07-13
  */
 public class ConstantLoadTest {
     /**

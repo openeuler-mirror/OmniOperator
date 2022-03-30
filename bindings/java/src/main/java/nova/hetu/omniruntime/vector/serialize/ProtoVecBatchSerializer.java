@@ -35,12 +35,11 @@ import nova.hetu.omniruntime.vector.VecFactory;
 import java.nio.ByteBuffer;
 
 /**
- * VecBatchSerializer implementation of protobuf
+ * VecBatchSerializer implementation of protobuf.
  *
  * @since 2021-09-13
  */
 public class ProtoVecBatchSerializer implements VecBatchSerializer {
-    // TODO: too much data copy, need to be optimized.
     @Override
     public byte[] serialize(VecBatch vecBatch) {
         VecBatchSerde.VecBatch.Builder vecBatchBuilder = VecBatchSerde.VecBatch.newBuilder();
@@ -164,7 +163,6 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 }
                 break;
             }
-            // TODO: support time32 and time64
             case OMNI_TIME32:
             case OMNI_TIME64:
                 break;
@@ -275,7 +273,6 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             case OMNI_DECIMAL128:
                 vec = new Decimal128Vec(vecAllocator, vecSize);
                 break;
-            // TODO: support other data types
             case OMNI_TIME32:
             case OMNI_TIME64:
             case OMNI_INTERVAL_DAY_TIME:

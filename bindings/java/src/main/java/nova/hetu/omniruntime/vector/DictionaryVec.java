@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.DataType;
 
 /**
- * dictionary vec
+ * dictionary vec.
  *
  * @since 2021-07-17
  */
@@ -18,11 +18,27 @@ public class DictionaryVec extends FixedWidthVec {
 
     private int[] ids;
 
+    /**
+     * The routine will use native vector to initialize a new dictionary vector.
+     *
+     * @param nativeVector native vector address
+     */
     public DictionaryVec(long nativeVector) {
         super(nativeVector, DataType.create(getTypeIdNative(nativeVector)));
         loadDictionaryAndIds(size);
     }
 
+    /**
+     * The routine will use native vector to initialize a new dictionary vector.
+     *
+     * @param nativeVector native vector address
+     * @param nativeValueBufAddress valueBuf address of native vector
+     * @param nativeVectorNullBufAddress nullBuf address of native vector
+     * @param nativeVectorAllocator allocator address of native vector
+     * @param capacityInBytes capacity in bytes of vector
+     * @param size the actual number of value of vector
+     * @param offset offset of positions in the input parameter
+     */
     public DictionaryVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
             long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
@@ -30,6 +46,12 @@ public class DictionaryVec extends FixedWidthVec {
         loadDictionaryAndIds(size);
     }
 
+    /**
+     * The routine will use the specialized vector allocator to allocate new vector.
+     *
+     * @param dictionary the specialized vector
+     * @param ids the int array
+     */
     public DictionaryVec(Vec dictionary, int[] ids) {
         super(dictionary.getAllocator(), ids.length * BYTES, ids.length, VecEncoding.OMNI_VEC_ENCODING_DICTIONARY,
                 dictionary.getType());
@@ -85,7 +107,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified integer at the specified absolute
+     * get the specified integer at the specified absolute.
      *
      * @param index the element offset in vec
      * @return int value
@@ -95,7 +117,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified integer at the specified absolute
+     * get the specified integer at the specified absolute.
      *
      * @param index the element offset in vec
      * @return integer value
@@ -109,7 +131,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified long at the specified absolute
+     * get the specified long at the specified absolute.
      *
      * @param index the element offset in vec
      * @return long value
@@ -124,7 +146,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified double at the specified absolute
+     * get the specified double at the specified absolute.
      *
      * @param index the element offset in vec
      * @return double value
@@ -138,7 +160,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified boolean at the specified absolute
+     * get the specified boolean at the specified absolute.
      *
      * @param index the element offset in vec
      * @return boolean value
@@ -152,7 +174,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified bytes at the specified absolute
+     * get the specified bytes at the specified absolute.
      *
      * @param index the element offset in vec
      * @return byte array
@@ -166,7 +188,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
-     * get the specified decimal at the specified absolute
+     * get the specified decimal at the specified absolute.
      *
      * @param index the element offset in vec
      * @return long array

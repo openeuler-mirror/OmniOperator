@@ -20,11 +20,10 @@ import java.util.Optional;
 /**
  * The type Omni sort merge streamed table with expression operator factory.
  *
- * @since 20211030
+ * @since 2021-10-30
  */
 public class OmniSmjStreamedTableWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni sort merge streamed table factory.
      *
@@ -57,7 +56,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
     /**
      * The type Context.
      *
-     * @since 20211030
+     * @since 2021-10-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
@@ -112,7 +111,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
     /**
      * The type Factory context.
      *
-     * @since 20211030
+     * @since 2021-10-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

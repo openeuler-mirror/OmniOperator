@@ -18,11 +18,10 @@ import java.util.Objects;
 /**
  * The type Omni distinct limit operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniDistinctLimitOperatorFactory
-        extends
-            OmniOperatorFactory<OmniDistinctLimitOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniDistinctLimitOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni distinct limit operator factory.
      *
@@ -48,7 +47,7 @@ public class OmniDistinctLimitOperatorFactory
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private DataType[] sourceTypes;
@@ -84,7 +83,7 @@ public class OmniDistinctLimitOperatorFactory
     /**
      * The type Factory context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

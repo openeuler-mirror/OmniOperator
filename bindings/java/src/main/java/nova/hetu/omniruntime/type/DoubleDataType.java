@@ -5,15 +5,17 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * double data type
+ * double data type.
  *
  * @since 2021-08-05
  */
 public class DoubleDataType extends DataType {
     /**
-     * Double singleton
+     * Double singleton.
      */
     public static final DoubleDataType DOUBLE = new DoubleDataType();
+
+    private static final long serialVersionUID = -5517157056853810138L;
 
     /**
      * The construct.

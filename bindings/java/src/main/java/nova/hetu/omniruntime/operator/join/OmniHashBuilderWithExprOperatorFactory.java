@@ -18,10 +18,11 @@ import java.util.Optional;
 
 /**
  * The Omni hash builder with expression operator factory.
+ *
+ * @since 2021-10-16
  */
 public class OmniHashBuilderWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniHashBuilderWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniHashBuilderWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni hash builder with expression operator factory.
      *
@@ -51,6 +52,8 @@ public class OmniHashBuilderWithExprOperatorFactory
 
     /**
      * The jit Context.
+     *
+     * @since 2021-10-16
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] buildTyeps;
@@ -91,8 +94,15 @@ public class OmniHashBuilderWithExprOperatorFactory
 
     /**
      * The Factory context.
+     *
+     * @since 2021-10-16
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param jitContext the jit context
+         */
         public FactoryContext(JitContext jitContext) {
             super(jitContext);
             setNeedCache(false);

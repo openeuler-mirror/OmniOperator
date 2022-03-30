@@ -7,9 +7,11 @@ package nova.hetu.omniruntime.utils;
 /**
  * The type Omni runtime exception.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniRuntimeException extends RuntimeException {
+    private static final long serialVersionUID = -4352889723335051173L;
+
     private final OmniErrorType errorType;
 
     /**

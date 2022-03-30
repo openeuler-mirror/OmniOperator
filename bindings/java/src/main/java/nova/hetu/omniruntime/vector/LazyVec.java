@@ -7,11 +7,20 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.DataType;
 
 /**
- * Lazy vector
+ * Lazy vector.
+ *
+ * @since 2021-11-08
  */
 public class LazyVec extends FixedWidthVec {
     private LazyVecLoader loader;
 
+    /**
+     * The routine will use the specialized vector allocator to allocate new vector.
+     *
+     * @param allocator the specialized vector allocator
+     * @param size the actual number of value of vector
+     * @param loader the loader of lazy vector
+     */
     public LazyVec(VecAllocator allocator, int size, LazyVecLoader loader) {
         super(allocator, 0, size, VecEncoding.OMNI_VEC_ENCODING_LAZY, DataType.NONE);
         this.loader = loader;
@@ -39,7 +48,7 @@ public class LazyVec extends FixedWidthVec {
     }
 
     /**
-     * Lazy vector loader
+     * Lazy vector loader.
      */
     public interface LazyVecLoader {
         Vec load();
@@ -51,7 +60,7 @@ public class LazyVec extends FixedWidthVec {
      * For native call, support load data from data source.
      *
      * @param loader loader
-     * @return the address of loaded native vector.
+     * @return the address of loaded native vector
      */
     public static long load(Object loader) {
         Vec vec = ((LazyVecLoader) loader).load();

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * vec batch
+ * vec batch.
  *
  * @since 2021-07-17
  */
@@ -26,6 +26,12 @@ public class VecBatch implements Closeable {
 
     private AtomicBoolean isClosed = new AtomicBoolean(false);
 
+    /**
+     * The routine will use vectors and row count to initialize a new vector.
+     *
+     * @param vectors vectors in vecBatch,it may be empty
+     * @param rowCount the row count of vector batch
+     */
     public VecBatch(Vec[] vectors, int rowCount) {
         this.vectors = vectors;
         this.rowCount = rowCount;
@@ -38,11 +44,10 @@ public class VecBatch implements Closeable {
 
     /**
      * it is recommended to use the VecBatch(Vec[] vectors, rowCount) construct to
-     * prevent exceptions caused by empty vectors
+     * prevent exceptions caused by empty vectors.
      *
      * @param vectors vectors in vecBatch,it may be empty
      */
-    @Deprecated
     public VecBatch(Vec[] vectors) {
         this(vectors, vectors[0].getSize());
     }
@@ -53,19 +58,28 @@ public class VecBatch implements Closeable {
 
     /**
      * it is recommended to use the VecBatch(List<Vec>, rowCount) construct to
-     * prevent exceptions caused by empty vectors
+     * prevent exceptions caused by empty vectors.
      *
      * @param vectors vectors in vecBatch,it may be empty
      */
-    @Deprecated
     public VecBatch(List<Vec> vectors) {
         this(vectors.toArray(new Vec[vectors.size()]));
     }
 
     /**
-     * This constructor is for native to call
+     * This constructor is for native to call.
      *
-     * @param nativeVecBatch
+     * @param nativeVecBatch native vector batch address
+     * @param nativeVectors native vector array
+     * @param nativeVectorValueBufAddresses valueBuf address of native vector
+     * @param nativeVectorNullBufAddresses nullBuf address of native vector
+     * @param nativeVectorOffsetBufAddresses offsetBuf address of native vector
+     * @param nativeVectorAllocators allocator address of native vector
+     * @param capacityInBytes capacity in bytes of vector
+     * @param offsets offset of positions in the input parameter
+     * @param encodings the encoding type array of vector batch
+     * @param dataTypeIds the type array of this vector batch
+     * @param rowCount the row count of vector batch
      */
     public VecBatch(long nativeVecBatch, long[] nativeVectors, long[] nativeVectorValueBufAddresses,
             long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses, long[] nativeVectorAllocators,
@@ -85,23 +99,23 @@ public class VecBatch implements Closeable {
     }
 
     /**
-     * create vector batch based on the number of vectors
+     * create vector batch based on the number of vectors.
      *
-     * @param nativeVectors native vector array.
+     * @param nativeVectors native vector array
      * @param rowCount the row count of vector batch
      * @return vector batch address
      */
     public static native long newVectorBatchNative(long[] nativeVectors, int rowCount);
 
     /**
-     * release vector batch
+     * release vector batch.
      *
      * @param nativeVectorBatch vector batch address
      */
     public static native void freeVectorBatchNative(long nativeVectorBatch);
 
     /**
-     * row count in the vecBatch
+     * row count in the vecBatch.
      *
      * @return row count
      */
@@ -110,7 +124,7 @@ public class VecBatch implements Closeable {
     }
 
     /**
-     * vector count in the vecBatch
+     * vector count in the vecBatch.
      *
      * @return vector count
      */
@@ -122,6 +136,12 @@ public class VecBatch implements Closeable {
         return vectors;
     }
 
+    /**
+     * get specified vector at the specified absolute.
+     *
+     * @param index the element offset in vec
+     * @return vector
+     */
     public Vec getVector(int index) {
         return vectors[index];
     }

@@ -5,18 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * long data type
+ * long data type.
  *
  * @since 2021-08-05
  */
 public class LongDataType extends DataType {
     /**
-     * Long singleton
+     * Long singleton.
      */
     public static final LongDataType LONG = new LongDataType();
 
+    private static final long serialVersionUID = -1589352305079680921L;
+
     /**
-     * The construct
+     * The construct.
      */
     public LongDataType() {
         super(DataTypeId.OMNI_LONG);

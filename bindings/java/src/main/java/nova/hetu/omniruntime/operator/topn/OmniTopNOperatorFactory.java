@@ -16,7 +16,7 @@ import java.util.Objects;
 /**
  * The type Omni top n operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperatorFactory.FactoryContext> {
     /**
@@ -49,7 +49,7 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
     /**
      * The type Jit context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] sourceTypes;
@@ -105,7 +105,7 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         /**

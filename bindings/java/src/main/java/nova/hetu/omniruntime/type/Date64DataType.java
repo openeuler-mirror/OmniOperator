@@ -9,21 +9,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * date64 data type
+ * date64 data type.
  *
  * @since 2021-08-05
  */
 public class Date64DataType extends DataType {
     /**
-     * Date64 singleton
+     * Date64 singleton.
      */
     public static final Date64DataType DATE64 = new Date64DataType(DateUnit.DAY);
+
+    private static final long serialVersionUID = -6927167052418618260L;
 
     @JsonProperty
     private final DataType.DateUnit dateUnit;
 
     /**
-     * date 64 construct
+     * date 64 construct.
      *
      * @param dateUnit the unit of date
      */

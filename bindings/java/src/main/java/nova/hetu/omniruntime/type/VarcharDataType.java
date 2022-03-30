@@ -9,29 +9,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * varchar data type
+ * varchar data type.
  *
  * @since 2021-08-05
  */
 public class VarcharDataType extends DataType {
     /**
-     * max width for varchar data type
+     * max width for varchar data type.
      */
     public static final int MAX_WIDTH = 1024 * 1024;
 
     /**
-     * Varchar singleton
+     * Varchar singleton.
      */
     public static final VarcharDataType VARCHAR = new VarcharDataType(MAX_WIDTH);
 
+    private static final long serialVersionUID = -4778484134512020833L;
+
     /**
-     * average length of a varchar
+     * average length of a varchar.
      */
     @JsonProperty
     protected final int width;
 
     /**
-     * The construct of varchar data type
+     * The construct of varchar data type.
      *
      * @param width the width of varchar
      */
@@ -44,6 +46,12 @@ public class VarcharDataType extends DataType {
         }
     }
 
+    /**
+     * The construct of varchar data type.
+     *
+     * @param width the width of varchar
+     * @param dataTypeId the types of data
+     */
     protected VarcharDataType(int width, DataTypeId dataTypeId) {
         super(dataTypeId);
         this.width = width;

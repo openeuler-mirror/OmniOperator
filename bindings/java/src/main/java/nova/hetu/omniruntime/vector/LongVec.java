@@ -9,7 +9,7 @@ import nova.hetu.omniruntime.type.LongDataType;
 import java.nio.ByteBuffer;
 
 /**
- * long vec
+ * long vec.
  *
  * @since 2021-07-17
  */
@@ -34,17 +34,9 @@ public class LongVec extends FixedWidthVec {
                 size, offset, LongDataType.LONG);
     }
 
-    private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
-    }
-
-    private LongVec(LongVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
-    }
-
     /**
      * This constructor of vector is just for shuffle compilation to pass, it will
-     * be removed later
+     * be removed later.
      *
      * @param data data of vector
      * @param capacityInBytes size in bytes of data
@@ -54,8 +46,16 @@ public class LongVec extends FixedWidthVec {
         super(capacityInBytes, data.limit(), VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
     }
 
+    private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
+        super(vector, offset, length, isSlice);
+    }
+
+    private LongVec(LongVec vector, int[] positions, int offset, int length) {
+        super(vector, positions, offset, length);
+    }
+
     /**
-     * get the specified long at the specified absolute
+     * get the specified long at the specified absolute.
      *
      * @param index the element offset in vec
      * @return long value
@@ -65,7 +65,7 @@ public class LongVec extends FixedWidthVec {
     }
 
     /**
-     * get long values from the specified position
+     * get long values from the specified position.
      *
      * @param index the position of element
      * @param length the number of element
@@ -78,7 +78,7 @@ public class LongVec extends FixedWidthVec {
     }
 
     /**
-     * Sets the specified long at the specified absolute
+     * Sets the specified long at the specified absolute.
      *
      * @param index the element offset in vec
      * @param value the value of vec
@@ -88,7 +88,7 @@ public class LongVec extends FixedWidthVec {
     }
 
     /**
-     * Batch sets the specified long at the specified absolute
+     * Batch sets the specified long at the specified absolute.
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec

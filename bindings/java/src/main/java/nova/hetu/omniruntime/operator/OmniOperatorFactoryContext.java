@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutionException;
  * The type Omni operator factory context.
  *
  * @param <T> the type parameter
- * @since 20210630
+ * @since 2021-06-30
  */
 public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
     private static final Cache<OmniJitContext, Long> JIT_CONTEXT_CACHE = CacheBuilder.newBuilder()
@@ -23,7 +23,7 @@ public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
     /**
      * Whether the omni operator factory needs to be cached.
      */
-    private boolean needCache = true;
+    private boolean isNeedCache = true;
 
     private final long nativeJitContext;
 
@@ -49,16 +49,16 @@ public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
      * @return the flag needCache
      */
     public boolean isNeedCache() {
-        return needCache;
+        return isNeedCache;
     }
 
     /**
      * Set the flag needCache whether the omni operator factory needs to be cached.
      *
-     * @param needCache the flag needCache
+     * @param isNeedCache the flag needCache
      */
-    public void setNeedCache(boolean needCache) {
-        this.needCache = needCache;
+    public void setNeedCache(boolean isNeedCache) {
+        this.isNeedCache = isNeedCache;
     }
 
     /**

@@ -9,23 +9,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * char data type
+ * char data type.
  *
  * @since 2021-11-30
  */
 public class CharDataType extends VarcharDataType {
     /**
-     * max width for char data type
+     * max width for char data type.
      */
     public static final int MAX_WIDTH = 65_536;
 
     /**
-     * char singleton
+     * char singleton.
      */
     public static final CharDataType CHAR = new CharDataType(MAX_WIDTH);
 
+    private static final long serialVersionUID = -8306919387371983633L;
+
     /**
-     * The construct of char data type
+     * The construct of char data type.
      *
      * @param width the width of char
      */

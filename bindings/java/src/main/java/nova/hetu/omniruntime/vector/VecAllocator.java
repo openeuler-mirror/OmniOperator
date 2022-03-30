@@ -7,24 +7,24 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.OmniLibs;
 
 /**
- * vec allocator
+ * vec allocator.
  *
  * @since 2021-07-17
  */
 public class VecAllocator implements AutoCloseable {
     /**
-     * global vector allocator
+     * global vector allocator.
      */
     public static final VecAllocator GLOBAL_VECTOR_ALLOCATOR;
 
     private static String GLOBAL_SCOPE = "___GLOBAL_SCOPE___";
 
-    private long nativeAllocator;
-
     static {
         OmniLibs.load();
         GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(newAllocatorNative(GLOBAL_SCOPE));
     }
+
+    private long nativeAllocator;
 
     public VecAllocator(String scope) {
         nativeAllocator = newAllocatorNative(scope);

@@ -10,28 +10,64 @@ import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 /**
- * base class of decimal vec
+ * base class of decimal vec.
  *
  * @since 2021-07-17
  */
 public abstract class DecimalVec extends FixedWidthVec {
     private final int typeWidth;
 
+    /**
+     * Ihe routine will use GLOBAL memory pool when there is no specialized vector
+     * allocator.
+     *
+     * @param size the actual number of value of vector
+     * @param typeLength the length of this data type
+     * @param type the data type of this vector
+     */
     public DecimalVec(int size, int typeLength, DataType type) {
         super(size * typeLength, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
+    /**
+     * The routine will use the specialized vector allocator to allocate new vector.
+     *
+     * @param allocator the specialized vector allocator
+     * @param size the actual number of value of vector
+     * @param typeLength the length of this data type
+     * @param type the data type of this vector
+     */
     public DecimalVec(VecAllocator allocator, int size, int typeLength, DataType type) {
         super(allocator, size * typeLength, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address
+     * @param typeLength the length of this data type
+     * @param type the type of this vector
+     */
     public DecimalVec(long nativeVector, int typeLength, DataType type) {
         super(nativeVector, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
+    /**
+     * The routine will use native vector to initialize a new vector.
+     *
+     * @param nativeVector native vector address
+     * @param nativeValueBufAddress valueBuf address of native vector
+     * @param nativeVectorNullBufAddress nullBuf address of native vector
+     * @param nativeVectorAllocator allocator address of native vector
+     * @param capacityInBytes capacity in bytes of vector
+     * @param size the actual number of value of vector
+     * @param offset offset of positions in the input parameter
+     * @param typeLength the length of this data type
+     * @param type the type of this vector
+     */
     public DecimalVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
             long nativeVectorAllocator, int capacityInBytes, int size, int offset, int typeLength, DataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
@@ -39,11 +75,28 @@ public abstract class DecimalVec extends FixedWidthVec {
         this.typeWidth = getTypeWidth(typeLength);
     }
 
+    /**
+     * The routine is just for slicing and copyRegion vector operator.
+     *
+     * @param vector the vector need to be sliced or copyRegion
+     * @param offset When a vector has been sliced or copyRegion, this value will
+     *            point to where is the new slice {@link Vec} start
+     * @param length the number of value
+     * @param isSlice Whether the current vector is sliced
+     */
     protected DecimalVec(DecimalVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
         this.typeWidth = vector.typeWidth;
     }
 
+    /**
+     * The routine is just for copyPosition vector operator.
+     *
+     * @param vector the vector need to be copy
+     * @param positions the original vector positions
+     * @param offset offset of positions in the input parameter
+     * @param length number of elements copied
+     */
     protected DecimalVec(DecimalVec vector, int[] positions, int offset, int length) {
         super(vector, positions, offset, length);
         this.typeWidth = vector.typeWidth;

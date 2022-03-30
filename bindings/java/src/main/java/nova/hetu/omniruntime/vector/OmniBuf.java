@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.vector;
 
-
 /**
  * encapsulate the ByteBuffer data interface and provide them to all vec.
  *
@@ -12,7 +11,7 @@ package nova.hetu.omniruntime.vector;
  */
 public interface OmniBuf {
     /**
-     * set byte
+     * set byte.
      *
      * @param index the byte offset of the element
      * @param value the value of the element
@@ -20,7 +19,7 @@ public interface OmniBuf {
     void setByte(int index, byte value);
 
     /**
-     * get byte
+     * get byte.
      *
      * @param index the byte offset of the element
      * @return the value of element
@@ -28,7 +27,7 @@ public interface OmniBuf {
     byte getByte(int index);
 
     /**
-     * Batch setting bytes
+     * Batch setting bytes.
      *
      * @param index the byte offset of the element
      * @param src byte array
@@ -38,7 +37,7 @@ public interface OmniBuf {
     void setBytes(int index, byte[] src, int srcStart, int length);
 
     /**
-     * get bytes in batch
+     * get bytes in batch.
      *
      * @param index the byte offset of the element
      * @param length byte size
@@ -47,7 +46,7 @@ public interface OmniBuf {
     byte[] getBytes(int index, int length);
 
     /**
-     * get bytes in batch
+     * get bytes in batch.
      *
      * @param index the byte offset of the element
      * @param target target byte array
@@ -57,7 +56,7 @@ public interface OmniBuf {
     void getBytes(int index, byte[] target, int targetIndex, int length);
 
     /**
-     * set short value
+     * set short value.
      *
      * @param index the byte offset of the element
      * @param value value of short
@@ -65,7 +64,7 @@ public interface OmniBuf {
     void setShort(int index, short value);
 
     /**
-     * set short array
+     * set short array.
      *
      * @param index the byte offset of the element
      * @param src short array
@@ -75,7 +74,7 @@ public interface OmniBuf {
     void setShortArray(int index, short[] src, int srcIndex, int length);
 
     /**
-     * get short value
+     * get short value.
      *
      * @param index the byte offset of the element
      * @return short value
@@ -83,7 +82,7 @@ public interface OmniBuf {
     short getShort(int index);
 
     /**
-     * set int value
+     * set int value.
      *
      * @param index the byte offset of the element
      * @param value int value
@@ -91,7 +90,7 @@ public interface OmniBuf {
     void setInt(int index, int value);
 
     /**
-     * get int value
+     * get int value.
      *
      * @param index the byte offset of the element
      * @return int value
@@ -99,7 +98,7 @@ public interface OmniBuf {
     int getInt(int index);
 
     /**
-     * set int array
+     * set int array.
      *
      * @param index the byte offset of the element
      * @param src int array
@@ -109,7 +108,7 @@ public interface OmniBuf {
     void setIntArray(int index, int[] src, int srcIndex, int length);
 
     /**
-     * get int array
+     * get int array.
      *
      * @param index the byte offset of the element
      * @param target target int array
@@ -119,7 +118,7 @@ public interface OmniBuf {
     void getIntArray(int index, int[] target, int targetIndex, int length);
 
     /**
-     * set long value
+     * set long value.
      *
      * @param index the byte offset of the element
      * @param value long value
@@ -127,7 +126,7 @@ public interface OmniBuf {
     void setLong(int index, long value);
 
     /**
-     * get long value
+     * get long value.
      *
      * @param index the byte offset of the element
      * @return long value
@@ -135,7 +134,7 @@ public interface OmniBuf {
     long getLong(int index);
 
     /**
-     * set long array
+     * set long array.
      *
      * @param index the byte offset of the element
      * @param src long array
@@ -145,7 +144,7 @@ public interface OmniBuf {
     void setLongArray(int index, long[] src, int srcIndex, int length);
 
     /**
-     * get long array
+     * get long array.
      *
      * @param index the byte offset of the element
      * @param target target long array
@@ -155,7 +154,7 @@ public interface OmniBuf {
     void getLongArray(int index, long[] target, int targetIndex, int length);
 
     /**
-     * set double value
+     * set double value.
      *
      * @param index the byte offset of the element
      * @param value double value
@@ -163,7 +162,7 @@ public interface OmniBuf {
     void setDouble(int index, double value);
 
     /**
-     * get double value
+     * get double value.
      *
      * @param index the byte offset of the element
      * @return double value
@@ -171,7 +170,7 @@ public interface OmniBuf {
     double getDouble(int index);
 
     /**
-     * set double array
+     * set double array.
      *
      * @param index the byte offset of the element
      * @param src source double array
@@ -181,7 +180,7 @@ public interface OmniBuf {
     void setDoubleArray(int index, double[] src, int srcIndex, int length);
 
     /**
-     * get double array
+     * get double array.
      *
      * @param index the byte offset of the element
      * @param target target double array
@@ -191,14 +190,14 @@ public interface OmniBuf {
     void getDoubleArray(int index, double[] target, int targetIndex, int length);
 
     /**
-     * get data capacity from omnibuf
+     * get data capacity from omnibuf.
      *
      * @return capacity of omnibuf
      */
     int getCapacity();
 
     /**
-     * get data address from omnibuf
+     * get data address from omnibuf.
      *
      * @return data address of omnibuf
      */

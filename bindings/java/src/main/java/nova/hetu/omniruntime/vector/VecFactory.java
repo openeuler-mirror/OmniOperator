@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.DataType;
 
 /**
- * vec factory
+ * vec factory.
  *
  * @since 2021-08-05
  */
@@ -15,10 +15,10 @@ public class VecFactory {
     /**
      * Create vector by native vector address and data type.
      *
-     * @param nativeVector native vector address.
-     * @param encoding vector encoding.
-     * @param dataType vector data type.
-     * @return a new {@link Vec} object instance.
+     * @param nativeVector native vector address
+     * @param encoding vector encoding
+     * @param dataType vector data type
+     * @return a new {@link Vec} object instance
      */
     public static Vec create(long nativeVector, VecEncoding encoding, DataType dataType) {
         Vec vector;

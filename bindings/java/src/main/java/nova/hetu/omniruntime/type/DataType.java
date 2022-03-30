@@ -10,18 +10,18 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * data type
+ * data type.
  *
  * @since 2021-08-05
  */
 public class DataType implements Serializable {
     /**
-     * It is a none data type
+     * It is a none data type.
      */
     public static final DataType NONE = new DataType(DataTypeId.OMNI_NONE);
 
     /**
-     * It is a invalid data type
+     * It is a invalid data type.
      */
     public static final DataType INVALID = new DataType(DataTypeId.OMNI_INVALID);
 
@@ -41,15 +41,15 @@ public class DataType implements Serializable {
     /**
      * Create a data type object.
      *
-     * @param typeId create data type by data type id.
-     * @return data type.
+     * @param typeId create data type by data type id
+     * @return data type
      */
     public static DataType create(int typeId) {
         return new DataType(DataTypeId.values()[typeId]);
     }
 
     /**
-     * The data type id
+     * The data type id.
      */
     public enum DataTypeId {
         OMNI_NONE,
@@ -74,7 +74,7 @@ public class DataType implements Serializable {
     }
 
     /**
-     * The unit of date
+     * The unit of date.
      */
     public enum DateUnit {
         DAY,
@@ -82,7 +82,7 @@ public class DataType implements Serializable {
     }
 
     /**
-     * The unit of time
+     * The unit of time.
      */
     public enum TimeUnit {
         SEC,

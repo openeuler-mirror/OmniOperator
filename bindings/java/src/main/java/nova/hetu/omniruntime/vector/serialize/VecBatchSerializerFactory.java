@@ -5,13 +5,13 @@
 package nova.hetu.omniruntime.vector.serialize;
 
 /**
- * create different types of serialization implementation
+ * create different types of serialization implementation.
  *
  * @since 2021-09-13
  */
 public class VecBatchSerializerFactory {
     /**
-     * new a vec batch serializer object
+     * new a vec batch serializer object.
      *
      * @return protobuf vec batch serializer
      */

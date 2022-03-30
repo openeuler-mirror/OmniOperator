@@ -19,7 +19,7 @@ import java.util.Optional;
 /**
  * The type Omni hash builder operator factory.
  *
- * @since 20210630
+ * @since 2021-06-30
  */
 public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHashBuilderOperatorFactory.FactoryContext> {
     /**
@@ -55,7 +55,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
     /**
      * The type Context.
      *
-     * @since 20210630
+     * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] buildTypes;
@@ -106,7 +106,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
             }
             JitContext that = (JitContext) obj;
             return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildHashCols, that.buildHashCols)
-                    && filterExpression.equals(that.filterExpression) && sortChannel == sortChannel
+                    && filterExpression.equals(that.filterExpression) && sortChannel.equals(sortChannel)
                     && Arrays.equals(searchExpressions, that.searchExpressions) && operatorCount == that.operatorCount;
         }
     }

@@ -18,11 +18,10 @@ import java.util.Objects;
 /**
  * The type Omni sort merge buffered table with expression operator factory.
  *
- * @since 20211030
+ * @since 2021-10-30
  */
 public class OmniSmjBufferedTableWithExprOperatorFactory
-        extends
-            OmniOperatorFactory<OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext> {
+        extends OmniOperatorFactory<OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni sort merge buffered table factory.
      *
@@ -55,7 +54,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
     /**
      * The type Context.
      *
-     * @since 20211030
+     * @since 2021-10-30
      */
     public static class JitContext implements OmniJitContext {
         private final DataType[] soruceTypes;
@@ -100,7 +99,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
     /**
      * The type Factory context.
      *
-     * @since 20211030
+     * @since 2021-10-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
         private final long streamedTableOperatorFactory;
