@@ -5,11 +5,10 @@
 #ifndef __JOIN_HASH_TABLE_H__
 #define __JOIN_HASH_TABLE_H__
 
-#include "../../vector/vector.h"
-#include "../../type/data_types.h"
-#include "../filter/filter_and_project.h"
-
-#include <stdint.h>
+#include <cstdint>
+#include "vector/vector.h"
+#include "type/data_types.h"
+#include "operator/filter/filter_and_project.h"
 
 class PagesHashStrategy;
 
@@ -35,29 +34,27 @@ public:
         return hashTableCount;
     }
 
-    int64_t EncodePartitionedJoinPosition(int32_t partition, int32_t joinPosition) const
+    uint64_t EncodePartitionedJoinPosition(uint32_t partition, uint32_t joinPosition) const
     {
-        int64_t result = static_cast<int64_t>(joinPosition) << shiftSize;
+        auto result = static_cast<uint64_t>(joinPosition) << shiftSize;
         result |= partition;
         return result;
     }
 
-    int32_t DecodePartition(int64_t partitionedJoinPosition) const
+    uint32_t DecodePartition(uint64_t partitionedJoinPosition) const
     {
-        auto result = static_cast<int32_t>(partitionedJoinPosition & partitionMask);
-        return result;
+        auto partition = static_cast<uint32_t>(partitionedJoinPosition & partitionMask);
+        return partition;
     }
 
-    int32_t DecodeJoinPosition(int64_t partitionedJoinPosition) const
+    uint32_t DecodeJoinPosition(uint64_t partitionedJoinPosition) const
     {
-        auto result = static_cast<uint64_t>(partitionedJoinPosition);
-        result = result >> shiftSize;
-        return static_cast<int32_t>(result);
+        return static_cast<uint32_t>(partitionedJoinPosition >> shiftSize);
     }
 
-    void SetBuildTypes(omniruntime::type::DataTypes *buildTypes)
+    void SetBuildTypes(omniruntime::type::DataTypes *buildDataTypes)
     {
-        this->buildTypes = buildTypes;
+        this->buildTypes = buildDataTypes;
     }
 
     omniruntime::type::DataTypes *GetBuildDataTypes()
@@ -65,14 +62,14 @@ public:
         return this->buildTypes;
     }
 
-    void SetProbeTypes(omniruntime::type::DataTypes *probeTypes)
+    void SetProbeTypes(omniruntime::type::DataTypes *probeDataTypes)
     {
-        this->probeTypes = probeTypes;
+        this->probeTypes = probeDataTypes;
     }
 
-    void SetFilterExpression(std::string &filterExpression)
+    void SetFilterExpression(std::string &expression)
     {
-        this->filterExpression = filterExpression;
+        this->filterExpression = expression;
     }
 
     std::string &GetFilterExpression()
@@ -107,8 +104,8 @@ private:
     JoinHashTable **hashTables; // actually, the type is JoinHashTable **
     int32_t hashTableCount;
     std::atomic_int32_t hashTableSize;
-    int32_t partitionMask;
-    int32_t shiftSize;
+    uint32_t partitionMask;
+    uint32_t shiftSize;
     omniruntime::type::DataTypes *probeTypes;
     omniruntime::type::DataTypes *buildTypes;
     std::string filterExpression;
@@ -119,7 +116,7 @@ private:
 
 class JoinHashTable {
 public:
-    JoinHashTable(PagesHashStrategy *pagesHashStrategy, int64_t *addresses, int32_t addressesCount);
+    JoinHashTable(PagesHashStrategy *pagesHashStrategy, uint64_t *addresses, uint32_t addressesCount);
     ~JoinHashTable();
     PagesHash *GetPagesHash() const
     {
@@ -144,25 +141,25 @@ private:
     int32_t StartJoinPosition(int32_t currentJoinPosition, int32_t probePosition, omniruntime::vec::Vector **allColumns,
         int32_t allColumnsCount) const;
 
-    PagesHash *pagesHash;
     ArrayPositionLinks *positionLinks;
+    PagesHash *pagesHash;
 };
 
 class PagesHash {
 public:
-    PagesHash(int64_t *addresses, int32_t addressesSize, PagesHashStrategy *pagesHashStrategy,
+    PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStrategy *pagesHashStrategy,
         ArrayPositionLinks *positionLinks);
     ~PagesHash();
     int32_t *GetKey() const
     {
         return key;
     }
-    int32_t GetKeySize() const
+    uint32_t GetKeySize() const
     {
         return keySize;
     }
     void SetAddressIndex(ArrayPositionLinks *positionLinks, int32_t realPosition, int64_t hash,
-        int64_t *totalHashCollisions) const;
+        uint64_t *totalHashCollisions) const;
     int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
         int64_t rawHash) const;
 
@@ -170,11 +167,11 @@ public:
     {
         return positionToHashes;
     }
-    int64_t *GetAddresses() const
+    uint64_t *GetAddresses() const
     {
         return addresses;
     }
-    int32_t GetAddressesCount() const
+    uint32_t GetAddressesCount() const
     {
         return addressesCount;
     }
@@ -192,13 +189,13 @@ private:
         omniruntime::vec::Vector **joinColumns) const;
 
     PagesHashStrategy *pagesHashStrategy;
-    int64_t *addresses;
-    int32_t addressesCount;
-    int32_t mask;
+    uint64_t *addresses;
+    uint32_t addressesCount;
+    uint32_t keySize;
     int32_t *key; // it is used to store the addresses index. the key index is from getRawHashPosition()
-    int32_t keySize;
+    uint32_t mask;
     int8_t *positionToHashes;
-    int64_t hashCollisions;
+    uint64_t hashCollisions;
 
     void SetAddressIndex(ArrayPositionLinks *positionLinks, int64_t hashCollisionsLocal, int32_t realPosition,
         int64_t hash);
@@ -228,9 +225,9 @@ public:
     int32_t Next(int32_t position) const;
 
 private:
-    int32_t *positionLinks;
     int32_t capacity;
     int32_t size;
+    int32_t *positionLinks;
 };
 } // end of op
 } // end of omniruntime

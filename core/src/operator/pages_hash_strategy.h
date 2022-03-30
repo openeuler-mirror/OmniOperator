@@ -2,11 +2,14 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: hash strategy implementations
  */
-#ifndef __PAGES_HASH_STRATETY_H__
-#define __PAGES_HASH_STRATETY_H__
+#ifndef __PAGES_HASH_STRATEGY_H__
+#define __PAGES_HASH_STRATEGY_H__
 
-#include <stdint.h>
-#include "../vector/vector_common.h"
+#include <cstdint>
+#include <cstring>
+#include "vector/vector.h"
+#include "vector/vector_common.h"
+#include "vector/vector_helper.h"
 #include "pages_index.h"
 #include "hash_util.h"
 #include "util/operator_util.h"
@@ -57,7 +60,7 @@ static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::V
 class PagesHashStrategy {
 public:
     PagesHashStrategy(omniruntime::vec::Vector ***columns, const int32_t *columnTypes, int32_t columnCount,
-        int32_t *joinCols, int32_t joinColsCount);
+        int32_t *hashCols, int32_t hashColsCount);
     ~PagesHashStrategy();
 
     bool IsPositionNull(int32_t pageIndex, int rowIndex) const

@@ -7,7 +7,6 @@
 
 #include <map>
 #include <shared_mutex>
-#include <unistd.h>
 #include <thread>
 
 class MemoryStatistic {

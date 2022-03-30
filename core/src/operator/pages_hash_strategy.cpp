@@ -3,24 +3,21 @@
  * @Description: hash strategy implementations
  */
 #include "pages_hash_strategy.h"
-#include "../vector/vector_common.h"
-#include "optimization.h"
-#include "../jit/annotation.h"
-#include "util/operator_util.h"
-
 #include <memory>
+#include "vector/vector_common.h"
+#include "optimization.h"
+#include "jit/annotation.h"
+#include "util/operator_util.h"
 
 using namespace omniruntime::vec;
 
 PagesHashStrategy::PagesHashStrategy(Vector ***columns, const int32_t *columnTypes, int32_t columnCount,
     int32_t *hashCols, int32_t hashColsCount)
+    : buildColumns(columns), buildColumnCount(columnCount), buildHashColsCount(hashColsCount)
 {
-    this->buildColumns = columns;
-    this->buildColumnCount = columnCount;
-    this->buildHashColsCount = hashColsCount;
     if (hashColsCount > 0) {
-        this->buildHashColTypes = std::make_unique<int32_t[]>(hashColsCount).release();
-        this->buildHashColumns = std::make_unique<Vector **[]>(hashColsCount).release();
+        this->buildHashColTypes = new int32_t[hashColsCount];
+        this->buildHashColumns = new Vector **[hashColsCount];
         int32_t hashColumn = 0;
         for (int32_t i = 0; i < hashColsCount; i++) {
             hashColumn = hashCols[i];
@@ -129,7 +126,6 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
         rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
         leftIsNull = leftColumn->IsValueNull(originalLeftRowIndex);
         rightIsNull = rightColumn->IsValueNull(originalRightRowIndex);
-
         if (leftIsNull && rightIsNull) {
             continue;
         }

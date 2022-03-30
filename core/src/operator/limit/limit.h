@@ -6,16 +6,15 @@
 
 #include <vector>
 #include <memory>
-#include "../operator.h"
-#include "../operator_factory.h"
-#include "../../type/data_type_serializer.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "type/data_type_serializer.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
 class LimitOperatorFactory : public OperatorFactory {
 public:
-    LimitOperatorFactory(int64_t limit);
+    explicit LimitOperatorFactory(int64_t limit);
 
     ~LimitOperatorFactory() override;
 
@@ -29,7 +28,7 @@ private:
 
 class LimitOperator : public Operator {
 public:
-    LimitOperator(int64_t limit);
+    explicit LimitOperator(int64_t limit);
 
     ~LimitOperator() override;
 

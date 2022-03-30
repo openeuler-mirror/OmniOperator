@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Aggregation Base Class
- * Author: Songling Liu
- * Create: 2021-07-01
- * Notes: None
  */
 #ifndef AGGREGATION_H
 #define AGGREGATION_H
@@ -20,7 +17,10 @@ namespace omniruntime {
 namespace op {
 class AggregationCommonOperator : public Operator {
 public:
-    AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial);
+    AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
+        : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial)
+    {}
+
     ~AggregationCommonOperator() override {};
 
 protected:

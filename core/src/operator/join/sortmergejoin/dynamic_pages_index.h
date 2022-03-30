@@ -5,20 +5,18 @@
 #ifndef __DYNAMIC_PAGES_INDEX_H__
 #define __DYNAMIC_PAGES_INDEX_H__
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 #include <deque>
-#include "../../../type/data_type.h"
-#include "../../../vector/vector_batch.h"
-#include "../../../type/data_types.h"
-
-using namespace omniruntime::vec;
+#include "type/data_type.h"
+#include "type/data_types.h"
+#include "vector/vector_batch.h"
 
 class DynamicPagesIndex {
 public:
-    explicit DynamicPagesIndex(const DataTypes &types);
+    explicit DynamicPagesIndex(const omniruntime::type::DataTypes &types);
     ~DynamicPagesIndex();
-    int32_t AddVecBatches(const std::vector<VectorBatch *> &vecBatches);
+    int32_t AddVecBatches(const std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
 
     const int32_t *GetTypes() const
     {
@@ -53,7 +51,7 @@ public:
         return this->valueAddressesDeque[rowIndex];
     }
 
-    Vector *GetColumns(int32_t vectorBatchIndex, int32_t columnIndex) const
+    omniruntime::vec::Vector *GetColumns(int32_t vectorBatchIndex, int32_t columnIndex) const
     {
         if (columnIndex >= typesCount) {
             return nullptr;
@@ -76,17 +74,17 @@ public:
     void FreeAllRemainingVecBatch();
 
 private:
-    const DataType *dataTypes;
+    const omniruntime::type::DataType *dataTypes;
     const int32_t *dataTypeIds;
     int32_t typesCount;
     int32_t lastFreedVecBatchIdx = -1;
 
     // vector  first Level：vectorBatch second Level: columnar vector
-    std::deque<std::deque<Vector *>> columnsDeque;
+    std::deque<std::deque<omniruntime::vec::Vector *>> columnsDeque;
     std::deque<int64_t> valueAddressesDeque; // row
     int32_t positionCount;
     std::deque<bool> vecBatchFreeFlagDeque;     // vectorBatch free flag
-    std::deque<VectorBatch *> vectorBatchDeque; // vectorBatch
+    std::deque<omniruntime::vec::VectorBatch *> vectorBatchDeque; // vectorBatch
     bool finishAddData;
 };
 

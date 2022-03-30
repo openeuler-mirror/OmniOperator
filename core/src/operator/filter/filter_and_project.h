@@ -2,16 +2,16 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: FilterAndProject operator header
  */
-#ifndef __FILTER_H__
-#define __FILTER_H__
+#ifndef __FILTER_AND_PROJECT_H__
+#define __FILTER_AND_PROJECT_H__
 
 #include <memory>
 #include <vector>
 
-#include "vector/vector_batch.h"
 #include "type/data_types.h"
-#include "operator/operator_factory.h"
 #include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "vector/vector_batch.h"
 #include "operator/projection/projection.h"
 #include "codegen/filter_codegen.h"
 #include "expression/expressions.h"
@@ -90,7 +90,7 @@ public:
      * @param the execution context
      * @return true if the data matches the expression, false if it doesn't match
      */
-    bool Evaluate(int64_t *values, bool *isNull, int32_t *lengths, int64_t executionContext);
+    bool Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext);
 
 private:
     std::unique_ptr<ExpressionCodeGen> codegen = nullptr;
@@ -104,6 +104,7 @@ private:
 class Filter {
 public:
     Filter(const expressions::Expr &expression, int32_t const * inputTypeIds, int32_t inputVecCount);
+    explicit Filter(const expressions::Expr &expression);
     ~Filter()
     {
         this->codeGen.reset();
@@ -111,7 +112,7 @@ public:
     }
     bool isSupported;
 
-    FilterFunc Apply;
+    FilterFunc apply;
 
 private:
     std::unique_ptr<FilterCodeGen> codeGen;
@@ -155,7 +156,7 @@ private:
     const int32_t *inputTypes;
     int32_t vecCount;
     ExecutionContext *context;
-    std::unique_ptr<omniruntime::vec::VectorBatch> projectedVecs;
+    omniruntime::vec::VectorBatch *projectedVecs;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {

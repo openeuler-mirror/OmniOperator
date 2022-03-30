@@ -17,22 +17,22 @@ TEST(ExecutionContext, testAllocateAndReset)
     // Small allocations should come from the same chunk.
     int64_t smallSize = 100;
     for (int64_t i = 0; i < 20; ++i) {
-        auto p = executionContext->getArena()->Allocate(smallSize);
+        auto p = executionContext->GetArena()->Allocate(smallSize);
         EXPECT_NE(p, nullptr);
-        EXPECT_EQ(executionContext->getArena()->TotalBytes(), chunkSize);
-        EXPECT_EQ(executionContext->getArena()->AvailBytes(), chunkSize - (i + 1) * smallSize);
+        EXPECT_EQ(executionContext->GetArena()->TotalBytes(), chunkSize);
+        EXPECT_EQ(executionContext->GetArena()->AvailBytes(), chunkSize - (i + 1) * smallSize);
     }
 
     // large allocations require separate chunks
     int64_t largeSize = 100 * chunkSize;
-    auto p = executionContext->getArena()->Allocate(largeSize);
+    auto p = executionContext->GetArena()->Allocate(largeSize);
     EXPECT_NE(p, nullptr);
-    EXPECT_EQ(executionContext->getArena()->TotalBytes(), chunkSize + largeSize);
-    EXPECT_EQ(executionContext->getArena()->AvailBytes(), 0);
+    EXPECT_EQ(executionContext->GetArena()->TotalBytes(), chunkSize + largeSize);
+    EXPECT_EQ(executionContext->GetArena()->AvailBytes(), 0);
 
-    executionContext->getArena()->Reset();
-    EXPECT_EQ(executionContext->getArena()->TotalBytes(), chunkSize);
-    EXPECT_EQ(executionContext->getArena()->AvailBytes(), chunkSize);
+    executionContext->GetArena()->Reset();
+    EXPECT_EQ(executionContext->GetArena()->TotalBytes(), chunkSize);
+    EXPECT_EQ(executionContext->GetArena()->AvailBytes(), chunkSize);
 
     delete executionContext;
 }

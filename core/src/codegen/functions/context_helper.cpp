@@ -18,13 +18,13 @@ extern "C" DLLEXPORT
     char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size)
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
-        return reinterpret_cast<char *>(context->getArena()->Allocate(size));
+        return reinterpret_cast<char *>(context->GetArena()->Allocate(size));
     }
 
     bool ArenaAllocatorReset(int64_t contextPtr)
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
-        context->getArena()->Reset();
+        context->GetArena()->Reset();
         return true;
     }
 }

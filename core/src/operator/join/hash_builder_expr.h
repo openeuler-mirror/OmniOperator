@@ -6,10 +6,10 @@
 #ifndef __HASH_BUILDER_EXPR_H__
 #define __HASH_BUILDER_EXPR_H__
 
-#include "../operator_factory.h"
-#include "../../type/data_types.h"
-#include "../projection/projection.h"
-#include "../join/hash_builder.h"
+#include "operator/operator_factory.h"
+#include "type/data_types.h"
+#include "operator/projection/projection.h"
+#include "operator/join/hash_builder.h"
 
 namespace omniruntime {
 namespace op {
@@ -43,7 +43,7 @@ private:
 class HashBuilderWithExprOperator : public Operator {
 public:
     HashBuilderWithExprOperator(const type::DataTypes &buildTypes, const std::vector<int32_t> &buildHashCols,
-        const std::vector<RowProjFunc> &projectFuncs, HashBuilderOperator *HashBuilderOperator);
+        const std::vector<RowProjFunc> &projectFuncs, HashBuilderOperator *hashBuilderOperator);
 
     ~HashBuilderWithExprOperator() override;
 

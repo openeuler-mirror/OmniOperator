@@ -3,10 +3,9 @@
  * @Description: pages index implementations
  */
 #include "pages_index.h"
-#include "optimization.h"
-#include "../jit/annotation.h"
-
 #include <algorithm>
+#include "optimization.h"
+#include "jit/annotation.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
@@ -17,19 +16,19 @@ const int32_t QUICK_SORT_STEP_SIZE = 8;
 const int32_t QUICK_SORT_MIDDLE = 2;
 
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol);
 void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to);
 template <typename T>
-T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+T *ConstructVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     VectorAllocator *vecAllocator);
-VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     uint32_t width, VectorAllocator *vecAllocator);
 
 int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t len);
 
 // function implements for class PagesIndex
@@ -43,14 +42,14 @@ PagesIndex::PagesIndex(const omniruntime::type::DataTypes &types)
 {}
 
 
-inline void Swap(int64_t *valueAddresses, int32_t a, int32_t b)
+inline void Swap(uint64_t *valueAddresses, int32_t a, int32_t b)
 {
-    int64_t temp = valueAddresses[a];
+    auto temp = valueAddresses[a];
     valueAddresses[a] = valueAddresses[b];
     valueAddresses[b] = temp;
 }
 
-inline void VectorSwap(int64_t *valueAddresses, int32_t from, int32_t l, int32_t s)
+inline void VectorSwap(uint64_t *valueAddresses, int32_t from, int32_t l, int32_t s)
 {
     for (int32_t i = 0; i < s; i++, from++, l++) {
         Swap(valueAddresses, from, l);
@@ -66,10 +65,10 @@ int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
     for (int vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
         this->positionCount += vecBatches[vecBatchIdx]->GetRowCount();
     }
-    this->valueAddresses = std::make_unique<int64_t[]>(this->positionCount).release();
-    this->columns = std::make_unique<Vector **[]>(columnCount).release();
+    this->valueAddresses = new uint64_t[this->positionCount];
+    this->columns = new Vector **[columnCount];
     for (int colIdx = 0; colIdx < columnCount; ++colIdx) {
-        this->columns[colIdx] = std::make_unique<Vector *[]>(vecBatchCount).release();
+        this->columns[colIdx] = new Vector *[vecBatchCount];
     }
 
     int32_t valueIndex = 0;
@@ -91,28 +90,28 @@ int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
 }
 
 template <typename V>
-int32_t CompareTo(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
+int32_t CompareTo(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
     Vector **columns, int32_t leftPosition, int32_t rightPosition)
 {
     return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
         OperatorUtil::CompareTemplate<V>);
 }
 
-int32_t CompareToDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
+int32_t CompareToDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
     Vector **columns, int32_t leftPosition, int32_t rightPosition)
 {
     return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
         OperatorUtil::CompareDouble);
 }
 
-int32_t CompareToVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
+int32_t CompareToVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
     Vector **columns, int32_t leftPosition, int32_t rightPosition)
 {
     return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
         OperatorUtil::CompareVarchar);
 }
 
-int32_t CompareToDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
+int32_t CompareToDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
     Vector **columns, int32_t leftPosition, int32_t rightPosition)
 {
     return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
@@ -120,7 +119,7 @@ int32_t CompareToDec128(const int32_t sortAscendings, const int32_t sortNullFirs
 }
 
 template <typename V>
-void QuickSortColumnSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     for (int32_t i = from; i < to; i++) {
@@ -131,7 +130,7 @@ void QuickSortColumnSmall(const int32_t sortAscendings, const int32_t sortNullFi
     }
 }
 
-void QuickSortColumnDoubleSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnDoubleSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     for (int32_t i = from; i < to; i++) {
@@ -142,7 +141,7 @@ void QuickSortColumnDoubleSmall(const int32_t sortAscendings, const int32_t sort
     }
 }
 
-void QuickSortColumnVarCharSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnVarCharSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     for (int32_t i = from; i < to; i++) {
@@ -154,7 +153,7 @@ void QuickSortColumnVarCharSmall(const int32_t sortAscendings, const int32_t sor
     }
 }
 
-void QuickSortColumnDec128Small(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnDec128Small(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     for (int32_t i = from; i < to; i++) {
@@ -166,7 +165,7 @@ void QuickSortColumnDec128Small(const int32_t sortAscendings, const int32_t sort
 }
 
 template <typename V>
-int32_t Median3(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses, Vector **columns,
+int32_t Median3(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns,
     int32_t a, int32_t b, int32_t c)
 {
     int32_t ab = CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
@@ -175,7 +174,7 @@ int32_t Median3(const int32_t sortAscendings, const int32_t sortNullFirsts, int6
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-int32_t Median3Double(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t Median3Double(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t a, int32_t b, int32_t c)
 {
     int32_t ab = CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
@@ -184,7 +183,7 @@ int32_t Median3Double(const int32_t sortAscendings, const int32_t sortNullFirsts
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-int32_t Median3VarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t Median3VarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t a, int32_t b, int32_t c)
 {
     int32_t ab = CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
@@ -193,7 +192,7 @@ int32_t Median3VarChar(const int32_t sortAscendings, const int32_t sortNullFirst
     return (ab < 0 ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-int32_t Median3Dec128(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t Median3Dec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t a, int32_t b, int32_t c)
 {
     int32_t ab = CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
@@ -203,7 +202,7 @@ int32_t Median3Dec128(const int32_t sortAscendings, const int32_t sortNullFirsts
 }
 
 template <typename V>
-void LeftAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses, Vector **columns,
+void LeftAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns,
     int32_t c, int32_t &m, int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
@@ -222,8 +221,8 @@ void LeftAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, int
 }
 
 template <typename V>
-void RightAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses, Vector **columns,
-    int32_t b, int32_t &m, int32_t &c, int32_t &d)
+void RightAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
+    Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
     while (c >= b &&
@@ -241,7 +240,7 @@ void RightAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, in
 }
 
 template <typename V>
-int32_t GetMedianPosition(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t GetMedianPosition(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
@@ -262,7 +261,7 @@ int32_t GetMedianPosition(const int32_t sortAscendings, const int32_t sortNullFi
 }
 
 template <typename V>
-void QuickSortColumn(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumn(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     int32_t len = to - from;
@@ -308,7 +307,7 @@ void QuickSortColumn(const int32_t sortAscendings, const int32_t sortNullFirsts,
     }
 }
 
-void LeftAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void LeftAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t c, int32_t &m, int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
@@ -326,7 +325,7 @@ void LeftAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirst
     }
 }
 
-void RightAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void RightAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
@@ -344,7 +343,7 @@ void RightAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirs
     }
 }
 
-int32_t GetMedianPositionDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t GetMedianPositionDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
@@ -364,7 +363,7 @@ int32_t GetMedianPositionDouble(const int32_t sortAscendings, const int32_t sort
     return m;
 }
 
-void QuickSortColumnDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     int32_t len = to - from;
@@ -410,7 +409,7 @@ void QuickSortColumnDouble(const int32_t sortAscendings, const int32_t sortNullF
     }
 }
 
-void LeftAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void LeftAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t c, int32_t &m, int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
@@ -428,7 +427,7 @@ void LeftAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirs
     }
 }
 
-void RightAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void RightAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
@@ -446,7 +445,7 @@ void RightAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFir
     }
 }
 
-int32_t GetMedianPositionVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t GetMedianPositionVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
@@ -466,7 +465,7 @@ int32_t GetMedianPositionVarChar(const int32_t sortAscendings, const int32_t sor
     return m;
 }
 
-void QuickSortColumnVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     int32_t len = to - from;
@@ -512,7 +511,7 @@ void QuickSortColumnVarChar(const int32_t sortAscendings, const int32_t sortNull
     }
 }
 
-void LeftAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void LeftAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t c, int32_t &m, int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
@@ -530,7 +529,7 @@ void LeftAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirst
     }
 }
 
-void RightAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void RightAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
@@ -548,7 +547,7 @@ void RightAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirs
     }
 }
 
-int32_t GetMedianPositionDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+int32_t GetMedianPositionDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
@@ -568,7 +567,7 @@ int32_t GetMedianPositionDec128(const int32_t sortAscendings, const int32_t sort
     return m;
 }
 
-void QuickSortColumnDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, int64_t *valueAddresses,
+void QuickSortColumnDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
     Vector **columns, int32_t from, int32_t to)
 {
     int32_t len = to - from;
@@ -612,8 +611,8 @@ void QuickSortColumnDec128(const int32_t sortAscendings, const int32_t sortNullF
     }
 }
 
-std::vector<std::tuple<int32_t, int32_t>> GetRanges(int64_t *valueAddresses, Vector **columns, int32_t from, int32_t to,
-    CompareFunc compareFunc)
+std::vector<std::tuple<int32_t, int32_t>> GetRanges(uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to, CompareFunc compareFunc)
 {
     std::vector<std::tuple<int32_t, int32_t>> ranges;
     int64_t valueAddress = valueAddresses[from];
@@ -667,33 +666,33 @@ std::vector<std::tuple<int32_t, int32_t>> GetRanges(int64_t *valueAddresses, Vec
 }
 
 template <typename V, typename T>
-std::vector<std::tuple<int32_t, int32_t>> GetRanges(int64_t *valueAddresses, Vector **columns, int32_t from, int32_t to)
+std::vector<std::tuple<int32_t, int32_t>> GetRanges(uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
     return GetRanges(valueAddresses, columns, from, to, OperatorUtil::CompareTemplate<V>);
 }
 
-std::vector<std::tuple<int32_t, int32_t>> GetRangesDouble(int64_t *valueAddresses, Vector **columns, int32_t from,
+std::vector<std::tuple<int32_t, int32_t>> GetRangesDouble(uint64_t *valueAddresses, Vector **columns, int32_t from,
     int32_t to)
 {
     return GetRanges(valueAddresses, columns, from, to, OperatorUtil::CompareDouble);
 }
 
-std::vector<std::tuple<int32_t, int32_t>> GetRangesVarChar(int64_t *valueAddresses, Vector **columns, int32_t from,
+std::vector<std::tuple<int32_t, int32_t>> GetRangesVarChar(uint64_t *valueAddresses, Vector **columns, int32_t from,
     int32_t to)
 {
     return GetRanges(valueAddresses, columns, from, to, OperatorUtil::CompareVarchar);
 }
 
-std::vector<std::tuple<int32_t, int32_t>> GetRangesDec128(int64_t *valueAddresses, Vector **columns, int32_t from,
+std::vector<std::tuple<int32_t, int32_t>> GetRangesDec128(uint64_t *valueAddresses, Vector **columns, int32_t from,
     int32_t to)
 {
     return GetRanges(valueAddresses, columns, from, to, OperatorUtil::CompareDecimal128);
 }
 
-
 template <typename V, typename T>
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
@@ -715,7 +714,7 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
 
 
 void ColumnarSortDouble(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
@@ -736,7 +735,7 @@ void ColumnarSortDouble(const int32_t *sortCols, const int32_t *sortColTypes, co
 }
 
 void ColumnarSortVarChar(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
@@ -757,7 +756,7 @@ void ColumnarSortVarChar(const int32_t *sortCols, const int32_t *sortColTypes, c
 }
 
 void ColumnarSortDec128(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
@@ -778,7 +777,7 @@ void ColumnarSortDec128(const int32_t *sortCols, const int32_t *sortColTypes, co
 }
 
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol)
 {
     switch (sortColTypes[currentCol]) {
@@ -826,7 +825,6 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
     const int32_t *sourceTypes, int32_t offset, int32_t length, VectorAllocator *vecAllocator) const
 {
     Vector ***inputVecBatches = this->columns;
-    int64_t *valueAddresses = this->valueAddresses;
 
     int32_t outputCol = 0;
     int colTypeId = 0;
@@ -856,9 +854,8 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                auto vecType = (VarcharDataType &)dataTypes[outputCol];
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch,
-                    vecType.GetWidth(), vecAllocator);
+                    (dataTypes[outputCol]).GetWidth(), vecAllocator);
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
@@ -898,10 +895,10 @@ template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *
 }
 
 template <typename T>
-T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+T *ConstructVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     VectorAllocator *vecAllocator)
 {
-    int64_t valueAddress = 0;
+    uint64_t valueAddress = 0;
     Vector *inputVector = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
@@ -936,7 +933,7 @@ void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *out
     }
 }
 
-VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     uint32_t width, VectorAllocator *vecAllocator)
 {
     int64_t valueAddress = 0;
@@ -944,7 +941,7 @@ VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, i
     int32_t pageIndex = 0;
     int32_t position = 0;
 
-    VarcharVector *outputVector = std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
+    VarcharVector *outputVector = new VarcharVector(vecAllocator, length * width, length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;

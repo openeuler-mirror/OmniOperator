@@ -5,8 +5,8 @@
 
 #include "hash_builder_expr.h"
 #include <memory>
-#include "../util/operator_util.h"
-#include "../../vector/vector_helper.h"
+#include "operator/util/operator_util.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
@@ -16,9 +16,8 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
     const DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
 {
-    auto operatorFactory = std::make_unique<HashBuilderWithExprOperatorFactory>(buildTypes, buildHashKeys,
-        buildHashKeysCount, filter, hashTableCount);
-    return operatorFactory.release();
+    return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, filter,
+        hashTableCount);
 }
 
 
@@ -42,9 +41,7 @@ HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 {
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(operatorFactory->CreateOperator());
-    auto hashBuilderWithExprOperator = std::make_unique<HashBuilderWithExprOperator>(*(buildTypes.get()), buildHashCols,
-        projectFuncs, hashBuilderOperator);
-    return hashBuilderWithExprOperator.release();
+    return new HashBuilderWithExprOperator(*(buildTypes.get()), buildHashCols, projectFuncs, hashBuilderOperator);
 }
 
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
@@ -61,15 +58,14 @@ HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
     delete this->hashBuilderOperator;
 }
 
-int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *inputVecBatch)
+int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, buildTypes, projectFuncs, buildHashCols);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols);
     if (newInputVecBatch != nullptr) {
         hashBuilderOperator->AddInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(inputVecBatch);
+        VectorHelper::FreeVecBatch(vecBatch);
     } else {
-        hashBuilderOperator->AddInput(inputVecBatch);
+        hashBuilderOperator->AddInput(vecBatch);
     }
     return 0;
 }

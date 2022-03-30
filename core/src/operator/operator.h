@@ -4,12 +4,12 @@
 #ifndef __OMNI_OPERATOR_H__
 #define __OMNI_OPERATOR_H__
 
-#include "../util/compiler_util.h"
-#include "../vector/vector_batch.h"
-#include "../vector/vector_allocator.h"
-#include "../vector/vector_allocator_factory.h"
-#include "status.h"
+#include <cstdint>
 #include <vector>
+#include "vector/vector_batch.h"
+#include "vector/vector_allocator.h"
+#include "vector/vector_allocator_factory.h"
+#include "status.h"
 
 namespace omniruntime {
 namespace op {
@@ -34,9 +34,9 @@ public:
         return status;
     }
 
-    void SetStatus(OmniStatus status)
+    void SetStatus(OmniStatus omniStatus)
     {
-        this->status = status;
+        this->status = omniStatus;
     };
 
     virtual OmniStatus Init()
@@ -49,9 +49,9 @@ public:
         return OMNI_STATUS_NORMAL;
     }
 
-    void SetVecAllocator(vec::VectorAllocator *vecAllocator)
+    void SetVecAllocator(vec::VectorAllocator *vectorAllocator)
     {
-        this->vecAllocator = vecAllocator;
+        this->vecAllocator = vectorAllocator;
     }
 
     vec::VectorAllocator ALWAYS_INLINE *GetVecAllocator() const

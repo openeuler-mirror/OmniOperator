@@ -34,13 +34,8 @@ RowFilterFunc RowFilter::Create()
 }
 
 SimpleFilter::SimpleFilter(const Expr &expression)
-{
-    this->codegen = nullptr;
-    this->expression = &expression;
-    this->func = nullptr;
-    this->resultLength = nullptr;
-    this->isResultNull = nullptr;
-}
+    : codegen(nullptr), expression(&expression), func(nullptr), resultLength(nullptr), isResultNull(nullptr)
+{}
 
 SimpleFilter::~SimpleFilter()
 {
@@ -89,10 +84,8 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
-    : inputDataTypes(inputDataTypes)
+    : inputDataTypes(inputDataTypes), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
 {
-    this->inputVecCount = inputVecCount;
-    this->projectVecCount = projectVecCount;
     this->SetJitContext(nullptr);
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << expression << std::endl;
@@ -100,7 +93,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     parsedExpr->Accept(printExprTree);
     std::cout << std::endl;
 #endif
-    this->filter = make_unique<Filter>(*parsedExpr, inputDataTypes.GetIds(), inputVecCount);
+    this->filter = make_unique<Filter>(*parsedExpr);
     if (!this->filter->isSupported) {
         this->isSupportedExpr = false;
     }
@@ -127,9 +120,8 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputDataTypes.GetIds(),
-        this->inputVecCount, this->projections, this->projectVecCount, new ExecutionContext());
-    return filterAndProjectOperator.release();
+    return new FilterAndProjectOperator(filter, this->inputDataTypes.GetIds(), inputVecCount, projections,
+        projectVecCount, new ExecutionContext());
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
@@ -183,26 +175,24 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 
     std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
 
-    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets,
+    int32_t numSelectedRows = this->filter->apply(data.data(), rowCount, selectedRows, bitmap, offsets,
         reinterpret_cast<int64_t>(context), dictionaries);
-
     if (numSelectedRows <= 0) {
         for (auto &dictionaryVec : dictionaryVecs) {
             delete dictionaryVec;
         }
-        context->getArena()->Reset();
+        context->GetArena()->Reset();
         VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
-    auto projectedData = make_unique<VectorBatch>(this->projectVecCount, numSelectedRows);
 
+    projectedVecs = new VectorBatch(this->projectVecCount, numSelectedRows);
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection
         Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data,
             bitmap, offsets, context, dictionaries);
-        projectedData->SetVector(i, col);
+        projectedVecs->SetVector(i, col);
     }
-    this->projectedVecs = std::move(projectedData);
 
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;
@@ -210,7 +200,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     data.clear();
     VectorHelper::FreeVecBatch(vecBatch);
     delete[] selectedRows;
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     return numSelectedRows;
 }
 
@@ -221,24 +211,37 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     }
 
     int rowCount = this->projectedVecs->GetRowCount();
-    data.push_back(this->projectedVecs.release());
+    data.push_back(this->projectedVecs);
 
     return rowCount;
 }
 
 Filter::Filter(const expressions::Expr &expression, const int32_t *inputTypeIds, int32_t inputVecCount)
+    : codeGen(FilterCodeGen::Create("filterFunc", expression)), expr(&expression)
 {
-    this->codeGen = FilterCodeGen::Create("filterFunc", expression);
-    this->expr = &expression;
-
     auto f = this->codeGen->GetFunction();
     if (f == 0) {
         this->isSupported = false;
-        return;
+        this->apply = nullptr;
+    } else {
+        this->isSupported = true;
+        void *function = &f;
+        this->apply = *static_cast<FilterFunc *>(function);
     }
-    this->isSupported = true;
-    void *function = &f;
-    this->Apply = *static_cast<FilterFunc *>(function);
+}
+
+Filter::Filter(const expressions::Expr &expression)
+    : codeGen(FilterCodeGen::Create("filterFunc", expression)), expr(&expression)
+{
+    auto f = this->codeGen->GetFunction();
+    if (f == 0) {
+        this->isSupported = false;
+        this->apply = nullptr;
+    } else {
+        this->isSupported = true;
+        void *function = &f;
+        this->apply = *static_cast<FilterFunc *>(function);
+    }
 }
 } // end of op
 } // end of omniruntime

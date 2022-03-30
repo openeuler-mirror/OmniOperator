@@ -84,13 +84,13 @@ TEST(CodeGenTest, SimpleFilter)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_TRUE(res);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int32_t i = 50; i < 100; i++) {
         bool res = *((bool *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_FALSE(res);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -148,7 +148,7 @@ TEST(CodeGenTest, SimpleProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 50);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -236,7 +236,7 @@ TEST(CodeGenTest, SingleCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -337,7 +337,7 @@ TEST(CodeGenTest, DoubleCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 10);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -451,7 +451,7 @@ TEST(CodeGenTest, ThreeCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -537,7 +537,7 @@ TEST(CodeGenTest, SwitchElseNull)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : 0);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -614,7 +614,7 @@ TEST(CodeGenTest, SingleProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -681,7 +681,7 @@ TEST(CodeGenTest, ShortCircuitProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 10);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -738,7 +738,7 @@ TEST(CodeGenTest, RowFilter)
             dictionaryVectors);
         EXPECT_EQ(res, i % 2 == 0);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -858,7 +858,7 @@ TEST(CodeGenTest, RowFilterString)
     res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
         dictionaryVectors);
     EXPECT_EQ(res, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -1021,7 +1021,7 @@ TEST(CodeGenTest, MathFunctions1)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
 
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     EXPECT_EQ(result, 1);
     std::cout << "result: " << result << std::endl;
@@ -1037,7 +1037,7 @@ TEST(CodeGenTest, MathFunctions1)
         dictionaries);
     EXPECT_EQ(result, 0);
 
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -1097,7 +1097,7 @@ TEST(CodeGenTest, MathFunctions2)
         reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 100;
     v2[0] = 1245;
@@ -1109,7 +1109,7 @@ TEST(CodeGenTest, MathFunctions2)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 100;
     v2[0] = 1245;
@@ -1121,7 +1121,7 @@ TEST(CodeGenTest, MathFunctions2)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1187,7 +1187,7 @@ TEST(CodeGenTest, MathFunctions3)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 100;
     v2[0] = 1245;
@@ -1199,7 +1199,7 @@ TEST(CodeGenTest, MathFunctions3)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = -12;
     v2[0] = 1245;
@@ -1211,7 +1211,7 @@ TEST(CodeGenTest, MathFunctions3)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = -12222;
     v2[0] = -12312;
@@ -1223,7 +1223,7 @@ TEST(CodeGenTest, MathFunctions3)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1284,7 +1284,7 @@ TEST(CodeGenTest, MathFunctions4)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 3;
     v2[0] = 1245;
@@ -1296,7 +1296,7 @@ TEST(CodeGenTest, MathFunctions4)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 5;
     v2[0] = 1245;
@@ -1308,7 +1308,7 @@ TEST(CodeGenTest, MathFunctions4)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 0;
     v2[0] = -12312;
@@ -1320,7 +1320,7 @@ TEST(CodeGenTest, MathFunctions4)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 123;
     v2[0] = -43;
@@ -1406,7 +1406,7 @@ TEST(CodeGenTest, CastNumbers1)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 2000000000;
     v2[0] = 3000000000;
@@ -1418,7 +1418,7 @@ TEST(CodeGenTest, CastNumbers1)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = -1000000;
     v2[0] = -1000000;
@@ -1430,7 +1430,7 @@ TEST(CodeGenTest, CastNumbers1)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1492,7 +1492,7 @@ TEST(CodeGenTest, CastNumbers2)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 2000000000;
     v2[0] = -233;
@@ -1504,7 +1504,7 @@ TEST(CodeGenTest, CastNumbers2)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = -1000000;
     v2[0] = 12;
@@ -1516,7 +1516,7 @@ TEST(CodeGenTest, CastNumbers2)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1585,7 +1585,7 @@ TEST(CodeGenTest, Like)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "asdf";
@@ -1599,7 +1599,7 @@ TEST(CodeGenTest, Like)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1669,7 +1669,7 @@ TEST(CodeGenTest, DateCast)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "j";
@@ -1684,7 +1684,7 @@ TEST(CodeGenTest, DateCast)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "j";
@@ -1699,7 +1699,7 @@ TEST(CodeGenTest, DateCast)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1782,7 +1782,7 @@ TEST(CodeGenTest, SubstrIn)
         reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "j";
@@ -1797,7 +1797,7 @@ TEST(CodeGenTest, SubstrIn)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "j";
@@ -1812,7 +1812,7 @@ TEST(CodeGenTest, SubstrIn)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1883,7 +1883,7 @@ TEST(CodeGenTest, ConcatStr)
         reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "hello";
@@ -1898,7 +1898,7 @@ TEST(CodeGenTest, ConcatStr)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "hello ";
@@ -1913,7 +1913,7 @@ TEST(CodeGenTest, ConcatStr)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -1992,7 +1992,7 @@ TEST(CodeGenTest, ConcatChars)
         reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "hello";
@@ -2007,7 +2007,7 @@ TEST(CodeGenTest, ConcatChars)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "hello ";
@@ -2022,7 +2022,7 @@ TEST(CodeGenTest, ConcatChars)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -2089,7 +2089,7 @@ TEST(CodeGenTest, ToUpper)
 
     EXPECT_EQ(result, 1);
 
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 2; i++) {
         delete[] bitmap[i];
@@ -2153,7 +2153,7 @@ TEST(CodeGenTest, ToUpperChar)
 
     EXPECT_EQ(result, 1);
 
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 2; i++) {
         delete[] bitmap[i];
@@ -2224,7 +2224,7 @@ TEST(CodeGenTest, StringWithOps)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "j";
@@ -2238,7 +2238,7 @@ TEST(CodeGenTest, StringWithOps)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "j";
@@ -2251,7 +2251,7 @@ TEST(CodeGenTest, StringWithOps)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -2313,14 +2313,14 @@ TEST(CodeGenTest, Coalesce)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     bitmap[0][0] = true;
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -2382,7 +2382,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
     EXPECT_EQ(oVec[0], true);
     EXPECT_EQ(oVec[1], false);
     EXPECT_EQ(oVec[2], false);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         bitmap[0][0] = true;
@@ -2395,7 +2395,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
     EXPECT_EQ(oVec[0], true);
     EXPECT_EQ(oVec[1], false);
     EXPECT_EQ(oVec[2], false);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 1; i++) {
         delete[] bitmap[i];
@@ -2449,7 +2449,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     EXPECT_EQ(oVec[0], false);
     EXPECT_EQ(oVec[1], false);
     EXPECT_EQ(oVec[2], false);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = true;
@@ -2462,7 +2462,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     EXPECT_EQ(oVec[0], true);
     EXPECT_EQ(oVec[1], true);
     EXPECT_EQ(oVec[2], true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 1; i++) {
         delete[] bitmap[i];
@@ -2509,14 +2509,14 @@ TEST(CodeGenTest, IsNull)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, false);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     bitmap[0][0] = true;
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -2562,14 +2562,14 @@ TEST(CodeGenTest, IsNotNull)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     bitmap[0][0] = true;
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, false);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -2624,7 +2624,7 @@ TEST(CodeGenTest, DecimalOperators1)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 1; i++) {
         delete[] bitmap[i];
@@ -2758,7 +2758,7 @@ TEST(CodeGenTest, DecimalOperators3)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -2961,7 +2961,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     EXPECT_EQ(oVec[0], -90);
     EXPECT_EQ(oVec[1], -80);
     EXPECT_EQ(oVec[2], -70);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = true;
@@ -2974,7 +2974,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     EXPECT_EQ(oVec[0], 0);
     EXPECT_EQ(oVec[1], 0);
     EXPECT_EQ(oVec[2], 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < 1; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -3040,7 +3040,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     EXPECT_EQ(oVec.at(3), 0);
     EXPECT_EQ(oVec.at(4), 130);
     EXPECT_EQ(oVec.at(5), 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = true;
@@ -3058,7 +3058,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     EXPECT_EQ(oVec.at(4), 0);
     EXPECT_EQ(oVec.at(5), 0);
 
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
     for (int i = 0; i < 1; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
@@ -3108,7 +3108,7 @@ TEST(CodeGenTest, TestRowProjectLong)
         int64_t inputValue = slicedVector->GetValue(i);
         EXPECT_EQ(value, inputValue + 100);
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete slicedVector;
     delete vector;
@@ -3163,7 +3163,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
         std::string expectResult(expectValue, expectValue + expectLen);
         EXPECT_EQ(result, expectResult.substr(0, 5));
     }
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete slicedVector;
     delete vector;
@@ -3213,7 +3213,7 @@ TEST(CodeGenTest, CastNumbers3)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = 2000000000;
     v2[0] = -100.22;
@@ -3225,7 +3225,7 @@ TEST(CodeGenTest, CastNumbers3)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     v1[0] = -1000000;
     v2[0] = 12;
@@ -3237,7 +3237,7 @@ TEST(CodeGenTest, CastNumbers3)
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, 0);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -3348,7 +3348,7 @@ TEST(CodeGenTest, Substr)
     EXPECT_FALSE(filter == nullptr);
     res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -3407,7 +3407,7 @@ TEST(CodeGenTest, Mm3HashInt)
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -3457,7 +3457,7 @@ TEST(CodeGenTest, Mm3HashLong)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expected_res = Mm3Int64(v1[0], false, 42);
     EXPECT_EQ(res, expected_res);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -3506,7 +3506,7 @@ TEST(CodeGenTest, Mm3HashDouble)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expected_res = Mm3Double(v1[0], false, 42);
     EXPECT_EQ(res, expected_res);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -3556,7 +3556,7 @@ TEST(CodeGenTest, Mm3HashString)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expected_res = Mm3String(v1.c_str(), v1.size(), false, 42);
     EXPECT_EQ(res, expected_res);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -3621,7 +3621,7 @@ TEST(CodeGenTest, Pmod)
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     delete[] bitmap[0];
     delete[] bitmap;
@@ -3698,7 +3698,7 @@ TEST(CodeGenTest, SubstrWithChars)
         filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
 
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -3760,7 +3760,7 @@ TEST(CodeGenTest, CombineHash)
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, true);
-    context->getArena()->Reset();
+    context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];

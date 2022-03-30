@@ -7,10 +7,10 @@
 
 #include <memory>
 #include "join_hash_table.h"
-#include "../operator_factory.h"
-#include "../operator.h"
-#include "../../type/data_types.h"
-#include "../../type/data_type.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "type/data_types.h"
+#include "type/data_type.h"
 #include "hash_builder.h"
 #include "common_join.h"
 
@@ -50,7 +50,7 @@ public:
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
         JoinHashTables *hashTables, int32_t outputRowSize);
     ~LookupJoinOperator() override;
-    int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
 
 private:
@@ -120,7 +120,7 @@ public:
     LookupJoinOutputBuilder(const int32_t *probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
-    void AppendRow(int32_t probePosition, int64_t partitionedJoinPosition);
+    void AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition);
     void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
         std::vector<VectorBatch *> &outputVecBatches);
 
@@ -132,7 +132,7 @@ private:
     const type::DataTypes &buildOutputTypes;
     int32_t outputRowSize;
     std::vector<int32_t> probeIndex;
-    std::vector<int64_t> buildIndex;
+    std::vector<uint64_t> buildIndex;
     bool isSequentialProbeIndices;
 };
 } // end of op

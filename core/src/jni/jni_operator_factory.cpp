@@ -27,7 +27,6 @@
 #include "operator/limit/distinct_limit.h"
 #include "config.h"
 
-
 using namespace omniruntime::op;
 using namespace std;
 
@@ -1170,7 +1169,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
     jint jJoinType, jstring jFilter, jlong jitContext)
 {
-    if ((JoinType)jJoinType != OMNI_JOIN_TYPE_INNER) {
+    if ((JoinType)jJoinType != JoinType::OMNI_JOIN_TYPE_INNER) {
         return (int64_t)0;
     }
 

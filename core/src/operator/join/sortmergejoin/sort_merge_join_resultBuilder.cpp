@@ -4,7 +4,7 @@
  */
 #include "sort_merge_join_resultBuilder.h"
 #include <memory>
-#include "../../pages_index.h"
+#include "operator/pages_index.h"
 
 namespace omniruntime {
 namespace op {
@@ -54,7 +54,7 @@ void JoinResultBuilder::JoinFilterCodeGen()
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
-    VectorBatch *vectorBatch = std::make_unique<VectorBatch>(outputColCount, maxRowCount).release();
+    VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
     std::vector<DataType> allTypes;
     allTypes.reserve(outputColCount);
     std::vector<DataType> leftTypes = leftTableOutputTypes.Get();
@@ -196,7 +196,7 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
 VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
 {
     int32_t outputColCount = vectorBatch->GetVectorCount();
-    VectorBatch *sliceBatch = std::make_unique<VectorBatch>(outputColCount, rowCount).release();
+    VectorBatch *sliceBatch = new VectorBatch(outputColCount, rowCount);
     Vector **vectors = vectorBatch->GetVectors();
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
         sliceBatch->SetVector(columnIdx, vectors[columnIdx]->Slice(0, rowCount));

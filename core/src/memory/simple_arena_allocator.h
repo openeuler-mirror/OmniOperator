@@ -4,8 +4,8 @@
 
 #ifndef SIMPLE_ARENA_ALLOCATOR_H
 #define SIMPLE_ARENA_ALLOCATOR_H
-#include <vector>
 
+#include <vector>
 #include "chunk.h"
 
 namespace omniruntime {
@@ -69,7 +69,7 @@ private:
 };
 
 inline SimpleArenaAllocator::SimpleArenaAllocator(int64_t minChunkSize)
-    : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL)
+    : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(nullptr)
 {}
 
 inline SimpleArenaAllocator::~SimpleArenaAllocator()
@@ -114,7 +114,7 @@ inline void SimpleArenaAllocator::Reset()
     // Release all but the first chunk.
     if (chunks.size() > 1) {
         ReleaseChunks(true);
-        chunks.erase(chunks.begin() + 1, chunks.end());
+        chunks.erase(chunks.cbegin() + 1, chunks.cend());
     }
 
     availBuf = reinterpret_cast<uint8_t *>(chunks.at(0)->GetAddress());

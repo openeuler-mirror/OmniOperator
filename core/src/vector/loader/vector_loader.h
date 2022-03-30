@@ -13,9 +13,9 @@ class VectorLoader {
 public:
     VectorLoader() {}
 
-    virtual Vector *Load() = 0;
-
     virtual ~VectorLoader() {}
+
+    virtual Vector *Load() = 0;
 };
 }
 }

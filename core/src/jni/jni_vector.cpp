@@ -3,12 +3,12 @@
  * Description: JNI Vector Operations Source File
  */
 #include "jni_vector.h"
-#include <stdint.h>
-#include "../util/debug.h"
-#include "../memory/memory_pool.h"
-#include "../vector/vector_common.h"
-#include "../type/data_type_serializer.h"
-#include "../vector/vector_helper.h"
+#include <cstdint>
+#include "util/debug.h"
+#include "memory/memory_pool.h"
+#include "vector/vector_common.h"
+#include "type/data_type_serializer.h"
+#include "vector/vector_helper.h"
 #include "jni_common_def.h"
 #include "jni_vector_loader.h"
 
@@ -18,25 +18,23 @@ Vector *TransformVector(long vectorAddr);
 
 VectorAllocator *TransformAllocator(long allocatorAddr);
 
+void RecordVectorStack(Vector *vector, VecOpType opType, JNIEnv *env)
+{
 #ifdef DEBUG_VECTOR
-#define RECORD_VECTOR_STACK(vector, opType, env)                                                     \
-    do {                                                                                             \
-        jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId); \
-        auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);                                 \
-        std::string stack(stackChars);                                                               \
-        vector->RecordStack(stack, opType);                                                          \
-        env->ReleaseStringUTFChars(jstack, stackChars);                                              \
-    } while (0)
-#else
-#define RECORD_VECTOR_STACK(vector, opType, env)
+    jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
+    auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);
+    std::string stack(stackChars);
+    vector->RecordStack(stack, opType);
+    env->ReleaseStringUTFChars(jstack, stackChars);
 #endif
+}
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
     jlong jAllocator, jint jCapacityInBytes, jint jValueCount, jint jVectorEncodingId, jint jVectorTypeId)
 {
     Vector *vector = VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorEncodingId, jVectorTypeId,
         jCapacityInBytes, jValueCount);
-    RECORD_VECTOR_STACK(vector, VecOpType::JNI_NEW, env);
+    RecordVectorStack(vector, VecOpType::JNI_NEW, env);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
 
@@ -44,9 +42,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(
     jlong jNativeVector, jint jStartIndex, jint jLength)
 {
     Vector *nativeVector = TransformVector(jNativeVector);
-    RECORD_VECTOR_STACK(nativeVector, VecOpType::JNI_SLICE_SRC, env);
+    RecordVectorStack(nativeVector, VecOpType::JNI_SLICE_SRC, env);
     Vector *sliceVector = nativeVector->Slice(jStartIndex, jLength);
-    RECORD_VECTOR_STACK(sliceVector, VecOpType::JNI_SLICE, env);
+    RecordVectorStack(sliceVector, VecOpType::JNI_SLICE, env);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(sliceVector));
 }
 
@@ -57,9 +55,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
     jint positionArray[jLength];
     env->GetIntArrayRegion(jPositions, jOffset, jLength, positionArray);
     jint *positions = positionArray;
-    RECORD_VECTOR_STACK(nativeVector, VecOpType::JNI_COPY_POSITIONS_SRC, env);
+    RecordVectorStack(nativeVector, VecOpType::JNI_COPY_POSITIONS_SRC, env);
     Vector *copyVector = nativeVector->CopyPositions(reinterpret_cast<int *>(positions), 0, jLength);
-    RECORD_VECTOR_STACK(copyVector, VecOpType::JNI_COPY_POSITIONS, env);
+    RecordVectorStack(copyVector, VecOpType::JNI_COPY_POSITIONS, env);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(copyVector));
 }
 
@@ -67,9 +65,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyRegionNative(J
     jlong jNativeVector, jint jPositionOffset, jint jLength)
 {
     Vector *nativeVector = TransformVector(jNativeVector);
-    RECORD_VECTOR_STACK(nativeVector, VecOpType::JNI_COPY_REGION_SRC, env);
+    RecordVectorStack(nativeVector, VecOpType::JNI_COPY_REGION_SRC, env);
     Vector *copyVector = nativeVector->CopyRegion(jPositionOffset, jLength);
-    RECORD_VECTOR_STACK(copyVector, VecOpType::JNI_COPY_REGION, env);
+    RecordVectorStack(copyVector, VecOpType::JNI_COPY_REGION, env);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(copyVector));
 }
 
@@ -80,7 +78,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative(JN
     if (nativeVector == nullptr) {
         std::cerr << "free vector native vector is null:" << jNativeVector << std::endl;
     }
-    RECORD_VECTOR_STACK(nativeVector, VecOpType::JNI_FREE, env);
+    RecordVectorStack(nativeVector, VecOpType::JNI_FREE, env);
     delete nativeVector;
 }
 

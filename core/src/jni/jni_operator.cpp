@@ -5,45 +5,45 @@
 
 #include <vector>
 #include <algorithm>
-#include <src/vector/vector_batch.h>
-#include "jni_operator.h"
+#include "vector/vector_batch.h"
 #include "jni_common_def.h"
-#include "../operator/operator_factory.h"
+#include "operator/operator_factory.h"
+#include "jni_operator.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 
+void RecordInputVectorsStack(VectorBatch *vectorBatch, JNIEnv *env)
+{
 #ifdef DEBUG_VECTOR
-#define RECORD_INPUT_VECTORS_STACK(vecBatch, env)                                                    \
-    do {                                                                                             \
-        jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId); \
-        auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);                                 \
-        std::string stack(stackChars);                                                               \
-        for (int i = 0; i < vecBatch->GetVectorCount(); ++i) {                                       \
-            Vector *vector = vecBatch->GetVector(i);                                                 \
-            vector->RecordStack(stack, VecOpType::JNI_ADD_INPUT);                                    \
-        }                                                                                            \
-        env->ReleaseStringUTFChars(jstack, stackChars);                                              \
-    } while (0)
-
-#define RECORD_OUTPUT_VECTORS_STACK(vecBatches, env)                                                 \
-    do {                                                                                             \
-        jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId); \
-        auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);                                 \
-        std::string stack(stackChars);                                                               \
-        for (int i = 0; i < vecBatches.size(); ++i) {                                                \
-            VectorBatch *vecBatch = outputVecBatches[i];                                             \
-            for (int j = 0; j < vecBatch->GetVectorCount(); ++j) {                                   \
-                Vector *vector = vecBatch->GetVector(j);                                             \
-                vector->RecordStack(stack, VecOpType::JNI_GET_OUTPUT);                               \
-            }                                                                                        \
-        }                                                                                            \
-        env->ReleaseStringUTFChars(jstack, stackChars);                                              \
-    } while (0)
-#else
-#define RECORD_INPUT_VECTORS_STACK(vecBatch, env)
-#define RECORD_OUTPUT_VECTORS_STACK(vecBatch, env)
+    jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
+    auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);
+    std::string stack(stackChars);
+    int32_t vecCount = vectorBatch->GetVectorCount();
+    for (int i = 0; i < vecCount; ++i) {
+        Vector *vector = vectorBatch->GetVector(i);
+        vector->RecordStack(stack, VecOpType::JNI_ADD_INPUT);
+    }
+    env->ReleaseStringUTFChars(jstack, stackChars);
 #endif
+}
+
+void RecordOutputVectorsStack(std::vector<VectorBatch *> outputVecBatches, JNIEnv *env)
+{
+#ifdef DEBUG_VECTOR
+    jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
+    auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);
+    std::string stack(stackChars);
+    for (int i = 0; i < outputVecBatches.size(); ++i) {
+        VectorBatch *vecBatch = outputVecBatches[i];
+        for (int j = 0; j < vecBatch->GetVectorCount(); ++j) {
+            Vector *vector = vecBatch->GetVector(j);
+            vector->RecordStack(stack, VecOpType::JNI_GET_OUTPUT);
+        }
+    }
+    env->ReleaseStringUTFChars(jstack, stackChars);
+#endif
+}
 
 jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
 {
@@ -119,7 +119,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 {
     VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
     Operator *nativeOperator = (Operator *)jOperatorAddress;
-    RECORD_INPUT_VECTORS_STACK(vecBatch, env);
+    RecordInputVectorsStack(vecBatch, env);
     return nativeOperator->AddInput(vecBatch);
 }
 
@@ -136,7 +136,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     Operator *nativeOperator = (Operator *)jOperatorAddr;
     std::vector<VectorBatch *> outputVecBatches;
     int32_t errNo = nativeOperator->GetOutput(outputVecBatches);
-    RECORD_OUTPUT_VECTORS_STACK(outputVecBatches, env);
+    RecordOutputVectorsStack(outputVecBatches, env);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
     jobjectArray result = transform(env, outputVecBatches);
     JNI_DEBUG_LOG("transform finished, elapsed time: %ld ms.", END(start));

@@ -2,11 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
 
-#include <iostream>
 #include "memory_pool.h"
+
+#include <iostream>
 #include <jemalloc/jemalloc.h>
 #include "memory_statistic.h"
-#include "../../config.h"
 
 using namespace std;
 const size_t ALIGNMENT = 64;
@@ -59,10 +59,11 @@ MemoryPool *GetMemoryPool()
 
 uint64_t GetPreferredSize(uint64_t size)
 {
-    if (size < 8) {
-        return 8;
+    const uint64_t smallSize = 8;
+    if (size < smallSize) {
+        return smallSize;
     }
-    int32_t bits = 63 - __builtin_clzll(size);
+    uint32_t bits = 63 - __builtin_clzll(size);
     size_t lower = 1U << bits;
     // Size is a power of 2.
     if (lower == size) {
@@ -70,10 +71,11 @@ uint64_t GetPreferredSize(uint64_t size)
     }
     // If size is below 1.5 * previous power of two, return 1.5 *
     // the previous power of two, else the next power of 2.
-    if (lower + (lower / 2) >= size) {
-        return lower + (lower / 2);
+    uint64_t preferredSize = lower + (lower / 2);
+    if (preferredSize >= size) {
+        return preferredSize;
     }
-    return lower * 2;
+    return (lower + lower);
 }
 
 void RecordSize(int size)

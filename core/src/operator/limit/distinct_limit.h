@@ -24,23 +24,22 @@ public:
     ~DistinctLimitOperatorFactory() override;
 
     static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(const type::DataTypes &sourceTypes,
-        const int32_t *distinctCols, int32_t distinctColsCount, int32_t hashCol, int64_t limit);
+        const int32_t *distinctCols, int32_t distinctColsCount, int32_t hashColumn, int64_t limitNum);
 
     Operator *CreateOperator() override;
 
 private:
-    const type::DataTypes *sourceTypes;
-    int32_t *distinctCols;
+    type::DataTypes sourceTypes;
+    std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;
     int64_t limit;
 };
 
-typedef struct {
+using DistinctRowInfo = struct {
     uint64_t hashValue; // hash value of the row
     int32_t slotIndex;  // index when hash conflict
-} DistinctRowInfo;
-
+};
 
 using DuplicateValueFunc = void (*)(AggregateState &distinctSlot, Vector *inputVector, uint32_t rowIndex,
     ExecutionContext *context);
@@ -63,10 +62,10 @@ using DistinctLimitFuncSet = struct {
 
 class DistinctLimitOperator : public Operator {
 public:
-    static const int32_t INVALID_DISTINCT_COL_ID = -1;
+    static constexpr int32_t INVALID_DISTINCT_COL_ID = -1;
 
 public:
-    DistinctLimitOperator(const type::DataTypes *sourceTypes, int32_t *distinctCols, int32_t distinctColsCount,
+    DistinctLimitOperator(type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols, int32_t distinctColsCount,
         int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperator() override;
@@ -82,21 +81,19 @@ private:
 
     void InLoop(omniruntime::vec::VectorBatch *vecBatch, uint64_t *combineHashVal);
 
-    void BuildOutputTypes();
-
     void releaseRowInfo(std::vector<DistinctRowInfo *> &rowInfo);
 
 private:
-    std::unique_ptr<ExecutionContext> executionContext;
+    ExecutionContext *executionContext;
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil>
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
-    const type::DataTypes *sourceTypes;
-    type::DataTypes *outTypes;
-    int32_t *distinctCols;
+    type::DataTypes sourceTypes;
+    std::vector<DataType> outTypes;
+    std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;
-    int32_t *outCols; // include distinct cols, hash cols
+    std::vector<int32_t> outCols; // include distinct cols, hash cols
     int32_t outColsCount;
     int64_t remainingLimit;
     int64_t limit;

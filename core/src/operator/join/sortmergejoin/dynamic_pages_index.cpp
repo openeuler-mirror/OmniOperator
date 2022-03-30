@@ -3,8 +3,8 @@
  * @Description: dynamic pages index implementations
  */
 #include "dynamic_pages_index.h"
-#include "../../pages_index.h"
-#include "../../../vector/vector_helper.h"
+#include "operator/pages_index.h"
+#include "vector/vector_helper.h"
 
 using namespace omniruntime::vec;
 

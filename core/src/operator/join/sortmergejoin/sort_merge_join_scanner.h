@@ -5,21 +5,21 @@
 #ifndef __SORT_MERGE_JOIN_SCANNER_H__
 #define __SORT_MERGE_JOIN_SCANNER_H__
 
-#include "../../../type/data_types.h"
+#include "type/data_types.h"
 #include "dynamic_pages_index.h"
-#include "../common_join.h"
-#include "../../../vector/vector_common.h"
+#include "operator/join/common_join.h"
+#include "vector/vector_common.h"
 
 namespace omniruntime {
 namespace op {
-enum JoinTableCode {
+enum class JoinTableCode {
     NEED_SCAN = 0,
     NEED_DATA = 1,
     SCAN_FINISHED = 2,
     INVALID = 3
 };
 
-enum JoinResultCode {
+enum class JoinResultCode {
     NO_RESULT = 0,
     HAS_RESULT = 1
 };
@@ -35,8 +35,8 @@ public:
     JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, bool hasResult);
     virtual ~JoinStatus() {}
 
-    int32_t GenerateStatus();
-    void Set(JoinTableCode streamedCode, JoinTableCode bufferedCode, bool hasResult);
+    uint32_t GenerateStatus();
+    void Set(JoinTableCode inputStreamedCode, JoinTableCode inputBufferedCode, bool hasResult);
     void TransToNeedStreamedData(bool hasResult);
     void TransToNeedBufferedData(bool hasResult);
     bool NewStreamedDataAdded();
@@ -51,15 +51,16 @@ private:
 
 class InitialJoinStatus : public JoinStatus {
 public:
-    InitialJoinStatus() : JoinStatus(INVALID, INVALID, NO_RESULT) {};
+    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT) {};
     ~InitialJoinStatus() override {}
 };
 
 class SortMergeJoinScanner {
 public:
-    SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols, int32_t keyColsCount,
-        DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
-        int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch);
+    SortMergeJoinScanner(const omniruntime::type::DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
+        int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex,
+        const omniruntime::type::DataTypes &bufferedTableKeysTypes, int32_t *bufferedTableKeysCols,
+        DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch);
 
     int64_t FindNextJoinRows();
 
@@ -112,7 +113,7 @@ private:
 
     int32_t *bufferedTableKeysCols;
 
-    std::unique_ptr<DataTypes> streamedTableKeysTypes;
+    std::unique_ptr<omniruntime::type::DataTypes> streamedTableKeysTypes;
 
     int32_t keyColsCount;
 
@@ -140,22 +141,23 @@ private:
     int32_t bufferedPagesIndexPosition;
 };
 
-const int32_t STREAM_SHIFT_24 = 24;
-const int32_t BUFFER_SHIFT_16 = 16;
+constexpr uint32_t STREAM_SHIFT_24 = 24;
+constexpr uint32_t BUFFER_SHIFT_16 = 16;
+constexpr uint32_t BUFFER_SHIFT_8 = 8;
 
-inline int8_t DecodeStreamedTblResult(int32_t findNextJoinRowResult)
+inline int8_t DecodeStreamedTblResult(uint32_t findNextJoinRowResult)
 {
     return static_cast<int8_t>(findNextJoinRowResult >> STREAM_SHIFT_24);
 }
 
-inline int8_t DecodeBufferedTblResult(int32_t findNextJoinRowResult)
+inline int8_t DecodeBufferedTblResult(uint32_t findNextJoinRowResult)
 {
-    return static_cast<int8_t>((findNextJoinRowResult << 8) >> STREAM_SHIFT_24);
+    return static_cast<int8_t>((findNextJoinRowResult << BUFFER_SHIFT_8) >> STREAM_SHIFT_24);
 }
 
-inline int16_t DecodeJoinResult(int32_t findNextJoinRowResult)
+inline int16_t DecodeJoinResult(uint32_t findNextJoinRowResult)
 {
-    return static_cast<int32_t>((findNextJoinRowResult << BUFFER_SHIFT_16) >> BUFFER_SHIFT_16);
+    return static_cast<int16_t>((findNextJoinRowResult << BUFFER_SHIFT_16) >> BUFFER_SHIFT_16);
 }
 }
 }

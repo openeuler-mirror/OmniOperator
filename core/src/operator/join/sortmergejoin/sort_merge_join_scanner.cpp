@@ -4,9 +4,8 @@
  */
 
 #include "sort_merge_join_scanner.h"
-#include "../../pages_index.h"
-
 #include <memory>
+#include "operator/pages_index.h"
 
 using namespace omniruntime::vec;
 namespace omniruntime {
@@ -14,32 +13,31 @@ namespace op {
 SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
     int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
     int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch)
-    : joinType(joinType),
+    : streamedTableKeysTypes(std::make_unique<DataTypes>(streamedTableKeysTypes)),
+      joinType(joinType),
       streamedTableKeysCols(streamedTableKeysCols),
       bufferedTableKeysCols(bufferedTableKeysCols),
       keyColsCount(keyColsCount),
       firstMatch(firstMatch),
       streamedPagesIndexPosition(-1),
-      bufferedPagesIndexPosition(0)
-{
-    streamedPagesIndex = streamedTablePagesIndex;
-    bufferedPagesIndex = bufferedTablePagesIndex;
-    this->streamedTableKeysTypes = std::make_unique<DataTypes>(streamedTableKeysTypes);
-    preStreamedValueAddress = -1;
-    preStatus = std::make_unique<InitialJoinStatus>();
-}
+      bufferedPagesIndexPosition(0),
+      streamedPagesIndex(streamedTablePagesIndex),
+      bufferedPagesIndex(bufferedTablePagesIndex),
+      preStreamedValueAddress(-1),
+      preStatus(std::make_unique<InitialJoinStatus>())
+{}
 
 SortMergeJoinScanner::~SortMergeJoinScanner() {}
 
 int64_t SortMergeJoinScanner::FindNextJoinRows()
 {
     switch (joinType) {
-        case OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_INNER:
             InnerJoin();
             return preStatus->GenerateStatus();
         default:
             LogError("Unsupported join type: %u.", joinType);
-            preStatus->Set(SCAN_FINISHED, SCAN_FINISHED, false);
+            preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
             return preStatus->GenerateStatus();
     }
 }
@@ -138,11 +136,11 @@ bool SortMergeJoinScanner::IsValidAddedStreamedData()
 {
     if (streamedPagesIndex->IsDataFinish(streamedPagesIndexPosition) &&
         bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition)) {
-        preStatus->Set(SCAN_FINISHED, SCAN_FINISHED, false);
+        preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
         return false;
     }
     if (streamedPagesIndex->IsDataFinish(streamedPagesIndexPosition)) {
-        preStatus->Set(SCAN_FINISHED, NEED_DATA, false);
+        preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::NEED_DATA, false);
         return false;
     }
     return true;
@@ -152,11 +150,11 @@ bool SortMergeJoinScanner::IsValidAddedBufferedData()
 {
     if (streamedPagesIndex->IsDataFinish(streamedPagesIndexPosition) &&
         bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition)) {
-        preStatus->Set(SCAN_FINISHED, SCAN_FINISHED, false);
+        preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
         return false;
     }
     if (bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition)) {
-        preStatus->Set(NEED_DATA, SCAN_FINISHED, false);
+        preStatus->Set(JoinTableCode::NEED_DATA, JoinTableCode::SCAN_FINISHED, false);
         return false;
     }
     return true;
@@ -312,57 +310,60 @@ JoinStatus::JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, J
     : streamedCode(streamedCode), bufferedCode(bufferedCode), resultCode(resultCode)
 {}
 
-int32_t JoinStatus::GenerateStatus()
+uint32_t JoinStatus::GenerateStatus()
 {
-    return streamedCode << STREAM_SHIFT_24 | bufferedCode << BUFFER_SHIFT_16 | resultCode;
+    return (static_cast<uint32_t>(streamedCode) << STREAM_SHIFT_24) |
+        (static_cast<uint32_t>(bufferedCode) << BUFFER_SHIFT_16) | static_cast<uint32_t>(resultCode);
 }
 
 JoinStatus::JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, bool hasResult)
-    : streamedCode(streamedCode), bufferedCode(bufferedCode)
-{
-    this->resultCode = hasResult ? HAS_RESULT : NO_RESULT;
-}
+    : streamedCode(streamedCode),
+      bufferedCode(bufferedCode),
+      resultCode(hasResult ? JoinResultCode::HAS_RESULT : JoinResultCode::NO_RESULT)
+{}
 
-void JoinStatus::Set(JoinTableCode streamed, JoinTableCode buffered, bool hasResult)
+void JoinStatus::Set(JoinTableCode inputStreamedCode, JoinTableCode inputBufferedCode, bool hasResult)
 {
-    this->streamedCode = streamed;
-    this->bufferedCode = buffered;
-    this->resultCode = hasResult ? HAS_RESULT : NO_RESULT;
+    this->streamedCode = inputStreamedCode;
+    this->bufferedCode = inputBufferedCode;
+    this->resultCode = hasResult ? JoinResultCode::HAS_RESULT : JoinResultCode::NO_RESULT;
 }
 
 bool JoinStatus::NewStreamedDataAdded()
 {
-    return streamedCode == NEED_DATA;
+    return streamedCode == JoinTableCode::NEED_DATA;
 }
 
 bool JoinStatus::NewBufferedDataAdded()
 {
-    return bufferedCode == NEED_DATA;
+    return bufferedCode == JoinTableCode::NEED_DATA;
 }
 
 void JoinStatus::Reset()
 {
-    streamedCode = INVALID;
-    bufferedCode = INVALID;
+    streamedCode = JoinTableCode::INVALID;
+    bufferedCode = JoinTableCode::INVALID;
 }
 
 void JoinStatus::TransToNeedBufferedData(bool hasResult)
 {
-    if (bufferedCode == SCAN_FINISHED) {
-        Set(SCAN_FINISHED, SCAN_FINISHED, hasResult);
+    if (bufferedCode == JoinTableCode::SCAN_FINISHED) {
+        Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, hasResult);
     } else {
-        auto streamStatus = (streamedCode == SCAN_FINISHED) ? SCAN_FINISHED : NEED_SCAN;
-        Set(streamStatus, NEED_DATA, hasResult);
+        auto streamStatus =
+            (streamedCode == JoinTableCode::SCAN_FINISHED) ? JoinTableCode::SCAN_FINISHED : JoinTableCode::NEED_SCAN;
+        Set(streamStatus, JoinTableCode::NEED_DATA, hasResult);
     }
 }
 
 void JoinStatus::TransToNeedStreamedData(bool hasResult)
 {
-    if (streamedCode == SCAN_FINISHED) {
-        Set(SCAN_FINISHED, SCAN_FINISHED, hasResult);
+    if (streamedCode == JoinTableCode::SCAN_FINISHED) {
+        Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, hasResult);
     } else {
-        auto bufferedStatus = (bufferedCode == SCAN_FINISHED) ? SCAN_FINISHED : NEED_SCAN;
-        Set(NEED_DATA, bufferedStatus, hasResult);
+        auto bufferedStatus =
+            (bufferedCode == JoinTableCode::SCAN_FINISHED) ? JoinTableCode::SCAN_FINISHED : JoinTableCode::NEED_SCAN;
+        Set(JoinTableCode::NEED_DATA, bufferedStatus, hasResult);
     }
 }
 }

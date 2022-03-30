@@ -6,11 +6,13 @@
 #ifndef __SORT_MERGE_JOIN_EXPR_H__
 #define __SORT_MERGE_JOIN_EXPR_H__
 
-#include "../../operator_factory.h"
-#include "../../projection/projection.h"
-#include "../../../vector/vector.h"
-#include "../../../type/data_types.h"
-#include "../common_join.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "operator/status.h"
+#include "operator/projection/projection.h"
+#include "vector/vector.h"
+#include "type/data_types.h"
+#include "operator/join/common_join.h"
 #include "dynamic_pages_index.h"
 #include "sort_merge_join.h"
 
@@ -20,8 +22,8 @@ class StreamedTableWithExprOperatorFactory : public OperatorFactory {
 public:
     static StreamedTableWithExprOperatorFactory *CreateStreamedTableWithExprOperatorFactory(
         const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
-        int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType,
-        std::string &filter);
+        int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt,
+        JoinType inputJoinType, std::string &filterExpression);
 
     StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
