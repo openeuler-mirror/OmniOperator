@@ -200,8 +200,7 @@ VectorBatch **BuildVarCharInput(int32_t vecBatchNum, int32_t colNum, int32_t row
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(colNum);
         for (int32_t c = 0; c < colNum; ++c) {
-            VarcharVector *col =
-                std::make_unique<VarcharVector>(vecAllocator, rowPerVecBatch * 10, rowPerVecBatch).release();
+            VarcharVector *col = new VarcharVector(vecAllocator, rowPerVecBatch * 10, rowPerVecBatch);
             std::string *values = va_arg(args, std::string *);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, reinterpret_cast<const uint8_t *>(values[j].c_str()), values[j].length());
@@ -687,9 +686,6 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     int32_t vecBatchCount = groupByNULL->GetOutput(result);
     EXPECT_EQ(vecBatchCount, 1);
 
-    for (auto &i : aggs1) {
-        delete i.release();
-    }
     Operator::DeleteOperator(groupByNULL);
 
     int64_t expectData1[1] = {0};

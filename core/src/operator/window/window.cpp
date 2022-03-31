@@ -52,22 +52,22 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
     int32_t expectedPositions, const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount)
 {
-    auto operatorFactory = make_unique<WindowOperatorFactory>(sourceTypes, outputCols, outputColsCount,
-        windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
-        sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes,
-        argumentChannels, argumentChannelsCount);
+    auto operatorFactory =
+        new WindowOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
+        partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts,
+        sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, argumentChannelsCount);
     operatorFactory->Init();
-    return operatorFactory.release();
+    return operatorFactory;
 }
 
 Operator *WindowOperatorFactory::CreateOperator()
 {
-    auto windowOperator = make_unique<WindowOperator>(*(sourceTypes), outputCols, outputColsCount, windowFunctionTypes,
-        windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
-        sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, *(allTypes), argumentChannels,
-        argumentChannelsCount);
+    auto windowOperator =
+        new WindowOperator(*(sourceTypes), outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
+        partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts,
+        sortColCount, preSortedChannelPrefix, expectedPositions, *(allTypes), argumentChannels, argumentChannelsCount);
     windowOperator->Init();
-    return windowOperator.release();
+    return windowOperator;
 }
 
 WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols,
@@ -206,7 +206,7 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     std::vector<type::DataType> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
 {
     rowCount = min(maxRowCount, positionCount - position);
-    vecBatch = std::make_unique<VectorBatch>(finalOutputColsCount, rowCount).release();
+    vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
 
     // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
     // result

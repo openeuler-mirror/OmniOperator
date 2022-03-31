@@ -192,40 +192,35 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // BinaryExpr
     OperatorType binRetType = GetBinaryOperatorType(opStr);
     if (binRetType != OperatorType::INVALIDOPTTYPE && args.size() == ARG2) {
-        return std::make_unique<BinaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], args[1],
-            std::move(type))
-            .release();
+        return new BinaryExpr(StringToOperator(DemangleOperator(opStr)), args[0], args[1], std::move(type));
     }
 
     // UnaryExpr
     // only handling NOT for now
     if (IsUnaryOperator(opStr) && args.size() == 1) {
-        return std::make_unique<UnaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], std::move(type))
-            .release();
+        return new UnaryExpr(StringToOperator(DemangleOperator(opStr)), args[0], std::move(type));
     }
 
     // Special form
     // Special forms are IN, BETWEEN, IF, COALESCE
     if (opStr == "BETWEEN")
-        return std::make_unique<BetweenExpr>(args[0], args[1], args[ARG2]).release();
+        return new BetweenExpr(args[0], args[1], args[ARG2]);
     if (opStr == "IN")
-        return std::make_unique<InExpr>(args).release();
+        return new InExpr(args);
     if (opStr == "COALESCE")
-        return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
+        return new CoalesceExpr(args[0], args[1]);
     if (opStr == "IF") {
         if (TypeUtil::IsStringType(args[ARG2]->GetReturnTypeId()) && args[ARG2]->GetType() == ExprType::LITERAL_E &&
             static_cast<LiteralExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
-            return std::make_unique<IfExpr>(args[0], args[1],
-                ParserHelper::GetDefaultValueForType(args[1]->GetReturnTypeId()))
-                .release();
+            return new IfExpr(args[0], args[1], ParserHelper::GetDefaultValueForType(args[1]->GetReturnTypeId()));
         }
-        return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
+        return new IfExpr(args[0], args[1], args[ARG2]);
     }
     if (opStr == "IS_NULL")
-        return std::make_unique<IsNullExpr>(args[0]).release();
+        return new IsNullExpr(args[0]);
     if (opStr == "IS_NOT_NULL") {
-        auto isNullExpr = std::make_unique<IsNullExpr>(args[0]).release();
-        return std::make_unique<UnaryExpr>(Operator::NOT, isNullExpr, std::move(type)).release();
+        auto isNullExpr = new IsNullExpr(args[0]);
+        return new UnaryExpr(Operator::NOT, isNullExpr, std::move(type));
     }
     // When casting to the same type, the result is the argument itself
     // Treat argument as constant DataExpr instead of returning FuncExpr
@@ -247,7 +242,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     auto signature = FunctionSignature(opStr, argTypes, type->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
-        return make_unique<FuncExpr>(opStr, args, std::move(type), function).release();
+        return new FuncExpr(opStr, args, std::move(type), function);
     }
 
     // No expression can be matched
@@ -258,7 +253,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 // Helper function to turn all % to .* for regex wildcard matching
 string *FixString(const string &dataStr)
 {
-    string *fixedStr = std::make_unique<string>("").release();
+    auto *fixedStr = new string("");
     for (char i : dataStr) {
         if (i == '%') {
             fixedStr->push_back('.');
@@ -275,33 +270,33 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
     switch (currType->GetId()) {
         // handle boolean as int32
         case OMNI_BOOLEAN: {
-            return std::make_unique<LiteralExpr>(stoi(literalStr), std::move(currType)).release();
+            return new LiteralExpr(stoi(literalStr), std::move(currType));
         }
         case OMNI_INT:
         case OMNI_DATE32: {
-            LiteralExpr *e = std::make_unique<LiteralExpr>(stoi(literalStr), std::move(currType)).release();
+            LiteralExpr *e = new LiteralExpr(stoi(literalStr), std::move(currType));
             e->longVal = e->intVal;
             e->doubleVal = e->intVal;
             return e;
         }
         // Need to handle decimals properly
         case OMNI_DECIMAL128: {
-            string *dec128String = make_unique<string>(literalStr).release();
-            return std::make_unique<LiteralExpr>(dec128String, std::move(currType)).release();
+            string *dec128String = new string(literalStr);
+            return new LiteralExpr(dec128String, std::move(currType));
         }
         case OMNI_DECIMAL64:
         case OMNI_LONG: {
-            return std::make_unique<LiteralExpr>(stol(literalStr), std::move(currType)).release();
+            return new LiteralExpr(stol(literalStr), std::move(currType));
         }
         case OMNI_DOUBLE: {
-            return std::make_unique<LiteralExpr>(stod(literalStr), std::move(currType)).release();
+            return new LiteralExpr(stod(literalStr), std::move(currType));
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
-            return std::make_unique<LiteralExpr>(FixString(literalStr), std::move(currType)).release();
+            return new LiteralExpr(FixString(literalStr), std::move(currType));
         }
         case OMNI_NONE: {
-            return std::make_unique<LiteralExpr>(0, std::move(currType)).release();
+            return new LiteralExpr(0, std::move(currType));
         }
         default: {
             LogError("type %u is not supported", currType->GetId());
@@ -314,7 +309,7 @@ FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const DataTypes &inputType
 {
     int colIdx = stoi(fieldStr.substr(1));
     DataType &colType = const_cast<DataType &>(inputTypes.Get().at(colIdx));
-    return std::make_unique<FieldExpr>(colIdx, std::make_unique<DataType>(colType)).release();
+    return new FieldExpr(colIdx, std::make_unique<DataType>(colType));
 }
 
 LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
@@ -338,7 +333,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
     // Case with boolean true/false
     if (literalStr == "true" || literalStr == "false") {
         currType = make_unique<BooleanDataType>();
-        return std::make_unique<LiteralExpr>(literalStr == "true", std::move(currType)).release();
+        return new LiteralExpr(literalStr == "true", std::move(currType));
     }
 
     // trim the single quotes for string values if there is any

@@ -10,6 +10,7 @@
 
 using namespace std;
 using namespace llvm::sys;
+using namespace omniruntime::LibConfig;
 
 TEST(LoadTest, All)
 {

@@ -20,24 +20,21 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
     switch (destTypeId) {
         case OMNI_INT:
         case OMNI_DATE32:
-            return std::make_unique<LiteralExpr>(INT_DEFAULT_VALUE, std::move(destType)).release();
+            return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
         case OMNI_LONG:
         case OMNI_DECIMAL64:
-            return std::make_unique<LiteralExpr>(LONG_DEFAULT_VALUE, std::move(destType)).release();
+            return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
         case OMNI_DOUBLE:
-            return std::make_unique<LiteralExpr>(DOUBLE_DEFAULT_VALUE, std::move(destType)).release();
+            return new LiteralExpr(DOUBLE_DEFAULT_VALUE, std::move(destType));
         case OMNI_BOOLEAN:
-            return std::make_unique<LiteralExpr>(BOOL_DEFAULT_VALUE, std::move(destType)).release();
+            return new LiteralExpr(BOOL_DEFAULT_VALUE, std::move(destType));
         case OMNI_CHAR:
         case OMNI_VARCHAR:
-            return std::make_unique<LiteralExpr>(make_unique<string>(CHAR_DEFAULT_VALUE).release(), std::move(destType))
-                .release();
+            return new LiteralExpr(new string(CHAR_DEFAULT_VALUE), std::move(destType));
         case OMNI_DECIMAL128:
-            return std::make_unique<LiteralExpr>(make_unique<string>(DECIMAL128_DEFAULT_VALUE).release(),
-                std::move(destType))
-                .release();
+            return new LiteralExpr(new string(DECIMAL128_DEFAULT_VALUE), std::move(destType));
         case OMNI_NONE:
-            return std::make_unique<LiteralExpr>(INT_DEFAULT_VALUE, std::move(destType)).release();
+            return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
         default:
             return nullptr;
     }

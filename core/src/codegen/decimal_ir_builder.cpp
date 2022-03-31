@@ -21,9 +21,8 @@ void DecimalIRBuilder::AddScaleMultiplier() const
     auto arrayType = llvm::ArrayType::get(llvmTypes.I128Type(), decimal128Precision + 1);
     auto initializer = llvm::ConstantArray::get(arrayType, llvm::ArrayRef<llvm::Constant *>(scale_multipliers));
 
-    auto globalScaleMultipliers = std::make_unique<llvm::GlobalVariable>(this->module, arrayType, true,
-        llvm::GlobalValue::LinkOnceAnyLinkage, initializer, this->scaleMultipliersName)
-                                      .release();
+    auto globalScaleMultipliers = new llvm::GlobalVariable(this->module, arrayType, true,
+        llvm::GlobalValue::LinkOnceAnyLinkage, initializer, this->scaleMultipliersName);
     int32_t alignment = 16;
     globalScaleMultipliers->setAlignment(llvm::MaybeAlign(alignment));
 }

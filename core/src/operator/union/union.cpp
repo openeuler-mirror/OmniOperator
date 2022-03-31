@@ -18,13 +18,13 @@ UnionOperatorFactory::~UnionOperatorFactory() {}
 UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const type::DataTypes &sourceTypes,
     int32_t sourceTypesCount, bool isDistinct)
 {
-    auto uOperatorFactory = std::make_unique<UnionOperatorFactory>(sourceTypes, sourceTypesCount, isDistinct);
-    return uOperatorFactory.release();
+    auto uOperatorFactory = new UnionOperatorFactory(sourceTypes, sourceTypesCount, isDistinct);
+    return uOperatorFactory;
 }
 
 Operator *UnionOperatorFactory::CreateOperator()
 {
-    UnionOperator *unionOperator = std::make_unique<UnionOperator>(sourceTypes, sourceTypesCount, isDistinct).release();
+    UnionOperator *unionOperator = new UnionOperator(sourceTypes, sourceTypesCount, isDistinct);
     return unionOperator;
 }
 
@@ -38,12 +38,12 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
 {
     int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t rowCount = vecBatch->GetRowCount();
-    auto outBatch = std::make_unique<VectorBatch>(vectorCount, rowCount);
+    auto outBatch = new VectorBatch(vectorCount, rowCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
         Vector *inputVector = vecBatch->GetVector(i);
         outBatch->SetVector(i, inputVector->Slice(0, rowCount));
     }
-    inputVecBatches.push_back(outBatch.release());
+    inputVecBatches.push_back(outBatch);
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }

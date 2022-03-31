@@ -29,16 +29,15 @@ SortOperatorFactory::~SortOperatorFactory() {}
 SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
     int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
-    auto pOperatorFactory = std::make_unique<SortOperatorFactory>(dataTypes, outputCols, outputColCount, sortCols,
-        sortAscendings, sortNullFirsts, sortColCount);
-    return pOperatorFactory.release();
+    auto pOperatorFactory = new SortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings,
+        sortNullFirsts, sortColCount);
+    return pOperatorFactory;
 }
 
 Operator *SortOperatorFactory::CreateOperator()
 {
-    auto pSortOperator =
-        std::make_unique<SortOperator>(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts);
-    return pSortOperator.release();
+    auto pSortOperator = new SortOperator(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts);
+    return pSortOperator;
 }
 
 // function implements for class Sort
@@ -99,7 +98,7 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
         rowCount = min(maxRowCount, positionCount - position);
         auto start = START();
         OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
-        vecBatch = std::make_unique<VectorBatch>(outputColsCount, rowCount).release();
+        vecBatch = new VectorBatch(outputColsCount, rowCount);
         pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
             this->vecAllocator);
         OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));

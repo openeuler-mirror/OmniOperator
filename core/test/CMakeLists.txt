@@ -1,3 +1,5 @@
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} TEST_ROOT_SRCS)
+
 add_subdirectory(operator)
 add_subdirectory(util)
 add_subdirectory(vector)
@@ -24,7 +26,7 @@ set(MY_LINK
 find_package(GTest REQUIRED)
 
 # compile a executable file
-add_executable(${OM_TEST_TARGET} omtest.cpp)
+add_executable(${OM_TEST_TARGET} ${ROOT_SRCS} ${TEST_ROOT_SRCS})
 # dependent libraries
 target_link_libraries(${OM_TEST_TARGET}
         ${GTEST_BOTH_LIBRARIES}

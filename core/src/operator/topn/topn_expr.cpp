@@ -29,8 +29,8 @@ TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() {}
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {
     auto topNOperator = static_cast<TopNOperator *>(topNOperatorFactory->CreateOperator());
-    auto pOperator = std::make_unique<TopNWithExprOperator>(*(sourceTypes.get()), sortCols, projectFuncs, topNOperator);
-    return pOperator.release();
+    auto pOperator = new TopNWithExprOperator(*(sourceTypes.get()), sortCols, projectFuncs, topNOperator);
+    return pOperator;
 }
 
 TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
