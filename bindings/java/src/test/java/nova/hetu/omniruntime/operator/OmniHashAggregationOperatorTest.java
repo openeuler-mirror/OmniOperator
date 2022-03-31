@@ -26,7 +26,11 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni hash aggregation operator test.
@@ -146,8 +150,11 @@ public class OmniHashAggregationOperatorTest {
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
         CountDownLatch downLatch = new CountDownLatch(threadCount);
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadCount, threadCount, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadCount));
+
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
-            Thread thread = new Thread(() -> {
+            CompletableFuture.runAsync(() -> {
                 try {
                     String[] groupByChanel = {"#0", "#1"};
                     DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
@@ -170,16 +177,9 @@ public class OmniHashAggregationOperatorTest {
                 } finally {
                     downLatch.countDown();
                 }
-            });
-            thread.setName("thread-" + tIdx);
-            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread thread1, Throwable throwable) {
-                    throwable.printStackTrace();
-                }
-            });
-            thread.start();
+            }, threadPool);
         }
+
         try {
             downLatch.await();
         } catch (InterruptedException ex) {

@@ -24,12 +24,15 @@ import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
-import org.testng.internal.thread.ThreadUtil;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni aggregation operator test.
@@ -145,9 +148,11 @@ public class OmniAggregationOperatorTest {
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
         CountDownLatch downLatch = new CountDownLatch(threadCount);
-        ThreadUtil threadUtil = new ThreadUtil();
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadCount, threadCount, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadCount));
+
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
-            Thread thread = new Thread(() -> {
+            CompletableFuture.runAsync(() -> {
                 try {
                     DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
                             LongDataType.LONG};
@@ -174,16 +179,9 @@ public class OmniAggregationOperatorTest {
                 } finally {
                     downLatch.countDown();
                 }
-            });
-            thread.setName("thread-" + tIdx);
-            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread thread1, Throwable throwable) {
-                    throwable.printStackTrace();
-                }
-            });
-            thread.start();
+            }, threadPool);
         }
+
         try {
             downLatch.await();
         } catch (InterruptedException ex) {
