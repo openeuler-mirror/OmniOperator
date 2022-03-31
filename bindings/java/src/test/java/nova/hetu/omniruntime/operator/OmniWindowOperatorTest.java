@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -21,6 +24,8 @@ import java.util.List;
 
 /**
  * The type Omni window operator test.
+ *
+ * @since 2021-6-4
  */
 public class OmniWindowOperatorTest {
     /**
@@ -115,7 +120,6 @@ public class OmniWindowOperatorTest {
     }
 
     private VecBatch buildData() {
-        List<Vec> columns = new ArrayList<>();
         int rowNum = 5;
         LongVec longVec1 = new LongVec(rowNum);
         LongVec longVec2 = new LongVec(rowNum);
@@ -129,6 +133,8 @@ public class OmniWindowOperatorTest {
         longVec2.set(2, 4);
         longVec2.set(3, 5);
         longVec2.set(4, 6);
+
+        List<Vec> columns = new ArrayList<>();
         columns.add(longVec1);
         columns.add(longVec2);
         return new VecBatch(columns, rowNum);

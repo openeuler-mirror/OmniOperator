@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -25,6 +28,8 @@ import java.util.List;
 
 /**
  * The type Omni window operator test.
+ *
+ * @since 2021-11-3
  */
 public class OmniWindowWithExprOperatorTest {
     /**
@@ -41,12 +46,11 @@ public class OmniWindowWithExprOperatorTest {
         int[] sortOrder = {0};
         int[] sortNullFirsts = {0};
         int preSortedChannelPrefix = 0;
-        int expectedPositions = 10000;
         String[] argumentKeys = {"ADD:3(#2, 50:3)"};
         DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
         OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentKeys, windowFunctionReturnType);
+                sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
         VecBatch vecBatch = buildData();
@@ -61,29 +65,29 @@ public class OmniWindowWithExprOperatorTest {
     }
 
     private VecBatch buildData() {
-        List<Vec> columns = new ArrayList<>();
         int rowNum = 6;
         IntVec vec1 = new IntVec(rowNum);
-        LongVec vec2 = new LongVec(rowNum);
-        DoubleVec vec3 = new DoubleVec(rowNum);
         vec1.set(0, 0);
         vec1.set(1, 1);
         vec1.set(2, 2);
         vec1.set(3, 0);
         vec1.set(4, 1);
         vec1.set(5, 2);
+        LongVec vec2 = new LongVec(rowNum);
         vec2.set(0, 8);
         vec2.set(1, 1);
         vec2.set(2, 2);
         vec2.set(3, 8);
         vec2.set(4, 4);
         vec2.set(5, 5);
+        DoubleVec vec3 = new DoubleVec(rowNum);
         vec3.set(0, 6.6);
         vec3.set(1, 5.5);
         vec3.set(2, 4.4);
         vec3.set(3, 3.3);
         vec3.set(4, 2.2);
         vec3.set(5, 1.1);
+        List<Vec> columns = new ArrayList<>();
         columns.add(vec1);
         columns.add(vec2);
         columns.add(vec3);

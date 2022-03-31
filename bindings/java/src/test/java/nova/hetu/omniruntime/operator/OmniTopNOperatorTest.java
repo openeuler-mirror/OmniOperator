@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -21,6 +24,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * The type Omni TopN operator test.
+ *
+ * @since 2021-7-31
+ */
 public class OmniTopNOperatorTest {
     @Test
     public void testOneColumn() {
@@ -55,7 +63,6 @@ public class OmniTopNOperatorTest {
     @Test
     public void testMultipleColumns() {
         int rowSize = 6;
-        int expectedRowSize = 5;
         int[] rawData1 = {0, 1, 2, 0, 1, 2};
         long[] rawData2 = {0, 1, 2, 3, 4, 5};
         double[] rawData3 = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -74,6 +81,7 @@ public class OmniTopNOperatorTest {
         String[] sortCols = {"#0", "#1"};
         int[] sortAsc = {1, 1};
         int[] nullFirst = {0, 0};
+        int expectedRowSize = 5;
         OmniTopNOperatorFactory omniTopNOperatorFactory = new OmniTopNOperatorFactory(sourceTypes, expectedRowSize,
                 sortCols, sortAsc, nullFirst);
         OmniOperator operator = omniTopNOperatorFactory.createOperator();
@@ -105,7 +113,6 @@ public class OmniTopNOperatorTest {
     @Test
     public void testTopNDescMultiColumnSortColumn1() {
         int rowSize = 6;
-        int expectedRowSize = 5;
         int[] rawData1 = {0, 1, 2, 0, 1, 2};
         long[] rawData2 = {0, 1, 2, 3, 4, 5};
         double[] rawData3 = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -124,6 +131,7 @@ public class OmniTopNOperatorTest {
         String[] sortCols = {"#1"};
         int[] sortAsc = {0};
         int[] nullFirst = {0};
+        int expectedRowSize = 5;
         OmniTopNOperatorFactory omniTopNOperatorFactory = new OmniTopNOperatorFactory(sourceTypes, expectedRowSize,
                 sortCols, sortAsc, nullFirst);
         OmniOperator operator = omniTopNOperatorFactory.createOperator();

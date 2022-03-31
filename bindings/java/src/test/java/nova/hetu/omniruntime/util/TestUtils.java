@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.util;
 
@@ -20,26 +23,49 @@ import nova.hetu.omniruntime.vector.VecEncoding;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Test utils for data generate
+ *
+ * @since 2021-8-10
+ */
 public class TestUtils {
+    /**
+     * Create data for blank vec batch
+     *
+     * @param types dataType
+     * @return VecBatch
+     */
     public static VecBatch createBlankVecBatch(DataType[] types) {
         Object[] data = {};
         Vec[] vecs = new Vec[types.length];
         for (int i = 0; i < types.length; i++) {
             vecs[i] = createVec(types[i], data);
         }
-        VecBatch vecBatch = new VecBatch(vecs, 0);
-        return vecBatch;
+        return new VecBatch(vecs, 0);
     }
 
+    /**
+     * Create vec batch data
+     *
+     * @param types dataType
+     * @param datas data
+     * @return VecBatch
+     */
     public static VecBatch createVecBatch(DataType[] types, Object[][] datas) {
         Vec[] vecs = new Vec[types.length];
         for (int i = 0; i < types.length; i++) {
             vecs[i] = createVec(types[i], datas[i]);
         }
-        VecBatch vecBatch = new VecBatch(vecs);
-        return vecBatch;
+        return new VecBatch(vecs);
     }
 
+    /**
+     * Create vec
+     *
+     * @param type dataType
+     * @param data data
+     * @return Vec
+     */
     public static Vec createVec(DataType type, Object[] data) {
         switch (type.getId()) {
             case OMNI_INT:
@@ -60,6 +86,13 @@ public class TestUtils {
         }
     }
 
+    /**
+     * Create vec for decimal128
+     *
+     * @param type dataType
+     * @param data data
+     * @return Vec
+     */
     public static Vec createVec(DataType type, Object[][] data) {
         switch (type.getId()) {
             case OMNI_DECIMAL128:
@@ -69,6 +102,12 @@ public class TestUtils {
         }
     }
 
+    /**
+     * Create int vec
+     *
+     * @param data data
+     * @return IntVec
+     */
     public static IntVec createIntVec(Object[] data) {
         IntVec result = new IntVec(data.length);
         for (int j = 0; j < data.length; j++) {
@@ -81,6 +120,12 @@ public class TestUtils {
         return result;
     }
 
+    /**
+     * Create long vec
+     *
+     * @param data data
+     * @return LongVec
+     */
     public static LongVec createLongVec(Object[] data) {
         LongVec result = new LongVec(data.length);
         for (int j = 0; j < data.length; j++) {
@@ -93,6 +138,12 @@ public class TestUtils {
         return result;
     }
 
+    /**
+     * Create Double vec
+     *
+     * @param data data
+     * @return DoubleVec
+     */
     public static DoubleVec createDoubleVec(Object[] data) {
         DoubleVec result = new DoubleVec(data.length);
         for (int j = 0; j < data.length; j++) {
@@ -105,6 +156,12 @@ public class TestUtils {
         return result;
     }
 
+    /**
+     * Create Boolean vec
+     *
+     * @param data data
+     * @return BooleanVec
+     */
     public static BooleanVec createBooleanVec(Object[] data) {
         BooleanVec result = new BooleanVec(data.length);
         for (int i = 0; i < data.length; i++) {
@@ -117,6 +174,13 @@ public class TestUtils {
         return result;
     }
 
+    /**
+     * Create Varchar vec
+     *
+     * @param varcharVecType varchar vec type
+     * @param data data
+     * @return VarcharVec
+     */
     public static VarcharVec createVarcharVec(VarcharDataType varcharVecType, Object[] data) {
         VarcharVec result = new VarcharVec(varcharVecType.getWidth() * data.length, data.length);
         for (int j = 0; j < data.length; j++) {
@@ -129,6 +193,12 @@ public class TestUtils {
         return result;
     }
 
+    /**
+     * Create Decimal128 vec
+     *
+     * @param data data
+     * @return Decimal128Vec
+     */
     public static Decimal128Vec createDecimal128Vec(Object[][] data) {
         Decimal128Vec result = new Decimal128Vec(data.length);
         for (int i = 0; i < data.length; i++) {
@@ -141,6 +211,14 @@ public class TestUtils {
         return result;
     }
 
+    /**
+     * Create Dictionary vec
+     *
+     * @param dataType dataType
+     * @param data input data
+     * @param ids id array
+     * @return DictionaryVec
+     */
     public static DictionaryVec createDictionaryVec(DataType dataType, Object[] data, int[] ids) {
         Vec dictionary = createVec(dataType, data);
         DictionaryVec dictionaryVec = new DictionaryVec(dictionary, ids);
@@ -148,6 +226,12 @@ public class TestUtils {
         return dictionaryVec;
     }
 
+    /**
+     * Vec Batch equals
+     *
+     * @param vecBatch vecBatch
+     * @param expectedDatas data
+     */
     public static void assertVecBatchEquals(VecBatch vecBatch, Object[][] expectedDatas) {
         int vectorCount = vecBatch.getVectorCount();
         assertEquals(vectorCount, expectedDatas.length);
@@ -165,6 +249,12 @@ public class TestUtils {
         }
     }
 
+    /**
+     * Vec equals
+     *
+     * @param vec vec
+     * @param expectedData data
+     */
     public static void assertVecEquals(Vec vec, Object[] expectedData) {
         for (int i = 0; i < vec.getSize(); i++) {
             if (vec.isNull(i)) {
@@ -196,6 +286,12 @@ public class TestUtils {
         }
     }
 
+    /**
+     * Vec equals
+     *
+     * @param vec vec
+     * @param expectedData data
+     */
     public static void assertVecEquals(Vec vec, Object[][] expectedData) {
         for (int i = 0; i < vec.getSize(); i++) {
             if (vec.isNull(i)) {
@@ -213,6 +309,12 @@ public class TestUtils {
         }
     }
 
+    /**
+     * Dictionary vec equals
+     *
+     * @param vec dictionary vec
+     * @param expectedData data
+     */
     public static void assertDictionaryVecEquals(DictionaryVec vec, Object[] expectedData) {
         Vec dictionary = vec.getDictionary();
         while (dictionary.getEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
@@ -254,6 +356,11 @@ public class TestUtils {
         }
     }
 
+    /**
+     * Vec batch free
+     *
+     * @param vecBatch vecBatch
+     */
     public static void freeVecBatch(VecBatch vecBatch) {
         vecBatch.releaseAllVectors();
         vecBatch.close();

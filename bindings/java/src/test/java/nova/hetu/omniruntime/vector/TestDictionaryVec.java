@@ -1,27 +1,23 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.util.TestUtils;
 
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
 
 /**
  * test dictionary vec
+ *
+ * @since 2021-9-8
  */
 public class TestDictionaryVec {
-    /**
-     * tear down
-     */
-    @AfterClass
-    public void tearDown() {
-    }
-
     /**
      * test slice
      */
@@ -38,8 +34,8 @@ public class TestDictionaryVec {
         DictionaryVec slice = dictionaryVec.slice(offset, 7);
         assertEquals(slice.getSize(), 4);
         for (int i = 0; i < slice.getSize(); i++) {
-            long v = slice.getLong(i);
-            assertEquals(v, originalVec.get(i + offset), "Error item value at: " + i);
+            long value = slice.getLong(i);
+            assertEquals(value, originalVec.get(i + offset), "Error item value at: " + i);
         }
 
         originalVec.close();
@@ -65,28 +61,28 @@ public class TestDictionaryVec {
         int offset = 3;
         DictionaryVec slice = nestedDictionaryVec.slice(offset, 7);
         assertEquals(slice.getSize(), 4);
-        long v = slice.getLong(0);
-        assertEquals(v, 2);
-        v = slice.getLong(1);
-        assertEquals(v, 4);
-        v = slice.getLong(2);
-        assertEquals(v, 4);
-        v = slice.getLong(3);
-        assertEquals(v, 7);
+        long value = slice.getLong(0);
+        assertEquals(value, 2);
+        value = slice.getLong(1);
+        assertEquals(value, 4);
+        value = slice.getLong(2);
+        assertEquals(value, 4);
+        value = slice.getLong(3);
+        assertEquals(value, 7);
 
         nestedDictionaryVec.close();
 
         int[] copyIds = {0, 1, 2, 3};
         DictionaryVec copy = slice.copyPositions(copyIds, 0, 4);
         assertEquals(copy.getSize(), 4);
-        v = copy.getLong(0);
-        assertEquals(v, 2);
-        v = copy.getLong(1);
-        assertEquals(v, 4);
-        v = copy.getLong(2);
-        assertEquals(v, 4);
-        v = copy.getLong(3);
-        assertEquals(v, 7);
+        value = copy.getLong(0);
+        assertEquals(value, 2);
+        value = copy.getLong(1);
+        assertEquals(value, 4);
+        value = copy.getLong(2);
+        assertEquals(value, 4);
+        value = copy.getLong(3);
+        assertEquals(value, 7);
 
         slice.close();
         copy.close();

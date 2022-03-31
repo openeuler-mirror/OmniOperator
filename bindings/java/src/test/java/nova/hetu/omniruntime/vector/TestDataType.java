@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
@@ -22,6 +25,8 @@ import java.util.List;
 
 /**
  * test vec type
+ *
+ * @since 2021-7-2
  */
 public class TestDataType {
     /**
@@ -55,8 +60,7 @@ public class TestDataType {
         List<nova.hetu.omniruntime.type.DataType> types = new ArrayList<>();
         types.add(LongDataType.LONG);
         types.add(new Decimal128DataType(1, 2));
-        String result = map.writeValueAsString(types);
-
-        System.out.println(result);
+        assertEquals(map.writeValueAsString(types),
+                "[{\"id\":\"OMNI_LONG\"},{\"precision\":1,\"scale\":2,\"id\":\"OMNI_DECIMAL128\"}]");
     }
 }

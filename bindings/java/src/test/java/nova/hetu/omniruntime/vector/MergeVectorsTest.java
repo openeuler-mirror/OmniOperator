@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
@@ -6,7 +9,9 @@ import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;
 
 /**
- * merge vector test
+ * Merge vector test
+ *
+ * @since 2021-7-7
  */
 public class MergeVectorsTest {
     /**

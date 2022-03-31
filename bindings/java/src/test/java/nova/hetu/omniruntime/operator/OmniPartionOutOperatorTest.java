@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -17,27 +20,32 @@ import org.testng.annotations.Test;
 import java.util.Iterator;
 import java.util.OptionalInt;
 
+/**
+ * The type Omni partition out operators test.
+ *
+ * @since 2021-6-30
+ */
 public class OmniPartionOutOperatorTest {
     @Test
     public void testPartionOut() {
-        DataType[] sourceTypes = {VarcharDataType.VARCHAR};
-        boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
 
         int[] partitionChannels = {0};
         int partitionCount = 1;
         int[] bucketToPartition = {0};
-        boolean isHashPrecomputed = false;
         DataType[] hashChannelTypes = {VarcharDataType.VARCHAR};
         int[] hashChannels = {0};
 
         DataType[] buildTypes = {new VarcharDataType(3), new VarcharDataType(3)};
         Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
+        DataType[] sourceTypes = {VarcharDataType.VARCHAR};
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
-                sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
-                isHashPrecomputed, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
+                new OmniPartitionedOutPutOperatorFactory(
+                        sourceTypes, false, nullChannel,
+                        partitionChannels, partitionCount, bucketToPartition,
+                        false, hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -54,23 +62,23 @@ public class OmniPartionOutOperatorTest {
 
     @Test
     public void testPartionOutCache() {
-        DataType[] sourceTypes = {VarcharDataType.VARCHAR};
-        boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
         int partitionCount = 1;
         int[] bucketToPartition = {0};
-        boolean isHashPrecomputed = false;
         DataType[] hashChannelTypes = {VarcharDataType.VARCHAR};
         int[] hashChannels = {0};
 
         DataType[] buildTypes = {new VarcharDataType(3), new VarcharDataType(3)};
         Object[][] buildDatas = {{"abc", "de", null}, {"abc", "de", null}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
+        DataType[] sourceTypes = {VarcharDataType.VARCHAR};
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
-                sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
-                isHashPrecomputed, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
+                new OmniPartitionedOutPutOperatorFactory(
+                        sourceTypes, false, nullChannel,
+                        partitionChannels, partitionCount, bucketToPartition,
+                        false, hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -87,23 +95,23 @@ public class OmniPartionOutOperatorTest {
 
     @Test
     public void testPartionOutChar() {
-        DataType[] sourceTypes = {CharDataType.CHAR};
-        boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
         int partitionCount = 1;
         int[] bucketToPartition = {0};
-        boolean isHashPrecomputed = false;
         DataType[] hashChannelTypes = {CharDataType.CHAR};
         int[] hashChannels = {0};
 
         DataType[] buildTypes = {new CharDataType(3), new CharDataType(3)};
         Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
+        DataType[] sourceTypes = {CharDataType.CHAR};
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
-                sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
-                isHashPrecomputed, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
+                new OmniPartitionedOutPutOperatorFactory(
+                        sourceTypes, false, nullChannel,
+                        partitionChannels, partitionCount, bucketToPartition,
+                        false, hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 

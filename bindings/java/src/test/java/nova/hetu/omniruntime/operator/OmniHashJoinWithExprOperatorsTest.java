@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -23,6 +26,11 @@ import org.testng.annotations.Test;
 import java.util.Iterator;
 import java.util.Optional;
 
+/**
+ * The type Omni hash join with expression operator test.
+ *
+ * @since 2021-10-16
+ */
 public class OmniHashJoinWithExprOperatorsTest {
     /**
      * Test inner hash join one column .
@@ -80,7 +88,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] buildDatas = {{1L, 2L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 1L},
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
-        Vec buildVecs[] = new Vec[2];
+        Vec[] buildVecs = new Vec[2];
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         buildVecs[0] = TestUtils.createDictionaryVec(buildTypes[0], buildDatas[0], ids);
         buildVecs[1] = TestUtils.createDictionaryVec(buildTypes[1], buildDatas[1], ids);
@@ -97,7 +105,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         Object[][] probeDatas = {{1L, 2L, 3L, 4L, 5L, 6L, 1L, 1L, 2L, 3L},
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 65L}};
-        Vec probeVecs[] = new Vec[2];
+        Vec[] probeVecs = new Vec[2];
         probeVecs[0] = TestUtils.createDictionaryVec(probeTypes[0], probeDatas[0], ids);
         probeVecs[1] = TestUtils.createDictionaryVec(probeTypes[1], probeDatas[1], ids);
         VecBatch probeVecBatch = new VecBatch(probeVecs);

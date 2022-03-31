@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -16,6 +19,11 @@ import org.testng.annotations.Test;
 
 import java.util.Iterator;
 
+/**
+ * The type Omni TopN with expression operator test.
+ *
+ * @since 2021-11-11
+ */
 public class OmniTopNWithExprOperatorTest {
     @Test
     public void testTopNWithAllExpr() {

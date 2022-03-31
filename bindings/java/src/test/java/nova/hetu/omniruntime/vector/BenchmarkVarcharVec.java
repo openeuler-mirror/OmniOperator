@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -32,6 +32,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Varchar vec benchmark
+ *
+ * @since 2021-8-10
+ */
 @State(Scope.Thread)
 @OutputTimeUnit(MICROSECONDS)
 @Fork(1)
@@ -41,6 +46,13 @@ import java.util.List;
 public class BenchmarkVarcharVec {
     private static final int ALLOCATOR_CAPACITY = 1024 * 1024;
     private static final int COUNT = 1000;
+
+    static {
+        // this parameter affects arrow get performance
+        System.setProperty("arrow.enable_null_check_for_get", "false");
+        // this parameter affects arrow set performance
+        System.setProperty("arrow.enable_unsafe_memory_access", "true");
+    }
 
     @Param({"1024"})
     private int rows = 1024;
@@ -68,15 +80,9 @@ public class BenchmarkVarcharVec {
     private RootAllocator allocator2;
     private VarCharVector arrowVecGet;
 
-    private VarcharVec varcharVec = new VarcharVec(1024 * 1024, 1024);
-
-    static {
-        // this parameter affects arrow get performance
-        System.setProperty("arrow.enable_null_check_for_get", "false");
-        // this parameter affects arrow set performance
-        System.setProperty("arrow.enable_unsafe_memory_access", "true");
-    }
-
+    /**
+     * init
+     */
     @Setup(Level.Iteration)
     public void init() {
         // for varchar set/put
@@ -120,6 +126,9 @@ public class BenchmarkVarcharVec {
         arrowVecGet.setValueCount(rows);
     }
 
+    /**
+     * close
+     */
     @TearDown(Level.Iteration)
     public void tearDown() {
         vecPutData.close();
@@ -151,6 +160,11 @@ public class BenchmarkVarcharVec {
         }
     }
 
+    /**
+     * Create varchar vec benchmark
+     *
+     * @param blackhole blackhole
+     */
     @Benchmark
     public void createVarcharVecBenchmark(Blackhole blackhole) {
         List<VarcharVec> vecs = new ArrayList<>();
@@ -162,6 +176,11 @@ public class BenchmarkVarcharVec {
         closeVec(vecs);
     }
 
+    /**
+     * Create arrow vec benchmark
+     *
+     * @param blackhole blackhole
+     */
     @Benchmark
     public void createArrowVecBenchmark(Blackhole blackhole) {
         List<VarCharVector> vecs = new ArrayList<>();
@@ -176,11 +195,21 @@ public class BenchmarkVarcharVec {
         rootAllocator.close();
     }
 
+    /**
+     * Put varchar vec benchmark
+     *
+     * @param blackhole blackhole
+     */
     @Benchmark
     public void putVarcharVecBenchmark(Blackhole blackhole) {
         vecPutData.put(0, putDataSource.getData(), 0, putDataSource.offsets, 0, rows);
     }
 
+    /**
+     * Set arrow vec benchmark
+     *
+     * @param blackhole blackhole
+     */
     @Benchmark
     public void setArrowVecBenchmark(Blackhole blackhole) {
         for (int i = 0; i < rows; i++) {
@@ -188,6 +217,11 @@ public class BenchmarkVarcharVec {
         }
     }
 
+    /**
+     * Set heap bytebuffer benchmark
+     *
+     * @param blackhole blackhole
+     */
     @Benchmark
     public void setHeapBytebufferBenchmark(Blackhole blackhole) {
         for (int i = 0; i < rows; i++) {
@@ -195,6 +229,9 @@ public class BenchmarkVarcharVec {
         }
     }
 
+    /**
+     * Set varchar vec benchmark
+     */
     @Benchmark
     public void setVarcharVecBenchmark() {
         for (int i = 0; i < rows; i++) {
@@ -202,45 +239,75 @@ public class BenchmarkVarcharVec {
         }
     }
 
+    /**
+     * Get heap bytebuffer benchmark
+     *
+     * @return sum value
+     */
     @Benchmark
     public long getHeapBytebufferBenchmark() {
-        long sum = 0;
+        long sum = 0L;
         for (int i = 0; i < rows; i++) {
             sum += varcharVecTest.get(i).length;
         }
         return sum;
     }
 
+    /**
+     * Get varchar vec benchmark
+     *
+     * @return sum value
+     */
     @Benchmark
     public long getVarcharVecBenchmark() {
-        long sum = 0;
+        long sum = 0L;
         for (int i = 0; i < rows; i++) {
             sum += vecGetData.get(i).length;
         }
         return sum;
     }
 
+    /**
+     * Get arrow vec benchmark
+     *
+     * @return sum value
+     */
     @Benchmark
     public long getArrowVecBenchmark() {
-        long sum = 0;
+        long sum = 0L;
         for (int i = 0; i < rows; i++) {
             sum += arrowVecGet.get(i).length;
         }
         return sum;
     }
 
+    /**
+     * Get varchar slice size
+     *
+     * @return slice size
+     */
     @Benchmark
     public int sliceVarcharVecBenchmark() {
         VarcharVec slice = vecGetData.slice(2, rows / 2);
         return slice.getSize();
     }
 
+    /**
+     * Copy region varchar vec benchmark
+     *
+     * @return copy region size
+     */
     @Benchmark
     public int copyRegionVarcharVecBenchmark() {
         VarcharVec copyRegion = vecGetData.copyRegion(2, rows / 2);
         return copyRegion.getSize();
     }
 
+    /**
+     * Copy position varchar vec benchmark
+     *
+     * @return copy position size
+     */
     @Benchmark
     public int copyPositionVarcharVecBenchmark() {
         VarcharVec copyPosition = vecGetData.copyPositions(positions, 0, positions.length);
@@ -256,6 +323,12 @@ public class BenchmarkVarcharVec {
             byteBuffer = ByteBuffer.allocate(capacityInBytes);
         }
 
+        /**
+         * Get data
+         *
+         * @param index index
+         * @return data
+         */
         public byte[] get(int index) {
             int startOffset = offsets[index];
             int dataLen = offsets[index + 1] - offsets[index];
@@ -265,6 +338,12 @@ public class BenchmarkVarcharVec {
             return data;
         }
 
+        /**
+         * Set data
+         *
+         * @param index index
+         * @param value data
+         */
         public void set(int index, byte[] value) {
             int startOffset = offsets[index];
             offsets[index + 1] = startOffset + value.length;
@@ -272,6 +351,11 @@ public class BenchmarkVarcharVec {
             byteBuffer.put(value, 0, value.length);
         }
 
+        /**
+         * Get Data
+         *
+         * @return data
+         */
         public byte[] getData() {
             return byteBuffer.array();
         }
