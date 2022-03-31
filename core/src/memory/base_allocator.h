@@ -56,7 +56,7 @@ public:
 
     virtual BaseAllocator *NewChildAllocator(const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0)
     {
-        return new BaseAllocator(this, scope, limit);
+        return new BaseAllocator(this, scope, limit, reservation);
     }
 
     void SetLimit(int64_t limit)
@@ -100,7 +100,6 @@ public:
 
     void ReleaseBytes(int64_t size)
     {
-        std::lock_guard<std::mutex> l(mutex);
         const int64_t newAllocated = allocatedBytes.fetch_add(-size, std::memory_order_relaxed) - size;
         const int64_t originalSize = newAllocated + size;
         if (originalSize > reservation && parentAllocator) {
@@ -155,8 +154,6 @@ private:
     }
 
     int64_t AllocatedBytesInternal(int64_t size);
-
-    void UpdateInternal(int64_t size);
 
     void UpdatePeak();
 

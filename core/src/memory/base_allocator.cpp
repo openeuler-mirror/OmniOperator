@@ -14,18 +14,14 @@ BaseAllocator::~BaseAllocator()
 
 int64_t BaseAllocator::AllocatedBytesInternal(int64_t size)
 {
-    bool beyondLimit;
-    {
-        std::lock_guard<std::mutex> l(mutex);
-        int64_t newAllocated = allocatedBytes.fetch_add(size, std::memory_order_relaxed) + size;
-        int64_t beyondReservation = newAllocated - reservation;
-        beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
-        if (beyondReservation > 0 && parentAllocator) {
-            int64_t increment = std::min(beyondReservation, size);
-            parentAllocator->AllocatedBytesInternal(increment);
-        }
+    int64_t newAllocated = allocatedBytes.fetch_add(size, std::memory_order_relaxed) + size;
+    int64_t beyondReservation = newAllocated - reservation;
+    if (beyondReservation > 0 && parentAllocator) {
+        int64_t increment = std::min(beyondReservation, size);
+        return parentAllocator->AllocatedBytesInternal(increment);
     }
 
+    bool beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
     if (size > 0 && beyondLimit) {
         return allocationLimit;
     }
