@@ -160,7 +160,7 @@ Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
         if (result == nullptr) {
             return nullptr;
         }
-        BinaryExpr *condition = new BinaryExpr(EQ, left, right, BooleanType());
+        BinaryExpr *condition = new BinaryExpr(Operator::EQ, left, right, BooleanType());
         when = make_pair(condition, result);
         whenClause.push_back(when);
     }
@@ -238,9 +238,9 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     }
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
     if (funcName == "CAST" && args.size() == 1 && retTypeId == args[0]->GetReturnTypeId()) {
-        if (args[0]->GetType() == LITERAL_E) {
+        if (args[0]->GetType() == ExprType::LITERAL_E) {
             return static_cast<LiteralExpr *>(args[0]);
-        } else if (args[0]->GetType() == FIELD_E) {
+        } else if (args[0]->GetType() == ExprType::FIELD_E) {
             return static_cast<FieldExpr *>(args[0]);
         } else {
             return nullptr;

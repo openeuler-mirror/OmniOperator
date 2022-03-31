@@ -63,7 +63,7 @@ bool Projection::Initialize(bool filter)
 {
     // short-circuit logic for column projections
     // no need to go through codegen
-    if (expr->GetType() == FIELD_E) {
+    if (expr->GetType() == ExprType::FIELD_E) {
         auto fieldExpr = static_cast<const FieldExpr *>(expr);
         this->isColumnProjection = true;
         this->columnProjectionIndex = fieldExpr->colVal;

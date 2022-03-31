@@ -1194,7 +1194,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     // create the expression for the filter
     FieldExpr *notEqualLeft = new FieldExpr(1, IntType());
     FieldExpr *notEqualRight = new FieldExpr(3, IntType());
-    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, notEqualLeft, notEqualRight, BooleanType());
+    BinaryExpr *notEqualExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::NEQ, notEqualLeft, notEqualRight, BooleanType());
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
@@ -1282,7 +1283,8 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
     rightSubstrArgs.push_back(rightSubstrLen);
     auto rightSubstrExpr = GetFuncExpr(funcStr, rightSubstrArgs, VarcharType());
 
-    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BooleanType());
+    BinaryExpr *notEqualExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::NEQ, leftSubstrExpr, rightSubstrExpr, BooleanType());
     return notEqualExpr;
 }
 

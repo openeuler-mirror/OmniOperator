@@ -62,7 +62,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     auto col0 = new FieldExpr(0, IntType());
     auto addCol = new FieldExpr(0, IntType());
     auto addLiteral = new LiteralExpr(50, IntType());
-    auto addExpr = new BinaryExpr(ADD, addCol, addLiteral, IntType());
+    auto addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addCol, addLiteral, IntType());
     std::vector<Expr *> sortExprs { col0, addExpr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -101,8 +101,8 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     auto add1Literal = new LiteralExpr(50, IntType());
     auto add2Col = new FieldExpr(1, LongType());
     auto add2Literal = new LiteralExpr(50, LongType());
-    auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col, LongType());
+    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -150,8 +150,8 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     auto add1Literal = new LiteralExpr(50, IntType());
     auto add2Col = new FieldExpr(2, LongType());
     auto add2Literal = new LiteralExpr(50, LongType());
-    auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col, LongType());
+    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
@@ -264,8 +264,8 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     auto add1Literal = new LiteralExpr(50, IntType());
     auto add2Col = new FieldExpr(2, LongType());
     auto add2Literal = new LiteralExpr(50, LongType());
-    auto add1Expr = new BinaryExpr(ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(ADD, add2Literal, add2Col, LongType());
+    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
 
     int32_t ascendings[2] = {false, true};

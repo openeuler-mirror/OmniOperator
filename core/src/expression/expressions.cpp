@@ -35,12 +35,12 @@ Operator StringToOperator(std::string opStr)
     if (opItr != OPERATOR_FROM_STRING.end()) {
         return opItr->second;
     }
-    return INVALIDOP;
+    return Operator::INVALIDOP;
 }
 
 ExprType Expr::GetType() const
 {
-    return INVALID_E;
+    return ExprType::INVALID_E;
 }
 
 DataType &Expr::GetReturnType() const
@@ -135,7 +135,6 @@ ExprType BinaryExpr::GetType() const
     return ExprType::BINARY_E;
 }
 
-
 UnaryExpr::UnaryExpr()
 {
     dataType = BooleanType();
@@ -157,7 +156,6 @@ ExprType UnaryExpr::GetType() const
 {
     return ExprType::UNARY_E;
 }
-
 
 InExpr::InExpr()
 {

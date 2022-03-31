@@ -230,9 +230,9 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // When casting to the same type, the result is the argument itself
     // Treat argument as constant DataExpr instead of returning FuncExpr
     if (opStr == "CAST" && args.size() == 1 && (typeId == args[0]->GetReturnTypeId())) {
-        if (args[0]->GetType() == LITERAL_E) {
+        if (args[0]->GetType() == ExprType::LITERAL_E) {
             return static_cast<LiteralExpr *>(args[0]);
-        } else if (args[0]->GetType() == FIELD_E) {
+        } else if (args[0]->GetType() == ExprType::FIELD_E) {
             return static_cast<FieldExpr *>(args[0]);
         } else {
             return nullptr;

@@ -34,10 +34,10 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(5, IntType());
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
     FieldExpr *modLeft = new FieldExpr(2, LongType());
     LiteralExpr *modRight = new LiteralExpr(3L, LongType());
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
 
     auto jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs, ascendings, nullFirsts);
@@ -91,7 +91,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     FieldExpr *col0 = new FieldExpr(0, IntType());
     FieldExpr *modLeft = new FieldExpr(2, LongType());
     LiteralExpr *modRight = new LiteralExpr(3L, LongType());
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
 
     JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortKeys, ascendings, nullFirsts);

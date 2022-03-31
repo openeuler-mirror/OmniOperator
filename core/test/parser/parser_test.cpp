@@ -28,11 +28,11 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
         }
         EXPECT_EQ(binaryExpr->op, op);
         FieldExpr *left = static_cast<FieldExpr *>(binaryExpr->left);
-        EXPECT_EQ(left->GetType(), FIELD_E);
+        EXPECT_EQ(left->GetType(), omniruntime::expressions::ExprType::FIELD_E);
         EXPECT_EQ(left->colVal, i);
 
         LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
-        EXPECT_EQ(right->GetType(), LITERAL_E);
+        EXPECT_EQ(right->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
         if (i == 3) {
             EXPECT_EQ(right->GetReturnTypeId(), OMNI_DECIMAL128);
         } else if (i == 5) {
@@ -69,11 +69,11 @@ void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::ex
         EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
         EXPECT_EQ(binaryExpr->op, op);
         FieldExpr *left = static_cast<FieldExpr *>(binaryExpr->left);
-        EXPECT_EQ(left->GetType(), FIELD_E);
+        EXPECT_EQ(left->GetType(), omniruntime::expressions::ExprType::FIELD_E);
         EXPECT_EQ(left->colVal, i);
 
         LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
-        EXPECT_EQ(right->GetType(), LITERAL_E);
+        EXPECT_EQ(right->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
         if (i == 3) {
             EXPECT_EQ(right->GetReturnTypeId(), OMNI_DECIMAL128);
         } else {
@@ -104,9 +104,9 @@ TEST(ParseTest, parseNotOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     UnaryExpr *notExpr = static_cast<UnaryExpr *>(result);
-    EXPECT_EQ(notExpr->op, NOT);
+    EXPECT_EQ(notExpr->op, omniruntime::expressions::Operator::NOT);
     FieldExpr *colExpr = static_cast<FieldExpr *>(notExpr->exp);
-    EXPECT_EQ(colExpr->GetType(), FIELD_E);
+    EXPECT_EQ(colExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(colExpr->colVal, 0);
 }
 
@@ -121,7 +121,7 @@ TEST(ParseTest, parseAddOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testArithmeticBinaryExpressions(result, ADD, projectCount);
+    testArithmeticBinaryExpressions(result, omniruntime::expressions::Operator::ADD, projectCount);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -137,7 +137,7 @@ TEST(ParseTest, parseSubtractOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testArithmeticBinaryExpressions(result, SUB, projectCount);
+    testArithmeticBinaryExpressions(result, omniruntime::expressions::Operator::SUB, projectCount);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -153,7 +153,7 @@ TEST(ParseTest, parseMultiplyOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testArithmeticBinaryExpressions(result, MUL, projectCount);
+    testArithmeticBinaryExpressions(result, omniruntime::expressions::Operator::MUL, projectCount);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -169,7 +169,7 @@ TEST(ParseTest, parseDivideOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testArithmeticBinaryExpressions(result, DIV, projectCount);
+    testArithmeticBinaryExpressions(result, omniruntime::expressions::Operator::DIV, projectCount);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -185,7 +185,7 @@ TEST(ParseTest, parseModulusOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testArithmeticBinaryExpressions(result, MOD, projectCount);
+    testArithmeticBinaryExpressions(result, omniruntime::expressions::Operator::MOD, projectCount);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -202,7 +202,7 @@ TEST(ParseTest, parseLTOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testCmpBinaryExpressions(result, LT, projectCount, true);
+    testCmpBinaryExpressions(result, omniruntime::expressions::Operator::LT, projectCount, true);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -220,7 +220,7 @@ TEST(ParseTest, parseLTEOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testCmpBinaryExpressions(result, LTE, projectCount, true);
+    testCmpBinaryExpressions(result, omniruntime::expressions::Operator::LTE, projectCount, true);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -236,7 +236,7 @@ TEST(ParseTest, parseGTOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testCmpBinaryExpressions(result, GT, projectCount, true);
+    testCmpBinaryExpressions(result, omniruntime::expressions::Operator::GT, projectCount, true);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -254,7 +254,7 @@ TEST(ParseTest, parseGTEOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testCmpBinaryExpressions(result, GTE, projectCount, true);
+    testCmpBinaryExpressions(result, omniruntime::expressions::Operator::GTE, projectCount, true);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -271,7 +271,7 @@ TEST(ParseTest, parseEQOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testCmpBinaryExpressions(result, EQ, projectCount, true);
+    testCmpBinaryExpressions(result, omniruntime::expressions::Operator::EQ, projectCount, true);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -289,7 +289,7 @@ TEST(ParseTest, parseNEQOperation)
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
-    testCmpBinaryExpressions(result, NEQ, projectCount, true);
+    testCmpBinaryExpressions(result, omniruntime::expressions::Operator::NEQ, projectCount, true);
     for (int i = 0; i < projectCount; i++) {
         delete result.at(i);
     }
@@ -310,16 +310,16 @@ TEST(ParseTest, parseLogicOperations)
         EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_BOOLEAN);
         FieldExpr *logLeft = static_cast<FieldExpr *>(logExpr->left);
         LiteralExpr *logRight = static_cast<LiteralExpr *>(logExpr->right);
-        EXPECT_EQ(logLeft->GetType(), FIELD_E);
+        EXPECT_EQ(logLeft->GetType(), omniruntime::expressions::ExprType::FIELD_E);
         EXPECT_EQ(logLeft->colVal, i);
-        EXPECT_EQ(logRight->GetType(), LITERAL_E);
+        EXPECT_EQ(logRight->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
         if (i == 0) {
             EXPECT_TRUE(logRight->boolVal);
-            EXPECT_EQ(logExpr->op, AND);
+            EXPECT_EQ(logExpr->op, omniruntime::expressions::Operator::AND);
         }
         if (i == 1) {
             EXPECT_FALSE(logRight->boolVal);
-            EXPECT_EQ(logExpr->op, OR);
+            EXPECT_EQ(logExpr->op, omniruntime::expressions::Operator::OR);
         }
     }
 
@@ -343,15 +343,15 @@ TEST(ParseTest, parseBetweenOperation)
     FieldExpr *lowerExpr = static_cast<FieldExpr *>(betweenExpr->lowerBound);
     FieldExpr *upperExpr = static_cast<FieldExpr *>(betweenExpr->upperBound);
 
-    EXPECT_EQ(valueExpr->GetType(), FIELD_E);
+    EXPECT_EQ(valueExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(valueExpr->colVal, 1);
     EXPECT_EQ(valueExpr->GetReturnTypeId(), OMNI_DOUBLE);
 
-    EXPECT_EQ(lowerExpr->GetType(), FIELD_E);
+    EXPECT_EQ(lowerExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(lowerExpr->colVal, 0);
     EXPECT_EQ(lowerExpr->GetReturnTypeId(), OMNI_INT);
 
-    EXPECT_EQ(upperExpr->GetType(), FIELD_E);
+    EXPECT_EQ(upperExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(upperExpr->colVal, 2);
     EXPECT_EQ(upperExpr->GetReturnTypeId(), OMNI_LONG);
 }
@@ -372,15 +372,15 @@ TEST(ParseTest, parseInOperation)
     FieldExpr *arg1 = static_cast<FieldExpr *>(args[1]);
     FieldExpr *arg2 = static_cast<FieldExpr *>(args[2]);
 
-    EXPECT_EQ(arg0->GetType(), FIELD_E);
+    EXPECT_EQ(arg0->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg0->colVal, 1);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_DOUBLE);
 
-    EXPECT_EQ(arg1->GetType(), FIELD_E);
+    EXPECT_EQ(arg1->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg1->colVal, 0);
     EXPECT_EQ(arg1->GetReturnTypeId(), OMNI_INT);
 
-    EXPECT_EQ(arg2->GetType(), FIELD_E);
+    EXPECT_EQ(arg2->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg2->colVal, 2);
     EXPECT_EQ(arg2->GetReturnTypeId(), OMNI_LONG);
 }
@@ -399,11 +399,11 @@ TEST(ParseTest, parseCoalesceOperation)
     FieldExpr *value1 = static_cast<FieldExpr *>(coalesceExpr->value1);
     FieldExpr *value2 = static_cast<FieldExpr *>(coalesceExpr->value2);
 
-    EXPECT_EQ(value1->GetType(), FIELD_E);
+    EXPECT_EQ(value1->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value1->colVal, 1);
     EXPECT_EQ(value1->GetReturnTypeId(), OMNI_INT);
 
-    EXPECT_EQ(value2->GetType(), FIELD_E);
+    EXPECT_EQ(value2->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value2->colVal, 0);
     EXPECT_EQ(value2->GetReturnTypeId(), OMNI_INT);
 }
@@ -424,14 +424,14 @@ TEST(ParseTest, parseIfOperation)
     LiteralExpr *fExpr = static_cast<LiteralExpr *>(ifExpr->falseExpr);
 
     EXPECT_EQ(condition->GetReturnTypeId(), OMNI_BOOLEAN);
-    EXPECT_EQ(condition->GetType(), LITERAL_E);
+    EXPECT_EQ(condition->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(condition->boolVal, true);
 
-    EXPECT_EQ(tExpr->GetType(), FIELD_E);
+    EXPECT_EQ(tExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(tExpr->colVal, 0);
     EXPECT_EQ(tExpr->GetReturnTypeId(), OMNI_VARCHAR);
 
-    EXPECT_EQ(fExpr->GetType(), LITERAL_E);
+    EXPECT_EQ(fExpr->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_STREQ(fExpr->stringVal->c_str(), "hello");
 }
 
@@ -448,7 +448,7 @@ TEST(ParseTest, parseIsNullOperation)
     IsNullExpr *isNullExpr = static_cast<IsNullExpr *>(result);
     FieldExpr *value = static_cast<FieldExpr *>(isNullExpr->value);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_CHAR);
 }
@@ -464,11 +464,11 @@ TEST(ParseTest, parseIsNotNullOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_BOOLEAN);
     UnaryExpr *unaryExpr = static_cast<UnaryExpr *>(result);
-    EXPECT_EQ(unaryExpr->op, NOT);
+    EXPECT_EQ(unaryExpr->op, omniruntime::expressions::Operator::NOT);
     IsNullExpr *isNullExpr = static_cast<IsNullExpr *>(unaryExpr->exp);
     FieldExpr *value = static_cast<FieldExpr *>(isNullExpr->value);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_CHAR);
 }
@@ -488,7 +488,7 @@ TEST(ParseTest, parseCastOperation)
     auto args = castExpr->arguments;
     FieldExpr *arg0 = static_cast<FieldExpr *>(args[0]);
 
-    EXPECT_EQ(arg0->GetType(), FIELD_E);
+    EXPECT_EQ(arg0->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_INT);
 }
@@ -508,7 +508,7 @@ TEST(ParseTest, parseAbsOperation)
     auto args = absExpr->arguments;
     FieldExpr *arg0 = static_cast<FieldExpr *>(args[0]);
 
-    EXPECT_EQ(arg0->GetType(), FIELD_E);
+    EXPECT_EQ(arg0->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_DOUBLE);
 }
@@ -530,15 +530,15 @@ TEST(ParseTest, parseSubstrOperation)
     LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
     LiteralExpr *length = static_cast<LiteralExpr *>(args[2]);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VARCHAR);
 
-    EXPECT_EQ(index->GetType(), LITERAL_E);
+    EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->intVal, 1);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
 
-    EXPECT_EQ(length->GetType(), LITERAL_E);
+    EXPECT_EQ(length->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(length->intVal, 6);
     EXPECT_EQ(length->GetReturnTypeId(), OMNI_INT);
 }
@@ -559,11 +559,11 @@ TEST(ParseTest, parseConcatOperation)
     FieldExpr *value1 = static_cast<FieldExpr *>(args[0]);
     LiteralExpr *value2 = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_EQ(value1->GetType(), FIELD_E);
+    EXPECT_EQ(value1->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value1->colVal, 0);
     EXPECT_EQ(value1->GetReturnTypeId(), OMNI_VARCHAR);
 
-    EXPECT_EQ(value2->GetType(), LITERAL_E);
+    EXPECT_EQ(value2->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_STREQ(value2->stringVal->c_str(), "hello");
     EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VARCHAR);
 }
@@ -584,11 +584,11 @@ TEST(ParseTest, parseLikeOperation)
     FieldExpr *value = static_cast<FieldExpr *>(args[0]);
     LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VARCHAR);
 
-    EXPECT_EQ(index->GetType(), LITERAL_E);
+    EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_STREQ(index->stringVal->c_str(), ".*hello");
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VARCHAR);
 }
@@ -609,11 +609,11 @@ TEST(ParseTest, parseMM3HashOperation)
     FieldExpr *value = static_cast<FieldExpr *>(args[0]);
     LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VARCHAR);
 
-    EXPECT_EQ(index->GetType(), LITERAL_E);
+    EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->intVal, 2);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
 }
@@ -634,11 +634,11 @@ TEST(ParseTest, parseCombineHashOperation)
     FieldExpr *value = static_cast<FieldExpr *>(args[0]);
     LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_LONG);
 
-    EXPECT_EQ(index->GetType(), LITERAL_E);
+    EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->longVal, 2);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_LONG);
 }
@@ -659,11 +659,11 @@ TEST(ParseTest, parsePmodOperation)
     FieldExpr *value = static_cast<FieldExpr *>(args[0]);
     LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_EQ(value->GetType(), FIELD_E);
+    EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_INT);
 
-    EXPECT_EQ(index->GetType(), LITERAL_E);
+    EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->intVal, 5);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
 }
@@ -701,25 +701,25 @@ TEST(ParseTest, ParseExpressions)
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, 2, inputTypes);
     // check substract expression
-    EXPECT_EQ(result.at(0)->GetType(), BINARY_E);
+    EXPECT_EQ(result.at(0)->GetType(), omniruntime::expressions::ExprType::BINARY_E);
     BinaryExpr *subtractExpr = static_cast<BinaryExpr *>(result.at(0));
-    EXPECT_EQ(subtractExpr->op, SUB);
+    EXPECT_EQ(subtractExpr->op, omniruntime::expressions::Operator::SUB);
     FieldExpr *subtractLeft = static_cast<FieldExpr *>(subtractExpr->left);
     LiteralExpr *subtractRight = static_cast<LiteralExpr *>(subtractExpr->right);
-    EXPECT_EQ(subtractLeft->GetType(), FIELD_E);
+    EXPECT_EQ(subtractLeft->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(subtractLeft->colVal, 0);
-    EXPECT_EQ(subtractRight->GetType(), LITERAL_E);
+    EXPECT_EQ(subtractRight->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(subtractRight->intVal, 10);
 
     // check add expression
-    EXPECT_EQ(result.at(1)->GetType(), BINARY_E);
+    EXPECT_EQ(result.at(1)->GetType(), omniruntime::expressions::ExprType::BINARY_E);
     BinaryExpr *addExpr = static_cast<BinaryExpr *>(result.at(1));
-    EXPECT_EQ(addExpr->op, ADD);
+    EXPECT_EQ(addExpr->op, omniruntime::expressions::Operator::ADD);
     FieldExpr *addLeft = static_cast<FieldExpr *>(addExpr->left);
     LiteralExpr *addRight = static_cast<LiteralExpr *>(addExpr->right);
-    EXPECT_EQ(addLeft->GetType(), FIELD_E);
+    EXPECT_EQ(addLeft->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(addLeft->colVal, 1);
-    EXPECT_EQ(addRight->GetType(), LITERAL_E);
+    EXPECT_EQ(addRight->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(addRight->longVal, 1);
 }
 }
