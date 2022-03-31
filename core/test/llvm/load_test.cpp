@@ -1,8 +1,11 @@
-#include "gtest/gtest.h"
-#include <vector>
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 
-#include "../../src/jit/compiler/library_loader.h"
+#include <vector>
+#include "gtest/gtest.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "jit/compiler/library_loader.h"
 #include "../../libconfig.h"
 
 using namespace std;

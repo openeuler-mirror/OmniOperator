@@ -2,19 +2,21 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: ...
  */
-#include "gtest/gtest.h"
-#include "../util/test_util.h"
-#include "../../src/operator/projection/projection.h"
-#include "../../src/vector/vector_helper.h"
+
 #include <string>
 #include <vector>
 #include <chrono>
+#include "gtest/gtest.h"
+#include "operator/projection/projection.h"
+#include "../util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
-namespace project_test {
+
+namespace ProjectionTest {
+    const int32_t INDEX_FACTOR = 2;
 VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
@@ -39,8 +41,8 @@ VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int
             case OMNI_VARCHAR: {
                 for (int j = 0; j < numRows; ++j) {
                     // std::cout << "row: " << j << std::endl;
-                    int64_t addr = ((int64_t *)(allData[i]))[j];
-                    std::string s((char *)(addr));
+                    int64_t addr = reinterpret_cast<int64_t *>(allData[i])[j];
+                    std::string s(reinterpret_cast<char *>(addr));
                     // std::cout << "s: " << s << std::endl;
                     ((VarcharVector *)vecBatch->GetVector(i))
                         ->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
@@ -75,11 +77,11 @@ int64_t *MakeDecimals(const int32_t size, const int32_t start = 0)
     int32_t idx = 0;
     for (int64_t i = start; i < start + size; i++) {
         if (i >= 0) {
-            arr[2 * idx] = i;
-            arr[2 * idx + 1] = 0;
+            arr[INDEX_FACTOR * idx] = i;
+            arr[INDEX_FACTOR * idx + 1] = 0;
         } else {
-            arr[2 * idx] = i * -1;
-            arr[2 * idx + 1] = -1;
+            arr[INDEX_FACTOR * idx] = i * -1;
+            arr[INDEX_FACTOR * idx + 1] = -1;
         }
         idx++;
     }
@@ -106,7 +108,7 @@ double *MakeDoubles(const int32_t size, const double start = 0)
     return arr;
 }
 
-TEST(ProjectTest, Cast)
+TEST(ProjectionTest, Cast)
 {
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows);
@@ -129,7 +131,7 @@ TEST(ProjectTest, Cast)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
@@ -156,7 +158,7 @@ TEST(ProjectTest, Cast)
     delete factory;
 }
 
-TEST(ProjectTest, CastDouble)
+TEST(ProjectionTest, CastDouble)
 {
     const int32_t numRows = 1000;
     double *col1 = MakeDoubles(numRows);
@@ -180,7 +182,7 @@ TEST(ProjectTest, CastDouble)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
@@ -205,7 +207,7 @@ TEST(ProjectTest, CastDouble)
     delete factory;
 }
 
-TEST(ProjectTest, CastInt64ToDecimal128)
+TEST(ProjectionTest, CastInt64ToDecimal128)
 {
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows);
@@ -221,7 +223,7 @@ TEST(ProjectTest, CastInt64ToDecimal128)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
@@ -245,7 +247,7 @@ TEST(ProjectTest, CastInt64ToDecimal128)
     delete factory;
 }
 
-TEST(ProjectTest, Simple)
+TEST(ProjectionTest, Simple)
 {
     const int32_t numRows = 1000;
     int32_t *col = MakeInts(numRows);
@@ -258,7 +260,7 @@ TEST(ProjectTest, Simple)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
@@ -292,7 +294,7 @@ TEST(ProjectTest, Simple)
     delete factory;
 }
 
-TEST(ProjectTest, WithNullValues)
+TEST(ProjectionTest, WithNullValues)
 {
     const int32_t numRows = 1000;
     int32_t *col1 = MakeInts(numRows, -5);
@@ -315,7 +317,7 @@ TEST(ProjectTest, WithNullValues)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     for (int i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
@@ -349,7 +351,7 @@ TEST(ProjectTest, WithNullValues)
     delete factory;
 }
 
-TEST(ProjectTest, Negatives)
+TEST(ProjectionTest, Negatives)
 {
     const int32_t numRows = 1000;
     int32_t *col = MakeInts(numRows, -5);
@@ -362,7 +364,7 @@ TEST(ProjectTest, Negatives)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -381,7 +383,7 @@ TEST(ProjectTest, Negatives)
     delete factory;
 }
 
-TEST(ProjectTest, Longs)
+TEST(ProjectionTest, Longs)
 {
     const int32_t numRows = 10000;
     int64_t *col = MakeLongs(numRows, -5000);
@@ -394,7 +396,7 @@ TEST(ProjectTest, Longs)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -403,7 +405,7 @@ TEST(ProjectTest, Longs)
     EXPECT_EQ(numReturned, numRows);
     for (int32_t i = 0; i < 1; i++) {
         int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
-        EXPECT_EQ(val0, (int64_t)(i - 5000) * 5000000);
+        EXPECT_EQ(val0, static_cast<int64_t>(i - 5000) * 5000000);
     }
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
@@ -414,7 +416,7 @@ TEST(ProjectTest, Longs)
     delete factory;
 }
 
-TEST(ProjectTest, Doubles)
+TEST(ProjectionTest, Doubles)
 {
     const int32_t numRows = 10000;
     double *col = MakeDoubles(numRows, -5000.5);
@@ -428,7 +430,7 @@ TEST(ProjectTest, Doubles)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -450,7 +452,7 @@ TEST(ProjectTest, Doubles)
     delete factory;
 }
 
-TEST(ProjectTest, MultipleColumns)
+TEST(ProjectionTest, MultipleColumns)
 {
     const int32_t numRows = 1000;
     int32_t *col1 = MakeInts(numRows);
@@ -472,7 +474,8 @@ TEST(ProjectTest, MultipleColumns)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -496,7 +499,7 @@ TEST(ProjectTest, MultipleColumns)
     delete factory;
 }
 
-TEST(ProjectTest, BenchmarkMultipleColumns)
+TEST(ProjectionTest, BenchmarkMultipleColumns)
 {
     const int32_t numRows = 1000;
     int32_t *col1 = MakeInts(numRows);
@@ -514,7 +517,7 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
         } else {
             s = new std::string("!!!!!");
         }
-        col4[i] = (int64_t)(s->c_str());
+        col4[i] = reinterpret_cast<int64_t>(s->c_str());
         strings.push_back(s);
     }
 
@@ -534,7 +537,8 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     std::cout << "[BenchmarkMultipleColumns Project without varchar]\n\n";
@@ -605,7 +609,7 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     delete factory;
 }
 
-TEST(ProjectTest, DependOtherColumn)
+TEST(ParserTest, DependOtherColumn)
 {
     const int32_t numRows = 1000;
     int32_t *col1 = MakeInts(numRows);
@@ -633,7 +637,8 @@ TEST(ProjectTest, DependOtherColumn)
     DataTypes inputTypes(vecOfTypes);
     auto factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -657,7 +662,7 @@ TEST(ProjectTest, DependOtherColumn)
     delete factory;
 }
 
-TEST(ProjectTest, ProjectString1)
+TEST(ParserTest, ProjectString1)
 {
     vector<string *> strings;
 
@@ -671,15 +676,15 @@ TEST(ProjectTest, ProjectString1)
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 40 == 0) {
             std::string *s = new std::string("hello");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         } else {
             std::string *s = new std::string("abcdefghijklmnopqrstuvwxyz");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         }
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
 
@@ -731,7 +736,7 @@ TEST(ProjectTest, ProjectString1)
     delete factory;
 }
 
-TEST(ProjectTest, DictionaryVecTest)
+TEST(ParserTest, DictionaryVecTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
@@ -796,7 +801,7 @@ TEST(ProjectTest, DictionaryVecTest)
     delete factory;
 }
 
-TEST(ProjectTest, DictionaryVecDoubleTest)
+TEST(ParserTest, DictionaryVecDoubleTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -842,7 +847,7 @@ TEST(ProjectTest, DictionaryVecDoubleTest)
     delete factory;
 }
 
-TEST(ProjectTest, DictionaryVecVarcharTest)
+TEST(ParserTest, DictionaryVecVarcharTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -850,7 +855,7 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     VarcharVector *col1 = new VarcharVector(vecAllocator, 5 * numRows, numRows);
 
     int32_t ids1[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-    DictionaryVector *VarCharDicVector = new DictionaryVector(col1, ids1, numRows);
+    DictionaryVector *varCharDicVector = new DictionaryVector(col1, ids1, numRows);
     string str1 = "hello";
     string str2 = "world";
     for (int32_t i = 0; i < numRows; i++) {
@@ -868,7 +873,7 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     DataTypes dataTypes(inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
 
-    batch->SetVector(0, VarCharDicVector);
+    batch->SetVector(0, varCharDicVector);
 
     const int32_t numProject = 1;
     std::string funcStr = "substr";
@@ -907,7 +912,7 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     delete factory;
 }
 
-TEST(ProjectTest, DictionaryVecDecimal128Test)
+TEST(ParserTest, DictionaryVecDecimal128Test)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -957,7 +962,7 @@ TEST(ProjectTest, DictionaryVecDecimal128Test)
     delete factory;
 }
 
-TEST(ProjectTest, DictionaryVecNestedTest)
+TEST(ParserTest, DictionaryVecNestedTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
@@ -1026,7 +1031,7 @@ TEST(ProjectTest, DictionaryVecNestedTest)
     delete factory;
 }
 
-TEST(ProjectTest, Decimal128Arithmetic)
+TEST(ParserTest, Decimal128Arithmetic)
 {
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
@@ -1042,7 +1047,7 @@ TEST(ProjectTest, Decimal128Arithmetic)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1085,7 +1090,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1141,7 +1146,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1192,7 +1197,7 @@ TEST(ProjectTest, Decimal128Multiply)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1227,7 +1232,7 @@ TEST(ProjectTest, Decimal128Divide)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1270,7 +1275,7 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1314,15 +1319,15 @@ TEST(ProjectTest, StringSubstr)
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
             std::string *s = new std::string("helloasdf");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         } else {
             std::string *s = new std::string("Bonjour");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         }
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
 
@@ -1361,7 +1366,7 @@ TEST(ProjectTest, StringSubstr)
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
 
-        string actualStr((char *)actualChar, 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
         if (i % 2 == 0) {
             EXPECT_EQ(actualStr, expected1);
         } else {
@@ -1547,7 +1552,8 @@ TEST(ProjectTest, Tpcds96)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
+        reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
@@ -1622,51 +1628,51 @@ TEST(ProjectTest, Round)
     auto data0 = new FieldExpr(0, IntType());
     std::vector<Expr *> args0;
     args0.push_back(data0);
-    int32_t data0_decimal = 1;
-    args0.push_back(new LiteralExpr(data0_decimal, IntType()));
+    int32_t data0Decimal = 1;
+    args0.push_back(new LiteralExpr(data0Decimal, IntType()));
     auto roundExpr0 = GetFuncExpr(funcStr, args0, IntType());
 
     // rounded to tens
     auto data1 = new FieldExpr(1, LongType());
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    int32_t data1_decimal = -1;
-    args1.push_back(new LiteralExpr(data1_decimal, IntType()));
+    int32_t data1Decimal = -1;
+    args1.push_back(new LiteralExpr(data1Decimal, IntType()));
     auto roundExpr1 = GetFuncExpr(funcStr, args1, LongType());
-    double data1Pow = pow(10, data1_decimal);
+    double data1Pow = pow(10, data1Decimal);
 
     // rounded to ones. equivalent to round()
     auto data2 = new FieldExpr(2, DoubleType());
     std::vector<Expr *> args2;
     args2.push_back(data2);
-    int32_t data2_decimal = 0;
-    args2.push_back(new LiteralExpr(data2_decimal, IntType()));
+    int32_t data2Decimal = 0;
+    args2.push_back(new LiteralExpr(data2Decimal, IntType()));
     auto roundExpr2 = GetFuncExpr(funcStr, args2, DoubleType());
 
     // rounded to hundredths
     auto data3 = new FieldExpr(3, DoubleType());
     std::vector<Expr *> args3;
     args3.push_back(data3);
-    int32_t data3_decimal = 2;
-    args3.push_back(new LiteralExpr(data3_decimal, IntType()));
+    int32_t data3Decimal = 2;
+    args3.push_back(new LiteralExpr(data3Decimal, IntType()));
     auto roundExpr3 = GetFuncExpr(funcStr, args3, DoubleType());
-    double data3Pow = pow(10, data3_decimal);
+    double data3Pow = pow(10, data3Decimal);
 
     // rounded to hundredths (all negatives)
     auto data4 = new FieldExpr(4, DoubleType());
     std::vector<Expr *> args4;
     args4.push_back(data4);
-    int32_t data4_decimal = 2;
-    args4.push_back(new LiteralExpr(data4_decimal, IntType()));
+    int32_t data4Decimal = 2;
+    args4.push_back(new LiteralExpr(data4Decimal, IntType()));
     auto roundExpr4 = GetFuncExpr(funcStr, args4, DoubleType());
-    double data4Pow = pow(10, data4_decimal);
+    double data4Pow = pow(10, data4Decimal);
 
     // invalid values
     auto data5 = new FieldExpr(5, DoubleType());
     std::vector<Expr *> args5;
     args5.push_back(data5);
-    int32_t data5_decimal = 2;
-    args5.push_back(new LiteralExpr(data5_decimal, IntType()));
+    int32_t data5Decimal = 2;
+    args5.push_back(new LiteralExpr(data5Decimal, IntType()));
     auto roundExpr5 = GetFuncExpr(funcStr, args5, DoubleType());
 
     std::vector<Expr *> exprs = { roundExpr0, roundExpr1, roundExpr2, roundExpr3, roundExpr4, roundExpr5 };
@@ -1674,7 +1680,9 @@ TEST(ProjectTest, Round)
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4, (int64_t) col5};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
+        reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4),
+        reinterpret_cast<int64_t>(col5)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     auto copy = DuplicateVectorBatch(t);
@@ -1734,10 +1742,10 @@ TEST(ProjectTest, ConcatStrAndChar)
     int64_t *col1 = new int64_t[numRows];
 
     std::string *s = new std::string("AAAA");
-    col1[0] = (int64_t)(s->c_str());
+    col1[0] = reinterpret_cast<int64_t>(s->c_str());
     strings.push_back(s);
 
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t numProject = 2;
@@ -1765,13 +1773,13 @@ TEST(ProjectTest, ConcatStrAndChar)
         VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
         uint8_t *actualChar1 = nullptr;
         int len1 = vcVec1->GetValue(i, &actualChar1);
-        string actualStr1((char *)actualChar1, 0, len1);
+        string actualStr1(reinterpret_cast<char *>(actualChar1), 0, len1);
         EXPECT_EQ(actualStr1, expected1);
 
         VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
         uint8_t *actualChar2 = nullptr;
         int len2 = vcVec2->GetValue(i, &actualChar2);
-        string actualStr2((char *)actualChar2, 0, len2);
+        string actualStr2(reinterpret_cast<char *>(actualChar2), 0, len2);
         EXPECT_EQ(actualStr2, expected2);
     }
 
@@ -1798,15 +1806,15 @@ TEST(ProjectTest, varcharExpand)
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
             std::string *s = new std::string("helloasdf");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         } else {
             std::string *s = new std::string("Bonjour");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         }
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
 
@@ -1857,7 +1865,7 @@ TEST(ProjectTest, varcharExpand)
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
 
-        string actualStr((char *)actualChar, 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
         if (i % 2 == 0) {
             EXPECT_EQ(actualStr, expected1);
         } else {

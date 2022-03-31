@@ -2,13 +2,14 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: ...
  */
-#include "gtest/gtest.h"
-#include "../util/test_util.h"
-#include "../../src/operator/filter/filter_and_project.h"
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include "gtest/gtest.h"
+#include "operator/filter/filter_and_project.h"
+#include "../util/test_util.h"
 
+namespace FilterTest {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
@@ -37,8 +38,8 @@ VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 for (int j = 0; j < numRows; ++j) {
-                    int64_t addr = ((int64_t *)(allData[i]))[j];
-                    std::string s((char *)(addr));
+                    int64_t addr = reinterpret_cast<int64_t *>(allData[i])[j];
+                    std::string s(reinterpret_cast<char *>(addr));
                     ((VarcharVector *)vecBatch->GetVector(i))
                         ->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
                 }
@@ -92,7 +93,7 @@ bool Filter3(VectorBatch *t, int32_t index)
     int64_t val2 = ((LongVector *)t->GetVector(n2))->GetValue(index);
     double val3 = ((DoubleVector *)t->GetVector(n3))->GetValue(index);
     // first val is multiple of 3, second val = 3 billion, third val >= 0.4.
-    return val1 % 3 == 0 && val2 == (int64_t)3e9 && val3 >= 0.4;
+    return val1 % 3 == 0 && val2 == static_cast<int64_t>(3e9) && val3 >= 0.4;
 }
 
 bool Filter4(VectorBatch *t, int32_t index)
@@ -164,7 +165,7 @@ TEST(FilterTest, LessThan)
     }
 
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
@@ -200,7 +201,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
     }
 
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
@@ -240,7 +241,7 @@ TEST(FilterTest, GreaterThan)
         col1[i] = i % 25;
         col2[i] = 3e9;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -285,7 +286,8 @@ TEST(FilterTest, EqualTo)
     for (int32_t i = 0; i < numRows; i++) {
         col2[i] = col3[i] = i % 100;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col3, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col3),
+        reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -336,7 +338,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
             col2[i] = 30;
         }
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -377,7 +379,7 @@ TEST(FilterTest, NotEqualTo)
         col1[i] = i;
     }
 
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ DoubleDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -418,7 +420,7 @@ TEST(FilterTest, AllPass)
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = 9348;
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -456,7 +458,7 @@ TEST(FilterTest, MultipleInputs)
         data1[i] = i % 10;
         data2[i] = i % 6 + 1;
     }
-    int64_t allData[numCols] = {(int64_t) data1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -479,7 +481,7 @@ TEST(FilterTest, MultipleInputs)
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter1));
     EXPECT_EQ(numReturned, 500);
 
-    allData[0] = (int64_t)data2;
+    allData[0] = reinterpret_cast<int64_t>(data2);
     VectorBatch *in2 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(in2);
     numReturned = op->GetOutput(ret);
@@ -510,7 +512,7 @@ TEST(FilterTest, NegativeValues)
             data2[i] = -data2[i];
         }
     }
-    int64_t allData[numCols] = {(int64_t) data1, (int64_t) data2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -559,11 +561,12 @@ TEST(FilterTest, AllTypes)
     double *data3 = new double[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         data1[i] = i % 3;
-        data2[i] = i % 2 ? 3e9 : 0;
+        data2[i] = (i % 2 != 0) ? 3e9 : 0;
         data3[i] = i % 10 / 10.0;
     }
 
-    int64_t allData[numCols] = {(int64_t) data1, (int64_t) data2, (int64_t) data3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
+        reinterpret_cast<int64_t>(data3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -623,7 +626,8 @@ TEST(FilterTest, Compile)
         data2[i] = 6;
     }
 
-    int64_t datas[4] = {(int64_t) data1, (int64_t) data2, (int64_t) data3, (int64_t) data4};
+    int64_t datas[4] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
+        reinterpret_cast<int64_t>(data3), reinterpret_cast<int64_t>(data4)};
     DataTypes inputTypes(
         std::vector<DataType>({ DoubleDataType(), IntDataType(), DoubleDataType(), DoubleDataType() }));
     VectorBatch *t = CreateInput(dataSize, numCols, inputTypes.GetIds(), datas);
@@ -684,14 +688,15 @@ TEST(FilterTest, LogicalOperators1)
     double *col5 = new double[numRows];
     int64_t *col6 = new int64_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i % 3 ? 1 : 0;
+        col1[i] = i % 3 != 0 ? 1 : 0;
         col2[i] = col3[i] = i;
-        col4[i] = i % 2 ? 2999999999 : 3e9;
+        col4[i] = i % 2 != 0 ? 2999999999 : 3e9;
         col5[i] = 50 + i / 10.0;
         col6[i] = i % 55;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3,
-                                (int64_t) col4, (int64_t) col5, (int64_t) col6};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4), reinterpret_cast<int64_t>(col5),
+        reinterpret_cast<int64_t>(col6)};
     // int int int long double long
     DataTypes inputTypes(std::vector<DataType>(
         { IntDataType(), IntDataType(), IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
@@ -764,7 +769,8 @@ TEST(FilterTest, LogicalOperators2)
         col3[i] = i % 8 == 0 ? -i - 3e9 : i + 3e9;
         col4[i] = i % 9 - 4;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), LongDataType(), LongDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     const int32_t projectCount = 4;
@@ -830,7 +836,7 @@ TEST(FilterTest, LogicalOperators3)
     col1[6] = 8;
     col1[7] = 13;
     col2[2] = 0;
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), DoubleDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     const int32_t projectCount = 2;
@@ -902,7 +908,7 @@ TEST(FilterTest, ArithmeticAdd)
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i % 5;
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -943,7 +949,7 @@ TEST(FilterTest, ArithmeticSubtract)
         col1[i] = i % 10;
         col2[i] = i;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -985,7 +991,7 @@ TEST(FilterTest, ArithmeticMultiply)
         col1[i] = i % 2;
         col2[i] = i % 10 + 1;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1038,7 +1044,8 @@ TEST(FilterTest, Conditional)
         col2[i] = 50;
         col3[i] = 100;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     const int32_t projectCount = 3;
@@ -1087,7 +1094,8 @@ TEST(FilterTest, Conditional2)
         col2[i] = i % 5;
         col3[i] = i % 10;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1140,7 +1148,8 @@ TEST(FilterTest, In)
         col2[i] = i % 5;
         col3[i] = i % 6 + 12;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     // filter
@@ -1188,7 +1197,8 @@ TEST(FilterTest, Between)
         col2[i] = i % 11;
         col3[i] = (i % 21) - 3;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1229,7 +1239,7 @@ TEST(FilterTest, NotEqualToAbs)
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i - 32435;
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1275,7 +1285,8 @@ TEST(FilterTest, MathFunctionFilter1)
         col2[i] = i % 5;
         col3[i] = -1;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1345,7 +1356,8 @@ TEST(FilterTest, MathFunctionFilter2)
         col2[i] = i % 5;
         col3[i] = -1;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1394,15 +1406,15 @@ TEST(FilterTest, FilterString1)
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 40 == 0) {
             std::string *s = new std::string("hello");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         } else {
             std::string *s = new std::string("abcdefghijklmnopqrstuvwxyz");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         }
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1456,12 +1468,13 @@ TEST(FilterTest, Coalesce1)
         col2[i] = 21;
         col3[i] = -1;
     }
-    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+        reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
-        if (i % 2) {
+        if (i % 2 != 0) {
             t->GetVector(1)->SetValueNull(i);
         } else {
             t->GetVector(1)->SetValueNotNull(i);
@@ -1503,12 +1516,12 @@ TEST(FilterTest, Coalesce2)
         col1[i] = (int64_t)(s->c_str());
         strings.push_back(s);
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
-        if (i % 2) {
+        if (i % 2 != 0) {
             t->GetVector(0)->SetValueNull(i);
         } else {
             // Seemingly necessary so that the bitmap doesn't get default values
@@ -1545,17 +1558,17 @@ TEST(FilterTest, Coalesce2)
 
 TEST(FilterTest, ExternalMathFunc)
 {
-    const int32_t NUM_COLS = 2;
-    const int32_t NUM_ROWS = 1000;
-    int32_t *col1 = new int32_t[NUM_ROWS];
-    int32_t *col2 = new int32_t[NUM_ROWS];
-    for (int32_t i = 0; i < NUM_ROWS; i++) {
+    const int32_t numCols = 2;
+    const int32_t numRows = 1000;
+    int32_t *col1 = new int32_t[numRows];
+    int32_t *col2 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i;
         col2[i] = i + 2;
     }
-    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType() }));
-    VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     // filter
     std::string funcStr = "Increment";
@@ -1569,12 +1582,12 @@ TEST(FilterTest, ExternalMathFunc)
 
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, projections.size());
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projections.size());
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
-    EXPECT_EQ(numReturned, NUM_ROWS);
+    EXPECT_EQ(numReturned, numRows);
 
     VectorHelper::FreeVecBatches(ret);
 
@@ -1587,33 +1600,33 @@ TEST(FilterTest, ExternalMathFunc)
 
 TEST(FilterTest, ExternalStringFunc)
 {
-    const int32_t NUM_COLS = 1;
-    const int32_t NUM_ROWS = 1000;
+    const int32_t numCols = 1;
+    const int32_t numRows = 1000;
     vector<string *> strings;
-    int64_t *col1 = new int64_t[NUM_ROWS];
+    int64_t *col1 = new int64_t[numRows];
 
     // column looks like:
     // hello, bye, hello, bye, hello, bye, ...
-    for (int32_t i = 0; i < NUM_ROWS; i++) {
+    for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
             std::string *s = new std::string("hello");
-            col1[i] = (int64_t)(s->c_str());
+            col1[i] = reinterpret_cast<int64_t>(s->c_str());
             strings.push_back(s);
         } else {
             if (i % 4 == 1) {
                 std::string *s = new std::string("bye");
-                col1[i] = (int64_t)(s->c_str());
+                col1[i] = reinterpret_cast<int64_t>(s->c_str());
                 strings.push_back(s);
             } else {
                 std::string *s = new std::string("asdf");
-                col1[i] = (int64_t)(s->c_str());
+                col1[i] = reinterpret_cast<int64_t>(s->c_str());
                 strings.push_back(s);
             }
         }
     }
-    int64_t allData[NUM_COLS] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
-    VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     std::string funcStr = "length";
     DataTypePtr retType = IntType();
@@ -1623,10 +1636,10 @@ TEST(FilterTest, ExternalStringFunc)
     auto filterExpr =
         new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
 
-    const int32_t PROJECT_COUNT = 1;
+    const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1662,22 +1675,23 @@ void process(omniruntime::op::Operator *op, VectorBatch *t, std::vector<VectorBa
 // For testing different types
 TEST(FilterTest, Multithreading)
 {
-    const int32_t NUM_COLS = 3;
-    const int32_t NUM_ROWS = 100000;
-    int32_t *col1 = new int32_t[NUM_ROWS];
-    int64_t *col2 = new int64_t[NUM_ROWS];
-    int32_t *col3 = new int32_t[NUM_ROWS];
-    for (int32_t i = 0; i < NUM_ROWS; i++) {
+    const int32_t numCols = 3;
+    const int32_t numRows = 100000;
+    int32_t *col1 = new int32_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
+    int32_t *col3 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i % 2;
         col2[i] = i % 5;
         col3[i] = -1;
     }
 
-    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+                                reinterpret_cast<int64_t>(col3)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), IntDataType() }));
     DataTypes inputTypes2(std::vector<DataType>({ IntDataType(), LongDataType(), IntDataType() }));
-    VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
-    VectorBatch *t2 = CreateInput(NUM_ROWS, NUM_COLS, inputTypes2.GetIds(), allData);
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *t2 = CreateInput(numRows, numCols, inputTypes2.GetIds(), allData);
 
     std::vector<VectorBatch *> ret;
     std::vector<VectorBatch *> ret2;
@@ -1707,11 +1721,11 @@ TEST(FilterTest, Multithreading)
 
     auto filterExpr1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
 
-    const int32_t PROJECT_COUNT = 3;
+    const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr1, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
+        new FilterAndProjectOperatorFactory(filterExpr1, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
     std::thread thread1(process, op, t, ret, numReturned);
 
@@ -1722,14 +1736,10 @@ TEST(FilterTest, Multithreading)
     std::vector<Expr *> projections2 = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
 
-    OperatorFactory *factory2 =
-        new FilterAndProjectOperatorFactory(filterExpr2, inputTypes2, NUM_COLS, projections2, 3);
+    OperatorFactory *factory2 = new FilterAndProjectOperatorFactory(filterExpr2, inputTypes2, numCols, projections2, 3);
     omniruntime::op::Operator *op2 = factory2->CreateOperator();
     std::thread thread2(process, op2, t2, ret2, numReturned2);
 
-
-    // process(op, t, ret, numReturned);
-    // process(op2, t2, ret2, numReturned2);
     thread2.join();
     thread1.join();
     EXPECT_EQ(*numReturned, 20000);
@@ -1931,7 +1941,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
         data2[2 * i + 1] = 0;
     }
 
-    int64_t allData[numCols] = {(int64_t) data1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
@@ -1952,7 +1962,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     EXPECT_EQ(numReturned, 500);
 
 
-    allData[0] = (int64_t)data2;
+    allData[0] = reinterpret_cast<int64_t>(data2);
     VectorBatch *in2 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(in2);
     numReturned = op->GetOutput(ret);
@@ -1982,7 +1992,8 @@ TEST(FilterTest, DecimalFilterAbsTest)
         data3[2 * i] = (i + 1) * 1;
         data3[2 * i + 1] = -1000;
     }
-    int64_t allData[numCols] = {(int64_t) data1, (int64_t) data2, (int64_t) data3};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
+        reinterpret_cast<int64_t>(data3)};
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128), DataType(OMNI_DECIMAL128),
         DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
@@ -2212,7 +2223,7 @@ TEST(FilterTest, SimpleFilter)
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i;
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -2248,7 +2259,7 @@ TEST(FilterTest, SimpleFilterWithNulls)
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i;
     }
-    int64_t allData[numCols] = {(int64_t) col1};
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -2380,4 +2391,5 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
         }
     }
     delete filter;
+}
 }

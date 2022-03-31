@@ -7,7 +7,7 @@
 
 #include "fixed_width_vector.h"
 #include "loader/vector_loader.h"
-#include "../type/data_type.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace vec {
@@ -17,9 +17,9 @@ public:
         : Vector(allocator, -1, size, type::OMNI_NONE), loader(nullptr), loadedVector(nullptr)
     {}
 
-    void SetLoader(VectorLoader *loader)
+    void SetLoader(VectorLoader *vectorLoader)
     {
-        this->loader = loader;
+        this->loader = vectorLoader;
     }
 
     VectorLoader *GetLoader()
@@ -64,7 +64,7 @@ public:
         loadedVector->Append(other, positionOffset, length);
     };
 
-    ~LazyVector()
+    ~LazyVector() override
     {
         if (loader != nullptr) {
             delete loader;

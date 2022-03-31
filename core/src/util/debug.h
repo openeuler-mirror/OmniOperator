@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ */
+
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
@@ -5,9 +9,9 @@
 #include <stdexcept>
 #include "../../config.h"
 
-typedef std::chrono::high_resolution_clock Time;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::duration<float> fsec;
+using Time = std::chrono::high_resolution_clock;
+using ms = std::chrono::milliseconds;
+using fsec = std::chrono::duration<float>;
 
 // define time
 #if defined(DEBUG_JNI) || defined(DEBUG_OPERATOR) || defined(DEBUG_LLVM)
@@ -24,7 +28,6 @@ typedef std::chrono::duration<float> fsec;
 #define END(t0) 0
 #endif
 
-// TODO define log level
 #ifdef DEBUG_JNI
 #define JNI_DEBUG_LOG(format, ...) printf("[%s][%s][%d]: " format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else

@@ -7,7 +7,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
 #include "expression/jsonparser/jsonparser.h"
 #include "codegen/expression_codegen.h"
 #include "codegen/filter_codegen.h"
@@ -29,9 +28,9 @@ using namespace omniruntime::codegen;
 
 const string defaultTestFunctionName = "test-function";
 
-typedef int32_t (*FilterFunc)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-typedef int32_t (*ProjectFunc)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *,
-    int64_t, int64_t *);
+using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+using ProjectFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *,
+    int32_t *, int64_t, int64_t *);
 
 // Filter is basically just a projection that must return a boolean.
 // The logic for filtering out rows from final output is handled in C++ when
@@ -55,7 +54,7 @@ TEST(CodeGenTest, SimpleFilter)
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
+    table[0] = reinterpret_cast<int64_t>(col1);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -120,7 +119,7 @@ TEST(CodeGenTest, SimpleProject)
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
+    table[0] = reinterpret_cast<int64_t>(col1);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -198,13 +197,13 @@ TEST(CodeGenTest, SingleCaseSwitch)
         col1[i] = i;
     }
     int64_t *col2 = new int64_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col2[i] = i % 2 ? 4000000000 : 12;
+    for (uint32_t i = 0; i < numRows; i++) {
+        col2[i] = (i % 2 != 0) ? 4000000000 : 12;
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
-    table[1] = (int64_t)col2;
+    table[0] = reinterpret_cast<int64_t>(col1);
+    table[1] = reinterpret_cast<int64_t>(col2);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -297,13 +296,13 @@ TEST(CodeGenTest, DoubleCaseSwitch)
         col1[i] = i;
     }
     int64_t *col2 = new int64_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col2[i] = i % 2 ? 4000000000 : 12;
+    for (uint32_t i = 0; i < numRows; i++) {
+        col2[i] = (i % 2 != 0) ? 4000000000 : 12;
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
-    table[1] = (int64_t)col2;
+    table[0] = reinterpret_cast<int64_t>(col1);
+    table[1] = reinterpret_cast<int64_t>(col2);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -409,13 +408,13 @@ TEST(CodeGenTest, ThreeCaseSwitch)
         col1[i] = i;
     }
     int64_t *col2 = new int64_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col2[i] = i % 2 ? 4000000000 : 12;
+    for (uint32_t i = 0; i < numRows; i++) {
+        col2[i] = (i % 2 != 0) ? 4000000000 : 12;
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
-    table[1] = (int64_t)col2;
+    table[0] = reinterpret_cast<int64_t>(col1);
+    table[1] = reinterpret_cast<int64_t>(col2);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -443,7 +442,7 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     for (int32_t i = 0; i < numRows; i++) {
         int32_t res = *((int32_t *)func(table, (int64_t *)bitmap, (int64_t *)offsets, i, dataLength,
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-        EXPECT_EQ(res, i % 2 ? i + 10 : -i);
+        EXPECT_EQ(res, (i % 2 != 0) ? i + 10 : -i);
     }
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
@@ -493,13 +492,13 @@ TEST(CodeGenTest, SwitchElseNull)
         col1[i] = i;
     }
     int64_t *col2 = new int64_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col2[i] = i % 2 ? 4000000000 : 12;
+    for (uint32_t i = 0; i < numRows; i++) {
+        col2[i] = (i % 2 != 0) ? 4000000000 : 12;
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
-    table[1] = (int64_t)col2;
+    table[0] = reinterpret_cast<int64_t>(col1);
+    table[1] = reinterpret_cast<int64_t>(col2);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -569,13 +568,13 @@ TEST(CodeGenTest, SingleProject)
         col1[i] = i;
     }
     int64_t *col2 = new int64_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col2[i] = i % 2 ? 4000000000 : 12;
+    for (uint32_t i = 0; i < numRows; i++) {
+        col2[i] = (i % 2 != 0) ? 4000000000 : 12;
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
-    table[1] = (int64_t)col2;
+    table[0] = reinterpret_cast<int64_t>(col1);
+    table[1] = reinterpret_cast<int64_t>(col2);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -638,8 +637,8 @@ TEST(CodeGenTest, ShortCircuitProject)
     }
 
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
-    table[1] = (int64_t)col2;
+    table[0] = reinterpret_cast<int64_t>(col1);
+    table[1] = reinterpret_cast<int64_t>(col2);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -702,7 +701,7 @@ TEST(CodeGenTest, RowFilter)
         col1[i] = i % 2;
     }
     int64_t *table = new int64_t[numCols];
-    table[0] = (int64_t)col1;
+    table[0] = reinterpret_cast<int64_t>(col1);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -753,8 +752,8 @@ TEST(CodeGenTest, RowFilterString)
     s1[0] = "hello world";
     s2[0] = "world hello";
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t)s1->c_str();
-    vals[1] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[1] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[numCols];
@@ -892,9 +891,9 @@ TEST(CodeGenTest, Operators1)
     int32_t v2[1] = {3};
     int32_t v3[1] = {2};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -922,9 +921,9 @@ TEST(CodeGenTest, Operators1)
     v1[0] = 2;
     v2[0] = 4;
     v3[0] = 2;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -984,9 +983,9 @@ TEST(CodeGenTest, MathFunctions1)
     int32_t v2[1] = {123};
     int32_t v3[1] = {123};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1016,9 +1015,9 @@ TEST(CodeGenTest, MathFunctions1)
     v1[0] = 10000;
     v2[0] = 10000;
     v3[0] = -10001;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1058,9 +1057,9 @@ TEST(CodeGenTest, MathFunctions2)
     int32_t v3[1] = {1001};
     int64_t *vals = new int64_t[3];
 
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1089,9 +1088,9 @@ TEST(CodeGenTest, MathFunctions2)
     v1[0] = 100;
     v2[0] = 1245;
     v3[0] = -12356;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1101,9 +1100,9 @@ TEST(CodeGenTest, MathFunctions2)
     v1[0] = 100;
     v2[0] = 1245;
     v3[0] = 12356;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1149,9 +1148,9 @@ TEST(CodeGenTest, MathFunctions3)
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1179,9 +1178,9 @@ TEST(CodeGenTest, MathFunctions3)
     v1[0] = 100;
     v2[0] = 1245;
     v3[0] = -12356;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1191,9 +1190,9 @@ TEST(CodeGenTest, MathFunctions3)
     v1[0] = -12;
     v2[0] = 1245;
     v3[0] = 123;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1203,9 +1202,9 @@ TEST(CodeGenTest, MathFunctions3)
     v1[0] = -12222;
     v2[0] = -12312;
     v3[0] = 42;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1246,9 +1245,9 @@ TEST(CodeGenTest, MathFunctions4)
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1276,9 +1275,9 @@ TEST(CodeGenTest, MathFunctions4)
     v1[0] = 3;
     v2[0] = 1245;
     v3[0] = -12356;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1288,9 +1287,9 @@ TEST(CodeGenTest, MathFunctions4)
     v1[0] = 5;
     v2[0] = 1245;
     v3[0] = 123;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1300,9 +1299,9 @@ TEST(CodeGenTest, MathFunctions4)
     v1[0] = 0;
     v2[0] = -12312;
     v3[0] = 42;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1312,9 +1311,9 @@ TEST(CodeGenTest, MathFunctions4)
     v1[0] = 123;
     v2[0] = -43;
     v3[0] = 542;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1368,9 +1367,9 @@ TEST(CodeGenTest, CastNumbers1)
     int64_t v2[1] = {10000};
     double v3[1] = {12.34};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1398,9 +1397,9 @@ TEST(CodeGenTest, CastNumbers1)
     v1[0] = 2000000000;
     v2[0] = 3000000000;
     v3[0] = -234;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1410,9 +1409,9 @@ TEST(CodeGenTest, CastNumbers1)
     v1[0] = -1000000;
     v2[0] = -1000000;
     v3[0] = 133.324234;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1454,9 +1453,9 @@ TEST(CodeGenTest, CastNumbers2)
     int64_t v2[1] = {12};
     double v3[1] = {12.34};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1484,9 +1483,9 @@ TEST(CodeGenTest, CastNumbers2)
     v1[0] = 2000000000;
     v2[0] = -233;
     v3[0] = -234.2142;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1496,9 +1495,9 @@ TEST(CodeGenTest, CastNumbers2)
     v1[0] = -1000000;
     v2[0] = 12;
     v3[0] = 12;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1543,9 +1542,9 @@ TEST(CodeGenTest, Like)
     s1[0] = "asdf";
     s2[0] = "asjd fehellojdsl kfjworlddslk  jf ";
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1577,9 +1576,9 @@ TEST(CodeGenTest, Like)
     v1[0] = {8766};
     s1[0] = "asdf";
     s2[0] = "asjd fehell ojdsl kfjwo rld dslk  jf ";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[2][1] = s2->length();
 
@@ -1627,9 +1626,9 @@ TEST(CodeGenTest, DateCast)
     s1[0] = "asdf";
     s2[0] = "1994-01-01";
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1661,9 +1660,9 @@ TEST(CodeGenTest, DateCast)
     v1[0] = {8766};
     s1[0] = "j";
     s2[0] = "1996-01-02";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1676,9 +1675,9 @@ TEST(CodeGenTest, DateCast)
     v1[0] = {8766};
     s1[0] = "j";
     s2[0] = "1993-11-12";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1739,9 +1738,9 @@ TEST(CodeGenTest, SubstrIn)
     s2[0] = "2134121";
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1774,9 +1773,9 @@ TEST(CodeGenTest, SubstrIn)
     v1[0] = {8766};
     s1[0] = "j";
     s2[0] = "233425";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1789,9 +1788,9 @@ TEST(CodeGenTest, SubstrIn)
     v1[0] = {8766};
     s1[0] = "j";
     s2[0] = "424321";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1840,9 +1839,9 @@ TEST(CodeGenTest, ConcatStr)
     s1[0] = "hello";
     s2[0] = "world";
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1875,9 +1874,9 @@ TEST(CodeGenTest, ConcatStr)
     v1[0] = {8766};
     s1[0] = "hello";
     s2[0] = "world ";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1890,9 +1889,9 @@ TEST(CodeGenTest, ConcatStr)
     v1[0] = {8766};
     s1[0] = "hello ";
     s2[0] = "world";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1950,9 +1949,9 @@ TEST(CodeGenTest, ConcatChars)
     s1[0] = "hello";
     s2[0] = "world";
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
     bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
@@ -1984,9 +1983,9 @@ TEST(CodeGenTest, ConcatChars)
     v1[0] = {8766};
     s1[0] = "hello";
     s2[0] = "world ";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -1999,9 +1998,9 @@ TEST(CodeGenTest, ConcatChars)
     v1[0] = {8766};
     s1[0] = "hello ";
     s2[0] = "world";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -2047,8 +2046,8 @@ TEST(CodeGenTest, ToUpper)
     string s1[] = {"[\\]^_abcdefghijklmnopqrstuvwxyz{|} The quick brown fox jumps over the lazy dog."};
     int32_t v1[] = {8766};
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[2];
@@ -2112,8 +2111,8 @@ TEST(CodeGenTest, ToUpperChar)
     string s1[] = {"[\\]^_abcdefghijklmnopqrstuvwxyz{|} The quick brown fox jumps over the lazy dog."};
     int32_t v1[] = {8766};
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[2];
@@ -2183,9 +2182,9 @@ TEST(CodeGenTest, StringWithOps)
     s2[0] = "Saturday";
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
 
@@ -2217,9 +2216,9 @@ TEST(CodeGenTest, StringWithOps)
     v1[0] = {8766};
     s1[0] = "j";
     s2[0] = "Sunday";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -2231,9 +2230,9 @@ TEST(CodeGenTest, StringWithOps)
     v1[0] = {8766};
     s1[0] = "j";
     s2[0] = "Monday";
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)s1->c_str();
-    vals[2] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
@@ -2276,9 +2275,9 @@ TEST(CodeGenTest, Coalesce)
     int64_t v2[1] = {234};
     int64_t v3[1] = {345};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -2342,7 +2341,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
 
     int64_t c[3] = {100, 200, 300};
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c;
+    vals[0] = reinterpret_cast<int64_t>(c);
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
     for (int i = 0; i < 3; i++) {
@@ -2411,7 +2410,7 @@ TEST(CodeGenTest, ProjectionIsNull)
 
     int64_t c[3] = {100, 200, 300};
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c;
+    vals[0] = reinterpret_cast<int64_t>(c);
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
     for (int i = 0; i < 3; i++) {
@@ -2480,7 +2479,7 @@ TEST(CodeGenTest, IsNull)
 
     int64_t v1[1] = {123};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
     bool **bitmap = new bool *[1];
@@ -2534,7 +2533,7 @@ TEST(CodeGenTest, IsNotNull)
 
     int64_t v1[1] = {123};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
     bool **bitmap = new bool *[1];
@@ -2593,7 +2592,7 @@ TEST(CodeGenTest, DecimalOperators1)
     // creating decimal
     int64_t c[4] = { 10, 0, 9, 0 };
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c;
+    vals[0] = reinterpret_cast<int64_t>(c);
 
     int32_t *selected = new int32_t[2];
 
@@ -2655,9 +2654,9 @@ TEST(CodeGenTest, DecimalOperators2)
     int64_t e1[2] = {15000, 0};
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)c1;
-    vals[1] = (int64_t)d1;
-    vals[2] = (int64_t)e1;
+    vals[0] = reinterpret_cast<int64_t>(c1);
+    vals[1] = reinterpret_cast<int64_t>(d1);
+    vals[2] = reinterpret_cast<int64_t>(e1);
 
     int32_t *selected = new int32_t[1];
 
@@ -2725,9 +2724,9 @@ TEST(CodeGenTest, DecimalOperators3)
     int64_t e1[2] = {42, 0};
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)c1;
-    vals[1] = (int64_t)d1;
-    vals[2] = (int64_t)e1;
+    vals[0] = reinterpret_cast<int64_t>(c1);
+    vals[1] = reinterpret_cast<int64_t>(d1);
+    vals[2] = reinterpret_cast<int64_t>(e1);
 
     int32_t *selected = new int32_t[1];
 
@@ -2800,10 +2799,10 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     int64_t f1[2] = {4, -1};
 
     int64_t *vals = new int64_t[4];
-    vals[0] = (int64_t)c1;
-    vals[1] = (int64_t)d1;
-    vals[2] = (int64_t)e1;
-    vals[3] = (int64_t)f1;
+    vals[0] = reinterpret_cast<int64_t>(c1);
+    vals[1] = reinterpret_cast<int64_t>(d1);
+    vals[2] = reinterpret_cast<int64_t>(e1);
+    vals[3] = reinterpret_cast<int64_t>(f1);
 
     int32_t *selected = new int32_t[1];
 
@@ -2870,8 +2869,8 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
     int64_t d1[2] = {3, 0};
 
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t)c1;
-    vals[1] = (int64_t)d1;
+    vals[0] = reinterpret_cast<int64_t>(c1);
+    vals[1] = reinterpret_cast<int64_t>(d1);
 
     int32_t *selected = new int32_t[1];
 
@@ -2924,7 +2923,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     int64_t c[3] = {10, 20, 30};
 
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c;
+    vals[0] = reinterpret_cast<int64_t>(c);
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
@@ -3001,7 +3000,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     int64_t c1[6] = {10, 0, 20, 0, 30, 0};
 
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t)c1;
+    vals[0] = reinterpret_cast<int64_t>(c1);
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
@@ -3091,9 +3090,9 @@ TEST(CodeGenTest, TestRowProjectLong)
     bool *nullAddress = (bool *)(slicedVector->GetValueNulls()) + positionOffset;
     int32_t *offsetAddress = (int32_t *)(slicedVector->GetValueOffsets()) + positionOffset;
 
-    int64_t valuesAddr[1] = {(int64_t)(valueAddress)};
-    int64_t nullsAddr[1] = {(int64_t)(nullAddress)};
-    int64_t offsetsAddr[1] = {(int64_t)(offsetAddress)};
+    int64_t valuesAddr[1] = {reinterpret_cast<int64_t>(valueAddress)};
+    int64_t nullsAddr[1] = {reinterpret_cast<int64_t>(nullAddress)};
+    int64_t offsetsAddr[1] = {reinterpret_cast<int64_t>(offsetAddress)};
     bool isNull;
     int32_t length;
     int64_t dictVecAddr[1] = {0};
@@ -3142,9 +3141,9 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     bool *nullAddress = (bool *)(slicedVector->GetValueNulls()) + positionOffset;
     int32_t *offsetAddress = (int32_t *)(slicedVector->GetValueOffsets()) + positionOffset;
 
-    int64_t valuesAddr[1] = {(int64_t)(valueAddress)};
-    int64_t valueNulls[1] = {(int64_t)(nullAddress)};
-    int64_t valueOffsets[1] = {(int64_t)(offsetAddress)};
+    int64_t valuesAddr[1] = {reinterpret_cast<int64_t>(valueAddress)};
+    int64_t valueNulls[1] = {reinterpret_cast<int64_t>(nullAddress)};
+    int64_t valueOffsets[1] = {reinterpret_cast<int64_t>(offsetAddress)};
     int32_t length;
     int64_t dictionaries[1] = {};
     bool isNull;
@@ -3187,9 +3186,9 @@ TEST(CodeGenTest, CastNumbers3)
     double v2[1] = {9.01};
     double v3[1] = {12.34};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -3216,9 +3215,9 @@ TEST(CodeGenTest, CastNumbers3)
     v1[0] = 2000000000;
     v2[0] = -100.22;
     v3[0] = -234.2142;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -3228,9 +3227,9 @@ TEST(CodeGenTest, CastNumbers3)
     v1[0] = -1000000;
     v2[0] = 12;
     v3[0] = 12;
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -3264,8 +3263,8 @@ TEST(CodeGenTest, Substr)
     s2[0] = "Function SUBSTR";
 
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t)s1->c_str();
-    vals[1] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[1] = reinterpret_cast<int64_t>(s2->c_str());
 
     int32_t *selected = new int32_t[1];
     bool **bitmap = new bool *[numCols];
@@ -3384,7 +3383,7 @@ TEST(CodeGenTest, Mm3HashInt)
 
     int32_t v1[1] = {-2147483648};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
     bool **bitmap = new bool *[1];
@@ -3395,7 +3394,6 @@ TEST(CodeGenTest, Mm3HashInt)
     offsets[0][0] = 0;
 
     auto codegen = FilterCodeGen::Create("mm3hashTest", *expr);
-    // int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 
     int64_t dictionaries[1] = {};
 
@@ -3432,7 +3430,7 @@ TEST(CodeGenTest, Mm3HashLong)
 
     int64_t v1[1] = {-2147483648};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = reinterpret_cast<int64_t>(v1);
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[1];
@@ -3453,8 +3451,8 @@ TEST(CodeGenTest, Mm3HashLong)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3Int64(v1[0], false, 42);
-    EXPECT_EQ(res, expected_res);
+    int32_t expectedRes = Mm3Int64(v1[0], false, 42);
+    EXPECT_EQ(res, expectedRes);
     context->GetArena()->Reset();
 
     delete[] bitmap[0];
@@ -3480,7 +3478,7 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     double v1[1] = {123.456};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = reinterpret_cast<int64_t>(v1);
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[1];
@@ -3502,8 +3500,8 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3Double(v1[0], false, 42);
-    EXPECT_EQ(res, expected_res);
+    int32_t expectedRes = Mm3Double(v1[0], false, 42);
+    EXPECT_EQ(res, expectedRes);
     context->GetArena()->Reset();
 
     delete[] bitmap[0];
@@ -3529,7 +3527,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     std::string v1 = "hello world";
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1.c_str();
+    vals[0] = reinterpret_cast<int64_t>(v1.c_str());
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[1];
@@ -3552,8 +3550,8 @@ TEST(CodeGenTest, Mm3HashString)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3String(v1.c_str(), v1.size(), false, 42);
-    EXPECT_EQ(res, expected_res);
+    int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42);
+    EXPECT_EQ(res, expectedRes);
     context->GetArena()->Reset();
 
     delete[] bitmap[0];
@@ -3595,7 +3593,7 @@ TEST(CodeGenTest, Pmod)
 
     int32_t v1[1] = {-2147483648};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
     bool **bitmap = new bool *[1];
@@ -3643,8 +3641,8 @@ TEST(CodeGenTest, SubstrWithChars)
     s2[0] = "Function SUBSTR";
 
     int64_t *vals = new int64_t[2];
-    vals[0] = (int64_t)s1->c_str();
-    vals[1] = (int64_t)s2->c_str();
+    vals[0] = reinterpret_cast<int64_t>(s1->c_str());
+    vals[1] = reinterpret_cast<int64_t>(s2->c_str());
 
     int32_t *selected = new int32_t[1];
     bool **bitmap = new bool *[numCols];
@@ -3733,9 +3731,9 @@ TEST(CodeGenTest, CombineHash)
     int64_t v2[1] = {123};
     int64_t v3[1] = {495};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
 
     auto *selected = new int32_t[1];
     bool **bitmap = new bool *[3];
@@ -3826,9 +3824,9 @@ TEST(CodeGenTest, JSONFunc)
     int64_t v2[1] = {234};
     int64_t v3[1] = {345};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    vals[1] = reinterpret_cast<int64_t>(v2);
+    vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];

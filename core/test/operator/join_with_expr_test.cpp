@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 #include "operator/join/hash_builder_expr.h"
 #include "operator/join/lookup_join_expr.h"
-#include "../util/test_util.h"
 #include "vector/vector_helper.h"
 #include "jit_context/jit_context.h"
+#include "../util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -49,15 +49,15 @@ std::vector<omniruntime::expressions::Expr *> CreateProbeHashKeys()
 TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
 {
     // construct input data
-    const int32_t DATA_SIZE = 4;
+    const int32_t dataSize = 4;
     DataTypes buildTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
-    VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
-    buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, DATA_SIZE));
+    VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, dataSize).release();
+    buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, dataSize));
     DataType dataType = buildTypes.Get()[1];
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->SetVector(1, CreateDictionaryVector(dataType, DATA_SIZE, ids, DATA_SIZE, buildData1));
+    buildVecBatch->SetVector(1, CreateDictionaryVector(dataType, dataSize, ids, dataSize, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
     int32_t hashKeysCount = 1;
@@ -76,10 +76,10 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     DataTypes probeTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
-    VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
-    probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, DATA_SIZE));
+    VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, dataSize).release();
+    probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, dataSize));
     DataType probeDataType = probeTypes.Get()[1];
-    probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, DATA_SIZE, ids, DATA_SIZE, probeData1));
+    probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, dataSize, ids, dataSize, probeData1));
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -102,13 +102,13 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
 
     EXPECT_EQ(lookupJoinOutput.size(), 1);
     VectorHelper::PrintVecBatch(lookupJoinOutput[0]);
-    const int32_t EXPECTED_DATA_SIZE = 2;
-    int64_t expectedDatas[4][EXPECTED_DATA_SIZE] = {
+    const int32_t expectedDataSize = 2;
+    int64_t expectedDatas[4][expectedDataSize] = {
             {1, 3},
             {11, 33},
             {2, 4},
             {11, 33}};
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, EXPECTED_DATA_SIZE,
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatches(lookupJoinOutput);
@@ -120,15 +120,15 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
 TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 {
     // construct input data
-    const int32_t DATA_SIZE = 4;
+    const int32_t dataSize = 4;
     DataTypes buildTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
-    VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
-    buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, DATA_SIZE));
+    VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, dataSize).release();
+    buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, dataSize));
     DataType dataType = buildTypes.Get()[1];
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->SetVector(1, CreateDictionaryVector(dataType, DATA_SIZE, ids, DATA_SIZE, buildData1));
+    buildVecBatch->SetVector(1, CreateDictionaryVector(dataType, dataSize, ids, dataSize, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
         LongType()) };
@@ -148,10 +148,10 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     DataTypes probeTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
-    VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, DATA_SIZE).release();
-    probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, DATA_SIZE));
+    VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, dataSize).release();
+    probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, dataSize));
     DataType probeDataType = probeTypes.Get()[1];
-    probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, DATA_SIZE, ids, DATA_SIZE, probeData1));
+    probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, dataSize, ids, dataSize, probeData1));
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -175,13 +175,13 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 
     EXPECT_EQ(lookupJoinOutput.size(), 1);
     VectorHelper::PrintVecBatch(lookupJoinOutput[0]);
-    const int32_t EXPECTED_DATA_SIZE = 2;
-    int64_t expectedDatas[4][EXPECTED_DATA_SIZE] = {
+    const int32_t expectedDataSize = 2;
+    int64_t expectedDatas[4][expectedDataSize] = {
             {1, 3},
             {11, 33},
             {2, 4},
             {11, 33}};
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, EXPECTED_DATA_SIZE,
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatches(lookupJoinOutput);

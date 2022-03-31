@@ -3,7 +3,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../src/memory/simple_arena_allocator.h"
+#include "memory/simple_arena_allocator.h"
 
 using namespace omniruntime::mem;
 

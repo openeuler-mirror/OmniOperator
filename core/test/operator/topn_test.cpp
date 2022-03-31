@@ -7,11 +7,11 @@
 #include <chrono>
 #include "gtest/gtest.h"
 #include "operator/topn/topn.h"
-#include "../util/test_util.h"
 #include "vector/vector_helper.h"
 #include "util/perf_util.h"
-#include "../../libconfig.h"
 #include "jit_context/jit_context.h"
+#include "../util/test_util.h"
+#include "../../libconfig.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;

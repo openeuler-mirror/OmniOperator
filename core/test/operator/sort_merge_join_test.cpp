@@ -5,12 +5,12 @@
 
 #include <vector>
 #include "gtest/gtest.h"
-#include "../../src/vector/vector_helper.h"
+#include "vector/vector_helper.h"
+#include "operator/pages_index.h"
+#include "operator/join/sortmergejoin/dynamic_pages_index.h"
+#include "operator/join/sortmergejoin/sort_merge_join_resultBuilder.h"
+#include "operator/join/sortmergejoin/sort_merge_join.h"
 #include "../util/test_util.h"
-#include "../../src/operator/pages_index.h"
-#include "../../src/operator/join/sortmergejoin/dynamic_pages_index.h"
-#include "../../src/operator/join/sortmergejoin/sort_merge_join_resultBuilder.h"
-#include "../../src/operator/join/sortmergejoin/sort_merge_join.h"
 
 using namespace omniruntime::op;
 using namespace std;
@@ -22,29 +22,29 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
     DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
 
-    // construct data;
-    const int32_t DATA_SIZE1 = 6;
+    // construct data
+    const int32_t dataSize1 = 6;
     // table1
-    int32_t data1[DATA_SIZE1] = {0, 1, 2, 0, 1, 2};
-    double data2[DATA_SIZE1] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int32_t data1[dataSize1] = {0, 1, 2, 0, 1, 2};
+    double data2[dataSize1] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     // table2
-    const int32_t DATA_SIZE2 = 7;
-    int32_t data3[DATA_SIZE2] = {10, 11, 12, 10, 11, 12, 15};
-    double data4[DATA_SIZE2] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1, 11.3};
+    const int32_t dataSize2 = 7;
+    int32_t data3[dataSize2] = {10, 11, 12, 10, 11, 12, 15};
+    double data4[dataSize2] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1, 11.3};
 
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE1, data1, data2);
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, DATA_SIZE2, data3, data4);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1, data2);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data3, data4);
 
     std::vector<VectorBatch *> vector1;
     vector1.push_back(vecBatch1);
     dynamicPagesIndex->AddVecBatches(vector1);
-    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), DATA_SIZE1);
+    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
     std::vector<VectorBatch *> vector2;
     vector2.push_back(vecBatch2);
     dynamicPagesIndex->AddVecBatches(vector2);
-    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), DATA_SIZE1 + DATA_SIZE2);
+    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1 + dataSize2);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
     std::vector<VectorBatch *> vector3;
@@ -52,7 +52,7 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
     vector3.push_back(emptyVectorBatch);
 
     dynamicPagesIndex->AddVecBatches(vector3);
-    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), DATA_SIZE1 + DATA_SIZE2);
+    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1 + dataSize2);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), true);
 
     dynamicPagesIndex->FreeAllRemainingVecBatch();
@@ -67,24 +67,24 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
     DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
 
-    // construct data;
-    const int32_t DATA_SIZE1 = 6;
+    // construct data
+    const int32_t dataSize1 = 6;
     // table1
-    int32_t data1[DATA_SIZE1] = {0, 1, 2, 3, 4, 5};
-    double data2[DATA_SIZE1] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int32_t data1[dataSize1] = {0, 1, 2, 3, 4, 5};
+    double data2[dataSize1] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     // table2
-    const int32_t DATA_SIZE2 = 7;
-    int32_t data3[DATA_SIZE2] = {6, 7, 8, 9, 10, 11, 12};
-    double data4[DATA_SIZE2] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1, 11.3};
+    const int32_t dataSize2 = 7;
+    int32_t data3[dataSize2] = {6, 7, 8, 9, 10, 11, 12};
+    double data4[dataSize2] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1, 11.3};
 
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE1, data1, data2);
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, DATA_SIZE2, data3, data4);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1, data2);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data3, data4);
     vecBatch2->GetVector(0)->SetValueNull(5);
 
     std::vector<VectorBatch *> vector1;
     vector1.push_back(vecBatch1);
     dynamicPagesIndex->AddVecBatches(vector1);
-    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), DATA_SIZE1);
+    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
     // fetch logical row of 6
     int64_t row6ValueAddress = dynamicPagesIndex->GetValueAddresses(5);
@@ -98,7 +98,7 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
     std::vector<VectorBatch *> vector2;
     vector2.push_back(vecBatch2);
     dynamicPagesIndex->AddVecBatches(vector2);
-    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), DATA_SIZE1 + DATA_SIZE2);
+    ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1 + dataSize2);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
     // fetch logical row of 8
@@ -150,7 +150,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
     smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols);
     smjOp->InitScannerAndResultBuilder();
 
-    // construct data;
+    // construct data
     const int32_t streamedTblDataSize = 6;
     int32_t streamedTblDataCol1[streamedTblDataSize] = {0, 1, 2, 3, 4, 5};
     long streamedTblDataCol2[streamedTblDataSize] = {6600, 5500, 4400, 3300, 2200, 1100};

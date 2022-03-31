@@ -3,8 +3,8 @@
  */
 
 #include "gtest/gtest.h"
+#include "operator/hash_util.h"
 #include "../util/test_util.h"
-#include "../../src/operator/hash_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -18,7 +18,7 @@ const int64_t END = 1000000;
 
 const std::string STRING = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-static string getString(int32_t index, int32_t offset, int32_t width)
+static string GetString(int32_t index, int32_t offset, int32_t width)
 {
     std::string str;
     for (int j = 0; j < width; j++) {
@@ -32,7 +32,7 @@ TEST(varcharType, VarcharHashPerf)
 {
     std::vector<string> vec;
     for (int i = 0; i < ROW_SIZE; i++) {
-        string str = getString(i, 10, VAR_LEN);
+        string str = GetString(i, 10, VAR_LEN);
         vec.emplace_back(str);
     }
 
@@ -56,10 +56,10 @@ TEST(varcharType, VarcharHashPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "hashVal: " << hashVal << std::endl;
@@ -74,10 +74,10 @@ TEST(varcharType, VarcharHashPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "hashVal: " << hashVal << std::endl;
@@ -104,10 +104,10 @@ TEST(LongType, LongHashPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "hashVal: " << hashVal << std::endl;
@@ -122,10 +122,10 @@ TEST(LongType, LongHashPerf)
         }
 
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse() * 1000;
-        double cpu_elapsed = timer.getCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-        sum += wall_elapsed;
+        double wallElapsed = timer.getWallElapse() * 1000;
+        double cpuElapsed = timer.getCpuElapse() * 1000;
+        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "hashVal: " << hashVal << std::endl;

@@ -3,7 +3,7 @@
  * @Description: sort operator test implementations
  */
 #include <thread>
-#include <time.h>
+#include <ctime>
 #include <vector>
 #include <iostream>
 #include <chrono>
@@ -19,6 +19,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
 
+namespace SortTest {
 const int32_t VEC_BATCH_COUNT = 10;
 const int32_t DISTINCT_VALUE_COUNT = 4;
 const int32_t REPEAT_COUNT = 250000;
@@ -72,7 +73,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
         std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), VarcharDataType(9) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    int32_t outputCols[vecSize] = {0, 1, 2 ,3};
+    int32_t outputCols[vecSize] = {0, 1, 2, 3};
     int32_t sortCols[vecSize] = {0, 1, 2, 3};
     int32_t ascendings[vecSize] = {true, true, true, true};
     int32_t nullFirsts[vecSize] = {true, true, true, true};
@@ -411,7 +412,7 @@ TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
-        for (uint32_t i = 0; i < threadNum; ++i) {
+        for (uint32_t j = 0; j < threadNum; ++j) {
             std::thread t(TestOrderBy, &threadArgs);
             vecOfThreads.push_back(std::move(t));
         }
@@ -459,7 +460,7 @@ TEST(NativeOmniSortTest, TestSortJITMultiThreads)
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
-        for (uint32_t i = 0; i < threadNum; ++i) {
+        for (uint32_t j = 0; j < threadNum; ++j) {
             std::thread t(TestOrderBy, &threadArgs);
             vecOfThreads.push_back(std::move(t));
         }
@@ -813,8 +814,9 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
     double doubleValue = 20.0;
     Decimal128 decimal128(20, 0);
     std::string stringValue("20");
-    const int32_t DATA_SIZE = 10;
-    void *sortDatas[DATA_SIZE] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128, &stringValue, &stringValue};
+    const int32_t dataSize = 10;
+    void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
+        &stringValue, &stringValue};
     DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
         Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
 
@@ -830,7 +832,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
         nullFirsts[i] = 0;
     }
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
-    auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, DATA_SIZE, 10, vecAllocator, false, false);
+    auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 10, vecAllocator, false, false);
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
@@ -842,7 +844,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
     vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
-    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, DATA_SIZE, 10, vecAllocator, false);
+    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, dataSize, 10, vecAllocator, false);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
@@ -861,8 +863,9 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
     double doubleValue = 20.0;
     Decimal128 decimal128(20, 0);
     std::string stringValue("20");
-    const int32_t DATA_SIZE = 10;
-    void *sortDatas[DATA_SIZE] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128, &stringValue, &stringValue};
+    const int32_t dataSize = 10;
+    void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
+        &stringValue, &stringValue};
     DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
         Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
 
@@ -878,7 +881,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
         nullFirsts[i] = 0;
     }
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
-    auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, DATA_SIZE, 1, vecAllocator, false, true);
+    auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, false, true);
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
@@ -890,7 +893,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
     vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
-    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, DATA_SIZE, 1, vecAllocator, true);
+    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
@@ -909,8 +912,9 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
     double doubleValue = 20.0;
     Decimal128 decimal128(20, 0);
     std::string stringValue("20");
-    const int32_t DATA_SIZE = 10;
-    void *sortDatas[DATA_SIZE] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128, &stringValue, &stringValue};
+    const int32_t dataSize = 10;
+    void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
+        &stringValue, &stringValue};
     DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
         Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
 
@@ -926,7 +930,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
         nullFirsts[i] = 0;
     }
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
-    auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, DATA_SIZE, 1, vecAllocator, true, true);
+    auto sourceVecBatch = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
@@ -938,11 +942,12 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
     vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
-    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, DATA_SIZE, 1, vecAllocator, true);
+    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+}
 }

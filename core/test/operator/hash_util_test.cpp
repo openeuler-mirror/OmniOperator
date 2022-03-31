@@ -3,9 +3,11 @@
  * @Description: lookup join operator test implementations
  */
 #include "gtest/gtest.h"
-#include "../../src/operator/hash_util.h"
+#include "operator/hash_util.h"
 
 using namespace omniruntime::op;
+
+namespace HashUtilTest {
 TEST(HashUtilTest, TestHashValueInt)
 {
     int32_t numbers[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -213,17 +215,17 @@ TEST(HashUtilTest, TestHashValueVarchar)
 {
     // lenth has 3, 4, 5, 8, 11, 20, 32, 36, 72, 180
     std::string values[] = {
-            "abc",
-            "abcd",
-            "abcde",
-            "abcde222",
-            "abcdefgh222",
-            "abcdefghijklmnopqrst",
-            "abcdefghijklmnopqrstuvwxyz123456",
-            "abcdefghijklmnopqrstuvwxyz1234567890",
-            "abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890",
-            "abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890ab"
-"cdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890"
+        "abc",
+        "abcd",
+        "abcde",
+        "abcde222",
+        "abcdefgh222",
+        "abcdefghijklmnopqrst",
+        "abcdefghijklmnopqrstuvwxyz123456",
+        "abcdefghijklmnopqrstuvwxyz1234567890",
+        "abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890",
+        "abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890ab"
+        "cdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890"
     };
     int64_t expectedHashes[] = {
         4952883123889572249,
@@ -241,4 +243,5 @@ TEST(HashUtilTest, TestHashValueVarchar)
         hash = HashUtil::HashValue((int8_t *)(values[i].c_str()), (int32_t)(values[i].length()));
         EXPECT_EQ(hash, expectedHashes[i]);
     }
+}
 }

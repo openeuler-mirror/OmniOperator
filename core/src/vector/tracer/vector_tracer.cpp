@@ -3,11 +3,9 @@
  */
 
 #include "vector_tracer.h"
-
 #include <iostream>
 #include <sstream>
-
-#include "../vector.h"
+#include "vector/vector.h"
 
 namespace omniruntime {
 namespace vec {

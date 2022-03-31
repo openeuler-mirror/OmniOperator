@@ -30,8 +30,8 @@ public:
 
 private:
     const std::string scope;
-    const static int32_t BUCKET_NUM = 1024;
-    const static int32_t RECYCLE_THRESHOLD = 1024;
+    const static int32_t bucketNum = 1024;
+    const static int32_t recycleThreshold = 1024;
     std::unique_ptr<std::atomic<VectorTracer *>[]> buckets;
     std::atomic<int64_t> deletedCount;
     std::atomic<bool> recycling;

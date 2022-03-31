@@ -2,10 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
 
-#include <sstream>
-#include "../util/trace_util.h"
-#include "vector.h"
 #include "vector_allocator.h"
+#include <sstream>
+#include "vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -52,7 +51,7 @@ void VectorAllocator::DeleteVector(Vector *vector)
     if (reference == nullptr) {
         return;
     }
-    if (0 == reference->DecRef()) {
+    if (reference->DecRef() == 0) {
         delete reference;
         vector->SetVectorReference(nullptr);
     }

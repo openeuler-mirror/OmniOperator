@@ -157,7 +157,6 @@ void DictionaryVector::Append(Vector *other, int positionOffset, int length)
     int32_t *destination = GetIds() + positionOffset;
     int32_t *src = otherVector->GetIds() + otherVector->GetPositionOffset();
     errno_t ret = memcpy_s(destination, size * sizeof(int32_t), src, length * sizeof(int32_t));
-
     if (ret != EOK) {
         std::cerr << "append failed in Dictionary vector." << std::endl;
     }
