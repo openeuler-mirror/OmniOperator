@@ -35,6 +35,10 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni filter and project operator test.
@@ -1261,9 +1265,13 @@ public class OmniFilterAndProjectOperatorTest {
         String str = "$operator$LESS_THAN_OR_EQUAL:4(#0, 500:1)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
 
+        final int threadCount = 1000;
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadCount, threadCount, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadCount));
         final int numRows = 1000;
-        for (int i = 0; i < 1000; i++) {
-            Thread thread = new Thread(() -> {
+
+        for (int i = 0; i < threadCount; i++) {
+            CompletableFuture.runAsync(() -> {
                 OmniOperator op = factory.createOperator();
                 VecBatch vecBatch = new VecBatch(createTable(numRows));
                 op.addInput(vecBatch);
@@ -1273,15 +1281,7 @@ public class OmniFilterAndProjectOperatorTest {
 
                 freeVecBatch(res);
                 op.close();
-            });
-            thread.setName("thread" + i);
-            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread thread1, Throwable throwable) {
-                    throwable.printStackTrace();
-                }
-            });
-            thread.start();
+            }, threadPool);
         }
         try {
             // Wait for all to finish
@@ -1296,8 +1296,8 @@ public class OmniFilterAndProjectOperatorTest {
                         + "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1,\"isNull\":false,\"value\":500}}",
                 types, projectionsJSON, 1);
         // test in JSON format
-        for (int i = 0; i < 1000; i++) {
-            Thread thread = new Thread(() -> {
+        for (int i = 0; i < threadCount; i++) {
+            CompletableFuture.runAsync(() -> {
                 OmniOperator opJSON = factoryJSON.createOperator();
                 VecBatch vecBatch = new VecBatch(createTable(numRows));
                 opJSON.addInput(vecBatch);
@@ -1307,16 +1307,9 @@ public class OmniFilterAndProjectOperatorTest {
 
                 freeVecBatch(resJSON);
                 opJSON.close();
-            });
-            thread.setName("thread" + i);
-            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread thread1, Throwable throwable) {
-                    throwable.printStackTrace();
-                }
-            });
-            thread.start();
+            }, threadPool);
         }
+
         try {
             // Wait for all to finish
             Thread.sleep(10000);
