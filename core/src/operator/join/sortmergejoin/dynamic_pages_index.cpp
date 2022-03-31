@@ -7,6 +7,7 @@
 #include "vector/vector_helper.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::op;
 
 // function implements for class PagesIndex
 DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types)

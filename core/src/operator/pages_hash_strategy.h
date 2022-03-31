@@ -14,6 +14,8 @@
 #include "hash_util.h"
 #include "util/operator_util.h"
 
+namespace omniruntime {
+namespace op {
 template <typename V>
 ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, int32_t leftIndex,
     omniruntime::vec::Vector *rightVector, int32_t rightIndex)
@@ -115,5 +117,6 @@ bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIn
 bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition,
     omniruntime::vec::Vector **probeJoinColumns, omniruntime::vec::Vector ***buildHashColumns,
     const int32_t *hashColTypes, int32_t hashColCount);
-
+}
+}
 #endif

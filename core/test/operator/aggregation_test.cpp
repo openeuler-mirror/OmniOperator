@@ -350,7 +350,7 @@ void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input,
     auto nativeOperatorFactory = reinterpret_cast<AggregationOperatorFactory *>(moduleAddr);
     Operator *aggregation;
     if (codegenMode) {
-        aggregation = reinterpret_cast<opt_module>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
+        aggregation = reinterpret_cast<OptModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
     } else {
         aggregation = nativeOperatorFactory->CreateOperator();
     }

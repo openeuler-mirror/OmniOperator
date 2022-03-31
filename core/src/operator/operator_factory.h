@@ -8,6 +8,8 @@
 #include "operator.h"
 #include "jit_context/jit_context.h"
 
+namespace omniruntime {
+namespace op {
 class OperatorFactory {
 public:
     OperatorFactory() {}
@@ -34,6 +36,7 @@ private:
 };
 
 using OptModule = omniruntime::op::Operator *(*)(OperatorFactory *);
-using opt_module = omniruntime::op::Operator *(*)(OperatorFactory *);
+}
+}
 
 #endif // __OMNI_OPERATOR_FACTORY_H__
