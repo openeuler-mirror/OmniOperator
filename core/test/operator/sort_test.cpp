@@ -41,10 +41,9 @@ void BuildSortTestData(VectorBatch **vecBatches, int32_t columnCount)
     uint32_t positionCount = DISTINCT_VALUE_COUNT * REPEAT_COUNT;
 
     for (int32_t i = 0; i < VEC_BATCH_COUNT; i++) {
-        VectorBatch *vecBatch = std::make_unique<VectorBatch>(columnCount).release();
+        VectorBatch *vecBatch = new VectorBatch(columnCount);
         for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
-            LongVector *vector =
-                std::make_unique<LongVector>(VectorAllocatorFactory::GetGlobalAllocator(), positionCount).release();
+            LongVector *vector = new LongVector(VectorAllocatorFactory::GetGlobalAllocator(), positionCount);
             BuildVectorValues(vector);
             vecBatch->SetVector(colIdx, vector);
         }

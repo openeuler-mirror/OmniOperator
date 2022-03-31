@@ -6,6 +6,7 @@
 #include "util/debug.h"
 
 using namespace std;
+using namespace omniruntime::LibConfig;
 
 // filesystem api is not standard in C++14
 namespace fs = llvm::sys::fs;

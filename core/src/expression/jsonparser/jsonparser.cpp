@@ -35,7 +35,7 @@ Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
     } else {
         retType = make_unique<DataType>(typeId);
     }
-    return make_unique<FieldExpr>(colVal, std::move(retType)).release();
+    return new FieldExpr(colVal, std::move(retType));
 }
 
 Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
@@ -50,35 +50,33 @@ Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
     // proceed with non-null value
     if (typeId == OMNI_BOOLEAN) {
         bool boolVal = jsonExpr["value"].get<bool>();
-        return make_unique<LiteralExpr>(boolVal, make_unique<BooleanDataType>()).release();
+        return new LiteralExpr(boolVal, make_unique<BooleanDataType>());
     } else if (typeId == OMNI_INT) {
         auto intVal = jsonExpr["value"].get<int32_t>();
-        return make_unique<LiteralExpr>(intVal, make_unique<IntDataType>()).release();
+        return new LiteralExpr(intVal, make_unique<IntDataType>());
     } else if (typeId == OMNI_DATE32) {
         auto intVal = jsonExpr["value"].get<int32_t>();
-        return make_unique<LiteralExpr>(intVal, make_unique<DataType>(OMNI_DATE32)).release();
+        return new LiteralExpr(intVal, make_unique<DataType>(OMNI_DATE32));
     } else if (typeId == OMNI_LONG) {
         auto longVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<LiteralExpr>(longVal, make_unique<LongDataType>()).release();
+        return new LiteralExpr(longVal, make_unique<LongDataType>());
     } else if (typeId == OMNI_DOUBLE) {
         auto doubleVal = jsonExpr["value"].get<double>();
-        return make_unique<LiteralExpr>(doubleVal, make_unique<DoubleDataType>()).release();
+        return new LiteralExpr(doubleVal, make_unique<DoubleDataType>());
     } else if (typeId == OMNI_DECIMAL64) {
         auto decimalVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<LiteralExpr>(decimalVal,
-            make_unique<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
-            .release();
+        return new LiteralExpr(decimalVal,
+            make_unique<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
     } else if (typeId == OMNI_DECIMAL128) {
-        string *dec128String = make_unique<string>(jsonExpr["value"].get<string>()).release();
-        return make_unique<LiteralExpr>(dec128String,
-            make_unique<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()))
-            .release();
+        string *dec128String = new string(jsonExpr["value"].get<string>());
+        return new LiteralExpr(dec128String,
+            make_unique<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
     } else if (typeId == OMNI_NONE) {
-        return make_unique<LiteralExpr>(0, make_unique<DataType>()).release();
+        return new LiteralExpr(0, make_unique<DataType>());
     } else {
-        string *stringVal = make_unique<string>(jsonExpr["value"].get<string>()).release();
+        string *stringVal = new string(jsonExpr["value"].get<string>());
         int32_t width = jsonExpr["width"].get<int32_t>();
-        return make_unique<LiteralExpr>(stringVal, make_unique<VarcharDataType>(width)).release();
+        return new LiteralExpr(stringVal, make_unique<VarcharDataType>(width));
     }
 }
 
@@ -95,7 +93,7 @@ Expr *JSONParser::ParseJSONBinary(Json jsonExpr)
     }
 
     DataTypePtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
-    return make_unique<BinaryExpr>(op, leftExpr, rightExpr, std::move(dataType)).release();
+    return new BinaryExpr(op, leftExpr, rightExpr, std::move(dataType));
 }
 
 Expr *JSONParser::ParseJSONUnary(Json jsonExpr)
@@ -105,7 +103,7 @@ Expr *JSONParser::ParseJSONUnary(Json jsonExpr)
     if (expr == nullptr) {
         return nullptr;
     }
-    return make_unique<UnaryExpr>(op, expr, make_unique<BooleanDataType>()).release();
+    return new UnaryExpr(op, expr, make_unique<BooleanDataType>());
 }
 
 Expr *JSONParser::ParseJSONIn(Json jsonExpr)
@@ -119,7 +117,7 @@ Expr *JSONParser::ParseJSONIn(Json jsonExpr)
             return nullptr;
         }
     }
-    return make_unique<InExpr>(args).release();
+    return new InExpr(args);
 }
 
 Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
@@ -134,7 +132,7 @@ Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
         return nullptr;
     }
 
-    return make_unique<BetweenExpr>(val, lowBoundExpr, upBoundExpr).release();
+    return new BetweenExpr(val, lowBoundExpr, upBoundExpr);
 }
 
 Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
@@ -166,10 +164,9 @@ Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
     }
     if (TypeUtil::IsStringType(elseExpr->GetReturnTypeId()) && elseExpr->GetType() == ExprType::LITERAL_E &&
         static_cast<LiteralExpr *>(elseExpr)->stringVal->compare("null") == 0) {
-        return make_unique<SwitchExpr>(whenClause, ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId()))
-            .release();
+        return new SwitchExpr(whenClause, ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId()));
     }
-    return make_unique<SwitchExpr>(whenClause, elseExpr).release();
+    return new SwitchExpr(whenClause, elseExpr);
 }
 
 Expr *JSONParser::ParseJSONIf(Json jsonExpr)
@@ -188,11 +185,10 @@ Expr *JSONParser::ParseJSONIf(Json jsonExpr)
     }
     if (TypeUtil::IsStringType(falseExpr->GetReturnTypeId()) && falseExpr->GetType() == ExprType::LITERAL_E &&
         static_cast<LiteralExpr *>(falseExpr)->stringVal->compare("null") == 0) {
-        return make_unique<IfExpr>(cond, trueExpr, ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId()))
-            .release();
+        return new IfExpr(cond, trueExpr, ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId()));
     }
 
-    return make_unique<IfExpr>(cond, trueExpr, falseExpr).release();
+    return new IfExpr(cond, trueExpr, falseExpr);
 }
 
 Expr *JSONParser::ParseJSONCoalesce(Json jsonExpr)
@@ -206,7 +202,7 @@ Expr *JSONParser::ParseJSONCoalesce(Json jsonExpr)
         return nullptr;
     }
 
-    return make_unique<CoalesceExpr>(val1, val2).release();
+    return new CoalesceExpr(val1, val2);
 }
 
 Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
@@ -215,7 +211,7 @@ Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
     if (val == nullptr) {
         return nullptr;
     }
-    return make_unique<IsNullExpr>(val).release();
+    return new IsNullExpr(val);
 }
 
 Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
@@ -271,7 +267,7 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
         retType = make_unique<DataType>(retTypeId);
     }
     if (function != nullptr) {
-        return make_unique<FuncExpr>(funcName, args, std::move(retType), function).release();
+        return new FuncExpr(funcName, args, std::move(retType), function);
     }
 
     // if operator is not supported, return nullptr

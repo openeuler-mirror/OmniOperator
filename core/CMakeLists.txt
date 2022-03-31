@@ -38,6 +38,7 @@ foreach (file ${target_generated})
     endif ()
 endforeach (file)
 
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} ROOT_SRCS)
 # for header searching
 include_directories(SYSTEM src)
 

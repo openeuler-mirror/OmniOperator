@@ -875,9 +875,9 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     if (fExpr.GetReturnTypeId() == omniruntime::type::OMNI_DECIMAL128) {
         Value *precision = llvmTypes->CreateConstantInt(fExpr.GetReturnType().GetPrecision());
         Value *scale = llvmTypes->CreateConstantInt(fExpr.GetReturnType().GetScale());
-        this->value.reset(make_unique<DecimalValue>(phiValue, bitmapValue, precision, scale).release());
+        this->value.reset(new DecimalValue(phiValue, bitmapValue, precision, scale));
     } else {
-        this->value.reset(make_unique<CodeGenValue>(phiValue, bitmapValue, phiLength).release());
+        this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
     }
     return;
 }

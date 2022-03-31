@@ -955,7 +955,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     DataTypes buildTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
-    VectorBatch *buildVecBatch = std::make_unique<VectorBatch>(2, dataSize).release();
+    VectorBatch *buildVecBatch = new VectorBatch(2, dataSize);
     buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, dataSize));
     DataType dataType = buildTypes.Get()[1];
     int32_t ids[] = {0, 1, 2, 3};
@@ -978,7 +978,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     DataTypes probeTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
-    VectorBatch *probeVecBatch = std::make_unique<VectorBatch>(2, dataSize).release();
+    VectorBatch *probeVecBatch = new VectorBatch(2, dataSize);
     probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, dataSize));
     DataType probeDataType = probeTypes.Get()[1];
     probeVecBatch->SetVector(1, CreateDictionaryVector(probeDataType, dataSize, ids, dataSize, probeData1));

@@ -246,15 +246,13 @@ class TestLiteralExpr : public TestExpr {
     LiteralExpr *expr = nullptr;
 
 public:
-    TestLiteralExpr(DataType &dt, int32_t colVal)
-        : expr(make_unique<LiteralExpr>(colVal, make_unique<DataType>(dt)).release())
+    TestLiteralExpr(DataType &dt, int32_t colVal) : expr(new LiteralExpr(colVal, make_unique<DataType>(dt)))
     {
         dataType = &(expr->GetReturnType());
     }
 
     template <typename T>
-    explicit TestLiteralExpr(T val, DataType &dt)
-        : expr(make_unique<LiteralExpr>(val, make_unique<DataType>(dt)).release())
+    explicit TestLiteralExpr(T val, DataType &dt) : expr(new LiteralExpr(val, make_unique<DataType>(dt)))
     {
         dataType = &(expr->GetReturnType());
     }
@@ -297,8 +295,7 @@ class TestFieldExpr : public TestExpr {
     FieldExpr *expr = nullptr;
 
 public:
-    TestFieldExpr(int32_t dt, int32_t colVal)
-        : expr(make_unique<FieldExpr>(colVal, make_unique<DataType>(dt)).release())
+    TestFieldExpr(int32_t dt, int32_t colVal) : expr(new FieldExpr(colVal, make_unique<DataType>(dt)))
     {
         dataType = &(expr->GetReturnType());
     }
@@ -668,7 +665,7 @@ TEST(JSONParserTest, Literal_Varchar)
 {
     string unparsedVarcharJson = GetVarcharTestJson(VARCHAR_VAL, VARCHAR_WIDTH);
     Expr *varcharExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedVarcharJson));
-    TestLiteralExpr expectedExpr(make_unique<string>(VARCHAR_VAL).release(), *VarcharType());
+    TestLiteralExpr expectedExpr(new string(VARCHAR_VAL), *VarcharType());
     expectedExpr.isEqual(varcharExpr);
     delete varcharExpr;
 }
@@ -724,8 +721,8 @@ TEST(JSONParserTest, BinaryExpr_EQ)
     string unparsedBinaryJson = GetBinaryTestJson(OMNI_BOOLEAN, CmpOps.at(Operator::EQ), GetInt32TestJSON(INT32_VAL),
         GetInt64TestJson(INT64_VAL));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
-    TestBinaryExpr expectedExpr(Operator::EQ, make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(INT64_VAL, *LongType()).release(), BooleanType());
+    TestBinaryExpr expectedExpr(Operator::EQ, new TestLiteralExpr(INT32_VAL, *IntType()),
+        new TestLiteralExpr(INT64_VAL, *LongType()), BooleanType());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
@@ -735,8 +732,8 @@ TEST(JSONParserTest, BinaryExpr_ADD)
     string unparsedBinaryJson = GetBinaryTestJson(OMNI_LONG, ArithOps.at(Operator::ADD), GetInt32TestJSON(INT32_VAL),
         GetInt64TestJson(INT64_VAL));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
-    TestBinaryExpr expectedExpr(Operator::ADD, make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(INT64_VAL, *LongType()).release(), LongType());
+    TestBinaryExpr expectedExpr(Operator::ADD, new TestLiteralExpr(INT32_VAL, *IntType()),
+        new TestLiteralExpr(INT64_VAL, *LongType()), LongType());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
@@ -746,9 +743,8 @@ TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL64)
     string unparsedBinaryJson = GetDecimalBinaryTestJson(OMNI_DECIMAL64, ArithOps.at(Operator::ADD),
         GetDec64TestJson((int64_t)65, 6, 2), GetInt64TestJson(INT64_VAL), 10, 3);
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
-    TestBinaryExpr expectedExpr(Operator::ADD,
-        make_unique<TestLiteralExpr>((int64_t)65, *Decimal64Type(6, 2)).release(),
-        make_unique<TestLiteralExpr>(INT64_VAL, *LongType()).release(), Decimal64Type(10, 3));
+    TestBinaryExpr expectedExpr(Operator::ADD, new TestLiteralExpr((int64_t)65, *Decimal64Type(6, 2)),
+        new TestLiteralExpr(INT64_VAL, *LongType()), Decimal64Type(10, 3));
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
@@ -759,9 +755,8 @@ TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL128)
     string unparsedBinaryJson = GetDecimalBinaryTestJson(OMNI_DECIMAL128, ArithOps.at(Operator::DIV),
         GetDec128TestJson("123456", 32, 2), GetInt32TestJSON(INT32_VAL), 35, 4);
     auto divExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
-    TestBinaryExpr expectedExpr(Operator::DIV,
-        make_unique<TestLiteralExpr>(new std::string("123456"), *Decimal128Type(32, 2)).release(),
-        make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(), Decimal128Type(35, 4));
+    TestBinaryExpr expectedExpr(Operator::DIV, new TestLiteralExpr(new std::string("123456"), *Decimal128Type(32, 2)),
+        new TestLiteralExpr(INT32_VAL, *IntType()), Decimal128Type(35, 4));
     expectedExpr.isEqual(divExpr);
     delete divExpr;
 }
@@ -770,7 +765,7 @@ TEST(JSONParserTest, UnaryExpr_NOT)
 {
     string unparsedUnaryJson = GetUnaryTestJson("NOT", GetBoolTestJson(BOOL_VAL));
     Expr *unaryExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedUnaryJson));
-    TestUnaryExpr expectedExpr(Operator::NOT, make_unique<TestLiteralExpr>(BOOL_VAL, *BooleanType()).release());
+    TestUnaryExpr expectedExpr(Operator::NOT, new TestLiteralExpr(BOOL_VAL, *BooleanType()));
     expectedExpr.isEqual(unaryExpr);
     delete unaryExpr;
 }
@@ -780,9 +775,8 @@ TEST(JSONParserTest, BetweenExpr)
     string unparsedBetweenJson =
         GetBetweenTestJson(GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(INT32_VAL));
     Expr *betweenExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBetweenJson));
-    TestBetweenExpr expectedExpr(make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release());
+    TestBetweenExpr expectedExpr(new TestLiteralExpr(INT32_VAL, *IntType()), new TestLiteralExpr(INT32_VAL, *IntType()),
+        new TestLiteralExpr(INT32_VAL, *IntType()));
     expectedExpr.isEqual(betweenExpr);
     delete betweenExpr;
 }
@@ -792,9 +786,8 @@ TEST(JSONParserTest, CoalesceExpr)
     string unparsedCoalesceJson =
         GetCoalesceTestJson(OMNI_VARCHAR, GetVarcharTestJson(VARCHAR_VAL, VARCHAR_WIDTH), GetVarcharTestJson("", 0));
     Expr *coalesceExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedCoalesceJson));
-    TestCoalesceExpr expectedExpr(
-        make_unique<TestLiteralExpr>(make_unique<string>(VARCHAR_VAL).release(), *VarcharType()).release(),
-        make_unique<TestLiteralExpr>(make_unique<string>("").release(), *VarcharType(0)).release());
+    TestCoalesceExpr expectedExpr(new TestLiteralExpr(new string(VARCHAR_VAL), *VarcharType()),
+        new TestLiteralExpr(new string(""), *VarcharType(0)));
     expectedExpr.isEqual(coalesceExpr);
     delete coalesceExpr;
 }
@@ -805,10 +798,8 @@ TEST(JSONParserTest, FuncExpr_substr)
     vector<string> argsJson = { GetVarcharTestJson(VARCHAR_VAL, VARCHAR_WIDTH), GetInt32TestJSON(INT32_VAL) };
     string unparsedFuncJson = GetFuncTestJson(OMNI_VARCHAR, "substr", argsJson);
     Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
-    vector<TestExpr *> args = {
-        make_unique<TestLiteralExpr>(make_unique<string>(VARCHAR_VAL).release(), *VarcharType()).release(),
-        make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release()
-    };
+    vector<TestExpr *> args = { new TestLiteralExpr(new string(VARCHAR_VAL), *VarcharType()),
+        new TestLiteralExpr(INT32_VAL, *IntType()) };
     TestFuncExpr expectedExpr(*VarcharType(), "substr", args);
     expectedExpr.isEqual(funcExpr);
     delete funcExpr;
@@ -819,8 +810,8 @@ TEST(JSONParserTest, InExpr)
     vector<string> argsJson = { GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(0), GetInt32TestJSON(2) };
     string unparsedInJson = GetInTestJson(argsJson);
     Expr *inExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedInJson));
-    vector<TestExpr *> args = { make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(0, *IntType()).release(), make_unique<TestLiteralExpr>(2, *IntType()).release() };
+    vector<TestExpr *> args = { new TestLiteralExpr(INT32_VAL, *IntType()), new TestLiteralExpr(0, *IntType()),
+        new TestLiteralExpr(2, *IntType()) };
     TestInExpr expectedExpr(args);
     expectedExpr.isEqual(inExpr);
     delete inExpr;
@@ -831,11 +822,10 @@ TEST(JSONParserTest, SwitchExpr)
     string whenJson = GetWhenTestJson(OMNI_INT, GetInt64TestJson(INT64_VAL), GetInt32TestJSON(INT32_VAL));
     string unparsedSwitchJson = GetSwitchTestJson(OMNI_INT, GetInt32TestJSON(INT32_VAL), whenJson, GetInt32TestJSON(4));
     Expr *switchExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedSwitchJson));
-    auto condition = new TestBinaryExpr(Operator::EQ, make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(INT64_VAL, *LongType()).release(), BooleanType());
-    vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition,
-        make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release() } };
-    TestSwitchExpr expectedExpr(whenClause, make_unique<TestLiteralExpr>(4, *IntType()).release());
+    auto condition = new TestBinaryExpr(Operator::EQ, new TestLiteralExpr(INT32_VAL, *IntType()),
+        new TestLiteralExpr(INT64_VAL, *LongType()), BooleanType());
+    vector<pair<TestExpr *, TestExpr *>> whenClause = { { condition, new TestLiteralExpr(INT32_VAL, *IntType()) } };
+    TestSwitchExpr expectedExpr(whenClause, new TestLiteralExpr(4, *IntType()));
     expectedExpr.isEqual(switchExpr);
     delete switchExpr;
 }
@@ -846,10 +836,9 @@ TEST(JSONParserTest, IfExpr)
         GetInt64TestJson(INT64_VAL));
     string unparsedIfJson = GetIfTestJson(OMNI_INT, conditionJson, GetInt32TestJSON(INT32_VAL), GetInt32TestJSON(4));
     Expr *ifExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIfJson));
-    auto condition = new TestBinaryExpr(Operator::EQ, make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(INT64_VAL, *LongType()).release(), BooleanType());
-    TestIfExpr expectedExpr(condition, make_unique<TestLiteralExpr>(INT32_VAL, *IntType()).release(),
-        make_unique<TestLiteralExpr>(4, *IntType()).release());
+    auto condition = new TestBinaryExpr(Operator::EQ, new TestLiteralExpr(INT32_VAL, *IntType()),
+        new TestLiteralExpr(INT64_VAL, *LongType()), BooleanType());
+    TestIfExpr expectedExpr(condition, new TestLiteralExpr(INT32_VAL, *IntType()), new TestLiteralExpr(4, *IntType()));
     expectedExpr.isEqual(ifExpr);
     delete ifExpr;
 }

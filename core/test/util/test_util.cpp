@@ -129,7 +129,7 @@ VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, in
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     uint32_t width = type.GetWidth();
-    VarcharVector *vector = std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
+    VarcharVector *vector = new VarcharVector(vecAllocator, length * width, length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
     }
@@ -139,7 +139,7 @@ VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, in
 Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
-    Decimal128Vector *vector = std::make_unique<Decimal128Vector>(vecAllocator, length).release();
+    Decimal128Vector *vector = new Decimal128Vector(vecAllocator, length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, values[i]);
     }
@@ -176,7 +176,7 @@ DictionaryVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, i
     va_start(args, idsCount);
     Vector *dictionary = CreateVector(dataType, rowCount, args);
     va_end(args);
-    auto vec = std::make_unique<DictionaryVector>(dictionary, ids, idsCount).release();
+    auto vec = new DictionaryVector(dictionary, ids, idsCount);
     delete dictionary;
     return vec;
 }
@@ -184,7 +184,7 @@ DictionaryVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, i
 VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
 {
     int32_t typesCount = types.GetSize();
-    VectorBatch *vectorBatch = std::make_unique<VectorBatch>(typesCount).release();
+    auto *vectorBatch = new VectorBatch(typesCount);
     va_list args;
     va_start(args, rowCount);
     for (int32_t i = 0; i < typesCount; i++) {

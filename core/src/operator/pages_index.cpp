@@ -902,7 +902,7 @@ T *ConstructVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vec
     Vector *inputVector = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
-    auto outputVector = std::make_unique<T>(vecAllocator, length).release();
+    auto outputVector = new T(vecAllocator, length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;

@@ -6,24 +6,11 @@
 #define __LIBCONFIG_H__
 
 #include <string>
-const std::string DEFAULT_LIB_PATH = "/opt/lib/"; // ideally should be changed to something similar to ~/omni_home/lib
-const std::string DEFAULT_FILE_PATH = "/etc/";
-const std::string IR_FOLDER = "ir/";
-const std::string IR_SUFFIX = ".ll";
-
-static std::string GetLibPath()
-{
-    auto omniHome = std::getenv("OMNI_HOME");
-    if (omniHome) {
-        return std::string(omniHome) + "/lib/";
-    } else {
-        return DEFAULT_LIB_PATH;
-    }
+namespace omniruntime {
+namespace LibConfig {
+std::string GetLibPath();
+std::string GenerateOperatorTemplatePath(const std::string &operatorName);
 }
-
-static std::string GenerateOperatorTemplatePath(const std::string &operatorName)
-{
-    return GetLibPath() + IR_FOLDER + operatorName + IR_SUFFIX;
 }
 
 #endif

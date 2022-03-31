@@ -25,7 +25,7 @@ set(MY_LINK
         type
         )
 # SHARED mode will compile a so file
-add_library(${OM_TARGET} SHARED ${CMAKE_CURRENT_LIST_DIR})
+add_library(${OM_TARGET} SHARED ${CMAKE_CURRENT_LIST_DIR} ${ROOT_SRCS})
 
 include_directories(/usr/lib/llvm-12/include)
 

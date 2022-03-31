@@ -449,7 +449,7 @@ template <typename T, typename V>
 T *ConstructBuildColumn(VectorAllocator *vecAllocator, const JoinHashTables *hashTables, int32_t outputCol,
     uint64_t *buildIndex, int32_t offset, int32_t length)
 {
-    auto vector = std::make_unique<T>(vecAllocator, length).release();
+    auto vector = new T(vecAllocator, length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t index = 0;

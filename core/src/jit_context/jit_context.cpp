@@ -13,6 +13,7 @@ using std::vector;
 using namespace omniruntime::type;
 using namespace omniruntime::jit;
 using namespace omniruntime::expressions;
+using namespace omniruntime::LibConfig;
 
 namespace {
 constexpr int32_t PARAM_INDEX_0 = 0;

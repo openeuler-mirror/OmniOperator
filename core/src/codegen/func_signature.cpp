@@ -61,7 +61,7 @@ bool FunctionSignature::operator == (const FunctionSignature &other) const
         return false;
     }
 
-    for (auto i = 0; i < this->paramTypes.size(); i++) {
+    for (uint32_t i = 0; i < this->paramTypes.size(); i++) {
         if (this->paramTypes.at(i) != other.paramTypes.at(i)) {
             return false;
         }

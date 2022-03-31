@@ -58,19 +58,19 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount)
 {
-    auto factory = std::make_unique<WindowWithExprOperatorFactory>(sourceTypes, outputCols, outputColsCount,
-        windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
-        sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions,
-        outputDataTypes, argumentKeys, argumentChannelsCount);
-    return factory.release();
+    auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
+        windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
+        sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
+        argumentChannelsCount);
+    return factory;
 }
 
 Operator *WindowWithExprOperatorFactory::CreateOperator()
 {
     auto windowOperator = static_cast<WindowOperator *>(operatorFactory->CreateOperator());
     auto windowWithExprOperator =
-        std::make_unique<WindowWithExprOperator>(*(sourceTypes.get()), argumentChannels, projectFuncs, windowOperator);
-    return windowWithExprOperator.release();
+        new WindowWithExprOperator(*(sourceTypes.get()), argumentChannels, projectFuncs, windowOperator);
+    return windowWithExprOperator;
 }
 
 WindowWithExprOperator::WindowWithExprOperator(const type::DataTypes &sourceTypes,

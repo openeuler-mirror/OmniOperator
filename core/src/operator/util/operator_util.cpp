@@ -74,7 +74,7 @@ T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls
     int64_t *dictVectorAddrs, int32_t rowCount)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
-    T *result = std::make_unique<T>(vecAllocator, rowCount).release();
+    T *result = new T(vecAllocator, rowCount);
     bool isNull = false;
     int32_t length = 0;
     ExecutionContext context;
@@ -98,8 +98,7 @@ VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc func, int6
 {
     VectorAllocator *vectorAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VarcharDataType vecType = static_cast<VarcharDataType &>(type);
-    VarcharVector *result =
-        std::make_unique<VarcharVector>(vectorAllocator, vecType.GetWidth() * rowCount, rowCount).release();
+    VarcharVector *result = new VarcharVector(vectorAllocator, vecType.GetWidth() * rowCount, rowCount);
 
     bool isNull = false;
     int32_t length = 0;
@@ -226,7 +225,7 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const Data
 
     int32_t vecCount = inputVecBatch->GetVectorCount();
     int32_t rowCount = inputVecBatch->GetRowCount();
-    VectorBatch *newInputVecBatch = std::make_unique<VectorBatch>(vecCount + projectFuncsCount, rowCount).release();
+    VectorBatch *newInputVecBatch = new VectorBatch(vecCount + projectFuncsCount, rowCount);
     int64_t valueAddresses[vecCount];
     int64_t valueNulls[vecCount];
     int64_t valueOffsets[vecCount];
@@ -258,7 +257,7 @@ VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, co
 {
     int32_t vecCount = projectCols.size();
     int32_t rowCount = inputVecBatch->GetRowCount();
-    VectorBatch *newInputVecBatch = std::make_unique<VectorBatch>(vecCount, rowCount).release();
+    VectorBatch *newInputVecBatch = new VectorBatch(vecCount, rowCount);
 
     for (int32_t i = 0; i < vecCount; i++) {
         int32_t sourceColId = projectCols[i];

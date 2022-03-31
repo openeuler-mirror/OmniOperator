@@ -28,21 +28,21 @@ PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const DataTyp
 {
     this->sourceTypes = std::make_unique<DataTypes>(sourceTypes);
 
-    this->partitionChannels = std::make_unique<int[]>(partitionChannelsCount).release();
+    this->partitionChannels = new int[partitionChannelsCount];
     for (int i = 0; i < partitionChannelsCount; ++i) {
         this->partitionChannels[i] = partitionChannels[i];
     }
-    this->bucketToPartition = std::make_unique<int[]>(bucketToPartitionCount).release();
+    this->bucketToPartition = new int[bucketToPartitionCount];
     for (int i = 0; i < bucketToPartitionCount; ++i) {
         this->bucketToPartition[i] = bucketToPartition[i];
     }
 
-    this->hashChannelTypes = std::make_unique<int[]>(hashChannelTypesCount).release();
+    this->hashChannelTypes = new int[hashChannelTypesCount];
     for (int i = 0; i < hashChannelTypesCount; ++i) {
         this->hashChannelTypes[i] = hashChannelTypes[i];
     }
 
-    this->hashChannels = std::make_unique<int[]>(hashChannelsCount).release();
+    this->hashChannels = new int[hashChannelsCount];
     for (int i = 0; i < hashChannelsCount; ++i) {
         this->hashChannels[i] = hashChannels[i];
     }
@@ -63,20 +63,19 @@ PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartit
     int32_t *hashChannels, int32_t hashChannelsCount)
 {
     PartitionedOutputOperatorFactory *operatorFactory =
-        std::make_unique<PartitionedOutputOperatorFactory>(sourceTypes, sourceTypeCount, replicatesAnyRow, nullChannel,
+        new PartitionedOutputOperatorFactory(sourceTypes, sourceTypeCount, replicatesAnyRow, nullChannel,
         partitionChannels, partitionChannelsCount, partitionCount, bucketToPartition, bucketToPartitionCount,
-        isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount)
-            .release();
+        isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
     return operatorFactory;
 }
 
 Operator *PartitionedOutputOperatorFactory::CreateOperator()
 {
-    auto partitionedOutputOperator = std::make_unique<PartitionedOutputOperator>(*(this->sourceTypes.get()),
-        sourceTypeCount, replicatesAnyRow, nullChannel, partitionChannels, partitionChannelsCount, partitionCount,
-        bucketToPartition, bucketToPartitionCount, hashPrecomputed, this->hashChannelTypes, hashChannelTypesCount,
-        hashChannels, hashChannelsCount);
-    return partitionedOutputOperator.release();
+    auto partitionedOutputOperator =
+        new PartitionedOutputOperator(*(this->sourceTypes.get()), sourceTypeCount, replicatesAnyRow, nullChannel,
+        partitionChannels, partitionChannelsCount, partitionCount, bucketToPartition, bucketToPartitionCount,
+        hashPrecomputed, this->hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    return partitionedOutputOperator;
 }
 
 PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount,
@@ -270,7 +269,7 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
 
 void PartitionedOutputOperator::BuildVecBatch(int32_t vecCount, int32_t rowCount)
 {
-    VectorBatch *vectorBatch = std::make_unique<VectorBatch>(vecCount, rowCount).release();
+    VectorBatch *vectorBatch = new VectorBatch(vecCount, rowCount);
     vectorBatch->NewVectors(this->vecAllocator, sourceTypes.Get());
     vectorBatches.push_back(vectorBatch);
 }
