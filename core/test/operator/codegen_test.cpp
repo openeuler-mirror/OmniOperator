@@ -12,7 +12,6 @@
 #include "codegen/filter_codegen.h"
 #include "codegen/projection_codegen.h"
 #include "operator/filter/filter_and_project.h"
-#include "codegen/functions/murmur3_hash.h"
 #include "../util/test_util.h"
 
 using omniruntime::op::RowFilter;
@@ -2850,7 +2849,7 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
     absArgs.push_back(col0);
     auto absExpr = GetFuncExpr(absFuncStr, absArgs, Decimal128Type(38, 0));
 
-    std::string compFuncStr = "Decimal128Compare";
+    std::string compFuncStr = "compare";
     std::vector<Expr *> compArgs;
     compArgs.push_back(absExpr);
     compArgs.push_back(col1);
@@ -3415,153 +3414,6 @@ TEST(CodeGenTest, Mm3HashInt)
     delete context;
     delete expr;
     codegen.reset();
-}
-
-TEST(CodeGenTest, Mm3HashLong)
-{
-    std::string funcStr = "mm3hash";
-    DataTypePtr retType = IntType();
-    std::vector<Expr *> args;
-    args.push_back(new FieldExpr(0, LongType()));
-    args.push_back(new LiteralExpr(42, IntType()));
-    auto expr = GetFuncExpr(funcStr, args, IntType());
-
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
-
-    int64_t v1[1] = {-2147483648};
-    auto *vals = new int64_t[1];
-    vals[0] = reinterpret_cast<int64_t>(v1);
-
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[1];
-    bitmap[0][0] = false;
-    auto **offsets = new int32_t *[1];
-    offsets[0] = new int32_t[1];
-    offsets[0][0] = 0;
-
-    RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
-    int32_t *dataLength = new int32_t[1];
-    dataLength[0] = 0;
-    bool isNull = false;
-    int64_t dictionaries[1] = {};
-
-    auto context = new ExecutionContext();
-
-    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
-        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Int64(v1[0], false, 42);
-    EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
-
-    delete[] bitmap[0];
-    delete[] bitmap;
-    delete[] offsets[0];
-    delete[] offsets;
-    delete[] vals;
-    delete[] dataLength;
-    delete context;
-}
-
-TEST(CodeGenTest, Mm3HashDouble)
-{
-    std::string funcStr = "mm3hash";
-    DataTypePtr retType = IntType();
-    std::vector<Expr *> args;
-    args.push_back(new FieldExpr(0, DoubleType()));
-    args.push_back(new LiteralExpr(42, IntType()));
-    auto expr = GetFuncExpr(funcStr, args, IntType());
-
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE) };
-    DataTypes types(vecOfTypes);
-
-    double v1[1] = {123.456};
-    auto *vals = new int64_t[1];
-    vals[0] = reinterpret_cast<int64_t>(v1);
-
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[1];
-    bitmap[0][0] = false;
-    auto **offsets = new int32_t *[1];
-    offsets[0] = new int32_t[1];
-    offsets[0][0] = 0;
-
-    RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
-
-    int32_t *dataLength = new int32_t[1];
-    dataLength[0] = 0;
-    bool isNull = false;
-    int64_t dictionaries[1] = {};
-
-    auto context = new ExecutionContext();
-
-    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
-        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Double(v1[0], false, 42);
-    EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
-
-    delete[] bitmap[0];
-    delete[] bitmap;
-    delete[] offsets[0];
-    delete[] offsets;
-    delete[] vals;
-    delete[] dataLength;
-    delete context;
-}
-
-TEST(CodeGenTest, Mm3HashString)
-{
-    std::string funcStr = "mm3hash";
-    DataTypePtr retType = IntType();
-    std::vector<Expr *> args;
-    args.push_back(new FieldExpr(0, VarcharType()));
-    args.push_back(new LiteralExpr(42, IntType()));
-    auto expr = GetFuncExpr(funcStr, args, IntType());
-
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
-
-    std::string v1 = "hello world";
-    auto *vals = new int64_t[1];
-    vals[0] = reinterpret_cast<int64_t>(v1.c_str());
-
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[1];
-    bitmap[0][0] = false;
-    auto **offsets = new int32_t *[1];
-    offsets[0] = new int32_t[2];
-    offsets[0][0] = 0;
-    offsets[0][1] = v1.size();
-
-    RowProjection codegen(*expr);
-    RowProjFunc func = codegen.Create();
-    EXPECT_EQ(codegen.GetReturnType().GetId(), OMNI_INT);
-
-    int32_t *dataLength = new int32_t[1];
-    dataLength[0] = 0;
-    bool isNull = false;
-    int64_t dictionaries[1] = {};
-
-    auto context = new ExecutionContext();
-
-    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
-        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42);
-    EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
-
-    delete[] bitmap[0];
-    delete[] bitmap;
-    delete[] offsets[0];
-    delete[] offsets;
-    delete[] vals;
-    delete[] dataLength;
-    delete context;
 }
 
 TEST(CodeGenTest, Pmod)

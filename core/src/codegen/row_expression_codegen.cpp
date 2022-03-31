@@ -113,7 +113,7 @@ Function *RowExpressionCodeGen::CreateFunction()
         idx++;
     }
 
-    codeGenUtils->RecordMainFunction(func);
+    codeGenUtils->RecordFunctions(func);
 
     BasicBlock *body = BasicBlock::Create(*context, "FUNC_BODY", func);
     builder->SetInsertPoint(body);
@@ -140,14 +140,10 @@ Function *RowExpressionCodeGen::CreateFunction()
 
 int64_t RowExpressionCodeGen::GetFunction()
 {
-#ifdef DEBUG
-    std::cout << "Row Expression: " << std::endl;
-    ExprPrinter p;
-    expr->Accept(p);
-    std::cout << std::endl;
-#endif
-
-    this->CreateFunction();
+    auto exprFunction = this->CreateFunction();
+    if (exprFunction == nullptr) {
+        return 0;
+    }
 
     OptimizeFunctionsAndModule();
 

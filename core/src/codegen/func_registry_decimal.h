@@ -8,11 +8,11 @@
 #include "func_registry_base.h"
 
 // functions called directly from codegen
-const std::string decimal128CompareStr = "Decimal128Compare";
-const std::string addDec128Str = "Add_decimal128";
-const std::string subDec128Str = "Sub_decimal128";
-const std::string mulDec128Str = "Mul_decimal128";
-const std::string divDec128Str = "Div_decimal128";
+const std::string decimal128CompareStr = "compare";
+const std::string addDec128Str = "add";
+const std::string subDec128Str = "sub";
+const std::string mulDec128Str = "mul";
+const std::string divDec128Str = "div";
 
 namespace omniruntime {
 class DecimalFunctionRegistry : public BaseFunctionRegistry {

@@ -12,9 +12,8 @@
 
 class FunctionSignature {
 public:
-    FunctionSignature();
     FunctionSignature(const std::string name, std::vector<omniruntime::type::DataTypeId> params,
-        const omniruntime::type::DataTypeId &returnType, void *address = nullptr);
+        const omniruntime::type::DataTypeId &returnType);
     FunctionSignature(const FunctionSignature &fs);
     FunctionSignature &operator = (FunctionSignature other);
     bool operator == (const FunctionSignature &other) const;
@@ -22,15 +21,12 @@ public:
     std::string GetName() const;
     const std::vector<omniruntime::type::DataTypeId> &GetParams() const;
     omniruntime::type::DataTypeId GetReturnType() const;
-    void *GetFunctionAddress() const;
     size_t HashCode() const;
     std::string ToString() const;
-
 private:
     std::string funcName;
     std::vector<omniruntime::type::DataTypeId> paramTypes {};
     omniruntime::type::DataTypeId retType;
-    void *funcAddress = nullptr;
 };
 
 #endif

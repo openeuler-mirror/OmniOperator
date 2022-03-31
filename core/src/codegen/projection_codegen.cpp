@@ -101,7 +101,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Argument *outputAddress = funcDecl->getArg(OUTPUT_ADDRESS_INDEX);
     outputAddress->setName("OUTPUT_ADDRESS");
 
-    codeGenUtils->RecordMainFunction(funcDecl);
+    codeGenUtils->RecordFunctions(funcDecl);
 
     // Only use these values if filter enabled
     Argument *selected = nullptr;
@@ -181,7 +181,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             FunctionSignature varcharVectorFuncSignature =
                 FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
             varcharVectorFunc = module->getFunction(
-                omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
+                omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetFunctionName());
             break;
         }
         case OMNI_DECIMAL128:
@@ -191,7 +191,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             outPtrType = llvmTypes->I1PtrType();
             break;
         default:
-            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnType());
+            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnType().GetId());
             break;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
@@ -248,8 +248,6 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         // call wrap_varchar_vector function
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
         auto call = codeGenUtils->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
-        InlineFunctionInfo inlineFunctionInfo;
-        auto inlineFunction = InlineFunction(*call, inlineFunctionInfo);
     } else {
         // x* gep = gep x* outColPtr, i32 counter
         gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
@@ -319,10 +317,14 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type *> args = GetSingleProjectArguments(*context);
     llvm::Function *baseFunc = this->CreateFunction();
+    if (baseFunc == nullptr) {
+        return 0;
+    }
+
     FunctionType *funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
     llvm::Function *funcDecl =
         llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
-    codeGenUtils->RecordMainFunction(funcDecl);
+    codeGenUtils->RecordFunctions(funcDecl);
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);
@@ -362,6 +364,8 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
 #ifdef DEBUG
     module->print(errs(), nullptr);
 #endif
+    jit->getMainJITDylib().addGenerator(
+            eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));

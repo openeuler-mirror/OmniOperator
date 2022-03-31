@@ -2,21 +2,14 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry math function name
  */
-#include "context_helper.h"
-#include "decimalfunctions.h"
+#include "common.h"
+#include "type/decimal128.h"
+#include "type/decimal_operations.h"
 
 using namespace omniruntime::type;
 using namespace std;
-
-namespace omniruntime {
-namespace codegen {
-#ifdef _WIN32
-#define DLLEXPORT __declspec(dllexport)
-#else
-#define DLLEXPORT
-#endif
-
-extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow)
+extern "C" {
+INLINE int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow)
 {
     Decimal128 left(xHigh, xLow);
     Decimal128 right(yHigh, yLow);
@@ -29,7 +22,7 @@ extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int
     }
     return 0;
 }
-extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+INLINE void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
     Decimal128 lValue(xHigh, xLow);
@@ -41,7 +34,7 @@ extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
     *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+INLINE void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
     Decimal128 lValue(xHigh, xLow);
@@ -53,7 +46,7 @@ extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
     *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+INLINE void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
     Decimal128 lValue(xHigh, xLow);
@@ -67,7 +60,7 @@ extern "C" DLLEXPORT void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+INLINE void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
     Decimal128 lValue(xHigh, xLow);
@@ -79,7 +72,7 @@ extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
     *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr)
+INLINE void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128 value(xHigh, xLow);
 
@@ -89,10 +82,9 @@ extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *o
     *outLowPtr = value.LowBits();
 }
 
-extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr)
+INLINE void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     *outHighPtr = 0;
     *outLowPtr = x;
-}
 }
 }

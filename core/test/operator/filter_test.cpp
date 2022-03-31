@@ -193,46 +193,6 @@ TEST(FilterTest, LessThan)
     delete factory;
 }
 
-TEST(FilterTest, LessThanWihtoutParsing)
-{
-    const int32_t numCols = 1;
-    const int32_t numRows = 5000;
-    int32_t *col1 = new int32_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i;
-    }
-
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-
-    const int32_t projectCount = 1;
-    FieldExpr *column = new FieldExpr(0, IntType());
-    FieldExpr *left = new FieldExpr(0, IntType());
-    LiteralExpr *right = new LiteralExpr(2000, IntType());
-    BinaryExpr *LTExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, left, right, BooleanType());
-
-    std::vector<Expr *> projections = { column };
-    OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(LTExpr, inputTypes, numCols, projections, projectCount);
-    omniruntime::op::Operator *op = factory->CreateOperator();
-
-
-    op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_EQ(numReturned, 2000);
-    for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        EXPECT_TRUE(val < 2000);
-    }
-    VectorHelper::FreeVecBatches(ret);
-
-    delete[] col1;
-    delete op;
-    delete factory;
-}
-
 TEST(FilterTest, GreaterThan)
 {
     const int32_t numCols = 2;
@@ -1573,7 +1533,7 @@ TEST(FilterTest, ExternalMathFunc)
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     // filter
-    std::string funcStr = "Increment";
+    std::string funcStr = "increment";
     DataTypePtr retType = IntType();
     auto col0 = new FieldExpr(0, IntType());
     auto add1Int1Expr = GetFuncExpr(funcStr, vector<Expr *> { col0 }, IntType());

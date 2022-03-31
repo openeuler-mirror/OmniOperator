@@ -22,6 +22,7 @@
 *.cbp
 *.lock
 *.log
+*.bc
 
 */dependency-reduced-pom.xml
 */.idea
@@ -46,3 +47,5 @@ core/config.h
 bindings/java/*.log
 omtest
 install_manifest.txt
+
+core/src/codegen/precompiled_bitcode.cpp

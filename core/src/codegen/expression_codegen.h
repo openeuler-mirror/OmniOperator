@@ -42,6 +42,7 @@
 #include "expression/parser/parser.h"
 #include "expression/expr_printer.h"
 #include "util/debug.h"
+#include "precompiled_bitcode.h"
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
 #include "codegen_utils.h"
@@ -56,6 +57,7 @@ public:
     ~ExpressionCodeGen() override;
 
     void Initialize();
+    void LoadPreCompiledIR();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
     llvm::IRBuilder<> &GetIRBuilder();
@@ -81,9 +83,6 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<omniruntime::type::DataTypeId> &params,
-        omniruntime::type::DataTypeId &retTypeId, bool needsContext);
-
     llvm::Value *GetIntToPtr(omniruntime::type::DataTypeId typeId, llvm::Value *elementAddr);
     void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
