@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
@@ -28,6 +28,8 @@ import java.util.Iterator;
 
 /**
  * The type Omni union operator test.
+ *
+ * @since 2021-8-11
  */
 public class OmniUnionOperatorTest {
     /**

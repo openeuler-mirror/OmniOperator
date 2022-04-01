@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.type;
@@ -8,6 +8,11 @@ import static org.testng.AssertJUnit.assertEquals;
 
 import org.testng.annotations.Test;
 
+/**
+ * Data type serializer test
+ *
+ * @since 2022-2-17
+ */
 public class TestDataTypeSerializer {
     @Test
     public void testAllTypes() {

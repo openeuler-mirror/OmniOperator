@@ -1,13 +1,14 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_VARCHAR;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -15,15 +16,10 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * test varchar vec
+ *
+ * @since 2021-7-2
  */
 public class TestVarcharVec {
-    /**
-     * teardown
-     */
-    @AfterClass
-    public void tearDown() {
-    }
-
     /**
      * test new vector
      */
@@ -263,7 +259,6 @@ public class TestVarcharVec {
     @Test
     public void testEmptyString() {
         String[] data = new String[]{"a", "ef", "", "ef", "", ""};
-        int[] offsets = new int[]{0, 1, 3, 3, 5, 5, 5};
         String[] expected = new String[]{"a", "ef", "", "ef", "", ""};
         int size = 6;
         VarcharVec varcharVec = new VarcharVec(1024, size);
@@ -279,6 +274,7 @@ public class TestVarcharVec {
         Assert.assertEquals(result, expected);
 
         VarcharVec vec2 = new VarcharVec(1024, size);
+        int[] offsets = new int[]{0, 1, 3, 3, 5, 5, 5};
         StringBuilder sb = new StringBuilder();
         for (String str : data) {
             sb.append(str);

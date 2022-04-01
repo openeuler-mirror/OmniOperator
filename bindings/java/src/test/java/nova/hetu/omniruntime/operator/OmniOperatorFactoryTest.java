@@ -1,17 +1,26 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni operator factory test.
+ *
+ * @since 2021-6-7
  */
 public class OmniOperatorFactoryTest {
     /**
@@ -37,19 +46,27 @@ public class OmniOperatorFactoryTest {
      * @throws InterruptedException the interrupted exception
      */
     @Test
-    public void testOperatorFactoryCacheMultiThread() throws InterruptedException {
-        List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 10000; i++) {
-            threads.add(new Thread(() -> {
-                MockOperatorFactory factory = new MockOperatorFactory(1);
-                assertEquals(checkFactory.getNativeOperatorFactory(), factory.getNativeOperatorFactory());
-            }));
+    public void testOperatorFactoryCacheMultiThread() {
+        final int threadNum = 10000;
+        CountDownLatch countDownLatch = new CountDownLatch(threadNum);
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
+                threadNum, threadNum, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
+
+        for (int i = 0; i < threadNum; i++) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    MockOperatorFactory factory = new MockOperatorFactory(1);
+                    assertEquals(checkFactory.getNativeOperatorFactory(), factory.getNativeOperatorFactory());
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }, threadPool);
         }
-        for (Thread thread : threads) {
-            thread.start();
-        }
-        for (Thread thread : threads) {
-            thread.join();
+        // This will wait until all future ready.
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException ex) {
+            assertTrue(false);
         }
     }
 
@@ -73,6 +90,8 @@ public class OmniOperatorFactoryTest {
 
         /**
          * The type Mock context.
+         *
+         * @since 2021-7-13
          */
         public static class JitContext implements OmniJitContext {
             private final long context;
@@ -86,20 +105,38 @@ public class OmniOperatorFactoryTest {
                 this.context = context;
             }
 
+            /**
+             * Calculate hash code
+             *
+             * @return hash value
+             */
             @Override
             public int hashCode() {
                 return Objects.hash(context);
             }
 
+            /**
+             * Check equals
+             *
+             * @param that object
+             * @return whether equals
+             */
             @Override
             public boolean equals(Object that) {
                 return context == ((JitContext) that).context;
             }
         }
 
+        /**
+         * Factory Context
+         *
+         * @since 2021-7-13
+         */
         public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
             /**
              * Instantiates a new Context.
+             *
+             * @param jitContext jitContext input
              */
             public FactoryContext(JitContext jitContext) {
                 super(jitContext);

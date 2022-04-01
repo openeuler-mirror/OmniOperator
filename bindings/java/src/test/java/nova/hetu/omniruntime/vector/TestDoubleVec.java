@@ -1,12 +1,13 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_DOUBLE;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
@@ -14,15 +15,10 @@ import java.util.Arrays;
 
 /**
  * test double vec
+ *
+ * @since 2021-7-2
  */
 public class TestDoubleVec {
-    /**
-     * tear down
-     */
-    @AfterClass
-    public void tearDown() {
-    }
-
     /**
      * test new vector
      */

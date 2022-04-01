@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
@@ -9,6 +12,11 @@ import nova.hetu.omniruntime.type.DataType;
 
 import org.testng.annotations.Test;
 
+/**
+ * Container vec test
+ *
+ * @since 2021-7-6
+ */
 public class TestContainerVec {
     @Test
     public void testSlice() {
@@ -90,8 +98,6 @@ public class TestContainerVec {
         LongVec field2 = new LongVec(rows);
         long[] longs = new long[]{1, 2, 3, 4, 5};
         field2.put(longs, 0, 0, rows);
-        ContainerVec originalVec = new ContainerVec(2, rows,
-                new long[]{field1.getNativeVector(), field2.getNativeVector()}, new DataType[]{DOUBLE, LONG});
 
         DoubleVec field11 = new DoubleVec(rows);
         double[] doubles1 = new double[]{6.6, 7.7, 8.8, 9.9, 10.1};
@@ -108,6 +114,8 @@ public class TestContainerVec {
                 new long[]{appendedDouble.getNativeVector(), appendedLong.getNativeVector()},
                 new DataType[]{DOUBLE, LONG});
 
+        ContainerVec originalVec = new ContainerVec(2, rows,
+                new long[]{field1.getNativeVector(), field2.getNativeVector()}, new DataType[]{DOUBLE, LONG});
         appended.append(originalVec, 0, 5);
         appended.append(originalVec1, 5, 5);
 

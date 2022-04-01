@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector.serialize;
 
@@ -35,11 +38,17 @@ import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Vec batch serializer test
+ *
+ * @since 2021-9-14
+ */
 public class VecBatchSerializerTest {
+    private static final int ROW_COUNT = 1024;
+
     @Test
-    public void should_return_right_result_when_serialize_common_types() {
+    public void testSerializeCommonTypes() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         LongVec longVec = new LongVec(ROW_COUNT);
         IntVec intVec = new IntVec(ROW_COUNT);
         VarcharVec varCharVec = new VarcharVec(2 * ROW_COUNT * 20, ROW_COUNT);
@@ -47,7 +56,7 @@ public class VecBatchSerializerTest {
         for (int i = 0; i < ROW_COUNT; i++) {
             longVec.set(i, i);
             intVec.set(i, i);
-            varCharVec.set(i, ("test" + i).getBytes());
+            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
             decimal128Vec.set(i, new long[]{i, i + 1});
         }
         Vec[] vecs = {longVec, intVec, varCharVec, decimal128Vec};
@@ -77,9 +86,8 @@ public class VecBatchSerializerTest {
     }
 
     @Test
-    public void should_return_right_result_when_serialize_directory_vec_contains_long_vec() {
+    public void testSerializeDirectoryVecContainsLongVec() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         LongVec longVec = new LongVec(ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
             longVec.set(i, i);
@@ -106,12 +114,11 @@ public class VecBatchSerializerTest {
     }
 
     @Test
-    public void should_return_right_result_when_serialize_directory_vec_contains_varchar_vec() {
+    public void testSerializeDirectoryVecContainsVarcharVec() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         VarcharVec varCharVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            varCharVec.set(i, ("test" + i).getBytes());
+            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
         DictionaryVec dictionaryVec = new DictionaryVec(varCharVec, new int[]{1, 2, 1000});
         VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
@@ -135,12 +142,11 @@ public class VecBatchSerializerTest {
     }
 
     @Test
-    public void should_return_right_result_when_serialize_nested_directory_vec() {
+    public void testSerializeNestedDirectoryVec() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         VarcharVec varCharVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            varCharVec.set(i, ("test" + i).getBytes());
+            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
         DictionaryVec dictionaryVec = new DictionaryVec(varCharVec, new int[]{1, 2, 3, 4, 5, 6, 7, 1000});
         DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, new int[]{1, 2, 7});
@@ -165,9 +171,8 @@ public class VecBatchSerializerTest {
     }
 
     @Test
-    public void should_return_right_result_when_serialize_container_vec() {
+    public void testSerializeContainerVec() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         LongVec longVec = new LongVec(ROW_COUNT);
         IntVec intVec = new IntVec(ROW_COUNT);
         VarcharVec varCharVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
@@ -175,7 +180,7 @@ public class VecBatchSerializerTest {
         for (int i = 0; i < ROW_COUNT; i++) {
             longVec.set(i, i);
             intVec.set(i, i);
-            varCharVec.set(i, ("test" + i).getBytes());
+            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
             decimal128Vec.set(i, new long[]{i, i + 1});
         }
         long[] vecAddresses = new long[]{longVec.getNativeVector(), intVec.getNativeVector(),
@@ -212,9 +217,8 @@ public class VecBatchSerializerTest {
     }
 
     @Test(enabled = false)
-    public void should_return_right_result_when_serialize_nested_container_vec() {
+    public void testSerializeNestedContainerVec() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         LongVec longVec = new LongVec(ROW_COUNT);
         IntVec intVec = new IntVec(ROW_COUNT);
         VarcharVec varCharVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
@@ -222,7 +226,7 @@ public class VecBatchSerializerTest {
         for (int i = 0; i < ROW_COUNT; i++) {
             longVec.set(i, i);
             intVec.set(i, i);
-            varCharVec.set(i, ("test" + i).getBytes());
+            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
             decimal128Vec.set(i, new long[]{i, i + 1});
         }
         long[] vecAddresses = new long[]{longVec.getNativeVector(), intVec.getNativeVector(),
@@ -288,10 +292,9 @@ public class VecBatchSerializerTest {
     @Test
     public void testSerializeCharVec() {
         // prepare vector batch
-        int ROW_COUNT = 1024;
         VarcharVec charVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            charVec.set(i, ("test" + i).getBytes());
+            charVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
         DictionaryVec dictionaryVec = new DictionaryVec(charVec, new int[]{1, 2, 1000});
         VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
@@ -345,7 +348,7 @@ public class VecBatchSerializerTest {
         VarcharVec vec = new VarcharVec(row * 20, row);
         for (int i = 0; i < row; i++) {
             if (i % 2 == 0) {
-                vec.set(i, ("test" + i).getBytes());
+                vec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
             } else {
                 vec.setNull(i);
             }
@@ -416,7 +419,8 @@ public class VecBatchSerializerTest {
         checkVecBatch.close();
     }
 
-    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
+    @Test(expectedExceptions = IllegalStateException.class,
+            expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
     public void testSerializeInvalidType() {
         int row = 5;
         IntVec invalidType = new IntVec(row);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
@@ -18,6 +18,11 @@ import org.testng.annotations.Test;
 
 import java.util.Iterator;
 
+/**
+ * The type Omni limit operator test.
+ *
+ * @since 2021-11-27
+ */
 public class OmniLimitOperatorTest {
     @Test
     public void testLimitByTwoColum() {

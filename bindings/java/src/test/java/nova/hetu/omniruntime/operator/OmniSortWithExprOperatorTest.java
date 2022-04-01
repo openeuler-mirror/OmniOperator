@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -19,6 +22,11 @@ import org.testng.annotations.Test;
 
 import java.util.Iterator;
 
+/**
+ * The type Omni sort with expression operator test.
+ *
+ * @since 2021-10-16
+ */
 public class OmniSortWithExprOperatorTest {
     /**
      * Test Sort by zero columns which one with expression
@@ -114,7 +122,7 @@ public class OmniSortWithExprOperatorTest {
     public void TestSortByTwoDictionaryWithExpr() {
         DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
-        Vec vecs[] = new Vec[2];
+        Vec[] vecs = new Vec[2];
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7};
         vecs[0] = TestUtils.createDictionaryVec(sourceTypes[0], sourceDatas[0], ids);
         vecs[1] = TestUtils.createDictionaryVec(sourceTypes[1], sourceDatas[1], ids);

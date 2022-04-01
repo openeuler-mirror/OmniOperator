@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
@@ -10,6 +13,8 @@ import java.util.List;
 
 /**
  * test vec batch
+ *
+ * @since 2021-6-23
  */
 public class TestVecBatch {
     /**

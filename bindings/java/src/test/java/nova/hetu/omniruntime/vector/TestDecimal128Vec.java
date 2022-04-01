@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
@@ -11,6 +14,8 @@ import org.testng.annotations.Test;
 
 /**
  * test decimal 128-bit vec
+ *
+ * @since 2021-6-23
  */
 public class TestDecimal128Vec {
     /**
@@ -36,7 +41,7 @@ public class TestDecimal128Vec {
         final int size = 10;
         Decimal128Vec vec1 = new Decimal128Vec(size);
         for (int i = 0; i < size; i++) {
-            long[] value = {1 << i + 1, 3};
+            long[] value = {1 << (i + 1), 3};
             vec1.set(i, value);
         }
         Decimal128Vec slice1 = vec1.slice(3, 5);

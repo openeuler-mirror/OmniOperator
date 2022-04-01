@@ -1,8 +1,13 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
@@ -26,6 +31,8 @@ import java.util.Iterator;
 
 /**
  * The type Omni project operator test.
+ *
+ * @since 2021-7-6
  */
 public class OmniProjectOperatorTest {
     private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols) {
@@ -106,9 +113,6 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void mm3HashAndPmodTest() {
-        String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
-        DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
-        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 3;
         final byte[] byteVal1 = "Wednesday".getBytes(StandardCharsets.UTF_8);
         final byte[] byteVal2 = "Hello World".getBytes(StandardCharsets.UTF_8);
@@ -129,6 +133,9 @@ public class OmniProjectOperatorTest {
         col2.setNull(2);
         col3.setNull(2);
 
+        String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
+        DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         OmniOperator op = factory.createOperator();
         ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
         for (VecBatch vecBatch : vecBatches) {

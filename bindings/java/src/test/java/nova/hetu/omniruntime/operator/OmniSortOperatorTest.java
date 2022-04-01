@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -32,10 +35,16 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni sort operator test.
+ *
+ * @since 2021-5-10
  */
 public class OmniSortOperatorTest {
     /**
@@ -90,7 +99,7 @@ public class OmniSortOperatorTest {
     public void testSortTwoColumnsWithDict() {
         DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
-        Vec vecs[] = new Vec[2];
+        Vec[] vecs = new Vec[2];
         vecs[0] = TestUtils.createIntVec(sourceDatas[0]);
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7};
         vecs[1] = TestUtils.createDictionaryVec(sourceTypes[1], sourceDatas[1], ids);
@@ -366,7 +375,6 @@ public class OmniSortOperatorTest {
         }
         Iterator<VecBatch> iterator = sortOperator.getOutput();
         long elapsed = System.currentTimeMillis() - start;
-        System.out.println("testOrderByPerformance elapsed time : " + elapsed + "ms");
 
         while (iterator.hasNext()) {
             VecBatch result = iterator.next();
@@ -391,8 +399,6 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortMultiThreadsPerformance() {
-        ImmutableList<VecBatch> vecs = buildVecs();
-
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};
@@ -401,10 +407,13 @@ public class OmniSortOperatorTest {
         OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
                 ascendings, nullFirsts);
 
-        int threadNum = 4;
+        final int threadNum = 4;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
+                threadNum, threadNum, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
+        ImmutableList<VecBatch> vecs = buildVecs();
         for (int i = 0; i < threadNum; i++) {
-            Thread thread = new Thread(() -> {
+            CompletableFuture.runAsync(() -> {
                 try {
                     OmniOperator sortOperator = sortOperatorFactory.createOperator();
                     for (VecBatch vec : vecs) {
@@ -419,23 +428,17 @@ public class OmniSortOperatorTest {
                 } finally {
                     countDownLatch.countDown();
                 }
-            });
-            thread.setName("thread" + i);
-            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread thread1, Throwable throwable) {
-                    assertTrue(false);
-                }
-            });
-            thread.start();
+            }, threadPool);
         }
+
+        vecs.forEach(TestUtils::freeVecBatch);
+        sortOperatorFactory.close();
+        // This will wait until all future ready.
         try {
             countDownLatch.await();
         } catch (InterruptedException e) {
             assertTrue(false);
         }
-        vecs.forEach(TestUtils::freeVecBatch);
-        sortOperatorFactory.close();
     }
 
     private ImmutableList<VecBatch> buildVecs() {

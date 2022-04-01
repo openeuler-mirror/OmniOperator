@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.operator;
 
@@ -34,6 +37,8 @@ import java.util.Optional;
 
 /**
  * The type Omni hash join operators test.
+ *
+ * @since 2021-6-2
  */
 public class OmniHashJoinOperatorsTest {
     /**

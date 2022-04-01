@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ */
 
 package nova.hetu.omniruntime.vector;
 
@@ -5,22 +8,16 @@ import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_INT;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
 
 /**
  * test int vec
+ *
+ * @since 2021-7-2
  */
 public class TestIntVec {
-    /**
-     * tear down
-     */
-    @AfterClass
-    public void tearDown() {
-    }
-
     /**
      * test new vector
      */
