@@ -662,7 +662,6 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19);
 
-    VectorHelper::PrintVecBatch(outputVecBatches[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);

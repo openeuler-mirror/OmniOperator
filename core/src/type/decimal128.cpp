@@ -461,7 +461,6 @@ Decimal128 &Decimal128::Rescale(int32_t delta)
             }
             return *this;
         }
-        // TODO: may data overflow
         *this *= SCALE_MULTIPLIERS[multiplierIndex];
         return *this;
     }

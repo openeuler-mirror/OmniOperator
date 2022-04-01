@@ -171,8 +171,8 @@ public:
     friend void to_json(nlohmann::json &nlohmannJson, const DataType &dataType)
     {
         nlohmannJson = nlohmann::json {
-            { ID, dataType.id },       { WIDTH, dataType.width },        { PRECISION, dataType.precision },
-            { SCALE, dataType.scale }, { DATE_UNIT, dataType.dateUnit }, { TIME_UNIT, dataType.timeUnit }
+                {ID,    dataType.id }, {WIDTH, dataType.width }, {PRECISION, dataType.precision },
+                {SCALE, dataType.scale }, {DATE_UNIT, dataType.dateUnit }, {TIME_UNIT, dataType.timeUnit }
         };
     }
 
@@ -305,16 +305,6 @@ public:
 
     ~Decimal64DataType() override {}
 
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
-
     const static Decimal64DataType &Instance()
     {
         static Decimal64DataType type(19, 0);
@@ -331,16 +321,6 @@ public:
     }
 
     ~Decimal128DataType() override {}
-
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
 
     const static Decimal128DataType &Instance()
     {

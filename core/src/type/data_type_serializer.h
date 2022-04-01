@@ -16,7 +16,7 @@ std::string SerializeSingle(const DataType &type);
 
 DataTypes Deserialize(const std::string &dataTypes);
 
-DataType DeserializeSingle(const std::string &dataTypeExt);
+DataType DeserializeSingle(const std::string &dataType);
 }
 }
 

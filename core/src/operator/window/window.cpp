@@ -46,16 +46,19 @@ OmniStatus WindowOperatorFactory::Init()
 
 WindowOperatorFactory::~WindowOperatorFactory() = default;
 
-WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const DataTypes &sourceTypes,
-    int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount,
-    int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
-    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-    int32_t expectedPositions, const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount)
+WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const DataTypes &sourceTypesField,
+    int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
+    int32_t windowFunctionCountField, int32_t *partitionColsField, int32_t partitionCountField,
+    int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
+    int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField,
+    int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const DataTypes &allTypesField,
+    int32_t *argumentChannelsField, int32_t argumentChannelsCountField)
 {
     auto operatorFactory =
-        new WindowOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
-        partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts,
-        sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, argumentChannelsCount);
+        new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField, windowFunctionTypesField,
+        windowFunctionCountField, partitionColsField, partitionCountField, preGroupedColsField, preGroupedCountField,
+        sortColsField, sortAscendingsField, sortNullFirstsField, sortColCountField, preSortedChannelPrefixField,
+        expectedPositionsField, allTypesField, argumentChannelsField, argumentChannelsCountField);
     operatorFactory->Init();
     return operatorFactory;
 }
@@ -231,41 +234,43 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     }
 }
 
-void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypes, VectorBatch *&vecBatch,
-    const int32_t &rowCount, const int32_t outputColsCount, const int finalOutputColsCount) const
+void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField,
+    const int32_t &rowCountField, const int32_t outputColsCountField,
+    const int finalOutputColsCountField) const
 {
-    for (int colIndex = outputColsCount; colIndex < finalOutputColsCount; ++colIndex) {
-        auto type = outputTypes[colIndex];
+    for (int colIndex = outputColsCountField; colIndex < finalOutputColsCountField; ++colIndex) {
+        auto type = outputTypesField[colIndex];
         switch (type.GetId()) {
             case OMNI_BOOLEAN:
-                vecBatch->SetVector(colIndex, new BooleanVector(vecAllocator, rowCount));
+                vecBatchField->SetVector(colIndex, new BooleanVector(vecAllocator, rowCountField));
                 break;
             case OMNI_INT:
             case OMNI_DATE32: {
-                vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
+                vecBatchField->SetVector(colIndex, new IntVector(vecAllocator, rowCountField));
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                vecBatch->SetVector(colIndex, new LongVector(vecAllocator, rowCount));
+                vecBatchField->SetVector(colIndex, new LongVector(vecAllocator, rowCountField));
                 break;
             }
             case OMNI_DOUBLE: {
-                vecBatch->SetVector(colIndex, new DoubleVector(vecAllocator, rowCount));
+                vecBatchField->SetVector(colIndex, new DoubleVector(vecAllocator, rowCountField));
                 break;
             }
             case OMNI_SHORT: {
-                vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
+                vecBatchField->SetVector(colIndex, new IntVector(vecAllocator, rowCountField));
                 break;
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 int32_t width = (static_cast<const VarcharDataType *>(&type))->GetWidth();
-                vecBatch->SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * width, rowCount));
+                vecBatchField->SetVector(colIndex,
+                    new VarcharVector(vecAllocator, rowCountField * width, rowCountField));
                 break;
             }
             case OMNI_DECIMAL128: {
-                vecBatch->SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCount));
+                vecBatchField->SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCountField));
                 break;
             }
             default: {

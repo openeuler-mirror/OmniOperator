@@ -70,7 +70,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
 
 
 template <typename T, typename V>
-T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,
+static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,
     int64_t *dictVectorAddrs, int32_t rowCount)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -93,7 +93,7 @@ T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls
     return result;
 }
 
-VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc func, int64_t *valuesAddresses,
+static VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc func, int64_t *valuesAddresses,
     int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount)
 {
     VectorAllocator *vectorAllocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -158,7 +158,6 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
                     projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_DECIMAL128:
-                // TODO: codegen does not support decimal128 current.
                 break;
             default:
                 break;
@@ -206,7 +205,6 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
                     valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_DECIMAL128:
-                // TODO: codegen does not support decimal128 current.
                 break;
             default:
                 break;

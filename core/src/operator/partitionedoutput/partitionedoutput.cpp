@@ -26,12 +26,18 @@ PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const DataTyp
       hashChannelTypesCount(hashChannelTypesCount),
       hashChannelsCount(hashChannelsCount)
 {
+    if (partitionChannelsCount <= 0 || bucketToPartitionCount <= 0 ||
+        hashChannelTypesCount <= 0 || hashChannelsCount <= 0) {
+        throw std::exception();
+    }
+
     this->sourceTypes = std::make_unique<DataTypes>(sourceTypes);
 
     this->partitionChannels = new int[partitionChannelsCount];
     for (int i = 0; i < partitionChannelsCount; ++i) {
         this->partitionChannels[i] = partitionChannels[i];
     }
+
     this->bucketToPartition = new int[bucketToPartitionCount];
     for (int i = 0; i < bucketToPartitionCount; ++i) {
         this->bucketToPartition[i] = bucketToPartition[i];
@@ -57,15 +63,17 @@ PartitionedOutputOperatorFactory::~PartitionedOutputOperatorFactory()
 }
 
 PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
-    const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel,
-    int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition,
-    int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes, int32_t hashChannelTypesCount,
-    int32_t *hashChannels, int32_t hashChannelsCount)
+    const DataTypes &sourceTypesField, int32_t sourceTypeCountField, bool replicatesAnyRowField,
+    int32_t nullChannelField, int32_t *partitionChannelsField, int32_t partitionChannelsCountField,
+    int32_t partitionCountField, int32_t *bucketToPartitionField, int32_t bucketToPartitionCountField,
+    bool hashPrecomputed, int32_t *hashChannelTypesField, int32_t hashChannelTypesCountField,
+    int32_t *hashChannelsField, int32_t hashChannelsCountField)
 {
     PartitionedOutputOperatorFactory *operatorFactory =
-        new PartitionedOutputOperatorFactory(sourceTypes, sourceTypeCount, replicatesAnyRow, nullChannel,
-        partitionChannels, partitionChannelsCount, partitionCount, bucketToPartition, bucketToPartitionCount,
-        isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+        new PartitionedOutputOperatorFactory(sourceTypesField, sourceTypeCountField, replicatesAnyRowField,
+        nullChannelField, partitionChannelsField, partitionChannelsCountField, partitionCountField,
+        bucketToPartitionField, bucketToPartitionCountField, hashPrecomputed, hashChannelTypesField,
+        hashChannelTypesCountField, hashChannelsField, hashChannelsCountField);
     return operatorFactory;
 }
 
@@ -199,7 +207,7 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
     return OMNI_STATUS_FINISHED;
 }
 
-long GetHash(int32_t rowIndex, int type, Vector *vector)
+long GetHash(int32_t rowIndex, Vector *vector)
 {
     switch (vector->GetTypeId()) {
         case OMNI_INT:
@@ -222,9 +230,9 @@ long GetHash(int32_t rowIndex, int type, Vector *vector)
             long result = 1;
             ContainerVector *containerVec = static_cast<ContainerVector *>(vector);
             auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->GetValue(0));
-            result = HashUtil::CombineHash(result, GetHash(rowIndex, avgValVector->GetTypeId(), avgValVector));
+            result = HashUtil::CombineHash(result, GetHash(rowIndex, avgValVector));
             auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->GetValue(1));
-            result = HashUtil::CombineHash(result, GetHash(rowIndex, avgCountVector->GetTypeId(), avgCountVector));
+            result = HashUtil::CombineHash(result, GetHash(rowIndex, avgCountVector));
             return result;
         }
         case OMNI_VARCHAR:
@@ -253,7 +261,7 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
             long hash = 0;
             vector = VectorHelper::ExpandVectorAndIndex(vector, tmpRowIndex, originalTmpRowIndex);
             if (!vector->IsValueNull(originalTmpRowIndex)) {
-                hash = GetHash(originalTmpRowIndex, type, vector);
+                hash = GetHash(originalTmpRowIndex, vector);
             }
             rowHash = HashUtil::CombineHash(rowHash, hash);
         }
