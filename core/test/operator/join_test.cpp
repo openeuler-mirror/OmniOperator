@@ -1677,8 +1677,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
         joinColumns[i] = i;
     }
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("join");
-    auto buildVecBatch = CreateBuildInputForAllTypes(joinTypes, joinDatas, DATA_SIZE, vecAllocator, false);
-    auto probeVecBatch = CreateProbeInputForAllTypes(joinTypes, joinDatas, DATA_SIZE, vecAllocator, false);
+    auto buildVecBatch = CreateBuildInputForAllTypes(joinTypes, joinDatas, dataSize, vecAllocator, false);
+    auto probeVecBatch = CreateProbeInputForAllTypes(joinTypes, joinDatas, dataSize, vecAllocator, false);
     auto expectVecBatch = CreateExpectVecBatchForAllTypes(probeVecBatch, buildVecBatch);
 
     int32_t operatorCount = 1;
@@ -1735,8 +1735,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
         joinColumns[i] = i;
     }
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("join");
-    auto buildVecBatch = CreateBuildInputForAllTypes(joinTypes, joinDatas, DATA_SIZE, vecAllocator, true);
-    auto probeVecBatch = CreateProbeInputForAllTypes(joinTypes, joinDatas, DATA_SIZE, vecAllocator, true);
+    auto buildVecBatch = CreateBuildInputForAllTypes(joinTypes, joinDatas, dataSize, vecAllocator, true);
+    auto probeVecBatch = CreateProbeInputForAllTypes(joinTypes, joinDatas, dataSize, vecAllocator, true);
     auto expectVecBatch = CreateExpectVecBatchForAllTypes(probeVecBatch, buildVecBatch);
 
     int32_t operatorCount = 1;

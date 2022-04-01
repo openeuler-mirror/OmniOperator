@@ -114,7 +114,7 @@ public:
 
     void SetExecutionContextAllocator(BaseAllocator *allocator)
     {
-        executionContext->getArena()->SetAllocator(allocator);
+        executionContext->GetArena()->SetAllocator(allocator);
     }
 
 public:

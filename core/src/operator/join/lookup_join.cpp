@@ -80,7 +80,7 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
     this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeTypes.GetIds(), probeOutputCols.data(),
         probeOutputCols.size(), buildOutputCols.data(), buildOutputTypes, outputRowSize);
     this->executionContext = new ExecutionContext();
-    this->executionContext->getArena()->SetAllocator(vecAllocator);
+    this->executionContext->GetArena()->SetAllocator(vecAllocator);
 }
 
 LookupJoinOperator::~LookupJoinOperator()
