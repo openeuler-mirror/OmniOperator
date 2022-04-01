@@ -1,14 +1,14 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector.serialize;
 
 import static nova.hetu.omniruntime.type.CharDataType.CHAR;
-import static nova.hetu.omniruntime.type.DataType.INVALID;
 import static nova.hetu.omniruntime.type.Date32DataType.DATE32;
 import static nova.hetu.omniruntime.type.Date64DataType.DATE64;
 import static nova.hetu.omniruntime.type.Decimal64DataType.DECIMAL64;
+import static nova.hetu.omniruntime.type.InvalidDataType.INVALID;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;

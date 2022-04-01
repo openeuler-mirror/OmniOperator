@@ -5,6 +5,8 @@
 package nova.hetu.omniruntime.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -14,17 +16,9 @@ import java.util.Objects;
  *
  * @since 2021-08-05
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "id")
+@JsonTypeIdResolver(DataTypeSerializer.DataTypeResolver.class)
 public class DataType implements Serializable {
-    /**
-     * It is a none data type.
-     */
-    public static final DataType NONE = new DataType(DataTypeId.OMNI_NONE);
-
-    /**
-     * It is a invalid data type.
-     */
-    public static final DataType INVALID = new DataType(DataTypeId.OMNI_INVALID);
-
     private static final long serialVersionUID = 2589766491688675794L;
 
     @JsonProperty

@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.NoneDataType;
 
 /**
  * Lazy vector.
@@ -22,7 +22,7 @@ public class LazyVec extends FixedWidthVec {
      * @param loader the loader of lazy vector
      */
     public LazyVec(VecAllocator allocator, int size, LazyVecLoader loader) {
-        super(allocator, 0, size, VecEncoding.OMNI_VEC_ENCODING_LAZY, DataType.NONE);
+        super(allocator, 0, size, VecEncoding.OMNI_VEC_ENCODING_LAZY, NoneDataType.NONE);
         this.loader = loader;
         setLazyLoaderNative(getNativeVector(), loader);
     }
