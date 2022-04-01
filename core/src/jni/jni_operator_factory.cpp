@@ -42,7 +42,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     auto start = START();
     VectorAllocator *vectorAllocator = (VectorAllocator *)jNativeVecAllocatorObj;
     OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
-    JitContext *jitContext = operatorFactory->GetJitContext();
+    auto jitContext = operatorFactory->GetJitContext();
     omniruntime::op::Operator *nativeOperator = nullptr;
 
 #if defined(DEBUG_OPERATOR)
@@ -53,7 +53,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
         nativeOperator = operatorFactory->CreateOperator();
         JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
     } else {
-        opt_module opModule = (opt_module)(jitContext->func);
+        auto opModule = reinterpret_cast<omniruntime::op::OptModule>(jitContext->func);
         nativeOperator = opModule(operatorFactory);
         JNI_DEBUG_LOG("JIT create omni operator finished, elapsed time: %ld ms.", END(start));
     }
@@ -74,7 +74,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                      */
+ *                                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -107,7 +107,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                      */
+ *                                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -171,7 +171,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                      */
+ *                                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
@@ -196,7 +196,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
 /**
  * Return an AggregationFactory object address.
- *                                                                       */
+ *                                                                        */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,

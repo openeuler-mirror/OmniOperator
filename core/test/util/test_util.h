@@ -32,8 +32,8 @@ void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *ex
 void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::string *expectedValues);
 
 
-omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory);
-void DeleteOperatorFactory(OperatorFactory *operatorFactory);
+omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
+void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory);
 omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input);
 
 class Timer {

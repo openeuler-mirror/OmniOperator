@@ -211,6 +211,7 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
 
     int rowCount = this->projectedVecs->GetRowCount();
     data.push_back(this->projectedVecs);
+    this->projectedVecs = nullptr;
 
     return rowCount;
 }

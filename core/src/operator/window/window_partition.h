@@ -6,9 +6,9 @@
 #define __WINDOW_PARTITION_H__
 
 #include <vector>
-#include "../pages_index.h"
+#include "operator/pages_index.h"
 #include "window_function.h"
-#include "../pages_hash_strategy.h"
+#include "operator/pages_hash_strategy.h"
 
 class Range {
 public:
@@ -37,9 +37,10 @@ private:
 
 class WindowPartition {
 public:
-    WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd, int32_t *outputChannels,
-        int32_t outputChannelsCount, std::vector<std::unique_ptr<WindowFunction>> &windowFunctions,
-        PagesHashStrategy *peerGroupHashStrategy);
+    WindowPartition(omniruntime::op::PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd,
+        int32_t *outputChannels, int32_t outputChannelsCount,
+        std::vector<std::unique_ptr<WindowFunction>> &windowFunctions,
+        omniruntime::op::PagesHashStrategy *peerGroupHashStrategy);
 
     ~WindowPartition();
 
@@ -53,7 +54,7 @@ public:
         return currentPosition < partitionEnd;
     }
 
-    void ProcessNextRow(VectorBatch *vecBatch, int32_t index);
+    void ProcessNextRow(omniruntime::vec::VectorBatch *vecBatch, int32_t index);
 
     void UpdatePeerGroup();
 
@@ -63,12 +64,12 @@ public:
     }
 
 private:
-    PagesIndex *pagesIndex;
+    omniruntime::op::PagesIndex *pagesIndex;
     int32_t partitionStart;
     int32_t partitionEnd;
     int32_t *outputChannels;
     int32_t outputChannelsCount;
-    PagesHashStrategy *peerGroupHashStrategy;
+    omniruntime::op::PagesHashStrategy *peerGroupHashStrategy;
     int32_t currentPosition;
     int32_t peerGroupStart;
     int32_t peerGroupEnd;
@@ -76,7 +77,7 @@ private:
     std::unique_ptr<WindowIndex> windowIndex;
 };
 
-bool PositionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partitionHashStrategy, int32_t leftPosition,
-    int32_t rightPosition);
+bool PositionEqualsPosition(omniruntime::op::PagesIndex *pagesIndex,
+    omniruntime::op::PagesHashStrategy *partitionHashStrategy, int32_t leftPosition, int32_t rightPosition);
 
 #endif

@@ -6,6 +6,7 @@
 #include "window_function.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::op;
 using namespace std;
 
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)

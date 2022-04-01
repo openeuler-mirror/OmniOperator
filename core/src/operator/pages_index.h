@@ -15,6 +15,8 @@
 #include "vector/vector_helper.h"
 #include "util/operator_util.h"
 
+namespace omniruntime {
+namespace op {
 class PagesIndex {
 public:
     explicit PagesIndex(const omniruntime::type::DataTypes &types);
@@ -105,5 +107,7 @@ static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t
         }
     }
     return compare;
+}
+}
 }
 #endif

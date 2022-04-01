@@ -384,25 +384,25 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
     va_end(args);
 }
 
-omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory)
+omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory)
 {
     omniruntime::op::Operator *nativeOperator = nullptr;
 
 #if defined(DEBUG_OPERATOR)
     nativeOperator = operatorFactory->CreateOperator();
 #else
-    JitContext *jitContext = operatorFactory->GetJitContext();
+    auto jitContext = operatorFactory->GetJitContext();
     if (jitContext == nullptr) {
         nativeOperator = operatorFactory->CreateOperator();
     } else {
-        opt_module operatorModule = (opt_module)(jitContext->func);
-        nativeOperator = operatorModule(operatorFactory);
+        auto optModule = reinterpret_cast<omniruntime::op::OptModule>(jitContext->func);
+        nativeOperator = optModule(operatorFactory);
     }
 #endif
     return nativeOperator;
 }
 
-void DeleteOperatorFactory(OperatorFactory *operatorFactory)
+void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
 {
     if (operatorFactory->GetJitContext() != nullptr) {
         delete operatorFactory->GetJitContext();

@@ -3,7 +3,6 @@
  * @Description: hash table implementations
  */
 #include "join_hash_table.h"
-#include "operator/pages_hash_strategy.h"
 #include "operator/optimization.h"
 #include "jit/annotation.h"
 
@@ -14,7 +13,7 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
-const int32_t BLOCK_SIZE = 1024;
+static constexpr int32_t BLOCK_SIZE = 1024;
 
 uint32_t NumberOfTrailingZeros(uint32_t value)
 {
@@ -538,8 +537,8 @@ bool PagesHash::PositionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t 
     int32_t rightTableIndex = DecodeSliceIndex(rightAddress);
     int32_t rightRowIndex = DecodePosition(rightAddress);
 
-    return ::PositionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex, rightRowIndex,
-        pagesHashStrategy->GetBuildHashColumns(), pagesHashStrategy->GetBuildHashColTypes(),
+    return omniruntime::op::PositionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex,
+        rightRowIndex, pagesHashStrategy->GetBuildHashColumns(), pagesHashStrategy->GetBuildHashColTypes(),
         pagesHashStrategy->GetBuildHashColsCount());
 }
 
@@ -554,7 +553,7 @@ bool PagesHash::PositionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_
     int32_t vecBatchIndex = DecodeSliceIndex(address);
     int32_t rowIndex = DecodePosition(address);
 
-    return ::PositionEqualsRowIgnoreNulls(vecBatchIndex, rowIndex, probePosition, joinColumns,
+    return omniruntime::op::PositionEqualsRowIgnoreNulls(vecBatchIndex, rowIndex, probePosition, joinColumns,
         pagesHashStrategy->GetBuildHashColumns(), pagesHashStrategy->GetBuildHashColTypes(),
         pagesHashStrategy->GetBuildHashColsCount());
 }

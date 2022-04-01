@@ -49,43 +49,43 @@ public:
 
     const std::vector<int> *ToInt32Vec()
     {
-        ASSERT(size >= 0 && type == INT32 && vector);
+        ASSERT(size >= 0 && type == ParamType::INT32 && vector);
         return static_cast<const std::vector<int> *>(value);
     }
 
     const int *ToInt32Array()
     {
-        ASSERT(size >= 0 && type == INT32);
+        ASSERT(size >= 0 && type == ParamType::INT32);
         return static_cast<const int *>(value);
     };
 
     const int ToInt32() const
     {
-        ASSERT(size == -1 && type == INT32);
+        ASSERT(size == -1 && type == ParamType::INT32);
         return *static_cast<const int *>(value);
     };
 
     const long *ToInt64Array() const
     {
-        ASSERT(size >= 0 && type == INT64);
+        ASSERT(size >= 0 && type == ParamType::INT64);
         return static_cast<const long *>(value);
     };
 
     long ToInt64() const
     {
-        ASSERT(size == -1 && type == INT64);
+        ASSERT(size == -1 && type == ParamType::INT64);
         return *(static_cast<const long *>(value));
     };
 
     const double *ToFp64Array() const
     {
-        ASSERT(size >= 0 && type == FP64);
+        ASSERT(size >= 0 && type == ParamType::FP64);
         return static_cast<const double *>(value);
     };
 
     double ToFp64() const
     {
-        ASSERT(size == -1 && type == FP64);
+        ASSERT(size == -1 && type == ParamType::FP64);
         return *(static_cast<const double *>(value));
     };
 

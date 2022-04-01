@@ -12,6 +12,8 @@
 #include "type/data_types.h"
 #include "vector/vector_batch.h"
 
+namespace omniruntime {
+namespace op {
 class DynamicPagesIndex {
 public:
     explicit DynamicPagesIndex(const omniruntime::type::DataTypes &types);
@@ -83,9 +85,10 @@ private:
     std::deque<std::deque<omniruntime::vec::Vector *>> columnsDeque;
     std::deque<int64_t> valueAddressesDeque; // row
     int32_t positionCount;
-    std::deque<bool> vecBatchFreeFlagDeque;     // vectorBatch free flag
+    std::deque<bool> vecBatchFreeFlagDeque;                       // vectorBatch free flag
     std::deque<omniruntime::vec::VectorBatch *> vectorBatchDeque; // vectorBatch
     bool finishAddData;
 };
-
+}
+}
 #endif

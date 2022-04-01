@@ -6,22 +6,18 @@
 #ifndef __WINDOW_FUNCTION_H__
 #define __WINDOW_FUNCTION_H__
 
-#include "../../vector/vector.h"
-#include "../pages_index.h"
+#include <memory>
+#include "vector/vector.h"
+#include "operator/pages_index.h"
 #include "operator/aggregation/aggregator/aggregator.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
-#include <memory>
-
-
-using namespace omniruntime::vec;
-
 class WindowIndex {
 public:
-    WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t size);
+    WindowIndex(omniruntime::op::PagesIndex *pagesIndex, int32_t start, int32_t size);
     ~WindowIndex();
 
-    PagesIndex *GetPagesIndex() const
+    omniruntime::op::PagesIndex *GetPagesIndex() const
     {
         return pagesIndex;
     }
@@ -37,7 +33,7 @@ public:
     }
 
 private:
-    PagesIndex *pagesIndex;
+    omniruntime::op::PagesIndex *pagesIndex;
     int32_t start;
     int32_t size;
 };
@@ -47,18 +43,18 @@ public:
     WindowFunction() = default;
     virtual ~WindowFunction() = default;
     virtual void Reset(WindowIndex *windowIndex) {};
-    virtual void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
-        int32_t frameStart, int32_t frameEnd) {};
+    virtual void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart,
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
 };
 
 class RankingWindowFunction : public WindowFunction {
 public:
     void Reset(WindowIndex *pWindowIndex) override;
-    void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
-        int32_t frameEnd) override;
+    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+        int32_t frameStart, int32_t frameEnd) override;
     virtual void Reset() {};
-    virtual void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
-        int32_t currentPositionIndex) {};
+    virtual void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup,
+        int32_t peerGroupCount, int32_t currentPositionIndex) {};
     RankingWindowFunction();
     ~RankingWindowFunction() override;
 
@@ -75,7 +71,7 @@ public:
     RankFunction();
     ~RankFunction() override;
     void Reset() override;
-    void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
 
 private:
@@ -87,18 +83,18 @@ class RowNumberFunction : public RankingWindowFunction {
 public:
     RowNumberFunction() = default;
     ~RowNumberFunction() override = default;
-    void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
 };
 
 class AggregateWindowFunction : public WindowFunction {
 public:
-    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, const DataType &inputType,
-        const DataType &outputType);
+    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
+        const omniruntime::type::DataType &inputType, const omniruntime::type::DataType &outputType);
     ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
-    void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
-        int32_t frameEnd) override;
+    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+        int32_t frameStart, int32_t frameEnd) override;
     void ResetAccumulator();
 
 private:
@@ -107,22 +103,25 @@ private:
     std::unique_ptr<omniruntime::op::AggregatorFactory> aggregatorFactory;
     int32_t currentStart;
     int32_t currentEnd;
-    const DataType inputType;
-    const DataType outputType;
+    const omniruntime::type::DataType inputType;
+    const omniruntime::type::DataType outputType;
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
     std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
 
-    void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn, int32_t index) const;
+    void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, omniruntime::vec::Vector *pColumn,
+        int32_t index) const;
 
-    void Accumulate(VectorAllocator *vecAllocator, VectorEncoding vectorEncoding, int32_t start, int32_t end);
+    void Accumulate(omniruntime::vec::VectorAllocator *vecAllocator, omniruntime::vec::VectorEncoding vectorEncoding,
+        int32_t start, int32_t end);
 
-    void AccumulateData(VectorBatch *resultVectorBatch, int32_t resultVectorPosition, Vector ***inputVectors,
-        int64_t inputAddress);
+    void AccumulateData(omniruntime::vec::VectorBatch *resultVectorBatch, int32_t resultVectorPosition,
+        omniruntime::vec::Vector ***inputVectors, int64_t inputAddress);
 
-    void AssignValueForVector(Vector *originalVector, int32_t originalVectorPosition, Vector *resultVector,
-        int32_t resultVectorPosition);
+    void AssignValueForVector(omniruntime::vec::Vector *originalVector, int32_t originalVectorPosition,
+        omniruntime::vec::Vector *resultVector, int32_t resultVectorPosition);
 
     template <typename T>
-    void SetValue(Vector *inputVector, int32_t inputPosition, Vector *outputVector, int32_t outputPosition);
+    void SetValue(omniruntime::vec::Vector *inputVector, int32_t inputPosition, omniruntime::vec::Vector *outputVector,
+        int32_t outputPosition);
 };
 #endif
