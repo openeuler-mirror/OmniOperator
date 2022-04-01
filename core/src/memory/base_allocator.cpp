@@ -16,18 +16,17 @@ int64_t BaseAllocator::AllocatedBytesInternal(int64_t size)
 {
     int64_t newAllocated = allocatedBytes.fetch_add(size, std::memory_order_relaxed) + size;
     int64_t beyondReservation = newAllocated - reservation;
+    int64_t parentLimit = UNLIMIT;
     if (beyondReservation > 0 && parentAllocator) {
         int64_t increment = std::min(beyondReservation, size);
-        return parentAllocator->AllocatedBytesInternal(increment);
+        parentLimit =  parentAllocator->AllocatedBytesInternal(increment);
     }
 
     bool beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
-    if (size > 0 && beyondLimit) {
-        return allocationLimit;
-    }
+    int64_t resultLimit = (size > 0 && beyondLimit) ? allocationLimit.load() : parentLimit;
     // set peakAllocated
     UpdatePeak();
-    return UNLIMIT;
+    return resultLimit;
 }
 
 void BaseAllocator::UpdatePeak()

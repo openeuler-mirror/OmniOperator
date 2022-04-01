@@ -40,7 +40,7 @@ public:
     static VectorAllocator *GetGlobalAllocator()
     {
         static auto *globalAllocator =
-            new VectorAllocator(omniruntime::mem::BaseAllocator::GetRootAllocator(), GLOBAL_SCOPE_NAME);
+            new VectorAllocator(omniruntime::mem::BaseAllocator::GetRootAllocator(), GLOBAL_SCOPE_NAME, UNLIMIT, kMB);
         return globalAllocator;
     }
 
@@ -48,6 +48,7 @@ protected:
     VectorAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0);
 
 private:
+    static constexpr int64_t kMB = 1 << 20;
     VectorLeakDetector leakDetector;
 };
 }
