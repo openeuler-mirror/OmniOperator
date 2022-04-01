@@ -6,8 +6,14 @@ package nova.hetu.omniruntime.util;
 
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_DICTIONARY;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+
+import nova.hetu.omniruntime.operator.OmniOperator;
+import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -21,7 +27,13 @@ import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
 
+import org.testng.AssertJUnit;
+
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Test utils for data generate
@@ -364,5 +376,295 @@ public class TestUtils {
     public static void freeVecBatch(VecBatch vecBatch) {
         vecBatch.releaseAllVectors();
         vecBatch.close();
+    }
+
+    /**
+     * match filter operator with json.
+     *
+     * @param inputData input data
+     * @param types the type array of input data
+     * @param projectIndices the list of project indices
+     * @param resultKeepRowIdxs the row ids of result
+     * @param filterExpression filter expression
+     * @param parFormat the format to parse expression
+     */
+    public static void filterOperatorMatchWithJson(Object[][] inputData, DataType[] types, List<String> projectIndices,
+            int[] resultKeepRowIdxs, String filterExpression, int parFormat) {
+        VecBatch vecBatch = createVecBatch(types, inputData);
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(filterExpression, types,
+                projectIndices, parFormat);
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+        Iterator<VecBatch> results = op.getOutput();
+
+        if (resultKeepRowIdxs.length == 0) {
+            assertFalse(results.hasNext());
+            return;
+        }
+
+        AssertJUnit.assertTrue(results.hasNext());
+
+        List<Integer> keepedColumns = new ArrayList<>();
+        for (int resultKeepRowIdx : resultKeepRowIdxs) {
+            keepedColumns.add(resultKeepRowIdx);
+        }
+        Object[][] expectedDatas = new Object[inputData.length][resultKeepRowIdxs.length];
+        for (int i = 0; i < inputData.length; i++) {
+            for (int j = 0, m = 0; j < inputData[0].length && m < resultKeepRowIdxs.length; j++) {
+                if (keepedColumns.contains(j)) {
+                    expectedDatas[i][m] = inputData[i][j];
+                    m++;
+                }
+            }
+        }
+
+        VecBatch resultVecBatch = results.next();
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        op.close();
+        factory.close();
+        freeVecBatch(resultVecBatch);
+    }
+
+    /**
+     * match filter operator.
+     *
+     * @param inputData input data
+     * @param types the type array of input data
+     * @param projectIndices the list of project indices
+     * @param resultKeepRowIdxs the row ids of result
+     * @param filterExpression filter expression
+     */
+    public static void filterOperatorMatch(Object[][] inputData, DataType[] types, List<String> projectIndices,
+            int[] resultKeepRowIdxs, String filterExpression) {
+        filterOperatorMatchWithJson(inputData, types, projectIndices, resultKeepRowIdxs, filterExpression, 0);
+    }
+
+    /**
+     * generating "is not null" json expression.
+     *
+     * @param arguments arguments
+     * @return the formatted "is not null" json expression
+     */
+    public static String omniJsonIsNotNullExpr(String arguments) {
+        return String.format(Locale.ROOT, "{\"exprType\":\"UNARY\",\"returnType\":4,\"operator\":\"not\","
+                + "\"expr\":{\"exprType\":\"IS_NULL\",\"returnType\":4," + "\"arguments\":[%s]}}", arguments);
+    }
+
+    /**
+     * generating "less than or equal" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "less than or equal" json expression
+     */
+    public static String omniJsonLessThanOrEqualExpr(String left, String right) {
+        return String.format(Locale.ROOT, "{\"exprType\":\"BINARY\",\"returnType\":4,"
+                + "\"operator\":\"LESS_THAN_OR_EQUAL\",\"left\":%s,\"right\":%s}", left, right);
+    }
+
+    /**
+     * generating "equal" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "equal" json expression
+     */
+    public static String omniJsonEqualExpr(String left, String right) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":%s,\"right\":%s}", left,
+                right);
+    }
+
+    /**
+     * generating "not equal" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @param <T> the generic parameter
+     * @return the formatted "not equal" json expression
+     */
+    public static <T> String omniJsonNotEqualExpr(String left, String right) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"NOT_EQUAL\",\"left\":%s,\"right\":%s}", left,
+                right);
+    }
+
+    /**
+     * generating "greater than or equal" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "greater than or equal" json expression
+     */
+    public static String omniJsonGreaterThanOrEqualExpr(String left, String right) {
+        return String.format(Locale.ROOT, "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+                + "\"GREATER_THAN_OR_EQUAL\",\"left\":%s,\"right\":%s}", left, right);
+    }
+
+    /**
+     * generating "greater than" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "greater than" json expression
+     */
+    public static String omniJsonGreaterThanExpr(String left, String right) {
+        return String.format(Locale.ROOT, "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\","
+                + "\"left\":%s,\"right\":%s}", left, right);
+    }
+
+    /**
+     * generating "and" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "and" json expression
+     */
+    public static String omniJsonAndExpr(String left, String right) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\",\"left\":%s,\"right\":%s}", left,
+                right);
+    }
+
+    /**
+     * generating "or" json expression.
+     *
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "or" json expression
+     */
+    public static String omniJsonOrExpr(String left, String right) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"OR\",\"left\":%s,\"right\":%s}", left, right);
+    }
+
+    /**
+     * generating "if" json expression.
+     *
+     * @param condition the condition
+     * @param returnType the type of result
+     * @param trueOpr the operator of true
+     * @param falseOpr the operator of false
+     * @return the formatted "if" json expression
+     */
+    public static String omniJsonIfExpr(String condition, int returnType, String trueOpr, String falseOpr) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"IF\",\"returnType\":%d,\"condition\":%s,\"if_true\":%s, \"if_false\":%s}", returnType,
+                condition, trueOpr, falseOpr);
+    }
+
+    /**
+     * get the formatted field reference.
+     *
+     * @param dataType the type of data
+     * @param colVal the column
+     * @return the formatted field reference
+     */
+    public static String getOmniJsonFieldReference(int dataType, int colVal) {
+        if (dataType == 15) {
+            return String.format(Locale.ROOT,
+                    "{\"exprType\": \"FIELD_REFERENCE\",\"dataType\": %d,\"colVal\": %d,\"width\":50}", dataType,
+                    colVal);
+        }
+        return String.format(Locale.ROOT, "{\"exprType\": \"FIELD_REFERENCE\",\"dataType\": %d,\"colVal\": %d}",
+                dataType, colVal);
+    }
+
+    /**
+     * get the formatted literal.
+     *
+     * @param dataType the type of data
+     * @param isNull whether is null
+     * @param value the value
+     * @param <T> the generic parameter
+     * @return the formatted literal
+     */
+    public static <T> String getOmniJsonLiteral(int dataType, boolean isNull, T value) {
+        if (value instanceof String) {
+            return String.format(Locale.ROOT,
+                    "{\"exprType\":\"LITERAL\",\"dataType\":%d,\"isNull\":%b,\"value\":\"%s\",\"width\":50}", dataType,
+                    isNull, value);
+        }
+        return String.format(Locale.ROOT, "{\"exprType\":\"LITERAL\",\"dataType\":%d,\"isNull\":%b,", dataType, isNull)
+                + "\"value\":" + value + "}";
+    }
+
+    /**
+     * generating "arithmetic" json expression.
+     *
+     * @param opr the operator
+     * @param returnType the type of result
+     * @param left the left argument
+     * @param right the right argument
+     * @return the formatted "arithmetic" json expression
+     */
+    public static String omniJsonFourArithmeticExpr(String opr, int returnType, String left, String right) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"BINARY\",\"returnType\":%d,\"operator\":\"%s\",\"left\":%s,\"right\":%s}", returnType,
+                opr, left, right);
+    }
+
+    /**
+     * generating "in" json expression.
+     *
+     * @param argDataType the type of data
+     * @param colVal the column
+     * @param values the list of value
+     * @param <T> the generic parameter
+     * @return the formatted "in" json expression
+     */
+    public static <T> String omniJsonInExpr(int argDataType, int colVal, List<T> values) {
+        JSONArray jsonArray = new JSONArray();
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("exprType", "FIELD_REFERENCE");
+        jsonObject.put("dataType", argDataType);
+        jsonObject.put("colVal", colVal);
+        if (argDataType == 15) {
+            jsonObject.put("width", 50);
+        }
+        jsonArray.add(jsonObject);
+        for (T value : values) {
+            JSONObject object = new JSONObject();
+            object.put("exprType", "LITERAL");
+            object.put("dataType", argDataType);
+            object.put("isNull", false);
+            object.put("value", value);
+            if (argDataType == 15) {
+                object.put("width", 50);
+            }
+            jsonArray.add(object);
+        }
+        String argString = jsonArray.toJSONString();
+        return String.format(Locale.ROOT, "{\"exprType\":\"IN\",\"returnType\":4,\"arguments\":%s}", argString);
+    }
+
+    /**
+     * generating "abs" json expression.
+     *
+     * @param dataType the type of data
+     * @param arguments the arguments
+     * @return the formatted "abs" json expression
+     */
+    public static String omniJsonAbsExpr(int dataType, String arguments) {
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"abs\",\"arguments\":[%s]}", dataType,
+                arguments);
+    }
+
+    /**
+     * generating "cast" json expression.
+     *
+     * @param returnType the type of result
+     * @param arguments the arguments
+     * @return the formatted "cast" json expression
+     */
+    public static String omniJsonCastExpr(int returnType, String arguments) {
+        if (returnType == 15) {
+            return String.format(Locale.ROOT, "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"width\":50,"
+                    + "\"function_name\":\"CAST\",\"arguments\":[%s]}", returnType, arguments);
+        }
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"CAST\",\"arguments\":[%s]}",
+                returnType, arguments);
     }
 }
