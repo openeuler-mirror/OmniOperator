@@ -91,7 +91,8 @@ TEST(LongVector, SetValues)
 // Test SetValues/get
 TEST(LongVector, SetValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_SetValuesWithoutOffset");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "LongVector_SetValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -112,7 +113,8 @@ TEST(LongVector, SetValuesWithoutOffset)
 // Test SetValues/get with offset
 TEST(LongVector, SetValuesWithOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_SetValuesWithOffset");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "LongVector_SetValuesWithOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);

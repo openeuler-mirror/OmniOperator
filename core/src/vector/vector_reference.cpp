@@ -33,7 +33,8 @@ VectorReference::VectorReference(VectorAllocator *allocator, int capacityInBytes
 
     int32_t nullsAndOffsetsCapacityInBytes = nullsCapacityInBytes + offsetsCapacityInBytes;
 
-    nullAndOffsetChunk = Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator), nullsAndOffsetsCapacityInBytes);
+    nullAndOffsetChunk = Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator),
+                                         nullsAndOffsetsCapacityInBytes);
     char *baseAddress = static_cast<char *>(nullAndOffsetChunk->GetAddress());
     if (memset_s(baseAddress, nullsAndOffsetsCapacityInBytes, 0, nullsAndOffsetsCapacityInBytes) != EOK) {
         std::cerr << "init nulls and offsets failed." << std::endl;
@@ -106,7 +107,7 @@ void *VectorReference::GetValueOffsetsAddress()
 void VectorReference::ResizeValueChunk(int32_t currentCapacityInBytes, int32_t toCapacityInBytes)
 {
     Chunk *oldChunk = valueChunk;
-    valueChunk = Chunk::NewChunk(oldChunk->GetAllocator(),toCapacityInBytes);
+    valueChunk = Chunk::NewChunk(oldChunk->GetAllocator(), toCapacityInBytes);
     // copy data
     char *newAddr = static_cast<char *>(valueChunk->GetAddress());
     char *oldAddr = static_cast<char *>(oldChunk->GetAddress());

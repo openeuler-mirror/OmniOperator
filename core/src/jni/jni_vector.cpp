@@ -258,9 +258,8 @@ JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getC
     auto length = static_cast<int32_t>(childAllocators.size());
     jlongArray nativeChilds = (env)->NewLongArray(length);
     long childAddrs[length];
-    for (int32_t i = 0; i < length; i++)
-    {
-        childAddrs[i] = reinterpret_cast<uintptr_t>(childAllocators[i]);;
+    for (int32_t i = 0; i < length; i++) {
+        childAddrs[i] = reinterpret_cast<uintptr_t>(childAllocators[i]);
     }
     env->SetLongArrayRegion(nativeChilds, 0, length, childAddrs);
     return nativeChilds;

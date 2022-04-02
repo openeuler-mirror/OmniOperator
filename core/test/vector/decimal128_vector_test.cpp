@@ -12,7 +12,8 @@ using namespace TestUtil;
 namespace Decimal128VectorTest {
 TEST(Decimal128Vector, SliceVector)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_sliceVector");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "Decimal128Vector_sliceVector");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 10);
@@ -95,7 +96,8 @@ TEST(Decimal128Vector, SetValues)
 // Test SetValues/get
 TEST(Decimal128Vector, SetValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetValuesWithoutOffset");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "Decimal128Vector_SetValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     auto *vector = new Decimal128Vector(allocator, 256);

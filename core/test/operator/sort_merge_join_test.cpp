@@ -1436,7 +1436,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter = "$operator$GREATER_THAN:4(#0, 1:1)";
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("TestSortMergeJoinResultBuilderWithFilter");
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "TestSortMergeJoinResultBuilderWithFilter");
 
     auto *resultBuilder =
         new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount, leftPagesIndex,

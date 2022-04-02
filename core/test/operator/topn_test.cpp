@@ -60,7 +60,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {1, 2, 3, 4, 5};
-    IntVector *expectCol1 = new IntVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnPerformance"), expectedDataSize);
+    IntVector *expectCol1 = new IntVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "topn_TestTopNAscOneColumnPerformance"), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -350,7 +351,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     topNOperator->GetOutput(outputVecorBatchs);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnChar"),
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+                "topn_TestTopNAscOneColumnChar"),
         expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
@@ -449,7 +451,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     topNOperator->GetOutput(outputVecorBatchs);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnVarChar"),
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+                "topn_TestTopNDescOneColumnVarChar"),
         expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         std::string str = expectData1[i];
@@ -502,7 +505,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     topNOperator->GetOutput(outputVecorBatchs);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
     VarcharVector *expectCol1 =
-        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnChar"),
+        new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+                "topn_TestTopNDescOneColumnChar"),
         expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         std::string str = expectData1[i];
@@ -941,7 +945,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), VarcharDataType(3), DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), VarcharDataType(3),
+                                                  DoubleDataType() }));
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
@@ -1333,7 +1338,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    DataTypes sourceTypes(std::vector<DataType>({ Date32DataType(DAY), LongDataType(), Decimal64DataType(2, 0) }));
+    DataTypes sourceTypes(std::vector<DataType>({ Date32DataType(DAY), LongDataType(),
+                                                  Decimal64DataType(2, 0) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
@@ -1353,7 +1359,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     int32_t expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     int64_t expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
-    DataTypes expectedTypes(std::vector<DataType>({ Date32DataType(DAY), LongDataType(), Decimal64DataType(2, 1) }));
+    DataTypes expectedTypes(std::vector<DataType>({ Date32DataType(DAY), LongDataType(),
+                                                    Decimal64DataType(2, 1) }));
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
@@ -1378,7 +1385,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     Decimal128 data2[dataSize] = {66, 55, 44, 33, 22, 11};
     DataTypes sourceTypes(
-        std::vector<DataType>({ Decimal128DataType(2, 1), LongDataType(), Decimal128DataType(2, 1) }));
+        std::vector<DataType>({ Decimal128DataType(2, 1), LongDataType(),
+                                Decimal128DataType(2, 1) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
@@ -1399,7 +1407,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     Decimal128 expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
     DataTypes expectedTypes(
-        std::vector<DataType>({ Decimal64DataType(2, 1), LongDataType(), Decimal64DataType(2, 1) }));
+        std::vector<DataType>({ Decimal64DataType(2, 1), LongDataType(),
+                                Decimal64DataType(2, 1) }));
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
@@ -1422,7 +1431,8 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     std::string data2[dataSize] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"};
-    DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(1), LongDataType(), VarcharDataType(3) }));
+    DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(1), LongDataType(),
+                                                  VarcharDataType(3) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 2};

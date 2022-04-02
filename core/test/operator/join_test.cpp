@@ -1484,7 +1484,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     std::string probeData1[dataSize] = {"35709", "35709", "31904", "12477", "31904", "38721", "90419", "35709",
                                         "88371", "35709"};
     auto probeVec0 = CreateVector<IntVector, int32_t>(probeData0, dataSize);
-    auto probeVec1 = new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("join"), 5 * dataSize, dataSize);
+    auto probeVec1 = new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("join"),
+                                       5 * dataSize, dataSize);
     for (int32_t i = 0; i < dataSize; i++) {
         if (i % 5 == 4) {
             probeVec1->SetValueNull(i);

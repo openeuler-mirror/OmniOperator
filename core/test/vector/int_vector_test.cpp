@@ -103,7 +103,8 @@ TEST(IntVector, setValues)
 // Test SetValues/get
 TEST(IntVector, setValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_setValuesWithoutOffset");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "IntVector_setValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);

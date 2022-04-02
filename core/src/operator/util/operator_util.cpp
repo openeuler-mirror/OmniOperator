@@ -156,7 +156,8 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
                 break;
             case OMNI_VARCHAR:
                 newVecBatch->SetVector(projectCol, ProjectVarcharVector(dataTypes[projectCol],
-                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
+                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs,
+                    rowCount, allocator));
                 break;
             case OMNI_DECIMAL128:
                 break;

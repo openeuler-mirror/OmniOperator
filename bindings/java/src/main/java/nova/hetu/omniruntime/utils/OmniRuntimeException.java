@@ -18,6 +18,7 @@ public class OmniRuntimeException extends RuntimeException {
 
     /**
      * this method for jni method call
+     *
      * @param msg error message
      */
     public OmniRuntimeException(String msg) {

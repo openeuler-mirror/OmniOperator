@@ -1,6 +1,7 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
@@ -11,13 +12,14 @@ import org.testng.annotations.Test;
 
 /**
  * test vec allocator
+ *
+ * @since 2022-04-02
  */
 public class TestVecAllocator {
     @Test
     public void testAllocatorBasic() {
-        long limit = 4096;
-        long subLimit = 2048;
-        int size = 8;
+        long limit = 4096L;
+        long subLimit = 2048L;
 
         VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("parent", limit, 0);
         vecAllocator.setLimit(limit);
@@ -32,11 +34,15 @@ public class TestVecAllocator {
             assertEquals(subVecAllocator.getScope(), "operator");
         }
 
+        int size = 8;
         IntVec intVec = new IntVec(subVecAllocator2, size);
-        assertEquals(subVecAllocator2.getAllocatedMemory(), 40); // size * 4 + size
+        // the value capacity and the null value capacity are added:size * 4 + size
+        assertEquals(subVecAllocator2.getAllocatedMemory(), 40);
         LongVec longVec = new LongVec(subVecAllocator1, size);
-        assertEquals(subVecAllocator1.getAllocatedMemory(), 72); // size * 8 + size
-        assertEquals(vecAllocator.getAllocatedMemory(), 112); // 40 + 72
+        // the value capacity and the null value capacity are added:size * 8 + size
+        assertEquals(subVecAllocator1.getAllocatedMemory(), 72);
+        // add the two capacities 40 + 72
+        assertEquals(vecAllocator.getAllocatedMemory(), 112);
         assertEquals(vecAllocator.getPeakAllocated(), 112);
 
         intVec.close();
@@ -51,8 +57,8 @@ public class TestVecAllocator {
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "memory cap exceeded")
     public void testVecAllocatorBeyondLimit() {
-        long limit = 2048;
-        long subLimit = 1024;
+        long limit = 2048L;
+        long subLimit = 1024L;
         int size = 200;
 
         VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("parent", limit, 0);

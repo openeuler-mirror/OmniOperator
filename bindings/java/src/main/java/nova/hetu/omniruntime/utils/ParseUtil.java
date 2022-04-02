@@ -7,6 +7,11 @@ package nova.hetu.omniruntime.utils;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * parse memory size
+ *
+ * @since 2022-04-02
+ */
 public class ParseUtil {
     private static final Pattern PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
 
@@ -39,8 +44,7 @@ public class ParseUtil {
         throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, "Unknown unit:" + unitString);
     }
 
-    enum Unit
-    {
+    enum Unit {
         BYTE(1L, "B"),
         KILOBYTE(1L << 10, "K"),
         MEGABYTE(1L << 20, "M"),

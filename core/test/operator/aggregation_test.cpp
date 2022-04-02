@@ -1504,6 +1504,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupByColumns.clear();
     aggInputCols.clear();
     aggs.clear();
+    VectorHelper::FreeVecBatches(result);
     result.clear();
     delete[] input;
 
@@ -1537,6 +1538,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupByColumns.clear();
     aggInputCols.clear();
     aggs.clear();
+    VectorHelper::FreeVecBatches(result);
     result.clear();
     delete[] input;
 

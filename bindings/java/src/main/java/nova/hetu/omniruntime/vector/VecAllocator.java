@@ -24,18 +24,17 @@ public class VecAllocator implements AutoCloseable {
      */
     public static final long UNLIMIT = -1;
 
-    private final long nativeAllocator;
-
     static {
         OmniLibs.load();
         // parse environment variable OMNI_OFFHEAP_MEMORY_SIZE
         String memorySize = System.getenv("OMNI_OFFHEAP_MEMORY_SIZE");
         long rootLimit = memorySize == null ? VM.maxDirectMemory() : ParseUtil.parserMemoryParameters(memorySize);
+        // the off heap memory from director or environment variable, set rootAllocator limit
         setRootAllocatorLimit(rootLimit);
         GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(getGlobalVectorAllocator());
-        //get the off heap memory from director, set rootAllocator limit
-        registerDestroyAllocator();
     }
+
+    private final long nativeAllocator;
 
     /**
      * new a vec allocator from native allocator
@@ -52,8 +51,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @param limit the size of limited memory
      */
-    public static void setRootAllocatorLimit(long limit)
-    {
+    public static void setRootAllocatorLimit(long limit) {
         setRootAllocatorLimitNative(limit);
     }
 
@@ -80,10 +78,10 @@ public class VecAllocator implements AutoCloseable {
 
     /**
      * set current allocator size of limited memory
+     *
      * @param limit the size of limited memory in bytes
      */
-    public void setLimit(long limit)
-    {
+    public void setLimit(long limit) {
         setLimitNative(nativeAllocator, limit);
     }
 
@@ -92,8 +90,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @return limit of allocator
      */
-    public long getLimit()
-    {
+    public long getLimit() {
         return getLimitNative(nativeAllocator);
     }
 
@@ -102,8 +99,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @return the scope of allocator
      */
-    public String getScope()
-    {
+    public String getScope() {
         return getScopeNative(nativeAllocator);
     }
 
@@ -112,8 +108,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @return allocated memory in bytes
      */
-    public long getAllocatedMemory()
-    {
+    public long getAllocatedMemory() {
         return getAllocatedMemoryNative(nativeAllocator);
     }
 
@@ -122,8 +117,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @return peak allocated memory in bytes
      * */
-    public long getPeakAllocated()
-    {
+    public long getPeakAllocated() {
         return getPeakAllocatedNative(nativeAllocator);
     }
 
@@ -132,8 +126,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @return allocator
      */
-    public VecAllocator getParentAllocator()
-    {
+    public VecAllocator getParentAllocator() {
         return new VecAllocator(getParentAllocator(nativeAllocator));
     }
 
@@ -142,8 +135,7 @@ public class VecAllocator implements AutoCloseable {
      *
      * @return child allocators
      */
-    public VecAllocator[] getChildAllocators()
-    {
+    public VecAllocator[] getChildAllocators() {
         long[] nativeAllocators = getChildAllocatorsNative(nativeAllocator);
         VecAllocator[] vecAllocators = new VecAllocator[nativeAllocators.length];
         for (int i = 0; i < nativeAllocators.length; i++) {
@@ -155,11 +147,6 @@ public class VecAllocator implements AutoCloseable {
     @Override
     public void close() {
         freeAllocatorNative(nativeAllocator);
-    }
-
-    private static  void registerDestroyAllocator()
-    {
-        Runtime.getRuntime().addShutdownHook(new Thread(GLOBAL_VECTOR_ALLOCATOR::close));
     }
 
     private static native long freeAllocatorNative(long nativeAllocator);
