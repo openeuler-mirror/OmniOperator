@@ -1266,7 +1266,9 @@ public class OmniFilterAndProjectOperatorTest {
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
 
         final int threadCount = 1000;
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadCount, threadCount, 60L, TimeUnit.SECONDS,
+        final int corePoolSize = 10;
+        final int maximumPoolSize = 50;
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(threadCount));
         final int numRows = 1000;
 
@@ -1317,6 +1319,7 @@ public class OmniFilterAndProjectOperatorTest {
             throw new InterruptedException("current thread is interrupted");
         }
 
+        threadPool.shutdown();
         factory.close();
         factoryJSON.close();
     }

@@ -408,9 +408,11 @@ public class OmniSortOperatorTest {
                 ascendings, nullFirsts);
 
         final int threadNum = 4;
+        final int corePoolSize = 10;
+        final int maximumPoolSize = 50;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
         ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
-                threadNum, threadNum, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
+                corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
         ImmutableList<VecBatch> vecs = buildVecs();
         for (int i = 0; i < threadNum; i++) {
             CompletableFuture.runAsync(() -> {
@@ -431,14 +433,16 @@ public class OmniSortOperatorTest {
             }, threadPool);
         }
 
-        vecs.forEach(TestUtils::freeVecBatch);
-        sortOperatorFactory.close();
         // This will wait until all future ready.
         try {
             countDownLatch.await();
         } catch (InterruptedException e) {
             assertTrue(false);
         }
+
+        threadPool.shutdown();
+        vecs.forEach(TestUtils::freeVecBatch);
+        sortOperatorFactory.close();
     }
 
     private ImmutableList<VecBatch> buildVecs() {

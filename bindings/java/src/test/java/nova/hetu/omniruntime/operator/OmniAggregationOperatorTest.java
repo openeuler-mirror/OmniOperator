@@ -147,24 +147,26 @@ public class OmniAggregationOperatorTest {
     }
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+        int[] aggInputChannels = {0, 1, 2, 3};
+        int[] maskChannels = {-1, -1, -1, -1};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                LongDataType.LONG};
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
+
         CountDownLatch downLatch = new CountDownLatch(threadCount);
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(threadCount, threadCount, 60L, TimeUnit.SECONDS,
+        final int corePoolSize = 10;
+        final int maximumPoolSize = 50;
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(threadCount));
 
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
-                            LongDataType.LONG};
-                    FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-                            OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-                    int[] aggInputChannels = {0, 1, 2, 3};
-                    int[] maskChannels = {-1, -1, -1, -1};
-                    DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
-                            LongDataType.LONG};
-                    OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
-                            aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
-
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
                     for (int i = 0; i < pageCount; i++) {
                         vecBatchList.add(new VecBatch(build4Columns(rowNum)));
@@ -176,6 +178,7 @@ public class OmniAggregationOperatorTest {
                     }
 
                     assertResult(rowNum, pageCount, aggOutputTypes, omniOperator);
+                    omniOperator.close();
                 } finally {
                     downLatch.countDown();
                 }
@@ -187,6 +190,9 @@ public class OmniAggregationOperatorTest {
         } catch (InterruptedException ex) {
             fail();
         }
+
+        threadPool.shutdown();
+        factory.close();
     }
 
     private void assertResult(int rowNum, int pageCount, DataType[] aggOutputTypes, OmniOperator omniOperator) {
