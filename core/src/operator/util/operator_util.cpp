@@ -4,12 +4,13 @@
 
 #include "operator_util.h"
 #include <memory>
-#include "../../vector/vector_helper.h"
+#include "vector/vector_helper.h"
 
 using namespace omniruntime::vec;
-using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 
+namespace omniruntime {
+namespace op {
 void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputTypes,
     std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
     std::vector<omniruntime::type::DataType> &newInputTypes,
@@ -293,4 +294,6 @@ VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, co
     ProjectRequiredVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets,
         dictVectorAddrs, rowCount, newInputVecBatch);
     return newInputVecBatch;
+}
+}
 }

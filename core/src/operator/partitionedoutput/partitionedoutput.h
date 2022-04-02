@@ -4,12 +4,11 @@
 #ifndef __PARTITIONEDOUTPUT_H__
 #define __PARTITIONEDOUTPUT_H__
 
-#include "../operator_factory.h"
-#include "../../type/data_type_serializer.h"
-#include "../../vector/vector_helper.h"
-
 #include <vector>
 #include <map>
+#include "operator/operator_factory.h"
+#include "type/data_type_serializer.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {

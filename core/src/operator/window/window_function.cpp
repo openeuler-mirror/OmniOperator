@@ -6,25 +6,21 @@
 #include "window_function.h"
 
 using namespace omniruntime::vec;
-using namespace omniruntime::op;
 using namespace std;
 
+namespace omniruntime {
+namespace op {
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
     : pagesIndex(pagesIndex), start(start), size(end - start)
-{
-};
+{}
 
 WindowIndex::~WindowIndex() = default;
 
-RankingWindowFunction::RankingWindowFunction() : windowIndex(nullptr), currentPeerGroupStart(0), currentPosition(0)
-{
-}
+RankingWindowFunction::RankingWindowFunction() : windowIndex(nullptr), currentPeerGroupStart(0), currentPosition(0) {}
 
 RankingWindowFunction::~RankingWindowFunction() = default;
 
-RankFunction::RankFunction() : rank(0), count(1)
-{
-}
+RankFunction::RankFunction() : rank(0), count(1) {}
 
 RankFunction::~RankFunction() = default;
 
@@ -78,8 +74,12 @@ AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
     const DataType &inputType, const DataType &outputType)
-    : windowIndex(nullptr), argumentChannels(argumentChannels), currentStart(0), currentEnd(0),
-    inputType(inputType), outputType(outputType)
+    : windowIndex(nullptr),
+      argumentChannels(argumentChannels),
+      currentStart(0),
+      currentEnd(0),
+      inputType(inputType),
+      outputType(outputType)
 {
     this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
 }
@@ -230,4 +230,6 @@ void AggregateWindowFunction::SetValue(Vector *inputVector, int32_t inputPositio
 {
     auto value = static_cast<T *>(inputVector)->GetValue(inputPosition);
     static_cast<T *>(outputVector)->SetValue(outputPosition, value);
+}
+}
 }

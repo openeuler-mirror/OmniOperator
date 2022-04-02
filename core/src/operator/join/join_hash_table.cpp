@@ -3,11 +3,10 @@
  * @Description: hash table implementations
  */
 #include "join_hash_table.h"
-#include "operator/optimization.h"
-#include "jit/annotation.h"
-
 #include <algorithm>
 #include <memory>
+#include "operator/optimization.h"
+#include "jit/annotation.h"
 
 namespace omniruntime {
 namespace op {

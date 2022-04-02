@@ -7,10 +7,10 @@
 
 #include <vector>
 #include <memory>
-#include "../operator_factory.h"
-#include "../pages_index.h"
-#include "../../type/data_types.h"
-#include "../../type/data_type.h"
+#include "operator/operator_factory.h"
+#include "operator/pages_index.h"
+#include "type/data_types.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace op {

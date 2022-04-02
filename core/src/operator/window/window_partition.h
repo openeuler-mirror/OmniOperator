@@ -10,11 +10,11 @@
 #include "window_function.h"
 #include "operator/pages_hash_strategy.h"
 
+namespace omniruntime {
+namespace op {
 class Range {
 public:
-    Range(int32_t start, int32_t end) : start(start), end(end)
-    {
-    }
+    Range(int32_t start, int32_t end) : start(start), end(end) {}
 
     ~Range() = default;
 
@@ -77,5 +77,6 @@ private:
 
 bool PositionEqualsPosition(omniruntime::op::PagesIndex *pagesIndex,
     omniruntime::op::PagesHashStrategy *partitionHashStrategy, int32_t leftPosition, int32_t rightPosition);
-
+}
+}
 #endif

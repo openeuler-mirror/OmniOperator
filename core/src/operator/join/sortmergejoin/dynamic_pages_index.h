@@ -76,7 +76,6 @@ public:
     void FreeAllRemainingVecBatch();
 
 private:
-    const omniruntime::type::DataType *dataTypes;
     const int32_t *dataTypeIds;
     int32_t typesCount;
     int32_t lastFreedVecBatchIdx = -1;

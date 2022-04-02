@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include "memory_statistic.h"
 
-MemoryStatistic::MemoryStatistic() {}
+namespace omniruntime {
+namespace mem {
+MemoryStatistic::MemoryStatistic() = default;
 
 void MemoryStatistic::RecordSize(int size)
 {
@@ -30,4 +32,6 @@ void MemoryStatistic::Print()
 MemoryStatistic::~MemoryStatistic()
 {
     running = false;
+}
+}
 }

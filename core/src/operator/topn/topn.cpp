@@ -4,14 +4,15 @@
 
 #include "topn.h"
 #include <vector>
-#include "../../jit/annotation.h"
-#include "../optimization.h"
-#include "../sort/sort.h"
+#include "jit/annotation.h"
+#include "operator/optimization.h"
+#include "operator/sort/sort.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+using namespace std;
+
 TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
     : sourceTypes(sourceTypes)
@@ -23,7 +24,7 @@ TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int
     this->sortColCount = sortColCount;
 }
 
-TopNOperatorFactory::~TopNOperatorFactory() {}
+TopNOperatorFactory::~TopNOperatorFactory() = default;
 
 Operator *TopNOperatorFactory::CreateOperator()
 {
@@ -52,6 +53,45 @@ TopNOperator::~TopNOperator()
     }
 }
 
+SPECIALIZE(OMNIJIT_TOPN_COMPARE)
+int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPosition, VectorBatch *right,
+    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
+    const int32_t *sortNullFirsts)
+{
+    int compare = 0;
+
+    for (int i = 0; i < sortColCount; ++i) {
+        int32_t sortCol = sortCols[i];
+        int32_t colTypeId = sourceTypeIds[sortCol];
+
+        Vector *leftVector = left->GetVector(sortCol);
+        Vector *rightVector = right->GetVector(sortCol);
+
+        int32_t originalLeftPosition, originalRightPosition;
+        leftVector = VectorHelper::ExpandVectorAndIndex(leftVector, leftPosition, originalLeftPosition);
+        rightVector = VectorHelper::ExpandVectorAndIndex(rightVector, rightPosition, originalRightPosition);
+
+        compare = OperatorUtil::CompareNull(leftVector, originalLeftPosition, rightVector, originalRightPosition,
+            sortNullFirsts[i]);
+        if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
+            break;
+        } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
+            continue;
+        }
+
+        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, originalLeftPosition, rightVector,
+            originalRightPosition);
+        if (sortAscendings[i] == 0) {
+            compare = -compare;
+        }
+
+        if (compare != 0) {
+            break;
+        }
+    }
+    return compare;
+}
+
 int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
     auto typeIds = sourceTypes.GetIds();
@@ -73,6 +113,31 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     return 0;
+}
+
+template <typename T>
+static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+    int32_t position)
+{
+    auto resultVector = static_cast<T *>(singleRowVecBatch->GetVector(colIndex));
+    auto inputVector = static_cast<T *>(vector);
+    resultVector->SetValueNull(0, inputVector->IsValueNull(position));
+    resultVector->SetValue(0, inputVector->GetValue(position));
+}
+
+static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    Vector *vector, int32_t position)
+{
+    auto resultVector = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
+    auto inputVector = static_cast<VarcharVector *>(vector);
+    // we just need to set value null
+    if (inputVector->IsValueNull(position)) {
+        resultVector->SetValueNull(0, true);
+        return;
+    }
+    // we need to delete then re-allocate;
+    delete resultVector;
+    singleRowVecBatch->SetVector(colIndex, inputVector->CopyRegion(position, 1));
 }
 
 void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
@@ -111,10 +176,17 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
     }
 }
 
+template <typename T>
+static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    Vector *vector, int32_t position)
+{
+    singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
+}
+
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
-    VectorBatch *singleRowVecBatch = new VectorBatch(sourceTypesCount, 1);
+    auto singleRowVecBatch = new VectorBatch(sourceTypesCount, 1);
     for (int i = 0; i < sourceTypesCount; ++i) {
         int32_t originalPosition;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
@@ -148,7 +220,7 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
     return singleRowVecBatch;
 }
 
-template <typename T> void ALWAYS_INLINE SetValueForVector(Vector *pqVector, Vector *tmpVector, int64_t index)
+template <typename T> static void ALWAYS_INLINE SetValueForVector(Vector *pqVector, Vector *tmpVector, int64_t index)
 {
     (static_cast<T *>(tmpVector))->SetValue(index, (static_cast<T *>(pqVector))->GetValue(0));
 }
@@ -159,7 +231,7 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
     if (positionCount <= 0) {
         return 0;
     }
-    VectorBatch *tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
+    auto tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
     tmpVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
     int64_t rowNum = 0;
     auto typeIds = sourceTypes.GetIds();
@@ -234,10 +306,9 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
             continue;
         }
         auto dataType = (VarcharDataType &)item;
-        VarcharVector *varcharVector =
-            new VarcharVector(vecAllocator, positionCount * dataType.GetWidth(), positionCount);
-        VarcharVector *tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
-        for (int i = 0; i < positionCount; ++i) {
+        auto varcharVector = new VarcharVector(vecAllocator, positionCount * dataType.GetWidth(), positionCount);
+        auto tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
+        for (int32_t i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {
                 varcharVector->SetValueNull(i);
             } else {
@@ -252,45 +323,6 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
     }
 }
 
-SPECIALIZE(OMNIJIT_TOPN_COMPARE)
-int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPosition, VectorBatch *right,
-    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts)
-{
-    int compare = 0;
-
-    for (int i = 0; i < sortColCount; ++i) {
-        int32_t sortCol = sortCols[i];
-        int32_t colTypeId = sourceTypeIds[sortCol];
-
-        Vector *leftVector = left->GetVector(sortCol);
-        Vector *rightVector = right->GetVector(sortCol);
-
-        int32_t originalLeftPosition, originalRightPosition;
-        leftVector = VectorHelper::ExpandVectorAndIndex(leftVector, leftPosition, originalLeftPosition);
-        rightVector = VectorHelper::ExpandVectorAndIndex(rightVector, rightPosition, originalRightPosition);
-
-        compare = OperatorUtil::CompareNull(leftVector, originalLeftPosition, rightVector, originalRightPosition,
-            sortNullFirsts[i]);
-        if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
-            break;
-        } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
-            continue;
-        }
-
-        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, originalLeftPosition, rightVector,
-            originalRightPosition);
-        if (sortAscendings[i] == 0) {
-            compare = -compare;
-        }
-
-        if (compare != 0) {
-            break;
-        }
-    }
-    return compare;
-}
-
 RowComparator::RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColCount, omniruntime::vec::VectorBatch *vectorBatch)
     : sourceTypes(sourceTypes)
@@ -302,7 +334,7 @@ RowComparator::RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int3
     this->vectorBatch = vectorBatch;
 }
 
-RowComparator::~RowComparator() {}
+RowComparator::~RowComparator() = default;
 
 const int32_t *RowComparator::GetSourceTypes() const
 {
@@ -342,9 +374,9 @@ bool operator < (const RowComparator &left, const RowComparator &right)
     // priority_queue will swap. suppose output is asc,compare>0 means left bigger
     // than right so pq shouldn't swap,so return 0
     if (compare >= 0) {
-        return 0;
+        return false;
     } else {
-        return 1;
+        return true;
     }
 }
 } // namespace op

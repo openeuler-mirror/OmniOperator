@@ -5,10 +5,10 @@
 #ifndef OMNI_RUNTIME_TOPN_EXPR_H
 #define OMNI_RUNTIME_TOPN_EXPR_H
 
-#include "../operator_factory.h"
-#include "../projection/projection.h"
-#include "../topn/topn.h"
-#include "../../type/data_types.h"
+#include "operator/operator_factory.h"
+#include "operator/projection/projection.h"
+#include "operator/topn/topn.h"
+#include "type/data_types.h"
 
 namespace omniruntime {
 namespace op {

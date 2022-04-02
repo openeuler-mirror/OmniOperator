@@ -6,9 +6,9 @@
 
 #include <vector>
 #include <memory>
-#include "../operator.h"
-#include "../operator_factory.h"
-#include "../../type/data_type_serializer.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "type/data_type_serializer.h"
 
 namespace omniruntime {
 namespace op {
