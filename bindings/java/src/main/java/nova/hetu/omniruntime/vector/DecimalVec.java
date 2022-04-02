@@ -122,6 +122,20 @@ public abstract class DecimalVec extends FixedWidthVec {
     }
 
     /**
+     * get long values from the specified position with element number
+     *
+     * @param index  the position of element
+     * @param length the number of element
+     * @return long value array
+     */
+    public long[] get(int index, int length) {
+        long[] value = new long[this.typeWidth * length];
+        int offset = (this.offset + index) * this.typeWidth;
+        valuesBuf.getLongArray(offset * Long.BYTES, value, 0, value.length * Long.BYTES);
+        return value;
+    }
+
+    /**
      * Sets the specified decimal value at the specified absolute
      *
      * @param index the element offset in vec
