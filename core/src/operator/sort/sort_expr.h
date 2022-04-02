@@ -7,10 +7,10 @@
 #define __SORT_EXPR_H__
 
 #include <memory>
-#include "../operator_factory.h"
-#include "../projection/projection.h"
-#include "../sort/sort.h"
-#include "../../type/data_types.h"
+#include "operator/operator_factory.h"
+#include "operator/projection/projection.h"
+#include "operator/sort/sort.h"
+#include "type/data_types.h"
 
 namespace omniruntime {
 namespace op {

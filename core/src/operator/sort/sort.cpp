@@ -3,11 +3,11 @@
  * @Description: sort implementations
  */
 #include "sort.h"
-#include "../../util/type_util.h"
-#include "../../util/debug.h"
-#include "../../vector/vector_common.h"
-#include "../../vector/vector_helper.h"
-#include "../util/operator_util.h"
+#include "util/type_util.h"
+#include "util/debug.h"
+#include "vector/vector_common.h"
+#include "vector/vector_helper.h"
+#include "operator/util/operator_util.h"
 
 using namespace std;
 namespace omniruntime {

@@ -8,14 +8,12 @@
 #include <queue>
 #include <memory>
 #include <vector>
-#include "../operator.h"
-#include "../operator_factory.h"
-#include "../../vector/vector_common.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "vector/vector_common.h"
 
 namespace omniruntime {
 namespace op {
-using namespace omniruntime::vec;
-
 class RowComparator {
 public:
     RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
@@ -47,10 +45,6 @@ private:
 };
 
 bool operator < (const RowComparator &left, const RowComparator &right);
-
-int CompareVectorBatch(int32_t leftPosition, vec::VectorBatch *left, int32_t rightPosition, vec::VectorBatch *right,
-    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts);
 
 class TopNOperatorFactory : public OperatorFactory {
 public:
@@ -106,37 +100,6 @@ private:
     void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
         int32_t position) const;
 };
-
-template <typename T>
-void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
-    int32_t position)
-{
-    singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
-}
-
-template <typename T>
-void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
-    int32_t position)
-{
-    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))
-        ->SetValueNull(0, (static_cast<T *>(vector))->IsValueNull(position));
-    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))
-        ->SetValue(0, (static_cast<T *>(vector))->GetValue(position));
-}
-
-void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
-    Vector *vector, int32_t position)
-{
-    VarcharVector *single = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
-    // we just need to set value null
-    if (static_cast<VarcharVector *>(vector)->IsValueNull(position)) {
-        single->SetValueNull(0, true);
-        return;
-    }
-    // we need to delete then re-allocate;
-    delete static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
-    singleRowVecBatch->SetVector(colIndex, (static_cast<VarcharVector *>(vector))->CopyRegion(position, 1));
-}
 }
 }
 #endif // OMNI_RUNTIME_TOPN_H

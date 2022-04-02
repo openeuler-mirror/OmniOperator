@@ -7,7 +7,6 @@
 #include "expression/jsonparser/jsonparser.h"
 
 using namespace std;
-using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
@@ -55,9 +54,6 @@ int RowProjection::GetIndexIfColumnProjection()
     }
     return static_cast<const FieldExpr *>(this->expression)->colVal;
 }
-}
-}
-
 
 bool Projection::Initialize(bool filter)
 {
@@ -314,4 +310,6 @@ omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 bool ProjectionOperatorFactory::IsSupported()
 {
     return this->isSupported;
+}
+}
 }

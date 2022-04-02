@@ -6,13 +6,13 @@
 #include "operator/pages_index.h"
 #include "vector/vector_helper.h"
 
+namespace omniruntime {
+namespace op {
 using namespace omniruntime::vec;
-using namespace omniruntime::op;
 
 // function implements for class PagesIndex
 DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types)
-    : dataTypes(types.Get().data()),
-      dataTypeIds(types.GetIds()),
+    : dataTypeIds(types.GetIds()),
       typesCount(types.GetSize()),
       positionCount(0),
       finishAddData(false)
@@ -78,4 +78,6 @@ void DynamicPagesIndex::FreeAllRemainingVecBatch()
     lastFreedVecBatchIdx = vectorBatchDeque.size() - 1;
 }
 
-DynamicPagesIndex::~DynamicPagesIndex() {}
+DynamicPagesIndex::~DynamicPagesIndex() = default;
+}
+}

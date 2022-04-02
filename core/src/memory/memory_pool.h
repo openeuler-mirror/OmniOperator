@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+namespace omniruntime {
+namespace mem {
 class MemoryPool {
 public:
     virtual int Allocate(int64_t size, uint8_t **buffer) = 0;
@@ -16,8 +18,9 @@ public:
 protected:
     MemoryPool() = default;
 };
+}
+}
 
-MemoryPool *GetMemoryPool();
 #ifdef __cplusplus
 extern "C" {
 #endif

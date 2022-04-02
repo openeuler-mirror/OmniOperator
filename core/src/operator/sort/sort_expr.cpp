@@ -5,8 +5,8 @@
 
 #include "sort_expr.h"
 #include "sort.h"
-#include "../util/operator_util.h"
-#include "../../vector/vector_helper.h"
+#include "operator/util/operator_util.h"
+#include "vector/vector_helper.h"
 
 using namespace std;
 namespace omniruntime {

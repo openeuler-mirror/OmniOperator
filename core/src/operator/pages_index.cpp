@@ -8,8 +8,9 @@
 #include "jit/annotation.h"
 
 using namespace omniruntime::vec;
-using namespace omniruntime::op;
 
+namespace omniruntime {
+namespace op {
 const int32_t QUICK_SORT_SMALL_LEN = 7;
 const int32_t QUICK_SORT_BIG_LEN = 40;
 const int32_t QUICK_SORT_STEP_SIZE = 8;
@@ -18,12 +19,15 @@ const int32_t QUICK_SORT_MIDDLE = 2;
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t currentCol);
+
 void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to);
+
 template <typename T>
 T *ConstructVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     VectorAllocator *vecAllocator);
+
 VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     uint32_t width, VectorAllocator *vecAllocator);
 
@@ -953,4 +957,6 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
         SetVarcharValue(inputVector, position, outputVector, outputIndex++);
     }
     return outputVector;
+}
+}
 }

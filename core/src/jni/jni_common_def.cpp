@@ -16,9 +16,9 @@ jmethodID omniResultsInitMethodId;
 jmethodID traceUtilStackMethodId;
 jmethodID lazyVectorLoaderMethodId;
 
-jint JNI_VERSION = JNI_VERSION_1_6;
+static const jint JNI_VERSION = JNI_VERSION_1_6;
 
-jclass createGlobalClassRef(JNIEnv *env, const char *className)
+static jclass createGlobalClassRef(JNIEnv *env, const char *className)
 {
     jclass local_class = env->FindClass(className);
     jclass global_class = (jclass)env->NewGlobalRef(local_class);

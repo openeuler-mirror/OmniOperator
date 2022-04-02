@@ -9,6 +9,8 @@
 #include <shared_mutex>
 #include <thread>
 
+namespace omniruntime {
+namespace mem {
 class MemoryStatistic {
 public:
     MemoryStatistic();
@@ -22,5 +24,6 @@ private:
     std::thread thread;
     bool running = true;
 };
-
+}
+}
 #endif // OMNI_RUNTIME_MEMORY_STATISTIC_H

@@ -4,8 +4,8 @@
 
 #include "partitionedoutput.h"
 #include <map>
-#include "../util/operator_util.h"
-#include "../hash_util.h"
+#include "operator/util/operator_util.h"
+#include "operator/hash_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;

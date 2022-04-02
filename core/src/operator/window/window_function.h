@@ -12,6 +12,8 @@
 #include "operator/aggregation/aggregator/aggregator.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
+namespace omniruntime {
+namespace op {
 class WindowIndex {
 public:
     WindowIndex(omniruntime::op::PagesIndex *pagesIndex, int32_t start, int32_t size);
@@ -124,4 +126,6 @@ private:
     void SetValue(omniruntime::vec::Vector *inputVector, int32_t inputPosition, omniruntime::vec::Vector *outputVector,
         int32_t outputPosition);
 };
+}
+}
 #endif

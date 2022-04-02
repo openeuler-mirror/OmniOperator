@@ -3,13 +3,13 @@
  */
 
 #include "topn_expr.h"
-#include "../util/operator_util.h"
-#include "../../vector/vector_helper.h"
+#include "operator/util/operator_util.h"
+#include "vector/vector_helper.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+using namespace std;
 
 TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
@@ -24,7 +24,7 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
         this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
 }
 
-TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() {}
+TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
 
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {

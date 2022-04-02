@@ -10,8 +10,9 @@
 #include "util/operator_util.h"
 
 using namespace omniruntime::vec;
-using namespace omniruntime::op;
 
+namespace omniruntime {
+namespace op {
 PagesHashStrategy::PagesHashStrategy(Vector ***columns, const int32_t *columnTypes, int32_t columnCount,
     int32_t *hashCols, int32_t hashColsCount)
     : buildColumns(columns), buildColumnCount(columnCount), buildHashColsCount(hashColsCount)
@@ -66,7 +67,7 @@ static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, in
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
-bool omniruntime::op::PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex,
+bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex,
     int32_t rightTableIndex, int32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes,
     int32_t hashColCount)
 {
@@ -81,7 +82,7 @@ bool omniruntime::op::PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, 
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
         rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
 
-        result = ::ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, originalLeftRowIndex, rightColumn,
+        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, originalLeftRowIndex, rightColumn,
             originalRightRowIndex);
         if (!result) {
             return false;
@@ -91,7 +92,7 @@ bool omniruntime::op::PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, 
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
-bool omniruntime::op::PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex,
+bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex,
     int32_t probePosition, Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes,
     int32_t hashColCount)
 {
@@ -102,7 +103,7 @@ bool omniruntime::op::PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int3
         Vector *probeColumn = probeJoinColumns[columnIdx];
         buildColumn = VectorHelper::ExpandVectorAndIndex(buildColumn, buildRowIndex, originalBuildRowIndex);
         probeColumn = VectorHelper::ExpandVectorAndIndex(probeColumn, probePosition, originalProbeRowIndex);
-        result = ::ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, originalBuildRowIndex, probeColumn,
+        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, originalBuildRowIndex, probeColumn,
             originalProbeRowIndex);
         if (!result) {
             return false;
@@ -136,11 +137,13 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
             return false;
         }
 
-        result = ::ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, originalLeftRowIndex,
+        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, originalLeftRowIndex,
             rightColumn, originalRightRowIndex);
         if (!result) {
             return false;
         }
     }
     return true;
+}
+}
 }
