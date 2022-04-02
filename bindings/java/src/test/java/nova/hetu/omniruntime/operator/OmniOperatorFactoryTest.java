@@ -48,15 +48,18 @@ public class OmniOperatorFactoryTest {
     @Test
     public void testOperatorFactoryCacheMultiThread() {
         final int threadNum = 10000;
+        final int corePoolSize = 10;
+        final int maximumPoolSize = 50;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
         ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
-                threadNum, threadNum, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
+                corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
 
         for (int i = 0; i < threadNum; i++) {
             CompletableFuture.runAsync(() -> {
                 try {
                     MockOperatorFactory factory = new MockOperatorFactory(1);
                     assertEquals(checkFactory.getNativeOperatorFactory(), factory.getNativeOperatorFactory());
+                    factory.close();
                 } finally {
                     countDownLatch.countDown();
                 }
@@ -68,6 +71,8 @@ public class OmniOperatorFactoryTest {
         } catch (InterruptedException ex) {
             assertTrue(false);
         }
+
+        threadPool.shutdown();
     }
 
     /**
