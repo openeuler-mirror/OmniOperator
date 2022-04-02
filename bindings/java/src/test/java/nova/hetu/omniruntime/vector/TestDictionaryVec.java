@@ -30,16 +30,25 @@ public class TestDictionaryVec {
 
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
         DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
-        int offset = 3;
-        DictionaryVec slice = dictionaryVec.slice(offset, 7);
-        assertEquals(slice.getSize(), 4);
-        for (int i = 0; i < slice.getSize(); i++) {
-            long value = slice.getLong(i);
-            assertEquals(value, originalVec.get(i + offset), "Error item value at: " + i);
+        int offset1 = 3;
+        DictionaryVec slice1 = dictionaryVec.slice(offset1, 7);
+        assertEquals(slice1.getSize(), 4);
+        for (int i = 0; i < slice1.getSize(); i++) {
+            long value = slice1.getLong(i);
+            assertEquals(value, originalVec.get(i + offset1), "Error item value from slice1 at: " + i);
         }
 
+        int offset2 = 1;
+        DictionaryVec slice2 = slice1.slice(offset2, 3);
+        assertEquals(slice2.getSize(), 2);
+        for (int i = 0; i < slice2.getSize(); i++) {
+            long value = slice2.getLong(i);
+            assertEquals(value, slice1.getLong(i + offset2), "Error item value from slice2 at: " + i);
+            assertEquals(value, originalVec.get(i + offset2 + offset1), "Error item value from slice2 at: " + i);
+        }
         originalVec.close();
-        slice.close();
+        slice2.close();
+        slice1.close();
         dictionaryVec.close();
     }
 
