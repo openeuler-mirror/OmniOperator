@@ -11,7 +11,8 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
 using Json = nlohmann::json;
-
+namespace omniruntime {
+namespace expressions {
 Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
 {
     DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
@@ -317,4 +318,6 @@ std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::js
         result.push_back(expr);
     }
     return result;
+}
+}
 }

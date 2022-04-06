@@ -8,6 +8,7 @@ using namespace std;
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 vector<Function> ExternalFunctionRegistry::GetFunctions()
 {
     std::vector<Function> externalFunctionRegistry = {
@@ -16,4 +17,5 @@ vector<Function> ExternalFunctionRegistry::GetFunctions()
         Function("Increment_int64", "increment", {}, { OMNI_LONG }, OMNI_LONG),
     };
     return externalFunctionRegistry;
+}
 }

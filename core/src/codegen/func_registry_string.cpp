@@ -7,6 +7,7 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // substr functions
@@ -36,4 +37,5 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function("StrCompare", "compare", {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT)
     };
     return stringFnRegistry;
+}
 }

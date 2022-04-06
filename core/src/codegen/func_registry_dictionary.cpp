@@ -7,6 +7,7 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT };
@@ -18,4 +19,5 @@ std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
         Function("GetVarcharFromDictionaryVector", "get_dictionary_value", {}, paramTypes, OMNI_VARCHAR),
         Function("GetDecimalFromDictionaryVector", "get_dictionary_value", {}, paramTypes, OMNI_DECIMAL128) };
     return dictionaryFnRegistry;
+}
 }

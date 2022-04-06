@@ -2,10 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Murmur3 Hash function
  */
+#include "murmur3_hash.h"
 #include <iostream>
 #include <string>
-
-#include "murmur3_hash.h"
 #include "common.h"
 #include "huawei_secure_c/include/securec.h"
 

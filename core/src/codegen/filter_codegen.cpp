@@ -27,6 +27,7 @@ const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
 const int ROW_FILTER_IS_NULL_INDEX = 6;
 }
 
+namespace omniruntime {
 std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
 {
     std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression) };
@@ -36,7 +37,7 @@ std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omn
 
 int64_t FilterCodeGen::GetFunction()
 {
-    Function *func = this->CreateFunction();
+    llvm::Function *func = this->CreateFunction();
     if (func == nullptr) {
         return 0;
     }
@@ -248,4 +249,5 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
     rt = resTracker;
     return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
+}
 }

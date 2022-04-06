@@ -47,11 +47,10 @@
 #include "decimal_ir_builder.h"
 #include "codegen_utils.h"
 
-
+namespace omniruntime {
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
-
 // Given an expression generates the function for it.
-class ExpressionCodeGen : public ExprVisitor {
+class ExpressionCodeGen : public expressions::ExprVisitor {
 public:
     ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
     ~ExpressionCodeGen() override;
@@ -140,5 +139,5 @@ private:
     void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
         llvm::Value *rightNull);
 };
-
+}
 #endif

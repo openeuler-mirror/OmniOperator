@@ -7,10 +7,12 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 std::vector<Function> VarcharVectorFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
     std::vector<Function> varcharVectorFnRegistry = { Function("WrapVarcharVector", "WrapVarcharVector", {}, paramTypes,
         OMNI_INT, false) };
     return varcharVectorFnRegistry;
+}
 }

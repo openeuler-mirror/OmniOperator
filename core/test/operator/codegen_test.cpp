@@ -19,11 +19,11 @@ using omniruntime::op::RowFilterFunc;
 using omniruntime::op::RowProjection;
 using omniruntime::op::RowProjFunc;
 using namespace std;
+using namespace omniruntime;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::op;
-using namespace omniruntime::codegen;
 using namespace TestUtil;
 
 const string defaultTestFunctionName = "test-function";

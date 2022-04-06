@@ -7,6 +7,7 @@
 
 using namespace omniruntime::type;
 
+namespace omniruntime {
 static std::string ToLower(std::string s)
 {
     std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
@@ -84,4 +85,5 @@ std::string FunctionSignature::ToString() const
     }
     result = result + "_" + TypeUtil::TypeToString(this->retType);
     return result;
+}
 }

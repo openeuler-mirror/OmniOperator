@@ -10,6 +10,7 @@
 #include <string>
 #include <type/data_type.h>
 
+namespace omniruntime {
 class FunctionSignature {
 public:
     FunctionSignature(const std::string name, std::vector<omniruntime::type::DataTypeId> params,
@@ -29,5 +30,5 @@ private:
     std::vector<omniruntime::type::DataTypeId> paramTypes {};
     omniruntime::type::DataTypeId retType;
 };
-
+}
 #endif

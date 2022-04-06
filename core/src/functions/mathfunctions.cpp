@@ -2,8 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry math function name
  */
-#include "common.h"
 #include <cmath>
+#include "common.h"
 
 namespace {
 const int COMBINE_HASH_VALUE = 31;

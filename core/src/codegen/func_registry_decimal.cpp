@@ -7,6 +7,7 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes = { OMNI_DECIMAL128, OMNI_DECIMAL128 };
@@ -28,4 +29,5 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
         Function("CastInt64ToDecimal128", "CAST", {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL128) };
 
     return decimalFnRegistry;
+}
 }

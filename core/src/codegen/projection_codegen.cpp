@@ -32,6 +32,7 @@ const int ROW_PROJ_DICT_VECTORS_INDEX = 6;
 const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
 
+namespace omniruntime {
 std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
     const omniruntime::expressions::Expr &expression, bool filter)
 {
@@ -42,7 +43,7 @@ std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
 
 int64_t ProjectionCodeGen::GetFunction()
 {
-    Function *func = this->CreateFunction();
+    llvm::Function *func = this->CreateFunction();
     if (func == nullptr) {
         return 0;
     }
@@ -162,7 +163,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     // Type of output column
     Type *outPtrType = nullptr;
-    Function *varcharVectorFunc = nullptr;
+    llvm::Function *varcharVectorFunc = nullptr;
     switch (this->expr->GetReturnTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:
@@ -371,4 +372,5 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
     rt = resTracker;
     return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
+}
 }

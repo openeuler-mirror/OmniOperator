@@ -27,7 +27,9 @@
 #include "operator/limit/distinct_limit.h"
 #include "config.h"
 
+using namespace omniruntime;
 using namespace omniruntime::op;
+using namespace omniruntime::expressions;
 using namespace std;
 
 /*

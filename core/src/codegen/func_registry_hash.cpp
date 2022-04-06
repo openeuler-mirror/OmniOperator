@@ -8,6 +8,7 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 std::vector<Function> HashFunctionRegistry::GetFunctions()
 {
     DataTypeId retType = OMNI_INT;
@@ -16,4 +17,5 @@ std::vector<Function> HashFunctionRegistry::GetFunctions()
         Function("Mm3Double", "mm3hash", {}, { OMNI_DOUBLE, OMNI_INT }, retType),
         Function("Mm3String", "mm3hash", {}, { OMNI_VARCHAR, OMNI_INT }, retType) };
     return hashRegistry;
+}
 }

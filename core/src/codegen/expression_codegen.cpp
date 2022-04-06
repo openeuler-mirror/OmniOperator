@@ -34,10 +34,10 @@ const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
 const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
-
 std::once_flag codegen_target_init_flag;
 }
 
+namespace omniruntime {
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Expr &e)
 {
     e.Accept(*this);
@@ -1627,4 +1627,5 @@ void ExpressionCodeGen::OptimizeModule()
     mpm.add(createPruneEHPass());
 
     mpm.run(*module);
+}
 }

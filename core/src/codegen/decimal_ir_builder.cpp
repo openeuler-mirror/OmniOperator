@@ -6,6 +6,7 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "llvm_types.h"
 
+namespace omniruntime {
 void DecimalIRBuilder::AddScaleMultiplier() const
 {
     std::string value = "1";
@@ -159,4 +160,5 @@ std::shared_ptr<DecimalValue> DecimalIRBuilder::BuildDecimalValue(llvm::Value *d
     llvm::Value *precision = llvmTypes.CreateConstantInt(retType.GetPrecision());
     llvm::Value *scale = llvmTypes.CreateConstantInt(retType.GetScale());
     return std::make_shared<DecimalValue>(data, isNull, precision, scale);
+}
 }

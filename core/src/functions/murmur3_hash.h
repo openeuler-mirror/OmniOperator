@@ -4,6 +4,7 @@
  */
 #ifndef __MURMUR3HASH_H__
 #define __MURMUR3HASH_H__
+#include <cstdint>
 
 extern "C" {
 static const int32_t MM3_C1 = 0xcc9e2d51;

@@ -17,6 +17,7 @@
 #include <set>
 #include <llvm/IR/LegacyPassManager.h>
 
+namespace omniruntime {
 class CodeGenUtils {
 public:
     explicit CodeGenUtils(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder)
@@ -41,5 +42,5 @@ private:
     llvm::IRBuilder<> &builder;
     llvm::legacy::PassManager mpm;
 };
-
+}
 #endif // OMNI_RUNTIME_CODEGEN_UTILS_H

@@ -7,6 +7,7 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace omniruntime {
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     std::vector<Function> mathFnRegistry = { // insert native functions for each absolute math function
@@ -34,4 +35,5 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function("Round_double", "round", {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE)
     };
     return mathFnRegistry;
+}
 }

@@ -13,6 +13,8 @@
 #include "util/type_util.h"
 #include "expression/expressions.h"
 
+namespace omniruntime {
+namespace expressions {
 class JSONParser {
 public:
     static omniruntime::expressions::Expr *ParseJSON(nlohmann::json jsonExpr);
@@ -33,6 +35,6 @@ private:
     static omniruntime::expressions::Expr *ParseJSONFunc(nlohmann::json jsonExpr);
     static omniruntime::expressions::Expr *ParseJSONSwitch(nlohmann::json jsonExpr);
 };
-
-
+}
+}
 #endif

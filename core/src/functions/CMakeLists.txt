@@ -1,6 +1,6 @@
 message("Precompile codegen functions...")
 
-set(PRECOMPILED_SRCS
+set(FUNCTION_FILES
         context_helper.cpp
         decimalfunctions.cpp
         dictionaryfunctions.cpp
@@ -14,10 +14,10 @@ set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
 set(LLVM_INCLUDE -I/usr/lib/llvm-12/include)
 
 # Create bitcode for each of the source files
-foreach(SRC_FILE ${PRECOMPILED_SRCS})
-    get_filename_component(SRC_BASE ${SRC_FILE} NAME_WE)
-    get_filename_component(ABSOLUTE_SRC ${SRC_FILE} ABSOLUTE)
-    set(BC_FILE ${PROJECT_BINARY_DIR}/${SRC_BASE}.bc)
+foreach(FUNCTION ${FUNCTION_FILES})
+    get_filename_component(FUNCTION_BASE ${FUNCTION} NAME_WE)
+    get_filename_component(FUNCTION_ABB ${FUNCTION} ABSOLUTE)
+    set(BC_FILE ${PROJECT_BINARY_DIR}/${FUNCTION_BASE}.bc)
     set(PRECOMPILE_COMMAND)
     list(APPEND
          PRECOMPILE_COMMAND
@@ -26,13 +26,13 @@ foreach(SRC_FILE ${PRECOMPILED_SRCS})
          ${COMPILE_OPTION}
          ${LLVM_INCLUDE}
          -c
-         ${ABSOLUTE_SRC}
+         ${FUNCTION_ABB}
          -o
          ${BC_FILE}
          -I${CMAKE_SOURCE_DIR}/src)
     add_custom_command(OUTPUT ${BC_FILE}
             COMMAND ${PRECOMPILE_COMMAND}
-            DEPENDS ${SRC_FILE})
+            DEPENDS ${FUNCTION})
     list(APPEND BC_FILES ${BC_FILE})
 endforeach()
 

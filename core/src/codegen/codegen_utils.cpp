@@ -11,6 +11,7 @@ using namespace std;
 using namespace llvm;
 using omniruntime::type::DataTypeId;
 
+namespace omniruntime {
 CallInst *CodeGenUtils::CreateCall(llvm::Function *func, const std::vector<llvm::Value *> &argsVals)
 {
     return builder.CreateCall(func, argsVals);
@@ -44,4 +45,5 @@ void CodeGenUtils::RemoveUnusedFunctions()
     }));
     mpm.add(llvm::createGlobalDCEPass());
     mpm.run(module);
+}
 }

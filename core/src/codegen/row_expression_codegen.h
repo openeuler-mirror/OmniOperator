@@ -10,6 +10,7 @@
 
 #include <utility>
 
+namespace omniruntime {
 class RowExpressionCodeGen : public ExpressionCodeGen {
 public:
     /* *
@@ -35,6 +36,6 @@ private:
     llvm::Function *CreateFunction() override;
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
 };
-
+}
 
 #endif // OMNI_RUNTIME_ROW_EXPRESSION_CODEGEN_H

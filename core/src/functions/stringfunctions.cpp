@@ -154,8 +154,8 @@ INLINE const char *ToUpper(int64_t contextPtr, const char *str, int32_t strLen, 
 {
     auto ret = ArenaAllocatorMalloc(contextPtr, strLen);
     for (int i = 0; i < strLen; i++) {
-        if (*(str + i) > 96 && *(str + i) < 123) {
-            *(ret + i) = *(str + i) - 32;
+        if (*(str + i) > ('a' - 1) && *(str + i) < ('z' + 1)) {
+            *(ret + i) = *(str + i) - ' ';
         } else {
             *(ret + i) = *(str + i);
         }
