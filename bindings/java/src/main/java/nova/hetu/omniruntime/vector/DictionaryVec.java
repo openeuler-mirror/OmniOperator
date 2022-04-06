@@ -67,7 +67,7 @@ public class DictionaryVec extends FixedWidthVec {
     private DictionaryVec(DictionaryVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
         if (isSlice) {
-            ids = vector.ids;
+            ids = vector.getIds();
             loadDictionary();
         } else {
             loadDictionaryAndIds(length);
@@ -86,8 +86,12 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     public int[] getIds() {
-        int[] newIds = new int[size];
-        for (int i = 0; i < size; i++) {
+        return ids;
+    }
+
+    public int[] getIds(int positionCount) {
+        int[] newIds = new int[positionCount];
+        for (int i = 0; i < positionCount; i++) {
             newIds[i] = getId(i);
         }
         return newIds;
