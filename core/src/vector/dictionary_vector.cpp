@@ -18,6 +18,7 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
         delete this->dictionary;
         return;
     }
+
     bool *nulls = new bool[idsCount];
     for (int32_t i = 0; i < idsCount; i++) {
         nulls[i] = dictionary->IsValueNull(ids[i]);

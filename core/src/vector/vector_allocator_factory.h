@@ -8,10 +8,9 @@
 #include <map>
 #include "vector_allocator.h"
 
-const static std::string GLOBAL_SCOPE_NAME = "___GLOBAL_SCOPE___";
-
 namespace omniruntime {
 namespace vec {
+const static std::string GLOBAL_SCOPE_NAME = "___GLOBAL_SCOPE___";
 class VectorAllocatorFactory {
 public:
     VectorAllocatorFactory();

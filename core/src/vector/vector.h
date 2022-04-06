@@ -26,9 +26,9 @@ public:
         return size;
     }
 
-    void SetSize(int size)
+    void SetSize(int newSize)
     {
-        this->size = size;
+        this->size = newSize;
     }
 
     int GetPositionOffset()
@@ -141,7 +141,7 @@ public:
 
     void RecordStack(std::string &stack, VecOpType opType);
 
-    void SetVectorTracer(VectorTracer *tracer);
+    void SetVectorTracer(VectorTracer *vectorTracer);
 
     VectorTracer *GetVectorTracer();
 

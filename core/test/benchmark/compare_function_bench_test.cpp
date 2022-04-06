@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "../util/test_util.h"
 
+namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
@@ -238,4 +239,5 @@ TEST(varcharType, CompareVarcharByLongPerf)
     delete vector2;
     delete vector3;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
+}
 }

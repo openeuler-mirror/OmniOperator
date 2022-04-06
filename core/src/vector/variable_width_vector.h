@@ -56,7 +56,7 @@ public:
         lastOffsetPosition = index;
     }
 
-    void ALWAYS_INLINE SetValueNull(int index, bool value)
+    virtual void ALWAYS_INLINE SetValueNull(int index, bool value)
     {
         FillSlots(index);
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
@@ -177,7 +177,7 @@ public:
         allocator->ResizeVectorData(this, toCapacityInBytes);
         valuesAddress = reference->GetValuesAddress();
         capacityInBytes = toCapacityInBytes;
-        int64_t newAddress = reinterpret_cast<uintptr_t>(valuesAddress);
+        int64_t newAddress = static_cast<int64_t>(reinterpret_cast<uintptr_t>(valuesAddress));
         return newAddress;
     }
 

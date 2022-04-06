@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "operator/hash_util.h"
 #include "../util/test_util.h"
-
+namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
@@ -130,4 +130,5 @@ TEST(LongType, LongHashPerf)
     }
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "hashVal: " << hashVal << std::endl;
+}
 }

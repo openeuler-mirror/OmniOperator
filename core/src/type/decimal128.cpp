@@ -172,17 +172,21 @@ static int64_t FillInArray(const Decimal128 &value, uint32_t *array, uint32_t ar
     // called here as the following code has better performance, to avoid regression on
     // Decimal128 Division.
     if (high != 0) {
+        const int arrayIndex0 = 0;
+        const int arrayIndex1 = 1;
+        const int arrayIndex2 = 2;
+        const int arrayIndex3 = 3;
         if (high > std::numeric_limits<uint32_t>::max()) {
-            array[0] = static_cast<uint32_t>(high >> INT_BIT_WIDTH);
-            array[1] = static_cast<uint32_t>(high);
-            array[2] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
-            array[3] = static_cast<uint32_t>(low);
+            array[arrayIndex0] = static_cast<uint32_t>(high >> INT_BIT_WIDTH);
+            array[arrayIndex1] = static_cast<uint32_t>(high);
+            array[arrayIndex2] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
+            array[arrayIndex3] = static_cast<uint32_t>(low);
             return Decimal128::DIVISION_ARRAY_LENGTH_FOUR;
         }
 
-        array[0] = static_cast<uint32_t>(high);
-        array[1] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
-        array[2] = static_cast<uint32_t>(low);
+        array[arrayIndex0] = static_cast<uint32_t>(high);
+        array[arrayIndex1] = static_cast<uint32_t>(low >> INT_BIT_WIDTH);
+        array[arrayIndex2] = static_cast<uint32_t>(low);
         return Decimal128::DIVISION_ARRAY_LENGTH_THREE;
     }
 
@@ -320,8 +324,9 @@ static uint32_t GuessResult(uint32_t *dividendArray, uint32_t *divisorArray, uin
     // catch all of the cases where guess is two too large and most of the
     // cases where it is one too large
     auto rhat = static_cast<uint32_t>(highDividend - guess * static_cast<uint64_t>(divisorArray[0]));
+    const int positionOffset = 2;
     while (static_cast<uint64_t>(divisorArray[1]) * guess >
-        (static_cast<uint64_t>(rhat) << INT_BIT_WIDTH) + dividendArray[pos + 2]) {
+        (static_cast<uint64_t>(rhat) << INT_BIT_WIDTH) + dividendArray[pos + positionOffset]) {
         --guess;
         rhat += divisorArray[0];
         if (static_cast<uint64_t>(rhat) < divisorArray[0]) {
