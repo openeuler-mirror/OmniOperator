@@ -51,6 +51,11 @@ public class LazyVec extends FixedWidthVec {
      * Lazy vector loader.
      */
     public interface LazyVecLoader {
+        /**
+         * loading the vector.
+         *
+         * @return the vector
+         */
         Vec load();
     }
 
