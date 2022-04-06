@@ -14,6 +14,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
+using namespace TestUtil;
 
 namespace ProjectionTest {
     const int32_t INDEX_FACTOR = 2;

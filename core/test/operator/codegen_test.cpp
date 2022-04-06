@@ -25,6 +25,7 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::op;
 using namespace omniruntime::codegen;
+using namespace TestUtil;
 
 const string defaultTestFunctionName = "test-function";
 

@@ -10,7 +10,9 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
+namespace LimitTest {
 // supported data types cover
 TEST(NativeOmniLimitOperator, TestLimitBasic)
 {
@@ -161,4 +163,5 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     VectorHelper::FreeVecBatches(outputVecBatches);
     Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
+}
 }

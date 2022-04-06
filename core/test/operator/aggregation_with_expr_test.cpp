@@ -12,6 +12,7 @@
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
+using namespace TestUtil;
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {

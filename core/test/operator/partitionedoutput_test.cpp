@@ -11,7 +11,9 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
+namespace PartitionedOutputTest {
 TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
 {
     const int32_t dataSize = 6;
@@ -505,4 +507,5 @@ TEST(PartitionedOutputOperatorTest, TestDictionaryPartitionedOutput)
     VectorHelper::FreeVecBatch(expectVecBatch);
     Operator::DeleteOperator(partitionedOperator);
     DeleteOperatorFactory(partitionedOutputOperatorFactory);
+}
 }

@@ -18,10 +18,12 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
+using namespace TestUtil;
 using std::map;
 using std::string;
 using std::vector;
 
+namespace JoinTest {
 void DeleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory,
     LookupJoinOperatorFactory *lookupJoinOperatorFactory)
 {
@@ -363,7 +365,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityBuildOriginalMultiThreads)
 
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             std::thread th(TestHashBuilder, &hashJoinThreadArgs);
             vecOfThreads.push_back(std::move(th));
@@ -373,9 +375,9 @@ TEST(NativeOmniJoinTest, TestInnerEqualityBuildOriginalMultiThreads)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
         std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed <<
             "s" << std::endl;
         std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
@@ -407,7 +409,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityBuildJITMultiThreads)
 
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             std::thread th(TestHashBuilder, &hashJoinThreadArgs);
             vecOfThreads.push_back(std::move(th));
@@ -417,9 +419,9 @@ TEST(NativeOmniJoinTest, TestInnerEqualityBuildJITMultiThreads)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
         std::cout << "testHashBuilderJITMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed << "s" <<
             std::endl;
         std::cout << "testHashBuilderJITMultiThreads " << threadNum << " cpuElapsed time: " <<
@@ -502,7 +504,7 @@ LookupJoinOperatorFactory *TestLookupJoinMultiThreads(VectorBatch ***probeVecBat
 
     std::vector<std::thread> vecOfThreads;
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
     for (int32_t i = 0; i < threadNum; ++i) {
         std::thread t(TestLookupJoin, &lookupJoinThreadArgs);
         vecOfThreads.push_back(std::move(t));
@@ -512,9 +514,9 @@ LookupJoinOperatorFactory *TestLookupJoinMultiThreads(VectorBatch ***probeVecBat
             th.join();
         }
     }
-    timer.calculateElapse();
-    wallElapsed = timer.getWallElapse();
-    cpuElapsed = timer.getCpuElapse();
+    timer.CalculateElapse();
+    wallElapsed = timer.GetWallElapse();
+    cpuElapsed = timer.GetCpuElapse();
     return lookupJoinOperatorFactory;
 }
 
@@ -1769,4 +1771,5 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
 }

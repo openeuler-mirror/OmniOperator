@@ -18,6 +18,7 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
 namespace SortTest {
 const int32_t VEC_BATCH_COUNT = 10;
@@ -308,18 +309,18 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     operatorFactory->SetJitContext(jitContext);
 
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     for (int i = 0; i < VEC_BATCH_COUNT; ++i) {
         sortOperator->AddInput(vecBatches[i]);
     }
     vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
-    timer.calculateElapse();
-    double wallElapsed = timer.getWallElapse();
-    double cpuElapsed = timer.getCpuElapse();
-    std::cout << "testOrderByTwoColumnPerf wall_elapsed time: " << wallElapsed << "s" << std::endl;
-    std::cout << "testOrderByTwoColumnPerf cpu_elapsed time: " << cpuElapsed << "s" << std::endl;
+    timer.CalculateElapse();
+    double wallElapsed = timer.GetWallElapse();
+    double cpuElapsed = timer.GetCpuElapse();
+    std::cout << "testOrderByTwoColumnPerf wallElapsed time: " << wallElapsed << "s" << std::endl;
+    std::cout << "testOrderByTwoColumnPerf cpuElapsed time: " << cpuElapsed << "s" << std::endl;
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -410,7 +411,7 @@ TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
         uint32_t threadNum = i;
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             std::thread t(TestOrderBy, &threadArgs);
             vecOfThreads.push_back(std::move(t));
@@ -420,12 +421,12 @@ TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
-        std::cout << "testOrderByOriginalMultiThreads " << threadNum << " wall_elapsed time: " << wallElapsed << "s" <<
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
+        std::cout << "testOrderByOriginalMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed << "s" <<
             std::endl;
-        std::cout << "testOrderByOriginalMultiThreads " << threadNum << " cpu_elapsed time: " <<
+        std::cout << "testOrderByOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
             cpuElapsed / processorCount * t << "s" << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -458,7 +459,7 @@ TEST(NativeOmniSortTest, TestSortJITMultiThreads)
         uint32_t threadNum = i;
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             std::thread t(TestOrderBy, &threadArgs);
             vecOfThreads.push_back(std::move(t));
@@ -468,12 +469,12 @@ TEST(NativeOmniSortTest, TestSortJITMultiThreads)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
-        std::cout << "testOrderByJITMultiThreads " << threadNum << " wall_elapsed time: " << wallElapsed << "s" <<
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
+        std::cout << "testOrderByJITMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed << "s" <<
             std::endl;
-        std::cout << "testOrderByJITMultiThreads " << threadNum << " cpu_elapsed time: " <<
+        std::cout << "testOrderByJITMultiThreads " << threadNum << " cpuElapsed time: " <<
             cpuElapsed / processorCount * t << "s" << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

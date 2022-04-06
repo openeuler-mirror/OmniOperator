@@ -13,7 +13,9 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
+namespace JoinWithExprTest {
 void DeleteJoinExprOperatorFactory(HashBuilderWithExprOperatorFactory *hashBuilderOperatorFactory,
     LookupJoinWithExprOperatorFactory *lookupJoinOperatorFactory)
 {
@@ -188,4 +190,5 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
     DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+}
 }

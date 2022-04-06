@@ -7,6 +7,7 @@
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
+using namespace TestUtil;
 
 namespace ContainerVectorTest {
 const int32_t POSITION_COUNT = 100;

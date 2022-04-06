@@ -16,6 +16,7 @@
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace std;
+using namespace TestUtil;
 
 namespace TopnTest {
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)

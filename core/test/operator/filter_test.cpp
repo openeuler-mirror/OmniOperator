@@ -14,7 +14,9 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
+using namespace TestUtil;
 
+namespace FilterTest {
 VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
@@ -2391,5 +2393,6 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
         }
     }
     delete filter;
+}
 }
 }

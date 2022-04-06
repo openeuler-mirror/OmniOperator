@@ -18,6 +18,7 @@
 using namespace std;
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
+using namespace TestUtil;
 
 namespace WindowTest {
 const int32_t DATA_SIZE = 6;

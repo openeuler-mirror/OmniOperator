@@ -7,6 +7,7 @@
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
+using namespace TestUtil;
 
 namespace VectorHelperTest {
 TEST(VectorHelper, setAndGetValue)

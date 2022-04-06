@@ -11,7 +11,9 @@
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 using namespace std;
+using namespace TestUtil;
 
+namespace SortMergeJoinWithExprTest {
 TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
 {
     // select t1.b, t2.c from t1, t2 where t1.a = t2.d
@@ -188,4 +190,5 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     delete streamedTblWithExprOperator;
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
     DeleteOperatorFactory(streamedWithExprOperatorFactory);
+}
 }

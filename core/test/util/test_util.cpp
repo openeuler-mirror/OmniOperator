@@ -6,13 +6,14 @@
 #include "test_util.h"
 #include <cmath>
 #include <cfloat>
+#include <cstdarg>
 #include <gtest/gtest.h>
 #include "vector/vector_helper.h"
-#include <cstdarg>
 
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
+namespace TestUtil {
 bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber);
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
@@ -510,4 +511,5 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
         return new FuncExpr(funcName, args, std::move(returnType), function);
     }
     return nullptr;
+}
 }
