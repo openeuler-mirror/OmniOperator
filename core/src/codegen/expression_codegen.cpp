@@ -146,16 +146,15 @@ void ExpressionCodeGen::LoadPreCompiledIR()
         LogDebug("Successfully loaded core library at path %s", path.c_str());
     }
 
-    auto bitcode = llvm::StringRef(reinterpret_cast<const char*>(precompiledBitcode),
-                                   precompiledBitcodeSize);
+    auto bitcode = llvm::StringRef(reinterpret_cast<const char *>(precompiledBitcode), precompiledBitcodeSize);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> bufferOrError =
-            llvm::MemoryBuffer::getMemBuffer(bitcode, "precompiled", false);
+        llvm::MemoryBuffer::getMemBuffer(bitcode, "precompiled", false);
     if (!bufferOrError) {
         std::cerr << "Unable to load module from IR " << bufferOrError.getError().message() << std::endl;
     }
     std::unique_ptr<llvm::MemoryBuffer> buffer = move(bufferOrError.get());
     llvm::Expected<std::unique_ptr<llvm::Module>> moduleOrError =
-            llvm::getOwningLazyBitcodeModule(move(buffer), *context);
+        llvm::getOwningLazyBitcodeModule(move(buffer), *context);
     if (!moduleOrError) {
         std::cerr << "Unable to get IR module from buffer" << std::endl;
     }
@@ -174,8 +173,9 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
 {
     // call function
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
-    std::string funcId = codeGenUtils->GetFunction(strCompareStr, std::vector<DataTypeId>{OMNI_VARCHAR, OMNI_VARCHAR},
-        OMNI_INT)->GetFunctionName();
+    std::string funcId =
+        codeGenUtils->GetFunction(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT)
+            ->GetFunctionName();
     auto f = module->getFunction(funcId);
     auto ret = codeGenUtils->CreateCall(f, argVals, "call_str_cmp");
     return ret;
@@ -217,7 +217,8 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
                 break;
             case OMNI_DECIMAL128: {
                 std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
-                std::string funcId = codeGenUtils->GetFunction(subDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+                std::string funcId =
+                    codeGenUtils->GetFunction(subDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
                 leftZero = decimalIRBuilder->CallDecimalFunction(funcId,
                     llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
                 rightZero = decimalIRBuilder->CallDecimalFunction(funcId,
@@ -411,8 +412,8 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
     std::vector<Value *> argVals { leftPhi, rightPhi };
     std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId() };
     Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
-    std::string dictionaryCmpFuncId = codeGenUtils->GetFunction(decimal128CompareStr, params,
-        OMNI_INT)->GetFunctionName();
+    std::string dictionaryCmpFuncId =
+        codeGenUtils->GetFunction(decimal128CompareStr, params, OMNI_INT)->GetFunctionName();
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
@@ -732,8 +733,8 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
             LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", typeId);
             return nullptr;
     }
-    auto dictionaryFunc = module->getFunction(
-            FunctionRegistry::LookupFunction(dictionaryFuncSignature)->GetFunctionName());
+    auto dictionaryFunc =
+        module->getFunction(FunctionRegistry::LookupFunction(dictionaryFuncSignature)->GetFunctionName());
     std::vector<Value *> funcArgs;
     funcArgs.push_back(dictionaryVectorPtr);
     funcArgs.push_back(rowIdx);
@@ -744,10 +745,9 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
     }
     Value *result = nullptr;
     if (typeId == OMNI_DECIMAL128) {
-        result =
-            decimalIRBuilder->CallDecimalFunction(
-                FunctionRegistry::LookupFunction(dictionaryFuncSignature)->GetFunctionName(),
-            llvmTypes->ToLLVMType(typeId), funcArgs);
+        result = decimalIRBuilder->CallDecimalFunction(
+            FunctionRegistry::LookupFunction(dictionaryFuncSignature)->GetFunctionName(), llvmTypes->ToLLVMType(typeId),
+            funcArgs);
     } else {
         result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs);
     }
@@ -1048,10 +1048,8 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     int32_t numReservedValues = 2;
 
     AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, nullptr, "temp_result_value");
-    AllocaInst *resultNullPtr =
-        builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "temp_result_null");
-    AllocaInst *resultLengthPtr =
-        builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "temp_result_length");
+    AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "temp_result_null");
+    AllocaInst *resultLengthPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "temp_result_length");
     condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(0), func));
     trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(0), func));
 
@@ -1294,8 +1292,8 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 Value *scaledCompareTo = nullptr;
                 Value *scaledArgi = nullptr;
 
-                std::string funcId = codeGenUtils->GetFunction(decimal128CompareStr, params,
-                    OMNI_INT)->GetFunctionName();
+                std::string funcId =
+                    codeGenUtils->GetFunction(decimal128CompareStr, params, OMNI_INT)->GetFunctionName();
 
                 decimalIRBuilder->ScaleValues(*(valueToCompare->data), *compareToScale, *(argiValue->data), *argiScale,
                     &scaledCompareTo, &scaledArgi);
@@ -1559,8 +1557,8 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     // Call Decimal IR Generator for decimal functions
     if (funcRetType == OMNI_DECIMAL128) {
         auto outputValuePtr = decimalIRBuilder->BuildDecimalValue(nullptr, fExpr.GetReturnType());
-        ret =
-            decimalIRBuilder->CallDecimalFunction(fExpr.function->GetFunctionName(), llvmTypes->ToLLVMType(funcRetType), argVals);
+        ret = decimalIRBuilder->CallDecimalFunction(fExpr.function->GetFunctionName(),
+            llvmTypes->ToLLVMType(funcRetType), argVals);
         outputValuePtr->data = ret;
         outputValuePtr->isNull = isAnyNull;
         outputValuePtr->length = outputLen;
@@ -1576,7 +1574,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         if (f) {
             ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetFunctionName(),
                 llvmTypes->ToLLVMType(funcRetType), argVals) :
-                codeGenUtils->CreateCall(f, argVals, fExpr.function->GetFunctionName());
+                                      codeGenUtils->CreateCall(f, argVals, fExpr.function->GetFunctionName());
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
         } else {
             std::cout << "Unable to generate function " << fExpr.funcName.c_str() << std::endl;

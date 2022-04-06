@@ -6,4 +6,4 @@
 #define OMNI_RUNTIME_PRECOMPILED_BITCODE_H
 extern const unsigned char precompiledBitcode[];
 extern const size_t precompiledBitcodeSize;
-#endif //OMNI_RUNTIME_PRECOMPILED_BITCODE_H
+#endif // OMNI_RUNTIME_PRECOMPILED_BITCODE_H

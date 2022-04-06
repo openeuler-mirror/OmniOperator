@@ -7,13 +7,10 @@
 using namespace omniruntime::type;
 
 namespace omniruntime {
-Function::Function(const std::string& functionName, const std::string &name, const std::vector<std::string> &aliases,
+Function::Function(const std::string &functionName, const std::string &name, const std::vector<std::string> &aliases,
     const std::vector<DataTypeId> &paramTypes, const DataTypeId &retType, bool setExecutionContext)
+    : name(name), functionName(functionName), isExecContextSet(setExecutionContext)
 {
-    this->name = name;
-    this->functionName = functionName;
-    // update function name used for lookup in codegen
-    this->isExecContextSet = setExecutionContext;
     // create function sig to register for codegen
     this->signatures.emplace_back(name, paramTypes, retType);
     // create function sigs for different functions calls in omni-runtime

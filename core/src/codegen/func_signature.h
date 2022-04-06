@@ -23,6 +23,7 @@ public:
     omniruntime::type::DataTypeId GetReturnType() const;
     size_t HashCode() const;
     std::string ToString() const;
+
 private:
     std::string funcName;
     std::vector<omniruntime::type::DataTypeId> paramTypes {};

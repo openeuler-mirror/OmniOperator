@@ -9,18 +9,14 @@ using namespace omniruntime::type;
 
 static std::string ToLower(std::string s)
 {
-    std::transform(s.begin(), s.end(), s.begin(),
-        [](unsigned char c){ return std::tolower(c); });
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
     return s;
 }
 
 FunctionSignature::FunctionSignature(const std::string name, std::vector<DataTypeId> params,
     const omniruntime::type::DataTypeId &returnType)
-{
-    this->funcName = name;
-    this->paramTypes = params;
-    this->retType = returnType;
-}
+    : funcName(name), paramTypes(params), retType(returnType)
+{}
 
 // Copy constructor
 FunctionSignature::FunctionSignature(const FunctionSignature &fs)
@@ -54,8 +50,7 @@ FunctionSignature &FunctionSignature::operator = (FunctionSignature other)
 
 bool FunctionSignature::operator == (const FunctionSignature &other) const
 {
-    if (ToLower(this->funcName) != ToLower(other.funcName) ||
-        this->retType != other.retType ||
+    if (ToLower(this->funcName) != ToLower(other.funcName) || this->retType != other.retType ||
         this->paramTypes.size() != other.paramTypes.size()) {
         return false;
     }

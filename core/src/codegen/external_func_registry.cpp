@@ -11,9 +11,9 @@ using namespace omniruntime::type;
 vector<Function> ExternalFunctionRegistry::GetFunctions()
 {
     std::vector<Function> externalFunctionRegistry = {
-        Function("StringLength", "length", {}, {OMNI_VARCHAR}, OMNI_INT),
-        Function("Increment_int32", "increment", {}, {OMNI_INT}, OMNI_INT),
-        Function("Increment_int64", "increment", {}, {OMNI_LONG}, OMNI_LONG),
+        Function("StringLength", "length", {}, { OMNI_VARCHAR }, OMNI_INT),
+        Function("Increment_int32", "increment", {}, { OMNI_INT }, OMNI_INT),
+        Function("Increment_int64", "increment", {}, { OMNI_LONG }, OMNI_LONG),
     };
     return externalFunctionRegistry;
 }

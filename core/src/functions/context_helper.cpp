@@ -9,12 +9,14 @@ using namespace std;
 using namespace omniruntime::op;
 
 extern "C" {
-INLINE char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size) {
+INLINE char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size)
+{
     auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
     return reinterpret_cast<char *>(context->GetArena()->Allocate(size));
 }
 
-INLINE bool ArenaAllocatorReset(int64_t contextPtr) {
+INLINE bool ArenaAllocatorReset(int64_t contextPtr)
+{
     auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
     context->GetArena()->Reset();
     return true;

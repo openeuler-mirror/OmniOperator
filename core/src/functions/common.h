@@ -13,4 +13,4 @@
 using int32 = int32_t;
 using int64 = int64_t;
 
-#endif //OMNI_RUNTIME_COMMON_H
+#endif // OMNI_RUNTIME_COMMON_H

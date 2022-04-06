@@ -10,9 +10,10 @@ const int COMBINE_HASH_VALUE = 31;
 }
 extern "C" {
 // cast template for basic types
-#define CAST(IN_TYPE, OUT_TYPE)                                   \
-    INLINE OUT_TYPE Cast_##IN_TYPE##_to_##OUT_TYPE(IN_TYPE in) {  \
-        return static_cast<OUT_TYPE>(in);                         \
+#define CAST(IN_TYPE, OUT_TYPE)                                \
+    INLINE OUT_TYPE Cast_##IN_TYPE##_to_##OUT_TYPE(IN_TYPE in) \
+    {                                                          \
+        return static_cast<OUT_TYPE>(in);                      \
     }
 
 CAST(int32, int64)
@@ -23,10 +24,11 @@ CAST(int64, double)
 #undef CAST
 
 // cast template for double types to int types.
-#define CAST_DOUBLE(IN_TYPE, OUT_TYPE)                            \
-    INLINE OUT_TYPE Cast_##IN_TYPE##_to_##OUT_TYPE(IN_TYPE in) {  \
-        OUT_TYPE out = static_cast<OUT_TYPE>(round(in));          \
-        return out;                                               \
+#define CAST_DOUBLE(IN_TYPE, OUT_TYPE)                         \
+    INLINE OUT_TYPE Cast_##IN_TYPE##_to_##OUT_TYPE(IN_TYPE in) \
+    {                                                          \
+        OUT_TYPE out = static_cast<OUT_TYPE>(round(in));       \
+        return out;                                            \
     }
 
 CAST_DOUBLE(double, int64)

@@ -49,8 +49,8 @@ INLINE bool Like(const char *str, int32_t strLen, const char *regexToMatch, int3
     return regex_match(s, re);
 }
 
-INLINE const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
-                                          int32_t bpLen, int32_t *outLen)
+INLINE const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
+    int32_t *outLen)
 {
     *outLen = apLen + bpLen;
     if (*outLen <= 0) {
@@ -67,8 +67,8 @@ INLINE const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLe
     return ret;
 }
 
-INLINE const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
-                                 const char *bp, int32_t bpLen, int32_t *outLen)
+INLINE const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen, const char *bp,
+    int32_t bpLen, int32_t *outLen)
 {
     if (bpLen == 0) {
         *outLen = apLen;
@@ -98,14 +98,14 @@ INLINE const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWi
     return ret;
 }
 
-INLINE const char *ConcatCharChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
-                                            const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
+INLINE const char *ConcatCharChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen, const char *bp,
+    int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
     return ConcatCharStr(contextPtr, ap, aWidth, apLen, bp, bpLen, outLen);
 }
 
-INLINE const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
-                                           int32_t bWidth, int32_t bpLen, int32_t *outLen)
+INLINE const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bWidth,
+    int32_t bpLen, int32_t *outLen)
 {
     if (bpLen == 0) {
         *outLen = apLen;
@@ -169,33 +169,74 @@ INLINE const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t widt
     return ToUpper(contextPtr, str, strLen, outLen);
 }
 
-#define SUBSTR(TYPE)                                                                                              \
-    INLINE const char *Substr_##TYPE(int64_t contextPtr, const char *str, int32_t strLen,                         \
-        TYPE startIdx, TYPE length, int32_t *outLen)                                                              \
+#define SUBSTR(TYPE)                                                                                                  \
+    INLINE const char *Substr_##TYPE(int64_t contextPtr, const char *str, int32_t strLen, TYPE startIdx, TYPE length, \
+        int32_t *outLen)                                                                                              \
+    {                                                                                                                 \
+        if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {          \
+            *outLen = 0;                                                                                              \
+            return "";                                                                                                \
+        }                                                                                                             \
+        int endIdx;                                                                                                   \
+        if (startIdx > 0) {                                                                                           \
+            startIdx = startIdx - 1;                                                                                  \
+            if (strLen - startIdx <= length) {                                                                        \
+                endIdx = strLen;                                                                                      \
+            } else if (length == 0) {                                                                                 \
+                endIdx = startIdx;                                                                                    \
+            } else {                                                                                                  \
+                endIdx = startIdx + length;                                                                           \
+            }                                                                                                         \
+        } else {                                                                                                      \
+            startIdx += strLen;                                                                                       \
+            if (startIdx + length < strLen) {                                                                         \
+                endIdx = startIdx + length;                                                                           \
+            } else {                                                                                                  \
+                endIdx = strLen;                                                                                      \
+            }                                                                                                         \
+        }                                                                                                             \
+        *outLen = endIdx - startIdx;                                                                                  \
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);                                                         \
+        errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);                                                \
+        if (res != EOK) {                                                                                             \
+            std::cerr << "Substring failed" << std::endl;                                                             \
+        }                                                                                                             \
+        return ret;                                                                                                   \
+    }
+
+SUBSTR(int32)
+SUBSTR(int64)
+#undef SUBSTR
+
+#define SUBSTR_CHAR(TYPE)                                                                                     \
+    INLINE const char *Substr_char_##TYPE(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, \
+        TYPE startIdx, TYPE length, int32_t *outLen)                                                          \
+    {                                                                                                         \
+        return Substr_##TYPE(contextPtr, str, strLen, startIdx, length, outLen);                              \
+    }
+
+SUBSTR_CHAR(int32)
+SUBSTR_CHAR(int64)
+#undef SUBSTR_CHAR
+
+
+#define SUBSTR_WITH_START(TYPE)                                                                                   \
+    INLINE const char *SubstrWithStart_##TYPE(int64_t contextPtr, const char *str, int32_t strLen, TYPE startIdx, \
+        int32_t *outLen)                                                                                          \
     {                                                                                                             \
-        if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {      \
+        if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {                         \
             *outLen = 0;                                                                                          \
             return "";                                                                                            \
         }                                                                                                         \
-        int endIdx;                                                                                               \
+                                                                                                                  \
         if (startIdx > 0) {                                                                                       \
-            startIdx = startIdx - 1;                                                                              \
-            if (strLen - startIdx <= length) {                                                                    \
-                endIdx = strLen;                                                                                  \
-            } else if (length == 0) {                                                                             \
-                endIdx = startIdx;                                                                                \
-            } else {                                                                                              \
-                endIdx = startIdx + length;                                                                       \
-            }                                                                                                     \
+            startIdx -= 1;                                                                                        \
         } else {                                                                                                  \
             startIdx += strLen;                                                                                   \
-            if (startIdx + length < strLen) {                                                                     \
-                endIdx = startIdx + length;                                                                       \
-            } else {                                                                                              \
-                endIdx = strLen;                                                                                  \
-            }                                                                                                     \
         }                                                                                                         \
-        *outLen = endIdx - startIdx;                                                                              \
+                                                                                                                  \
+        *outLen = strLen - startIdx;                                                                              \
+                                                                                                                  \
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);                                                     \
         errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);                                            \
         if (res != EOK) {                                                                                         \
@@ -204,57 +245,16 @@ INLINE const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t widt
         return ret;                                                                                               \
     }
 
-SUBSTR(int32)
-SUBSTR(int64)
-#undef SUBSTR
-
-#define SUBSTR_CHAR(TYPE)                                                                                            \
-    INLINE const char *Substr_char_##TYPE(int64_t contextPtr, const char *str, int32_t width,                        \
-        int32_t strLen, TYPE startIdx, TYPE length, int32_t *outLen)                                                 \
-    {                                                                                                                \
-        return Substr_##TYPE(contextPtr, str, strLen, startIdx, length, outLen);                                     \
-    }
-
-SUBSTR_CHAR(int32)
-SUBSTR_CHAR(int64)
-#undef SUBSTR_CHAR
-
-
-#define SUBSTR_WITH_START(TYPE)                                                                            \
-    INLINE const char *SubstrWithStart_##TYPE(int64_t contextPtr, const char *str,                         \
-        int32_t strLen, TYPE startIdx, int32_t *outLen)                                                    \
-    {                                                                                                      \
-        if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {                  \
-            *outLen = 0;                                                                                   \
-            return "";                                                                                     \
-        }                                                                                                  \
-                                                                                                           \
-        if (startIdx > 0) {                                                                                \
-            startIdx -= 1;                                                                                 \
-        } else {                                                                                           \
-            startIdx += strLen;                                                                            \
-        }                                                                                                  \
-                                                                                                           \
-        *outLen = strLen - startIdx;                                                                       \
-                                                                                                           \
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);                                              \
-        errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);                                     \
-        if (res != EOK) {                                                                                  \
-            std::cerr << "Substring failed" << std::endl;                                                  \
-        }                                                                                                  \
-        return ret;                                                                                        \
-    }
-
 SUBSTR_WITH_START(int32)
 SUBSTR_WITH_START(int64)
 
 #undef SUBSTR_WITH_START
 
-#define SUBSTR_CHAR_WITH_START(TYPE)                                                                           \
-    INLINE const char *SubstrWithStart_char_##TYPE(int64_t contextPtr, const char *str,                        \
-        int32_t width, int32_t strLen, TYPE startIdx, int32_t *outLen)                                         \
-    {                                                                                                          \
-        return SubstrWithStart_##TYPE(contextPtr, str, strLen, startIdx, outLen);                              \
+#define SUBSTR_CHAR_WITH_START(TYPE)                                                                                   \
+    INLINE const char *SubstrWithStart_char_##TYPE(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, \
+        TYPE startIdx, int32_t *outLen)                                                                                \
+    {                                                                                                                  \
+        return SubstrWithStart_##TYPE(contextPtr, str, strLen, startIdx, outLen);                                      \
     }
 SUBSTR_CHAR_WITH_START(int32)
 SUBSTR_CHAR_WITH_START(int64)

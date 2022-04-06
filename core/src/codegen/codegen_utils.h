@@ -25,13 +25,14 @@ public:
     virtual ~CodeGenUtils() = default;
 
     const omniruntime::Function *GetFunction(const std::string &functionName,
-        const std::vector<omniruntime::type::DataTypeId>& params, omniruntime::type::DataTypeId returnType);
-    llvm::CallInst *CreateCall(llvm::Function *func, const std::vector<llvm::Value *>& argsVals);
-    llvm::CallInst *CreateCall(
-        llvm::Function *func, const std::vector<llvm::Value *>& argsVals, const std::string& name);
+        const std::vector<omniruntime::type::DataTypeId> &params, omniruntime::type::DataTypeId returnType);
+    llvm::CallInst *CreateCall(llvm::Function *func, const std::vector<llvm::Value *> &argsVals);
+    llvm::CallInst *CreateCall(llvm::Function *func, const std::vector<llvm::Value *> &argsVals,
+        const std::string &name);
     void RecordFunctions(llvm::Function *func);
     void RemoveUnusedFunctions();
     friend class ExpressionCodeGen;
+
 private:
     std::set<std::string> visited;
     llvm::Function *function;

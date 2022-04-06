@@ -11,17 +11,18 @@ using namespace std;
 using namespace llvm;
 using omniruntime::type::DataTypeId;
 
-CallInst *CodeGenUtils::CreateCall(llvm::Function *func, const std::vector<llvm::Value *>& argsVals)
+CallInst *CodeGenUtils::CreateCall(llvm::Function *func, const std::vector<llvm::Value *> &argsVals)
 {
     return builder.CreateCall(func, argsVals);
 }
 
-CallInst *CodeGenUtils::CreateCall(llvm::Function *func, const std::vector<llvm::Value *>& argsVals, const string& name)
+CallInst *CodeGenUtils::CreateCall(llvm::Function *func, const std::vector<llvm::Value *> &argsVals, const string &name)
 {
     return builder.CreateCall(func, argsVals, name);
 }
 
-const omniruntime::Function *CodeGenUtils::GetFunction(const string &functionName, const std::vector<DataTypeId>& params, DataTypeId returnType)
+const omniruntime::Function *CodeGenUtils::GetFunction(const string &functionName,
+    const std::vector<DataTypeId> &params, DataTypeId returnType)
 {
     auto compareFuncSignature = FunctionSignature(functionName, params, returnType);
     return omniruntime::FunctionRegistry::LookupFunction(&compareFuncSignature);
@@ -38,9 +39,9 @@ void CodeGenUtils::RemoveUnusedFunctions()
     // (one is wrapper and another actually does codegen), they both need to be preserved.
     std::set<string> preserved;
     preserved.insert(visited.begin(), visited.end());
-    mpm.add(llvm::createInternalizePass([preserved](const llvm::GlobalValue& func) {
-                return (preserved.find(func.getName().str()) != preserved.end());
-            }));
+    mpm.add(llvm::createInternalizePass([preserved](const llvm::GlobalValue &func) {
+        return (preserved.find(func.getName().str()) != preserved.end());
+    }));
     mpm.add(llvm::createGlobalDCEPass());
     mpm.run(module);
 }

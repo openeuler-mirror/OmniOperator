@@ -32,7 +32,7 @@ struct Equals {
     }
 };
 
-typedef std::unique_ptr<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>> FunctionMapPtr;
+using FunctionMapPtr = std::unique_ptr<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>;
 
 class FunctionRegistry {
 public:
