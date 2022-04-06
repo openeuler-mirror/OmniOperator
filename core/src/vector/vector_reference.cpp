@@ -11,7 +11,8 @@ Chunk *VectorReference::zeroChunk = Chunk::NewChunk(mem::BaseAllocator::GetRootA
 /*
  * Encoding : values | nulls | offsets(option)
  */
-VectorReference::VectorReference(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId) : writable(true), reference(1)
+VectorReference::VectorReference(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId)
+    : writable(true), reference(1)
 {
     // for empty vector, like lazy vector.
     if (capacityInBytes == -1) {
@@ -33,8 +34,8 @@ VectorReference::VectorReference(VectorAllocator *allocator, int capacityInBytes
 
     int32_t nullsAndOffsetsCapacityInBytes = nullsCapacityInBytes + offsetsCapacityInBytes;
 
-    nullAndOffsetChunk = Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator),
-                                         nullsAndOffsetsCapacityInBytes);
+    nullAndOffsetChunk =
+        Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator), nullsAndOffsetsCapacityInBytes);
     char *baseAddress = static_cast<char *>(nullAndOffsetChunk->GetAddress());
     if (memset_s(baseAddress, nullsAndOffsetsCapacityInBytes, 0, nullsAndOffsetsCapacityInBytes) != EOK) {
         std::cerr << "init nulls and offsets failed." << std::endl;

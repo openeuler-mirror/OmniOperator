@@ -35,7 +35,8 @@ TEST(VectorBatch, constructVectorBatchWithVectorCount)
     for (int i = 0; i < 4; ++i) {
         EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
     }
-    VectorHelper::FreeVecBatch(vectorBatch);;
+    VectorHelper::FreeVecBatch(vectorBatch);
+    delete allocator;
 }
 
 TEST(VectorBatch, constructVectorBatchWithTypes)
@@ -43,13 +44,15 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
     std::vector<DataType> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->NewVectors(
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vector_batch_constructVectorBatchWithTypes"), types);
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_constructVectorBatchWithTypes");
+    vectorBatch->NewVectors(allocator, types);
 
     for (int i = 0; i < 4; ++i) {
         EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
+    delete allocator;
 }
 
 TEST(VectorBatch, getVectorCount)
@@ -57,12 +60,14 @@ TEST(VectorBatch, getVectorCount)
     std::vector<DataType> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->NewVectors(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vector_batch_getVectorCount"),
-        types);
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorCount");
+    vectorBatch->NewVectors(allocator, types);
 
     EXPECT_EQ(4, vectorBatch->GetVectorCount());
     EXPECT_EQ(1024, vectorBatch->GetRowCount());
+
     VectorHelper::FreeVecBatch(vectorBatch);
+    delete allocator;
 }
 
 TEST(VectorBatch, getVectorTypes)
@@ -70,13 +75,14 @@ TEST(VectorBatch, getVectorTypes)
     std::vector<DataType> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(5, 1024);
-    vectorBatch->NewVectors(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vector_batch_getVectorTypes"),
-        types);
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorTypes");
+    vectorBatch->NewVectors(allocator, types);
 
     const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
     for (int i = 0; i < 5; ++i) {
         EXPECT_EQ(types[i].GetId(), vectorTypeIds[i]);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
+    delete allocator;
 }
 }

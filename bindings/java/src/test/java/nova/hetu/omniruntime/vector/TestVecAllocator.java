@@ -23,11 +23,12 @@ public class TestVecAllocator {
 
         VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("parent", limit, 0);
         vecAllocator.setLimit(limit);
-        VecAllocator subVecAllocator1 = vecAllocator.newChildAllocator("operator", subLimit, 0);
-        VecAllocator subVecAllocator2 = vecAllocator.newChildAllocator("operator", subLimit, 0);
 
         assertEquals(vecAllocator.getScope(), "parent");
         assertEquals(vecAllocator.getLimit(), limit);
+
+        VecAllocator subVecAllocator1 = vecAllocator.newChildAllocator("operator", subLimit, 0);
+        VecAllocator subVecAllocator2 = vecAllocator.newChildAllocator("operator", subLimit, 0);
         for (VecAllocator subVecAllocator : vecAllocator.getChildAllocators()) {
             assertEquals(subVecAllocator.getParentAllocator().getNativeAllocator(), vecAllocator.getNativeAllocator());
             assertEquals(subVecAllocator.getLimit(), subLimit);

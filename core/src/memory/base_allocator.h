@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 
 #ifndef __BASE_ALLOCATOR_H__
@@ -13,8 +13,8 @@
 #include <list>
 #include <mutex>
 #include "memory_pool.h"
-#include "../util/debug.h"
-#include "../util/omni_exception.h"
+#include "util/debug.h"
+#include "util/omni_exception.h"
 
 namespace omniruntime {
 namespace mem {
@@ -113,7 +113,7 @@ public:
     static BaseAllocator *GetRootAllocator()
     {
         static std::string ROOT_SCOPE_NAME = "___ROOT_SCOPE___";
-        static BaseAllocator ROOT_ALLOCATOR(nullptr, ROOT_SCOPE_NAME, -1);
+        static BaseAllocator ROOT_ALLOCATOR(nullptr, ROOT_SCOPE_NAME, UNLIMIT);
         return &ROOT_ALLOCATOR;
     }
 
@@ -127,11 +127,11 @@ protected:
     BaseAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0)
         : scope(scope), allocationLimit(limit), reservation(reservation), parentAllocator(parent)
     {
-        if (parentAllocator) {
-            parentAllocator->AddChildAllocator(this);
-        }
         if (reservation != 0 && parentAllocator) {
             parentAllocator->TryAllocate(reservation);
+        }
+        if (parentAllocator) {
+            parentAllocator->AddChildAllocator(this);
         }
     }
 
@@ -166,8 +166,6 @@ private:
     std::list<BaseAllocator *> childAllocators;
     std::list<BaseAllocator *>::iterator childAllocatorIt;
 
-    // for update allocated
-    std::mutex mutex;
     std::atomic<int64_t> allocatedBytes { 0 };
     std::atomic<int64_t> allocationLimit { 0 };
     std::atomic<int64_t> peakAllocated { 0 };

@@ -274,7 +274,7 @@ TEST(VarcharVector, appendVector)
 TEST(VarcharVector, setValueExpand)
 {
     VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_setvalueExpand");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_setValueExpand");
     EXPECT_TRUE(allocator != nullptr);
 
     // specify initial capacity expansion

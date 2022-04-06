@@ -57,6 +57,7 @@ public class OmniTopNWithExprOperatorTest {
 
         freeVecBatch(resultVecBatch);
         operator.close();
+        omniTopNOperatorFactory.close();
     }
 
     @Test
@@ -91,6 +92,7 @@ public class OmniTopNWithExprOperatorTest {
 
         freeVecBatch(resultVecBatch);
         operator.close();
+        omniTopNOperatorFactory.close();
     }
 
     @Test
@@ -124,5 +126,6 @@ public class OmniTopNWithExprOperatorTest {
 
         freeVecBatch(resultVecBatch);
         operator.close();
+        omniTopNOperatorFactory.close();
     }
 }

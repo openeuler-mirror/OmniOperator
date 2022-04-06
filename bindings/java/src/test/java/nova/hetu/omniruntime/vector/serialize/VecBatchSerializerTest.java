@@ -153,7 +153,7 @@ public class VecBatchSerializerTest {
         }
         DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[]{1, 2, 3, 4, 5, 6, 7, 1000});
         dictionary.close();
-        DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, new int[] {1, 2, 7});
+        DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, new int[]{1, 2, 7});
         dictionaryVec.close();
         VecBatch vecBatch = new VecBatch(new Vec[]{nestedDictionaryVec});
 
@@ -265,8 +265,7 @@ public class VecBatchSerializerTest {
             assertEquals(i + 1, checkDecimal128Vec.get(i)[1]);
         }
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
     }
 
     @Test
@@ -301,7 +300,7 @@ public class VecBatchSerializerTest {
         for (int i = 0; i < ROW_COUNT; i++) {
             dictionary.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
-        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[] {1, 2, 1000});
+        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[]{1, 2, 1000});
         dictionary.close();
         VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
 
@@ -377,10 +376,8 @@ public class VecBatchSerializerTest {
             }
         }
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
@@ -417,14 +414,13 @@ public class VecBatchSerializerTest {
         Object[][] expectedDatas = {{1, 2, 3, 4, 5}, {1L, 2L, 3L, 4L, 5L}, {1L, 2L, 3L, 4L, 5L},
                 {"1", "2", "3", "4", "5"}, {1.1D, 2.2D, 3.3D, 4.4D, 5.5D}, {true, false, true, false, true}};
         assertVecBatchEquals(checkVecBatch, expectedDatas);
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test(expectedExceptions = IllegalStateException.class,
-            expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
+        expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
     public void testSerializeInvalidType() {
         int row = 5;
         IntVec invalidType = new IntVec(row);
@@ -434,8 +430,7 @@ public class VecBatchSerializerTest {
         try {
             serializer.serialize(vecBatch);
         } finally {
-            vecBatch.releaseAllVectors();
-            vecBatch.close();
+            freeVecBatch(vecBatch);
         }
     }
 
@@ -463,9 +458,8 @@ public class VecBatchSerializerTest {
         VecBatch checkVecBatch = serializer.deserialize(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, serialized);
         IntVec checkResultVec = (IntVec) checkVecBatch.getVector(0);
         assertVecEquals(checkResultVec, new Object[]{1, 2, 3, 4, 5});
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 }

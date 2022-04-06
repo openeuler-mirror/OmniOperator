@@ -17,13 +17,14 @@ using namespace std;
 using namespace TestUtil;
 
 namespace ProjectionTest {
-    const int32_t INDEX_FACTOR = 2;
-VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData)
+const int32_t INDEX_FACTOR = 2;
+VectorBatch *CreateInput(VectorAllocator *vectorAllocator, const int32_t numRows, const int32_t numCols,
+    const int32_t *inputTypeIds, int64_t *allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
     vector<DataType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    vecBatch->NewVectors(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_createInput"), inputTypes);
+    vecBatch->NewVectors(vectorAllocator, inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypeIds[i]) {
             case OMNI_INT:
@@ -133,7 +134,8 @@ TEST(ProjectionTest, Cast)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Cast");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         t->GetVector(0)->SetValueNotNull(i);
@@ -157,6 +159,7 @@ TEST(ProjectionTest, Cast)
     delete[] col2;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, CastDouble)
@@ -184,7 +187,8 @@ TEST(ProjectionTest, CastDouble)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         t->GetVector(0)->SetValueNotNull(i);
@@ -206,6 +210,7 @@ TEST(ProjectionTest, CastDouble)
     delete[] col2;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, CastInt64ToDecimal128)
@@ -225,7 +230,9 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastInt64ToDecimal128");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         t->GetVector(0)->SetValueNotNull(i);
@@ -246,6 +253,7 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, Simple)
@@ -262,7 +270,8 @@ TEST(ProjectionTest, Simple)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Simple");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
@@ -293,6 +302,7 @@ TEST(ProjectionTest, Simple)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, WithNullValues)
@@ -319,7 +329,8 @@ TEST(ProjectionTest, WithNullValues)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_WithNullValues");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     for (int i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
             t->GetVector(0)->SetValueNull(i);
@@ -350,6 +361,7 @@ TEST(ProjectionTest, WithNullValues)
     delete[] col2;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, Negatives)
@@ -366,7 +378,8 @@ TEST(ProjectionTest, Negatives)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Negatives");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -382,6 +395,7 @@ TEST(ProjectionTest, Negatives)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, Longs)
@@ -398,7 +412,8 @@ TEST(ProjectionTest, Longs)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Longs");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -415,6 +430,7 @@ TEST(ProjectionTest, Longs)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, Doubles)
@@ -432,7 +448,8 @@ TEST(ProjectionTest, Doubles)
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -451,6 +468,7 @@ TEST(ProjectionTest, Doubles)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, MultipleColumns)
@@ -477,7 +495,8 @@ TEST(ProjectionTest, MultipleColumns)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_MultipleColumns");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -498,6 +517,7 @@ TEST(ProjectionTest, MultipleColumns)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, BenchmarkMultipleColumns)
@@ -540,7 +560,9 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_BenchmarkMultipleColumns");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     std::cout << "[BenchmarkMultipleColumns Project without varchar]\n\n";
     for (int i = 0; i < 10; i++) {
@@ -608,9 +630,10 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, DependOtherColumn)
+TEST(ProjectionTest, DependOtherColumn)
 {
     const int32_t numRows = 1000;
     int32_t *col1 = MakeInts(numRows);
@@ -640,7 +663,9 @@ TEST(ParserTest, DependOtherColumn)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DependOtherColumn");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -661,9 +686,10 @@ TEST(ParserTest, DependOtherColumn)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, ProjectString1)
+TEST(ProjectionTest, ProjectString1)
 {
     vector<string *> strings;
 
@@ -686,7 +712,8 @@ TEST(ParserTest, ProjectString1)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ProjectString1");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
 
     const int32_t numProject = 2;
@@ -735,9 +762,10 @@ TEST(ParserTest, ProjectString1)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, DictionaryVecTest)
+TEST(ProjectionTest, DictionaryVecTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
@@ -799,9 +827,10 @@ TEST(ParserTest, DictionaryVecTest)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, DictionaryVecDoubleTest)
+TEST(ProjectionTest, DictionaryVecDoubleTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -844,9 +873,10 @@ TEST(ParserTest, DictionaryVecDoubleTest)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, DictionaryVecVarcharTest)
+TEST(ProjectionTest, DictionaryVecVarcharTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -908,9 +938,10 @@ TEST(ParserTest, DictionaryVecVarcharTest)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, DictionaryVecDecimal128Test)
+TEST(ProjectionTest, DictionaryVecDecimal128Test)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -957,9 +988,10 @@ TEST(ParserTest, DictionaryVecDecimal128Test)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, DictionaryVecNestedTest)
+TEST(ProjectionTest, DictionaryVecNestedTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
@@ -1026,9 +1058,10 @@ TEST(ParserTest, DictionaryVecNestedTest)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
-TEST(ParserTest, Decimal128Arithmetic)
+TEST(ProjectionTest, Decimal128Arithmetic)
 {
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
@@ -1045,7 +1078,9 @@ TEST(ParserTest, Decimal128Arithmetic)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal128Arithmetic");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -1062,6 +1097,7 @@ TEST(ParserTest, Decimal128Arithmetic)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
@@ -1088,7 +1124,9 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DISABLED_Decimal128Arithmetic2");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -1118,6 +1156,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
@@ -1144,7 +1183,9 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DISABLED_Decimal128Arithmetic3");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -1176,6 +1217,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, Decimal128Multiply)
@@ -1195,7 +1237,9 @@ TEST(ProjectTest, Decimal128Multiply)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal128Multiply");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -1212,6 +1256,7 @@ TEST(ProjectTest, Decimal128Multiply)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, Decimal128Divide)
@@ -1230,7 +1275,9 @@ TEST(ProjectTest, Decimal128Divide)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal128Divide");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -1247,6 +1294,7 @@ TEST(ProjectTest, Decimal128Divide)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, MultipleDecimal128Columns)
@@ -1273,7 +1321,9 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_MultipleDecimal128Columns");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     vector<VectorBatch *> ret;
@@ -1300,6 +1350,7 @@ TEST(ProjectTest, MultipleDecimal128Columns)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, StringSubstr)
@@ -1325,7 +1376,8 @@ TEST(ProjectTest, StringSubstr)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_StringSubstr");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
 
     const int32_t numProject = 2;
@@ -1383,6 +1435,7 @@ TEST(ProjectTest, StringSubstr)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, SlicedDictionaryVecTest)
@@ -1453,6 +1506,7 @@ TEST(ProjectTest, SlicedDictionaryVecTest)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
@@ -1511,6 +1565,7 @@ TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, Tpcds96)
@@ -1552,7 +1607,8 @@ TEST(ProjectTest, Tpcds96)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
         reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Tpcds96");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         t->GetVector(0)->SetValueNotNull(i);
@@ -1594,6 +1650,7 @@ TEST(ProjectTest, Tpcds96)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, Round)
@@ -1681,7 +1738,8 @@ TEST(ProjectTest, Round)
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
         reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4),
         reinterpret_cast<int64_t>(col5)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Round");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
@@ -1726,6 +1784,7 @@ TEST(ProjectTest, Round)
     delete[] col5;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, ConcatStrAndChar)
@@ -1744,7 +1803,9 @@ TEST(ProjectTest, ConcatStrAndChar)
     strings.push_back(s);
 
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrAndChar");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t numProject = 2;
     std::vector<Expr *> concatArgs1, concatArgs2;
@@ -1788,6 +1849,7 @@ TEST(ProjectTest, ConcatStrAndChar)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, varcharExpand)
@@ -1813,7 +1875,8 @@ TEST(ProjectTest, varcharExpand)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_varcharExpand");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
 
     const int32_t numProject = 2;
@@ -1881,6 +1944,7 @@ TEST(ProjectTest, varcharExpand)
     delete[] col1;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, testDivDecimal)
@@ -1900,7 +1964,8 @@ TEST(ProjectTest, testDivDecimal)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDivDecimal");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -1912,6 +1977,7 @@ TEST(ProjectTest, testDivDecimal)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 
@@ -1932,7 +1998,8 @@ TEST(ProjectTest, testADDDecimal)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testADDDecimal");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -1944,6 +2011,7 @@ TEST(ProjectTest, testADDDecimal)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(ProjectTest, testDecinalBetween)
@@ -1963,7 +2031,9 @@ TEST(ProjectTest, testDecinalBetween)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecinalBetween");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -1974,6 +2044,7 @@ TEST(ProjectTest, testDecinalBetween)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 
@@ -1996,7 +2067,8 @@ TEST(ProjectTest, testDecinmalIn)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecinmalIn");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -2007,6 +2079,7 @@ TEST(ProjectTest, testDecinmalIn)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 
@@ -2035,7 +2108,9 @@ TEST(ProjectTest, trstDecimalComprehensive)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_trstDecimalComprehensive");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -2047,5 +2122,6 @@ TEST(ProjectTest, trstDecimalComprehensive)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 }

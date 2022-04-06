@@ -124,7 +124,7 @@ TEST(VectorAllocator, memoryLeak)
 
 TEST(VectorAllocator, doubleFree)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VectorAllocator_doubleFree");
     EXPECT_TRUE(allocator != nullptr);
     LongVector *vector = new LongVector(allocator, 256);
     EXPECT_EQ(vector->GetSize(), 256);
@@ -227,7 +227,7 @@ TEST(VectorAllocator, basic)
     EXPECT_EQ(vectorAllocator->GetScope(), "VectorAllocator_basic");
     EXPECT_EQ(vectorAllocator->GetLimit(), limit);
     std::vector<BaseAllocator *> subAllocators = vectorAllocator->GetChildAllocators();
-    for (auto & subAllocator : subAllocators) {
+    for (auto &subAllocator : subAllocators) {
         EXPECT_EQ(subAllocator->GetParentAllocator(), vectorAllocator);
         EXPECT_EQ(subAllocator->GetLimit(), subLimit);
         EXPECT_EQ(subAllocator->GetScope(), "subVectorAllocator");
@@ -236,9 +236,9 @@ TEST(VectorAllocator, basic)
     auto *longVector = new LongVector(subAllocator1, size);
     EXPECT_EQ(subAllocator1->GetAllocatedMemory(), 72); // size * 8 + size
     auto *intVector = new IntVector(subAllocator2, size);
-    EXPECT_EQ(subAllocator2->GetAllocatedMemory(), 40); // size * 4 + size
+    EXPECT_EQ(subAllocator2->GetAllocatedMemory(), 40);           // size * 4 + size
     auto *doubleVector = new DoubleVector(vectorAllocator, size); // size * 8 + size
-    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(), 184); // 72 + 40 + 72
+    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(), 184);        // 72 + 40 + 72
     EXPECT_EQ(vectorAllocator->GetPeakAllocated(), vectorAllocator->GetAllocatedMemory());
 
     delete longVector;
@@ -250,5 +250,29 @@ TEST(VectorAllocator, basic)
     delete subAllocator1;
     delete subAllocator2;
     delete vectorAllocator;
+}
+
+TEST(VectorAllocator, beyondLimit)
+{
+    int64_t limit = 2048;
+    int64_t subLimit = 1024;
+    int32_t size = 300;
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("parent", limit, 0);
+    vecAllocator->SetLimit(limit);
+    VectorAllocator *subVecAllocator = vecAllocator->NewChildAllocator("operator", subLimit, 0);
+
+    LongVector *longVector = nullptr;
+    LongVector *subLongVector = nullptr;
+    ASSERT_THROW(subLongVector = new LongVector(subVecAllocator, size), OmniException);
+    ASSERT_THROW(longVector = new LongVector(vecAllocator, size), OmniException);
+
+    if (longVector != nullptr) {
+        delete longVector;
+    }
+    if (subLongVector != nullptr) {
+        delete subLongVector;
+    }
+    delete subVecAllocator;
+    delete vecAllocator;
 }
 }

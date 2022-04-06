@@ -37,14 +37,14 @@ void BuildVectorValues(LongVector *vector)
     }
 }
 
-void BuildSortTestData(VectorBatch **vecBatches, int32_t columnCount)
+void BuildSortTestData(VectorBatch **vecBatches, VectorAllocator *vecAllocator, int32_t columnCount)
 {
     uint32_t positionCount = DISTINCT_VALUE_COUNT * REPEAT_COUNT;
 
     for (int32_t i = 0; i < VEC_BATCH_COUNT; i++) {
         VectorBatch *vecBatch = new VectorBatch(columnCount);
         for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
-            LongVector *vector = new LongVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort"), positionCount);
+            LongVector *vector = new LongVector(vecAllocator, positionCount);
             BuildVectorValues(vector);
             vecBatch->SetVector(colIdx, vector);
         }
@@ -294,7 +294,9 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
 {
     VectorBatch *vecBatches[VEC_BATCH_COUNT];
-    BuildSortTestData(vecBatches, COLUMN_COUNT_2);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort_TestSortTwoColumnsPerf");
+    BuildSortTestData(vecBatches, vecAllocator, COLUMN_COUNT_2);
     std::cout << "finish build sort data" << endl;
 
     DataTypes sourceTypes(std::vector<DataType> { LongDataType(), LongDataType() });
@@ -325,6 +327,7 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     VectorHelper::FreeVecBatches(outputVecBatches);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete vecAllocator;
 }
 
 struct SortThreadArgs {
@@ -390,7 +393,9 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
 TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
 {
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
-    BuildSortTestData(vecBatches, COLUMN_COUNT_4);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort_TestSortOriginalMultiThreads");
+    BuildSortTestData(vecBatches, vecAllocator, COLUMN_COUNT_4);
 
     int32_t rowNum = DISTINCT_VALUE_COUNT * REPEAT_COUNT;
     int32_t rowCounts[VEC_BATCH_COUNT];
@@ -433,12 +438,15 @@ TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
 
     VectorHelper::FreeVecBatches(vecBatches, VEC_BATCH_COUNT);
     DeleteOperatorFactory(operatorFactory);
+    delete vecAllocator;
 }
 
 TEST(NativeOmniSortTest, TestSortJITMultiThreads)
 {
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
-    BuildSortTestData(vecBatches, COLUMN_COUNT_4);
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort_TestSortJITMultiThreads");
+    BuildSortTestData(vecBatches, vecAllocator, COLUMN_COUNT_4);
 
     int32_t rowNum = DISTINCT_VALUE_COUNT * REPEAT_COUNT;
     int32_t rowCounts[VEC_BATCH_COUNT];
@@ -481,6 +489,7 @@ TEST(NativeOmniSortTest, TestSortJITMultiThreads)
 
     VectorHelper::FreeVecBatches(vecBatches, VEC_BATCH_COUNT);
     DeleteOperatorFactory(operatorFactory);
+    delete vecAllocator;
 }
 
 TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)

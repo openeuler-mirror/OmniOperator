@@ -12,7 +12,6 @@
 #include "vector/vector_common.h"
 #include "type/data_types.h"
 #include "expression/expressions.h"
-#include "projection.h"
 #include "operator/execution_context.h"
 
 using vec64 = std::vector<int64_t>;
@@ -103,11 +102,12 @@ class ProjectionOperator : public Operator {
 public:
     explicit ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t inputTypes[],
         int32_t nCols, int32_t nProj, ExecutionContext *context)
-        : proj(proj), nCols(nCols), nProj(nProj), context(context)
+        : proj(proj), nCols(nCols), nProj(nProj)
     {
         this->sourceTypes = inputTypes;
         this->mutated = nullptr;
-        this->context->getArena()->SetAllocator(vecAllocator);
+        this->context = context;
+        this->context->GetArena()->SetAllocator(vecAllocator);
     }
 
     ~ProjectionOperator() override

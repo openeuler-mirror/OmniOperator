@@ -12,8 +12,8 @@ using namespace TestUtil;
 namespace Decimal128VectorTest {
 TEST(Decimal128Vector, SliceVector)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "Decimal128Vector_sliceVector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SliceVector");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 10);
@@ -48,7 +48,8 @@ TEST(Decimal128Vector, SliceVector)
 // Test set/get
 TEST(Decimal128Vector, SetAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetAndGetValue");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetAndGetValue");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -96,8 +97,8 @@ TEST(Decimal128Vector, SetValues)
 // Test SetValues/get
 TEST(Decimal128Vector, SetValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "Decimal128Vector_SetValuesWithoutOffset");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     auto *vector = new Decimal128Vector(allocator, 256);
@@ -121,7 +122,8 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
 // Test SetValues/get with offset
 TEST(Decimal128Vector, SetValuesWithOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetValuesWithOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -145,7 +147,8 @@ TEST(Decimal128Vector, SetValuesWithOffset)
 // Test is null
 TEST(Decimal128Vector, SetValueNull)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetValueNull");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -170,7 +173,8 @@ TEST(Decimal128Vector, SetValueNull)
 // Test is copyPosition
 TEST(Decimal128Vector, CopyPositions)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_CopyPositions");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
@@ -195,7 +199,8 @@ TEST(Decimal128Vector, CopyPositions)
 // Test is copyRegion
 TEST(Decimal128Vector, CopyRegion)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_CopyRegion");
     EXPECT_TRUE(allocator != NULL);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
@@ -235,7 +240,8 @@ private:
 // Performance test
 TEST(Decimal128Vector, PerformanceCompare)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_PerformanceCompare");
     int rowCount = 100000000;
 
     Timer timer;
@@ -304,6 +310,7 @@ TEST(Decimal128Vector, PerformanceCompare)
 
     delete[](long *) decimal128Vector2;
     delete vectorTest2;
+    delete allocator;
 }
 }
 // Test is not writable

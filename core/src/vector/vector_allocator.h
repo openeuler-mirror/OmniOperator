@@ -35,12 +35,13 @@ public:
         return leakDetector;
     }
 
-    VectorAllocator *NewChildAllocator(const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0) override;
+    VectorAllocator *NewChildAllocator(const std::string &scope, int64_t limit = UNLIMIT,
+        int64_t reservation = 0) override;
 
     static VectorAllocator *GetGlobalAllocator()
     {
-        static auto *globalAllocator =
-            new VectorAllocator(omniruntime::mem::BaseAllocator::GetRootAllocator(), GLOBAL_SCOPE_NAME, UNLIMIT, kMB);
+        static auto *globalAllocator = new VectorAllocator(omniruntime::mem::BaseAllocator::GetRootAllocator(),
+            GLOBAL_SCOPE_NAME, UNLIMIT, DEFAULT_RESERVATION);
         return globalAllocator;
     }
 
@@ -48,7 +49,7 @@ protected:
     VectorAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0);
 
 private:
-    static constexpr int64_t kMB = 1 << 20;
+    static constexpr int64_t DEFAULT_RESERVATION = 1 << 20;
     VectorLeakDetector leakDetector;
 };
 }

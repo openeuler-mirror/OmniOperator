@@ -236,6 +236,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, GreaterThan)
@@ -282,6 +283,7 @@ TEST(FilterTest, GreaterThan)
     delete[] col2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, EqualTo)
@@ -332,6 +334,7 @@ TEST(FilterTest, EqualTo)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, GreaterThanOrEqualTo)
@@ -379,6 +382,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
     delete[] col2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, NotEqualTo)
@@ -422,6 +426,7 @@ TEST(FilterTest, NotEqualTo)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, AllPass)
@@ -459,6 +464,7 @@ TEST(FilterTest, AllPass)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, MultipleInputs)
@@ -509,6 +515,7 @@ TEST(FilterTest, MultipleInputs)
     delete[] data2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, NegativeValues)
@@ -567,6 +574,7 @@ TEST(FilterTest, NegativeValues)
     delete[] data2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, AllTypes)
@@ -627,6 +635,7 @@ TEST(FilterTest, AllTypes)
     delete[] data3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, Compile)
@@ -694,6 +703,7 @@ TEST(FilterTest, Compile)
     delete[] data4;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, LogicalOperators1)
@@ -774,6 +784,7 @@ TEST(FilterTest, LogicalOperators1)
     delete[] col6;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, LogicalOperators2)
@@ -838,6 +849,7 @@ TEST(FilterTest, LogicalOperators2)
     delete[] col4;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, LogicalOperators3)
@@ -923,6 +935,7 @@ TEST(FilterTest, LogicalOperators3)
     delete[] col2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, ArithmeticAdd)
@@ -963,6 +976,7 @@ TEST(FilterTest, ArithmeticAdd)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, ArithmeticSubtract)
@@ -1007,6 +1021,7 @@ TEST(FilterTest, ArithmeticSubtract)
     delete[] col2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, ArithmeticMultiply)
@@ -1060,6 +1075,7 @@ TEST(FilterTest, ArithmeticMultiply)
     delete[] col2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, Conditional)
@@ -1111,6 +1127,7 @@ TEST(FilterTest, Conditional)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, Conditional2)
@@ -1165,6 +1182,7 @@ TEST(FilterTest, Conditional2)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 
@@ -1216,6 +1234,7 @@ TEST(FilterTest, In)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, Between)
@@ -1263,6 +1282,7 @@ TEST(FilterTest, Between)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, NotEqualToAbs)
@@ -1303,6 +1323,7 @@ TEST(FilterTest, NotEqualToAbs)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 
@@ -1376,6 +1397,7 @@ TEST(FilterTest, MathFunctionFilter1)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 
@@ -1433,6 +1455,7 @@ TEST(FilterTest, MathFunctionFilter2)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 // String Filter and varcharvec testing
@@ -1492,6 +1515,7 @@ TEST(FilterTest, FilterString1)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 
@@ -1544,6 +1568,7 @@ TEST(FilterTest, Coalesce1)
     delete[] col3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, Coalesce2)
@@ -1595,6 +1620,7 @@ TEST(FilterTest, Coalesce2)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 
@@ -1639,6 +1665,7 @@ TEST(FilterTest, ExternalMathFunc)
     delete[] col2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 
@@ -1702,6 +1729,7 @@ TEST(FilterTest, ExternalStringFunc)
     delete[] col1;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 // Testing multithreading
@@ -1809,6 +1837,7 @@ TEST(FilterTest, Multithreading)
     delete factory2;
     delete numReturned;
     delete numReturned2;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, TestFilterDictionaryVec)
@@ -1862,6 +1891,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
     delete col3;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(FilterTest, TestFilterDictionaryVarchar)
@@ -1915,6 +1945,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     delete col2;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(FilterTest, TestFilterDictionaryVecNested)
@@ -1972,6 +2003,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
     delete dictionaryVector;
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(FilterTest, DecimalFilterBinaryTest)
@@ -2023,6 +2055,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     delete[] data2;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, DecimalFilterAbsTest)
@@ -2097,6 +2130,7 @@ TEST(FilterTest, DecimalFilterAbsTest)
     delete[] data3;
     delete op;
     delete factory;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, FilterStringWithNull)
@@ -2139,6 +2173,7 @@ TEST(FilterTest, FilterStringWithNull)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(FilterTest, TestFilterSlicedDictionaryVec)
@@ -2199,6 +2234,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
@@ -2263,6 +2299,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
 
     delete op;
     delete factory;
+    delete vecAllocator;
 }
 
 TEST(FilterTest, SimpleFilter)
@@ -2301,6 +2338,7 @@ TEST(FilterTest, SimpleFilter)
     VectorHelper::FreeVecBatch(in1);
     delete filter;
     delete[] col1;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, SimpleFilterWithNulls)
@@ -2343,8 +2381,10 @@ TEST(FilterTest, SimpleFilterWithNulls)
             EXPECT_FALSE(result);
         }
     }
+    VectorHelper::FreeVecBatch(in1);
     delete filter;
     delete[] col1;
+    delete vectorAllocator;
 }
 
 TEST(FilterTest, SimpleFilterIntWithNulls)
@@ -2447,6 +2487,7 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     }
     delete filter;
     VectorHelper::FreeVecBatch(vecBatch);
+    delete vecAllocator;
 }
 }
 }

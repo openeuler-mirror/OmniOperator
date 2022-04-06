@@ -200,7 +200,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newChildA
 {
     auto scope = env->GetStringUTFChars(jScopeId, JNI_FALSE);
     auto *parent = TransformAllocator(jNativeParent);
-    VectorAllocator *child = static_cast<VectorAllocator *>(parent->NewChildAllocator(scope, jLimit, jReservation));
+    VectorAllocator *child;
+    JNI_METHOD_START
+    child = static_cast<VectorAllocator *>(parent->NewChildAllocator(scope, jLimit, jReservation));
+    JNI_METHOD_END(0)
     env->ReleaseStringUTFChars(jScopeId, scope);
     return reinterpret_cast<uintptr_t>(child);
 }

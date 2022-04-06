@@ -72,9 +72,11 @@ public class OmniWindowOperatorTest {
             assertEquals(((LongVec) vectors[2]).get(2), 3);
             assertEquals(((LongVec) vectors[2]).get(3), 1);
             assertEquals(((LongVec) vectors[2]).get(4), 2);
-            outputVecBatch.releaseAllVectors();
-            outputVecBatch.close();
+            freeVecBatch(outputVecBatch);
         }
+
+        omniOperator.close();
+        omniWindowOperatorFactory.close();
     }
 
     /**

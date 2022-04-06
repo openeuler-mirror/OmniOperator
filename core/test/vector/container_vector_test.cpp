@@ -14,7 +14,8 @@ const int32_t POSITION_COUNT = 100;
 const int32_t VECTOR_COUNT = 2;
 TEST(ContainerVector, sliceVector)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_SliceVector");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 10;
@@ -45,7 +46,8 @@ TEST(ContainerVector, sliceVector)
 // Test set/get
 TEST(ContainerVector, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_SetAndGetValue");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -74,7 +76,8 @@ TEST(ContainerVector, setAndGetValue)
 // Test is copyPosition
 TEST(ContainerVector, copyPositions)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_CopyPositions");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 10;
@@ -110,7 +113,7 @@ TEST(ContainerVector, copyPositions)
 // Test is copyRegion
 TEST(ContainerVector, copyRegion)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_CopyRegion");
     EXPECT_TRUE(allocator != NULL);
 
     int32_t rows = 10;
@@ -140,7 +143,8 @@ TEST(ContainerVector, copyRegion)
 
 TEST(ContainerVector, jniFreeVector)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_jniFreeVector");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -159,7 +163,8 @@ TEST(ContainerVector, jniFreeVector)
 
 TEST(ContainerVector, getVectorAllocator)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_getVectorAllocator");
     EXPECT_TRUE(allocator != nullptr);
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
@@ -181,7 +186,8 @@ TEST(ContainerVector, getVectorAllocator)
 
 TEST(ContainerVector, appendVector)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("container_vector");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_appendVector");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 5;

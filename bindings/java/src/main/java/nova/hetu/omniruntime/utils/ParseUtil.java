@@ -4,6 +4,11 @@
 
 package nova.hetu.omniruntime.utils;
 
+import static nova.hetu.omniruntime.vector.VecAllocator.UNLIMIT;
+
+import com.sun.management.OperatingSystemMXBean;
+
+import java.lang.management.ManagementFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,8 +24,7 @@ public class ParseUtil {
     }
 
     /**
-     *
-     * parse memory size to byte, like 1B, 1K, 1M, 1G
+     * parse memory size to byte, like 1B, 1KB, 1MB, 1GB.
      *
      * @param size capacity size with unit
      * @return size in bytes
@@ -37,19 +41,33 @@ public class ParseUtil {
 
         for (Unit unit : Unit.values()) {
             if (unit.getUnitString().equals(unitString)) {
-                return value * unit.getFactor();
+                long limit = value * unit.getFactor();
+                long systemFreeMemory = getOperatorSystemFreeMemorySize();
+                if (limit >= systemFreeMemory || limit < UNLIMIT) {
+                    throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
+                            "OMNI_OFFHEAP_MEMORY_SIZE exceeds system free memorySize:" + systemFreeMemory);
+                }
+                return limit;
             }
         }
-
         throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, "Unknown unit:" + unitString);
+    }
+
+    private static long getOperatorSystemFreeMemorySize() {
+        java.lang.management.OperatingSystemMXBean langOSMXBean = ManagementFactory.getOperatingSystemMXBean();
+        if (langOSMXBean instanceof OperatingSystemMXBean) {
+            OperatingSystemMXBean osmxb = (OperatingSystemMXBean) langOSMXBean ;
+            return osmxb.getFreePhysicalMemorySize();
+        }
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "Cannot get system freeMemorySize");
     }
 
     enum Unit {
         BYTE(1L, "B"),
-        KILOBYTE(1L << 10, "K"),
-        MEGABYTE(1L << 20, "M"),
-        GIGABYTE(1L << 30, "G"),
-        TERABYTE(1L << 40, "T");
+        KILOBYTE(1L << 10, "KB"),
+        MEGABYTE(1L << 20, "MB"),
+        GIGABYTE(1L << 30, "GB"),
+        TERABYTE(1L << 40, "TB");
 
         private final long factor;
         private final String unitString;

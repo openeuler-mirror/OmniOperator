@@ -91,8 +91,8 @@ TEST(LongVector, SetValues)
 // Test SetValues/get
 TEST(LongVector, SetValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "LongVector_SetValuesWithoutOffset");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_SetValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -113,8 +113,8 @@ TEST(LongVector, SetValuesWithoutOffset)
 // Test SetValues/get with offset
 TEST(LongVector, SetValuesWithOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "LongVector_SetValuesWithOffset");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_SetValuesWithOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -204,7 +204,7 @@ TEST(LongVector, copyRegion)
     delete allocator;
 }
 
-TEST(Vector, jniFreeVector)
+TEST(LongVector, jniFreeVector)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_jniFreeVector");
     EXPECT_TRUE(allocator != nullptr);
@@ -212,6 +212,7 @@ TEST(Vector, jniFreeVector)
     LongVector *longVector = new LongVector(allocator, 256);
     Vector *vector = (Vector *)longVector;
     delete vector;
+    delete allocator;
 }
 
 class LongVectorTest {
@@ -235,7 +236,8 @@ private:
 // Performance test
 TEST(LongVector, performanceCompare)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_performanceCompare");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_performanceCompare");
     int rowCount = 100000000;
 
     Timer timer;
@@ -303,6 +305,7 @@ TEST(LongVector, performanceCompare)
 
     delete[](long *) longVector2;
     delete vectorTest2;
+    delete allocator;
 }
 
 TEST(LongVector, appendVector)

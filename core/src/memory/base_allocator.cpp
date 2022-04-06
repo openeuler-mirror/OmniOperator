@@ -14,6 +14,8 @@ BaseAllocator::~BaseAllocator()
 
 int64_t BaseAllocator::AllocatedBytesInternal(int64_t size)
 {
+    // fetch_add returns the original value,
+    // here we need to calculate the original value plus size as new Allocated
     int64_t newAllocated = allocatedBytes.fetch_add(size, std::memory_order_relaxed) + size;
     int64_t beyondReservation = newAllocated - reservation;
     int64_t parentLimit = UNLIMIT;
