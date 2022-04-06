@@ -1,8 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include "llvm_compiler.h"
-#include <set>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ExecutionEngine/Orc/Core.h>
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
@@ -21,6 +19,7 @@
 #include "harden_optimizer.h"
 #include "jit/annotation.h"
 #include "util/debug.h"
+#include "llvm_compiler.h"
 
 using llvm::Module;
 using llvm::outs;
@@ -32,9 +31,8 @@ using std::unique_ptr;
 
 namespace omniruntime {
 namespace jit {
-LLVMCompiler::LLVMCompiler()
+LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
 {
-    this->config = Config::GetConf();
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
@@ -57,7 +55,6 @@ bool LLVMCompiler::LoadModule(std::string templatePath)
 {
     llvm::SMDiagnostic error;
     auto module = llvm::parseIRFile(templatePath, error, *context);
-
     if (!module) {
         error.print("error loadding module", llvm::errs());
         return false;
@@ -73,10 +70,20 @@ bool LLVMCompiler::LoadModule(std::string templatePath)
 
 LibraryLoader LLVMCompiler::ll;
 
+static std::string TransEnv(const char *srcEnv)
+{
+    return { srcEnv };
+}
+
 void LLVMCompiler::LoadExtraLibraries()
 {
     using namespace llvm::sys;
-    StringOrNull ev = std::getenv("LD_LIBRARY_PATH");
+    const char *envVal = std::getenv("LD_LIBRARY_PATH");
+    if (envVal == nullptr) {
+        LLVM_DEBUG_LOG("Failed get ld library path");
+        return;
+    }
+    StringOrNull ev = TransEnv(envVal);
     auto vec = ll.LoadLibraries(ev.msg());
     string err;
     for (auto &s : vec) {

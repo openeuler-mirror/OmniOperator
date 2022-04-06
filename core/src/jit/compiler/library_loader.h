@@ -72,7 +72,7 @@ private:
 
 class LibraryLoader {
 public:
-    LibraryLoader();
+    LibraryLoader() noexcept;
     ~LibraryLoader();
     std::vector<std::string> LoadLibraries(std::string envStr) noexcept;
     bool FinishedLoading();

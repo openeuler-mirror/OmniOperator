@@ -49,8 +49,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
-    JitContext *jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
-        (int32_t *)aggFuncTypes, 2, aggOutputTypes);
+    JitContext *jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto *hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
@@ -118,8 +117,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
-    auto jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
-        (int32_t *)aggFuncTypes, 2, aggOutputTypes);
+    auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
@@ -172,8 +170,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
-    auto jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
-        (int32_t *)aggFuncTypes, 2, aggOutputTypes);
+    auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);

@@ -95,7 +95,7 @@ void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector
     depConfig.close();
 }
 
-LibraryLoader::LibraryLoader() : neededLibs()
+LibraryLoader::LibraryLoader() noexcept: neededLibs()
 {
     unordered_map<string, CoreLibrary> baseLibs = { { "stdc++", CoreLibrary("libstdc++.so", "stdc++") },
         { "operator", CoreLibrary("liboperator.so", "operator", 1) } };

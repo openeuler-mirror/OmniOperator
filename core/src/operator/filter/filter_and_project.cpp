@@ -216,20 +216,6 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-Filter::Filter(const expressions::Expr &expression, const int32_t *inputTypeIds, int32_t inputVecCount)
-    : codeGen(FilterCodeGen::Create("filterFunc", expression)), expr(&expression)
-{
-    auto f = this->codeGen->GetFunction();
-    if (f == 0) {
-        this->isSupported = false;
-        this->apply = nullptr;
-    } else {
-        this->isSupported = true;
-        void *function = &f;
-        this->apply = *static_cast<FilterFunc *>(function);
-    }
-}
-
 Filter::Filter(const expressions::Expr &expression)
     : codeGen(FilterCodeGen::Create("filterFunc", expression)), expr(&expression)
 {

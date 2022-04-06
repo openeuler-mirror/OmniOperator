@@ -190,17 +190,17 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         aggs.push_back(std::move(aggregator));
     }
 
-    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByIndex, aggInputCols, aggInputTypes,
-        aggOutputTypes, std::move(aggs), inputRaw, outputPartial);
-    groupBy->Init();
-    return groupBy;
+    auto groupByOperator = new HashAggregationOperator(groupByIndex, aggInputCols, aggInputTypes, aggOutputTypes,
+        std::move(aggs), inputRaw, outputPartial);
+    groupByOperator->Init();
+    return groupByOperator;
 }
 
 OmniStatus HashAggregationOperator::Init()
 {
-    int32_t groupByColsSize = groupByCols.size();
-    int32_t aggInputColsSize = aggInputCols.size();
-    int32_t colSize = groupByColsSize + aggInputColsSize;
+    auto groupByColsSize = groupByCols.size();
+    auto aggInputColsSize = aggInputCols.size();
+    auto colSize = groupByColsSize + aggInputColsSize;
     sourceTypes = new int32_t[colSize];
     for (auto &c : groupByCols) {
         sourceTypes[c.idx] = static_cast<int32_t>(c.input.GetId());
@@ -299,7 +299,7 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
         for (uint32_t rowIdx = 0; rowIdx < run; ++rowIdx) {
             uint64_t hash = combinedHashVal[rowIdx];
             int32_t isSamePos = -1;
-            int32_t actualIdx = start + rowIdx;
+            uint32_t actualIdx = start + rowIdx;
             auto &bucket = groupedRows[hash];
             isSamePos = IsSameGroupByTuples(groupByVectors, actualIdx, groupByColNum, bucket);
             if (isSamePos == -1) {
@@ -310,11 +310,13 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
                 bucket.push_back(groupByTuple);
                 size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggNum; ++i) {
-                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], vecBatch, actualIdx);
+                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], vecBatch,
+                        static_cast<int32_t>(actualIdx));
                 }
             } else {
                 for (int32_t i = 0; i < aggNum; ++i) {
-                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], vecBatch, actualIdx);
+                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], vecBatch,
+                        static_cast<int32_t>(actualIdx));
                 }
             }
         }
@@ -325,10 +327,10 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     LogTrace("Enter Func");
     this->PreLoop(vecBatch);
-    int32_t groupColNum = this->groupByCols.size();
+    auto groupColNum = this->groupByCols.size();
     auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
-    int32_t aggColNum = this->aggInputCols.size();
-    int32_t aggNum = this->aggregators.size();
+    auto aggColNum = this->aggInputCols.size();
+    auto aggNum = this->aggregators.size();
     auto aggColIdx = std::make_unique<int32_t[]>(aggColNum);
     auto aggFuncTypes = std::make_unique<int32_t[]>(aggNum);
 
@@ -345,8 +347,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     VerifyInputTypes(vecBatch, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggNum, this->sourceTypes,
         aggFuncTypes.get());
 
-    uint32_t rowCount = vecBatch->GetRowCount();
-
+    uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
     this->InLoop(vecBatch, rowCount, groupByColIdx.get(), groupColNum, aggNum);
 
     this->PostLoop(vecBatch);
@@ -416,16 +417,16 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     // accumulate whole row count first
     int32_t totalRowCount = 0;
     for (auto it = groupedRows.begin(); it != groupedRows.end(); ++it) {
-        totalRowCount += it->second.size();
+        totalRowCount += static_cast<int32_t>(it->second.size());
     }
 
     if (totalRowCount == 0) {
         return 0;
     }
 
-    int32_t rowsPerBatch = std::ceil(OperatorUtil::MAX_VEC_BATCH_SIZE_IN_BYTES / static_cast<double>(rowByteSize));
-    int32_t expectedBatchSize = std::ceil(totalRowCount / static_cast<double>(rowsPerBatch));
-    int32_t leftRowCount = totalRowCount;
+    auto rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
+    auto expectedBatchSize = OperatorUtil::GetVecBatchCount(totalRowCount, rowsPerBatch);
+    auto leftRowCount = totalRowCount;
 
     // create all output vector batches
     for (int32_t batchId = 0; batchId < expectedBatchSize; ++batchId) {
@@ -478,7 +479,7 @@ void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCo
     for (uint32_t i = 0; i < rowCount; ++i) {
         auto idx = i + start;
         hash = !vector->IsValueNull(idx) * hasher(static_cast<V *>(vector)->GetValue(idx));
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+        combinedHash[i] = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), static_cast<int64_t>(hash));
     }
 }
 
@@ -489,7 +490,8 @@ void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_
         auto idx = i + start;
         auto valLen = static_cast<VarcharVector *>(vector)->GetValue(idx, &data);
         auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(data), valLen);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * val);
+        auto hash = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), !vector->IsValueNull(idx) * val);
+        combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
 
@@ -498,8 +500,9 @@ void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t ro
     for (uint32_t i = 0; i < rowCount; ++i) {
         auto idx = i + start;
         Decimal128 val = static_cast<Decimal128Vector *>(vector)->GetValue(idx);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i],
+        auto hash = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]),
             !vector->IsValueNull(idx) * HashUtil::HashValue(val.LowBits(), val.HighBits()));
+        combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
 
@@ -511,7 +514,7 @@ void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowInd
     for (uint32_t i = 0; i < rowCount; ++i) {
         auto idx = rowIndexes[i];
         hash = !vector->IsValueNull(idx) * hasher(static_cast<V *>(vector)->GetValue(idx));
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+        combinedHash[i] = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), static_cast<int64_t>(hash));
     }
 }
 
@@ -522,7 +525,7 @@ void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t 
         auto idx = rowIndexes[i];
         auto valLen = static_cast<VarcharVector *>(vector)->GetValue(idx, &data);
         auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(data), valLen);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * val);
+        combinedHash[i] = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), !vector->IsValueNull(idx) * val);
     }
 }
 
@@ -531,8 +534,9 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
     for (uint32_t i = 0; i < rowCount; ++i) {
         int32_t idx = rowIndexes[i];
         Decimal128 val = static_cast<Decimal128Vector *>(vector)->GetValue(idx);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i],
+        auto hash = HashUtil::CombineHash(combinedHash[i],
             !vector->IsValueNull(idx) * HashUtil::HashValue(val.LowBits(), val.HighBits()));
+        combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
 
@@ -561,7 +565,7 @@ void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, AggregateS
     if (!isInputNull && !isIntermediateNull) {
         uint8_t *data = nullptr;
         int32_t valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
-        isSame = valLen == slot.strLen && memcmp(data, slot.strVal, std::min(valLen, slot.strLen)) == 0;
+        isSame = (valLen == slot.strLen) && (memcmp(data, slot.strVal, static_cast<size_t>(valLen)) == 0);
         return;
     }
     if (isInputNull != isIntermediateNull) {
@@ -578,7 +582,7 @@ void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t
     if (vector->IsValueNull(offset)) {
         return;
     }
-    int32_t len = sizeof(D);
+    auto len = sizeof(D);
     uint8_t *ptr = context->GetArena()->Allocate(len);
     D data = static_cast<V *>(vector)->GetValue(offset);
     memcpy_s(ptr, len, &data, len);
@@ -591,9 +595,9 @@ void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint3
         return;
     }
     uint8_t *tmp = nullptr;
-    int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
+    int32_t valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
     uint8_t *data = context->GetArena()->Allocate(valLen);
-    memcpy_s(data, valLen, tmp, valLen);
+    memcpy_s(data, valLen, tmp, static_cast<size_t>(valLen));
     state.strVal = data;
     state.strLen = valLen;
 }
@@ -608,22 +612,22 @@ void SetVectorImpl(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, V
 void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount)
 {
-    vecBatch->SetVector(columnIndex,
-        new VarcharVector(vecAllocator, rowCount * ((VarcharDataType &)type).GetWidth(), rowCount));
+    vecBatch->SetVector(columnIndex, new VarcharVector(vecAllocator,
+        static_cast<uint32_t>(rowCount) * ((VarcharDataType &)type).GetWidth(), rowCount));
 }
 
 void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount)
 {
-    DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
-    LongVector *longVector = new LongVector(vecAllocator, rowCount);
+    auto doubleVector = new DoubleVector(vecAllocator, rowCount);
+    auto longVector = new LongVector(vecAllocator, rowCount);
     std::vector<uintptr_t> vectorAddresses(op::AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
     std::vector<DataType> dataTypes(op::AVG_VECTOR_COUNT);
     dataTypes[0] = DoubleDataType::Instance();
     dataTypes[1] = LongDataType::Instance();
-    ContainerVector *containerVector =
+    auto containerVector =
         new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, dataTypes);
     vecBatch->SetVector(columnIndex, containerVector);
 }

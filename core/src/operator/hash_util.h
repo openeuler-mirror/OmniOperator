@@ -80,7 +80,8 @@ public:
 
     static ALWAYS_INLINE int64_t HashValue(int64_t low, int64_t high)
     {
-        return XxHash64HashValue(low) ^ XxHash64HashValue(UnpackUnsignedLong(high));
+        return static_cast<uint64_t>(XxHash64HashValue(low)) ^
+            static_cast<uint64_t>(XxHash64HashValue(UnpackUnsignedLong(high)));
     }
 
     static ALWAYS_INLINE int64_t HashValue(int8_t *value, int32_t length)
@@ -131,7 +132,7 @@ public:
         hash = XxHash64UpdateTail(hash, value);
         hash = XxHash64FinalShuffle(hash);
 
-        return static_cast<int32_t>(hash) & mask;
+        return static_cast<uint32_t>(hash) & static_cast<uint32_t>(mask);
     }
 
     static ALWAYS_INLINE int64_t RotateLeft(uint64_t i, uint32_t distance)
@@ -146,22 +147,22 @@ public:
 
     static ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int64_t value)
     {
-        int64_t temp = hash ^ XxHash64Mix(0, value);
-        return HashUtil::RotateLeft(temp, ROTATE_DISTANCE_27) * PRIME64_1 + PRIME64_4;
+        uint64_t temp = static_cast<uint64_t>(hash) ^ static_cast<uint64_t>(XxHash64Mix(0, value));
+        return HashUtil::RotateLeft(static_cast<int64_t>(temp), ROTATE_DISTANCE_27) * PRIME64_1 + PRIME64_4;
     }
 
     static ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int8_t value)
     {
-        int32_t unsignedValue = value & 0xFF;
-        int64_t temp = hash ^ (unsignedValue * PRIME64_5);
-        return RotateLeft(temp, ROTATE_DISTANCE_11) * PRIME64_1;
+        uint32_t unsignedValue = static_cast<uint32_t>(value) & static_cast<uint32_t>(0xFF);
+        uint64_t temp = static_cast<uint64_t>(hash) ^ static_cast<uint64_t>(unsignedValue * PRIME64_5);
+        return RotateLeft(static_cast<int64_t>(temp), ROTATE_DISTANCE_11) * PRIME64_1;
     }
 
     static ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int32_t value)
     {
-        int64_t unsignedValue = value & 0xFFFFFFFFL;
-        int64_t temp = hash ^ (unsignedValue * PRIME64_1);
-        return HashUtil::RotateLeft(temp, ROTATE_DISTANCE_23) * PRIME64_2 + PRIME64_3;
+        uint64_t unsignedValue = static_cast<uint64_t>(value) & static_cast<uint64_t>(0xFFFFFFFFL);
+        uint64_t temp = static_cast<uint64_t>(hash) ^ (unsignedValue * PRIME64_1);
+        return HashUtil::RotateLeft(static_cast<int64_t>(temp), ROTATE_DISTANCE_23) * PRIME64_2 + PRIME64_3;
     }
 
     static ALWAYS_INLINE int64_t XxHash64FinalShuffle(uint64_t hash)
@@ -199,7 +200,7 @@ public:
 
     static ALWAYS_INLINE int64_t XxHash64Update(int64_t hash, int64_t value)
     {
-        int64_t temp = hash ^ XxHash64Mix(0, value);
+        uint64_t temp = static_cast<uint64_t>(hash) ^ static_cast<uint64_t>(XxHash64Mix(0, value));
         return temp * PRIME64_1 + PRIME64_4;
     }
 
@@ -244,7 +245,7 @@ public:
         }
         hash += length;
 
-        int index = length & 0xFFFFFFE0;
+        int32_t index = static_cast<uint32_t>(length) & static_cast<uint32_t>(0xFFFFFFE0);
         return XxHash64UpdateTail(hash, address, index, length);
     }
 
@@ -259,9 +260,9 @@ public:
         return bits;
     }
 
-    static ALWAYS_INLINE long UnpackUnsignedLong(int64_t value)
+    static ALWAYS_INLINE int64_t UnpackUnsignedLong(int64_t value)
     {
-        return value & ~omniruntime::op::SIGN_LONG_MASK;
+        return static_cast<uint64_t>(value) & static_cast<uint64_t>(~omniruntime::op::SIGN_LONG_MASK);
     }
 
     static ALWAYS_INLINE int64_t Reverse(uint64_t i)

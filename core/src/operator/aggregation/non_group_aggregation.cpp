@@ -105,9 +105,9 @@ Operator *AggregationOperatorFactory::CreateOperator()
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    int32_t aggCount = aggregators.size();
+    auto aggCount = aggregators.size();
     int32_t rowCount = vecBatch->GetRowCount();
-    for (int32_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
+    for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggStates[aggIdx];
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
@@ -121,12 +121,12 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
     // always output one row
-    int32_t aggCount = aggregators.size();
+    auto aggCount = aggregators.size();
     auto outputVecBatch = new VectorBatch(aggCount, 1);
     outputVecBatch->NewVectors(this->vecAllocator, aggOutputTypes.Get());
 
     // set result value
-    for (int32_t aggIdx = 0; aggIdx < aggCount; ++aggIdx) {
+    for (size_t aggIdx = 0; aggIdx < aggCount; ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
         auto outputVec = outputVecBatch->GetVector(aggIdx);
         auto state = aggStates[aggIdx];

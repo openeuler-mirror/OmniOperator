@@ -32,11 +32,11 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; ++i) {
-        groupByCols[i] = hashAggCols[i];
+        groupByCols[i] = static_cast<uint32_t>(hashAggCols[i]);
     }
     uint32_t aggCols[aggNum];
     for (uint32_t i = 0, j = groupByNum; i < aggNum; ++i, ++j) {
-        aggCols[i] = hashAggCols[j];
+        aggCols[i] = static_cast<uint32_t>(hashAggCols[j]);
     }
 
     std::vector<DataType> groupByTypeVec;

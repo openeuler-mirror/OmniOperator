@@ -1,12 +1,9 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include "jit.h"
-#include "compiler/llvm_compiler.h"
 #include "util/debug.h"
-
-#include <iostream>
-#include <utility>
+#include "compiler/llvm_compiler.h"
+#include "jit.h"
 
 namespace omniruntime {
 namespace jit {

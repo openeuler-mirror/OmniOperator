@@ -6,6 +6,7 @@
 #define __JOIN_HASH_TABLE_H__
 
 #include <cstdint>
+#include <string>
 #include "vector/vector.h"
 #include "type/data_types.h"
 #include "operator/filter/filter_and_project.h"
@@ -55,8 +56,8 @@ public:
     {
         return keySize;
     }
-    void SetAddressIndex(ArrayPositionLinks *positionLinks, int32_t realPosition, int64_t hash,
-        uint64_t *totalHashCollisions) const;
+    void SetAddressIndex(ArrayPositionLinks &positionLinks, int32_t realPosition, int64_t hash,
+        uint64_t &totalHashCollisions) const;
     int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
         int64_t rawHash) const;
 
@@ -93,9 +94,6 @@ private:
     uint32_t mask;
     int8_t *positionToHashes;
     uint64_t hashCollisions;
-
-    void SetAddressIndex(ArrayPositionLinks *positionLinks, int64_t hashCollisionsLocal, int32_t realPosition,
-        int64_t hash);
 };
 
 class JoinHashTable {
@@ -200,7 +198,7 @@ public:
         this->filterExpr = filterExpr;
     }
 
-    void AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable);
+    void AddHashTable(int32_t partitionIndex, JoinHashTable *hashTable);
     JoinHashTable *GetHashTable(int32_t partitionIndex) const;
     bool IsJoinPositionEligible(int64_t partitionedJoinPosition, int32_t probePosition,
         omniruntime::vec::Vector **probeColumns, int32_t probeColsCount, ExecutionContext *executionContext) const;
@@ -212,8 +210,8 @@ public:
         omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
 
 private:
-    JoinHashTable **hashTables; // actually, the type is JoinHashTable **
     int32_t hashTableCount;
+    JoinHashTable **hashTables; // actually, the type is JoinHashTable **
     std::atomic_int32_t hashTableSize;
     uint32_t partitionMask;
     uint32_t shiftSize;

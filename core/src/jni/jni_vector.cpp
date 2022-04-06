@@ -14,9 +14,17 @@
 
 using namespace omniruntime::vec;
 
-Vector *TransformVector(long vectorAddr);
+static Vector *TransformVector(long vectorAddr)
+{
+    Vector *nativeVector = reinterpret_cast<Vector *>(vectorAddr);
+    return nativeVector;
+}
 
-VectorAllocator *TransformAllocator(long allocatorAddr);
+static VectorAllocator *TransformAllocator(long allocatorAddr)
+{
+    VectorAllocator *nativeAllocator = reinterpret_cast<VectorAllocator *>(allocatorAddr);
+    return nativeAllocator;
+}
 
 void RecordVectorStack(Vector *vector, VecOpType opType, JNIEnv *env)
 {
@@ -245,16 +253,4 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataC
 {
     Vector *nativeVector = TransformVector(jNativeVector);
     return nativeVector->ExpandDataCapacity(jToCapacityInBytes);
-}
-
-Vector *TransformVector(long vectorAddr)
-{
-    Vector *nativeVector = reinterpret_cast<Vector *>(vectorAddr);
-    return nativeVector;
-}
-
-VectorAllocator *TransformAllocator(long allocatorAddr)
-{
-    VectorAllocator *nativeAllocator = reinterpret_cast<VectorAllocator *>(allocatorAddr);
-    return nativeAllocator;
 }

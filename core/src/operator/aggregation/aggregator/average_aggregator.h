@@ -40,8 +40,8 @@ public:
                 return;
             }
             auto containerVector = static_cast<ContainerVector *>(vector);
-            DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
-            LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
+            auto avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
+            auto avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
             double avgVal = avgValVector->GetValue(offset);
             int64_t avgCnt = avgCountVector->GetValue(offset);
             auto currentVal = static_cast<double *>(state.avgVal);
@@ -72,8 +72,8 @@ public:
             state.avgCnt = 1;
         } else {
             auto containerVector = static_cast<ContainerVector *>(vector);
-            auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
-            auto *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
+            auto avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
+            auto avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
             double avgVal = avgValVector->GetValue(offset);
             int64_t avgCnt = avgCountVector->GetValue(offset);
             if (avgCnt == 0) {
@@ -98,12 +98,12 @@ public:
             if (state.avgCnt == 0) {
                 LogError("Divisor is zero!");
             }
-            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(v->GetValue(0));
+            auto doubleVector = reinterpret_cast<DoubleVector *>(v->GetValue(0));
             doubleVector->SetValue(rowIndex, *static_cast<double *>(state.avgVal));
-            LongVector *longVector = reinterpret_cast<LongVector *>(v->GetValue(1));
+            auto longVector = reinterpret_cast<LongVector *>(v->GetValue(1));
             longVector->SetValue(rowIndex, state.avgCnt);
         } else {
-            DoubleVector *v = static_cast<DoubleVector *>(vector);
+            auto v = static_cast<DoubleVector *>(vector);
             if (state.val == nullptr) {
                 v->SetValueNull(rowIndex);
                 return;
