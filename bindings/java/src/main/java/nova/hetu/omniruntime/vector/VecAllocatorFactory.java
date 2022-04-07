@@ -66,6 +66,9 @@ public class VecAllocatorFactory {
      * @since 2021-09-23
      */
     public interface CallBack {
+        /**
+         * the call back method.
+         */
         void callback();
     }
 }

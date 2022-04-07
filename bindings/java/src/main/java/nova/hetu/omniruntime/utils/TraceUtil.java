@@ -24,8 +24,8 @@ public class TraceUtil {
     public static String stack() {
         StackTraceElement[] elements = Thread.currentThread().getStackTrace();
         StringJoiner stack = new StringJoiner(lineSeparator() + "\t");
-        Arrays.stream(elements).skip(2).limit(min(25, elements.length - 1)).forEach(e -> {
-            stack.add(e.toString());
+        Arrays.stream(elements).skip(2).limit(min(25, elements.length - 1)).forEach(item -> {
+            stack.add(item.toString());
         });
         return stack.toString();
     }

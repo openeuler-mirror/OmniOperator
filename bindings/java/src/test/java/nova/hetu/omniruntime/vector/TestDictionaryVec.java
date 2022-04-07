@@ -170,7 +170,7 @@ public class TestDictionaryVec {
     public void testGetDouble() {
         DoubleVec originalVec = new DoubleVec(10);
         for (int i = 0; i < 10; i++) {
-            originalVec.set(i, 2.3 * i);
+            originalVec.set(i, 2.3d * i);
         }
 
         int[] ids = {6, 8, 9};
