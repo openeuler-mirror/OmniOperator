@@ -125,14 +125,14 @@ public:
     /*
      * it is used to get partition for rawHash when getting partition for probe of join and local exchange
      */
-    static ALWAYS_INLINE int32_t GetRawHashPartition(int64_t rawHash, int32_t mask)
+    static ALWAYS_INLINE uint32_t GetRawHashPartition(int64_t rawHash, uint32_t mask)
     {
         int64_t value = Reverse(rawHash);
         int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
         hash = XxHash64UpdateTail(hash, value);
         hash = XxHash64FinalShuffle(hash);
 
-        return static_cast<uint32_t>(hash) & static_cast<uint32_t>(mask);
+        return static_cast<uint32_t>(hash) & mask;
     }
 
     static ALWAYS_INLINE int64_t RotateLeft(uint64_t i, uint32_t distance)

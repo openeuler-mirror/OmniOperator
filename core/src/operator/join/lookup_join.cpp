@@ -41,15 +41,14 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
     this->hashTables->JoinFilterCodeGen();
 }
 
-LookupJoinOperatorFactory::~LookupJoinOperatorFactory() {}
+LookupJoinOperatorFactory::~LookupJoinOperatorFactory() = default;
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const type::DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
     int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType inputJoinType,
     int64_t hashBuilderFactoryAddr)
 {
-    HashBuilderOperatorFactory *hashBuilderFactory =
-        reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
+    auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory =
         new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols,
         probeHashColsCount, buildOutputCols, buildOutputTypes, inputJoinType, hashBuilderFactory->GetHashTables());
@@ -76,7 +75,7 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
       currentProbePositionProducedRow(false),
       hashTables(hashTables),
       joinProbe(nullptr),
-      partitionedJoinPosition(-1)
+      partitionedJoinPosition(INVALID_PARTITION_POSITION)
 {
     this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeTypes.GetIds(), probeOutputCols.data(),
         probeOutputCols.size(), buildOutputCols.data(), buildOutputTypes, outputRowSize);
@@ -94,7 +93,7 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
     this->input = vecBatch;
     this->joinProbe = new JoinProbe(vecBatch, probeTypes.GetSize(), probeHashCols.data(), probeHashColTypes.data(),
         probeHashCols.size());
-    this->partitionedJoinPosition = -1;
+    this->partitionedJoinPosition = INVALID_PARTITION_POSITION;
 
     // start probe
     ProcessProbe();
@@ -145,23 +144,23 @@ void LookupJoinOperator::ProcessProbe()
 void LookupJoinOperator::JoinCurrentPosition()
 {
     // match in hash table
-    while (partitionedJoinPosition >= 0) {
+    while (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
         // handle data of build
         currentProbePositionProducedRow = true;
         outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
-        partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition, joinProbe->GetPosition());
+        partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition);
     }
 
     // do not match in hash table
-    if (probeOnOuterSide && !currentProbePositionProducedRow && partitionedJoinPosition < 0) {
+    if (probeOnOuterSide && !currentProbePositionProducedRow && partitionedJoinPosition == INVALID_PARTITION_POSITION) {
         currentProbePositionProducedRow = true;
-        outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
+        outputBuilder->AppendRow(joinProbe->GetPosition(), INVALID_PARTITION_POSITION);
     }
 }
 
 void LookupJoinOperator::JoinCurrentPositionWithFilter()
 {
-    while (partitionedJoinPosition >= 0) {
+    while (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
         // match in hash table
         if (hashTables->IsJoinPositionEligible(partitionedJoinPosition, joinProbe->GetPosition(),
             joinProbe->GetProbeAllColumns(), joinProbe->GetProbeAllColsCount(), executionContext)) {
@@ -169,13 +168,13 @@ void LookupJoinOperator::JoinCurrentPositionWithFilter()
             currentProbePositionProducedRow = true;
             outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
         }
-        partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition, joinProbe->GetPosition());
+        partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition);
     }
 
     // do not match in hash table
-    if (probeOnOuterSide && !currentProbePositionProducedRow && partitionedJoinPosition < 0) {
+    if (probeOnOuterSide && !currentProbePositionProducedRow && partitionedJoinPosition == INVALID_PARTITION_POSITION) {
         currentProbePositionProducedRow = true;
-        outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
+        outputBuilder->AppendRow(joinProbe->GetPosition(), INVALID_PARTITION_POSITION);
     }
 }
 
@@ -190,30 +189,29 @@ bool LookupJoinOperator::AdvanceProbePosition()
     return true;
 }
 
-int64_t LookupJoinOperator::GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const
+uint64_t LookupJoinOperator::GetNextJoinPosition(uint64_t currentJoinPosition) const
 {
-    int64_t result = hashTables->GetNextJoinPosition(currentJoinPosition, probePosition);
-    return result;
+    return hashTables->GetNextJoinPosition(currentJoinPosition);
 }
 
 template <typename T>
-void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+void CalculateColHashes(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
     int64_t hash;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vec->IsValueNull(i)) {
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(static_cast<int32_t>(i))) {
                 nulls[i] = true;
                 continue;
             }
-            hash = HashUtil::HashValue(static_cast<T *>(vec)->GetValue(i));
+            hash = HashUtil::HashValue(static_cast<T *>(vec)->GetValue(static_cast<int32_t>(i)));
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
     } else {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
@@ -224,23 +222,24 @@ void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t
     }
 }
 
-void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
     int64_t hash;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vec->IsValueNull(i)) {
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(static_cast<int32_t>(i))) {
                 nulls[i] = true;
                 continue;
             }
-            hash = HashUtil::HashDecimal64Value(static_cast<omniruntime::vec::LongVector *>(vec)->GetValue(i));
+            hash = HashUtil::HashDecimal64Value(
+                static_cast<omniruntime::vec::LongVector *>(vec)->GetValue(static_cast<int32_t>(i)));
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
     } else {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
@@ -251,37 +250,37 @@ void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, in
     }
 }
 
-void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
     int64_t hash;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     Decimal128 decimal128Value;
     if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vec->IsValueNull(i)) {
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(static_cast<int32_t>(i))) {
                 nulls[i] = true;
                 continue;
             }
-            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vec)->GetValue(i);
-            hash = HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vec)->GetValue(static_cast<int32_t>(i));
+            hash = HashUtil::HashValue(static_cast<int64_t>(decimal128Value.LowBits()), decimal128Value.HighBits());
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
     } else {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
             }
             decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(result)->GetValue(idIndex);
-            hash = HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
+            hash = HashUtil::HashValue(static_cast<int64_t>(decimal128Value.LowBits()), decimal128Value.HighBits());
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
     }
 }
 
-void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
     int64_t hash;
     uint8_t *varcharValue = nullptr;
@@ -289,19 +288,20 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     if (vec->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vec->IsValueNull(i)) {
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(static_cast<int32_t>(i))) {
                 nulls[i] = true;
                 continue;
             }
             varcharValue = nullptr;
-            valueLength = static_cast<omniruntime::vec::VarcharVector *>(vec)->GetValue(i, &varcharValue);
+            valueLength =
+                static_cast<omniruntime::vec::VarcharVector *>(vec)->GetValue(static_cast<int32_t>(i), &varcharValue);
             hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
     } else {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
@@ -315,10 +315,10 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
 }
 
 SPECIALIZE(OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES)
-void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, int32_t hashColsCount, int64_t *hashes,
-    bool *nulls)
+void PopulateHashes(Vector **hashCols, uint32_t rowCount, int32_t *hashColTypes, uint32_t hashColsCount,
+    int64_t *hashes, bool *nulls)
 {
-    for (int32_t i = 0; i < hashColsCount; ++i) {
+    for (uint32_t i = 0; i < hashColsCount; ++i) {
         switch (hashColTypes[i]) {
             case omniruntime::type::OMNI_INT:
             case omniruntime::type::OMNI_DATE32:
@@ -352,8 +352,8 @@ void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, 
     }
 }
 
-JoinProbe::JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
-    int32_t hashColsCount)
+JoinProbe::JoinProbe(VectorBatch *input, uint32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
+    uint32_t hashColsCount)
     : probeAllColsCount(allColsCount),
       positionCount(input->GetRowCount()),
       probeHashColTypes(hashColTypes),
@@ -361,14 +361,13 @@ JoinProbe::JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols
       position(-1)
 {
     this->probeAllColumns = new Vector *[allColsCount];
-    for (int32_t columnIdx = 0; columnIdx < allColsCount; columnIdx++) {
-        probeAllColumns[columnIdx] = input->GetVector(columnIdx);
+    for (uint32_t columnIdx = 0; columnIdx < allColsCount; columnIdx++) {
+        probeAllColumns[columnIdx] = input->GetVector(static_cast<int32_t>(columnIdx));
     }
 
     this->probeHashColumns = new Vector *[hashColsCount];
-    int32_t hashColumn;
-    for (int32_t columnIdx = 0; columnIdx < hashColsCount; columnIdx++) {
-        hashColumn = hashCols[columnIdx];
+    for (uint32_t columnIdx = 0; columnIdx < hashColsCount; columnIdx++) {
+        auto hashColumn = hashCols[columnIdx];
         probeHashColumns[columnIdx] = probeAllColumns[hashColumn];
     }
 
@@ -391,14 +390,13 @@ bool JoinProbe::AdvanceNextPosition()
     return position < positionCount;
 }
 
-int64_t JoinProbe::GetCurrentJoinPosition(const JoinHashTables *hashTables) const
+uint64_t JoinProbe::GetCurrentJoinPosition(const JoinHashTables *hashTables) const
 {
     if (nulls[position]) {
-        return -1;
+        return INVALID_PARTITION_POSITION;
     }
 
-    int64_t currentJoinPosition = hashTables->GetJoinPosition(position, probeHashColumns, probeHashColTypes,
-        probeHashColsCount, probeAllColumns, probeAllColsCount, hashes[position]);
+    auto currentJoinPosition = hashTables->GetJoinPosition(position, probeHashColumns, hashes[position]);
     return currentJoinPosition;
 }
 
@@ -416,32 +414,24 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(const int32_t *probeTypes, int3
 
 void LookupJoinOutputBuilder::AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition)
 {
-    int32_t previousPosition = probeIndex.size() == 0 ? -1 : probeIndex[probeIndex.size() - 1];
+    int32_t previousPosition = probeIndex.empty() ? -1 : probeIndex[probeIndex.size() - 1];
     isSequentialProbeIndices =
         isSequentialProbeIndices && ((probePosition == previousPosition + 1) || (previousPosition == -1));
     probeIndex.push_back(probePosition);
     buildIndex.push_back(partitionedJoinPosition);
 }
 
-Vector *GetBuildColumnAndRowIndex(const JoinHashTables *hashTables, int64_t partitionedJoinPosition, int32_t outputCol,
+Vector *GetBuildColumnAndRowIndex(const JoinHashTables *hashTables, uint64_t partitionedJoinPosition, int32_t outputCol,
     int32_t &originalRowIndex)
 {
-    JoinHashTable *hashTable = nullptr;
-    int32_t joinPosition = -1;
-    if (hashTables->GetHashTableCount() != 1) {
-        uint32_t partition = hashTables->DecodePartition(partitionedJoinPosition);
-        joinPosition = hashTables->DecodeJoinPosition(static_cast<uint64_t>(partitionedJoinPosition));
-        hashTable = hashTables->GetHashTable(static_cast<int32_t>(partition));
-    } else {
-        joinPosition = static_cast<int32_t>(partitionedJoinPosition);
-        hashTable = hashTables->GetHashTable(0);
-    }
-
-    PagesHash *pagesHash = hashTable->GetPagesHash();
-    uint64_t address = pagesHash->GetAddresses()[joinPosition];
-    uint32_t vecBatchIndex = DecodeSliceIndex(address);
-    uint32_t rowIndex = DecodePosition(address);
-    Vector *vector = pagesHash->GetPagesHashStrategy()->GetBuildColumns()[outputCol][vecBatchIndex];
+    auto partition = hashTables->DecodePartition(partitionedJoinPosition);
+    auto joinPosition = hashTables->DecodeJoinPosition(partitionedJoinPosition);
+    auto hashTable = hashTables->GetHashTable(partition);
+    auto pagesHash = hashTable->GetPagesHash();
+    auto address = pagesHash->GetAddresses()[joinPosition];
+    auto vecBatchIndex = DecodeSliceIndex(address);
+    auto rowIndex = DecodePosition(address);
+    auto vector = pagesHash->GetPagesHashStrategy()->GetBuildColumns()[outputCol][vecBatchIndex];
     vector = VectorHelper::ExpandVectorAndIndex(vector, static_cast<int32_t>(rowIndex), originalRowIndex);
     return vector;
 }
@@ -456,7 +446,7 @@ T *ConstructBuildColumn(VectorAllocator *vecAllocator, const JoinHashTables *has
     int32_t index = 0;
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         auto partitionedJoinPosition = buildIndex[rowIdx];
-        if (partitionedJoinPosition != -1) {
+        if (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
             int32_t originalRowIndex;
             T *buildVector = static_cast<T *>(
                 GetBuildColumnAndRowIndex(hashTables, partitionedJoinPosition, outputCol, originalRowIndex));
@@ -476,15 +466,15 @@ T *ConstructBuildColumn(VectorAllocator *vecAllocator, const JoinHashTables *has
 VarcharVector *ConstructBuildVarcharColumn(VectorAllocator *vecAllocator, const JoinHashTables *hashTables,
     int32_t outputCol, uint64_t *buildIndex, int32_t offset, int32_t length, uint32_t width)
 {
-    auto *vector = new VarcharVector(vecAllocator, length * width, length);
+    auto *vector = new VarcharVector(vecAllocator, static_cast<int32_t>(length * width), length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t index = 0;
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         auto partitionedJoinPosition = buildIndex[rowIdx];
-        if (partitionedJoinPosition != -1) {
+        if (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
             int32_t originalRowIndex;
-            VarcharVector *buildVector = static_cast<VarcharVector *>(
+            auto buildVector = static_cast<VarcharVector *>(
                 GetBuildColumnAndRowIndex(hashTables, partitionedJoinPosition, outputCol, originalRowIndex));
             if (buildVector->IsValueNull(originalRowIndex)) {
                 vector->SetValueNull(index++);
@@ -553,7 +543,7 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
     if (probeOutputCols == nullptr) {
         return;
     }
-    int32_t probeLength = static_cast<int32_t>(probeIndex.size());
+    auto probeLength = static_cast<int32_t>(probeIndex.size());
     if (!isSequentialProbeIndices || probeLength == 0) {
         // probeIndices are discrete
         ConstructProbeColumnsFromPositions(vectorBatch, probeAllColumns, probeTypes, probeOutputCols,
@@ -620,7 +610,7 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
 void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe,
     const JoinHashTables *hashTables, std::vector<VectorBatch *> &outputVecBatches)
 {
-    int32_t positionCount = static_cast<int32_t>(probeIndex.size());
+    auto positionCount = static_cast<int32_t>(probeIndex.size());
     // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
     int32_t maxRowCount = OperatorUtil::GetMaxRowCount((outputRowSize != 0) ? outputRowSize : DEFAULT_ROW_SIZE);
     int32_t tableCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);

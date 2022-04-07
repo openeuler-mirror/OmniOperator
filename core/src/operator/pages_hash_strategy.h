@@ -17,14 +17,14 @@
 namespace omniruntime {
 namespace op {
 template <typename V>
-ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, int32_t leftIndex,
-    omniruntime::vec::Vector *rightVector, int32_t rightIndex)
+ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, uint32_t leftIndex,
+    omniruntime::vec::Vector *rightVector, uint32_t rightIndex)
 {
     return static_cast<V *>(leftVector)->GetValue(leftIndex) == static_cast<V *>(rightVector)->GetValue(rightIndex);
 }
 
-static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, int32_t leftIndex,
-    omniruntime::vec::Vector *rightVector, int32_t rightIndex)
+static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, uint32_t leftIndex,
+    omniruntime::vec::Vector *rightVector, uint32_t rightIndex)
 {
     double leftValue = static_cast<omniruntime::vec::DoubleVector *>(leftVector)->GetValue(leftIndex);
     double rightValue = static_cast<omniruntime::vec::DoubleVector *>(rightVector)->GetValue(rightIndex);
@@ -35,8 +35,8 @@ static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::Ve
     }
 }
 
-static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, int32_t leftIndex,
-    omniruntime::vec::Vector *rightVector, int32_t rightIndex)
+static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, uint32_t leftIndex,
+    omniruntime::vec::Vector *rightVector, uint32_t rightIndex)
 {
     uint8_t *leftValue = nullptr;
     uint8_t *rightValue = nullptr;
@@ -85,7 +85,7 @@ public:
     {
         return buildHashColTypes;
     }
-    int32_t GetBuildHashColsCount() const
+    uint32_t GetBuildHashColsCount() const
     {
         return buildHashColsCount;
     }
@@ -94,7 +94,7 @@ public:
         return buildHashColumns;
     }
 
-    int32_t GetBuildColsCount() const
+    uint32_t GetBuildColsCount() const
     {
         return buildColumnCount;
     }
@@ -105,18 +105,18 @@ public:
 
 private:
     omniruntime::vec::Vector ***buildColumns;     // Vector *[colCount][vecBatchCount]
-    int32_t buildColumnCount;                     // column count
+    uint32_t buildColumnCount;                    // column count
     int32_t *buildHashColTypes;                   // build hash column types
     omniruntime::vec::Vector ***buildHashColumns; // Vector *[join colCount][vecBatchCount]
-    int32_t buildHashColsCount;                   // join column count
+    uint32_t buildHashColsCount;                  // join column count
 };
 
-bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
-    int32_t rightRowIndex, omniruntime::vec::Vector ***buildHashColumns, const int32_t *hashColTypes,
-    int32_t hashColCount);
-bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition,
+bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
+    uint32_t rightRowIndex, omniruntime::vec::Vector ***buildHashColumns, const int32_t *hashColTypes,
+    uint32_t hashColCount);
+bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
     omniruntime::vec::Vector **probeJoinColumns, omniruntime::vec::Vector ***buildHashColumns,
-    const int32_t *hashColTypes, int32_t hashColCount);
+    const int32_t *hashColTypes, uint32_t hashColCount);
 }
 }
 #endif

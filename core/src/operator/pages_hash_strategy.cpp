@@ -42,8 +42,8 @@ PagesHashStrategy::~PagesHashStrategy()
     }
 }
 
-static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, int32_t leftRowIndex, Vector *rightVector,
-    int32_t rightRowIndex)
+static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, uint32_t leftRowIndex,
+    Vector *rightVector, uint32_t rightRowIndex)
 {
     switch (dataType) {
         case OMNI_INT:
@@ -67,9 +67,8 @@ static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, in
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
-bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex,
-    int32_t rightTableIndex, int32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes,
-    int32_t hashColCount)
+bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
+    uint32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
 {
     Vector *leftColumn = nullptr;
     Vector *rightColumn = nullptr;
@@ -92,9 +91,8 @@ bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIn
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
-bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex,
-    int32_t probePosition, Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes,
-    int32_t hashColCount)
+bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
+    Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
 {
     bool result = true;
     int32_t originalBuildRowIndex, originalProbeRowIndex;

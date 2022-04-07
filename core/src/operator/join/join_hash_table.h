@@ -14,6 +14,8 @@
 
 namespace omniruntime {
 namespace op {
+constexpr uint32_t INVALID_POSITION = UINT32_MAX;
+constexpr uint64_t INVALID_PARTITION_POSITION = UINT64_MAX;
 /*
  * ArrayPositionLinks is used to storing the conflict position, it is a link.
  * pos = key[hashPos]
@@ -23,24 +25,24 @@ namespace op {
  */
 class ArrayPositionLinks {
 public:
-    explicit ArrayPositionLinks(int32_t capacity);
+    explicit ArrayPositionLinks(uint32_t capacity);
     ~ArrayPositionLinks();
-    int32_t *GetPositionLinks() const
+    uint32_t *GetPositionLinks() const
     {
         return positionLinks;
     }
-    int32_t GetSize() const
+    uint32_t GetSize() const
     {
         return size;
     }
-    int32_t Link(int32_t left, int32_t right);
-    int32_t Start(int32_t position) const;
-    int32_t Next(int32_t position) const;
+    uint32_t Link(uint32_t left, uint32_t right);
+    uint32_t Start(uint32_t position) const;
+    uint32_t Next(uint32_t position) const;
 
 private:
-    int32_t capacity;
-    int32_t size;
-    int32_t *positionLinks;
+    uint32_t capacity;
+    uint32_t size;
+    uint32_t *positionLinks;
 };
 
 class PagesHash {
@@ -48,7 +50,7 @@ public:
     PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStrategy *pagesHashStrategy,
         ArrayPositionLinks *positionLinks);
     ~PagesHash();
-    int32_t *GetKey() const
+    uint32_t *GetKey() const
     {
         return key;
     }
@@ -56,10 +58,9 @@ public:
     {
         return keySize;
     }
-    void SetAddressIndex(ArrayPositionLinks &positionLinks, int32_t realPosition, int64_t hash,
+    void SetAddressIndex(ArrayPositionLinks &positionLinks, uint32_t realPosition, int64_t hash,
         uint64_t &totalHashCollisions) const;
-    int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
-        int64_t rawHash) const;
+    uint32_t GetAddressIndex(uint32_t probePosition, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
 
     int8_t *GetPositionToHashes() const
     {
@@ -80,17 +81,15 @@ public:
     }
 
 private:
-    int64_t GetRawHash(int32_t position) const;
-    bool IsPositionNull(int32_t position) const;
-    bool PositionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition) const;
-    bool PositionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition,
+    bool PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition) const;
+    bool PositionEqualsCurrentRowIgnoreNulls(uint32_t buildPosition, int8_t rawHash, uint32_t probePosition,
         omniruntime::vec::Vector **joinColumns) const;
 
     PagesHashStrategy *pagesHashStrategy;
     uint64_t *addresses;
     uint32_t addressesCount;
     uint32_t keySize;
-    int32_t *key; // it is used to store the addresses index. the key index is from getRawHashPosition()
+    uint32_t *key; // it is used to store the addresses index. the key index is from getRawHashPosition()
     uint32_t mask;
     int8_t *positionToHashes;
     uint64_t hashCollisions;
@@ -110,18 +109,12 @@ public:
         return positionLinks;
     }
 
-    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
-        omniruntime::vec::Vector **allColumns) const;
-    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
-        omniruntime::vec::Vector **allColumns, int64_t rawHash) const;
-    int32_t GetNextJoinPosition(int32_t currentJoinPosition, int probePosition) const;
-    int32_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
-        omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
-    void PrintHashTable(int32_t partitionIndex) const;
+    uint32_t GetNextJoinPosition(uint32_t currentJoinPosition) const;
+    uint32_t GetJoinPosition(uint32_t position, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
+    void PrintHashTable(uint32_t partitionIndex) const;
 
 private:
-    int32_t StartJoinPosition(int32_t currentJoinPosition, int32_t probePosition, omniruntime::vec::Vector **allColumns,
-        int32_t allColumnsCount) const;
+    uint32_t StartJoinPosition(uint32_t currentJoinPosition) const;
 
     ArrayPositionLinks *positionLinks;
     PagesHash *pagesHash;
@@ -129,16 +122,16 @@ private:
 
 class JoinHashTables {
 public:
-    explicit JoinHashTables(int32_t hashTableCount);
+    explicit JoinHashTables(uint32_t hashTableCount);
 
     ~JoinHashTables();
 
-    int32_t GetHashTableSize()
+    uint32_t GetHashTableSize()
     {
         return hashTableSize;
     }
 
-    int32_t GetHashTableCount() const
+    uint32_t GetHashTableCount() const
     {
         return hashTableCount;
     }
@@ -198,21 +191,17 @@ public:
         this->filterExpr = filterExpr;
     }
 
-    void AddHashTable(int32_t partitionIndex, JoinHashTable *hashTable);
-    JoinHashTable *GetHashTable(int32_t partitionIndex) const;
-    bool IsJoinPositionEligible(int64_t partitionedJoinPosition, int32_t probePosition,
-        omniruntime::vec::Vector **probeColumns, int32_t probeColsCount, ExecutionContext *executionContext) const;
-    int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
-    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t *joinColumnTypes,
-        int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns, int32_t allColumnsCount,
-        int64_t rawHash) const;
-    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
-        omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
+    void AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTable);
+    JoinHashTable *GetHashTable(uint32_t partitionIndex) const;
+    bool IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
+        omniruntime::vec::Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const;
+    uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
+    uint64_t GetJoinPosition(uint32_t position, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
 
 private:
-    int32_t hashTableCount;
+    uint32_t hashTableCount;
     JoinHashTable **hashTables; // actually, the type is JoinHashTable **
-    std::atomic_int32_t hashTableSize;
+    std::atomic_uint32_t hashTableSize;
     uint32_t partitionMask;
     uint32_t shiftSize;
     omniruntime::type::DataTypes *probeTypes;
