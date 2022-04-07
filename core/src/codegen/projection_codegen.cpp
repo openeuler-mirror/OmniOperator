@@ -37,7 +37,9 @@ std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
     const omniruntime::expressions::Expr &expression, bool filter)
 {
     std::unique_ptr<ProjectionCodeGen> codegen { new ProjectionCodeGen(std::move(name), expression, filter) };
-    codegen->Initialize();
+    if (!codegen->Initialize()) {
+        return nullptr;
+    }
     return codegen;
 }
 

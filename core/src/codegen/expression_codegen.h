@@ -55,8 +55,8 @@ public:
     ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
     ~ExpressionCodeGen() override;
 
-    void Initialize();
-    void LoadPreCompiledIR();
+    bool Initialize();
+    bool LoadPreCompiledIR();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
     llvm::IRBuilder<> &GetIRBuilder();

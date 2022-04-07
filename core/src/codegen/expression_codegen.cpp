@@ -113,7 +113,7 @@ void ExpressionCodeGen::InitializeCodegenTargets()
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 }
 
-void ExpressionCodeGen::Initialize()
+bool ExpressionCodeGen::Initialize()
 {
     std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
     jit = eoe(LLJITBuilder().create());
@@ -129,43 +129,51 @@ void ExpressionCodeGen::Initialize()
     decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder, *codeGenUtils);
     fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
 
-    LoadPreCompiledIR();
+    auto loaded = LoadPreCompiledIR();
+    if (!loaded) {
+        return false;
+    }
 
     ExprInfoExtractor exprInfoExtractor;
     this->expr->Accept(exprInfoExtractor);
     this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
+    return true;
 }
 
-void ExpressionCodeGen::LoadPreCompiledIR()
+bool ExpressionCodeGen::LoadPreCompiledIR()
 {
     string err;
-    string path = omniruntime::LibConfig::GetLibPath() + "libomni_vector.so";
+    string path = omniruntime::LibConfig::GetLibPath() + "libboostkit-omniop-vector-1.0.0-aarch64.so";
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(path.c_str(), &err)) {
         LogWarn("Failed to load core library at path: %s", path.c_str());
-    } else {
-        LogDebug("Successfully loaded core library at path %s", path.c_str());
+        return false;
     }
 
     auto bitcode = llvm::StringRef(reinterpret_cast<const char *>(precompiledBitcode), precompiledBitcodeSize);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> bufferOrError =
         llvm::MemoryBuffer::getMemBuffer(bitcode, "precompiled", false);
     if (!bufferOrError) {
-        std::cerr << "Unable to load module from IR " << bufferOrError.getError().message() << std::endl;
+        LogError("Unable to load module from IR %s, ", bufferOrError.getError().message().c_str());
+        return false;
     }
     std::unique_ptr<llvm::MemoryBuffer> buffer = move(bufferOrError.get());
     llvm::Expected<std::unique_ptr<llvm::Module>> moduleOrError =
         llvm::getOwningLazyBitcodeModule(move(buffer), *context);
     if (!moduleOrError) {
-        std::cerr << "Unable to get IR module from buffer" << std::endl;
+        LogError("Unable to get IR module from buffer");
+        return false;
     }
     std::unique_ptr<llvm::Module> irModule = move(moduleOrError.get());
     irModule->setDataLayout(jit->getDataLayout());
     if (llvm::verifyModule(*irModule, &llvm::errs())) {
-        std::cerr << "Verification of IR Module failed" << std::endl;
+        LogError("Verification of IR Module failed");
+        return false;
     }
     if (llvm::Linker::linkModules(*module, move(irModule))) {
-        std::cerr << "Linking of IR Modules failed" << std::endl;
+        LogError("Linking of IR Module failed");
+        return false;
     }
+    return true;
 }
 
 // Other operations which require externed functions

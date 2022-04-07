@@ -31,7 +31,10 @@ namespace omniruntime {
 std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
 {
     std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression) };
-    codegen->Initialize();
+    auto initialized = codegen->Initialize();
+    if (!initialized) {
+        return nullptr;
+    }
     return codegen;
 }
 
