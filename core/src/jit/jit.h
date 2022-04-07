@@ -4,13 +4,12 @@
 #ifndef __OMNI_JIT_H__
 #define __OMNI_JIT_H__
 
-#include "compiler/compiler.h"
-#include "config.h"
-#include "context.h"
-
 #include <vector>
 #include <map>
 #include <string>
+#include "compiler/compiler.h"
+#include "config.h"
+#include "context.h"
 
 namespace omniruntime {
 namespace jit {

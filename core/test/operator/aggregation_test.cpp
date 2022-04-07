@@ -231,8 +231,7 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
     PrepareContext aggColContext = { aggCols, 2 };
     PrepareContext aggFuncTypeContext = { aggFunType, 2 };
 
-    auto jitContext = CreateHashAggregationJitContext(groupByTypes, (int32_t *)groupCols, aggInputTypes,
-        (int32_t *)aggCols, (int32_t *)aggFunType, 2, aggOutputTypes);
+    auto jitContext = CreateHashAggregationJitContext(groupByTypes, 2);
     std::cout << "after jit" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypes, aggColContext,
@@ -255,8 +254,7 @@ uintptr_t CreateAggFactoryWithJit()
                             static_cast<uint32_t>(-1)};
     omniruntime::op::PrepareContext maskColsContext = { maskCols, 4 };
 
-    auto jitContext = CreateAggregationJitContext(sourceTypes, (int32_t *)aggInputCols, (int32_t *)maskCols,
-        (int32_t *)aggFuncTypes, 4, sourceTypes);
+    auto jitContext = CreateAggregationJitContext();
     std::cout << "after jit" << std::endl;
     auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeContext, aggInputColsContext,
         maskColsContext, sourceTypes, true, false);
@@ -1227,8 +1225,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     PrepareContext aggFuncTypeContext = { reinterpret_cast<uint32_t *>(aggFunType), 2 };
 
     // ------------------------------------------Create operator--------------------------------------------
-    auto jitContext = CreateHashAggregationJitContext(groupInputTypes, (int32_t *)groupCols, aggInput,
-        (int32_t *)aggCols, (int32_t *)aggFunType, 2, aggOutput);
+    auto jitContext = CreateHashAggregationJitContext(groupInputTypes, 2);
     std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupInputTypes, aggColContext, aggInput,

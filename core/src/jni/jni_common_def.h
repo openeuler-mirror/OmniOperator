@@ -17,7 +17,6 @@ extern jclass omniResultsCls;
 extern jclass traceUtilCls;
 extern jclass lazyVectorCls;
 extern jmethodID vecBatchInitMethodId;
-extern jmethodID vecBatchInitMethodId;
 extern jmethodID omniResultsInitMethodId;
 extern jmethodID traceUtilStackMethodId;
 extern jmethodID lazyVectorLoaderMethodId;

@@ -43,8 +43,7 @@ public:
             return;
         }
         auto rowVal = static_cast<InputVecType *>(vector)->GetValue(offset);
-        int32_t len = sizeof(ResultType);
-        auto ptr = executionContext->GetArena()->Allocate(len);
+        auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
         *reinterpret_cast<ResultType *>(ptr) = rowVal;
         state.val = ptr;
     }

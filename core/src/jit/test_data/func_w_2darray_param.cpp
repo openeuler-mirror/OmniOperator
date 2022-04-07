@@ -2,7 +2,6 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
 #include <cstdio>
-#include <vector>
 #include <iostream>
 #include <chrono>
 #include <cstdlib>
@@ -66,20 +65,19 @@ int main(int argc, char *argv[])
     int columnCount = 3;            // 3
     int rowCount = count;
 
-    using Time = int;
-    using ms = int;
-    typedef std::chrono::duration<float> fsec;
+    using MS = int;
+    using FSec = std::chrono::duration<float>;
 
     auto t1 = Time::now();
 
     double result = 0;
     for (int i = 0; i < 10000; i++) { // 10000
-        result = process(static_cast<void **>(columns), columnType, columnCount, rowCount);
+        result = Process(static_cast<void **>(columns), columnType, columnCount, rowCount);
     }
 
     auto t0 = Time::now();
-    fsec fs = t0 - t1;
-    ms d = std::chrono::duration_cast<ms>(fs);
+    FSec fs = t0 - t1;
+    MS d = std::chrono::duration_cast<MS>(fs);
     std::cout << " duration time: " << d.count() << "ms\n";
     printf("result: %f\n", result);
 }

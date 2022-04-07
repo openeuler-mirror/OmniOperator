@@ -15,6 +15,8 @@ using namespace omniruntime::jit;
 using namespace omniruntime::expressions;
 using namespace omniruntime::LibConfig;
 
+namespace omniruntime {
+namespace op {
 namespace {
 constexpr int32_t PARAM_INDEX_0 = 0;
 constexpr int32_t PARAM_INDEX_1 = 1;
@@ -206,8 +208,7 @@ JitContext *CreateSortWithExprJitContext(DataTypes &sourceDataTypes, int32_t *ou
 #endif
 }
 
-JitContext *CreateHashBuilderJitContext(DataTypes &buildDataTypes, int32_t *buildHashCols, int32_t buildHashColsCount,
-    int32_t operatorCount)
+JitContext *CreateHashBuilderJitContext(DataTypes &buildDataTypes, int32_t *buildHashCols, int32_t buildHashColsCount)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -252,9 +253,8 @@ JitContext *CreateHashBuilderJitContext(DataTypes &buildDataTypes, int32_t *buil
 #endif
 }
 
-JitContext *CreateLookupJoinJitContext(DataTypes &probeDataTypes, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, DataTypes &buildOutputDataTypes,
-    int32_t *buildOutputCols)
+JitContext *CreateLookupJoinJitContext(DataTypes &probeDataTypes, int32_t probeOutputColsCount, int32_t *probeHashCols,
+    int32_t probeHashColsCount, DataTypes &buildOutputDataTypes, int32_t *buildOutputCols)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -311,7 +311,7 @@ JitContext *CreateLookupJoinJitContext(DataTypes &probeDataTypes, int32_t *probe
 }
 
 JitContext *CreateHashBuilderWithExprJitContext(DataTypes &buildDataTypes,
-    const vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t operatorCount)
+    const vector<omniruntime::expressions::Expr *> &buildHashKeys)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -359,9 +359,9 @@ JitContext *CreateHashBuilderWithExprJitContext(DataTypes &buildDataTypes,
 #endif
 }
 
-JitContext *CreateLookupJoinWithExprJitContext(DataTypes &probeDataTypes, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, const vector<omniruntime::expressions::Expr *> &probeHashKeys,
-    DataTypes &buildOutputDataTypes, int32_t *buildOutputCols)
+JitContext *CreateLookupJoinWithExprJitContext(DataTypes &probeDataTypes, int32_t probeOutputColsCount,
+    const vector<omniruntime::expressions::Expr *> &probeHashKeys, DataTypes &buildOutputDataTypes,
+    int32_t *buildOutputCols)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -422,7 +422,7 @@ JitContext *CreateLookupJoinWithExprJitContext(DataTypes &probeDataTypes, int32_
 }
 
 JitContext *CreateTopNJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *sortCols,
-    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount)
+    int32_t sortColsCount)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -452,7 +452,7 @@ JitContext *CreateTopNJitContext(omniruntime::type::DataTypes &sourceDataTypes, 
 }
 
 JitContext *CreateTopNWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes,
-    const vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts)
+    const vector<omniruntime::expressions::Expr *> &sortKeys)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -622,8 +622,7 @@ JitContext *CreateWindowWithExprJitContext(DataTypes &sourceDataTypes, int32_t *
 #endif
 }
 
-JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t *groupByCols, DataTypes &aggDataTypes,
-    int32_t *aggCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, DataTypes &outputDataTypes)
+JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t aggFuncsCount)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -656,10 +655,8 @@ JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t
 #endif
 }
 
-JitContext *CreateHashAggregationWithExprJitContext(omniruntime::type::DataTypes &sourceDataTypes,
-    const vector<omniruntime::expressions::Expr *> &groupByKeys,
-    const vector<omniruntime::expressions::Expr *> &aggKeys, int32_t *aggFuncTypes, int32_t aggFuncsCount,
-    omniruntime::type::DataTypes &outputDataTypes)
+JitContext *CreateHashAggregationWithExprJitContext(const vector<omniruntime::expressions::Expr *> &groupByKeys,
+    int32_t aggFuncsCount)
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -694,8 +691,7 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::type::DataTypes
 #endif
 }
 
-JitContext *CreateAggregationJitContext(DataTypes &sourceDataTypes, int32_t *aggCols, int32_t *aggMaskCols,
-    int32_t *aggFuncTypes, int32_t aggFuncsCount, DataTypes &outputDataTypes)
+JitContext *CreateAggregationJitContext()
 {
 #if defined(DISABLE_JIT)
     return nullptr;
@@ -711,4 +707,6 @@ JitContext *CreateAggregationJitContext(DataTypes &sourceDataTypes, int32_t *agg
 
     return jitContext;
 #endif
+}
+}
 }

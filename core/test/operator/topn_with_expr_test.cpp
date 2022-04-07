@@ -41,7 +41,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
 
-    auto jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs, ascendings, nullFirsts);
+    auto jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs);
     auto topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
     topNWithExprOperatorFactory->SetJitContext(jitContext);
@@ -95,7 +95,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
 
-    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortKeys, ascendings, nullFirsts);
+    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortKeys);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts, sortKeyCnt);
     topNWithExprOperatorFactory->SetJitContext(jitContext);
@@ -146,7 +146,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     FieldExpr *col2 = new FieldExpr(2, LongType());
     std::vector<Expr *> sortExprs = { col0, col2 };
 
-    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs, ascendings, nullFirsts);
+    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
     topNWithExprOperatorFactory->SetJitContext(jitContext);

@@ -68,7 +68,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
         HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
         hashKeysCount, filter, hashTableCount);
-    JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys, hashTableCount); // here
+    JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys);
     hashBuilderWithExprOperatorFactory->SetJitContext(buildContext);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
@@ -94,8 +94,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
         buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto probeContext = CreateLookupJoinWithExprJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
-        probeHashKeys, buildOutputTypes, buildOutputCols);
+    auto probeContext = CreateLookupJoinWithExprJitContext(probeTypes, probeOutputColsCount, probeHashKeys,
+        buildOutputTypes, buildOutputCols);
     lookupJoinWithExprOperatorFactory->SetJitContext(probeContext);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     lookupJoinWithExprOperator->AddInput(probeVecBatch);
@@ -140,7 +140,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
         HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
         hashKeysCount, filter, hashTableCount);
-    JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys, hashTableCount);
+    JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys);
     hashBuilderWithExprOperatorFactory->SetJitContext(buildContext);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
@@ -167,8 +167,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
         buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto probeContext = CreateLookupJoinWithExprJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
-        probeHashKeys, buildOutputTypes, buildOutputCols);
+    auto probeContext = CreateLookupJoinWithExprJitContext(probeTypes, probeOutputColsCount, probeHashKeys,
+        buildOutputTypes, buildOutputCols);
     lookupJoinWithExprOperatorFactory->SetJitContext(probeContext);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     lookupJoinWithExprOperator->AddInput(probeVecBatch);
