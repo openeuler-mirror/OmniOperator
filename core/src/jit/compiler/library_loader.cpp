@@ -98,7 +98,7 @@ void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector
 LibraryLoader::LibraryLoader() noexcept: neededLibs()
 {
     unordered_map<string, CoreLibrary> baseLibs = { { "stdc++", CoreLibrary("libstdc++.so", "stdc++") },
-        { "operator", CoreLibrary("liboperator.so", "operator", 1) } };
+        { "operator", CoreLibrary("libboostkit-omniop-operator-1.0.0-aarch64.so", "operator", 1) } };
 
     ParseExtraDependencies(baseLibs, neededLibs);
 
