@@ -56,7 +56,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *            */
+             *              */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64:
             case OMNI_VARCHAR: {
@@ -159,6 +159,10 @@ public:
             case OMNI_CHAR: {
                 return std::make_unique<MinVarcharAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
             }
+            case OMNI_BOOLEAN: {
+                return std::make_unique<MinAggregator<BooleanVector, BooleanVector, bool>>(inputType, outputType,
+                    channel, inputRaw, outputPartial);
+            }
             default: {
                 LogError("Unsupported input type %d for min aggregate", inputTypeId);
                 return nullptr;
@@ -207,6 +211,10 @@ public:
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 return std::make_unique<MaxVarcharAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
+            }
+            case OMNI_BOOLEAN: {
+                return std::make_unique<MaxAggregator<BooleanVector, BooleanVector, bool>>(inputType, outputType,
+                    channel, inputRaw, outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for min aggregate", inputTypeId);
