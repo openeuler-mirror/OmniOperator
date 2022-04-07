@@ -5,6 +5,7 @@
 #include "vector_allocator.h"
 #include <sstream>
 #include "vector.h"
+#include "util/trace_util.h"
 
 namespace omniruntime {
 namespace vec {
