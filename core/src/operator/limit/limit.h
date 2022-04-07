@@ -18,7 +18,7 @@ public:
 
     ~LimitOperatorFactory() override;
 
-    static LimitOperatorFactory *CreateLimitOperatorFactory(int64_t limit);
+    static LimitOperatorFactory *CreateLimitOperatorFactory(int64_t limitNum);
 
     Operator *CreateOperator() override;
 

@@ -23,8 +23,8 @@ public:
 
     ~DistinctLimitOperatorFactory() override;
 
-    static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(const type::DataTypes &sourceTypes,
-        const int32_t *distinctCols, int32_t distinctColsCount, int32_t hashColumn, int64_t limitNum);
+    static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(const type::DataTypes &inSourceTypes,
+        const int32_t *inDistinctCols, int32_t inDistinctColsCount, int32_t inHashColumn, int64_t inLimit);
 
     Operator *CreateOperator() override;
 

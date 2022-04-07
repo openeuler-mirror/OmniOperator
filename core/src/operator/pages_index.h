@@ -83,18 +83,19 @@ static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t
     CompareFunc compareFunc)
 {
     int64_t leftValueAddress = valueAddresses[leftPosition];
-    int32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
-    int32_t leftColumnPosition = DecodePosition(leftValueAddress);
-    int64_t rightValueAddress = valueAddresses[rightPosition];
-    int32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
-    int32_t rightColumnPosition = DecodePosition(rightValueAddress);
+    uint32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
+    uint32_t leftColumnPosition = DecodePosition(leftValueAddress);
+    uint64_t rightValueAddress = valueAddresses[rightPosition];
+    uint32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
+    uint32_t rightColumnPosition = DecodePosition(rightValueAddress);
 
     omniruntime::vec::Vector *leftColumn = columns[leftColumnIndex];
     omniruntime::vec::Vector *rightColumn = columns[rightColumnIndex];
-    int32_t originalLeftColumnPosition, originalRightColumnPosition;
-    leftColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(leftColumn, leftColumnPosition,
+    int32_t originalLeftColumnPosition;
+    int32_t originalRightColumnPosition;
+    leftColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(leftColumn, static_cast<int32_t>(leftColumnPosition),
         originalLeftColumnPosition);
-    rightColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(rightColumn, rightColumnPosition,
+    rightColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(rightColumn, static_cast<int32_t>(rightColumnPosition),
         originalRightColumnPosition);
     int32_t compare = omniruntime::op::OperatorUtil::CompareNull(leftColumn, originalLeftColumnPosition, rightColumn,
         originalRightColumnPosition, sortNullFirsts);

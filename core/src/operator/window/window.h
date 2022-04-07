@@ -24,12 +24,13 @@ public:
 
     ~WindowOperatorFactory() override;
 
-    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypesField, int32_t *outputColsField,
-        int32_t outputColsCountField, int32_t *windowFunctionTypesField, int32_t windowFunctionCountField, int32_t *partitionColsField,
-        int32_t partitionCountField, int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
-        int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
-        int32_t expectedPositionsField, const type::DataTypes &allTypesField, int32_t *argumentChannelsField,
-        int32_t argumentChannelsCountField);
+    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypesField,
+        int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
+        int32_t windowFunctionCountField, int32_t *partitionColsField, int32_t partitionCountField,
+        int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
+        int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField,
+        int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
+        int32_t *argumentChannelsField, int32_t argumentChannelsCountField);
 
     Operator *CreateOperator() override;
 
@@ -218,13 +219,11 @@ private:
         std::vector<type::DataType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
         int32_t &rowCount);
 
-    void InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField, const int32_t &rowCountField,
-        const int32_t outputColsCountField, const int finalOutputColsCountField) const;
+    void InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField,
+        const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);
 }
 }
-
-const int MID_SEARCH_FACTOR = 2;
 #endif

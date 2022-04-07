@@ -96,7 +96,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
     auto typeIds = sourceTypes.GetIds();
     int32_t position = 0;
-    for (; (pq.size() < n) && (position < vectorBatch->GetRowCount()); ++position) {
+    for (; (static_cast<int32_t>(pq.size()) < n) && (position < vectorBatch->GetRowCount()); ++position) {
         VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
         pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount,
             singleRowVecBatch);
@@ -227,7 +227,7 @@ template <typename T> static void ALWAYS_INLINE SetValueForVector(Vector *pqVect
 
 int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
 {
-    int64_t positionCount = pq.size();
+    int64_t positionCount = static_cast<int64_t>(pq.size());
     if (positionCount <= 0) {
         return 0;
     }

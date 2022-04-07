@@ -15,7 +15,7 @@ namespace omniruntime {
 namespace op {
 class Operator {
 public:
-    Operator() : vecAllocator(vec::VectorAllocatorFactory::GetGlobalAllocator()), status(0) {}
+    Operator() : sourceTypes(nullptr), vecAllocator(vec::VectorAllocatorFactory::GetGlobalAllocator()), status(0) {}
 
     virtual ~Operator() {}
 

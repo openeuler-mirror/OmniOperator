@@ -70,8 +70,8 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
         return 0;
     }
 
-    int32_t sortColCount = sortCols.size();
-    int32_t outputColsCount = outputCols.size();
+    int32_t sortColCount = static_cast<int32_t>(sortCols.size());
+    int32_t outputColsCount = static_cast<int32_t>(outputCols.size());
 
     // first, sort
     int32_t to = positionCount;

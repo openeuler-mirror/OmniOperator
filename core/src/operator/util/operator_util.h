@@ -79,6 +79,7 @@ public:
 
     static int32_t GetMaxRowCount(int32_t rowSize)
     {
+        ASSERT(rowSize != 0);
         return (MAX_VEC_BATCH_SIZE_IN_BYTES + rowSize - 1) / rowSize;
     }
 
@@ -91,6 +92,7 @@ public:
 
     static int32_t GetVecBatchCount(int32_t positionCount, int32_t maxRowCount)
     {
+        ASSERT(maxRowCount != 0);
         return ((positionCount + maxRowCount - 1) / maxRowCount);
     }
 
@@ -135,10 +137,10 @@ public:
             if (rightIsNull) {
                 return COMPARE_STATUS_EQUAL;
             }
-            return nullsFirst ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_GREATER_THAN;
+            return (nullsFirst != 0) ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_GREATER_THAN;
         }
         // we are left with right only
-        return nullsFirst ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
+        return (nullsFirst != 0) ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
     }
 
     template <typename V>

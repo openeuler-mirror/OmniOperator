@@ -38,7 +38,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     }
     for (uint32_t i = 0; i < this->projectFuncs.size(); i++) {
         auto index = outputColsCount + i;
-        newOutputCols[index] = sourceTypes.GetSize() + i;
+        newOutputCols[index] = sourceTypes.GetSize() + static_cast<int32_t>(i);
     }
     this->operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes.get()),
         newOutputCols, newOutputColsCount, windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount,
