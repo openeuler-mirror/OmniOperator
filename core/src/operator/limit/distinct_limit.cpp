@@ -117,10 +117,10 @@ DistinctLimitOperatorFactory::DistinctLimitOperatorFactory(const type::DataTypes
 DistinctLimitOperatorFactory::~DistinctLimitOperatorFactory() {}
 
 DistinctLimitOperatorFactory *DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
-    const type::DataTypes &sourceTypes, const int32_t *distinctCols, int32_t distinctColsCount, int32_t hashColumn,
-    int64_t limitNum)
+    const type::DataTypes &inSourceTypes, const int32_t *inDistinctCols, int32_t inDistinctColsCount,
+    int32_t inHashColumn, int64_t inLimit)
 {
-    return new DistinctLimitOperatorFactory(sourceTypes, distinctCols, distinctColsCount, hashColumn, limitNum);
+    return new DistinctLimitOperatorFactory(inSourceTypes, inDistinctCols, inDistinctColsCount, inHashColumn, inLimit);
 }
 
 Operator *DistinctLimitOperatorFactory::CreateOperator()
@@ -153,7 +153,8 @@ void FillPrecomputedHash(Vector **inputVectors, const int32_t *inputTypeIds, con
             for (int i = 0; i < rowCount; ++i) {
                 originalVector =
                     VectorHelper::ExpandVectorAndIndex(inputVectors[preComputedHashCol], start + i, originalRowIndex);
-                combineHashVal[i] = (static_cast<IntVector *>(originalVector))->GetValue(originalRowIndex);
+                combineHashVal[i] =
+                    static_cast<uint64_t>((static_cast<IntVector *>(originalVector))->GetValue(originalRowIndex));
             }
             break;
         }
@@ -162,7 +163,8 @@ void FillPrecomputedHash(Vector **inputVectors, const int32_t *inputTypeIds, con
             for (int i = 0; i < rowCount; ++i) {
                 originalVector =
                     VectorHelper::ExpandVectorAndIndex(inputVectors[preComputedHashCol], start + i, originalRowIndex);
-                combineHashVal[i] = (static_cast<LongVector *>(originalVector))->GetValue(originalRowIndex);
+                combineHashVal[i] =
+                    static_cast<uint64_t>((static_cast<LongVector *>(originalVector))->GetValue(originalRowIndex));
             }
             break;
         }
@@ -315,7 +317,7 @@ void DistinctLimitOperator::InLoop(VectorBatch *vecBatch, uint64_t *combineHashV
 
             auto rowInfo = new DistinctRowInfo();
             rowInfo->hashValue = hashValue;
-            rowInfo->slotIndex = bucket.size() - 1;
+            rowInfo->slotIndex = static_cast<int32_t>(bucket.size() - 1);
             distinctRowInfo.push_back(rowInfo);
 
             pickedRows++;
@@ -355,7 +357,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
 void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector,
     std::vector<type::DataType> &outTypes, int32_t rowIndex)
 {
-    for (int i = 0; i < outTypes.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(outTypes.size()); ++i) {
         // nullptr handle
         if (rowVector[i].val == nullptr) {
             Vector *resultCol = resultBatch->GetVector(i);

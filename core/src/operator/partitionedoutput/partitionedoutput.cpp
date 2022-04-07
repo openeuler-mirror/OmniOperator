@@ -26,8 +26,8 @@ PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const DataTyp
       hashChannelTypesCount(hashChannelTypesCount),
       hashChannelsCount(hashChannelsCount)
 {
-    if (partitionChannelsCount <= 0 || bucketToPartitionCount <= 0 ||
-        hashChannelTypesCount <= 0 || hashChannelsCount <= 0) {
+    if (partitionChannelsCount <= 0 || bucketToPartitionCount <= 0 || hashChannelTypesCount <= 0 ||
+        hashChannelsCount <= 0) {
         throw std::exception();
     }
 
@@ -69,11 +69,10 @@ PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartit
     bool hashPrecomputed, int32_t *hashChannelTypesField, int32_t hashChannelTypesCountField,
     int32_t *hashChannelsField, int32_t hashChannelsCountField)
 {
-    PartitionedOutputOperatorFactory *operatorFactory =
-        new PartitionedOutputOperatorFactory(sourceTypesField, sourceTypeCountField, replicatesAnyRowField,
-        nullChannelField, partitionChannelsField, partitionChannelsCountField, partitionCountField,
-        bucketToPartitionField, bucketToPartitionCountField, hashPrecomputed, hashChannelTypesField,
-        hashChannelTypesCountField, hashChannelsField, hashChannelsCountField);
+    PartitionedOutputOperatorFactory *operatorFactory = new PartitionedOutputOperatorFactory(sourceTypesField,
+        sourceTypeCountField, replicatesAnyRowField, nullChannelField, partitionChannelsField,
+        partitionChannelsCountField, partitionCountField, bucketToPartitionField, bucketToPartitionCountField,
+        hashPrecomputed, hashChannelTypesField, hashChannelTypesCountField, hashChannelsField, hashChannelsCountField);
     return operatorFactory;
 }
 
@@ -267,7 +266,9 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
         }
     }
 
-    rowHash = rowHash & 0x7fffffffffffffffL;
+    uint64_t tempValue = static_cast<uint64_t>(rowHash);
+    tempValue &= 0x7fffffffffffffffUL;
+    rowHash = static_cast<uint64_t>(tempValue);
     if (bucketToPartitionCount == 0) {
         bucketToPartitionCount = 1;
     }

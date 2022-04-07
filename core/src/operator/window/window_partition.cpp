@@ -58,13 +58,13 @@ void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index)
 bool PositionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partitionHashStrategy, int32_t leftPosition,
     int32_t rightPosition)
 {
-    int64_t leftValueAddress = pagesIndex->GetValueAddresses()[leftPosition];
-    int32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
-    int32_t leftColumnPosition = DecodePosition(leftValueAddress);
+    uint64_t leftValueAddress = pagesIndex->GetValueAddresses()[leftPosition];
+    int32_t leftColumnIndex = static_cast<int32_t>(DecodeSliceIndex(leftValueAddress));
+    int32_t leftColumnPosition = static_cast<int32_t>(DecodePosition(leftValueAddress));
 
-    int64_t rightValueAddress = pagesIndex->GetValueAddresses()[rightPosition];
-    int32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
-    int32_t rightColumnPosition = DecodePosition(rightValueAddress);
+    uint64_t rightValueAddress = pagesIndex->GetValueAddresses()[rightPosition];
+    int32_t rightColumnIndex = static_cast<int32_t>(DecodeSliceIndex(rightValueAddress));
+    int32_t rightColumnPosition = static_cast<int32_t>(DecodePosition(rightValueAddress));
 
     return partitionHashStrategy->PositionEqualsPosition(leftColumnIndex, leftColumnPosition, rightColumnIndex,
         rightColumnPosition);

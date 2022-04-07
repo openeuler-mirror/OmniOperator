@@ -417,7 +417,8 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(const int32_t *probeTypes, int3
 void LookupJoinOutputBuilder::AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition)
 {
     int32_t previousPosition = probeIndex.size() == 0 ? -1 : probeIndex[probeIndex.size() - 1];
-    isSequentialProbeIndices &= (probePosition == previousPosition + 1) || (previousPosition == -1);
+    isSequentialProbeIndices =
+        isSequentialProbeIndices && ((probePosition == previousPosition + 1) || (previousPosition == -1));
     probeIndex.push_back(probePosition);
     buildIndex.push_back(partitionedJoinPosition);
 }
@@ -428,20 +429,20 @@ Vector *GetBuildColumnAndRowIndex(const JoinHashTables *hashTables, int64_t part
     JoinHashTable *hashTable = nullptr;
     int32_t joinPosition = -1;
     if (hashTables->GetHashTableCount() != 1) {
-        int32_t partition = hashTables->DecodePartition(partitionedJoinPosition);
-        joinPosition = hashTables->DecodeJoinPosition(partitionedJoinPosition);
-        hashTable = hashTables->GetHashTable(partition);
+        uint32_t partition = hashTables->DecodePartition(partitionedJoinPosition);
+        joinPosition = hashTables->DecodeJoinPosition(static_cast<uint64_t>(partitionedJoinPosition));
+        hashTable = hashTables->GetHashTable(static_cast<int32_t>(partition));
     } else {
         joinPosition = static_cast<int32_t>(partitionedJoinPosition);
         hashTable = hashTables->GetHashTable(0);
     }
 
     PagesHash *pagesHash = hashTable->GetPagesHash();
-    int64_t address = pagesHash->GetAddresses()[joinPosition];
-    int32_t vecBatchIndex = DecodeSliceIndex(address);
-    int32_t rowIndex = DecodePosition(address);
+    uint64_t address = pagesHash->GetAddresses()[joinPosition];
+    uint32_t vecBatchIndex = DecodeSliceIndex(address);
+    uint32_t rowIndex = DecodePosition(address);
     Vector *vector = pagesHash->GetPagesHashStrategy()->GetBuildColumns()[outputCol][vecBatchIndex];
-    vector = VectorHelper::ExpandVectorAndIndex(vector, rowIndex, originalRowIndex);
+    vector = VectorHelper::ExpandVectorAndIndex(vector, static_cast<int32_t>(rowIndex), originalRowIndex);
     return vector;
 }
 
@@ -552,7 +553,7 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
     if (probeOutputCols == nullptr) {
         return;
     }
-    int32_t probeLength = probeIndex.size();
+    int32_t probeLength = static_cast<int32_t>(probeIndex.size());
     if (!isSequentialProbeIndices || probeLength == 0) {
         // probeIndices are discrete
         ConstructProbeColumnsFromPositions(vectorBatch, probeAllColumns, probeTypes, probeOutputCols,
@@ -619,7 +620,7 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
 void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe,
     const JoinHashTables *hashTables, std::vector<VectorBatch *> &outputVecBatches)
 {
-    int32_t positionCount = probeIndex.size();
+    int32_t positionCount = static_cast<int32_t>(probeIndex.size());
     // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
     int32_t maxRowCount = OperatorUtil::GetMaxRowCount((outputRowSize != 0) ? outputRowSize : DEFAULT_ROW_SIZE);
     int32_t tableCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);

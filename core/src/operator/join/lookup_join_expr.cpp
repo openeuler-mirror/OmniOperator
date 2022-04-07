@@ -4,9 +4,7 @@
  */
 
 #include "lookup_join_expr.h"
-#include <memory>
 #include "hash_builder_expr.h"
-#include "lookup_join.h"
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 

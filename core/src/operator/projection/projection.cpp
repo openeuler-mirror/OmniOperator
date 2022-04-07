@@ -183,7 +183,6 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
         case type::OMNI_DECIMAL64:
-            // FIXME: Support Decimal64Vector in the future
             outVec = new LongVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_DECIMAL128:

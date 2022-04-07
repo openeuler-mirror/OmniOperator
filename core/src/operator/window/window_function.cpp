@@ -145,8 +145,8 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
     } else {
-        resultVectorBatch->SetVector(0,
-            VectorHelper::CreateVector(vecAllocator, vectorEncoding, inputType.GetId(), rowCount * width, rowCount));
+        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding,
+            static_cast<int32_t>(inputType.GetId()), rowCount * static_cast<int32_t>(width), rowCount));
     }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
@@ -164,17 +164,18 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
 void AggregateWindowFunction::AccumulateData(VectorBatch *resultVectorBatch, int32_t resultVectorPosition,
     Vector ***inputVectors, int64_t inputAddress)
 {
-    int32_t vectorIndex = DecodeSliceIndex(inputAddress);
-    int32_t vectorPosition = DecodePosition(inputAddress);
+    uint32_t vectorIndex = DecodeSliceIndex(inputAddress);
+    uint32_t vectorPosition = DecodePosition(inputAddress);
     Vector *originalVector = nullptr;
     int32_t originalVectorPosition;
     if (argumentChannels == -1) {
-        originalVectorPosition = vectorPosition;
+        originalVectorPosition = static_cast<int32_t>(vectorPosition);
         aggregator->ProcessGroup(aggregateState.operator*(), resultVectorBatch, resultVectorPosition);
         return;
     } else {
         Vector *vector = inputVectors[argumentChannels][vectorIndex];
-        originalVector = VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
+        originalVector =
+            VectorHelper::ExpandVectorAndIndex(vector, static_cast<int32_t>(vectorPosition), originalVectorPosition);
     }
 
     auto resultVector = resultVectorBatch->GetVector(0);

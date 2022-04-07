@@ -63,31 +63,31 @@ inline void VectorSwap(uint64_t *valueAddresses, int32_t from, int32_t l, int32_
 // return error number
 int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
 {
-    int32_t vecBatchCount = vecBatches.size();
-    int32_t columnCount = this->typesCount;
+    uint32_t vecBatchCount = vecBatches.size();
+    uint32_t columnCount = this->typesCount;
 
-    for (int vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-        this->positionCount += vecBatches[vecBatchIdx]->GetRowCount();
+    for (uint32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+        this->positionCount += static_cast<uint32_t>(vecBatches[vecBatchIdx]->GetRowCount());
     }
     this->valueAddresses = new uint64_t[this->positionCount];
     this->columns = new Vector **[columnCount];
-    for (int colIdx = 0; colIdx < columnCount; ++colIdx) {
+    for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
         this->columns[colIdx] = new Vector *[vecBatchCount];
     }
 
-    int32_t valueIndex = 0;
-    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+    uint32_t valueIndex = 0;
+    for (uint32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
         VectorBatch *vecBatch = vecBatches[vecBatchIdx];
-        int32_t rowCount = vecBatch->GetRowCount();
+        uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
         // generate value address.
-        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            int64_t valueAddress = EncodeSyntheticAddress(vecBatchIdx, rowIdx);
+        for (uint32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            uint64_t valueAddress = EncodeSyntheticAddress(vecBatchIdx, rowIdx);
             this->valueAddresses[valueIndex++] = valueAddress;
         }
 
         // put vectors to a collector.
-        for (int32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
-            this->columns[colIdx][vecBatchIdx] = vecBatch->GetVector(colIdx);
+        for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
+            this->columns[colIdx][vecBatchIdx] = vecBatch->GetVector(static_cast<int32_t>(colIdx));
         }
     }
     return 0;
@@ -619,9 +619,9 @@ std::vector<std::tuple<int32_t, int32_t>> GetRanges(uint64_t *valueAddresses, Ve
     int32_t to, CompareFunc compareFunc)
 {
     std::vector<std::tuple<int32_t, int32_t>> ranges;
-    int64_t valueAddress = valueAddresses[from];
-    int32_t columnIndex = DecodeSliceIndex(valueAddress);
-    int32_t columnPosition = DecodePosition(valueAddress);
+    uint64_t valueAddress = valueAddresses[from];
+    uint32_t columnIndex = DecodeSliceIndex(valueAddress);
+    uint32_t columnPosition = DecodePosition(valueAddress);
     Vector *column = columns[columnIndex];
     int32_t originalColumnPosition;
     column = VectorHelper::ExpandVectorAndIndex(column, columnPosition, originalColumnPosition);
@@ -639,7 +639,8 @@ std::vector<std::tuple<int32_t, int32_t>> GetRanges(uint64_t *valueAddresses, Ve
         columnIndex = DecodeSliceIndex(valueAddress);
         columnPosition = DecodePosition(valueAddress);
         column = columns[columnIndex];
-        column = VectorHelper::ExpandVectorAndIndex(column, columnPosition, originalColumnPosition);
+        column =
+            VectorHelper::ExpandVectorAndIndex(column, static_cast<int32_t>(columnPosition), originalColumnPosition);
         // we are still null
         valueIsNull = column->IsValueNull(originalColumnPosition);
         if (currentIsNull && valueIsNull) {
@@ -876,7 +877,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
 PagesIndex::~PagesIndex()
 {
     if (this->columns != nullptr) {
-        for (int32_t colIdx = 0; colIdx < this->typesCount; ++colIdx) {
+        for (uint32_t colIdx = 0; colIdx < this->typesCount; ++colIdx) {
             delete[] this->columns[colIdx];
         }
         delete[] this->columns;
@@ -904,8 +905,8 @@ T *ConstructVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vec
 {
     uint64_t valueAddress = 0;
     Vector *inputVector = nullptr;
-    int32_t pageIndex = 0;
-    int32_t position = 0;
+    uint32_t pageIndex = 0;
+    uint32_t position = 0;
     auto outputVector = new T(vecAllocator, length);
     int32_t start = offset;
     int32_t end = offset + length;
@@ -915,7 +916,7 @@ T *ConstructVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vec
         pageIndex = DecodeSliceIndex(valueAddress);
         position = DecodePosition(valueAddress);
         inputVector = inputVecBatch[pageIndex];
-        SetValue(inputVector, position, outputVector, outputIndex++);
+        SetValue(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
     }
     return outputVector;
 }
@@ -940,10 +941,10 @@ void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *out
 VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     uint32_t width, VectorAllocator *vecAllocator)
 {
-    int64_t valueAddress = 0;
+    uint64_t valueAddress = 0;
     Vector *inputVector = nullptr;
-    int32_t pageIndex = 0;
-    int32_t position = 0;
+    uint32_t pageIndex = 0;
+    uint32_t position = 0;
 
     VarcharVector *outputVector = new VarcharVector(vecAllocator, length * width, length);
     int32_t start = offset;
@@ -954,7 +955,7 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
         pageIndex = DecodeSliceIndex(valueAddress);
         position = DecodePosition(valueAddress);
         inputVector = inputVecBatch[pageIndex];
-        SetVarcharValue(inputVector, position, outputVector, outputIndex++);
+        SetVarcharValue(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
     }
     return outputVector;
 }
