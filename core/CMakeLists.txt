@@ -4,6 +4,15 @@ project(omni-runtime)
 # required cmake version
 cmake_minimum_required(VERSION 3.10)
 
+message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+# omniruntime version
+set(OMNI_RUNTIME_VERSION 1.0.0)
+set(OS_ARCHITECTURES aarch64)
+set(OMNI_CODEGEN_SO boostkit-omniop-codegen-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
+set(OMNI_OPERATOR_SO boostkit-omniop-operator-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
+set(OMNI_RUNTIME_SO boostkit-omniop-runtime-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
+set(OMNI_VECTOR_SO boostkit-omniop-vector-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
+
 # configure cmake
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_COMPILER "g++")
@@ -25,11 +34,11 @@ endif ()
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 
 # clean all target
-set(target_generated ${CMAKE_INSTALL_PREFIX}/libomni_runtime.so
-        ${CMAKE_INSTALL_PREFIX}/libomni_vector.so
-        ${CMAKE_INSTALL_PREFIX}/libcodegen.so
+set(target_generated ${CMAKE_INSTALL_PREFIX}/${OMNI_RUNTIME_SO}
+        ${CMAKE_INSTALL_PREFIX}/${OMNI_VECTOR_SO}
+        ${CMAKE_INSTALL_PREFIX}/${OMNI_CODEGEN_SO}
         ${CMAKE_INSTALL_PREFIX}/ir
-        ${CMAKE_INSTALL_PREFIX}/liboperator.so
+        ${CMAKE_INSTALL_PREFIX}/${OMNI_OPERATOR_SO}
         )
 foreach (file ${target_generated})
     if (EXISTS ${file})

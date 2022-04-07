@@ -1,5 +1,5 @@
 file(GLOB_RECURSE VECTOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
-set(VEC_TARGET omni_vector)
+set(VEC_TARGET ${OMNI_VECTOR_SO})
 
 add_library(${VEC_TARGET} SHARED ${VECTOR_LIST})
 target_link_libraries(${VEC_TARGET} PRIVATE -Wl,--whole-archive memory type -Wl,--no-whole-archive securec)

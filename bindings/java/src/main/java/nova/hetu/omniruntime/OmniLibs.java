@@ -10,7 +10,7 @@ package nova.hetu.omniruntime;
  * @since 2021-07-17
  */
 public class OmniLibs {
-    private static final String OMNI_RUNTIME = "omni_runtime";
+    private static final String OMNI_RUNTIME = "boostkit-omniop-runtime-1.0.0-aarch64";
 
     private OmniLibs() {
     }

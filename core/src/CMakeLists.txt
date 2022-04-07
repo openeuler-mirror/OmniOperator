@@ -9,7 +9,7 @@ add_subdirectory(codegen)
 add_subdirectory(expression)
 add_subdirectory(type)
 
-set(OM_TARGET omni_runtime)
+set(OM_TARGET ${OMNI_RUNTIME_SO})
 
 # link libraries
 set(MY_LINK
@@ -17,12 +17,12 @@ set(MY_LINK
         jit_context
         jni
         memory
-        operator
         util
-        omni_vector
-        codegen
         expression
         type
+        ${OMNI_CODEGEN_SO}
+        ${OMNI_OPERATOR_SO}
+        ${OMNI_VECTOR_SO}
         )
 # SHARED mode will compile a so file
 add_library(${OM_TARGET} SHARED ${CMAKE_CURRENT_LIST_DIR} ${ROOT_SRCS})
