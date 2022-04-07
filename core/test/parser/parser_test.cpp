@@ -33,28 +33,28 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
 
         LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
         EXPECT_EQ(right->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
-        if (i == 3) {
+        if (i == 3) { // the int LiteralExpr
             EXPECT_EQ(right->GetReturnTypeId(), OMNI_DECIMAL128);
-        } else if (i == 5) {
+        } else if (i == 5) { // the char LiteralExpr
             EXPECT_EQ(right->GetReturnTypeId(), OMNI_CHAR);
         } else {
             EXPECT_EQ(right->GetReturnTypeId(), dataTypes[i]);
         }
-        if (i == 0)
+        if (i == 0) // the int LiteralExpr
             EXPECT_EQ(right->intVal, i);
-        else if (i == 1)
+        else if (i == 1) // the long LiteralExpr
             EXPECT_EQ(right->longVal, i);
-        else if (i == 2)
+        else if (i == 2) // the double LiteralExpr
             EXPECT_EQ(right->doubleVal, i);
-        else if (i == 3)
+        else if (i == 3) // the decimal128 LiteralExpr
             ASSERT_EQ(stol(*right->stringVal), i);
-        else if (i == 4 || i == 5)
+        else if (i == 4 || i == 5) // the varchar LiteralExpr
             ASSERT_STREQ(right->stringVal->c_str(), "hello");
         else {
             // explicit branch
         }
 
-        if (i == 5) {
+        if (i == 5) { // the char LiteralExpr
             EXPECT_EQ(right->dataType->GetWidth(), 6);
         }
     }

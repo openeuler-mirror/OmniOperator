@@ -12,6 +12,7 @@
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
+using namespace TestUtil;
 
 namespace SortWithExprTest {
 TEST(SortWithExprTest, TestSortZeroExprColumns)

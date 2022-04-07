@@ -12,6 +12,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 using namespace std;
+using namespace TestUtil;
 
 namespace TopnWithExprTest {
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)

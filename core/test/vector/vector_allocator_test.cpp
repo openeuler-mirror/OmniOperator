@@ -67,9 +67,11 @@ void TraceRecord(VectorBatch &vecBatch, std::string opName, VecOpType opType)
 
 void AddInput(VectorAllocator *allocator)
 {
-    LongVector *vector1 = new LongVector(allocator, 1024);
-    LongVector *vector2 = new LongVector(allocator, 1024);
-    VectorBatch vectorBatch(2, 1024);
+    int vectorCount = 2;
+    int size = 1024;
+    LongVector *vector1 = new LongVector(allocator, size);
+    LongVector *vector2 = new LongVector(allocator, size);
+    VectorBatch vectorBatch(vectorCount, size);
     vectorBatch.SetVector(0, vector1);
     vectorBatch.SetVector(1, vector2);
 

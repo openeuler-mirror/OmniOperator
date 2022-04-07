@@ -9,6 +9,7 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
 const int32_t ROW_SIZE = 1000000;
 const int32_t VAR_LEN = 10;
@@ -41,7 +42,7 @@ TEST(varcharType, VarcharHashPerf)
     std::cout << "varchar length: " << VAR_LEN << std::endl;
 
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
 
     std::hash<std::string> hashVarChar;
     std::cout << "std::hash()" << std::endl;
@@ -49,15 +50,15 @@ TEST(varcharType, VarcharHashPerf)
     double sum = 0;
     int hashVal;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
             hashVal = hashVarChar(vec[i]);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }
@@ -67,15 +68,15 @@ TEST(varcharType, VarcharHashPerf)
     std::cout << "HashUtil::HashValue()" << std::endl;
     sum = 0;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
             hashVal = HashUtil::HashValue((int8_t *)vec[i].c_str(), VAR_LEN);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }
@@ -89,7 +90,7 @@ TEST(LongType, LongHashPerf)
     std::cout << "long scope: [" << START << ", " << START + ROW_SIZE << "]" << std::endl;
 
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
 
     std::hash<long> hashLong;
     std::cout << "std::hash()" << std::endl;
@@ -97,15 +98,15 @@ TEST(LongType, LongHashPerf)
     double sum = 0;
     long hashVal;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (long i = START; i < END; i++) {
             hashVal = hashLong(i);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }
@@ -115,15 +116,15 @@ TEST(LongType, LongHashPerf)
     std::cout << "HashUtil::HashValue()" << std::endl;
     sum = 0;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (long i = START; i < END; i++) {
             hashVal = HashUtil::HashValue(i);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }

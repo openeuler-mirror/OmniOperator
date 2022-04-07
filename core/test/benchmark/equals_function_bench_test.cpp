@@ -8,6 +8,7 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
 const int32_t ROW_SIZE = 1000000;
 const int32_t VAR_LEN = 10;
@@ -78,21 +79,21 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     std::cout << "varchar length: " << VAR_LEN << std::endl;
 
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
 
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     bool isEqual;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
             isEqual = join_equal(vector1, i, vector2, i);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }
@@ -108,15 +109,15 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     std::cout << "Compare different varchar: " << std::endl;
     sum = 0;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
             isEqual = join_equal(vector1, i, vector3, i);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }
@@ -148,21 +149,21 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     std::cout << "varchar length: " << VAR_LEN << std::endl;
 
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
 
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     bool isEqual;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
             isEqual = hashagg_equal(vector1, i, vector2, i);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }
@@ -179,15 +180,15 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     std::cout << "Compare different varchar: " << std::endl;
     sum = 0;
     for (int j = 0; j < ROUNDS; j++) {
-        timer.reset();
+        timer.Reset();
 
         for (int i = 0; i < ROW_SIZE; i++) {
             isEqual = hashagg_equal(vector1, i, vector3, i);
         }
 
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse() * 1000;
-        double cpuElapsed = timer.getCpuElapse() * 1000;
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
         std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
         sum += wallElapsed;
     }

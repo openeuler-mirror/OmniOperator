@@ -11,11 +11,12 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
+using namespace TestUtil;
 
 namespace UnionTest {
 TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
 {
-    // construct input data;
+    // construct input data
     const int32_t dataSize = 6;
     // table1
     int32_t data1[dataSize] = {0, 1, 2, 0, 1, 2};

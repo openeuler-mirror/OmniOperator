@@ -19,6 +19,7 @@
 #include "codegen/func_registry.h"
 #include "expression/expressions.h"
 
+namespace TestUtil {
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::type::DataTypes &types, int32_t rowCount, ...);
 omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<omniruntime::vec::DataType> &dataTypes);
@@ -38,75 +39,75 @@ omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatc
 
 class Timer {
 public:
-    Timer() : wall_elapsed(0), cpu_elapsed(0) {}
+    Timer() : wallElapsed(0), cpuElapsed(0) {}
 
     ~Timer() {}
 
-    void setStart()
+    void SetStart()
     {
-        clock_gettime(CLOCK_REALTIME, &wall_start);
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_start);
+        clock_gettime(CLOCK_REALTIME, &wallStart);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpuStart);
     }
 
-    void calculateElapse()
+    void CalculateElapse()
     {
-        clock_gettime(CLOCK_REALTIME, &wall_end);
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_end);
-        long seconds_wall = wall_end.tv_sec - wall_start.tv_sec;
-        long seconds_cpu = cpu_end.tv_sec - cpu_start.tv_sec;
-        long ns_wall = wall_end.tv_nsec - wall_start.tv_nsec;
-        long ns_cpu = cpu_end.tv_nsec - cpu_start.tv_nsec;
-        wall_elapsed = seconds_wall + ns_wall * 1e-9;
-        cpu_elapsed = seconds_cpu + ns_cpu * 1e-9;
+        clock_gettime(CLOCK_REALTIME, &wallEnd);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpuEnd);
+        long secondsWall = wallEnd.tv_sec - wallStart.tv_sec;
+        long secondsCpu = cpuEnd.tv_sec - cpuStart.tv_sec;
+        long nsWall = wallEnd.tv_nsec - wallStart.tv_nsec;
+        long nsCpu = cpuEnd.tv_nsec - cpuStart.tv_nsec;
+        wallElapsed = secondsWall + nsWall * 1e-9;
+        cpuElapsed = secondsCpu + nsCpu * 1e-9;
     }
 
-    void start(const char *title)
+    void Start(const char *TestTitle)
     {
-        wall_elapsed = 0;
-        cpu_elapsed = 0;
-        clock_gettime(CLOCK_REALTIME, &wall_start);
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_start);
-        this->title = title;
+        wallElapsed = 0;
+        cpuElapsed = 0;
+        clock_gettime(CLOCK_REALTIME, &wallStart);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpuStart);
+        this->title = TestTitle;
     }
 
-    void end()
+    void End()
     {
-        clock_gettime(CLOCK_REALTIME, &wall_end);
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_end);
-        long seconds_wall = wall_end.tv_sec - wall_start.tv_sec;
-        long seconds_cpu = cpu_end.tv_sec - cpu_start.tv_sec;
-        long ns_wall = wall_end.tv_nsec - wall_start.tv_nsec;
-        long ns_cpu = cpu_end.tv_nsec - cpu_start.tv_nsec;
-        wall_elapsed = seconds_wall + ns_wall * 1e-9;
-        cpu_elapsed = seconds_cpu + ns_cpu * 1e-9;
-        std::cout << title << " \t: wall " << wall_elapsed << " \tcpu " << cpu_elapsed << std::endl;
+        clock_gettime(CLOCK_REALTIME, &wallEnd);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpuEnd);
+        long secondsWall = wallEnd.tv_sec - wallStart.tv_sec;
+        long secondsCpu = cpuEnd.tv_sec - cpuStart.tv_sec;
+        long nsWall = wallEnd.tv_nsec - wallStart.tv_nsec;
+        long nsCpu = cpuEnd.tv_nsec - cpuStart.tv_nsec;
+        wallElapsed = secondsWall + nsWall * 1e-9;
+        cpuElapsed = secondsCpu + nsCpu * 1e-9;
+        std::cout << title << " \t: wall " << wallElapsed << " \tcpu " << cpuElapsed << std::endl;
     }
 
-    double getWallElapse()
+    double GetWallElapse()
     {
-        return wall_elapsed;
+        return wallElapsed;
     }
 
-    double getCpuElapse()
+    double GetCpuElapse()
     {
-        return cpu_elapsed;
+        return cpuElapsed;
     }
 
-    void reset()
+    void Reset()
     {
-        wall_elapsed = 0;
-        cpu_elapsed = 0;
-        clock_gettime(CLOCK_REALTIME, &wall_start);
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_start);
+        wallElapsed = 0;
+        cpuElapsed = 0;
+        clock_gettime(CLOCK_REALTIME, &wallStart);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpuStart);
     }
 
 private:
-    double wall_elapsed;
-    double cpu_elapsed;
-    struct timespec cpu_start;
-    struct timespec wall_start;
-    struct timespec cpu_end;
-    struct timespec wall_end;
+    double wallElapsed;
+    double cpuElapsed;
+    struct timespec cpuStart;
+    struct timespec wallStart;
+    struct timespec cpuEnd;
+    struct timespec wallEnd;
     const char *title;
 };
 
@@ -138,3 +139,4 @@ omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
     std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
 
 #endif
+}

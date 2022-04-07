@@ -43,6 +43,7 @@ long lrand()
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace omniruntime::type;
+using namespace TestUtil;
 
 Vector *BuildHashInput(const DataType &groupType, int32_t rowPerVecBatch, int32_t cardinality)
 {
@@ -792,7 +793,7 @@ TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
         uint32_t threadNum = threadNums[i];
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             // same stage Id
             std::thread t(PerfTestOriginal, factoryObjAddr, input);
@@ -803,9 +804,9 @@ TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
         std::cout << threadNum << " wallElapsed time: " << wallElapsed << "s" << std::endl;
         std::cout << threadNum << " cpuElapsed time: " << cpuElapsed / processorCount * t_ << "s" << std::endl;
         std::this_thread::sleep_for(100ms);
@@ -842,7 +843,7 @@ TEST(HashAggregationOperatorTest, DISABLED_perf_via_API_multiple_threads)
         uint32_t threadNum = threadNums[i];
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             // same stage Id
             std::thread t(PerfTest, factoryObjAddr, input, VEC_BATCH_NUM, rowCount);
@@ -853,9 +854,9 @@ TEST(HashAggregationOperatorTest, DISABLED_perf_via_API_multiple_threads)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
         std::cout << threadNum << " wallElapsed time: " << wallElapsed << "s" << std::endl;
         std::cout << threadNum << " cpuElapsed time: " << cpuElapsed / processorCount * t_ << "s" << std::endl;
         std::this_thread::sleep_for(100ms);
@@ -1138,7 +1139,7 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
         uint32_t threadNum = threadNums[i];
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             // same stage Id
             std::thread t(PerfTestNonGroup, factoryAddr, false, input, VEC_BATCH_NUM, rowCount);
@@ -1149,9 +1150,9 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
         std::cout << threadNum << " wallElapsed time: " << wallElapsed << "s" << std::endl;
         std::cout << threadNum << " cpuElapsed time: " << cpuElapsed / processorCount * t_ << "s" << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -1190,7 +1191,7 @@ TEST(AggregationOperatorTest, DISABLED_perf_codegen)
         uint32_t threadNum = threadNums[i];
         std::vector<std::thread> vecOfThreads;
         Timer timer;
-        timer.setStart();
+        timer.SetStart();
         for (uint32_t j = 0; j < threadNum; ++j) {
             // same stage Id
             std::thread t(PerfTestNonGroup, factoryObjAddr, true, input, VEC_BATCH_NUM, rowCount);
@@ -1201,9 +1202,9 @@ TEST(AggregationOperatorTest, DISABLED_perf_codegen)
                 th.join();
             }
         }
-        timer.calculateElapse();
-        double wallElapsed = timer.getWallElapse();
-        double cpuElapsed = timer.getCpuElapse();
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse();
+        double cpuElapsed = timer.GetCpuElapse();
         std::cout << threadNum << " wallElapsed time: " << wallElapsed << "s" << std::endl;
         std::cout << threadNum << " cpuElapsed time: " << cpuElapsed / processorCount * t_ << "s" << std::endl;
         std::this_thread::sleep_for(100ms);
@@ -1247,7 +1248,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
     std::vector<VectorBatch *> jittedResult;
     Timer timer;
-    timer.setStart();
+    timer.SetStart();
 
     auto *perfUtil = new PerfUtil();
     perfUtil->Init();
@@ -1266,9 +1267,9 @@ TEST(HashAggregationOperatorTest, compare_perf)
         printf("HashAgg with OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
 
-    timer.calculateElapse();
-    double wallElapsed = timer.getWallElapse();
-    double cpuElapsed = timer.getCpuElapse();
+    timer.CalculateElapse();
+    double wallElapsed = timer.GetWallElapse();
+    double cpuElapsed = timer.GetCpuElapse();
     std::cout << "wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
     jitGroupBy->GetOutput(jittedResult);
 
@@ -1283,7 +1284,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     if (input2 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
-    timer.reset();
+    timer.Reset();
 
     perfUtil->Reset();
     perfUtil->Start();
@@ -1299,9 +1300,9 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
     delete perfUtil;
 
-    timer.calculateElapse();
-    wallElapsed = timer.getWallElapse();
-    cpuElapsed = timer.getCpuElapse();
+    timer.CalculateElapse();
+    wallElapsed = timer.GetWallElapse();
+    cpuElapsed = timer.GetCpuElapse();
 
     std::cout << "wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
     groupBy->GetOutput(result);
