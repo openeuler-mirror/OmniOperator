@@ -12,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * @since 2021-06-30
  */
-@SuppressWarnings("StaticVariableName")
 public class Status extends Constant {
     /**
      * The constant OMNI_STATUS_NORMAL.
