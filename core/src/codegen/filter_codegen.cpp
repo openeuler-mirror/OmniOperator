@@ -27,20 +27,16 @@ const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
 const int ROW_FILTER_IS_NULL_INDEX = 6;
 }
 
-namespace omniruntime {
 std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
 {
     std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression) };
-    auto initialized = codegen->Initialize();
-    if (!initialized) {
-        return nullptr;
-    }
+    codegen->Initialize();
     return codegen;
 }
 
 int64_t FilterCodeGen::GetFunction()
 {
-    llvm::Function *func = this->CreateFunction();
+    Function *func = this->CreateFunction();
     if (func == nullptr) {
         return 0;
     }
@@ -87,7 +83,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
     offsets->setName("DICTIONARY_VECTORS");
 
-    codeGenUtils->RecordFunctions(funcDecl);
+    codeGenUtils->RecordMainFunction(funcDecl);
 
     Value *zero = llvmTypes->CreateConstantInt(0);
     Value *one = llvmTypes->CreateConstantInt(1);
@@ -173,8 +169,6 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     builder->CreateRet(nextSelectedIndexVal);
     OptimizeFunctionsAndModule();
 
-    llvm::verifyModule(*module, &llvm::errs());
-
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
@@ -199,15 +193,11 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type *> args = GetSingleFilterArguments(*context);
     llvm::Function *baseFunc = this->CreateFunction();
-    if (baseFunc == nullptr) {
-        return 0;
-    }
-
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
     llvm::Function *funcDecl =
         llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
-    codeGenUtils->RecordFunctions(funcDecl);
+    codeGenUtils->RecordMainFunction(funcDecl);
 
     builder->SetInsertPoint(wrapperBody);
     // Name the arguments
@@ -245,12 +235,9 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
 #ifdef DEBUG
     module->print(errs(), nullptr);
 #endif
-    jit->getMainJITDylib().addGenerator(
-        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
     rt = resTracker;
     return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
-}
 }

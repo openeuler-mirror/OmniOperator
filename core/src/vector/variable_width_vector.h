@@ -157,9 +157,9 @@ public:
                 }
             }
         } else {
-            auto *src = static_cast<DictionaryVector *>(other);
-            auto *originalIds = new int32_t[length];
-            auto *dictionary =
+            DictionaryVector *src = static_cast<DictionaryVector *>(other);
+            int32_t originalIds[length];
+            VariableWidthVectorImpl *dictionary =
                 static_cast<VariableWidthVectorImpl *>(src->ExtractDictionaryAndIds(0, length, originalIds));
             for (int32_t i = 0; i < length; i++) {
                 if (dictionary->IsValueNull(originalIds[i])) {
@@ -169,7 +169,6 @@ public:
                     SetValue(startIndex + i, value, valueLen);
                 }
             }
-            delete[] originalIds;
         }
     }
 

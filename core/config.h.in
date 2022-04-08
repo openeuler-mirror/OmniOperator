@@ -1,11 +1,6 @@
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
-
 #cmakedefine DEBUG
 #cmakedefine TRACE
 #cmakedefine DEBUG_OPERATOR
 #cmakedefine DEBUG_VECTOR
 #cmakedefine DEBUG_LLVM
 #cmakedefine DISABLE_JIT
-
-#endif

@@ -14,8 +14,6 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 using namespace std;
 
-namespace omniruntime {
-namespace expressions {
 string ExprPrinter::BinaryExprPrinterHelper(const Operator &op) const
 {
     switch (op) {
@@ -412,6 +410,4 @@ void ExprPrinter::Visit(const FuncExpr &e)
         }
     }
     this->indentationDepth--;
-}
-}
 }

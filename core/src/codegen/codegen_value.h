@@ -7,7 +7,6 @@
 
 #include <llvm/IR/Value.h>
 
-namespace omniruntime {
 class CodeGenValue {
 public:
     explicit CodeGenValue(llvm::Value *data, llvm::Value *isNull, llvm::Value *length = nullptr)
@@ -69,5 +68,6 @@ private:
     llvm::Value *high;
     llvm::Value *low;
 };
-}
+
+
 #endif // OMNI_RUNTIME_CODEGEN_VALUE_H

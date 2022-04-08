@@ -13,7 +13,6 @@
 #include "../type/data_type.h"
 #include "codegen_utils.h"
 
-namespace omniruntime {
 class DecimalIRBuilder {
 public:
     explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder,
@@ -47,6 +46,6 @@ private:
     CodeGenUtils &codeGenUtils;
     const std::string scaleMultipliersName = "SCALE_MULTIPLIERS";
 };
-}
+
 
 #endif // OMNI_RUNTIME_DECIMAL_IR_BUILDER_H

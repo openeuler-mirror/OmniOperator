@@ -9,16 +9,15 @@ using namespace std;
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
+Parser::Parser() {}
+
+Parser::~Parser() {}
+
 namespace {
 const string OPERATOR_PREFIX = "$operator$";
 const int32_t SUBSTR_LEN = 10;
 const int32_t ARG2 = 2;
 }
-
-namespace omniruntime {
-namespace expressions {
-Parser::Parser() {}
-Parser::~Parser() {}
 
 // Helper function to remove operator prefix if it is there
 string DemangleOperator(string opStr)
@@ -361,6 +360,4 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     // Case with regular data (int, long, double, string ...)
     return GenerateLiteralExprHelper(literalStr, std::move(currType));
-}
-}
 }

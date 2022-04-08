@@ -9,7 +9,7 @@
 #include "util/type_util.h"
 
 // functions called directly from codegen
-const std::string mm3hashStrPrefix = "mm3hash";
+const std::string mm3hashStr = "mm3hash";
 const std::string strCompareStr = "compare";
 
 namespace omniruntime {

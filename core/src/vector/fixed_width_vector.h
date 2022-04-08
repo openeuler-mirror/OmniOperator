@@ -96,9 +96,9 @@ public:
             SetValues(startIndex, otherValues, length);
             SetValueNulls(startIndex, otherValueNulls, length);
         } else {
-            auto *src = static_cast<DictionaryVector *>(other);
-            auto *originalIds = new int32_t[length];;
-            auto *dictionary =
+            DictionaryVector *src = static_cast<DictionaryVector *>(other);
+            int32_t originalIds[length];
+            FixedWidthVectorImpl *dictionary =
                 static_cast<FixedWidthVectorImpl *>(src->ExtractDictionaryAndIds(0, length, originalIds));
             for (int32_t i = 0; i < length; i++) {
                 if (dictionary->IsValueNull(originalIds[i])) {
@@ -107,7 +107,6 @@ public:
                     SetValue(startIndex + i, dictionary->GetValue(originalIds[i]));
                 }
             }
-            delete[] originalIds;
         }
     }
 

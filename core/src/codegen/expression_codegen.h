@@ -42,21 +42,20 @@
 #include "expression/parser/parser.h"
 #include "expression/expr_printer.h"
 #include "util/debug.h"
-#include "precompiled_bitcode.h"
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
 #include "codegen_utils.h"
 
-namespace omniruntime {
+
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
+
 // Given an expression generates the function for it.
-class ExpressionCodeGen : public expressions::ExprVisitor {
+class ExpressionCodeGen : public ExprVisitor {
 public:
     ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
     ~ExpressionCodeGen() override;
 
-    bool Initialize();
-    bool LoadPreCompiledIR();
+    void Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
     llvm::IRBuilder<> &GetIRBuilder();
@@ -82,6 +81,9 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
+    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<omniruntime::type::DataTypeId> &params,
+        omniruntime::type::DataTypeId &retTypeId, bool needsContext);
+
     llvm::Value *GetIntToPtr(omniruntime::type::DataTypeId typeId, llvm::Value *elementAddr);
     void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
@@ -139,5 +141,5 @@ private:
     void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
         llvm::Value *rightNull);
 };
-}
+
 #endif

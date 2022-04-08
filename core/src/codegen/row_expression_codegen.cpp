@@ -13,7 +13,6 @@ namespace {
 const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
 }
 
-namespace omniruntime {
 std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(std::string name,
     const omniruntime::expressions::Expr &expression)
 {
@@ -60,7 +59,7 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fiel
     return;
 }
 
-bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<llvm::Function::arg_iterator> args)
+bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)
 {
     this->codegenContext = std::make_unique<CodegenContext>();
     for (auto &arg : args) {
@@ -87,7 +86,7 @@ bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<llvm::Functio
     return true;
 }
 
-llvm::Function *RowExpressionCodeGen::CreateFunction()
+Function *RowExpressionCodeGen::CreateFunction()
 {
     int32_t argsSize = 6;
     std::vector<Type *> args;
@@ -102,7 +101,7 @@ llvm::Function *RowExpressionCodeGen::CreateFunction()
     args.push_back(llvmTypes->I64Type());
 
     FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
-    func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, FUNCTION_NAME, module.get());
+    func = Function::Create(prototype, Function::ExternalLinkage, FUNCTION_NAME, module.get());
 
     std::string argNames[] = {
         "data", "isNulls", "lengths", "isResultNull",
@@ -114,7 +113,7 @@ llvm::Function *RowExpressionCodeGen::CreateFunction()
         idx++;
     }
 
-    codeGenUtils->RecordFunctions(func);
+    codeGenUtils->RecordMainFunction(func);
 
     BasicBlock *body = BasicBlock::Create(*context, "FUNC_BODY", func);
     builder->SetInsertPoint(body);
@@ -141,10 +140,14 @@ llvm::Function *RowExpressionCodeGen::CreateFunction()
 
 int64_t RowExpressionCodeGen::GetFunction()
 {
-    auto exprFunction = this->CreateFunction();
-    if (exprFunction == nullptr) {
-        return 0;
-    }
+#ifdef DEBUG
+    std::cout << "Row Expression: " << std::endl;
+    ExprPrinter p;
+    expr->Accept(p);
+    std::cout << std::endl;
+#endif
+
+    this->CreateFunction();
 
     OptimizeFunctionsAndModule();
 
@@ -160,5 +163,4 @@ int64_t RowExpressionCodeGen::GetFunction()
 
     auto sym = eoe(jit->lookup(FUNCTION_NAME));
     return sym.getAddress();
-}
 }

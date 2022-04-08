@@ -8,8 +8,6 @@
 #include <chrono>
 #include <utility>
 
-#include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Linker/Linker.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/TargetSelect.h>
@@ -20,7 +18,6 @@
 #include "vector"
 #include "expr_info_extractor.h"
 #include "codegen_context.h"
-#include "../libconfig.h"
 
 using namespace llvm;
 using namespace orc;
@@ -34,14 +31,49 @@ const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
 const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
+
 std::once_flag codegen_target_init_flag;
 }
 
-namespace omniruntime {
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Expr &e)
 {
     e.Accept(*this);
     return this->value;
+}
+
+std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<DataTypeId> &params, DataTypeId &retTypeId,
+    bool needsContext)
+{
+    std::vector<Type *> args;
+    if (needsContext) {
+        args.push_back(llvmTypes->I64Type());
+    }
+    for (auto type : params) {
+        if (type == OMNI_DECIMAL128) {
+            // add high and low
+            args.push_back(llvmTypes->I64Type());
+            args.push_back(llvmTypes->I64Type());
+        } else {
+            args.push_back(llvmTypes->ToLLVMType(type));
+            if (TypeUtil::IsStringType(type)) {
+                if (type == OMNI_CHAR) {
+                    // Add Type for width support
+                    args.push_back(llvmTypes->I32Type());
+                }
+                // Add Type for Length of the string
+                args.push_back(llvmTypes->I32Type());
+            }
+        }
+    }
+    // return arguments
+    if (TypeUtil::IsStringType(retTypeId)) {
+        args.push_back(llvmTypes->I32PtrType());
+    } else if (retTypeId == OMNI_DECIMAL128) {
+        // Add high and low output pointers
+        args.push_back(llvmTypes->I64PtrType());
+        args.push_back(llvmTypes->I64PtrType());
+    }
+    return args;
 }
 
 /**
@@ -113,7 +145,7 @@ void ExpressionCodeGen::InitializeCodegenTargets()
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 }
 
-bool ExpressionCodeGen::Initialize()
+void ExpressionCodeGen::Initialize()
 {
     std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
     jit = eoe(LLJITBuilder().create());
@@ -129,51 +161,36 @@ bool ExpressionCodeGen::Initialize()
     decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder, *codeGenUtils);
     fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
 
-    auto loaded = LoadPreCompiledIR();
-    if (!loaded) {
-        return false;
-    }
-
     ExprInfoExtractor exprInfoExtractor;
     this->expr->Accept(exprInfoExtractor);
     this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
-    return true;
+    // get functions used in funcExpr  RegisterFunctions(exprInfoExtractor.GetFunctions());
+    RegisterFunctions(FunctionRegistry::GetFunctions());
 }
 
-bool ExpressionCodeGen::LoadPreCompiledIR()
+// Register function in JIT
+void ExpressionCodeGen::RegisterFunctions(const std::vector<omniruntime::Function> &functions)
 {
-    string err;
-    string path = omniruntime::LibConfig::GetLibPath() + "libboostkit-omniop-vector-1.0.0-aarch64.so";
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(path.c_str(), &err)) {
-        LogWarn("Failed to load core library at path: %s", path.c_str());
-        return false;
+    std::set<std::string> jitRegisteredFuncs;
+    for (auto &func : functions) {
+        auto &jd = jit->getMainJITDylib();
+        auto &dl = jit->getDataLayout();
+        llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
+        std::vector<DataTypeId> params = func.GetParamTypes();
+        DataTypeId retType = func.GetReturnType();
+        std::vector<Type *> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
+        auto s = llvm::orc::absoluteSymbols({ { mangle(func.GetId()),
+            JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()), JITSymbolFlags::Exported) } });
+        auto ign = jd.define(s);
+        if (ign) {
+            LogError("Error while defining absolute symbol in jd");
+        }
+        llvm::Type *ret = (retType == OMNI_DECIMAL128) ? llvmTypes->VoidType() : llvmTypes->ToLLVMType(retType);
+        llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
+        auto linkage = llvm::Function::ExternalLinkage;
+        llvm::Function *fn = llvm::Function::Create(ft, linkage, func.GetId(), *module);
+        FunctionCallee callee = module->getOrInsertFunction(func.GetId(), ft);
     }
-
-    auto bitcode = llvm::StringRef(reinterpret_cast<const char *>(precompiledBitcode), precompiledBitcodeSize);
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> bufferOrError =
-        llvm::MemoryBuffer::getMemBuffer(bitcode, "precompiled", false);
-    if (!bufferOrError) {
-        LogError("Unable to load module from IR %s, ", bufferOrError.getError().message().c_str());
-        return false;
-    }
-    std::unique_ptr<llvm::MemoryBuffer> buffer = move(bufferOrError.get());
-    llvm::Expected<std::unique_ptr<llvm::Module>> moduleOrError =
-        llvm::getOwningLazyBitcodeModule(move(buffer), *context);
-    if (!moduleOrError) {
-        LogError("Unable to get IR module from buffer");
-        return false;
-    }
-    std::unique_ptr<llvm::Module> irModule = move(moduleOrError.get());
-    irModule->setDataLayout(jit->getDataLayout());
-    if (llvm::verifyModule(*irModule, &llvm::errs())) {
-        LogError("Verification of IR Module failed");
-        return false;
-    }
-    if (llvm::Linker::linkModules(*module, move(irModule))) {
-        LogError("Linking of IR Module failed");
-        return false;
-    }
-    return true;
 }
 
 // Other operations which require externed functions
@@ -181,11 +198,11 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
 {
     // call function
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
-    std::string funcId =
-        codeGenUtils->GetFunction(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT)
-            ->GetFunctionName();
-    auto f = module->getFunction(funcId);
+    auto signature = FunctionSignature(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT);
+    auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
     auto ret = codeGenUtils->CreateCall(f, argVals, "call_str_cmp");
+    InlineFunctionInfo inlineFunctionInfo;
+    auto inlinedFunction = llvm::InlineFunction(*ret, inlineFunctionInfo);
     return ret;
 }
 
@@ -225,8 +242,7 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
                 break;
             case OMNI_DECIMAL128: {
                 std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
-                std::string funcId =
-                    codeGenUtils->GetFunction(subDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+                std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
                 leftZero = decimalIRBuilder->CallDecimalFunction(funcId,
                     llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
                 rightZero = decimalIRBuilder->CallDecimalFunction(funcId,
@@ -284,10 +300,10 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
             break;
         case OMNI_DECIMAL128: {
             std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
-            std::string funcId = codeGenUtils->GetFunction(subDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+            std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
             leftZero = decimalIRBuilder->CallDecimalFunction(funcId,
                 llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
-            funcId = codeGenUtils->GetFunction(divDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+            funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             rightOne = decimalIRBuilder->CallDecimalFunction(funcId,
                 llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals);
             break;
@@ -420,8 +436,7 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
     std::vector<Value *> argVals { leftPhi, rightPhi };
     std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId() };
     Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
-    std::string dictionaryCmpFuncId =
-        codeGenUtils->GetFunction(decimal128CompareStr, params, OMNI_INT)->GetFunctionName();
+    std::string dictionaryCmpFuncId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
@@ -455,22 +470,22 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
                 llvmTypes->CreateConstantInt(0)));
             break;
         case omniruntime::expressions::Operator::ADD: {
-            std::string funcId = codeGenUtils->GetFunction(addDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+            std::string funcId = FunctionSignature(addDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
         case omniruntime::expressions::Operator::SUB: {
-            std::string funcId = codeGenUtils->GetFunction(subDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+            std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
         case omniruntime::expressions::Operator::MUL: {
-            std::string funcId = codeGenUtils->GetFunction(mulDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+            std::string funcId = FunctionSignature(mulDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
         case omniruntime::expressions::Operator::DIV: {
-            std::string funcId = codeGenUtils->GetFunction(divDec128Str, params, OMNI_DECIMAL128)->GetFunctionName();
+            std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
@@ -555,7 +570,6 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
 #endif
     FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
     func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, funcName, module.get());
-    codeGenUtils->RecordFunctions(func);
 
     std::string argNames[] = {
         "data", "nullBitmap", "offsets", "rowIdx",
@@ -590,21 +604,12 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
 
     // cast char* to int64 for output
-    if (expr->GetReturnTypeId() == DataTypeId::OMNI_VARCHAR || expr->GetReturnTypeId() == DataTypeId::OMNI_CHAR) {
+    if (expr->GetReturnTypeId() == DataTypeId::OMNI_VARCHAR) {
         result->data = builder->CreatePtrToInt(result->data, llvmTypes->I64Type());
     }
     // Return value
     builder->CreateRet(result->data);
-
-    std::string errorMessage;
-    auto ostream = new raw_string_ostream(errorMessage);
-    auto hasError = verifyFunction(*func, ostream);
-    if (hasError) {
-        LogWarn("Expression codegen failed");
-        LogDebug("%s", errorMessage.c_str());
-        return nullptr;
-    }
-
+    verifyFunction(*func);
     return func;
 }
 
@@ -714,35 +719,34 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT };
     DataTypeId typeId = dataType.GetId();
-    FunctionSignature *dictionaryFuncSignature = nullptr;
+    FunctionSignature dictionaryFuncSignature;
     switch (typeId) {
         case OMNI_INT:
         case OMNI_DATE32:
-            dictionaryFuncSignature = new FunctionSignature(dictionaryGetIntStr, paramTypes, OMNI_INT);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetIntStr, paramTypes, OMNI_INT);
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
-            dictionaryFuncSignature = new FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_LONG);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_LONG);
             break;
         case OMNI_DECIMAL128:
-            dictionaryFuncSignature = new FunctionSignature(dictionaryGetDecimalStr, paramTypes, OMNI_DECIMAL128);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetDecimalStr, paramTypes, OMNI_DECIMAL128);
             break;
         case OMNI_DOUBLE:
-            dictionaryFuncSignature = new FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_DOUBLE);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_DOUBLE);
             break;
         case OMNI_BOOLEAN:
-            dictionaryFuncSignature = new FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_BOOLEAN);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_BOOLEAN);
             break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
-            dictionaryFuncSignature = new FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
             break;
         default:
             LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", typeId);
             return nullptr;
     }
-    auto dictionaryFunc =
-        module->getFunction(FunctionRegistry::LookupFunction(dictionaryFuncSignature)->GetFunctionName());
+    auto dictionaryFunc = module->getFunction(FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId());
     std::vector<Value *> funcArgs;
     funcArgs.push_back(dictionaryVectorPtr);
     funcArgs.push_back(rowIdx);
@@ -753,13 +757,14 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
     }
     Value *result = nullptr;
     if (typeId == OMNI_DECIMAL128) {
-        result = decimalIRBuilder->CallDecimalFunction(
-            FunctionRegistry::LookupFunction(dictionaryFuncSignature)->GetFunctionName(), llvmTypes->ToLLVMType(typeId),
-            funcArgs);
+        result =
+            decimalIRBuilder->CallDecimalFunction(FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
+            llvmTypes->ToLLVMType(typeId), funcArgs);
     } else {
-        result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs);
+        result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+        InlineFunctionInfo inlineFunctionInfo;
+        auto inlinedFunction = llvm::InlineFunction(*((CallInst *)result), inlineFunctionInfo);
     }
-    delete dictionaryFuncSignature;
     return result;
 }
 
@@ -874,6 +879,7 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     } else {
         this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
     }
+    return;
 }
 
 CodeGenValuePtr CreateInvalidCodeGenValue()
@@ -1055,9 +1061,11 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
     int32_t numReservedValues = 2;
 
-    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, nullptr, "temp_result_value");
-    AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "temp_result_null");
-    AllocaInst *resultLengthPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "temp_result_length");
+    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, numReservedValues, nullptr, "temp_result_value");
+    AllocaInst *resultNullPtr =
+        builder->CreateAlloca(Type::getInt1Ty(*context), numReservedValues, nullptr, "temp_result_null");
+    AllocaInst *resultLengthPtr =
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_length");
     condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(0), func));
     trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(0), func));
 
@@ -1300,8 +1308,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 Value *scaledCompareTo = nullptr;
                 Value *scaledArgi = nullptr;
 
-                std::string funcId =
-                    codeGenUtils->GetFunction(decimal128CompareStr, params, OMNI_INT)->GetFunctionName();
+                std::string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
 
                 decimalIRBuilder->ScaleValues(*(valueToCompare->data), *compareToScale, *(argiValue->data), *argiScale,
                     &scaledCompareTo, &scaledArgi);
@@ -1314,7 +1321,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 break;
             }
             default: {
-                LogDebug("Unsupported data type in IN expr %d", iExpr->arguments[0]->GetReturnTypeId());
+                LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->GetReturnTypeId());
                 this->value = CreateInvalidCodeGenValue();
                 return;
             }
@@ -1397,7 +1404,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         Value *cmpRightScaledVal = nullptr;
         Value *cmpRightScaledUpper = nullptr;
 
-        std::string funcId = codeGenUtils->GetFunction(decimal128CompareStr, params, OMNI_INT)->GetFunctionName();
+        std::string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
 
         decimalIRBuilder->ScaleValues(*lowerValData, *lowerScale, *valData, *valueScale, &cmpLeftScaledLower,
             &cmpLeftScaledVal);
@@ -1554,8 +1561,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         if (argN->GetReturnTypeId() == OMNI_DECIMAL128) {
             isDecimalFunction = true;
         }
-        // Pass null values for mm3hash functions, should be fixed by nullable params later
-        if (fExpr.funcName.find(mm3hashStrPrefix) == 0 && argN->GetType() == ExprType::FIELD_E) {
+        if (fExpr.funcName == mm3hashStr) {
             argVals.push_back(this->value->isNull);
         }
     }
@@ -1565,8 +1571,8 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     // Call Decimal IR Generator for decimal functions
     if (funcRetType == OMNI_DECIMAL128) {
         auto outputValuePtr = decimalIRBuilder->BuildDecimalValue(nullptr, fExpr.GetReturnType());
-        ret = decimalIRBuilder->CallDecimalFunction(fExpr.function->GetFunctionName(),
-            llvmTypes->ToLLVMType(funcRetType), argVals);
+        ret =
+            decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(), llvmTypes->ToLLVMType(funcRetType), argVals);
         outputValuePtr->data = ret;
         outputValuePtr->isNull = isAnyNull;
         outputValuePtr->length = outputLen;
@@ -1578,11 +1584,13 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
             argVals.push_back(outputLenPtr);
         }
 
-        auto f = module->getFunction(fExpr.function->GetFunctionName());
+        auto f = module->getFunction(fExpr.function->GetId());
         if (f) {
-            ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetFunctionName(),
+            ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(),
                 llvmTypes->ToLLVMType(funcRetType), argVals) :
-                                      codeGenUtils->CreateCall(f, argVals, fExpr.function->GetFunctionName());
+                                      codeGenUtils->CreateCall(f, argVals, fExpr.function->GetId());
+            InlineFunctionInfo inlineFunctionInfo;
+            auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
         } else {
             std::cout << "Unable to generate function " << fExpr.funcName.c_str() << std::endl;
@@ -1596,8 +1604,6 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
 
 void ExpressionCodeGen::OptimizeFunctionsAndModule()
 {
-    codeGenUtils->RemoveUnusedFunctions();
-
     fpm->add(createSCCPPass());
     fpm->add(createNewGVNPass());
     fpm->add(createInductiveRangeCheckEliminationPass());
@@ -1618,6 +1624,8 @@ void ExpressionCodeGen::OptimizeFunctionsAndModule()
     fpm->add(createDeadStoreEliminationPass());
     fpm->add(createPromoteMemoryToRegisterPass());
 
+    codeGenUtils->RemoveUnusedFunctions();
+
     mpm.add(createFunctionInliningPass());
     mpm.add(createPruneEHPass());
 
@@ -1635,5 +1643,4 @@ void ExpressionCodeGen::OptimizeModule()
     mpm.add(createPruneEHPass());
 
     mpm.run(*module);
-}
 }

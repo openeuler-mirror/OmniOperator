@@ -10,7 +10,6 @@
 #include "expression_codegen.h"
 #include "util/type_util.h"
 
-namespace omniruntime {
 class ProjectionCodeGen : public ExpressionCodeGen {
 public:
     /* *
@@ -36,5 +35,5 @@ private:
     int64_t CreateWrapper(llvm::Function &proj);
     bool filter;
 };
-}
+
 #endif
