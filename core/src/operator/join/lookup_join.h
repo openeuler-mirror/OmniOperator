@@ -58,7 +58,7 @@ private:
     void JoinCurrentPositionWithFilter();
     void JoinCurrentPosition();
     bool AdvanceProbePosition();
-    int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
+    uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
 
     const type::DataTypes &probeTypes;
     std::vector<int32_t> probeOutputCols;
@@ -70,7 +70,7 @@ private:
     bool currentProbePositionProducedRow;
     JoinHashTables *hashTables;
     JoinProbe *joinProbe;
-    int64_t partitionedJoinPosition; // the addressIndex combined partition for build, it is encoded by ((addressIndex
+    uint64_t partitionedJoinPosition; // the addressIndex combined partition for build, it is encoded by ((addressIndex
     // << shiftSize) | partition)
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
     ExecutionContext *executionContext = nullptr;
@@ -79,8 +79,8 @@ private:
 
 class JoinProbe {
 public:
-    JoinProbe(omniruntime::vec::VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
-        int32_t hashColsCount);
+    JoinProbe(omniruntime::vec::VectorBatch *input, uint32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
+        uint32_t hashColsCount);
     ~JoinProbe();
 
     int32_t GetPosition() const
@@ -99,17 +99,15 @@ public:
     }
 
     bool AdvanceNextPosition();
-    int64_t GetCurrentJoinPosition(const JoinHashTables *hashTables) const;
+    uint64_t GetCurrentJoinPosition(const JoinHashTables *hashTables) const;
 
 private:
-    bool CurrentRowContainsNull() const;
-
     omniruntime::vec::Vector **probeAllColumns;
-    int32_t probeAllColsCount;
-    int32_t positionCount;
+    uint32_t probeAllColsCount;
+    uint32_t positionCount;
     omniruntime::vec::Vector **probeHashColumns; // Vector *[join column count]
     int32_t *probeHashColTypes;
-    int32_t probeHashColsCount;
+    uint32_t probeHashColsCount;
     int32_t position;
     int64_t *hashes;
     bool *nulls;
