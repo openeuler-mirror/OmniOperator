@@ -12,13 +12,10 @@
 #include "expressions.h"
 #include "util/type_util.h"
 
-namespace omniruntime {
-namespace expressions {
 class ParserHelper {
 public:
     static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(omniruntime::type::DataTypeId destTypeId);
     static omniruntime::expressions::DataTypePtr GetReturnDataType(nlohmann::json jsonExpr);
 };
-}
-}
+
 #endif

@@ -8,12 +8,12 @@
 #include "func_registry_base.h"
 
 // functions called directly from codegen
-const std::string dictionaryGetIntStr = "get_dictionary_value";
-const std::string dictionaryGetLongStr = "get_dictionary_value";
-const std::string dictionaryGetDoubleStr = "get_dictionary_value";
-const std::string dictionaryGetBooleanStr = "get_dictionary_value";
-const std::string dictionaryGetVarcharStr = "get_dictionary_value";
-const std::string dictionaryGetDecimalStr = "get_dictionary_value";
+const std::string dictionaryGetIntStr = "DictionaryGetInt";
+const std::string dictionaryGetLongStr = "DictionaryGetLong";
+const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";
+const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
+const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
+const std::string dictionaryGetDecimalStr = "DictionaryGetDecimal";
 
 namespace omniruntime {
 class DictionaryFunctionRegistry : public BaseFunctionRegistry {

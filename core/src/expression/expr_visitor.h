@@ -7,8 +7,6 @@
 
 #include "expressions.h"
 
-namespace omniruntime {
-namespace expressions {
 class ExprVisitor {
 public:
     virtual ~ExprVisitor() = default;
@@ -24,6 +22,5 @@ public:
     virtual void Visit(const omniruntime::expressions::FuncExpr &e) = 0;
     virtual void Visit(const omniruntime::expressions::SwitchExpr &e) = 0;
 };
-}
-}
+
 #endif

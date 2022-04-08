@@ -4,18 +4,19 @@
  */
 
 #include "func_registry_hash.h"
-
+#include "functions/murmur3_hash.h"
 using namespace omniruntime;
 using namespace omniruntime::type;
+using namespace omniruntime::codegen;
 
-namespace omniruntime {
 std::vector<Function> HashFunctionRegistry::GetFunctions()
 {
     DataTypeId retType = OMNI_INT;
-    std::vector<Function> hashRegistry = { Function("Mm3Int32", "mm3hash", {}, { OMNI_INT, OMNI_INT }, retType),
-        Function("Mm3Int64", "mm3hash", {}, { OMNI_LONG, OMNI_INT }, retType),
-        Function("Mm3Double", "mm3hash", {}, { OMNI_DOUBLE, OMNI_INT }, retType),
-        Function("Mm3String", "mm3hash", {}, { OMNI_VARCHAR, OMNI_INT }, retType) };
+    std::string mm3fnStr = "mm3hash";
+    std::vector<Function> hashRegistry = { Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {},
+        { OMNI_INT, OMNI_INT }, retType),
+        Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, { OMNI_LONG, OMNI_INT }, retType),
+        Function(reinterpret_cast<void *>(Mm3Double), mm3fnStr, {}, { OMNI_DOUBLE, OMNI_INT }, retType),
+        Function(reinterpret_cast<void *>(Mm3String), mm3fnStr, {}, { OMNI_VARCHAR, OMNI_INT }, retType) };
     return hashRegistry;
-}
 }

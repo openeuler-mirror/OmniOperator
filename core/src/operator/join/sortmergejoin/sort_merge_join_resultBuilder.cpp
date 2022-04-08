@@ -10,7 +10,6 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
-using namespace omniruntime::expressions;
 
 JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
     int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,

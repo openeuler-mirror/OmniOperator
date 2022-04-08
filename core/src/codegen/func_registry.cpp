@@ -10,7 +10,6 @@ using namespace std;
 using namespace omniruntime;
 using omniruntime::Function;
 
-namespace omniruntime {
 vector<Function> FunctionRegistry::registeredFunctions = Initialize();
 FunctionMapPtr FunctionRegistry::functionRegistry;
 
@@ -69,5 +68,4 @@ const Function *FunctionRegistry::LookupFunction(FunctionSignature *signature)
 std::vector<Function> &FunctionRegistry::GetFunctions()
 {
     return registeredFunctions;
-}
 }

@@ -6,7 +6,6 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 #include "llvm_types.h"
 
-namespace omniruntime {
 void DecimalIRBuilder::AddScaleMultiplier() const
 {
     std::string value = "1";
@@ -139,15 +138,18 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
             disassembledArgs.push_back(outLowPtr);
 
             // Make call to pre-compiled IR function.
-            codeGenUtils.CreateCall(f, disassembledArgs);
+            codeGenUtils.CreateCall(f, disassembledArgs, fnName);
 
             auto outHigh = builder.CreateLoad(outHighPtr);
             auto outLow = builder.CreateLoad(outLowPtr);
             result = ToInt128(outHigh, outLow);
         } else {
-            result = codeGenUtils.CreateCall(f, disassembledArgs);
+            result = codeGenUtils.CreateCall(f, disassembledArgs, fnName);
         }
+        llvm::InlineFunctionInfo inlineFunctionInfo;
+        auto inlinedFunction = llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);
     } else {
+        std::cout << "Unable to generate function " << fnName << std::endl;
         LogWarn("Unable to generate function : %s", fnName.c_str());
     }
     return result;
@@ -160,5 +162,4 @@ std::shared_ptr<DecimalValue> DecimalIRBuilder::BuildDecimalValue(llvm::Value *d
     llvm::Value *precision = llvmTypes.CreateConstantInt(retType.GetPrecision());
     llvm::Value *scale = llvmTypes.CreateConstantInt(retType.GetScale());
     return std::make_shared<DecimalValue>(data, isNull, precision, scale);
-}
 }

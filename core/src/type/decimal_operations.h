@@ -19,8 +19,6 @@ namespace omniruntime {
 namespace type {
 static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
 static constexpr int32_t BYTES_OF_LONG = 8;
-static constexpr uint32_t RIGHT_SHIFT = 63;
-
 class DecimalOperations {
 public:
     DecimalOperations(int64_t high_bits, uint64_t low_bits) = delete;
@@ -110,7 +108,7 @@ public:
         int64_t z1 = intermediateResult & (~omniruntime::type::SIGN_LONG_MASK);
         Pack(result, z0, z1, resultNegative);
 
-        return ((uint64_t)intermediateResult) >> RIGHT_SHIFT;
+        return ((uint64_t)intermediateResult) >> 63;
     }
 
     static inline void SetToZero(Decimal128 &decimal128)
@@ -170,7 +168,7 @@ public:
 
     static inline bool IsNegative(Decimal128 &left)
     {
-        return (((uint64_t)left.HighBits()) >> RIGHT_SHIFT) != 0;
+        return (((uint64_t)left.HighBits()) >> 63) != 0;
     }
 
     static inline int64_t GetLong(int64_t bits)

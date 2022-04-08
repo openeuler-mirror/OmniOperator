@@ -5,7 +5,6 @@
 #ifndef OMNI_RUNTIME_CODEGEN_CONTEXT_H
 #define OMNI_RUNTIME_CODEGEN_CONTEXT_H
 
-namespace omniruntime {
 class CodegenContext {
 public:
     explicit CodegenContext() : data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr), print(nullptr) {}
@@ -35,5 +34,5 @@ private:
     llvm::Value *dictionaryVectors;
     llvm::FunctionCallee print;
 };
-}
+
 #endif // OMNI_RUNTIME_CODEGEN_CONTEXT_H

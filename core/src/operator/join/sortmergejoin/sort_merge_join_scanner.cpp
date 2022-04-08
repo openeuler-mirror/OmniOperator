@@ -13,18 +13,18 @@ namespace op {
 SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
     int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
     int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch)
-    : joinType(joinType),
+    : streamedTableKeysTypes(std::make_unique<DataTypes>(streamedTableKeysTypes)),
+      joinType(joinType),
       streamedTableKeysCols(streamedTableKeysCols),
       bufferedTableKeysCols(bufferedTableKeysCols),
-      streamedTableKeysTypes(std::make_unique<DataTypes>(streamedTableKeysTypes)),
       keyColsCount(keyColsCount),
+      firstMatch(firstMatch),
+      streamedPagesIndexPosition(-1),
+      bufferedPagesIndexPosition(0),
       streamedPagesIndex(streamedTablePagesIndex),
       bufferedPagesIndex(bufferedTablePagesIndex),
-      firstMatch(firstMatch),
       preStreamedValueAddress(-1),
-      preStatus(std::make_unique<InitialJoinStatus>()),
-      streamedPagesIndexPosition(-1),
-      bufferedPagesIndexPosition(0)
+      preStatus(std::make_unique<InitialJoinStatus>())
 {}
 
 SortMergeJoinScanner::~SortMergeJoinScanner() {}
