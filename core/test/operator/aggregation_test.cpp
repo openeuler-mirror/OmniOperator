@@ -145,7 +145,7 @@ Vector *BuildAggregateInput(const DataType &aggType, int32_t rowPerVecBatch)
         case OMNI_BOOLEAN: {
             BooleanVector *col = new BooleanVector(vecAllocator, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
-                col->SetValue(j, 1);
+                col->SetValue(j, true);
             }
             return col;
         }
@@ -1708,6 +1708,8 @@ TEST(AggregatorTest, min_test)
     auto minNull = minFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 2, true, false);
     auto minIntLong = minFactory->CreateAggregator(IntDataType::Instance(), LongDataType::Instance(), 5, true, false);
     auto minLongInt = minFactory->CreateAggregator(LongDataType::Instance(), IntDataType::Instance(), 0, true, false);
+    auto minBoolean =
+        minFactory->CreateAggregator(BooleanDataType::Instance(), BooleanDataType::Instance(), 6, true, false);
 
     auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128DataType(38, 0), rowPerVecBatch);
@@ -1727,14 +1729,16 @@ TEST(AggregatorTest, min_test)
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
     auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
     auto intInputVec = BuildAggregateInput(IntDataType(), rowPerVecBatch);
+    auto BoolInputVec = BuildAggregateInput(BooleanDataType(), rowPerVecBatch);
 
-    VectorBatch *vectorBatch = new VectorBatch(5);
+    VectorBatch *vectorBatch = new VectorBatch(7);
     vectorBatch->SetVector(0, longInputVec);
     vectorBatch->SetVector(1, dictInputVec);
     vectorBatch->SetVector(2, nullInputVec);
     vectorBatch->SetVector(3, decimalInputVec);
     vectorBatch->SetVector(4, varcharInputVec);
     vectorBatch->SetVector(5, intInputVec);
+    vectorBatch->SetVector(6, BoolInputVec);
 
     // process long
     AggregateState state { nullptr };
@@ -1798,6 +1802,17 @@ TEST(AggregatorTest, min_test)
     EXPECT_EQ(1, *static_cast<int32_t *>(state.val));
     state.val = nullptr;
 
+    for (int32_t i = 0; i < rowPerVecBatch; ++i) {
+        if (i == 0) {
+            minBoolean->InitiateGroup(state, vectorBatch, i);
+        } else {
+            minBoolean->ProcessGroup(state, vectorBatch, i);
+        }
+    }
+    EXPECT_EQ(true, *static_cast<bool *>(state.val));
+    state.val = nullptr;
+
+
     VectorHelper::FreeVecBatch(vectorBatch);
     delete minFactory;
 }
@@ -1814,6 +1829,8 @@ TEST(AggregatorTest, max_test)
     auto maxNull = maxFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 4, true, false);
     auto maxIntLong = maxFactory->CreateAggregator(IntDataType::Instance(), LongDataType::Instance(), 5, true, false);
     auto maxLongInt = maxFactory->CreateAggregator(LongDataType::Instance(), IntDataType::Instance(), 0, true, false);
+    auto maxBoolean =
+        maxFactory->CreateAggregator(BooleanDataType::Instance(), BooleanDataType::Instance(), 6, true, false);
 
     auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128DataType(38, 0), rowPerVecBatch);
@@ -1833,14 +1850,16 @@ TEST(AggregatorTest, max_test)
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
     auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
     auto intInputVec = BuildAggregateInput(IntDataType(), rowPerVecBatch);
+    auto boolInputVec = BuildAggregateInput(BooleanDataType(), rowPerVecBatch);
 
-    VectorBatch *vectorBatch = new VectorBatch(5);
+    VectorBatch *vectorBatch = new VectorBatch(7);
     vectorBatch->SetVector(0, longInputVec);
     vectorBatch->SetVector(1, decimalInputVec);
     vectorBatch->SetVector(2, varcharInputVec);
     vectorBatch->SetVector(3, dictInputVec);
     vectorBatch->SetVector(4, nullInputVec);
     vectorBatch->SetVector(5, intInputVec);
+    vectorBatch->SetVector(6, boolInputVec);
 
     // process long
     AggregateState state { nullptr };
@@ -1914,6 +1933,16 @@ TEST(AggregatorTest, max_test)
         }
     }
     EXPECT_EQ(1, *static_cast<int32_t *>(state.val));
+    state.val = nullptr;
+
+    for (int32_t i = 0; i < rowPerVecBatch; ++i) {
+        if (i == 0) {
+            maxBoolean->InitiateGroup(state, vectorBatch, i);
+        } else {
+            maxBoolean->ProcessGroup(state, vectorBatch, i);
+        }
+    }
+    EXPECT_EQ(true, *static_cast<bool *>(state.val));
     state.val = nullptr;
 
     VectorHelper::FreeVecBatch(vectorBatch);
