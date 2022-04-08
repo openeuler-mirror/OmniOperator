@@ -12,7 +12,7 @@ namespace omniruntime {
 namespace vec {
 class VectorBatch {
 public:
-    VectorBatch(int vectorCount);
+    explicit VectorBatch(int vectorCount);
 
     VectorBatch(int vectorCount, int rowCount);
 

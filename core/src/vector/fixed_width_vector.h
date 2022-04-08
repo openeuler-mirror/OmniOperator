@@ -77,8 +77,8 @@ public:
             return nullptr;
         }
         FixedWidthVectorImpl *vector = new FixedWidthVectorImpl(GetAllocator(), length);
-        vector->SetValues(0, (T *)valuesAddress + startIndex + this->positionOffset, length);
-        vector->SetValueNulls(0, (bool *)valueNullsAddress + startIndex + this->positionOffset, length);
+        vector->SetValues(0, static_cast<T *>(valuesAddress) + startIndex + this->positionOffset, length);
+        vector->SetValueNulls(0, static_cast<bool *>(valueNullsAddress) + startIndex + this->positionOffset, length);
         return vector;
     }
 

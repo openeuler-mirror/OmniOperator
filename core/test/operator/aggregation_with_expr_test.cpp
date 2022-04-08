@@ -10,6 +10,7 @@
 #include "../util/test_util.h"
 #include "../../libconfig.h"
 
+namespace omniruntime {
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace TestUtil;
@@ -197,4 +198,5 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+}
 }

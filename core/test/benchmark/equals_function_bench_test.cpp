@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "../util/test_util.h"
 
+namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
@@ -199,4 +200,5 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     delete vector2;
     delete vector3;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
+}
 }

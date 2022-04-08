@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "memory/simple_arena_allocator.h"
-
+namespace omniruntime {
 using namespace omniruntime::mem;
 
 TEST(SimpleArenaAllocator, testAllocate)
@@ -81,4 +81,5 @@ TEST(SimpleArenaAllocator, testResetFromBigToSmall)
     EXPECT_NE(p, nullptr);
     EXPECT_EQ(arena.TotalBytes(), largeSize);
     EXPECT_EQ(arena.AvailBytes(), largeSize - smallSize);
+}
 }

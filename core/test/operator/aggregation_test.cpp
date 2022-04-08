@@ -18,7 +18,7 @@
 #include "util/perf_util.h"
 #include "../util/test_util.h"
 #include "../../libconfig.h"
-
+namespace omniruntime {
 using namespace omniruntime::vec;
 const int32_t VEC_BATCH_NUM = 10;
 const int32_t ROW_PER_VEC_BATCH = 2000000;
@@ -26,16 +26,22 @@ const int32_t CARDINALITY = 4;
 const int32_t COLUMN_NUM = 4;
 const bool INPUT_MODE = true;
 const bool OUTPUT_MODE = false;
+const int CONST_VALUE_2 = 2;
+const int CONST_VALUE_7 = 7;
+const int CONST_VALUE_24 = 24;
+const int CONST_VALUE_32 = 32;
+const int CONST_VALUE_38 = 38;
 
-static Decimal64DataType SHORT_DECIMAL_TYPE(7, 2);
-static VarcharDataType SUM_IMMEDIATE_VARBINARY(24);
-static VarcharDataType AVG_IMMEDIATE_VARBINARY(32);
-static Decimal128DataType LONG_DECIMAL_TYPE(38, 0);
+static Decimal64DataType SHORT_DECIMAL_TYPE(CONST_VALUE_7, CONST_VALUE_2);
+static VarcharDataType SUM_IMMEDIATE_VARBINARY(CONST_VALUE_24);
+static VarcharDataType AVG_IMMEDIATE_VARBINARY(CONST_VALUE_32);
+static Decimal128DataType LONG_DECIMAL_TYPE(CONST_VALUE_38, 0);
 
 long lrand()
 {
+    const int CONST_VALUE_8 = 8;
     if (sizeof(int) < sizeof(long)) {
-        return (static_cast<long>(rand())) << (sizeof(int) * 8) | rand();
+        return (static_cast<long>(rand())) << (sizeof(int) * CONST_VALUE_8) | rand();
     }
     return rand();
 }
@@ -244,15 +250,18 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
 
 uintptr_t CreateAggFactoryWithJit()
 {
+    const int CONST_VALUE_4 = 4;
     DataTypes sourceTypes(
-        { LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance() });
-    uint32_t aggFuncTypes[4] = {0, 0, 0, 0};
-    omniruntime::op::PrepareContext aggFuncTypeContext = { aggFuncTypes, 4 };
-    uint32_t aggInputCols[4] = {0, 1, 2, 3};
-    omniruntime::op::PrepareContext aggInputColsContext = { aggInputCols, 4 };
-    uint32_t maskCols[4] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
-                            static_cast<uint32_t>(-1)};
-    omniruntime::op::PrepareContext maskColsContext = { maskCols, 4 };
+            {LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance(),
+             LongDataType::Instance()});
+    uint32_t aggFuncTypes[CONST_VALUE_4] = {0, 0, 0, 0};
+    omniruntime::op::PrepareContext aggFuncTypeContext = {aggFuncTypes, CONST_VALUE_4};
+    uint32_t aggInputCols[CONST_VALUE_4] = {0, 1, 2, 3};
+    omniruntime::op::PrepareContext aggInputColsContext = {aggInputCols, CONST_VALUE_4};
+    uint32_t maskCols[CONST_VALUE_4] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
+                                        static_cast<uint32_t>(-1),
+                                        static_cast<uint32_t>(-1)};
+    omniruntime::op::PrepareContext maskColsContext = {maskCols, CONST_VALUE_4};
 
     auto jitContext = CreateAggregationJitContext();
     std::cout << "after jit" << std::endl;
@@ -2006,4 +2015,5 @@ TEST(AggregatorTest, avg_test)
 
     VectorHelper::FreeVecBatch(vectorBatch);
     delete avgFactory;
+}
 }
