@@ -17,7 +17,6 @@ import java.util.Objects;
  *
  * @since 2021-06-30
  */
-@SuppressWarnings("StaticVariableName")
 public abstract class Constant implements Serializable {
     private static final long serialVersionUID = -2589766491699675794L;
 

@@ -12,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * @since 2021-06-30
  */
-@SuppressWarnings("StaticVariableName")
 public class JoinType extends Constant {
     /**
      * The constant OMNI_JOIN_TYPE_INNER.
