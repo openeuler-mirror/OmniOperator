@@ -7,6 +7,8 @@ using namespace std;
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
+namespace omniruntime {
+namespace expressions {
 constexpr int32_t INT_DEFAULT_VALUE = 0;
 constexpr int64_t LONG_DEFAULT_VALUE = 0L;
 constexpr double DOUBLE_DEFAULT_VALUE = 0.000;
@@ -78,4 +80,6 @@ DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
             LogError("Unsupported data type %d ", typeId);
             return nullptr;
     }
+}
+}
 }

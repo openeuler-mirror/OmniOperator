@@ -5,7 +5,8 @@
 #include "expr_visitor.h"
 
 using namespace omniruntime::expressions;
-
+namespace omniruntime {
+namespace expressions {
 void LiteralExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);
@@ -59,4 +60,6 @@ void FuncExpr::Accept(ExprVisitor &visitor) const
 void UnaryExpr::Accept(ExprVisitor &visitor) const
 {
     return visitor.Visit(*this);
+}
+}
 }

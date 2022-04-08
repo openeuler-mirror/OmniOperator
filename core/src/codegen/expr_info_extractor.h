@@ -13,7 +13,8 @@
 #include "function.h"
 #include "util/type_util.h"
 
-class ExprInfoExtractor : public ExprVisitor {
+namespace omniruntime {
+class ExprInfoExtractor : public expressions::ExprVisitor {
 public:
     void Visit(const omniruntime::expressions::LiteralExpr &e) override;
     void Visit(const omniruntime::expressions::FieldExpr &e) override;
@@ -31,4 +32,5 @@ public:
 private:
     std::set<int32_t> vectorIndexes;
 };
+}
 #endif

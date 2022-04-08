@@ -12,6 +12,7 @@
 
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
+using namespace omniruntime;
 
 namespace TestUtil {
 bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber);

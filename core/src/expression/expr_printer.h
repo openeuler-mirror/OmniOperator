@@ -8,6 +8,8 @@
 #include "expr_visitor.h"
 #include "util/type_util.h"
 
+namespace omniruntime {
+namespace expressions {
 class ExprPrinter : public ExprVisitor {
 public:
     void Visit(const omniruntime::expressions::LiteralExpr &e) override;
@@ -27,5 +29,7 @@ private:
     std::string GenerateIndentation() const;
     int indentationDepth = 0;
 };
+}
+}
 
 #endif

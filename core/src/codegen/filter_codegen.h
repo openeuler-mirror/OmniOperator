@@ -8,6 +8,7 @@
 #include <utility>
 #include "expression_codegen.h"
 
+namespace omniruntime {
 class FilterCodeGen : public ExpressionCodeGen {
 public:
     /* *
@@ -31,4 +32,5 @@ private:
     {}
     int64_t CreateWrapper(llvm::Function &filter);
 };
+}
 #endif

@@ -27,6 +27,9 @@ RowFilter::~RowFilter()
 RowFilterFunc RowFilter::Create()
 {
     this->codegen = FilterCodeGen::Create("single_row_filter", *this->expression);
+    if (this->codegen == nullptr) {
+        return nullptr;
+    }
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fAddr;
     auto castedRef = static_cast<RowFilterFunc *>(refFunc);
@@ -219,11 +222,13 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
 Filter::Filter(const expressions::Expr &expression)
     : codeGen(FilterCodeGen::Create("filterFunc", expression)), expr(&expression)
 {
+    this->isSupported = false;
+    this->apply = nullptr;
+    if (this->codeGen == nullptr) {
+        return;
+    }
     auto f = this->codeGen->GetFunction();
-    if (f == 0) {
-        this->isSupported = false;
-        this->apply = nullptr;
-    } else {
+    if (f != 0) {
         this->isSupported = true;
         void *function = &f;
         this->apply = *static_cast<FilterFunc *>(function);

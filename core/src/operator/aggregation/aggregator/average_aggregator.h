@@ -65,8 +65,8 @@ public:
         // for partial aggregation
         if (inputRaw == true) {
             auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
-            auto len = sizeof(ResultType);
-            auto ptr = executionContext->GetArena()->Allocate(len);
+            size_t len = sizeof(ResultType);
+            auto ptr = executionContext->GetArena()->Allocate(static_cast<int64_t>(len));
             *reinterpret_cast<ResultType *>(ptr) = rowVal;
             state.avgVal = ptr;
             state.avgCnt = 1;

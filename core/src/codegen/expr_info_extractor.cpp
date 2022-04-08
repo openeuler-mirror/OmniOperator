@@ -8,6 +8,7 @@
 using namespace omniruntime::expressions;
 using namespace std;
 
+namespace omniruntime {
 void ExprInfoExtractor::Visit(const LiteralExpr &e) {}
 
 void ExprInfoExtractor::Visit(const FieldExpr &e)
@@ -75,4 +76,5 @@ void ExprInfoExtractor::Visit(const FuncExpr &e)
 std::set<int32_t> ExprInfoExtractor::GetVectorIndexes()
 {
     return this->vectorIndexes;
+}
 }

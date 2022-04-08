@@ -12,12 +12,12 @@
 #include "type/decimal128.h"
 #include "type/data_type.h"
 
-class ExprVisitor;
 
 namespace omniruntime {
 namespace expressions {
 // place holder context class here
 class Context {};
+class ExprVisitor;
 
 enum class Operator {
     // Comparison

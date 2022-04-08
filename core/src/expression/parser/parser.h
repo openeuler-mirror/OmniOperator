@@ -14,6 +14,8 @@ enum ParserFormat {
     JSON = 1
 };
 
+namespace omniruntime {
+namespace expressions {
 class Parser {
 public:
     Parser();
@@ -39,6 +41,6 @@ private:
     // Helper function to strip a string but keep spaces intact inside string literals
     static std::string StripString(const std::string &input);
 };
-
-
+}
+}
 #endif
