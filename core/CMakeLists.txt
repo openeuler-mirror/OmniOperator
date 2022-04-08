@@ -34,11 +34,11 @@ endif ()
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 
 # clean all target
-set(target_generated ${CMAKE_INSTALL_PREFIX}/${OMNI_RUNTIME_SO}
-        ${CMAKE_INSTALL_PREFIX}/${OMNI_VECTOR_SO}
-        ${CMAKE_INSTALL_PREFIX}/${OMNI_CODEGEN_SO}
+set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_RUNTIME_SO}.so
+        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_VECTOR_SO}.so
+        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_CODEGEN_SO}.so
         ${CMAKE_INSTALL_PREFIX}/ir
-        ${CMAKE_INSTALL_PREFIX}/${OMNI_OPERATOR_SO}
+        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_OPERATOR_SO}.so
         )
 foreach (file ${target_generated})
     if (EXISTS ${file})
