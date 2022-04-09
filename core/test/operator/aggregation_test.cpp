@@ -252,16 +252,15 @@ uintptr_t CreateAggFactoryWithJit()
 {
     const int CONST_VALUE_4 = 4;
     DataTypes sourceTypes(
-            {LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance(),
-             LongDataType::Instance()});
+        { LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance() });
     uint32_t aggFuncTypes[CONST_VALUE_4] = {0, 0, 0, 0};
-    omniruntime::op::PrepareContext aggFuncTypeContext = {aggFuncTypes, CONST_VALUE_4};
+    omniruntime::op::PrepareContext aggFuncTypeContext = { aggFuncTypes, CONST_VALUE_4 };
     uint32_t aggInputCols[CONST_VALUE_4] = {0, 1, 2, 3};
-    omniruntime::op::PrepareContext aggInputColsContext = {aggInputCols, CONST_VALUE_4};
+    omniruntime::op::PrepareContext aggInputColsContext = { aggInputCols, CONST_VALUE_4 };
     uint32_t maskCols[CONST_VALUE_4] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
                                         static_cast<uint32_t>(-1),
                                         static_cast<uint32_t>(-1)};
-    omniruntime::op::PrepareContext maskColsContext = {maskCols, CONST_VALUE_4};
+    omniruntime::op::PrepareContext maskColsContext = { maskCols, CONST_VALUE_4 };
 
     auto jitContext = CreateAggregationJitContext();
     std::cout << "after jit" << std::endl;
@@ -1103,6 +1102,48 @@ TEST(AggregationOperatorTest, avg_correctness_test)
 
     VectorHelper::FreeVecBatches(result);
     Operator::DeleteOperator(aggregate);
+}
+
+TEST(AggregationOperatorTest, min_max_varchar_correctness)
+{
+    std::string data0[] = {"operators", "operator", "operators", "helloha", "hello", "helloha"};
+    std::string data1[] = {"hello", "helloha", "hello", "operator", "operators", "operator"};
+    DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(10), VarcharDataType(10) }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, 6, data0, data1);
+
+    std::vector<std::unique_ptr<Aggregator>> aggs;
+    aggs.push_back(std::make_unique<MinVarcharAggregator>(VarcharDataType(10), VarcharDataType(10), 0));
+    aggs.push_back(std::make_unique<MaxVarcharAggregator>(VarcharDataType(10), VarcharDataType(10), 1));
+
+    std::vector<int32_t> aggInputCols = { 0, 1 };
+    std::vector<int32_t> maskCols = { -1, -1 };
+    DataTypes aggPartialOutputTypes(std::vector<DataType> { VarcharDataType(10), VarcharDataType(10) });
+
+    auto aggOperator =
+        new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggPartialOutputTypes, true, true);
+    aggOperator->AddInput(vecBatch);
+    std::vector<VectorBatch *> result;
+    int32_t vecBatchCount = aggOperator->GetOutput(result);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    auto resultVec0 = static_cast<VarcharVector *>(result[0]->GetVector(0));
+    EXPECT_EQ(resultVec0->GetSize(), 1);
+    uint8_t *minVal = nullptr;
+    int32_t minValLen = resultVec0->GetValue(0, &minVal);
+    std::string minStr(minVal, minVal + minValLen);
+    EXPECT_EQ(minValLen, data0[4].size());
+    EXPECT_EQ(data0[4].compare(minStr), 0);
+
+    auto resultVec1 = static_cast<VarcharVector *>(result[0]->GetVector(1));
+    EXPECT_EQ(resultVec1->GetSize(), 1);
+    uint8_t *maxVal = nullptr;
+    int32_t maxValLen = resultVec1->GetValue(0, &maxVal);
+    std::string maxStr(maxVal, maxVal + maxValLen);
+    EXPECT_EQ(maxValLen, data1[4].size());
+    EXPECT_EQ(data1[4].compare(maxStr), 0);
+
+    omniruntime::op::Operator::DeleteOperator(aggOperator);
+    VectorHelper::FreeVecBatches(result);
 }
 
 TEST(AggregationOperatorTest, DISABLED_perf_original)
