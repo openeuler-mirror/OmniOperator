@@ -33,13 +33,24 @@ public:
         uint8_t *rowVal = nullptr;
         int valLen = (static_cast<VarcharVector *>(vector))->GetValue(offset, &rowVal);
         auto leftVal = reinterpret_cast<char *>(state.strVal);
-        if (memcmp(leftVal, (char *)rowVal, std::min(valLen, state.strLen)) > 0) {
+
+        int32_t result = memcmp(leftVal, (char *)rowVal, std::min(state.strLen, valLen));
+        if (result > 0 && state.strLen == valLen) {
             auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
             if (err != EOK) {
                 LogError("set data failed in variable vector. %d", err);
             }
         }
-        return;
+        if ((result > 0 && state.strLen != valLen) || (result == 0 && state.strLen > valLen)) {
+            uint8_t *ptr = executionContext->GetArena()->Allocate(valLen);
+            auto err = memcpy_s(ptr, valLen, rowVal, valLen);
+            if (err != EOK) {
+                LogError("set data failed in variable vector. %d", err);
+            }
+           
+            state.strVal = ptr;
+            state.strLen = valLen;
+        }
     }
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
