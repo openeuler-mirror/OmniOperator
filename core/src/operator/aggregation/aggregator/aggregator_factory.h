@@ -56,7 +56,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *              */
+             *                */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64:
             case OMNI_VARCHAR: {
@@ -136,6 +136,14 @@ public:
             return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
                 inputRaw, outputPartial);
         }
+        if (inputTypeId == OMNI_DATE32 && outputTypeId == OMNI_LONG) {
+            return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_DATE32) {
+            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32: {
@@ -186,6 +194,14 @@ public:
                 inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_INT) {
+            return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_DATE32 && outputTypeId == OMNI_LONG) {
+            return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(inputType, outputType, channel,
+                inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_DATE32) {
             return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(inputType, outputType, channel,
                 inputRaw, outputPartial);
         }
