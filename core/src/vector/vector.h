@@ -101,8 +101,6 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
-    void SetValueNullBitMap(int startIndex);
-
     int GetValueOffset(int index)
     {
         return static_cast<int32_t *>(valueOffsetsAddress)[index];
