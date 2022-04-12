@@ -167,10 +167,12 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     Vector *outVec = nullptr;
     int32_t avgStringLength = 200;
     switch (outTypeId) {
+        case type::OMNI_DATE32:
         case type::OMNI_INT:
             outVec = new IntVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_LONG:
+        case type::OMNI_DECIMAL64:
             outVec = new LongVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_DOUBLE:
@@ -181,9 +183,6 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
             outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
-            break;
-        case type::OMNI_DECIMAL64:
-            outVec = new LongVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_DECIMAL128:
             outVec = new Decimal128Vector(vecAllocator, numSelectedRows);
