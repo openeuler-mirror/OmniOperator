@@ -169,6 +169,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             outPtrType = llvmTypes->I32PtrType();
             break;
         case OMNI_LONG:
+        case OMNI_DECIMAL64:
             outPtrType = llvmTypes->I64PtrType();
             break;
         case OMNI_DOUBLE:
