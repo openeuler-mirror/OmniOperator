@@ -11,18 +11,25 @@
     <version>1.0.0</version>
 
     <properties >
+        <guava.version>30.0-jre</guava.version>
         <java.version>8</java.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <arrow.version>5.0.0</arrow.version>
         <protobuf.version>3.15.3</protobuf.version>
+        <jackson.version>2.10.0</jackson.version>
+        <testng.version>6.10</testng.version>
+        <jdk.jmh.version>1.20</jdk.jmh.version>
+        <openhft.version>3.2.4</openhft.version>
+        <fastjson.version>1.2.78</fastjson.version>
+        <jacoco.version>0.7.9</jacoco.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>30.0-jre</version>
+            <version>${guava.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -32,37 +39,37 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>2.10.0</version>
+            <version>${jackson.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.10.0</version>
+            <version>${jackson.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.10</version>
+            <version>${testng.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>1.20</version>
+            <version>${jdk.jmh.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.20</version>
+            <version>${jdk.jmh.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>affinity</artifactId>
-            <version>3.2.4</version>
+            <version>${openhft.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -86,7 +93,14 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.78</version>
+            <version>${fastjson.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <classifier>runtime</classifier>
+            <version>${jacoco.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -158,23 +172,25 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.7</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M6</version>
+            </plugin>
+            <plugin>
+                <groupId>com.huawei.devtest</groupId>
+                <artifactId>devtestcov-maven-plugin</artifactId>
+                <version>2.1.1</version>
                 <configuration>
-                    <skip>false</skip>
+                    <activeDevtest>${active.devtest}</activeDevtest>
+                    <reportService>SiteManagement</reportService>
+                    <reportVersion>2.1.0</reportVersion>
+                    <autoOpenReport>true</autoOpenReport>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>insert</id>
                         <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
+                            <goal>dev_insert</goal>
                         </goals>
                     </execution>
                 </executions>

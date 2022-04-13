@@ -46,3 +46,10 @@ core/config.h
 bindings/java/*.log
 omtest
 install_manifest.txt
+
+core/build/test_coverage
+test.info
+test_detail.xml
+*.tar.gz
+*.zip
+boostkit-omniop-operator-*
