@@ -11,9 +11,13 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
+import nova.hetu.omniruntime.utils.OmniErrorType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * The type Omni distinct limit operator factory.
@@ -50,16 +54,48 @@ public class OmniDistinctLimitOperatorFactory
      * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
+        private static Set<DataType.DataTypeId> supportTypes = new HashSet<DataType.DataTypeId>() {
+            {
+                add(DataType.DataTypeId.OMNI_INT);
+                add(DataType.DataTypeId.OMNI_LONG);
+                add(DataType.DataTypeId.OMNI_DOUBLE);
+                add(DataType.DataTypeId.OMNI_BOOLEAN);
+                add(DataType.DataTypeId.OMNI_DECIMAL64);
+                add(DataType.DataTypeId.OMNI_DECIMAL128);
+                add(DataType.DataTypeId.OMNI_DATE32);
+                add(DataType.DataTypeId.OMNI_CHAR);
+                add(DataType.DataTypeId.OMNI_VARCHAR);
+            }
+        };
+
         private DataType[] sourceTypes;
         private int[] distinctCols;
         private int hashCol;
         private long limit;
 
+        /**
+         * Instantiates a new Context.
+         *
+         * @param sourceTypes the data types of each column
+         * @param distinctCols the column index
+         * @param hashCol col index of precomputed hash values
+         * @param limit the limit count
+         */
         public JitContext(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
             this.sourceTypes = requireNonNull(sourceTypes, "Source types array is null.");
             this.distinctCols = requireNonNull(distinctCols, "Distinct cols array is null.");
+            checkDataType();
             this.limit = limit;
             this.hashCol = hashCol;
+        }
+
+        private void checkDataType() {
+            for (int index : distinctCols) {
+                if (!supportTypes.contains(sourceTypes[index].getId())) {
+                    throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
+                            "DataType(" + sourceTypes[index].getId() + ") of column" + index + " is not supported.");
+                }
+            }
         }
 
         @Override
