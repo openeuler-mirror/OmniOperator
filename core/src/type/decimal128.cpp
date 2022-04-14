@@ -116,7 +116,7 @@ bool Decimal128::operator != (const Decimal128 &right) const
 
 bool Decimal128::operator < (const Decimal128 &right) const
 {
-    return highBits < right.highBits || (highBits == right.highBits && lowBits < right.lowBits);
+    return Compare(right) == -1;
 }
 
 bool Decimal128::operator <= (const Decimal128 &right) const
@@ -126,7 +126,7 @@ bool Decimal128::operator <= (const Decimal128 &right) const
 
 bool Decimal128::operator > (const Decimal128 &right) const
 {
-    return !operator < (right) && !operator == (right);
+    return Compare(right) == 1;
 }
 
 bool Decimal128::operator >= (const Decimal128 &right) const

@@ -3,6 +3,7 @@
  */
 
 #include "gtest/gtest.h"
+#include "type/decimal_operations.h"
 #include "vector/vector_common.h"
 
 using namespace omniruntime::type;
@@ -288,5 +289,27 @@ TEST(Decimal128, compare_gt)
     EXPECT_EQ(result, true);
     delete left;
     delete right;
+}
+
+TEST(Decimal128, compare_negative)
+{
+    Decimal128 left(-1);
+    Decimal128 right(-2);
+    auto result = left < right;
+    EXPECT_EQ(result, false);
+}
+
+TEST(DecimalTest, compare_after_sum)
+{
+    Decimal128 d1 = DecimalOperations::UnscaledDecimal(-1);
+    Decimal128 d2 = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 d3;
+    DecimalOperations::AddWithOverflow(d1, d2, d3);
+    Decimal128 d4 = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 d5 = DecimalOperations::UnscaledDecimal(-3);
+    Decimal128 d6;
+    DecimalOperations::AddWithOverflow(d4, d5, d6);
+    auto result = d3 > d6;
+    EXPECT_EQ(result, true);
 }
 }

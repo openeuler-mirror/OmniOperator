@@ -12,6 +12,8 @@
 
 namespace omniruntime {
 namespace type {
+static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
+
 enum class OpStatus {
     SUCCESS = 0,
     OP_OVERFLOW = 1,
@@ -82,6 +84,19 @@ public:
     int64_t IsNegative() const
     {
         return highBits < 0;
+    }
+
+    int32_t Compare(const Decimal128& right) const
+    {
+        int32_t comparison = highBits < right.highBits ? -1 : (highBits == right.highBits ? 0 : 1);
+        if (comparison == 0) {
+            if (highBits == SIGN_LONG_MASK) {
+                comparison = lowBits > right.lowBits ? -1 : (lowBits == right.lowBits ? 0 : 1);
+            } else {
+                comparison = lowBits < right.lowBits ? -1 : (lowBits == right.lowBits ? 0 : 1);
+            }
+        }
+        return comparison;
     }
 
     Decimal128 &Negate();
