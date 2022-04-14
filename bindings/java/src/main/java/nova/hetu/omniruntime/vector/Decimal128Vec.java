@@ -9,6 +9,9 @@ import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+
 /**
  * 128-bit decimal vec.
  *
@@ -88,5 +91,86 @@ public class Decimal128Vec extends DecimalVec {
     @Override
     public Decimal128Vec copyRegion(int positionOffset, int length) {
         return new Decimal128Vec(this, positionOffset, length, false);
+    }
+
+    /**
+     * transfer long to bytes
+     *
+     * @param input input long
+     * @return new bytes
+     */
+    public static byte[] longToBytes(long input) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.putLong(input);
+        return buffer.array();
+    }
+
+    /**
+     * transfer bytes to long
+     *
+     * @param bytes input bytes
+     * @return new long
+     */
+    public static long bytesToLong(byte[] bytes) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.put(bytes);
+        buffer.flip(); // need flip
+        return buffer.getLong();
+    }
+
+    /**
+     * get long array from 128-bit BigInteger
+     *
+     * @param bigInteger input
+     * @return new long array
+     */
+    public static long[] putDecimal(BigInteger bigInteger) {
+        byte[] bytes = bigInteger.toByteArray();
+        // need to check array length?
+        // the array is big endian
+        long[] longs = new long[2];
+        byte[] highBytes = new byte[Long.BYTES];
+        byte[] lowBytes = new byte[Long.BYTES];
+        System.arraycopy(bytes, 0, highBytes, 0, Long.BYTES);
+        System.arraycopy(bytes, 8, lowBytes, 0, Long.BYTES);
+
+        longs[0] = bytesToLong(highBytes);
+        longs[1] = bytesToLong(lowBytes);
+        return longs;
+    }
+
+    /**
+     * get 128-bit BigInteger from long array
+     *
+     * @param longs input
+     * @return new BigInteger
+     */
+    public static BigInteger getDecimal(long[] longs) {
+        byte[] bytes = new byte[Long.BYTES * 2];
+        byte[] highBytes = longToBytes(longs[0]);
+        byte[] lowBytes = longToBytes(longs[1]);
+        System.arraycopy(highBytes, 0, bytes, 0, Long.BYTES);
+        System.arraycopy(lowBytes, 0, bytes, 8, Long.BYTES);
+        return new BigInteger(bytes);
+    }
+
+    /**
+     * please use this method to set jdk BigInteger to Decimal128Vec
+     *
+     * @param index  row index
+     * @param bigInteger input value
+     */
+    public void setBigInteger(int index, BigInteger bigInteger) {
+        super.set(index, putDecimal(bigInteger));
+    }
+
+    /**
+     * please use this method to get jdk BigInteger from Decimal128Vec
+     *
+     * @param index  row index
+     * @return new BigInteger
+     */
+    public BigInteger getBigInteger(int index) {
+        return getDecimal(super.get(index));
     }
 }

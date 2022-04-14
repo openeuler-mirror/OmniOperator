@@ -17,7 +17,6 @@
 
 namespace omniruntime {
 namespace type {
-static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
 static constexpr int32_t BYTES_OF_LONG = 8;
 class DecimalOperations {
 public:
@@ -190,7 +189,7 @@ public:
     {
         Decimal128 decimal128;
         if (unscaledValue < 0) {
-            decimal128.SetValue(omniruntime::type::SIGN_LONG_MASK, -unscaledValue);
+            decimal128.SetValue(SIGN_LONG_MASK, -unscaledValue);
         } else {
             decimal128.SetValue(0, unscaledValue);
         }

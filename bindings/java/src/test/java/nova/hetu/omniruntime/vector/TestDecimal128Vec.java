@@ -12,6 +12,8 @@ import nova.hetu.omniruntime.type.Decimal128DataType;
 
 import org.testng.annotations.Test;
 
+import java.math.BigInteger;
+
 /**
  * test decimal 128-bit vec
  *
@@ -178,5 +180,39 @@ public class TestDecimal128Vec {
         long[] values = new long[0];
         v1.put(values, 0, 0, values.length);
         v1.close();
+    }
+
+    /**
+     * test BigInteger to long array and vice versa
+     */
+    @Test
+    public void testBigIntegerTrans() {
+        BigInteger bigInteger = new BigInteger("11111111111111111111111111111111111111");
+
+        long[] longs = Decimal128Vec.putDecimal(bigInteger);
+        assertEquals(longs[0], 602334540269724685L);
+        assertEquals(longs[1], -8122175193715281465L);
+
+        BigInteger newBigInteger = Decimal128Vec.getDecimal(longs);
+        assertEquals(newBigInteger, bigInteger);
+    }
+
+    /**
+     * test Decimal128Vec set/get BigInteger
+     */
+    @Test
+    public void testSetGetBigInteger() {
+        final int size = 1024;
+        BigInteger bigInteger = new BigInteger("11111111111111111111111111111111111111");
+        Decimal128Vec vec = new Decimal128Vec(size);
+
+        for (int i = 0; i < size; ++i) {
+            vec.setBigInteger(i, bigInteger);
+        }
+
+        for (int i = 0; i < size; ++i) {
+            BigInteger val = vec.getBigInteger(i);
+            assertEquals(val, bigInteger);
+        }
     }
 }
