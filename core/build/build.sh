@@ -79,6 +79,10 @@ if [ $# != 0 ] ; then
       echo "-- Disable JIT"
       options="$options -DDISABLE_JIT=ON"
     fi
+  elif [ "$1" = 'coverage' ]; then
+      echo "-- Enable Coverage"
+      options="$options -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON"
+      append_options $*
   fi
   print_gcc_lib
   cmake ../ $options

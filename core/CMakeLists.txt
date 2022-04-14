@@ -20,8 +20,18 @@ set(CMAKE_CXX_COMPILER "g++")
 # this is used to generate LLVM IR for jitting
 set(IR_COMPILER "clang++-12")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fstack-check")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now -ftest-coverage -fprofile-arcs")
+if (DEFINED COVERAGE)
+    if(${COVERAGE} STREQUAL "ON")
+        set(DEBUG_COMPILE_LEVEL "-O2")
+    else()
+        set(DEBUG_COMPILE_LEVEL "-O0")
+    endif()
+else()
+    set(DEBUG_COMPILE_LEVEL "-O0")
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fstack-check -ftest-coverage -fprofile-arcs")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -82,3 +92,6 @@ message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")
 
 option(DISABLE_JIT "Disable OmniJit to optimize operator" OFF)
 message(STATUS "Option DISABLE_JIT: ${DISABLE_JIT}")
+
+option(COVERAGE "Disable OmniJit to optimize operator" OFF)
+message(STATUS "Option COVERAGE: ${COVERAGE}")
