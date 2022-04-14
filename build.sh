@@ -12,7 +12,7 @@ cd core/build
 echo "-- Enter" $(dirname $(readlink -f $0))
 if [ "$1" = 'coverage' ]; then
     echo "-- Enable coverage"
-    sh build.sh release
+    sh build.sh $*
     ./test/omtest --gtest_output=xml:test_detail.xml
     lcov --d ../ --c --output-file test.info --rc lcov_branch_coverage=1
     genhtml test.info -o test_coverage --branch-coverage --rc lcov_branch_coverage=1
@@ -39,36 +39,37 @@ else
     mvn clean install -DskipTests
 fi
 
-cd ../../
-# clean environment
-if [ -z "$OMNI_HOME" ]; then
-  echo "OMNI_HOME is empty"
-  package_files=/opt/lib
-else
-  echo "OMNI_HOME = $OMNI_HOME"
-  package_files=$OMNI_HOME/lib
+if [ "$1" != 'coverage' ]; then
+    cd ../../
+    # clean environment
+    if [ -z "$OMNI_HOME" ]; then
+      echo "OMNI_HOME is empty"
+      package_files=/opt/lib
+    else
+      echo "OMNI_HOME = $OMNI_HOME"
+      package_files=$OMNI_HOME/lib
+    fi
+
+    if [ -d "$targz_name" ]; then
+      rm -rf $targz_name/
+    fi
+
+    echo mkdir -p $targz_name
+
+
+    if [ -f "$targz_name.tar.gz" ]; then
+      rm -rf $targz_name.tar.gz
+    fi
+
+    if [ -f "$zip_name.zip" ]; then
+      rm -rf $zip_name.zip
+    fi
+
+    cp -r $package_files/ $targz_name
+    cp bindings/java/target/*.jar $targz_name
+    tar -zcvf $targz_name.tar.gz $targz_name
+    zip $zip_name.zip $targz_name.tar.gz
 fi
-
-if [ -d "$targz_name" ]; then
-  rm -rf $targz_name/
-fi
-
-echo mkdir -p $targz_name
-
-
-if [ -f "$targz_name.tar.gz" ]; then
-  rm -rf $targz_name.tar.gz
-fi
-
-if [ -f "$zip_name.zip" ]; then
-  rm -rf $zip_name.zip
-fi
-
-cp -r $package_files/ $targz_name
-cp bindings/java/target/*.jar $targz_name
-tar -zcvf $targz_name.tar.gz $targz_name
-zip $zip_name.zip $targz_name.tar.gz
-
 
 
 
