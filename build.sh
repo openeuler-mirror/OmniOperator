@@ -34,7 +34,6 @@ rm -r devtestcov-maven-plugin-2.1.1.pom
 if [ "$1" = 'coverage' ]; then
     echo "-- Enable coverage"
     mvn clean devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
-    mvn clean install -DskipTests
 else
     echo "-- Disable coverage"
     mvn clean install -DskipTests
