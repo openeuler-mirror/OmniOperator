@@ -33,12 +33,17 @@ public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
      * Instantiates a new Omni operator factory context.
      *
      * @param jitContext the jit context
+     * @param isJitEnabled whether the jit is enabled
      */
-    public OmniOperatorFactoryContext(T jitContext) {
-        try {
-            this.nativeJitContext = JIT_CONTEXT_CACHE.get(jitContext, () -> createNativeJitContext(jitContext));
-        } catch (ExecutionException e) {
-            throw new RuntimeException("Get instance failed.");
+    public OmniOperatorFactoryContext(T jitContext, boolean isJitEnabled) {
+        if (!isJitEnabled) {
+            this.nativeJitContext = 0L;
+        } else {
+            try {
+                this.nativeJitContext = JIT_CONTEXT_CACHE.get(jitContext, () -> createNativeJitContext(jitContext));
+            } catch (ExecutionException e) {
+                throw new RuntimeException("Get instance failed.");
+            }
         }
         this.jitContext = jitContext;
     }

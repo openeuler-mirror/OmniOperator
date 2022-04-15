@@ -24,9 +24,20 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      *
      * @param sourceTypes the source type
      * @param isDistinct mark union or union all
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, isDistinct), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni union operator factory with jit default.
+     *
+     * @param sourceTypes the source type
+     * @param isDistinct mark union or union all
      */
     public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct) {
-        super(new FactoryContext(new JitContext(sourceTypes, isDistinct)));
+        this(sourceTypes, isDistinct, true);
     }
 
     @Override
@@ -92,9 +103,10 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

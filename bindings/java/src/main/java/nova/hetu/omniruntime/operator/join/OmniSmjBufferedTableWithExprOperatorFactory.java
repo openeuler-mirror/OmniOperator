@@ -30,11 +30,28 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
      * @param outputChannels output of streamed table
      * @param smjStreamedTableOperatorFactory streamed table operator factory
      *            instance
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniSmjBufferedTableWithExprOperatorFactory(DataType[] soruceTypes, String[] equalKeyExprs,
+            int[] outputChannels, OmniSmjStreamedTableWithExprOperatorFactory smjStreamedTableOperatorFactory,
+            boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(soruceTypes, equalKeyExprs, outputChannels),
+                smjStreamedTableOperatorFactory, isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni sort merge buffered table factory with jit
+     * default.
+     *
+     * @param soruceTypes the all input vector types
+     * @param equalKeyExprs equal condition key expressions
+     * @param outputChannels output of streamed table
+     * @param smjStreamedTableOperatorFactory streamed table operator factory
+     *            instance
      */
     public OmniSmjBufferedTableWithExprOperatorFactory(DataType[] soruceTypes, String[] equalKeyExprs,
             int[] outputChannels, OmniSmjStreamedTableWithExprOperatorFactory smjStreamedTableOperatorFactory) {
-        super(new FactoryContext(new JitContext(soruceTypes, equalKeyExprs, outputChannels),
-                smjStreamedTableOperatorFactory));
+        this(soruceTypes, equalKeyExprs, outputChannels, smjStreamedTableOperatorFactory, true);
     }
 
     private static native long createSmjBufferedTableWithExprOperatorFactory(String soruceTypes, String[] equalKeyExprs,
@@ -109,10 +126,11 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
          *
          * @param jitContext the jit context
          * @param streamedTableOperatorFactory streamed table operator factory instance
+         * @param isJitEnabled whether the jit is enabled
          */
         public FactoryContext(JitContext jitContext,
-                OmniSmjStreamedTableWithExprOperatorFactory streamedTableOperatorFactory) {
-            super(jitContext);
+                OmniSmjStreamedTableWithExprOperatorFactory streamedTableOperatorFactory, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
             setNeedCache(false);
             this.streamedTableOperatorFactory = streamedTableOperatorFactory.getNativeOperatorFactory();
         }

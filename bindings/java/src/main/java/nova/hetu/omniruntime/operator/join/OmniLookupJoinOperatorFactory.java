@@ -32,13 +32,32 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
      * @param buildOutputTypes the build output types
      * @param joinType the join type
      * @param hashBuilderOperatorFactory the hash builder operator factory
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniLookupJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, int[] probeHashCols,
+            int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
+            OmniHashBuilderOperatorFactory hashBuilderOperatorFactory, boolean isJitEnabled) {
+        super(new FactoryContext(
+                new JitContext(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, joinType),
+                hashBuilderOperatorFactory, isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni lookup join operator factory with jit default.
+     *
+     * @param probeTypes the probe types
+     * @param probeOutputCols the probe output cols
+     * @param probeHashCols the probe hash cols
+     * @param buildOutputCols the build output cols
+     * @param buildOutputTypes the build output types
+     * @param joinType the join type
+     * @param hashBuilderOperatorFactory the hash builder operator factory
      */
     public OmniLookupJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, int[] probeHashCols,
             int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
             OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
-        super(new FactoryContext(
-                new JitContext(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, joinType),
-                hashBuilderOperatorFactory));
+        this(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, joinType,
+                hashBuilderOperatorFactory, true);
     }
 
     private static native long createLookupJoinOperatorFactory(String probeTypes, int[] probeOutputCols,
@@ -132,9 +151,11 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
          *
          * @param jitContext the jit context
          * @param hashBuilderOperatorFactory the hash builder operator factory
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory,
+                boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
             setNeedCache(false);
             this.hashBuilderOperatorFactory = hashBuilderOperatorFactory.getNativeOperatorFactory();
         }

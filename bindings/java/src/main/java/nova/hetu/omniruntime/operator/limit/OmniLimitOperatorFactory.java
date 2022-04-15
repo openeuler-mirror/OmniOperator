@@ -20,9 +20,19 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      * Instantiates a new Omni limit operator factory.
      *
      * @param limit the limit count
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniLimitOperatorFactory(long limit, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(limit), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni limit operator factory with jit default.
+     *
+     * @param limit the limit count
      */
     public OmniLimitOperatorFactory(long limit) {
-        super(new FactoryContext(new JitContext(limit)));
+        this(limit, true);
     }
 
     @Override
@@ -73,9 +83,10 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

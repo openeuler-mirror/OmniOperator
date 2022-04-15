@@ -1149,7 +1149,7 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     VectorHelper::FreeVecBatches(result);
 }
 
-TEST(AggregationOperatorTest, DISABLED_perf_original)
+TEST(AggregationOperatorTest, perf_original)
 {
     DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
     DataTypes aggOutputTypes(
@@ -1213,7 +1213,7 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
-TEST(AggregationOperatorTest, DISABLED_perf_codegen)
+TEST(AggregationOperatorTest, perf_codegen)
 {
     using namespace std;
 
@@ -1267,7 +1267,6 @@ TEST(AggregationOperatorTest, DISABLED_perf_codegen)
 TEST(HashAggregationOperatorTest, compare_perf)
 {
     uint32_t groupCols[] = {0, 1};
-
     DataTypes groupInputTypes({ LongDataType::Instance(), LongDataType::Instance() });
     uint32_t aggCols[] = {2, 3};
     DataTypes aggInput({ LongDataType::Instance(), LongDataType::Instance() });
@@ -1296,13 +1295,11 @@ TEST(HashAggregationOperatorTest, compare_perf)
         std::cerr << "Building input data failed!" << std::endl;
     }
 
-    std::vector<VectorBatch *> jittedResult;
     Timer timer;
     timer.SetStart();
 
     auto *perfUtil = new PerfUtil();
     perfUtil->Init();
-
     perfUtil->Reset();
     perfUtil->Start();
 
@@ -1316,19 +1313,20 @@ TEST(HashAggregationOperatorTest, compare_perf)
     if (instCount != -1) {
         printf("HashAgg with OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
+    std::vector<VectorBatch *> jittedResult;
+    jitGroupBy->GetOutput(jittedResult);
 
     timer.CalculateElapse();
     double wallElapsed = timer.GetWallElapse();
     double cpuElapsed = timer.GetCpuElapse();
-    std::cout << "wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-    jitGroupBy->GetOutput(jittedResult);
+    std::cout << "HashAgg with OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
     HashAggregationOperatorFactory *nativeOperatorFactory2 = new HashAggregationOperatorFactory(groupByColContext,
         groupInputTypes, aggColContext, aggInput, aggOutput, aggFuncTypeContext, true, false);
     nativeOperatorFactory2->Init();
+    std::cout << "after create factory" << std::endl;
     auto groupBy = nativeOperatorFactory2->CreateOperator();
 
-    std::vector<VectorBatch *> result;
     VectorBatch **input2 =
         buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInput.Get());
     if (input2 == nullptr) {
@@ -1339,7 +1337,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     perfUtil->Reset();
     perfUtil->Start();
     for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
-        groupBy->AddInput(input2[pageIndex]);
+        auto errNo = groupBy->AddInput(input2[pageIndex]);
+        EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
     }
 
     perfUtil->Stop();
@@ -1348,15 +1347,15 @@ TEST(HashAggregationOperatorTest, compare_perf)
         printf("HashAgg without OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
 
-    delete perfUtil;
+    std::vector<VectorBatch *> result;
+    groupBy->GetOutput(result);
 
     timer.CalculateElapse();
     wallElapsed = timer.GetWallElapse();
     cpuElapsed = timer.GetCpuElapse();
+    std::cout << "HashAgg without OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    std::cout << "wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-    groupBy->GetOutput(result);
-
+    delete perfUtil;
     Operator::DeleteOperator(jitGroupBy);
     Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);

@@ -32,9 +32,22 @@ public class OmniFilterAndProjectOperatorFactory
      * @param expression the expression
      * @param inputTypes the input types
      * @param projections the projections
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
+            boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(expression, inputTypes, projections), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni filter and project operator factory with jit.
+     *
+     * @param expression the expression
+     * @param inputTypes the input types
+     * @param projections the projections
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections) {
-        super(new FactoryContext(new JitContext(expression, inputTypes, projections)));
+        this(expression, inputTypes, projections, true);
     }
 
     /**
@@ -45,10 +58,25 @@ public class OmniFilterAndProjectOperatorFactory
      * @param inputTypes the input types
      * @param projections the projections
      * @param parseFormat the format to parse expression into
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
+            int parseFormat, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(expression, inputTypes, projections, parseFormat), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni filter and project operator factory with configured
+     * expression parsing format with jit default.
+     *
+     * @param expression the expression
+     * @param inputTypes the input types
+     * @param projections the projections
+     * @param parseFormat the format to parse expression into
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
             int parseFormat) {
-        super(new FactoryContext(new JitContext(expression, inputTypes, projections, parseFormat)));
+        this(expression, inputTypes, projections, parseFormat, true);
     }
 
     private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
@@ -145,9 +173,10 @@ public class OmniFilterAndProjectOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

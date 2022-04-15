@@ -35,12 +35,33 @@ public class OmniHashAggregationOperatorFactory
      * @param aggOutputTypes the agg output types
      * @param isInputRaw the input raw
      * @param isOutputPartial the output partial
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniHashAggregationOperatorFactory(String[] groupByChanel, DataType[] groupByTypes, String[] aggChannels,
+            DataType[] aggTypes, FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
+            boolean isOutputPartial, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes,
+                aggOutputTypes, isInputRaw, isOutputPartial), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni hash aggregation operator factory with jit
+     * default.
+     *
+     * @param groupByChanel the group by chanel
+     * @param groupByTypes the group by types
+     * @param aggChannels the agg channels
+     * @param aggTypes the agg types
+     * @param aggFunctionTypes the agg function types
+     * @param aggOutputTypes the agg output types
+     * @param isInputRaw the input raw
+     * @param isOutputPartial the output partial
      */
     public OmniHashAggregationOperatorFactory(String[] groupByChanel, DataType[] groupByTypes, String[] aggChannels,
             DataType[] aggTypes, FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
             boolean isOutputPartial) {
-        super(new FactoryContext(new JitContext(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes,
-                aggOutputTypes, isInputRaw, isOutputPartial)));
+        this(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, isInputRaw,
+                isOutputPartial, true);
     }
 
     private static native long createHashAggregationOperatorFactory(String[] groupByChanel, String groupByTypes,
@@ -142,9 +163,10 @@ public class OmniHashAggregationOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

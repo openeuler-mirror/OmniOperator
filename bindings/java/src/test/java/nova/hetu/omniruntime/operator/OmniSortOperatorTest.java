@@ -355,35 +355,53 @@ public class OmniSortOperatorTest {
     }
 
     /**
-     * Test sort performance.
+     * Test sort performance whether with jit or not.
      */
     @Test
-    public void testSortPerformance() {
-        ImmutableList<VecBatch> vecs = buildVecs();
-
-        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
+    public void testSortComparePref() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
-                ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactoryWithoutJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
+                sortCols, ascendings, nullFirsts, false);
+        OmniOperator sortOperatorWithoutJit = sortOperatorFactoryWithoutJit.createOperator();
+        ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
 
         long start = System.currentTimeMillis();
-        OmniOperator sortOperator = sortOperatorFactory.createOperator();
-        for (VecBatch vec : vecs) {
-            sortOperator.addInput(vec);
+        for (VecBatch vec : vecsWithoutJit) {
+            sortOperatorWithoutJit.addInput(vec);
         }
-        Iterator<VecBatch> iterator = sortOperator.getOutput();
-        long elapsed = System.currentTimeMillis() - start;
+        Iterator<VecBatch> outputWithoutJit = sortOperatorWithoutJit.getOutput();
+        long end = System.currentTimeMillis();
+        System.out.println("Sort without jit use " + (end - start) + " ms.");
 
-        while (iterator.hasNext()) {
-            VecBatch result = iterator.next();
-            freeVecBatch(result);
+        OmniSortOperatorFactory sortOperatorFactoryWithJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
+                sortCols, ascendings, nullFirsts, true);
+        OmniOperator sortOperatorWithJit = sortOperatorFactoryWithJit.createOperator();
+        ImmutableList<VecBatch> vecsWithJit = buildVecs();
+
+        start = System.currentTimeMillis();
+        for (VecBatch vec : vecsWithJit) {
+            sortOperatorWithJit.addInput(vec);
         }
-        sortOperator.close();
-        sortOperatorFactory.close();
+        Iterator<VecBatch> outputWithJit = sortOperatorWithJit.getOutput();
+        end = System.currentTimeMillis();
+        System.out.println("Sort with jit use " + (end - start) + " ms.");
+
+        while (outputWithoutJit.hasNext()) {
+            VecBatch resultWithoutJit = outputWithoutJit.next();
+            VecBatch resultWithJit = outputWithJit.next();
+            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            freeVecBatch(resultWithJit);
+        }
+
+        sortOperatorWithoutJit.close();
+        sortOperatorWithJit.close();
+        sortOperatorFactoryWithoutJit.close();
+        sortOperatorFactoryWithJit.close();
     }
 
     private VecBatch duplicateVecBatch(VecBatch vecBatch) {

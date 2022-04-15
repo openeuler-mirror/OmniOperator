@@ -27,11 +27,26 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
      * @param sortColumns the sort columns
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniSortOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortColumns,
+            int[] sortAscendings, int[] sortNullFirsts, boolean isJitEnabled) {
+        super(new FactoryContext(
+                new JitContext(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni sort operator factory with jit default.
+     *
+     * @param sourceTypes the source types
+     * @param outputColumns the output columns
+     * @param sortColumns the sort columns
+     * @param sortAscendings the sort ascendings
+     * @param sortNullFirsts the sort null firsts
      */
     public OmniSortOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortColumns,
             int[] sortAscendings, int[] sortNullFirsts) {
-        super(new FactoryContext(
-                new JitContext(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts)));
+        this(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts, true);
     }
 
     private static native long createSortOperatorFactory(String sourceTypes, int[] outputCols, String[] sortCols,
@@ -114,9 +129,10 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

@@ -32,10 +32,27 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      * @param outputChannels output of streamed table
      * @param joinType join type
      * @param filter condition for not equal expression
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
+            int[] outputChannels, JoinType joinType, Optional<String> filter, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter),
+                isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni sort merge streamed table factory with jit
+     * default.
+     *
+     * @param sourceTypes the all input vector types
+     * @param equalKeyExprs equal condition key expressions
+     * @param outputChannels output of streamed table
+     * @param joinType join type
+     * @param filter condition for not equal expression
      */
     public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
             int[] outputChannels, JoinType joinType, Optional<String> filter) {
-        super(new FactoryContext(new JitContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter)));
+        this(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, true);
     }
 
     private static native long createSmjStreamedTableWithExprOperatorFactory(String sourceTypes, String[] equalKeyExprs,
@@ -118,9 +135,10 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
             setNeedCache(false);
         }
 

@@ -33,12 +33,34 @@ public class OmniPartitionedOutPutOperatorFactory
      * @param isHashPrecomputed the is hash precomputed
      * @param hashChannelTypes the hash channel types
      * @param hashChannels the hash channels
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean isReplicatesAnyRow,
+            OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
+            boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels,
+                partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni partitioned out put operator factory with jit
+     * default.
+     *
+     * @param sourceTypes the source types
+     * @param isReplicatesAnyRow the replicates any row
+     * @param nullChannel the null channel
+     * @param partitionChannels the partition channels
+     * @param partitionCount the partition count
+     * @param bucketToPartition the bucket to partition
+     * @param isHashPrecomputed the is hash precomputed
+     * @param hashChannelTypes the hash channel types
+     * @param hashChannels the hash channels
      */
     public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean isReplicatesAnyRow,
             OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels) {
-        super(new FactoryContext(new JitContext(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels,
-                partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels)));
+        this(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
+                isHashPrecomputed, hashChannelTypes, hashChannels, true);
     }
 
     private static native long createPartitionedOutputOperatorFactory(String sourceTypes, boolean isReplicatesAnyRow,
@@ -151,9 +173,10 @@ public class OmniPartitionedOutPutOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

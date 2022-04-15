@@ -27,10 +27,26 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
      * @param sortCols the sort cols
      * @param sortAssendings the sort assendings
      * @param sortNullFirsts the sort null firsts
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniTopNOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings,
+            int[] sortNullFirsts, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts),
+                isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni top n operator factory with jit default.
+     *
+     * @param sourceTypes the source types
+     * @param limitN the limit n
+     * @param sortCols the sort cols
+     * @param sortAssendings the sort assendings
+     * @param sortNullFirsts the sort null firsts
      */
     public OmniTopNOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings,
             int[] sortNullFirsts) {
-        super(new FactoryContext(new JitContext(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts)));
+        this(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts, true);
     }
 
     private static native long createTopNOperatorFactory(String sourceTypes, int limitN, String[] sortCols,
@@ -112,9 +128,10 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

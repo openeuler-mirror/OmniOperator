@@ -2,18 +2,17 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: window operator implementations
  */
-#include <ctime>
 #include <vector>
 #include <iostream>
 #include <chrono>
 
 #include "gtest/gtest.h"
-#include "operator/sort/sort.h"
 #include "operator/window/window.h"
 #include "../util/test_util.h"
 #include "jit_context/jit_context.h"
 #include "vector/vector_helper.h"
 #include "../../libconfig.h"
+#include "perf_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -22,6 +21,89 @@ using namespace TestUtil;
 
 namespace WindowTest {
 const int32_t DATA_SIZE = 6;
+const int32_t VEC_BATCH_NUM = 10;
+const int32_t ROW_PER_VEC_BATCH = 100000;
+
+Vector *BuildVectorInput(const DataType &sourceType, int32_t rowPerVecBatch)
+{
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
+    switch (sourceType.GetId()) {
+        case OMNI_NONE: {
+            LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValueNull(j);
+            }
+            return col;
+        }
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            IntVector *col = new IntVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, 1);
+            }
+            return col;
+        }
+        case OMNI_LONG:
+        case OMNI_DECIMAL64: {
+            LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, 1);
+            }
+            return col;
+        }
+        case OMNI_DOUBLE: {
+            DoubleVector *col = new DoubleVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, 1);
+            }
+            return col;
+        }
+        case OMNI_BOOLEAN: {
+            BooleanVector *col = new BooleanVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, true);
+            }
+            return col;
+        }
+        case OMNI_DECIMAL128: {
+            Decimal128Vector *col = new Decimal128Vector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, Decimal128(0, 1));
+            }
+            return col;
+        }
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
+            VarcharDataType charType = (VarcharDataType &)sourceType;
+            VarcharVector *col = new VarcharVector(vecAllocator, charType.GetWidth() * rowPerVecBatch, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                std::string str = std::to_string(j);
+                col->SetValue(j, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+            }
+            return col;
+        }
+        default: {
+            LogError("No such %d type support", sourceType.GetId());
+            return nullptr;
+        }
+    }
+}
+
+VectorBatch **BuildWindowInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t windowFunctionNum,
+    const std::vector<DataType> &sourceTypes)
+{
+    VectorBatch **input = new VectorBatch *[vecBatchNum];
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        VectorBatch *vecBatch = new VectorBatch(windowFunctionNum);
+        for (int32_t index = 0; index < windowFunctionNum; index++) {
+            Vector *vec = BuildVectorInput(sourceTypes[index], rowPerVecBatch);
+            vecBatch->SetVector(index, vec);
+        }
+        input[i] = vecBatch;
+    }
+    return input;
+}
+
 
 JitContext *CreateTestWindowJitContextWithFactory(omniruntime::op::WindowOperatorFactory *windowOperatorFactory)
 {
@@ -1536,5 +1618,113 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
+}
+
+TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
+{
+    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
+    int32_t outputCols[2] = {0, 1};
+    int32_t windowFunctionTypes[2] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+    DataTypes allTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
+    int32_t argumentChannels[2] = {1, -1};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactoryWithJit = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes,
+        outputCols, 2, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2);
+    operatorFactoryWithJit->Init();
+    std::cout << "after create factory" << std::endl;
+    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactoryWithJit);
+    std::cout << "after JIT" << std::endl;
+    operatorFactoryWithJit->SetJitContext(jitContext);
+    WindowOperator *windowOperatorWithJit = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactoryWithJit));
+    VectorBatch **input1 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes.Get());
+
+    Timer timer;
+    timer.SetStart();
+
+    if (input1 == nullptr) {
+        std::cerr << "Building input1 data failed!" << std::endl;
+    }
+
+    for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
+        auto errNo = windowOperatorWithJit->AddInput(input1[pageIndex]);
+        EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
+    }
+
+    auto *perfUtil = new PerfUtil();
+    perfUtil->Init();
+    perfUtil->Reset();
+    perfUtil->Start();
+    perfUtil->Stop();
+    long instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("Window with OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+
+    std::vector<VectorBatch *> resultWithJit;
+    windowOperatorWithJit->GetOutput(resultWithJit);
+
+    timer.CalculateElapse();
+    double wallElapsed = timer.GetWallElapse();
+    double cpuElapsed = timer.GetCpuElapse();
+    std::cout << "Window with OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+
+    WindowOperatorFactory *operatorFactoryWithoutJit = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes,
+        outputCols, 2, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2);
+    operatorFactoryWithoutJit->Init();
+    std::cout << "after create factory" << std::endl;
+    WindowOperator *windowOperatorWithoutJit =
+        dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactoryWithoutJit));
+    VectorBatch **input2 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes.Get());
+
+    timer.Reset();
+
+    if (input2 == nullptr) {
+        std::cerr << "Building input2 data failed!" << std::endl;
+    }
+
+    for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
+        auto errNo = windowOperatorWithoutJit->AddInput(input2[pageIndex]);
+        EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
+    }
+
+    perfUtil->Reset();
+    perfUtil->Start();
+    perfUtil->Stop();
+    instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("Window without OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+
+    std::vector<VectorBatch *> resultWithoutJit;
+    windowOperatorWithoutJit->GetOutput(resultWithoutJit);
+    delete perfUtil;
+
+    timer.CalculateElapse();
+    wallElapsed = timer.GetWallElapse();
+    cpuElapsed = timer.GetCpuElapse();
+
+    std::cout << "Window without OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+
+    Operator::DeleteOperator(windowOperatorWithJit);
+    Operator::DeleteOperator(windowOperatorWithoutJit);
+    DeleteOperatorFactory(operatorFactoryWithJit);
+    DeleteOperatorFactory(operatorFactoryWithoutJit);
+
+    EXPECT_EQ(resultWithJit.size(), resultWithoutJit.size());
+    for (uint32_t i = 0; i < resultWithJit.size(); ++i) {
+        EXPECT_TRUE(VecBatchMatch(resultWithJit[i], resultWithoutJit[i]));
+    }
+    VectorHelper::FreeVecBatches(resultWithJit);
+    VectorHelper::FreeVecBatches(resultWithoutJit);
 }
 }

@@ -33,12 +33,31 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
      * @param aggOutputTypes the aggregation output types
      * @param isInputRaw the input raw
      * @param isOutputPartial the output partial
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniAggregationOperatorFactory(DataType[] sourceTypes, FunctionType[] aggFunctionTypes,
+            int[] aggInputChannels, int[] maskChannels, DataType[] aggOutputTypes, boolean isInputRaw,
+            boolean isOutputPartial, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
+                aggOutputTypes, isInputRaw, isOutputPartial), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni aggregation operator factory with jit default.
+     *
+     * @param sourceTypes the aggregation source types
+     * @param aggFunctionTypes the aggregation function types
+     * @param aggInputChannels the aggregation function input channels
+     * @param maskChannels mask chennels array for aggregetions
+     * @param aggOutputTypes the aggregation output types
+     * @param isInputRaw the input raw
+     * @param isOutputPartial the output partial
      */
     public OmniAggregationOperatorFactory(DataType[] sourceTypes, FunctionType[] aggFunctionTypes,
             int[] aggInputChannels, int[] maskChannels, DataType[] aggOutputTypes, boolean isInputRaw,
             boolean isOutputPartial) {
-        super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
-                aggOutputTypes, isInputRaw, isOutputPartial)));
+        this(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, isInputRaw, isOutputPartial,
+                true);
     }
 
     private static native long createAggregationOperatorFactory(String sourceTypes, int[] aggFunctionTypes,
@@ -136,9 +155,10 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

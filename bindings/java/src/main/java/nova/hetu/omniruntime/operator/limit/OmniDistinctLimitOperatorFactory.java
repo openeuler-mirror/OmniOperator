@@ -33,9 +33,23 @@ public class OmniDistinctLimitOperatorFactory
      * @param distinctCols the column index
      * @param hashCol col index of precomputed hash values
      * @param limit the limit count
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit,
+            boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, distinctCols, hashCol, limit), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni distinct limit operator factory with jit default.
+     *
+     * @param sourceTypes the data types of each column
+     * @param distinctCols the column index
+     * @param hashCol col index of precomputed hash values
+     * @param limit the limit count
      */
     public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
-        super(new FactoryContext(new JitContext(sourceTypes, distinctCols, hashCol, limit)));
+        this(sourceTypes, distinctCols, hashCol, limit, true);
     }
 
     private static native long createDistinctLimitOperatorFactory(String sourceTypes, int[] distinctCols, int hashCol,
@@ -126,9 +140,10 @@ public class OmniDistinctLimitOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

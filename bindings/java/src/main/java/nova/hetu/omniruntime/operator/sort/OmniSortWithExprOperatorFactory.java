@@ -28,10 +28,27 @@ public class OmniSortWithExprOperatorFactory
      * @param sortKeys the sort keys
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
+            int[] sortAscendings, int[] sortNullFirsts, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts),
+                isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni sort with expression operator factory with jit
+     * default.
+     *
+     * @param sourceTypes the source types
+     * @param outputColumns the output columns
+     * @param sortKeys the sort keys
+     * @param sortAscendings the sort ascendings
+     * @param sortNullFirsts the sort null firsts
      */
     public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
             int[] sortAscendings, int[] sortNullFirsts) {
-        super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts)));
+        this(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts, true);
     }
 
     private static native long createSortWithExprOperatorFactory(String sourceTypes, int[] outputCols,
@@ -113,9 +130,10 @@ public class OmniSortWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

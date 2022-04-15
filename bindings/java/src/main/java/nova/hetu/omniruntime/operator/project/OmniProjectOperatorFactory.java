@@ -28,9 +28,20 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      *
      * @param expressions the expressions
      * @param inputTypes the input types
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(expressions, inputTypes), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni project operator factory with jit default.
+     *
+     * @param expressions the expressions
+     * @param inputTypes the input types
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes) {
-        super(new FactoryContext(new JitContext(expressions, inputTypes)));
+        this(expressions, inputTypes, true);
     }
 
     /**
@@ -40,9 +51,23 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      * @param expressions the expressions
      * @param inputTypes the input types
      * @param parseFormat the parse format
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat,
+            boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni project operator factory with configured expression
+     * parsing format with jit default.
+     *
+     * @param expressions the expressions
+     * @param inputTypes the input types
+     * @param parseFormat the parse format
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat) {
-        super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat)));
+        this(expressions, inputTypes, parseFormat, true);
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
@@ -131,9 +156,10 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

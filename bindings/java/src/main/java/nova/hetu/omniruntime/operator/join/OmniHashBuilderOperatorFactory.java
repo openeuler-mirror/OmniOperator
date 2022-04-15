@@ -31,11 +31,27 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      * @param sortChannel the sort channel
      * @param searchExpressions the search expressions
      * @param operatorCount the operator count
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
+            Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(buildTypes, buildHashCols, filterExpression, sortChannel,
+                searchExpressions, operatorCount), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni hash builder operator factory with jit default.
+     *
+     * @param buildTypes the build types
+     * @param buildHashCols the build hash cols
+     * @param filterExpression the join filter expression
+     * @param sortChannel the sort channel
+     * @param searchExpressions the search expressions
+     * @param operatorCount the operator count
      */
     public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
             Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount) {
-        super(new FactoryContext(new JitContext(buildTypes, buildHashCols, filterExpression, sortChannel,
-                searchExpressions, operatorCount)));
+        this(buildTypes, buildHashCols, filterExpression, sortChannel, searchExpressions, operatorCount, true);
     }
 
     private static native long createHashBuilderOperatorFactory(String buildTypes, int[] buildHashCols,
@@ -121,9 +137,10 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
             setNeedCache(false);
         }
 

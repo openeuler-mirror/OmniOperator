@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
