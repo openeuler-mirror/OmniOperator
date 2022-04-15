@@ -30,10 +30,26 @@ public class OmniHashBuilderWithExprOperatorFactory
      * @param buildHashKeys the build hash keys
      * @param filterExpression the filter expression in join
      * @param operatorCount the operator count
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
+            Optional<String> filterExpression, int operatorCount, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(buildTypes, buildHashKeys, filterExpression, operatorCount),
+                isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni hash builder with expression operator factory with
+     * jit default.
+     *
+     * @param buildTypes the build input types
+     * @param buildHashKeys the build hash keys
+     * @param filterExpression the filter expression in join
+     * @param operatorCount the operator count
      */
     public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
             Optional<String> filterExpression, int operatorCount) {
-        super(new FactoryContext(new JitContext(buildTypes, buildHashKeys, filterExpression, operatorCount)));
+        this(buildTypes, buildHashKeys, filterExpression, operatorCount, true);
     }
 
     private static native long createHashBuilderWithExprOperatorFactory(String buildTypes, String[] buildHashKeys,
@@ -102,9 +118,10 @@ public class OmniHashBuilderWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
             setNeedCache(false);
         }
 

@@ -8,6 +8,8 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
+import com.google.common.collect.ImmutableList;
+
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -28,6 +30,84 @@ import java.util.List;
  * @since 2021-6-4
  */
 public class OmniWindowOperatorTest {
+    /**
+     * The Total page count.
+     */
+    int totalPageCount = 10;
+
+    /**
+     * The Page distinct count.
+     */
+    int pageDistinctCount = 4;
+
+    /**
+     * The Page distinct value repeat count.
+     */
+    int pageDistinctValueRepeatCount = 5000;
+
+    /**
+     * test window performance whether with jit or not.
+     */
+    @Test
+    public void testWindowComparePref() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] outputChannels = {0, 1};
+        FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        int[] partitionChannels = {0};
+        int[] preGroupedChannels = {};
+        int[] sortChannels = {1};
+        int[] sortOrder = {1};
+        int[] sortNullFirsts = {0};
+        int preSortedChannelPrefix = 0;
+        int expectedPositions = 10000;
+        int[] argumentChannels = {1, -1};
+        DataType[] windowFunctionReturnType = {LongDataType.LONG, LongDataType.LONG};
+
+        OmniWindowOperatorFactory windowOperatorFactoryWithoutJit = new OmniWindowOperatorFactory(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
+                false);
+        OmniOperator windowOperatorWithoutJit = windowOperatorFactoryWithoutJit.createOperator();
+        ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
+
+        long start = System.currentTimeMillis();
+        for (VecBatch vec : vecsWithoutJit) {
+            windowOperatorWithoutJit.addInput(vec);
+        }
+        Iterator<VecBatch> outputWithoutJit = windowOperatorWithoutJit.getOutput();
+        long end = System.currentTimeMillis();
+        System.out.println("Window without jit use " + (end - start) + " ms.");
+
+        OmniWindowOperatorFactory windowOperatorFactoryWithJit = new OmniWindowOperatorFactory(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
+                true);
+        OmniOperator windowOperatorWithJit = windowOperatorFactoryWithJit.createOperator();
+        ImmutableList<VecBatch> vecsWithJit = buildVecs();
+
+        start = System.currentTimeMillis();
+        for (VecBatch vec : vecsWithJit) {
+            windowOperatorWithJit.addInput(vec);
+        }
+        Iterator<VecBatch> outputWithJit = windowOperatorWithJit.getOutput();
+        end = System.currentTimeMillis();
+        System.out.println("Window with jit use " + (end - start) + " ms.");
+
+        while (outputWithoutJit.hasNext()) {
+            VecBatch resultWithoutJit = outputWithoutJit.next();
+            VecBatch resultWithJit = outputWithJit.next();
+            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            freeVecBatch(resultWithoutJit);
+            freeVecBatch(resultWithJit);
+        }
+
+        windowOperatorWithoutJit.close();
+        windowOperatorWithJit.close();
+        windowOperatorFactoryWithoutJit.close();
+        windowOperatorFactoryWithJit.close();
+    }
+
     /**
      * Test rank.
      */
@@ -142,5 +222,28 @@ public class OmniWindowOperatorTest {
         columns.add(longVec1);
         columns.add(longVec2);
         return new VecBatch(columns, rowNum);
+    }
+
+    private ImmutableList<VecBatch> buildVecs() {
+        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
+        int positionCount = pageDistinctCount * pageDistinctValueRepeatCount;
+        List<Vec> vecs = new ArrayList<>();
+        for (int i = 0; i < totalPageCount; i++) {
+            LongVec longVec1 = new LongVec(positionCount);
+            LongVec longVec2 = new LongVec(positionCount);
+            int idx = 0;
+            for (int j = 0; j < pageDistinctCount; j++) {
+                for (int k = 0; k < pageDistinctValueRepeatCount; k++) {
+                    longVec1.set(idx, j);
+                    longVec2.set(idx, j);
+                    idx++;
+                }
+            }
+            vecs.add(longVec1);
+            vecs.add(longVec2);
+            VecBatch vecBatch = new VecBatch(new Vec[]{longVec1, longVec2});
+            vecBatchList.add(vecBatch);
+        }
+        return vecBatchList.build();
     }
 }

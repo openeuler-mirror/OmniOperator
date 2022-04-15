@@ -1436,4 +1436,3 @@ public class OmniFilterAndProjectOperatorTest {
         factory.close();
     }
 }
-

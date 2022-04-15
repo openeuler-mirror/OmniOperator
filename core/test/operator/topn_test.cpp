@@ -31,12 +31,12 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
         data0[i] = dataSize - i;
     }
 
-    VectorBatch *inputVecBatch = new VectorBatch(1);
+    VectorBatch *inputVecBatch1 = new VectorBatch(1);
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscOneColumnPerformance");
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
-    inputVecBatch->SetVector(0, column0);
+    inputVecBatch1->SetVector(0, column0);
 
     std::vector<DataType> types = { IntDataType::Instance() };
     DataTypes sourceTypes(types);
@@ -49,16 +49,26 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
-    auto s = clock();
-
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    topNOperator->AddInput(inputVecBatch);
+    auto *perfUtil = new PerfUtil();
+    perfUtil->Init();
+    perfUtil->Reset();
+    perfUtil->Start();
+    auto s = clock();
+
+    topNOperator->AddInput(inputVecBatch1);
+    perfUtil->Stop();
+    long instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("TopN with OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
 
     auto e = clock();
-    cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
+    cout << "topn with OmniJit performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {1, 2, 3, 4, 5};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
@@ -68,11 +78,40 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
+    TopNOperatorFactory *topNOperatorFactory2 =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+
+    TopNOperator *topNOperator2 = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory2));
+    VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
+
+    perfUtil->Init();
+    perfUtil->Reset();
+    perfUtil->Start();
+    auto s2 = clock();
+
+    topNOperator2->AddInput(inputVecBatch2);
+    perfUtil->Stop();
+    instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("TopN without OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+
+    vector<VectorBatch *> outputVecorBatchs2;
+    topNOperator2->GetOutput(outputVecorBatchs2);
+
+    auto e2 = clock();
+    cout << "topn without OmniJit performance takes: " << (double)(e2 - s2) / CLOCKS_PER_SEC << endl;
+
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs2[0], expectVecorBatch));
+
     delete[] data0;
     Operator::DeleteOperator(topNOperator);
+    Operator::DeleteOperator(topNOperator2);
     DeleteOperatorFactory(topNOperatorFactory);
+    DeleteOperatorFactory(topNOperatorFactory2);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatches(outputVecorBatchs2);
     delete vecAllocator;
 }
 
@@ -122,10 +161,11 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     auto e = clock();
-    cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
+    cout << "topn with OmniJit performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     TopNOperatorFactory *topNOperatorFactoryWithoutJit =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    auto s2 = clock();
     auto topNOp = topNOperatorFactoryWithoutJit->CreateOperator();
     perfUtil->Init();
     perfUtil->Reset();
@@ -139,7 +179,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     vector<VectorBatch *> outputVecorBatchsWithoutJit;
     topNOp->GetOutput(outputVecorBatchsWithoutJit);
     auto e2 = clock();
-    cout << "topn performance takes: " << (double)(e2 - s) / CLOCKS_PER_SEC << endl;
+    cout << "topn without OmniJit performance takes: " << (double)(e2 - s2) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);

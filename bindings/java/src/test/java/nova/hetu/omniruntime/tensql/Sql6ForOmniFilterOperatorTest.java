@@ -134,7 +134,7 @@ public class Sql6ForOmniFilterOperatorTest {
             omniJsonIfExpr(omniJsonGreaterThanExpr(getOmniJsonFieldReference(3, 11), getOmniJsonLiteral(3, false, 0.0)),
                     3,
                     omniJsonFourArithmeticExpr("DIVIDE", 3, omniJsonAbsExpr(3, omniJsonFourArithmeticExpr("SUBTRACT", 3,
-                            omniJsonCastExpr(3, getOmniJsonFieldReference(3, 10)), getOmniJsonFieldReference(3, 11))),
+                            omniJsonCastExpr(3, getOmniJsonFieldReference(2, 10)), getOmniJsonFieldReference(3, 11))),
                             getOmniJsonFieldReference(3, 11)),
                     getOmniJsonFieldReference(3, 11)),
             getOmniJsonLiteral(3, false, 0.1));

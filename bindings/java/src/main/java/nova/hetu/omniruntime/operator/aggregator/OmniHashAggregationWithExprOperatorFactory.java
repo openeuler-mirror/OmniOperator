@@ -34,12 +34,32 @@ public class OmniHashAggregationWithExprOperatorFactory
      * @param aggOutputTypes the agg output types
      * @param isInputRaw the input raw
      * @param isOutputPartial the output partial
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniHashAggregationWithExprOperatorFactory(String[] groupByChanel, String[] aggChannels,
+            DataType[] sourceTypes, FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
+            boolean isOutputPartial, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
+                aggOutputTypes, isInputRaw, isOutputPartial), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni hash aggregation with expression operator factory
+     * with jit default.
+     *
+     * @param groupByChanel the group by chanel
+     * @param aggChannels the agg channels
+     * @param sourceTypes the source types
+     * @param aggFunctionTypes the agg function types
+     * @param aggOutputTypes the agg output types
+     * @param isInputRaw the input raw
+     * @param isOutputPartial the output partial
      */
     public OmniHashAggregationWithExprOperatorFactory(String[] groupByChanel, String[] aggChannels,
             DataType[] sourceTypes, FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
             boolean isOutputPartial) {
-        super(new FactoryContext(new JitContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
-                aggOutputTypes, isInputRaw, isOutputPartial)));
+        this(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, isInputRaw, isOutputPartial,
+                true);
     }
 
     private static native long createHashAggregationWithExprOperatorFactory(String[] groupByChanel,
@@ -134,9 +154,10 @@ public class OmniHashAggregationWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

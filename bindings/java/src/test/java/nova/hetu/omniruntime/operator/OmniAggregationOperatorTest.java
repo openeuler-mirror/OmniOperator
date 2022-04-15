@@ -8,6 +8,7 @@ import static java.lang.String.format;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -40,6 +41,68 @@ import java.util.concurrent.TimeUnit;
  * @since 2021-06-09
  */
 public class OmniAggregationOperatorTest {
+    /**
+     * test aggregation performance whether with jit or not.
+     */
+    @Test
+    public void testAggregationComparePref() {
+        DataType[] sourceTypes = {LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        int[] aggInputChannels = {1};
+        int[] maskChannels = {-1, -1};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        OmniAggregationOperatorFactory factoryWithJit = new OmniAggregationOperatorFactory(sourceTypes,
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false, true);
+        OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
+
+        ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
+        int rowNum = 100000;
+        int pageCount = 10;
+        for (int i = 0; i < pageCount; i++) {
+            vecBatchList1.add(new VecBatch(buildDataForCount(rowNum)));
+        }
+
+        long start1 = System.currentTimeMillis();
+        for (VecBatch vecBatch : vecBatchList1.build()) {
+            omniOperatorWithJit.addInput(vecBatch);
+        }
+
+        Iterator<VecBatch> outputWithJit = omniOperatorWithJit.getOutput();
+        long end1 = System.currentTimeMillis();
+        System.out.println("Aggregation with jit use " + (end1 - start1) + " ms.");
+
+        OmniAggregationOperatorFactory factoryWithoutJit = new OmniAggregationOperatorFactory(sourceTypes,
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false, false);
+        OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
+
+        ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
+        for (int i = 0; i < pageCount; i++) {
+            vecBatchList2.add(new VecBatch(buildDataForCount(rowNum)));
+        }
+
+        long start2 = System.currentTimeMillis();
+        for (VecBatch vecBatch : vecBatchList2.build()) {
+            omniOperatorWithoutJit.addInput(vecBatch);
+        }
+
+        Iterator<VecBatch> outputWithoutJit = omniOperatorWithoutJit.getOutput();
+        long end2 = System.currentTimeMillis();
+        System.out.println("Aggregation without jit use " + (end2 - start2) + " ms.");
+
+        while (outputWithJit.hasNext()) {
+            VecBatch resultWithJit = outputWithJit.next();
+            VecBatch resultWithoutJit = outputWithoutJit.next();
+            assertVecBatchEquals(resultWithJit, resultWithoutJit);
+            freeVecBatch(resultWithJit);
+            freeVecBatch(resultWithoutJit);
+        }
+
+        omniOperatorWithJit.close();
+        omniOperatorWithoutJit.close();
+        factoryWithJit.close();
+        factoryWithoutJit.close();
+    }
+
     /**
      * Test execute agg multiple page.
      */
@@ -149,16 +212,14 @@ public class OmniAggregationOperatorTest {
     }
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
-        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
-                LongDataType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                 OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         int[] aggInputChannels = {0, 1, 2, 3};
         int[] maskChannels = {-1, -1, -1, -1};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
-                LongDataType.LONG};
-        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
+                aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
         CountDownLatch downLatch = new CountDownLatch(threadCount);
         final int corePoolSize = 10;

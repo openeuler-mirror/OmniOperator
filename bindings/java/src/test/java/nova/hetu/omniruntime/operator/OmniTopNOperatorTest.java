@@ -4,7 +4,11 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+
+import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.operator.topn.OmniTopNOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -31,6 +35,73 @@ import java.util.List;
  * @since 2021-7-31
  */
 public class OmniTopNOperatorTest {
+    /**
+     * The Total page count.
+     */
+    int totalPageCount = 10;
+
+    /**
+     * The Page distinct count.
+     */
+    int pageDistinctCount = 4;
+
+    /**
+     * The Page distinct value repeat count.
+     */
+    int pageDistinctValueRepeatCount = 2500;
+
+    /**
+     * test topN performance whether with jit or not.
+     */
+    @Test
+    public void testTopNComparePref() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        int limitN = 10;
+        int[] outputCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
+        int[] sotrAscendings = {1, 1};
+        int[] sortNullFirsts = {0, 0};
+
+        OmniTopNOperatorFactory topNOperatorFactoryWithoutJit = new OmniTopNOperatorFactory(sourceTypes, limitN,
+                sortCols, sotrAscendings, sortNullFirsts, false);
+        OmniOperator topNOperatorWithoutJit = topNOperatorFactoryWithoutJit.createOperator();
+        ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
+
+        long start = System.currentTimeMillis();
+        for (VecBatch vec : vecsWithoutJit) {
+            topNOperatorWithoutJit.addInput(vec);
+        }
+        Iterator<VecBatch> outputWithoutJit = topNOperatorWithoutJit.getOutput();
+        long end = System.currentTimeMillis();
+        System.out.println("TopN without jit use " + (end - start) + " ms.");
+
+        OmniTopNOperatorFactory topNOperatorFactoryWithJit = new OmniTopNOperatorFactory(sourceTypes, limitN, sortCols,
+                sotrAscendings, sortNullFirsts, true);
+        OmniOperator topNOperatorWithJit = topNOperatorFactoryWithJit.createOperator();
+        ImmutableList<VecBatch> vecsWithJit = buildVecs();
+
+        start = System.currentTimeMillis();
+        for (VecBatch vec : vecsWithJit) {
+            topNOperatorWithJit.addInput(vec);
+        }
+        Iterator<VecBatch> outputWithJit = topNOperatorWithJit.getOutput();
+        end = System.currentTimeMillis();
+        System.out.println("TopN with jit use " + (end - start) + " ms.");
+
+        while (outputWithoutJit.hasNext()) {
+            VecBatch resultWithoutJit = outputWithoutJit.next();
+            VecBatch resultWithJit = outputWithJit.next();
+            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            freeVecBatch(resultWithoutJit);
+            freeVecBatch(resultWithJit);
+        }
+
+        topNOperatorWithoutJit.close();
+        topNOperatorWithJit.close();
+        topNOperatorFactoryWithoutJit.close();
+        topNOperatorFactoryWithJit.close();
+    }
+
     @Test
     public void testOneColumn() {
         int rowSize = 6;
@@ -176,5 +247,28 @@ public class OmniTopNOperatorTest {
 
         operator.close();
         omniTopNOperatorFactory.close();
+    }
+
+    private ImmutableList<VecBatch> buildVecs() {
+        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
+        int positionCount = pageDistinctCount * pageDistinctValueRepeatCount;
+        List<Vec> vecs = new ArrayList<>();
+        for (int i = 0; i < totalPageCount; i++) {
+            LongVec longVec1 = new LongVec(positionCount);
+            LongVec longVec2 = new LongVec(positionCount);
+            int idx = 0;
+            for (int j = 0; j < pageDistinctCount; j++) {
+                for (int k = 0; k < pageDistinctValueRepeatCount; k++) {
+                    longVec1.set(idx, j);
+                    longVec2.set(idx, j);
+                    idx++;
+                }
+            }
+            vecs.add(longVec1);
+            vecs.add(longVec2);
+            VecBatch vecBatch = new VecBatch(new Vec[]{longVec1, longVec2});
+            vecBatchList.add(vecBatch);
+        }
+        return vecBatchList.build();
     }
 }

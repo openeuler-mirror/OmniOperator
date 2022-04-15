@@ -9,9 +9,6 @@ import static nova.hetu.omniruntime.util.TestUtils.createDictionaryVec;
 import static nova.hetu.omniruntime.util.TestUtils.createLongVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
 
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;

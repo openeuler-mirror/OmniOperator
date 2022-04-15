@@ -38,14 +38,40 @@ public class OmniWindowWithExprOperatorFactory
      * @param expectedPositions the expected positions
      * @param argumentKeys the argument keys
      * @param windowFunctionReturnType the window function return type
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniWindowWithExprOperatorFactory(DataType[] sourceTypes, int[] outputChannels,
+            FunctionType[] windowFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels,
+            int[] sortOrder, int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions,
+            String[] argumentKeys, DataType[] windowFunctionReturnType, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
+                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
+                argumentKeys, windowFunctionReturnType), isJitEnabled));
+    }
+
+    /**
+     * Instantiates a new Omni window operator factory with jit default.
+     *
+     * @param sourceTypes the source types
+     * @param outputChannels the output channels
+     * @param windowFunction the window function
+     * @param partitionChannels the partition channels
+     * @param preGroupedChannels the pre grouped channels
+     * @param sortChannels the sort channels
+     * @param sortOrder the sort order
+     * @param sortNullFirsts the sort null firsts
+     * @param preSortedChannelPrefix the pre sorted channel prefix
+     * @param expectedPositions the expected positions
+     * @param argumentKeys the argument keys
+     * @param windowFunctionReturnType the window function return type
      */
     public OmniWindowWithExprOperatorFactory(DataType[] sourceTypes, int[] outputChannels,
             FunctionType[] windowFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels,
             int[] sortOrder, int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions,
             String[] argumentKeys, DataType[] windowFunctionReturnType) {
-        super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
-                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
-                argumentKeys, windowFunctionReturnType)));
+        this(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
+                sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentKeys,
+                windowFunctionReturnType, true);
     }
 
     private static native long createWindowWithExprJitContext(String sourceTypes, int[] outputChannels,
@@ -173,9 +199,10 @@ public class OmniWindowWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
+         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
+        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+            super(jitContext, isJitEnabled);
         }
 
         @Override

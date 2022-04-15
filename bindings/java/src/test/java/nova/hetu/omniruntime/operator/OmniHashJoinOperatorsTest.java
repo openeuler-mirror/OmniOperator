@@ -17,6 +17,8 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.type.CharDataType;
@@ -27,12 +29,15 @@ import nova.hetu.omniruntime.type.Decimal64DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -41,6 +46,116 @@ import java.util.Optional;
  * @since 2021-6-2
  */
 public class OmniHashJoinOperatorsTest {
+    /**
+     * The Total page count.
+     */
+    int totalPageCount = 10;
+
+    /**
+     * The Page distinct count.
+     */
+    int pageDistinctCount = 4;
+
+    /**
+     * The Page distinct value repeat count.
+     */
+    int pageDistinctValueRepeatCount = 100;
+
+    /**
+     * test hash join performance whether with jit or not.
+     */
+    @Test
+    public void testHashJoinComparePref() {
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] buildHashCols = {0};
+        int operatorCount = 1;
+
+        OmniHashBuilderOperatorFactory hashBuilderOperatorFactoryWithoutJit = new OmniHashBuilderOperatorFactory(
+                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount, false);
+        OmniOperator hashBuilderOperatorWithoutJit = hashBuilderOperatorFactoryWithoutJit.createOperator();
+        ImmutableList<VecBatch> buildVecsWithoutJit = buildVecs();
+
+        long start = System.currentTimeMillis();
+        for (VecBatch vec : buildVecsWithoutJit) {
+            hashBuilderOperatorWithoutJit.addInput(vec);
+        }
+        Iterator<VecBatch> hashBuilderOutputWithoutJit = hashBuilderOperatorWithoutJit.getOutput();
+        long end = System.currentTimeMillis();
+        System.out.println("HashBuilder without jit use " + (end - start) + " ms.");
+
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] probeOutputCols = {1};
+        int[] probeHashCols = {0};
+        int[] buildOutputCols = {1};
+        DataType[] buildOutputTypes = {LongDataType.LONG};
+
+        OmniLookupJoinOperatorFactory lookupJoinOperatorFactoryWithoutJit = new OmniLookupJoinOperatorFactory(
+                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                hashBuilderOperatorFactoryWithoutJit, false);
+        OmniOperator lookupJoinOperatorWithoutJit = lookupJoinOperatorFactoryWithoutJit.createOperator();
+        ImmutableList<VecBatch> probeVecsWithoutJit = buildVecs();
+
+        start = System.currentTimeMillis();
+        for (VecBatch vec : probeVecsWithoutJit) {
+            lookupJoinOperatorWithoutJit.addInput(vec);
+        }
+        Iterator<VecBatch> lookupJoinOutputWithoutJit = lookupJoinOperatorWithoutJit.getOutput();
+        end = System.currentTimeMillis();
+        System.out.println("LookupJoin without jit use " + (end - start) + " ms.");
+
+        OmniHashBuilderOperatorFactory hashBuilderOperatorFactoryWithJit = new OmniHashBuilderOperatorFactory(
+                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount, true);
+        OmniOperator hashBuilderOperatorWithJit = hashBuilderOperatorFactoryWithJit.createOperator();
+        ImmutableList<VecBatch> buildVecsWithJit = buildVecs();
+
+        start = System.currentTimeMillis();
+        for (VecBatch vec : buildVecsWithJit) {
+            hashBuilderOperatorWithJit.addInput(vec);
+        }
+        Iterator<VecBatch> hashBuilderOutputWithJit = hashBuilderOperatorWithJit.getOutput();
+        end = System.currentTimeMillis();
+        System.out.println("HashBuilder with jit use " + (end - start) + " ms.");
+
+        OmniLookupJoinOperatorFactory lookupJoinOperatorFactoryWithJit = new OmniLookupJoinOperatorFactory(probeTypes,
+                probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                hashBuilderOperatorFactoryWithJit, true);
+        OmniOperator lookupJoinOperatorWithJit = lookupJoinOperatorFactoryWithJit.createOperator();
+        ImmutableList<VecBatch> probeVecsWithJit = buildVecs();
+
+        start = System.currentTimeMillis();
+        for (VecBatch vec : probeVecsWithJit) {
+            lookupJoinOperatorWithJit.addInput(vec);
+        }
+        Iterator<VecBatch> lookupJoinOutputWithJit = lookupJoinOperatorWithJit.getOutput();
+        end = System.currentTimeMillis();
+        System.out.println("LookupJoin with jit use " + (end - start) + " ms.");
+
+        while (hashBuilderOutputWithoutJit.hasNext()) {
+            VecBatch resultWithoutJit = hashBuilderOutputWithoutJit.next();
+            VecBatch resultWithJit = hashBuilderOutputWithoutJit.next();
+            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            freeVecBatch(resultWithoutJit);
+            freeVecBatch(resultWithJit);
+        }
+
+        while (lookupJoinOutputWithoutJit.hasNext()) {
+            VecBatch resultWithoutJit = lookupJoinOutputWithoutJit.next();
+            VecBatch resultWithJit = lookupJoinOutputWithJit.next();
+            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            freeVecBatch(resultWithoutJit);
+            freeVecBatch(resultWithJit);
+        }
+
+        lookupJoinOperatorWithoutJit.close();
+        hashBuilderOperatorWithoutJit.close();
+        lookupJoinOperatorWithJit.close();
+        hashBuilderOperatorWithJit.close();
+        lookupJoinOperatorFactoryWithoutJit.close();
+        hashBuilderOperatorFactoryWithoutJit.close();
+        lookupJoinOperatorFactoryWithJit.close();
+        hashBuilderOperatorFactoryWithJit.close();
+    }
+
     /**
      * Test inner hash join one column 1.
      */
@@ -608,5 +723,28 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.close();
         lookupJoinOperatorFactory.close();
         hashBuilderOperatorFactory.close();
+    }
+
+    private ImmutableList<VecBatch> buildVecs() {
+        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
+        int positionCount = pageDistinctCount * pageDistinctValueRepeatCount;
+        List<Vec> vecs = new ArrayList<>();
+        for (int i = 0; i < totalPageCount; i++) {
+            LongVec longVec1 = new LongVec(positionCount);
+            LongVec longVec2 = new LongVec(positionCount);
+            int idx = 0;
+            for (int j = 0; j < pageDistinctCount; j++) {
+                for (int k = 0; k < pageDistinctValueRepeatCount; k++) {
+                    longVec1.set(idx, j);
+                    longVec2.set(idx, j);
+                    idx++;
+                }
+            }
+            vecs.add(longVec1);
+            vecs.add(longVec2);
+            VecBatch vecBatch = new VecBatch(new Vec[]{longVec1, longVec2});
+            vecBatchList.add(vecBatch);
+        }
+        return vecBatchList.build();
     }
 }

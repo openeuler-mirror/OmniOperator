@@ -144,6 +144,7 @@ JitContext *CreateSortJitContext(DataTypes &sourceDataTypes, int32_t *outputCols
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     JNI_DEBUG_LOG("create sort JIT context finished, elapsed time: %ld ms.", END(start));
 
+    LogInfo("Sort operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -204,6 +205,7 @@ JitContext *CreateSortWithExprJitContext(DataTypes &sourceDataTypes, int32_t *ou
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("SortWithExpr operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -249,6 +251,7 @@ JitContext *CreateHashBuilderJitContext(DataTypes &buildDataTypes, int32_t *buil
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     JNI_DEBUG_LOG("create hash builder JIT context finished, elapsed time: %ld ms.", END(start));
 
+    LogInfo("HashBuilder operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -306,6 +309,7 @@ JitContext *CreateLookupJoinJitContext(DataTypes &probeDataTypes, int32_t probeO
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
 
+    LogInfo("LookupJoin operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -355,6 +359,7 @@ JitContext *CreateHashBuilderWithExprJitContext(DataTypes &buildDataTypes,
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("HashBuilderWithExpr operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -417,6 +422,7 @@ JitContext *CreateLookupJoinWithExprJitContext(DataTypes &probeDataTypes, int32_
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("LookupJoinWithExpr operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -447,6 +453,7 @@ JitContext *CreateTopNJitContext(omniruntime::type::DataTypes &sourceDataTypes, 
     auto jitContext = new JitContext;
     jitContext->func = createOperatorFunc;
 
+    LogInfo("TopN operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -483,6 +490,7 @@ JitContext *CreateTopNWithExprJitContext(omniruntime::type::DataTypes &sourceDat
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("TopNWithExpr operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -547,6 +555,7 @@ JitContext *CreateWindowJitContext(omniruntime::type::DataTypes &sourceDataTypes
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("Window operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -618,6 +627,7 @@ JitContext *CreateWindowWithExprJitContext(DataTypes &sourceDataTypes, int32_t *
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("WindowWithExpr operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -651,6 +661,7 @@ JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("HashAggregation operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -687,6 +698,7 @@ JitContext *CreateHashAggregationWithExprJitContext(const vector<omniruntime::ex
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("HashAggregationWithExpr operator with jit has taken effect.");
     return jitContext;
 #endif
 }
@@ -705,6 +717,7 @@ JitContext *CreateAggregationJitContext()
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    LogInfo("Aggregation operator with jit has taken effect.");
     return jitContext;
 #endif
 }

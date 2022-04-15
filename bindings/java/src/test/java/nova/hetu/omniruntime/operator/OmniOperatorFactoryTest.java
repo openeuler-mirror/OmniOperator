@@ -51,8 +51,8 @@ public class OmniOperatorFactoryTest {
         final int corePoolSize = 10;
         final int maximumPoolSize = 50;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
-                corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadNum));
 
         for (int i = 0; i < threadNum; i++) {
             CompletableFuture.runAsync(() -> {
@@ -142,9 +142,19 @@ public class OmniOperatorFactoryTest {
              * Instantiates a new Context.
              *
              * @param jitContext jitContext input
+             * @param isJitEnabled whether the jit is enabled
+             */
+            public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
+                super(jitContext, isJitEnabled);
+            }
+
+            /**
+             * Instantiates a new Context without jit default.
+             *
+             * @param jitContext jitContext input
              */
             public FactoryContext(JitContext jitContext) {
-                super(jitContext);
+                this(jitContext, false);
             }
 
             @Override
