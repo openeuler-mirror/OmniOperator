@@ -91,7 +91,7 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
     }
 
-    void SetValueNull(int index, bool value)
+    virtual void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
     }

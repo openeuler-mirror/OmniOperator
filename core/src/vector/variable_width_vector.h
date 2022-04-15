@@ -56,7 +56,7 @@ public:
         lastOffsetPosition = index;
     }
 
-    virtual void ALWAYS_INLINE SetValueNull(int index, bool value)
+    void ALWAYS_INLINE SetValueNull(int index, bool value) override
     {
         FillSlots(index);
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
