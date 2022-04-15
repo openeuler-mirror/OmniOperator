@@ -11,7 +11,8 @@ using namespace omniruntime::vec;
 namespace DictionaryVectorTest {
 TEST(DictionaryVector, appendVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_appendVector");
     EXPECT_TRUE(allocator != nullptr);
     int *ids1 = new int[5];
     int *ids2 = new int[5];
@@ -40,13 +41,13 @@ TEST(DictionaryVector, appendVector)
     delete[] ids1;
     delete[] ids2;
     delete[] ids;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, CopyRegion)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_copyRegion");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -62,13 +63,13 @@ TEST(DictionaryVector, CopyRegion)
     delete dictionary;
     delete dictionaryVector;
     delete copyRegion;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, copyPostions)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_copyRegions");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -105,13 +106,12 @@ TEST(DictionaryVector, copyPostions)
     delete dictionaryVector1;
     delete copyPositions1;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, LongType)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_LongType");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -131,13 +131,12 @@ TEST(DictionaryVector, LongType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, IntType)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_IntType");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new IntVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -157,13 +156,13 @@ TEST(DictionaryVector, IntType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, BooleanType)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_BooleanType");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new BooleanVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -183,13 +182,13 @@ TEST(DictionaryVector, BooleanType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, DoubleType)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_DoubleType");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new DoubleVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -209,13 +208,13 @@ TEST(DictionaryVector, DoubleType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, VarcharType)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_VarcharType");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new VarcharVector(allocator, 1024, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -251,13 +250,13 @@ TEST(DictionaryVector, VarcharType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, Decimal128)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_Decimal128");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new Decimal128Vector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -278,13 +277,13 @@ TEST(DictionaryVector, Decimal128)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, NestedDictionaryVectorExtract)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_NestedDictionaryVectorExtract");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -307,13 +306,13 @@ TEST(DictionaryVector, NestedDictionaryVectorExtract)
     delete dictionaryVector;
     delete nested;
     delete checkDictionary;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, NestedDictionaryVectorGetId)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_NestedDictionaryVectorGetId");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -340,13 +339,13 @@ TEST(DictionaryVector, NestedDictionaryVectorGetId)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(DictionaryVector, NestedDictionaryVectorGetIds)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_NestedDictionaryVectorGetIds");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -369,7 +368,6 @@ TEST(DictionaryVector, NestedDictionaryVectorGetIds)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 }

@@ -103,7 +103,9 @@ public class OmniSortOperatorTest {
         vecs[0] = TestUtils.createIntVec(sourceDatas[0]);
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7};
         vecs[1] = TestUtils.createDictionaryVec(sourceTypes[1], sourceDatas[1], ids);
-        vecs[1] = new DictionaryVec(vecs[1], ids);
+        Vec dictionary = vecs[1];
+        vecs[1] = new DictionaryVec(dictionary, ids);
+        dictionary.close();
         VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {0, 1};

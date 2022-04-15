@@ -182,5 +182,6 @@ public class TestBooleanVec {
 
         boolean[] actual = originalVec.get(0, values.length);
         assertEquals(actual, values);
+        originalVec.close();
     }
 }

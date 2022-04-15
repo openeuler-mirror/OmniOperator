@@ -72,13 +72,13 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
 
 template <typename T, typename V>
 static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,
-    int64_t *dictVectorAddrs, int32_t rowCount)
+    int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
-    T *result = new T(vecAllocator, rowCount);
+    T *result = new T(allocator, rowCount);
     bool isNull = false;
     int32_t length = 0;
     ExecutionContext context;
+    context.GetArena()->SetAllocator(allocator);
     for (int32_t i = 0; i < rowCount; i++) {
         isNull = false;
         length = 0;
@@ -95,15 +95,15 @@ static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *val
 }
 
 static VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc func, int64_t *valuesAddresses,
-    int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount)
+    int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
 {
-    VectorAllocator *vectorAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VarcharDataType vecType = static_cast<VarcharDataType &>(type);
-    VarcharVector *result = new VarcharVector(vectorAllocator, vecType.GetWidth() * rowCount, rowCount);
+    VarcharVector *result = new VarcharVector(allocator, vecType.GetWidth() * rowCount, rowCount);
 
     bool isNull = false;
     int32_t length = 0;
     ExecutionContext context;
+    context.GetArena()->SetAllocator(allocator);
     for (int32_t i = 0; i < rowCount; i++) {
         isNull = false;
         length = 0;
@@ -121,7 +121,7 @@ static VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc fun
 
 void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
     const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-    int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch)
+    int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator)
 {
     int32_t originalVecCount = newInputTypes.GetSize() - projectFuncs.size();
     int32_t projectColsCount = projectCols.size();
@@ -139,24 +139,25 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
             case OMNI_INT:
             case OMNI_DATE32:
                 newVecBatch->SetVector(projectCol, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 newVecBatch->SetVector(projectCol, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_DOUBLE:
                 newVecBatch->SetVector(projectCol, ProjectVector<DoubleVector, double>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_BOOLEAN:
                 newVecBatch->SetVector(projectCol, ProjectVector<BooleanVector, bool>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_VARCHAR:
                 newVecBatch->SetVector(projectCol, ProjectVarcharVector(dataTypes[projectCol],
-                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs,
+                    rowCount, allocator));
                 break;
             case OMNI_DECIMAL128:
                 break;
@@ -169,7 +170,7 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
 
 void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
     const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-    int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch)
+    int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator)
 {
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
@@ -186,24 +187,24 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
             case OMNI_INT:
             case OMNI_DATE32:
                 newVecBatch->SetVector(i, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex], values,
-                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 newVecBatch->SetVector(i, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex], values,
-                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_DOUBLE:
                 newVecBatch->SetVector(i, ProjectVector<DoubleVector, double>(projectFuncs[projectFuncsIndex], values,
-                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_BOOLEAN:
                 newVecBatch->SetVector(i, ProjectVector<BooleanVector, bool>(projectFuncs[projectFuncsIndex], values,
-                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_VARCHAR:
                 newVecBatch->SetVector(i, ProjectVarcharVector(dataTypes[i], projectFuncs[projectFuncsIndex], values,
-                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_DECIMAL128:
                 break;
@@ -215,7 +216,7 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
 }
 
 VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-    const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
+    const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator)
 {
     int32_t projectFuncsCount = projectFuncs.size();
     if (projectFuncsCount <= 0) {
@@ -247,12 +248,12 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const Data
     }
 
     ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
-        rowCount, newInputVecBatch);
+        rowCount, newInputVecBatch, allocator);
     return newInputVecBatch;
 }
 
 VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-    const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
+    const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator)
 {
     int32_t vecCount = projectCols.size();
     int32_t rowCount = inputVecBatch->GetRowCount();
@@ -292,7 +293,7 @@ VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, co
     }
 
     ProjectRequiredVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets,
-        dictVectorAddrs, rowCount, newInputVecBatch);
+        dictVectorAddrs, rowCount, newInputVecBatch, allocator);
     return newInputVecBatch;
 }
 }

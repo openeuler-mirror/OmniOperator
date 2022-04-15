@@ -6,22 +6,39 @@
 #define CHUNK_H
 
 #include <iostream>
+#include "base_allocator.h"
 
 namespace omniruntime {
 namespace mem {
 class Chunk {
 public:
-    explicit Chunk(int64_t sizeInBytes);
-
     ~Chunk();
 
     void *GetAddress() const;
 
     int64_t GetSizeInBytes();
 
+    BaseAllocator *GetAllocator()
+    {
+        return allocator;
+    }
+
+    static Chunk* NewChunk(BaseAllocator *allocator, int64_t sizeInBytes)
+    {
+        void *data = allocator->alloc(sizeInBytes);
+        if (data != nullptr) {
+            return new Chunk(allocator, data, sizeInBytes);
+        }
+        return nullptr;
+    }
+
+protected:
+    explicit Chunk(BaseAllocator *allocator, void *address, int64_t sizeInBytes);
+
 private:
     void *address = nullptr;
     int64_t sizeInBytes;
+    BaseAllocator *allocator;
 };
 } // namespace mem
 } // namespace omniruntime

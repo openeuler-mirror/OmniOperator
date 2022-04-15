@@ -53,7 +53,8 @@ using namespace TestUtil;
 
 Vector *BuildHashInput(const DataType &groupType, int32_t rowPerVecBatch, int32_t cardinality)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_buildHashInput");
     switch (groupType.GetId()) {
         case OMNI_INT:
         case OMNI_DATE32: {
@@ -114,9 +115,8 @@ Vector *BuildHashInput(const DataType &groupType, int32_t rowPerVecBatch, int32_
     }
 }
 
-Vector *BuildAggregateInput(const DataType &aggType, int32_t rowPerVecBatch)
+Vector *BuildAggregateInput(VectorAllocator *vecAllocator, const DataType &aggType, int32_t rowPerVecBatch)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     switch (aggType.GetId()) {
         case OMNI_NONE: {
             LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
@@ -183,6 +183,8 @@ VectorBatch **buildAggInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t
     int32_t aggColNum, const std::vector<DataType> &groupTypes, const std::vector<DataType> &aggTypes)
 {
     VectorBatch **input = new VectorBatch *[vecBatchNum];
+    VectorAllocator *vectorAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_buildAggInput");
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(groupColNum + aggColNum);
         for (int32_t index = 0; index < groupColNum; ++index) {
@@ -190,7 +192,7 @@ VectorBatch **buildAggInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t
             vecBatch->SetVector(index, vec);
         }
         for (int32_t index = 0; index < aggColNum; ++index) {
-            Vector *vec = BuildAggregateInput(aggTypes[index], rowPerVecBatch);
+            Vector *vec = BuildAggregateInput(vectorAllocator, aggTypes[index], rowPerVecBatch);
             vecBatch->SetVector(groupColNum + index, vec);
         }
         input[i] = vecBatch;
@@ -202,7 +204,7 @@ VectorBatch **BuildVarCharInput(int32_t vecBatchNum, int32_t colNum, int32_t row
 {
     va_list args;
     va_start(args, rowPerVecBatch);
-    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_buildVarCharInput");
     VectorBatch **input = new VectorBatch *[vecBatchNum];
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(colNum);
@@ -717,7 +719,8 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     const int vecBatchNum = 10;
     VectorBatch **input = new VectorBatch *[vecBatchNum];
     const int dataSize = 10;
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+            "aggregation_verfify_correctness_group_by_agg_same_cols");
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(2);
         LongVector *col1 = new LongVector(vecAllocator, dataSize);
@@ -1462,6 +1465,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
         expectData4, expectData5, expectData6);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
     VectorHelper::FreeVecBatches(resultFromFinal);
+    VectorHelper::FreeVecBatch(expectVecBatch);
 }
 
 TEST(HashAggregationOperatorTest, supported_type_test)
@@ -1500,6 +1504,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupByColumns.clear();
     aggInputCols.clear();
     aggs.clear();
+    VectorHelper::FreeVecBatches(result);
     result.clear();
     delete[] input;
 
@@ -1533,6 +1538,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupByColumns.clear();
     aggInputCols.clear();
     aggs.clear();
+    VectorHelper::FreeVecBatches(result);
     result.clear();
     delete[] input;
 
@@ -1591,8 +1597,10 @@ TEST(AggregatorTest, sum_test)
     auto sumShortDecimal = sumFactory->CreateAggregator(SHORT_DECIMAL_TYPE, LONG_DECIMAL_TYPE, 0, true, false);
     auto sumNull = sumFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 3, true, false);
 
-    auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
-    auto decimalInputVec = BuildAggregateInput(Decimal128DataType(38, 2), rowPerVecBatch);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_sum_test");
+    auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
+    auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 2), rowPerVecBatch);
     LongDataType longDataType;
     int32_t ids[rowPerVecBatch];
     int64_t dict[rowPerVecBatch];
@@ -1601,7 +1609,7 @@ TEST(AggregatorTest, sum_test)
         dict[i] = 1;
     }
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
-    auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
+    auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), rowPerVecBatch);
 
     VectorBatch *vecBatch = new VectorBatch(4);
     vecBatch->SetVector(0, longInputVec);
@@ -1659,7 +1667,9 @@ TEST(AggregatorTest, count_column_test)
     auto countLong = countFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 0, true, false);
     auto countNull = countFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 2, true, false);
 
-    auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_column_test");
+    auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     LongDataType longDataType;
     int32_t ids[rowPerVecBatch];
     int64_t dict[rowPerVecBatch];
@@ -1668,7 +1678,7 @@ TEST(AggregatorTest, count_column_test)
         dict[i] = 1;
     }
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
-    auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
+    auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), rowPerVecBatch);
 
     VectorBatch *vecBatch = new VectorBatch(3);
     vecBatch->SetVector(0, longInputVec);
@@ -1711,9 +1721,11 @@ TEST(AggregatorTest, count_all_test)
     auto countNull = countAllFactory->CreateAggregator(NoneDataType::Instance(), LongDataType::Instance(),
         Aggregator::INVALID_INPUT_COL, true, false);
 
-    auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_all_test");
+    auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     LongDataType longDataType;
-    auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), ROW_PER_VEC_BATCH);
+    auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), ROW_PER_VEC_BATCH);
 
     VectorBatch *vecBatch = new VectorBatch(2, rowPerVecBatch);
     vecBatch->SetVector(0, longInputVec);
@@ -1761,8 +1773,9 @@ TEST(AggregatorTest, min_test)
     auto minBoolean =
         minFactory->CreateAggregator(BooleanDataType::Instance(), BooleanDataType::Instance(), 6, true, false);
 
-    auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
-    auto decimalInputVec = BuildAggregateInput(Decimal128DataType(38, 0), rowPerVecBatch);
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_minTest");
+    auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
+    auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 0), rowPerVecBatch);
     VarcharDataType varcharDataType(1);
     std::string stringVals[rowPerVecBatch];
     for (int32_t i = 0; i < rowPerVecBatch; ++i) {
@@ -1777,9 +1790,9 @@ TEST(AggregatorTest, min_test)
         dict[i] = 1;
     }
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
-    auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
-    auto intInputVec = BuildAggregateInput(IntDataType(), rowPerVecBatch);
-    auto BoolInputVec = BuildAggregateInput(BooleanDataType(), rowPerVecBatch);
+    auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), rowPerVecBatch);
+    auto intInputVec = BuildAggregateInput(vectorAllocator, IntDataType(), rowPerVecBatch);
+    auto BoolInputVec = BuildAggregateInput(vectorAllocator, BooleanDataType(), rowPerVecBatch);
 
     VectorBatch *vectorBatch = new VectorBatch(7);
     vectorBatch->SetVector(0, longInputVec);
@@ -1823,7 +1836,7 @@ TEST(AggregatorTest, min_test)
     }
     std::string expectedStr = "1";
     EXPECT_EQ(0, std::memcmp(state.val, expectedStr.c_str(), 1));
-    VarcharVector minVarcharOutput(VectorAllocatorFactory::GetGlobalAllocator(), 1, 1);
+    VarcharVector minVarcharOutput(vectorAllocator, 1, 1);
     minVarchar->ExtractValue(state, &minVarcharOutput, 0);
     uint8_t *strRes = nullptr;
     minVarcharOutput.GetValue(0, &strRes);
@@ -1882,8 +1895,10 @@ TEST(AggregatorTest, max_test)
     auto maxBoolean =
         maxFactory->CreateAggregator(BooleanDataType::Instance(), BooleanDataType::Instance(), 6, true, false);
 
-    auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
-    auto decimalInputVec = BuildAggregateInput(Decimal128DataType(38, 0), rowPerVecBatch);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_max_test1");
+    auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
+    auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 0), rowPerVecBatch);
     VarcharDataType varcharDataType(1);
     std::string stringVals[rowPerVecBatch];
     for (int32_t i = 0; i < rowPerVecBatch; ++i) {
@@ -1898,9 +1913,9 @@ TEST(AggregatorTest, max_test)
         dict[i] = 1;
     }
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
-    auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
-    auto intInputVec = BuildAggregateInput(IntDataType(), rowPerVecBatch);
-    auto boolInputVec = BuildAggregateInput(BooleanDataType(), rowPerVecBatch);
+    auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), rowPerVecBatch);
+    auto intInputVec = BuildAggregateInput(vectorAllocator, IntDataType(), rowPerVecBatch);
+    auto boolInputVec = BuildAggregateInput(vectorAllocator, BooleanDataType(), rowPerVecBatch);
 
     VectorBatch *vectorBatch = new VectorBatch(7);
     vectorBatch->SetVector(0, longInputVec);
@@ -1944,7 +1959,8 @@ TEST(AggregatorTest, max_test)
     }
     std::string expectedStr = "1";
     EXPECT_EQ(0, std::memcmp(state.val, expectedStr.c_str(), 1));
-    VarcharVector maxVarcharOutput(VectorAllocatorFactory::GetGlobalAllocator(), 1, 1);
+    VarcharVector maxVarcharOutput(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_maxTest2"), 1,
+        1);
     maxVarchar->ExtractValue(state, &maxVarcharOutput, 0);
     uint8_t *strRes = nullptr;
     maxVarcharOutput.GetValue(0, &strRes);
@@ -2009,8 +2025,10 @@ TEST(AggregatorTest, avg_test)
     auto avgDecimal = avgFactory->CreateAggregator(LONG_DECIMAL_TYPE, LONG_DECIMAL_TYPE, 1, true, false);
     auto avgNull = avgFactory->CreateAggregator(LongDataType::Instance(), DoubleDataType::Instance(), 3, true, false);
 
-    auto longInputVec = BuildAggregateInput(LongDataType(), rowPerVecBatch);
-    auto decimalInputVec = BuildAggregateInput(Decimal128DataType(38, 0), rowPerVecBatch);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_avg_test");
+    auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
+    auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 0), rowPerVecBatch);
     LongDataType longDataType;
     int32_t ids[rowPerVecBatch];
     int64_t dict[rowPerVecBatch];
@@ -2019,7 +2037,7 @@ TEST(AggregatorTest, avg_test)
         dict[i] = 1;
     }
     auto dictInputVec = CreateDictionaryVector(longDataType, rowPerVecBatch, ids, rowPerVecBatch, dict);
-    auto nullInputVec = BuildAggregateInput(DataType(OMNI_NONE), rowPerVecBatch);
+    auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), rowPerVecBatch);
 
     VectorBatch *vectorBatch = new VectorBatch(4);
     vectorBatch->SetVector(0, longInputVec);
@@ -2036,7 +2054,7 @@ TEST(AggregatorTest, avg_test)
             avgLong->ProcessGroup(state, vectorBatch, i);
         }
     }
-    DoubleVector avgLongOutput(VectorAllocatorFactory::GetGlobalAllocator(), 1);
+    DoubleVector avgLongOutput(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_avgTest"), 1);
     avgLong->ExtractValue(state, &avgLongOutput, 0);
     EXPECT_TRUE(avgLongOutput.GetValue(0) - 1 <= DBL_EPSILON);
     state.val = nullptr;
@@ -2049,7 +2067,7 @@ TEST(AggregatorTest, avg_test)
             avgNull->ProcessGroup(state, vectorBatch, i);
         }
     }
-    DoubleVector avgNullOutput(VectorAllocatorFactory::GetGlobalAllocator(), 1);
+    DoubleVector avgNullOutput(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_avgTest"), 1);
     avgNull->ExtractValue(state, &avgNullOutput, 0);
     EXPECT_TRUE(avgNullOutput.IsValueNull(0));
     state.val = nullptr;

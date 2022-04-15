@@ -7,132 +7,103 @@
 
 #include <vector>
 #include "chunk.h"
+#include "base_allocator.h"
 
 namespace omniruntime {
 namespace mem {
-// / \brief Simple arena allocator.
-// /
-// / Memory is allocated from system in units of chunk-size, and dished out in the
-// / requested sizes. If the requested size > chunk-size, allocate directly from the
-// / system.
-// /
-// / The allocated memory gets released only when the arena is destroyed, or on
-// / Reset.
-// /
-// / This code is not multi-thread safe, and avoids all locking for efficiency.
-// /
+// this allocator is not thread-safe, and mainly applies for temporary memory usage for operators,
+// such as when dealing with types such as varchar/decimal and so on.
 class SimpleArenaAllocator {
 public:
-    explicit SimpleArenaAllocator(int64_t minChunkSize = 4096);
+    explicit SimpleArenaAllocator(int64_t minChunkSize = 4096,
+        BaseAllocator *allocator = BaseAllocator::GetRootAllocator())
+        : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL), allocator(allocator)
+    {}
 
-    ~SimpleArenaAllocator();
+    ~SimpleArenaAllocator()
+    {
+        ReleaseChunks(false /* retainFirst */);
+    }
 
-    // Allocate buffer of requested size.
-    uint8_t *Allocate(int64_t sizeInBytes);
+    uint8_t *Allocate(int64_t sizeInBytes)
+    {
+        if (availBytes < sizeInBytes) {
+            AllocateChunk(std::max(sizeInBytes, minChunkSize));
+        }
 
-    // Reset arena state.
-    void Reset();
+        uint8_t *ret = availBuf;
+        availBuf += sizeInBytes;
+        availBytes -= sizeInBytes;
+        return ret;
+    }
 
-    // total bytes allocated from system.
+    void Reset()
+    {
+        if (chunks.size() == 0) {
+            // if there are no chunks, nothing to do.
+            return;
+        }
+
+        // Release all but the first chunk.
+        if (chunks.size() > 1) {
+            ReleaseChunks(true);
+            chunks.erase(chunks.cbegin() + 1, chunks.cend());
+        }
+
+        availBuf = reinterpret_cast<uint8_t *>(chunks.at(0)->GetAddress());
+        availBytes = totalBytes = chunks.at(0)->GetSizeInBytes();
+    }
+
     int64_t TotalBytes()
     {
         return totalBytes;
     }
 
-    // total bytes available for allocations.
     int64_t AvailBytes()
     {
         return availBytes;
     }
 
+    void SetAllocator(BaseAllocator *allocator)
+    {
+        this->allocator = allocator;
+    }
+
+    BaseAllocator *GetAllocator()
+    {
+        return this->allocator;
+    }
+
 private:
-    // Allocate new chunk.
-    void AllocateChunk(int64_t sizeInBytes);
+    void AllocateChunk(int64_t sizeInBytes)
+    {
+        Chunk *chunk = Chunk::NewChunk(allocator, sizeInBytes);
 
-    // release memory from buffers.
-    void ReleaseChunks(bool retainFirst);
-
-    // The chunk-size used for allocations from system.
-    int64_t minChunkSize;
-
-    // Total bytes allocated from system.
-    int64_t totalBytes;
-
-    // Bytes available from allocated chunk.
-    int64_t availBytes;
-
-    // buffer from current chunk.
-    uint8_t *availBuf;
-
-    // List of allocated chunks.
-    std::vector<Chunk *> chunks;
-};
-
-inline SimpleArenaAllocator::SimpleArenaAllocator(int64_t minChunkSize)
-    : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(nullptr)
-{}
-
-inline SimpleArenaAllocator::~SimpleArenaAllocator()
-{
-    ReleaseChunks(false /* retainFirst */);
-}
-
-inline uint8_t *SimpleArenaAllocator::Allocate(int64_t sizeInBytes)
-{
-    if (availBytes < sizeInBytes) {
-        AllocateChunk(std::max(sizeInBytes, minChunkSize));
+        chunks.emplace_back(chunk);
+        availBuf = reinterpret_cast<uint8_t *>(chunk->GetAddress());
+        availBytes = sizeInBytes; // left-over bytes in the previous chunk cannot be used anymore.
+        totalBytes += sizeInBytes;
     }
 
-    uint8_t *ret = availBuf;
-    availBuf += sizeInBytes;
-    availBytes -= sizeInBytes;
-    return ret;
-}
-
-inline void SimpleArenaAllocator::AllocateChunk(int64_t sizeInBytes)
-{
-    // TODO:add new chunk record
-    Chunk *chunk = new Chunk(sizeInBytes);
-
-    chunks.emplace_back(chunk);
-    availBuf = reinterpret_cast<uint8_t *>(chunk->GetAddress());
-    availBytes = sizeInBytes; // left-over bytes in the previous chunk cannot be used anymore.
-    totalBytes += sizeInBytes;
-}
-
-// In the most common case, a chunk will be allocated when processing the first record.
-// And, the same chunk can be used for processing the remaining records in the batch.
-// By retaining the first chunk, the number of malloc calls are reduced to one per batch,
-// instead of one per record.
-inline void SimpleArenaAllocator::Reset()
-{
-    if (chunks.size() == 0) {
-        // if there are no chunks, nothing to do.
-        return;
-    }
-
-    // Release all but the first chunk.
-    if (chunks.size() > 1) {
-        ReleaseChunks(true);
-        chunks.erase(chunks.cbegin() + 1, chunks.cend());
-    }
-
-    availBuf = reinterpret_cast<uint8_t *>(chunks.at(0)->GetAddress());
-    availBytes = totalBytes = chunks.at(0)->GetSizeInBytes();
-}
-
-inline void SimpleArenaAllocator::ReleaseChunks(bool retainFirst)
-{
-    for (auto &chunk : chunks) {
-        if (retainFirst) {
-            // skip freeing first chunk.
-            retainFirst = false;
-            continue;
+    void ReleaseChunks(bool retainFirst)
+    {
+        for (auto &chunk : chunks) {
+            if (retainFirst) {
+                // skip freeing first chunk.
+                retainFirst = false;
+                continue;
+            }
+            delete chunk;
         }
-        // TODO:add release chunk record
-        delete chunk;
     }
-}
+
+    int64_t minChunkSize;
+    int64_t totalBytes;
+    int64_t availBytes;
+    uint8_t *availBuf;
+    std::vector<Chunk *> chunks;
+    BaseAllocator *allocator;
+};
 } // namespace mem
 } // namespace omniruntime
 #endif // SIMPLE_ARENA_ALLOCATOR_H

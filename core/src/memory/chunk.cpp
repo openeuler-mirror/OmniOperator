@@ -3,11 +3,12 @@
  */
 
 #include "chunk.h"
-#include "memory/memory_pool.h"
 
 namespace omniruntime {
 namespace mem {
-Chunk::Chunk(int64_t sizeInBytes) : address(OmniAllocate(sizeInBytes)), sizeInBytes(sizeInBytes) {}
+Chunk::Chunk(BaseAllocator *allocator, void *address, int64_t sizeInBytes)
+    : address(address), sizeInBytes(sizeInBytes), allocator(allocator)
+{}
 
 Chunk::~Chunk()
 {
@@ -15,7 +16,7 @@ Chunk::~Chunk()
         std::cerr << "address is null in chunk." << std::endl;
         return;
     }
-    OmniRelease(reinterpret_cast<int64_t>(address));
+    allocator->free(address, sizeInBytes);
     address = nullptr;
 }
 

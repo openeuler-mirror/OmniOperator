@@ -7,11 +7,12 @@
 
 namespace omniruntime {
 namespace vec {
-Chunk *VectorReference::zeroChunk = new Chunk(0);
+Chunk *VectorReference::zeroChunk = Chunk::NewChunk(mem::BaseAllocator::GetRootAllocator(), 0);
 /*
  * Encoding : values | nulls | offsets(option)
  */
-VectorReference::VectorReference(int capacityInBytes, int size, DataTypeId dataTypeId) : writable(true), reference(1)
+VectorReference::VectorReference(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId)
+    : writable(true), reference(1)
 {
     // for empty vector, like lazy vector.
     if (capacityInBytes == -1) {
@@ -23,7 +24,7 @@ VectorReference::VectorReference(int capacityInBytes, int size, DataTypeId dataT
         return;
     }
 
-    valueChunk = new Chunk(capacityInBytes);
+    valueChunk = Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator), capacityInBytes);
     int nullsCapacityInBytes = size;
     int offsetsCapacityInBytes = 0;
     bool isVariableType = IsVariableWidthType(dataTypeId);
@@ -33,7 +34,8 @@ VectorReference::VectorReference(int capacityInBytes, int size, DataTypeId dataT
 
     int32_t nullsAndOffsetsCapacityInBytes = nullsCapacityInBytes + offsetsCapacityInBytes;
 
-    nullAndOffsetChunk = new Chunk(nullsAndOffsetsCapacityInBytes);
+    nullAndOffsetChunk =
+        Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator), nullsAndOffsetsCapacityInBytes);
     char *baseAddress = static_cast<char *>(nullAndOffsetChunk->GetAddress());
     if (memset_s(baseAddress, nullsAndOffsetsCapacityInBytes, 0, nullsAndOffsetsCapacityInBytes) != EOK) {
         std::cerr << "init nulls and offsets failed." << std::endl;
@@ -106,7 +108,7 @@ void *VectorReference::GetValueOffsetsAddress()
 void VectorReference::ResizeValueChunk(int32_t currentCapacityInBytes, int32_t toCapacityInBytes)
 {
     Chunk *oldChunk = valueChunk;
-    valueChunk = new Chunk(toCapacityInBytes);
+    valueChunk = Chunk::NewChunk(oldChunk->GetAllocator(), toCapacityInBytes);
     // copy data
     char *newAddr = static_cast<char *>(valueChunk->GetAddress());
     char *oldAddr = static_cast<char *>(oldChunk->GetAddress());

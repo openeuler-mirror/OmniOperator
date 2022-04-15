@@ -39,6 +39,8 @@ public class MergeVectorsTest {
         for (int i = 0; i < vec1.getSize() + vec2.getSize() + vec3.getSize(); i++) {
             assertEquals(vec.get(i), i);
         }
+
+        closeVecs(new Vec[] {vec1, vec2, vec3, vec});
     }
 
     /**
@@ -70,6 +72,8 @@ public class MergeVectorsTest {
         for (int i = 0; i < vec1.getSize() + vec2.getSize() + vec3.getSize(); i++) {
             assertEquals(vec.get(i), (double) i);
         }
+
+        closeVecs(new Vec[] {vec1, vec2, vec3, vec});
     }
 
     /**
@@ -100,6 +104,14 @@ public class MergeVectorsTest {
 
         for (int i = 0; i < vec1.getSize() + vec2.getSize() + vec3.getSize(); i++) {
             assertEquals(vec.get(i), (long) i);
+        }
+
+        closeVecs(new Vec[] {vec1, vec2, vec3, vec});
+    }
+
+    private void closeVecs(Vec [] vecs) {
+        for (Vec vec : vecs) {
+            vec.close();
         }
     }
 }

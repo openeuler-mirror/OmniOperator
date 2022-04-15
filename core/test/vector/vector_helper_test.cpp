@@ -12,7 +12,7 @@ using namespace TestUtil;
 namespace VectorHelperTest {
 TEST(VectorHelper, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper1");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("test_helper1");
     EXPECT_TRUE(allocator != nullptr);
 
     // int32 test
@@ -96,13 +96,12 @@ TEST(VectorHelper, setAndGetValue)
     delete dictionaryVarchar;
     delete dictionaryVarcharVec;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(VectorHelper, printVectorValue)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper2");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("test_helper2");
     EXPECT_TRUE(allocator != nullptr);
 
     auto *dictionaryVarchar = new VarcharVector(allocator, 100, 10);
@@ -117,13 +116,12 @@ TEST(VectorHelper, printVectorValue)
     delete dictionaryVarchar;
     delete dictionaryVarcharVec;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(VectorHelper, ConcatVectorBatches)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper3");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("test_helper3");
     EXPECT_TRUE(allocator != nullptr);
 
     int32_t row = 10;
@@ -146,13 +144,12 @@ TEST(VectorHelper, ConcatVectorBatches)
 
     VectorHelper::FreeVecBatches(batchs);
     VectorHelper::FreeVecBatch(merged);
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(VectorHelper, createVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper4");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("test_helper4");
     EXPECT_TRUE(allocator != nullptr);
     int32_t rowCount = 10;
     Vector *tmp;
@@ -218,7 +215,6 @@ TEST(VectorHelper, createVector)
     delete dictionaryVector;
     delete lazyVector;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 }

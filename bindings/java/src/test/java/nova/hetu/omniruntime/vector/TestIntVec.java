@@ -183,6 +183,7 @@ public class TestIntVec {
         for (int i = 0; i < actual.length; i++) {
             assertEquals(actual[i], expected[i]);
         }
+        vec.close();
     }
 
     @Test

@@ -374,7 +374,7 @@ int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages
     if (distinctRowInfo.size() > 0) {
         auto resultBatch = new VectorBatch(outColsCount, distinctRowInfo.size());
 
-        resultBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), outTypes);
+        resultBatch->NewVectors(vecAllocator, outTypes);
 
         int32_t rowIndex = 0;
         for (auto item : distinctRowInfo) {

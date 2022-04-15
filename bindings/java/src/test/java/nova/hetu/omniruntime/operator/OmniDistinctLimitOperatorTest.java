@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 
 import nova.hetu.omniruntime.operator.limit.OmniDistinctLimitOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -45,8 +46,7 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        resultVecBatch1.releaseAllVectors();
-        resultVecBatch1.close();
+        freeVecBatch(resultVecBatch1);
         distinctLimitOperator.close();
         distinctLimitOperatorFactory.close();
     }
@@ -72,8 +72,7 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        resultVecBatch1.releaseAllVectors();
-        resultVecBatch1.close();
+        freeVecBatch(resultVecBatch1);
         distinctLimitOperator.close();
         distinctLimitOperatorFactory.close();
     }
@@ -99,8 +98,7 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        resultVecBatch1.releaseAllVectors();
-        resultVecBatch1.close();
+        freeVecBatch(resultVecBatch1);
         distinctLimitOperator.close();
         distinctLimitOperatorFactory.close();
     }
@@ -124,8 +122,7 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        resultVecBatch1.releaseAllVectors();
-        resultVecBatch1.close();
+        freeVecBatch(resultVecBatch1);
         distinctLimitOperator.close();
         distinctLimitOperatorFactory.close();
     }

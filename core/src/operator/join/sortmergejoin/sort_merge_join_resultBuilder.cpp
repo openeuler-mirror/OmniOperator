@@ -46,6 +46,7 @@ void JoinResultBuilder::JoinFilterCodeGen()
         omniruntime::expressions::Expr *filterExpr =
             parser.ParseRowExpression(filterExpStr, dataTypes, dataTypes.GetSize());
         executionContext = new ExecutionContext();
+        executionContext->GetArena()->SetAllocator(vecAllocator);
         simpleFilter = new SimpleFilter(*filterExpr);
         simpleFilter->Initialize();
     }

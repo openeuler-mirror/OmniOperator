@@ -11,7 +11,6 @@
 #include "vector.h"
 #include "vector_batch.h"
 #include "vector_allocator.h"
-#include "vector_allocator_factory.h"
 #include "fixed_width_vector.h"
 #include "variable_width_vector.h"
 #include "container_vector.h"

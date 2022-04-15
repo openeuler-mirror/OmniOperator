@@ -4,6 +4,8 @@
 
 package nova.hetu.omniruntime.utils;
 
+import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_NATIVE_ERROR;
+
 /**
  * The type Omni runtime exception.
  *
@@ -13,6 +15,16 @@ public class OmniRuntimeException extends RuntimeException {
     private static final long serialVersionUID = -4352889723335051173L;
 
     private final OmniErrorType errorType;
+
+    /**
+     * this method for jni method call
+     *
+     * @param msg error message
+     */
+    public OmniRuntimeException(String msg) {
+        super(msg);
+        this.errorType = OMNI_NATIVE_ERROR;
+    }
 
     /**
      * Instantiates a new Omni runtime exception.

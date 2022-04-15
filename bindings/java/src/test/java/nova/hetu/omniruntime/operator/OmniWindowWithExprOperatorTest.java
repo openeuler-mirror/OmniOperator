@@ -62,6 +62,9 @@ public class OmniWindowWithExprOperatorTest {
                 {56.6D, 53.3D, 52.2D, 55.5D, 51.1D, 54.4D}, {56.6D, 56.6D, 52.2D, 55.5D, 51.1D, 54.4D}};
         assertVecBatchEquals(outputVecBatch, expectedDatas);
         freeVecBatch(outputVecBatch);
+
+        omniOperator.close();
+        omniWindowOperatorFactory.close();
     }
 
     private VecBatch buildData() {

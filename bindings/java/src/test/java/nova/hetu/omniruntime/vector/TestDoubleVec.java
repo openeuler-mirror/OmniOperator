@@ -37,7 +37,8 @@ public class TestDoubleVec {
      */
     @Test
     public void testSlice() {
-        VecAllocator allocator = new VecAllocator("test");
+        VecAllocator allocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("test",
+                VecAllocator.UNLIMIT, 0);
         DoubleVec originalVec = new DoubleVec(allocator, 10);
         for (int i = 0; i < originalVec.getSize(); i++) {
             originalVec.set(i, (double) i / 3);
@@ -188,6 +189,7 @@ public class TestDoubleVec {
         for (int i = 0; i < actual.length; i++) {
             assertEquals(actual[i], expected[i]);
         }
+        doubleVec1.close();
     }
 
     @Test

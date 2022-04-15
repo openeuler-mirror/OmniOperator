@@ -14,7 +14,6 @@
 #include "operator/operator_factory.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
-#include "vector/vector_allocator_factory.h"
 #include "codegen/func_signature.h"
 #include "codegen/func_registry.h"
 #include "expression/expressions.h"
@@ -113,7 +112,7 @@ private:
 
 template <typename T, typename V> T *CreateVector(V *values, int32_t length)
 {
-    omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocatorFactory::GetGlobalAllocator();
+    omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocator::GetGlobalAllocator();
     auto vector = new T(vecAllocator, length);
     vector->SetValues(0, values, length);
     return vector;

@@ -210,6 +210,7 @@ OmniStatus HashAggregationOperator::Init()
         sourceTypes[idx + groupByColsSize] = static_cast<int32_t>(aggInputTypes.Get()[idx].GetId());
     }
     executionContext = std::make_unique<ExecutionContext>();
+    executionContext->GetArena()->SetAllocator(vecAllocator);
     executionContext->GetArena()->Allocate(DEFAULT_TEMP_MEM_SIZE);
     return OMNI_STATUS_NORMAL;
 }

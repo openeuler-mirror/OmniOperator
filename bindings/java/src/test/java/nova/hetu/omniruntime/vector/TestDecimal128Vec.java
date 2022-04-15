@@ -126,6 +126,7 @@ public class TestDecimal128Vec {
         for (int i = 0; i < size; i++) {
             assertTrue(vec.isNull(i));
         }
+        vec.close();
     }
 
     /**

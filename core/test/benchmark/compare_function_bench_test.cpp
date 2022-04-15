@@ -108,7 +108,7 @@ int32_t CompareVarcharByLong(Vector *leftColumn, int32_t leftColumnPosition, Vec
 
 TEST(varcharType, CompareVarcharPerf)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
@@ -170,12 +170,12 @@ TEST(varcharType, CompareVarcharPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(varcharType, CompareVarcharByLongPerf)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("varchar");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 
@@ -238,6 +238,6 @@ TEST(varcharType, CompareVarcharByLongPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 }

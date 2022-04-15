@@ -13,10 +13,10 @@ namespace omniruntime {
 namespace vec {
 using namespace type;
 using Chunk = mem::Chunk;
-
+class VectorAllocator;
 class VectorReference {
 public:
-    VectorReference(int capacityInBytes, int size, DataTypeId dataTypeId);
+    VectorReference(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);
 
     ~VectorReference();
 

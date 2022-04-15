@@ -25,7 +25,7 @@ public class VecAllocatorFactory {
     public static synchronized VecAllocator create(String scope, CallBack createCallback) {
         VecAllocator allocator = vecAllocators.get(scope);
         if (allocator == null) {
-            allocator = new VecAllocator(scope);
+            allocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator(scope, VecAllocator.UNLIMIT, 0);
             vecAllocators.put(scope, allocator);
             if (createCallback != null) {
                 createCallback.callback();

@@ -111,6 +111,7 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
+    VectorHelper::FreeVecBatch(expVecBatch2);
     VectorHelper::FreeVecBatches(outputVecBatches);
     Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);

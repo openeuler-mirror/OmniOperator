@@ -147,12 +147,14 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictio
  * Signature: (J)[I
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *, jclass, jlong, jobject);
+
 /*
  * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    newAllocatorNative
- * Signature: (Ljava/lang/String;)J
+ * Method:    newChildAllocatorNative
+ * Signature: (JLjava/lang/String;JJ)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newAllocatorNative(JNIEnv *, jclass, jstring);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newChildAllocatorNative
+        (JNIEnv *, jclass, jlong, jstring, jlong, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_VecAllocator
@@ -166,6 +168,75 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_freeAlloc
  * Method:    newVectorBatchNative
  * Signature: (I)J
  */
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setLimitNative
+        (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getLimitNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getLimitNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getScopeNative
+ * Signature: (J)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getScopeNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    setRootAllocatorLimitNative
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setRootAllocatorLimitNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getAllocatedMemoryNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getAllocatedMemoryNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getParentAllocator
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getParentAllocator
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getChildAllocatorsNative
+ * Signature: (J)[J
+ */
+JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getChildAllocatorsNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getGlobalVectorAllocator
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator
+        (JNIEnv *, jclass);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getPeakAllocatedNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative
+        (JNIEnv *, jclass, jlong);
+
+
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *, jclass, jlongArray,
     jint);
 

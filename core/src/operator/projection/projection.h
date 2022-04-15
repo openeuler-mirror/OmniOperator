@@ -10,7 +10,6 @@
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
 #include "vector/vector_common.h"
-#include "vector/vector_allocator_factory.h"
 #include "type/data_types.h"
 #include "expression/expressions.h"
 #include "operator/execution_context.h"
@@ -103,11 +102,14 @@ class ProjectionOperator : public Operator {
 public:
     explicit ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t inputTypes[],
         int32_t nCols, int32_t nProj, ExecutionContext *context)
-        : proj(proj), nCols(nCols), nProj(nProj), context(context)
+        : proj(proj), nCols(nCols), nProj(nProj)
     {
         this->sourceTypes = inputTypes;
         this->mutated = nullptr;
+        this->context = context;
+        this->context->GetArena()->SetAllocator(vecAllocator);
     }
+
     ~ProjectionOperator() override
     {
         delete context;
@@ -121,7 +123,6 @@ private:
     const std::vector<std::unique_ptr<Projection>> &proj;
     int32_t nCols = 0;
     int32_t nProj = 0;
-    ExecutionContext *context;
     VectorBatch *mutated = nullptr;
 };
 

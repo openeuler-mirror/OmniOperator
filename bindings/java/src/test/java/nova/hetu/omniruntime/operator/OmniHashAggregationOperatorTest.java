@@ -100,13 +100,10 @@ public class OmniHashAggregationOperatorTest {
                 aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
         int rowNum = 40000;
         int pageCount = 10;
-        int[] rowNums = new int[pageCount];
 
         OmniOperator omniOperator = factory.createOperator();
 
-        List<Vec> inputData = new ArrayList<>();
         for (int i = 0; i < pageCount; i++) {
-            inputData.addAll(build4Columns(rowNum));
             VecBatch vecBatch = new VecBatch(build4Columns(rowNum));
             omniOperator.addInput(vecBatch);
         }
@@ -127,14 +124,10 @@ public class OmniHashAggregationOperatorTest {
             assertEquals(((LongVec) vectors[1]).get(0), 1);
             assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
             assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
-            releaseVecMemory(vecBatch.getVectors());
+            freeVecBatch(vecBatch);
         }
-    }
-
-    private void releaseVecMemory(Vec[] vecs) {
-        for (Vec vec : vecs) {
-            vec.close();
-        }
+        omniOperator.close();
+        factory.close();
     }
 
     /**
@@ -208,6 +201,7 @@ public class OmniHashAggregationOperatorTest {
             assertEquals(((LongVec) vectors[1]).get(0), 1);
             assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
             assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
+            freeVecBatch(vecBatch);
         }
     }
 

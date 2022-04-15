@@ -11,7 +11,7 @@ using namespace omniruntime::vec;
 namespace VacharVectorTest {
 TEST(VarcharVector, newVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_newVector");
     EXPECT_TRUE(allocator != nullptr);
     VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
     EXPECT_EQ(vector->GetSize(), 256);
@@ -20,13 +20,12 @@ TEST(VarcharVector, newVector)
     EXPECT_EQ(vector->GetTypeId(), OMNI_VARCHAR);
     delete vector;
 
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(VarcharVector, sliceVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_sliceVector");
     EXPECT_TRUE(allocator != nullptr);
 
     int size = 10;
@@ -74,13 +73,14 @@ TEST(VarcharVector, sliceVector)
     EXPECT_EQ(sliceVector2->GetReference(), 1);
 
     delete sliceVector2;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test set/get
 TEST(VarcharVector, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_setAndGetValue");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 4);
@@ -101,13 +101,13 @@ TEST(VarcharVector, setAndGetValue)
     }
 
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is null
 TEST(VarcharVector, setValueNull)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_setValueNull");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
@@ -131,13 +131,14 @@ TEST(VarcharVector, setValueNull)
         }
     }
     delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is copyPosition
 TEST(VarcharVector, copyPositions)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_copyPositions");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 4);
@@ -167,13 +168,13 @@ TEST(VarcharVector, copyPositions)
     delete vector;
     delete copyPostionVector;
     delete[] positions;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 // Test is CopyRegion
 TEST(VarcharVector, copyRegion)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_copyRegion");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 4);
@@ -199,12 +200,12 @@ TEST(VarcharVector, copyRegion)
 
     delete vector;
     delete copyRegionVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(VarcharVector, emptyString)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_emptyString");
     EXPECT_TRUE(allocator != nullptr);
 
     std::vector<std::string> data = { "e", "abc", "", "hg", "" };
@@ -222,12 +223,12 @@ TEST(VarcharVector, emptyString)
     }
 
     delete original;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(VarcharVector, appendVector)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_appendVector");
     EXPECT_TRUE(allocator != nullptr);
 
     auto *src1 = new VarcharVector(allocator, 1024, 5);
@@ -267,13 +268,13 @@ TEST(VarcharVector, appendVector)
     delete src2;
     delete dictionaryVector;
     delete appended;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 
 TEST(VarcharVector, setValueExpand)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_setValueExpand");
     EXPECT_TRUE(allocator != nullptr);
 
     // specify initial capacity expansion
@@ -336,12 +337,12 @@ TEST(VarcharVector, setValueExpand)
     delete vector;
     delete vector1;
     delete iniZeroCapacityVector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    delete allocator;
 }
 
 TEST(VarcharVector, appendExpand)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVec_appendExpand");
     EXPECT_TRUE(allocator != nullptr);
 
     auto *src1 = new VarcharVector(allocator, 1024, 5);
@@ -370,7 +371,6 @@ TEST(VarcharVector, appendExpand)
     delete src1;
     delete src2;
     delete appended;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-    EXPECT_TRUE(allocator == nullptr);
+    delete allocator;
 }
 }

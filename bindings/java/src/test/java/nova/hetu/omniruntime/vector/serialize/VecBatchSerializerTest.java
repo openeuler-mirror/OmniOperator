@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector.serialize;
@@ -11,6 +11,7 @@ import static nova.hetu.omniruntime.type.Date64DataType.DATE64;
 import static nova.hetu.omniruntime.type.Decimal64DataType.DECIMAL64;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -81,18 +82,19 @@ public class VecBatchSerializerTest {
             assertEquals(i, checkDecimal128Vec.get(i)[0]);
             assertEquals(i + 1, checkDecimal128Vec.get(i)[1]);
         }
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
     public void testSerializeDirectoryVecContainsLongVec() {
         // prepare vector batch
-        LongVec longVec = new LongVec(ROW_COUNT);
+        LongVec dictionary = new LongVec(ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            longVec.set(i, i);
+            dictionary.set(i, i);
         }
-        DictionaryVec dictionaryVec = new DictionaryVec(longVec, new int[]{1, 2, 1000});
+        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[]{1, 2, 1000});
+        dictionary.close();
         VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
 
         // serialize
@@ -109,18 +111,19 @@ public class VecBatchSerializerTest {
         assertEquals(2, checkLongVec.get(1));
         assertEquals(1000, checkLongVec.get(2));
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
     public void testSerializeDirectoryVecContainsVarcharVec() {
         // prepare vector batch
-        VarcharVec varCharVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
+        VarcharVec dictionary = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
+            dictionary.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
-        DictionaryVec dictionaryVec = new DictionaryVec(varCharVec, new int[]{1, 2, 1000});
+        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[]{1, 2, 1000});
+        dictionary.close();
         VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
 
         // serialize
@@ -137,19 +140,21 @@ public class VecBatchSerializerTest {
         assertEquals("test2", new String(checkLongVec.get(1)));
         assertEquals("test1000", new String(checkLongVec.get(2)));
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
     public void testSerializeNestedDirectoryVec() {
         // prepare vector batch
-        VarcharVec varCharVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
+        VarcharVec dictionary = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            varCharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
+            dictionary.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
-        DictionaryVec dictionaryVec = new DictionaryVec(varCharVec, new int[]{1, 2, 3, 4, 5, 6, 7, 1000});
+        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[]{1, 2, 3, 4, 5, 6, 7, 1000});
+        dictionary.close();
         DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, new int[]{1, 2, 7});
+        dictionaryVec.close();
         VecBatch vecBatch = new VecBatch(new Vec[]{nestedDictionaryVec});
 
         // serialize
@@ -166,8 +171,8 @@ public class VecBatchSerializerTest {
         assertEquals("test3", new String(checkLongVec.get(1)));
         assertEquals("test1000", new String(checkLongVec.get(2)));
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
@@ -212,8 +217,8 @@ public class VecBatchSerializerTest {
             assertEquals(i + 1, checkDecimal128Vec.get(i)[1]);
         }
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test(enabled = false)
@@ -260,8 +265,7 @@ public class VecBatchSerializerTest {
             assertEquals(i + 1, checkDecimal128Vec.get(i)[1]);
         }
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
+        freeVecBatch(vecBatch);
     }
 
     @Test
@@ -284,7 +288,7 @@ public class VecBatchSerializerTest {
             Object[][] expectedDatas = {{0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L}};
             assertVecBatchEquals(resultVecBatch, expectedDatas);
             vecBatch.close();
-            resultVecBatch.close();
+            freeVecBatch(resultVecBatch);
         }
         col1.close();
     }
@@ -292,11 +296,12 @@ public class VecBatchSerializerTest {
     @Test
     public void testSerializeCharVec() {
         // prepare vector batch
-        VarcharVec charVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
+        VarcharVec dictionary = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
         for (int i = 0; i < ROW_COUNT; i++) {
-            charVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
+            dictionary.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
         }
-        DictionaryVec dictionaryVec = new DictionaryVec(charVec, new int[]{1, 2, 1000});
+        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, new int[]{1, 2, 1000});
+        dictionary.close();
         VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
 
         // serialize
@@ -313,10 +318,8 @@ public class VecBatchSerializerTest {
         assertEquals("test2", new String(checkResultVec.get(1)));
         assertEquals("test1000", new String(checkResultVec.get(2)));
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
@@ -336,9 +339,9 @@ public class VecBatchSerializerTest {
         VecBatch resultVecBatch = serializer.deserialize(str);
         Object[][] expectedDatas = {{0L, 1L, 2L, 3L, 4L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        vecBatch.close();
-        resultVecBatch.close();
-        col1.close();
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(resultVecBatch);
     }
 
     @Test
@@ -373,10 +376,8 @@ public class VecBatchSerializerTest {
             }
         }
 
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test
@@ -413,14 +414,13 @@ public class VecBatchSerializerTest {
         Object[][] expectedDatas = {{1, 2, 3, 4, 5}, {1L, 2L, 3L, 4L, 5L}, {1L, 2L, 3L, 4L, 5L},
                 {"1", "2", "3", "4", "5"}, {1.1D, 2.2D, 3.3D, 4.4D, 5.5D}, {true, false, true, false, true}};
         assertVecBatchEquals(checkVecBatch, expectedDatas);
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 
     @Test(expectedExceptions = IllegalStateException.class,
-            expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
+        expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
     public void testSerializeInvalidType() {
         int row = 5;
         IntVec invalidType = new IntVec(row);
@@ -430,8 +430,7 @@ public class VecBatchSerializerTest {
         try {
             serializer.serialize(vecBatch);
         } finally {
-            vecBatch.releaseAllVectors();
-            vecBatch.close();
+            freeVecBatch(vecBatch);
         }
     }
 
@@ -459,9 +458,8 @@ public class VecBatchSerializerTest {
         VecBatch checkVecBatch = serializer.deserialize(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, serialized);
         IntVec checkResultVec = (IntVec) checkVecBatch.getVector(0);
         assertVecEquals(checkResultVec, new Object[]{1, 2, 3, 4, 5});
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
-        checkVecBatch.releaseAllVectors();
-        checkVecBatch.close();
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 }

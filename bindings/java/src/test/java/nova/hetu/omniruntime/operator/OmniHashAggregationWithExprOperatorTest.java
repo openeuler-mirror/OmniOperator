@@ -61,6 +61,8 @@ public class OmniHashAggregationWithExprOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
+        omniOperator.close();
+        factory.close();
     }
 
     @Test
@@ -95,6 +97,8 @@ public class OmniHashAggregationWithExprOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
+        omniOperator.close();
+        factory.close();
     }
 
     @Test
@@ -129,5 +133,7 @@ public class OmniHashAggregationWithExprOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
+        omniOperator.close();
+        factory.close();
     }
 }

@@ -133,11 +133,11 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MAX:
             case OMNI_AGGREGATION_TYPE_MIN:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+                    sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator)));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    DataType(OMNI_NONE), allTypes.Get()[sourceTypes.GetSize() + i])));
+                    DataType(OMNI_NONE), allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator)));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;

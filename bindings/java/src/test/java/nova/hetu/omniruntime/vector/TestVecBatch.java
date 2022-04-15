@@ -37,6 +37,7 @@ public class TestVecBatch {
     public void testNewVecBatchWithEmptyVectors() {
         // for load libomni_runtime.so
         LongVec vec = new LongVec(1);
+        vec.close();
         List<Vec> emptyVecs = new ArrayList<>();
         int rowCount = 100;
         VecBatch vecBatch = new VecBatch(emptyVecs, rowCount);

@@ -128,7 +128,7 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
 VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, int32_t length)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
     uint32_t width = type.GetWidth();
     VarcharVector *vector = new VarcharVector(vecAllocator, length * width, length);
     for (int32_t i = 0; i < length; i++) {
@@ -139,7 +139,7 @@ VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, in
 
 Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
 {
-    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
     Decimal128Vector *vector = new Decimal128Vector(vecAllocator, length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, values[i]);
@@ -198,7 +198,7 @@ VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
 
 VectorBatch *createEmptyVectorBatch(std::vector<DataType> &dataTypes)
 {
-    VectorAllocator *allocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator();
     VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
     vectorBatch->NewVectors(allocator, dataTypes);
     return vectorBatch;

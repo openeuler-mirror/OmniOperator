@@ -136,9 +136,11 @@ public:
           projectVecCount(projectVecCount),
           inputTypes(inputDataTypes),
           vecCount(vecCount),
-          context(context),
           projectedVecs(nullptr)
-    {}
+    {
+        this->context = context;
+        this->context->GetArena()->SetAllocator(vecAllocator);
+    }
 
     ~FilterAndProjectOperator() override
     {
@@ -155,7 +157,6 @@ private:
     int32_t projectVecCount;
     const int32_t *inputTypes;
     int32_t vecCount;
-    ExecutionContext *context;
     omniruntime::vec::VectorBatch *projectedVecs;
 };
 
