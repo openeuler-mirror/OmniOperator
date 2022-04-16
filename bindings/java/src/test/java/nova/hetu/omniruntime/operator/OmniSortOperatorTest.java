@@ -395,6 +395,7 @@ public class OmniSortOperatorTest {
             VecBatch resultWithoutJit = outputWithoutJit.next();
             VecBatch resultWithJit = outputWithJit.next();
             assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            freeVecBatch(resultWithoutJit);
             freeVecBatch(resultWithJit);
         }
 
