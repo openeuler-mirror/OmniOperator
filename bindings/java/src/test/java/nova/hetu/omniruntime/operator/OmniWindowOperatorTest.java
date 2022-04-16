@@ -7,6 +7,8 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
@@ -201,6 +203,33 @@ public class OmniWindowOperatorTest {
 
         omniOperator.close();
         omniWindowOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        int[] partitionChannels = {0};
+        int[] preGroupedChannels = {};
+        int[] sortChannels = {1};
+        int[] sortOrder = {1};
+        int[] sortNullFirsts = {0};
+        int preSortedChannelPrefix = 0;
+        int expectedPositions = 10000;
+        int[] argumentChannels = {1, -1};
+        DataType[] windowFunctionReturnType = {LongDataType.LONG, LongDataType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] outputChannels = {0, 1};
+        OmniWindowOperatorFactory.JitContext factory1 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+        OmniWindowOperatorFactory.JitContext factory2 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+        OmniWindowOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     private VecBatch buildData() {

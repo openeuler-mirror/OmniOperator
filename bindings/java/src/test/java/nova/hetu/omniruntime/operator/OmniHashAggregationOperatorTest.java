@@ -11,6 +11,7 @@ import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -206,6 +207,26 @@ public class OmniHashAggregationOperatorTest {
         int threadCount = 1;
         int rowNum = 100;
         multiThreadExecution(threadCount, rowNum, pageCount);
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        String[] groupByChannel = {"#0", "#1"};
+        DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
+        String[] aggChannels = {"#3"};
+        DataType[] aggTypes = {LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+
+        OmniHashAggregationOperatorFactory.JitContext factory1 = new OmniHashAggregationOperatorFactory.JitContext(
+                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+        OmniHashAggregationOperatorFactory.JitContext factory2 = new OmniHashAggregationOperatorFactory.JitContext(
+                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+        OmniHashAggregationOperatorFactory.JitContext factory3 = null;
+
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {

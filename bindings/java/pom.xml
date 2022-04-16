@@ -40,14 +40,14 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>${jackson.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
-            <scope>provided</scope>
         </dependency>
+
+        <!--For test-->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -185,6 +185,9 @@
                     <reportService>SiteManagement</reportService>
                     <reportVersion>2.1.0</reportVersion>
                     <autoOpenReport>true</autoOpenReport>
+                    <excludes>
+                        <item>**/nova/hetu/omniruntime/vector/serialize/*</item>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>

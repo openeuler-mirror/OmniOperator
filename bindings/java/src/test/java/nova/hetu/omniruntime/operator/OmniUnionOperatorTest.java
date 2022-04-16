@@ -9,6 +9,8 @@ import static nova.hetu.omniruntime.util.TestUtils.createDictionaryVec;
 import static nova.hetu.omniruntime.util.TestUtils.createLongVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -135,5 +137,16 @@ public class OmniUnionOperatorTest {
         freeVecBatch(resultVecBatch2);
         unionOperator.close();
         unionOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        OmniUnionOperatorFactory.JitContext factory1 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false);
+        OmniUnionOperatorFactory.JitContext factory2 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false);
+        OmniUnionOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 }

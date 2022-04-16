@@ -7,8 +7,9 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -146,5 +147,22 @@ public class OmniSortWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
+        int[] outputCols = {0, 1};
+        String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+        OmniSortWithExprOperatorFactory.JitContext factory1 = new OmniSortWithExprOperatorFactory.JitContext(
+                sourceTypes, outputCols, sortKeys, ascendings, nullFirsts);
+        OmniSortWithExprOperatorFactory.JitContext factory2 = new OmniSortWithExprOperatorFactory.JitContext(
+                sourceTypes, outputCols, sortKeys, ascendings, nullFirsts);
+        OmniSortWithExprOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 }

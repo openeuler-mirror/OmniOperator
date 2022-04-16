@@ -8,7 +8,6 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createIntVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -1434,5 +1433,28 @@ public class OmniFilterAndProjectOperatorTest {
 
         assertFalse(factory.isSupported());
         factory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] types = {DoubleDataType.DOUBLE};
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
+
+        OmniFilterAndProjectOperatorFactory.JitContext factory1 = new OmniFilterAndProjectOperatorFactory.JitContext(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
+                        + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
+                types, projectionsJSON, 1);
+        OmniFilterAndProjectOperatorFactory.JitContext factory2 = new OmniFilterAndProjectOperatorFactory.JitContext(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
+                        + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
+                types, projectionsJSON, 1);
+        OmniFilterAndProjectOperatorFactory.JitContext factory3 = null;
+
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 }

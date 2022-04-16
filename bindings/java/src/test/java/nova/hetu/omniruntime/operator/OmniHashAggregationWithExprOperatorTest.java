@@ -12,6 +12,8 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
@@ -206,6 +208,29 @@ public class OmniHashAggregationWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         omniOperator.close();
         factory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        String[] groupByChanel = {"#0", "#2"};
+        String[] aggChannels = {"#1", "#3"};
+
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
+
+        OmniHashAggregationWithExprOperatorFactory.JitContext factory1 =
+                new OmniHashAggregationWithExprOperatorFactory.JitContext(
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+        OmniHashAggregationWithExprOperatorFactory.JitContext factory2 =
+                new OmniHashAggregationWithExprOperatorFactory.JitContext(
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+        OmniHashAggregationWithExprOperatorFactory.JitContext factory3 = null;
+
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     private List<Vec> buildDataForCount(int rowNum) {

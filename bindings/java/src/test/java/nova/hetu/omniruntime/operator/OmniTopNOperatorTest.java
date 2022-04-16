@@ -7,6 +7,8 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
@@ -247,6 +249,23 @@ public class OmniTopNOperatorTest {
 
         operator.close();
         omniTopNOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
+        String[] sortCols = {"#1"};
+        int[] sortAsc = {0};
+        int[] nullFirst = {0};
+        int expectedRowSize = 5;
+        OmniTopNOperatorFactory.JitContext factory1 = new OmniTopNOperatorFactory.JitContext(sourceTypes,
+                expectedRowSize, sortCols, sortAsc, nullFirst);
+        OmniTopNOperatorFactory.JitContext factory2 = new OmniTopNOperatorFactory.JitContext(sourceTypes,
+                expectedRowSize, sortCols, sortAsc, nullFirst);
+        OmniTopNOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     private ImmutableList<VecBatch> buildVecs() {

@@ -9,8 +9,8 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -463,6 +463,23 @@ public class OmniSortOperatorTest {
         threadPool.shutdown();
         vecs.forEach(TestUtils::freeVecBatch);
         sortOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
+        int[] outputCols = {0, 1};
+        String[] sortCols = {"#1", "#0"};
+        int[] ascendings = {0, 0};
+        int[] nullFirsts = {1, 1};
+        OmniSortOperatorFactory.JitContext factory1 = new OmniSortOperatorFactory.JitContext(sourceTypes, outputCols,
+                sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory.JitContext factory2 = new OmniSortOperatorFactory.JitContext(sourceTypes, outputCols,
+                sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     private ImmutableList<VecBatch> buildVecs() {
