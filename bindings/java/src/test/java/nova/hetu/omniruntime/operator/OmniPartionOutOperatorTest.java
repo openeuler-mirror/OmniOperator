@@ -7,6 +7,8 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
 import nova.hetu.omniruntime.type.CharDataType;
@@ -124,5 +126,33 @@ public class OmniPartionOutOperatorTest {
         TestUtils.freeVecBatch(result);
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        OptionalInt nullChannel = OptionalInt.empty();
+        int[] partitionChannels = {0};
+        int partitionCount = 1;
+        int[] bucketToPartition = {0};
+        DataType[] hashChannelTypes = {CharDataType.CHAR};
+        int[] hashChannels = {0};
+
+        DataType[] buildTypes = {new CharDataType(3), new CharDataType(3)};
+        Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
+        VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
+        DataType[] sourceTypes = {CharDataType.CHAR};
+
+        OmniPartitionedOutPutOperatorFactory.JitContext factory1 =
+                new OmniPartitionedOutPutOperatorFactory.JitContext(
+                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
+                hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory.JitContext factory2 =
+                new OmniPartitionedOutPutOperatorFactory.JitContext(
+                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
+                hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 }

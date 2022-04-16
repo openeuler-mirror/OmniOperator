@@ -4,4 +4,4 @@
 /* #undef DEBUG_VECTOR */
 /* #undef DEBUG_LLVM */
 /* #undef DISABLE_JIT */
-#define COVERAGE
+/* #undef COVERAGE */

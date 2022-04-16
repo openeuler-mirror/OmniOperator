@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.limit.OmniLimitOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -71,5 +73,16 @@ public class OmniLimitOperatorTest {
         resultVecBatch1.close();
         limitOperator.close();
         limitOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        OmniLimitOperatorFactory.JitContext factory1 = new OmniLimitOperatorFactory.JitContext(6);
+        OmniLimitOperatorFactory.JitContext factory2 = new OmniLimitOperatorFactory.JitContext(6);
+        OmniLimitOperatorFactory.JitContext factory3 = null;
+
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 }

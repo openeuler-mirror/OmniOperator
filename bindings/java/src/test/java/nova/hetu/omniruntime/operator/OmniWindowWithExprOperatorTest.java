@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
@@ -64,6 +66,31 @@ public class OmniWindowWithExprOperatorTest {
 
         omniOperator.close();
         omniWindowOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
+        int[] outputChannels = {0, 1, 2};
+        FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
+        int[] partitionChannels = {0};
+        int[] preGroupedChannels = {};
+        int[] sortChannels = {1};
+        int[] sortOrder = {0};
+        int[] sortNullFirsts = {0};
+        int preSortedChannelPrefix = 0;
+        String[] argumentKeys = {"ADD:3(#2, 50:3)"};
+        DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
+        OmniWindowWithExprOperatorFactory.JitContext factory1 = new OmniWindowWithExprOperatorFactory.JitContext(
+                sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
+                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType);
+        OmniWindowWithExprOperatorFactory.JitContext factory2 = new OmniWindowWithExprOperatorFactory.JitContext(
+                sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
+                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType);
+        OmniWindowWithExprOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     private VecBatch buildData() {

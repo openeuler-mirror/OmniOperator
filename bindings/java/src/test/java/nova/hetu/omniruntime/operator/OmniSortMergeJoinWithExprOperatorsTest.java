@@ -10,6 +10,8 @@ import static nova.hetu.omniruntime.util.TestUtils.createBlankVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.join.OmniSmjBufferedTableWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniSmjStreamedTableWithExprOperatorFactory;
@@ -88,5 +90,38 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         bufferedWithExprOperatorFactory.close();
         streamedTableOperator.close();
         streamedBuilderWithExprOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
+
+        String[] streamedKeyExps = {"$operator$ADD:1(#0, 5:1)"};
+        int[] streamedOutputCols = {1};
+        OmniSmjStreamedTableWithExprOperatorFactory.JitContext streamedBuilderWithExprOperatorFactory1 =
+                new OmniSmjStreamedTableWithExprOperatorFactory.JitContext(
+                streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty());
+        OmniSmjStreamedTableWithExprOperatorFactory.JitContext streamedBuilderWithExprOperatorFactory2 =
+                new OmniSmjStreamedTableWithExprOperatorFactory.JitContext(
+                streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty());
+        OmniSmjStreamedTableWithExprOperatorFactory.JitContext streamedBuilderWithExprOperatorFactory3 = null;
+        assertTrue(streamedBuilderWithExprOperatorFactory1.equals(streamedBuilderWithExprOperatorFactory2));
+        assertTrue(streamedBuilderWithExprOperatorFactory1.equals(streamedBuilderWithExprOperatorFactory1));
+        assertFalse(streamedBuilderWithExprOperatorFactory1.equals(streamedBuilderWithExprOperatorFactory3));
+
+        DataType[] bufferedTypes = {LongDataType.LONG, IntDataType.INTEGER};
+
+        int[] bufferedOutputCols = {0};
+        String[] bufferedKeyExps = {"$operator$ADD:1(#1, 5:1)"};
+        OmniSmjBufferedTableWithExprOperatorFactory.JitContext bufferedWithExprOperatorFactory1 =
+                new OmniSmjBufferedTableWithExprOperatorFactory.JitContext(
+                bufferedTypes, bufferedKeyExps, bufferedOutputCols);
+        OmniSmjBufferedTableWithExprOperatorFactory.JitContext bufferedWithExprOperatorFactory2 =
+                new OmniSmjBufferedTableWithExprOperatorFactory.JitContext(
+                bufferedTypes, bufferedKeyExps, bufferedOutputCols);
+        OmniSmjBufferedTableWithExprOperatorFactory.JitContext bufferedWithExprOperatorFactory3 = null;
+        assertTrue(bufferedWithExprOperatorFactory1.equals(bufferedWithExprOperatorFactory2));
+        assertTrue(bufferedWithExprOperatorFactory1.equals(bufferedWithExprOperatorFactory1));
+        assertFalse(bufferedWithExprOperatorFactory1.equals(bufferedWithExprOperatorFactory3));
     }
 }

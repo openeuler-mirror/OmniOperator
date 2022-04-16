@@ -7,6 +7,8 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.limit.OmniDistinctLimitOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -125,5 +127,23 @@ public class OmniDistinctLimitOperatorTest {
         freeVecBatch(resultVecBatch1);
         distinctLimitOperator.close();
         distinctLimitOperatorFactory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, LongDataType.LONG};
+        Object[][] sourceDatas1 = {{0, 1, 2, 0, 1}, {6.6, 5.5, 4.4, 6.6, 2.2},
+                {100000L, 110000L, 120000L, 100000L, 110000L}};
+
+        int[] distinctCols = {0, 1};
+        OmniDistinctLimitOperatorFactory.JitContext factory1 = new OmniDistinctLimitOperatorFactory.JitContext(
+                sourceTypes, distinctCols, 2, sourceDatas1[0].length);
+        OmniDistinctLimitOperatorFactory.JitContext factory2 = new OmniDistinctLimitOperatorFactory.JitContext(
+                sourceTypes, distinctCols, 2, sourceDatas1[0].length);
+        OmniDistinctLimitOperatorFactory.JitContext factory3 = null;
+
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 }

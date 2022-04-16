@@ -180,4 +180,23 @@ public class OmniProjectOperatorTest {
         assertFalse(factory.isSupported());
         factory.close();
     }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] types = {};
+        String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", "
+                + "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": "
+                + "\"FUNCTION\", \"returnType\": 4, \"function_name\": \"not\", \"arguments\": "
+                + "[{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": true}]}, \"if_true\": "
+                + "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, "
+                + "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
+        OmniProjectOperatorFactory.JitContext factory1 = new OmniProjectOperatorFactory.JitContext(projectionsJSON,
+                types, 1);
+        OmniProjectOperatorFactory.JitContext factory2 = new OmniProjectOperatorFactory.JitContext(projectionsJSON,
+                types, 1);
+        OmniProjectOperatorFactory.JitContext factory3 = null;
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
+    }
 }

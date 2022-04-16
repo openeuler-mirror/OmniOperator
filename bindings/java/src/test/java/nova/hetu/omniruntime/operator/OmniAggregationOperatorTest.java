@@ -11,7 +11,9 @@ import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
@@ -148,6 +150,25 @@ public class OmniAggregationOperatorTest {
 
         omniOperator.close();
         factory.close();
+    }
+
+    @Test
+    public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+        int[] aggInputChannels = {0, 1, 2, 3};
+        int[] maskChannels = {-1, -1, -1, -1};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        OmniAggregationOperatorFactory.JitContext factory1 = new OmniAggregationOperatorFactory.JitContext(sourceTypes,
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
+        OmniAggregationOperatorFactory.JitContext factory2 = new OmniAggregationOperatorFactory.JitContext(sourceTypes,
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
+        OmniAggregationOperatorFactory.FactoryContext factory3 = null;
+
+        assertTrue(factory1.equals(factory2));
+        assertTrue(factory1.equals(factory1));
+        assertFalse(factory1.equals(factory3));
     }
 
     @Test
