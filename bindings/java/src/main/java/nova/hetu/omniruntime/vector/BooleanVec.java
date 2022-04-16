@@ -76,13 +76,25 @@ public class BooleanVec extends FixedWidthVec {
      * Batch sets the specified boolean at the specified absolute.
      *
      * @param values the value of the element to be written
-     * @param offset the element offset in vec
+     * @param index the element index in vec
      * @param start the element index in values
      * @param length the number of elements that need to written
      */
-    public void put(boolean[] values, int offset, int start, int length) {
+    public void put(boolean[] values, int index, int start, int length) {
         byte[] data = transformBooleanToByte(values, start, length);
-        valuesBuf.setBytes(offset, data, 0, length);
+        valuesBuf.setBytes(index, data, 0, length);
+    }
+
+    /**
+     * Batch sets the specified byte at the specified absolute.
+     *
+     * @param values the value of the element to be written
+     * @param index the element index in vec
+     * @param start the element index in values
+     * @param length the number of elements that need to written
+     */
+    public void put(byte[] values, int index, int start, int length) {
+        valuesBuf.setBytes(index * BYTES, values, start * BYTES, length * BYTES);
     }
 
     @Override
