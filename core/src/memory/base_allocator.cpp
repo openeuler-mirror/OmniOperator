@@ -52,7 +52,7 @@ void BaseAllocator::Close()
     int64_t currentAllocated = allocatedBytes.load(std::memory_order_relaxed);
     if (currentAllocated > 0) {
         ReleaseBytes(currentAllocated);
-        LogError("Memory leak in allocator:%s,leak size in bytes is:%ld, stack is:%s", scope.c_str(), currentAllocated,
+        LogWarn("Memory leak in allocator:%s,leak size in bytes is:%ld, stack is:%s", scope.c_str(), currentAllocated,
             TraceUtil::GetStack().c_str());
     }
 
