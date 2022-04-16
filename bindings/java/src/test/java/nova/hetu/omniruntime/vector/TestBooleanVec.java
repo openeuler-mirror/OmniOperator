@@ -104,6 +104,20 @@ public class TestBooleanVec {
             assertEquals(vector2.get(i + 1), values[i + 2]);
         }
         vector2.close();
+
+        byte[] byteValues = {1, 0, 0, 1, 1};
+        BooleanVec vector3 = new BooleanVec(byteValues.length);
+        vector3.put(byteValues, 0, 0, byteValues.length);
+        for (int i = 0; i < byteValues.length; i++) {
+            assertEquals(vector3.get(i), byteValues[i] == Vec.NULL);
+        }
+        vector3.close();
+        BooleanVec vector4 = new BooleanVec(byteValues.length);
+        vector4.put(byteValues, 1, 2, 3);
+        for (int i = 0; i < 3; i++) {
+            assertEquals(vector4.get(i + 1), byteValues[i + 2] == Vec.NULL);
+        }
+        vector4.close();
     }
 
     /**
