@@ -3361,6 +3361,62 @@ TEST(CodeGenTest, Substr)
     delete context;
 }
 
+TEST(CodeGenTest, Mm3HashDate32)
+{
+    // create expression objects
+    auto col0 = new FieldExpr(0, Date32Type());
+    auto data = new LiteralExpr(42, IntType());
+    std::string funcStr = "mm3hash";
+    DataTypePtr retType = IntType();
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col0);
+    hashArgs.push_back(data);
+    auto mhash = GetFuncExpr(funcStr, hashArgs, IntType());
+
+    auto equalRight = new LiteralExpr(723455942, IntType());
+
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, mhash, equalRight, BooleanType());
+
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_DATE32) };
+    DataTypes types(vecOfTypes);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int32_t v1[1] = {-2147483648};
+    auto *vals = new int64_t[1];
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    auto *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr);
+
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+                       dictionaries);
+    EXPECT_EQ(result, true);
+    context->GetArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] selected;
+    delete context;
+    delete expr;
+    codegen.reset();
+}
+
 TEST(CodeGenTest, Mm3HashInt)
 {
     // create expression objects
