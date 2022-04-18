@@ -246,6 +246,11 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
         [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
+    for (int i = 0; i < argTypes.size(); i++) {
+        if (argTypes[i] == omniruntime::type::OMNI_DATE32) {
+            argTypes[i] = omniruntime::type::OMNI_INT;
+        }
+    }
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (TypeUtil::IsStringType(retTypeId)) {
