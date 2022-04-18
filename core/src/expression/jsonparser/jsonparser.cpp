@@ -123,6 +123,9 @@ Expr *JSONParser::ParseJSONIn(Json jsonExpr)
 Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
 {
     Expr *val = ParseJSON(jsonExpr["value"]);
+    if (val == nullptr) {
+        return nullptr;
+    }
     Expr *lowBoundExpr = ParseJSON(jsonExpr["lower_bound"]);
     if (lowBoundExpr == nullptr) {
         return nullptr;
