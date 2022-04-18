@@ -29,8 +29,8 @@ const int32_t REPEAT_COUNT = 200;
 const int32_t COLUMN_COUNT_4 = 4;
 const int32_t VEC_BATCH_COUNT_10 = 10;
 const int32_t VEC_BATCH_COUNT_1 = 1;
-const int32_t BUILD_POSITION_COUNT = 1000000;
-const int32_t PROBE_POSITION_COUNT = 10000;
+const int32_t BUILD_POSITION_COUNT = 1000;
+const int32_t PROBE_POSITION_COUNT = 1000;
 const int32_t TIME_TO_SLEEP = 100;
 
 void DeleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory,

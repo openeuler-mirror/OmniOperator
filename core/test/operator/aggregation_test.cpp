@@ -1149,7 +1149,7 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     VectorHelper::FreeVecBatches(result);
 }
 
-TEST(AggregationOperatorTest, perf_original)
+TEST(AggregationOperatorTest, DISABLED_perf_original)
 {
     DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
     DataTypes aggOutputTypes(
@@ -1213,7 +1213,7 @@ TEST(AggregationOperatorTest, perf_original)
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
-TEST(AggregationOperatorTest, perf_codegen)
+TEST(AggregationOperatorTest, DISABLED_perf_codegen)
 {
     using namespace std;
 
