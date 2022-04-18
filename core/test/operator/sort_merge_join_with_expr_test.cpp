@@ -65,12 +65,12 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = createEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
     addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatchEof);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
-    VectorBatch *streamedTblVecBatchEof = createEmptyVectorBatch(streamTypeVector);
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypeVector);
     addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
@@ -154,12 +154,12 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = createEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
     addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatchEof);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
-    VectorBatch *streamedTblVecBatchEof = createEmptyVectorBatch(streamTypeVector);
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypeVector);
     addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 

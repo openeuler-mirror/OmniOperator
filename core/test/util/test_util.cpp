@@ -196,7 +196,7 @@ VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
     return vectorBatch;
 }
 
-VectorBatch *createEmptyVectorBatch(std::vector<DataType> &dataTypes)
+VectorBatch *CreateEmptyVectorBatch(std::vector<DataType> &dataTypes)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator();
     VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
