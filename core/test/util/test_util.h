@@ -21,7 +21,7 @@
 namespace TestUtil {
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::type::DataTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<omniruntime::vec::DataType> &dataTypes);
+omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(std::vector<omniruntime::vec::DataType> &dataTypes);
 omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::VarcharDataType type, std::string *values,
     int32_t length);
 omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,

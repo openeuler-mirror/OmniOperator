@@ -50,7 +50,7 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
     std::vector<VectorBatch *> vector3;
-    VectorBatch *emptyVectorBatch = createEmptyVectorBatch(types);
+    VectorBatch *emptyVectorBatch = CreateEmptyVectorBatch(types);
     vector3.push_back(emptyVectorBatch);
 
     dynamicPagesIndex->AddVecBatches(vector3);
@@ -174,12 +174,12 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = createEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
-    VectorBatch *streamedTblVecBatchEof = createEmptyVectorBatch(streamTypesVector);
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
@@ -1436,8 +1436,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter = "$operator$GREATER_THAN:4(#0, 1:1)";
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "TestSortMergeJoinResultBuilderWithFilter");
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("TestSortMergeJoinResultBuilderWithFilter");
 
     auto *resultBuilder =
         new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount, leftPagesIndex,

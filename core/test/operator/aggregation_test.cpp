@@ -357,9 +357,9 @@ void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input,
 {
     // create operatory
     auto nativeOperatorFactory = reinterpret_cast<AggregationOperatorFactory *>(moduleAddr);
-    Operator *aggregation;
+    Operator *aggregation = nullptr;
     if (codegenMode) {
-        aggregation = reinterpret_cast<OptModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
+        aggregation = CreateTestOperator(nativeOperatorFactory);
     } else {
         aggregation = nativeOperatorFactory->CreateOperator();
     }
@@ -720,7 +720,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     VectorBatch **input = new VectorBatch *[vecBatchNum];
     const int dataSize = 10;
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "aggregation_verfify_correctness_group_by_agg_same_cols");
+        "aggregation_verfify_correctness_group_by_agg_same_cols");
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(2);
         LongVector *col1 = new LongVector(vecAllocator, dataSize);
@@ -1597,7 +1597,7 @@ TEST(AggregatorTest, sum_test)
     auto sumNull = sumFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 3, true, false);
 
     VectorAllocator *vectorAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_sum_test");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_sum_test");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 2), rowPerVecBatch);
     LongDataType longDataType;
@@ -1667,7 +1667,7 @@ TEST(AggregatorTest, count_column_test)
     auto countNull = countFactory->CreateAggregator(LongDataType::Instance(), LongDataType::Instance(), 2, true, false);
 
     VectorAllocator *vectorAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_column_test");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_column_test");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     LongDataType longDataType;
     int32_t ids[rowPerVecBatch];
@@ -1721,7 +1721,7 @@ TEST(AggregatorTest, count_all_test)
         Aggregator::INVALID_INPUT_COL, true, false);
 
     VectorAllocator *vectorAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_all_test");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_all_test");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     LongDataType longDataType;
     auto nullInputVec = BuildAggregateInput(vectorAllocator, DataType(OMNI_NONE), ROW_PER_VEC_BATCH);
@@ -1895,7 +1895,7 @@ TEST(AggregatorTest, max_test)
         maxFactory->CreateAggregator(BooleanDataType::Instance(), BooleanDataType::Instance(), 6, true, false);
 
     VectorAllocator *vectorAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_max_test1");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_max_test1");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 0), rowPerVecBatch);
     VarcharDataType varcharDataType(1);
@@ -2025,7 +2025,7 @@ TEST(AggregatorTest, avg_test)
     auto avgNull = avgFactory->CreateAggregator(LongDataType::Instance(), DoubleDataType::Instance(), 3, true, false);
 
     VectorAllocator *vectorAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_avg_test");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_avg_test");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongDataType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(vectorAllocator, Decimal128DataType(38, 0), rowPerVecBatch);
     LongDataType longDataType;
