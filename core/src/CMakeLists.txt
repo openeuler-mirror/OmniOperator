@@ -43,12 +43,13 @@ install(TARGETS ${OM_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 message(STATUS "Install libomni_runtime.so into ${CMAKE_INSTALL_PREFIX}")
 
 # compile IR files
-set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
+set(COMPILE_OPTION "-S -O2 -emit-llvm -fno-discard-value-names")
 set(LLVM_INCLUDE -I/usr/lib/llvm-12/include)
 set(COMPILE_INCLUDE_SOURCE -I${CMAKE_CURRENT_LIST_DIR})
 
 # add sources file, if you have new source need compile to ir file, pls add it here.
-set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp
+set(IR_SOURCE_FILES
+        \"${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/pages_index.cpp
@@ -68,16 +69,13 @@ set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggrega
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/limit/limit.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/operator/limit/distinct_limit.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/limit/distinct_limit.cpp\"
         )
-set(IR_COMPILE_COMMANDS "")
-foreach(IR_SOURCE_FILE ${IR_SOURCE_FILES})
-    list(APPEND IR_COMPILE_COMMANDS COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${IR_SOURCE_FILE} ${LLVM_INCLUDE} ${COMPILE_INCLUDE_SOURCE})
-endforeach()
-message(STATUS "IRs Compiling...")
-execute_process(${IR_COMPILE_COMMANDS})
-message(STATUS "IRs Compiled")
+add_custom_command(TARGET ${OM_TARGET} PRE_LINK
+        COMMAND bash ${CMAKE_CURRENT_LIST_DIR}/build.sh ${IR_COMPILE_COMMANDS} ${IR_COMPILER} ${COMPILE_OPTION} ${IR_SOURCE_FILES} ${LLVM_INCLUDE} ${COMPILE_INCLUDE_SOURCE}
+        COMMENT "build IR files for operator")
 
 # install IR file
-file(GLOB_RECURSE LL_FILES ${PROJECT_BINARY_DIR}/*.ll)
-install(FILES ${LL_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/ir)
+add_custom_command(TARGET ${OM_TARGET} POST_BUILD
+        COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/ir && cp ${PROJECT_BINARY_DIR}/src/*.ll ${CMAKE_INSTALL_PREFIX}/ir
+        COMMENT "copy IR files for operator")
