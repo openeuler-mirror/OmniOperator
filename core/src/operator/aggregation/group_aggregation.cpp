@@ -114,7 +114,6 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
 };
 
-
 OmniStatus HashAggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
@@ -124,30 +123,31 @@ OmniStatus HashAggregationOperatorFactory::Init()
     for (uint32_t i = 0; i < aggInputColsContext.len; ++i) {
         aggInputCols.push_back(aggInputColsContext.context[i]);
     }
+    std::vector<int32_t> &maskCols = GetMaskColumns();
     for (uint32_t i = 0; i < aggFuncTypesContext.len; ++i) {
         switch (aggFuncTypesContext.context[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
-                aggregatorFactories.push_back(std::make_unique<SumAggregatorFactory>());
+                CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT_COLUMN: {
-                aggregatorFactories.push_back(std::make_unique<CountColumnAggregatorFactory>());
+                CreateAggregatorFactory<CountColumnAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT_ALL: {
-                aggregatorFactories.push_back(std::make_unique<CountAllAggregatorFactory>());
+                CreateAggregatorFactory<CountAllAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_MAX: {
-                aggregatorFactories.push_back(std::make_unique<MaxAggregatorFactory>());
+                CreateAggregatorFactory<MaxAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_MIN: {
-                aggregatorFactories.push_back(std::make_unique<MinAggregatorFactory>());
+                CreateAggregatorFactory<MinAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
-                aggregatorFactories.push_back(std::make_unique<AverageAggregatorFactory>());
+                CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             default: {

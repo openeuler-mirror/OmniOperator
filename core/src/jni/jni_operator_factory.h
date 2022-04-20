@@ -39,20 +39,21 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory
  * Method:    createHashAggregationJitContext
- * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[I[ILjava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
-    JNIEnv *, jclass, jobjectArray, jstring, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean);
+    JNIEnv *, jclass, jobjectArray, jstring, jobjectArray, jstring, jintArray, jintArray, jstring, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory
  * Method:    createHashAggregationOperatorFactory
- * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[I[ILjava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
-    JNIEnv *, jclass, jobjectArray, jstring, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean, jlong);
+    JNIEnv *, jclass, jobjectArray, jstring, jobjectArray, jstring, jintArray, jintArray, jstring, jboolean, jboolean,
+    jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
@@ -247,20 +248,20 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory
  * Method:    createHashAggregationWithExprJitContext
- * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[I[ILjava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprJitContext(
-    JNIEnv *, jclass, jobjectArray, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean);
+    JNIEnv *, jclass, jobjectArray, jobjectArray, jstring, jintArray, jintArray, jstring, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory
  * Method:    createHashAggregationWithExprOperatorFactory
- * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[I[ILjava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
-    JNIEnv *, jclass, jobjectArray, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean, jlong);
+    JNIEnv *, jclass, jobjectArray, jobjectArray, jstring, jintArray, jintArray, jstring, jboolean, jboolean, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory

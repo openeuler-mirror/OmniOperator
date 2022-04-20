@@ -140,9 +140,9 @@ public:
     Operator *CreateOperator() override;
 
     HashAggregationOperatorFactory(PrepareContext groupByCol, DataTypes groupInputTypes, PrepareContext aggCol,
-        DataTypes aggInputTypes, DataTypes aggOutputTypes, PrepareContext aggFuncTypes, bool inputRaw,
-        bool outputPartial)
-        : AggregationCommonOperatorFactory(inputRaw, outputPartial),
+        DataTypes aggInputTypes, DataTypes aggOutputTypes, PrepareContext aggFuncTypes, PrepareContext maskColsContext,
+        bool inputRaw, bool outputPartial)
+        : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsContext),
           groupByColsContext(groupByCol),
           groupByTypes(groupInputTypes),
           aggInputColsContext(aggCol),

@@ -45,6 +45,27 @@ public class OmniHashAggregationOperatorFactory
     }
 
     /**
+     * Instantiates a new Omni hash aggregation operator factory.
+     *
+     * @param groupByChanel the group by chanel
+     * @param groupByTypes the group by types
+     * @param aggChannels the agg channels
+     * @param aggTypes the agg types
+     * @param aggFunctionTypes the agg function types
+     * @param aggOutputTypes the agg output types
+     * @param maskChannels mask channel list for aggregators
+     * @param isInputRaw the input raw
+     * @param isOutputPartial the output partial
+     * @param isJitEnabled whether the jit is enabled
+     */
+    public OmniHashAggregationOperatorFactory(String[] groupByChanel, DataType[] groupByTypes, String[] aggChannels,
+            DataType[] aggTypes, FunctionType[] aggFunctionTypes, int[] maskChannels, DataType[] aggOutputTypes,
+            boolean isInputRaw, boolean isOutputPartial, boolean isJitEnabled) {
+        super(new FactoryContext(new JitContext(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes,
+                maskChannels, aggOutputTypes, isInputRaw, isOutputPartial), isJitEnabled));
+    }
+
+    /**
      * Instantiates a new Omni hash aggregation operator factory with jit
      * default.
      *
@@ -64,13 +85,34 @@ public class OmniHashAggregationOperatorFactory
                 isOutputPartial, true);
     }
 
+    /**
+     * Instantiates a new Omni hash aggregation operator factory with jit
+     * default.
+     *
+     * @param groupByChanel the group by chanel
+     * @param groupByTypes the group by types
+     * @param aggChannels the agg channels
+     * @param aggTypes the agg types
+     * @param aggFunctionTypes the agg function types
+     * @param maskChannels mask channel list for aggregators
+     * @param aggOutputTypes the agg output types
+     * @param isInputRaw the input raw
+     * @param isOutputPartial the output partial
+     */
+    public OmniHashAggregationOperatorFactory(String[] groupByChanel, DataType[] groupByTypes, String[] aggChannels,
+            DataType[] aggTypes, FunctionType[] aggFunctionTypes, int[] maskChannels, DataType[] aggOutputTypes,
+            boolean isInputRaw, boolean isOutputPartial) {
+        this(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, maskChannels, aggOutputTypes,
+                isInputRaw, isOutputPartial, true);
+    }
+
     private static native long createHashAggregationOperatorFactory(String[] groupByChanel, String groupByTypes,
-            String[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean isInputRaw,
-            boolean isOutputPartial, long jitContext);
+            String[] aggChannels, String aggTypes, int[] aggFunctionTypes, int[] maskChannels, String aggOutputTypes,
+            boolean isInputRaw, boolean isOutputPartial, long jitContext);
 
     private static native long createHashAggregationJitContext(String[] groupByChanel, String groupByTypes,
-            String[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean isInputRaw,
-            boolean isOutputPartial);
+            String[] aggChannels, String aggTypes, int[] aggFunctionTypes, int[] maskChannels, String aggOutputTypes,
+            boolean isInputRaw, boolean isOutputPartial);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
@@ -78,8 +120,8 @@ public class OmniHashAggregationOperatorFactory
         return createHashAggregationOperatorFactory(context.groupByChanel,
                 DataTypeSerializer.serialize(context.groupByTypes), context.aggChannels,
                 DataTypeSerializer.serialize(context.aggTypes), toNativeConstants(context.aggFunctionTypes),
-                DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial,
-                factoryContext.getNativeJitContext());
+                context.maskChannels, DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw,
+                context.isOutputPartial, factoryContext.getNativeJitContext());
     }
 
     /**
@@ -88,6 +130,8 @@ public class OmniHashAggregationOperatorFactory
      * @since 2021-06-30
      */
     public static class JitContext implements OmniJitContext {
+        private static final int INVALID_MASK_CHANNEL = -1;
+
         private final String[] groupByChanel;
 
         private final DataType[] groupByTypes;
@@ -98,11 +142,40 @@ public class OmniHashAggregationOperatorFactory
 
         private final FunctionType[] aggFunctionTypes;
 
+        private final int[] maskChannels;
+
         private final DataType[] aggOutputTypes;
 
         private final boolean isInputRaw;
 
         private final boolean isOutputPartial;
+
+        /**
+         * Instantiates a new Context.
+         *
+         * @param groupByChanel the group by chanel
+         * @param groupByTypes the group by types
+         * @param aggChannels the agg channels
+         * @param aggTypes the agg types
+         * @param aggFunctionTypes the agg function types
+         * @param maskChannels mask channel list for aggregators
+         * @param aggOutputTypes the agg output types
+         * @param isInputRaw the input raw
+         * @param isOutputPartial the output partial
+         */
+        public JitContext(String[] groupByChanel, DataType[] groupByTypes, String[] aggChannels, DataType[] aggTypes,
+                FunctionType[] aggFunctionTypes, int[] maskChannels, DataType[] aggOutputTypes, boolean isInputRaw,
+                boolean isOutputPartial) {
+            this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
+            this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");
+            this.aggChannels = requireNonNull(aggChannels, "aggChannels");
+            this.aggTypes = requireNonNull(aggTypes, "aggTypes");
+            this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
+            this.maskChannels = requireNonNull(maskChannels, "maskChannels is null");
+            this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
+            this.isInputRaw = isInputRaw;
+            this.isOutputPartial = isOutputPartial;
+        }
 
         /**
          * Instantiates a new Context.
@@ -119,21 +192,24 @@ public class OmniHashAggregationOperatorFactory
         public JitContext(String[] groupByChanel, DataType[] groupByTypes, String[] aggChannels, DataType[] aggTypes,
                 FunctionType[] aggFunctionTypes, DataType[] aggOutputTypes, boolean isInputRaw,
                 boolean isOutputPartial) {
-            this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
-            this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");
-            this.aggChannels = requireNonNull(aggChannels, "aggChannels");
-            this.aggTypes = requireNonNull(aggTypes, "aggTypes");
-            this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
-            this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
-            this.isInputRaw = isInputRaw;
-            this.isOutputPartial = isOutputPartial;
+            this(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes,
+                    getDefaultMaskChannel(aggFunctionTypes), aggOutputTypes, isInputRaw, isOutputPartial);
+        }
+
+        private static int[] getDefaultMaskChannel(FunctionType[] aggFunctionTypes) {
+            int[] maskChannelArray = new int[aggFunctionTypes.length]; // one mask channel for each function
+            for (int i = 0; i < maskChannelArray.length; i++) {
+                maskChannelArray[i] = INVALID_MASK_CHANNEL;
+            }
+
+            return maskChannelArray;
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(groupByChanel), Arrays.hashCode(groupByTypes),
-                    Arrays.hashCode(aggChannels), Arrays.hashCode(aggTypes), Arrays.hashCode(aggOutputTypes),
-                    Arrays.hashCode(aggFunctionTypes), isInputRaw, isOutputPartial);
+                    Arrays.hashCode(aggChannels), Arrays.hashCode(aggTypes), Arrays.hashCode(maskChannels),
+                    Arrays.hashCode(aggOutputTypes), Arrays.hashCode(aggFunctionTypes), isInputRaw, isOutputPartial);
         }
 
         @Override
@@ -149,7 +225,7 @@ public class OmniHashAggregationOperatorFactory
                     && Arrays.equals(aggTypes, that.aggTypes) && Arrays.equals(aggOutputTypes, that.aggOutputTypes)
                     && Arrays.equals(aggChannels, that.aggChannels)
                     && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && isInputRaw == that.isInputRaw
-                    && isOutputPartial == that.isOutputPartial;
+                    && isOutputPartial == that.isOutputPartial && Arrays.equals(maskChannels, that.maskChannels);
         }
     }
 
@@ -174,7 +250,8 @@ public class OmniHashAggregationOperatorFactory
             return createHashAggregationJitContext(context.groupByChanel,
                     DataTypeSerializer.serialize(context.groupByTypes), context.aggChannels,
                     DataTypeSerializer.serialize(context.aggTypes), toNativeConstants(context.aggFunctionTypes),
-                    DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial);
+                    context.maskChannels, DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw,
+                    context.isOutputPartial);
         }
     }
 }

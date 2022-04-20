@@ -9,6 +9,7 @@
 #include <thread>
 #include "operator/operator_factory.h"
 #include "operator/aggregation/aggregator/aggregator.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "memory/memory_pool.h"
 #include "operator/status.h"
 
@@ -30,16 +31,35 @@ protected:
 
 class AggregationCommonOperatorFactory : public OperatorFactory {
 public:
-    AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial)
+    AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial, PrepareContext maskColsContext)
         : inputRaw(inputRaw), outputPartial(outputPartial)
-    {}
+    {
+        for (int i = 0; i < maskColsContext.len; ++i) {
+            maskCols.push_back(maskColsContext.context[i]);
+        }
+    }
     ~AggregationCommonOperatorFactory() override {};
+    std::vector<int32_t> &GetMaskColumns()
+    {
+        return maskCols;
+    }
     virtual OmniStatus Init() = 0;
     virtual OmniStatus Close() = 0;
+
+    template <class T>
+    void CreateAggregatorFactory(std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories, int32_t maskCol)
+    {
+        if (maskCol == Aggregator::INVALID_MASK_COL) {
+            aggregatorFactories.push_back(std::make_unique<T>());
+        } else {
+            aggregatorFactories.push_back(std::make_unique<MaskAggregatorFactory<T>>(maskCol));
+        }
+    }
 
 protected:
     int inputRaw;
     int outputPartial;
+    std::vector<int32_t> maskCols;
 };
 }
 }
