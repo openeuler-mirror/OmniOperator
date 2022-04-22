@@ -37,6 +37,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch1->SetVector(0, column0);
+    VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
 
     std::vector<DataType> types = { IntDataType::Instance() };
     DataTypes sourceTypes(types);
@@ -82,7 +83,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator2 = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory2));
-    VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
 
     perfUtil->Init();
     perfUtil->Reset();
