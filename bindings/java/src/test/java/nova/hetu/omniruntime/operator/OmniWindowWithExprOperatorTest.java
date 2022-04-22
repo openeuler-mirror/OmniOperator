@@ -9,7 +9,9 @@ import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAM
 import static nova.hetu.omniruntime.constants.OmniWindowFrameType.OMNI_FRAME_TYPE_RANGE;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -59,7 +61,8 @@ public class OmniWindowWithExprOperatorTest {
         int[] sortOrder = {0};
         int[] sortNullFirsts = {0};
         int preSortedChannelPrefix = 0;
-        String[] argumentKeys = {"ADD:3(#2, 50:3)"};
+        String[] argumentKeys = {omniJsonFourArithmeticExpr("ADD", 3, getOmniJsonFieldReference(3, 2),
+                getOmniJsonLiteral(3, false, 50))};
         DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
         OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
@@ -97,7 +100,8 @@ public class OmniWindowWithExprOperatorTest {
         int[] sortOrder = {0};
         int[] sortNullFirsts = {0};
         int preSortedChannelPrefix = 0;
-        String[] argumentKeys = {"ADD:3(#2, 50:3)"};
+        String[] argumentKeys = {omniJsonFourArithmeticExpr("ADD", 3, getOmniJsonFieldReference(3, 2),
+                getOmniJsonLiteral(3, false, 50))};
         DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
         OmniWindowWithExprOperatorFactory.JitContext factory1 = new OmniWindowWithExprOperatorFactory.JitContext(
                 sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,

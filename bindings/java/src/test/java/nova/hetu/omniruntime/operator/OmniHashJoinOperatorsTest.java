@@ -13,6 +13,11 @@ import static nova.hetu.omniruntime.util.TestUtils.createLongVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonGreaterThanExpr;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonNotEqualExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -597,7 +602,8 @@ public class OmniHashJoinOperatorsTest {
 
         int[] buildHashCols = {0};
         int operatorCount = 1;
-        String filterExpression = "$operator$GREATER_THAN:4(#1, #3)";
+        String filterExpression = omniJsonGreaterThanExpr(getOmniJsonFieldReference(1, 1),
+                getOmniJsonFieldReference(1, 3));
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
                 buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
@@ -645,7 +651,12 @@ public class OmniHashJoinOperatorsTest {
 
         int[] buildHashCols = {0};
         int operatorCount = 1;
-        String filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+        String filterExpression = omniJsonNotEqualExpr(
+                omniFunctionExpr("substr", 15,
+                        getOmniJsonFieldReference(15, 1) + "," + getOmniJsonLiteral(1, false, 1) + ","
+                                + getOmniJsonLiteral(1, false, 5)),
+                omniFunctionExpr("substr", 15, getOmniJsonFieldReference(15, 3) + "," + getOmniJsonLiteral(1, false, 1)
+                        + "," + getOmniJsonLiteral(1, false, 5)));
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
                 buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();

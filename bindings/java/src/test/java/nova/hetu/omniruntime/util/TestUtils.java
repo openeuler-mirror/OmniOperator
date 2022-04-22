@@ -772,4 +772,22 @@ public class TestUtils {
                 "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"CAST\",\"arguments\":[%s]}",
                 returnType, arguments);
     }
+
+    /**
+     * generating general function json expression.
+     *
+     * @param function the name of function
+     * @param returnType the type of result
+     * @param arguments the arguments
+     * @return the formatted "cast" json expression
+     */
+    public static String omniFunctionExpr(String function, int returnType, String arguments) {
+        if (returnType == 15) {
+            return String.format(Locale.ROOT, "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"width\":50,"
+                    + "\"function_name\":\"%s\",\"arguments\":[%s]}", returnType, function, arguments);
+        }
+        return String.format(Locale.ROOT,
+                "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"%s\",\"arguments\":[%s]}",
+                returnType, function, arguments);
+    }
 }
