@@ -47,6 +47,22 @@ using AggregateState = union AggregateState {
     };
 };
 
+using DecimalAverageState = struct DecimalAverageState {
+    int64_t count;
+    int64_t overflow;
+    int64_t highBits;
+    uint64_t lowBits;
+};
+
+using DecimalSumState = struct DecimalSumState {
+    int64_t overflow;
+    int64_t highBits;
+    uint64_t lowBits;
+};
+
+static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = sizeof(DecimalSumState);
+static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = sizeof(DecimalAverageState);
+
 template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));

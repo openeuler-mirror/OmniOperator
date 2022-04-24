@@ -56,15 +56,19 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *                 */
+             *                  */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
-            case OMNI_DECIMAL64:
-            case OMNI_VARCHAR: {
+            case OMNI_DECIMAL64: {
                 return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_DECIMAL128: {
                 return std::make_unique<SumLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
+            }
+            // Final stage
+            case OMNI_VARCHAR: {
+                return std::make_unique<SumFinalDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             default: {
@@ -102,12 +106,9 @@ public:
                     outputPartial);
             }
             case OMNI_DECIMAL64:
+            case OMNI_DECIMAL128:
             case OMNI_VARCHAR: {
-                return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
-                    outputPartial);
-            }
-            case OMNI_DECIMAL128: {
-                return std::make_unique<AverageLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                return std::make_unique<AverageDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             default: {

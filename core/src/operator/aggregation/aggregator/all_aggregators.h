@@ -8,8 +8,7 @@
 #include "operator/aggregation/aggregator/sum_long_decimal_aggregator.h"
 #include "operator/aggregation/aggregator/sum_short_decimal_aggregator.h"
 #include "operator/aggregation/aggregator/average_aggregator.h"
-#include "operator/aggregation/aggregator/average_short_decimal_aggregator.h"
-#include "operator/aggregation/aggregator/average_long_decimal_aggregator.h"
+#include "operator/aggregation/aggregator/average_decimal_aggregator.h"
 #include "operator/aggregation/aggregator/min_aggregator.h"
 #include "operator/aggregation/aggregator/min_varchar_aggregator.h"
 #include "operator/aggregation/aggregator/max_aggregator.h"
@@ -17,4 +16,5 @@
 #include "operator/aggregation/aggregator/count_column_aggregator.h"
 #include "operator/aggregation/aggregator/count_all_aggregator.h"
 #include "operator/aggregation/aggregator/mask_column_assistant_aggregator.h"
+#include "operator/aggregation/aggregator/sum_final_decimal_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

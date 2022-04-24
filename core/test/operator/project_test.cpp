@@ -1230,10 +1230,10 @@ TEST(ProjectTest, Decimal128Multiply)
     const int32_t numProject = 1;
     FieldExpr *mulLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *mulRight = new LiteralExpr(new std::string("3"), Decimal128Type(38, 0));
-    BinaryExpr *addExpr =
+    BinaryExpr *mulExpr =
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal128Type(38, 0));
 
-    std::vector<Expr *> exprs = { addExpr };
+    std::vector<Expr *> exprs = { mulExpr };
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
     DataTypes inputTypes(vecOfTypes);
