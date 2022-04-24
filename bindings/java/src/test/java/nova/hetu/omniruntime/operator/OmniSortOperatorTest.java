@@ -28,6 +28,7 @@ import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -368,7 +370,9 @@ public class OmniSortOperatorTest {
         OmniSortOperatorFactory sortOperatorFactoryWithoutJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
                 sortCols, ascendings, nullFirsts, false);
         OmniOperator sortOperatorWithoutJit = sortOperatorFactoryWithoutJit.createOperator();
-        ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
+        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator(
+            "sort_testSortComparePref", VecAllocator.UNLIMIT, 0);
+        ImmutableList<VecBatch> vecsWithoutJit = buildVecs(vecAllocator);
 
         long start = System.currentTimeMillis();
         for (VecBatch vec : vecsWithoutJit) {
@@ -381,7 +385,7 @@ public class OmniSortOperatorTest {
         OmniSortOperatorFactory sortOperatorFactoryWithJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
                 sortCols, ascendings, nullFirsts, true);
         OmniOperator sortOperatorWithJit = sortOperatorFactoryWithJit.createOperator();
-        ImmutableList<VecBatch> vecsWithJit = buildVecs();
+        ImmutableList<VecBatch> vecsWithJit = buildVecs(vecAllocator);
 
         start = System.currentTimeMillis();
         for (VecBatch vec : vecsWithJit) {
@@ -397,12 +401,14 @@ public class OmniSortOperatorTest {
             assertVecBatchEquals(resultWithoutJit, resultWithJit);
             freeVecBatch(resultWithoutJit);
             freeVecBatch(resultWithJit);
+            freeVecBatch(resultWithoutJit);
         }
 
         sortOperatorWithoutJit.close();
         sortOperatorWithJit.close();
         sortOperatorFactoryWithoutJit.close();
         sortOperatorFactoryWithJit.close();
+        vecAllocator.close();
     }
 
     private VecBatch duplicateVecBatch(VecBatch vecBatch) {
@@ -432,9 +438,11 @@ public class OmniSortOperatorTest {
         final int corePoolSize = 10;
         final int maximumPoolSize = 50;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
-                corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(threadNum));
-        ImmutableList<VecBatch> vecs = buildVecs();
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadNum));
+        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR
+                .newChildAllocator("sort_testSortMultiThreadsPerformance", VecAllocator.UNLIMIT, 0);
+        ImmutableList<VecBatch> vecs = buildVecs(vecAllocator);
         for (int i = 0; i < threadNum; i++) {
             CompletableFuture.runAsync(() -> {
                 try {
@@ -464,6 +472,7 @@ public class OmniSortOperatorTest {
         threadPool.shutdown();
         vecs.forEach(TestUtils::freeVecBatch);
         sortOperatorFactory.close();
+        vecAllocator.close();
     }
 
     @Test
@@ -483,13 +492,13 @@ public class OmniSortOperatorTest {
         assertFalse(factory1.equals(factory3));
     }
 
-    private ImmutableList<VecBatch> buildVecs() {
+    private ImmutableList<VecBatch> buildVecs(VecAllocator vecAllocator) {
         ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
         int positionCount = pageDistinctCount * pageDistinctValueRepeatCount;
         List<Vec> vecs = new ArrayList<>();
         for (int i = 0; i < totalPageCount; i++) {
-            LongVec longVec1 = new LongVec(positionCount);
-            LongVec longVec2 = new LongVec(positionCount);
+            LongVec longVec1 = new LongVec(vecAllocator, positionCount);
+            LongVec longVec2 = new LongVec(vecAllocator, positionCount);
             int idx = 0;
             for (int j = 0; j < pageDistinctCount; j++) {
                 for (int k = 0; k < pageDistinctValueRepeatCount; k++) {
@@ -504,5 +513,129 @@ public class OmniSortOperatorTest {
             vecBatchList.add(vecBatch);
         }
         return vecBatchList.build();
+    }
+
+    @Test
+    public void testSortMultiThreadsAllocatorStatisticsBasic() {
+        long reservation = 1 << 23;
+        long limit = 1 << 28;
+        VecAllocator parentAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR
+            .newChildAllocator("SortTest_AllocatorStatistics_parent", limit, reservation);
+        VecAllocator subAllocator = parentAllocator.newChildAllocator("SortTest_AllocatorStatistics_sub", limit,
+            reservation);
+
+        int[] outputCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+            ascendings, nullFirsts);
+
+        ConcurrentHashMap<String, VecAllocator> opAllocatorMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap = new ConcurrentHashMap<>();
+        ImmutableList<VecBatch> vecs = buildVecs(subAllocator);
+
+        final int threadNum = 4;
+        final int corePoolSize = 10;
+        final int maximumPoolSize = 50;
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(threadNum));
+        CountDownLatch countDownLatch = new CountDownLatch(threadNum);
+
+        long subAllocatorMemInit = subAllocator.getAllocatedMemory();
+        for (int i = 0; i < threadNum; i++) {
+            int threadId = i;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    long submit = 1 << 26;
+                    VecAllocator opAllocator = subAllocator.newChildAllocator("operator" + threadId, submit, 0);
+                    multiThreadsOpTask(opAllocator, sortOperatorFactory, vecs, opAllocatorMap, vecBatchListMap);
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }, threadPool);
+        }
+
+        // This will wait until all future ready.
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            assertTrue(false);
+        }
+
+        threadPool.shutdown();
+        opAllocatorStatisticsCheck(vecBatchListMap, opAllocatorMap, parentAllocator, subAllocator, subAllocatorMemInit);
+        sortOperatorFactory.close();
+        vecs.forEach(TestUtils::freeVecBatch);
+        assertEquals(subAllocator.getAllocatedMemory(), 0);
+        subAllocator.close();
+        assertEquals(parentAllocator.getAllocatedMemory(), 0);
+        parentAllocator.close();
+    }
+
+    private void multiThreadsOpTask(VecAllocator opAllocator, OmniSortOperatorFactory sortOperatorFactory,
+        ImmutableList<VecBatch> vecs, ConcurrentHashMap<String, VecAllocator> opAllocatorMap,
+        ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap) {
+        OmniOperator sortOperator = sortOperatorFactory.createOperator(opAllocator);
+        opAllocatorMap.put(opAllocator.getScope(), opAllocator);
+        List<VecBatch> vecBatchList = new ArrayList<>();
+        vecBatchListMap.put(opAllocator.getScope(), vecBatchList);
+        for (VecBatch vec : vecs) {
+            sortOperator.addInput(duplicateVecBatch(vec));
+        }
+        Iterator<VecBatch> iterator = sortOperator.getOutput();
+        int vecBatchCount = 0;
+        while (iterator.hasNext()) {
+            VecBatch result = iterator.next();
+            vecBatchCount++;
+            if (vecBatchCount % 2 != 0) {
+                freeVecBatch(result);
+            } else {
+                vecBatchList.add(result);
+            }
+        }
+        sortOperator.close();
+    }
+
+    private void opAllocatorStatisticsCheck(ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap,
+        ConcurrentHashMap<String, VecAllocator> opAllocatorMap, VecAllocator parentVecAllocator,
+        VecAllocator subVecAllocator, long subAllocatorMemInit) {
+        // 1048576(4 * 25000 * 8) + 131072(4 * 25000 * 1)
+        long unitLongVecAllocated = 1179648L;
+        assertEquals(subAllocatorMemInit, totalPageCount * 2 * unitLongVecAllocated);
+
+        long resultVecBatchMemTotal = 0L;
+        long opAllocatorMemTotal = 0L;
+
+        for (String op : vecBatchListMap.keySet()) {
+            List<VecBatch> vecBatchList = vecBatchListMap.get(op);
+            long vecBatchMem = 0L;
+            for (VecBatch vecBatch : vecBatchList) {
+                int rowCount = vecBatch.getRowCount();
+                int colCount = vecBatch.getVectorCount();
+                vecBatchMem += (rowCount * (8L + 1L) * colCount);
+            }
+            opAllocatorMemTotal += opAllocatorMap.get(op).getAllocatedMemory();
+            resultVecBatchMemTotal += vecBatchMem;
+            assertEquals(opAllocatorMap.get(op).getAllocatedMemory(), vecBatchMem);
+        }
+        assertEquals(resultVecBatchMemTotal, opAllocatorMemTotal);
+
+        long vecAllocatorMemEnd = subVecAllocator.getAllocatedMemory();
+        opAllocatorMemTotal = 0L;
+        for (String op : opAllocatorMap.keySet()) {
+            opAllocatorMemTotal += opAllocatorMap.get(op).getAllocatedMemory();
+        }
+        assertEquals(vecAllocatorMemEnd - subAllocatorMemInit, opAllocatorMemTotal);
+        assertEquals(parentVecAllocator.getAllocatedMemory(), subVecAllocator.getAllocatedMemory());
+
+        vecBatchListMap.forEach((op, value) -> {
+            List<VecBatch> vecBatchList = vecBatchListMap.get(op);
+            vecBatchList.forEach(TestUtils::freeVecBatch);
+        });
+        opAllocatorMap.forEach((key, value) -> {
+            value.close();
+        });
     }
 }
