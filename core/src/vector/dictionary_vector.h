@@ -90,6 +90,9 @@ public:
     void SetDictionary(Vector *dictionaryVector)
     {
         this->dictionary = dictionaryVector;
+        if (size <= 0) {
+            return;
+        }
         // when set dictionary, means we slice a dictionary vector, we need set nulls here.
         bool *nulls = new bool[size];
         for (int32_t i = 0; i < size; i++) {
