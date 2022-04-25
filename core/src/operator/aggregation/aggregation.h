@@ -1,17 +1,16 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Aggregation Base Class
  */
 #ifndef AGGREGATION_H
 #define AGGREGATION_H
 
+#include <vector>
+#include <thread>
 #include "operator/operator_factory.h"
 #include "operator/aggregation/aggregator/aggregator.h"
 #include "memory/memory_pool.h"
 #include "operator/status.h"
-
-#include <vector>
-#include <thread>
 
 namespace omniruntime {
 namespace op {

@@ -1,10 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Min aggregate for varchar
  */
 #ifndef OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
 #define OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
+
 #include "aggregator.h"
+
 namespace omniruntime {
 namespace op {
 class MinVarcharAggregator : public Aggregator {
@@ -23,7 +25,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (state.val == nullptr) {
@@ -47,7 +49,7 @@ public:
             if (err != EOK) {
                 LogError("set data failed in variable vector. %d", err);
             }
-           
+
             state.strVal = ptr;
             state.strLen = valLen;
         }
@@ -57,7 +59,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         uint8_t *data = nullptr;

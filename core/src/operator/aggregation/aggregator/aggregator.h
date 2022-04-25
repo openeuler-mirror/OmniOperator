@@ -57,7 +57,7 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *          */
+     *           */
     Aggregator(FunctionType aggregateType, const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),

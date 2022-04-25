@@ -1,5 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Description: decimal 128 type
  */
 
 #include "decimal128.h"
@@ -7,7 +8,6 @@
 #include <limits>
 #include <array>
 #include <iomanip>
-#include <util/compiler_util.h>
 #include "util/debug.h"
 
 namespace omniruntime {
@@ -405,7 +405,7 @@ static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &
     DecimalClass &remainder)
 {
     // Leave an extra zero before the dividend
-    if (UNLIKELY(divisor == 0)) {
+    if (divisor == 0) {
         return OpStatus::DIVIDE_BY_ZERO;
     }
 
@@ -419,7 +419,7 @@ static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &
     // Fill divisor array.
     int64_t divisorLength = FillInArray(divisor, divisorArray, decimalArrayLength, divisorWasNegative);
     // Leave an extra zero before the dividend
-    if (UNLIKELY(divisorLength == 0)) {
+    if (divisorLength == 0) {
         return OpStatus::DIVIDE_BY_ZERO;
     }
 

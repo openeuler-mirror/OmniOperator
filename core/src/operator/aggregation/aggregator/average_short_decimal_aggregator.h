@@ -1,10 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Average aggregate for short decimal
  */
 #ifndef OMNI_RUNTIME_AVERAGE_SHORT_DECIMAL_AGGREGATOR_H
 #define OMNI_RUNTIME_AVERAGE_SHORT_DECIMAL_AGGREGATOR_H
+
 #include "aggregator.h"
+
 namespace omniruntime {
 namespace op {
 static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = 32;
@@ -26,7 +28,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (state.val == nullptr) {
@@ -83,7 +85,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (inputRaw) {

@@ -1,10 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Count aggregate
  */
 #ifndef OMNI_RUNTIME_COUNT_COLUMN_AGGREGATOR_H
 #define OMNI_RUNTIME_COUNT_COLUMN_AGGREGATOR_H
+
 #include "aggregator.h"
+
 namespace omniruntime {
 namespace op {
 class CountColumnAggregator : public Aggregator {
@@ -24,7 +26,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (inputRaw) {
@@ -39,7 +41,7 @@ public:
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         // It is only effective when COUNT(col). When COUNT(*) or COUNT(1) should directly accumulate vector size;
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             state.count = 0;
             return;
         }
