@@ -68,5 +68,10 @@ VectorAllocator *VectorAllocator::NewChildAllocator(const std::string &scope, in
 {
     return new VectorAllocator(this, scope, limit, reservation);
 }
+
+VectorAllocator *GetProcessGlobalVecAllocator()
+{
+    return VectorAllocator::GetGlobalAllocator();
+}
 }
 }

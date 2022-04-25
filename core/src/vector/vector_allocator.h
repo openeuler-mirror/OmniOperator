@@ -40,7 +40,7 @@ public:
 
     static VectorAllocator *GetGlobalAllocator()
     {
-        static auto *globalAllocator = new VectorAllocator(omniruntime::mem::BaseAllocator::GetRootAllocator(),
+        static auto *globalAllocator = new VectorAllocator(omniruntime::mem::GetProcessRootAllocator(),
             GLOBAL_SCOPE_NAME, UNLIMIT, DEFAULT_RESERVATION);
         return globalAllocator;
     }
@@ -52,6 +52,8 @@ private:
     static constexpr int64_t DEFAULT_RESERVATION = 1 << 20;
     VectorLeakDetector leakDetector;
 };
+
+VectorAllocator *GetProcessGlobalVecAllocator();
 }
 }
 #endif // __VECTOR_ALLOCATOR_H__

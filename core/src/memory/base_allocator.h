@@ -117,12 +117,6 @@ public:
         return &ROOT_ALLOCATOR;
     }
 
-    static void SetRootAllocatorLimit(int64_t limit)
-    {
-        LogInfo("set root allocator limit:%ld", limit);
-        GetRootAllocator()->SetLimit(limit);
-    }
-
 protected:
     BaseAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit = UNLIMIT, int64_t reservation = 0)
         : scope(scope), allocationLimit(limit), reservation(reservation), parentAllocator(parent)
@@ -167,13 +161,16 @@ private:
     std::list<BaseAllocator *>::iterator childAllocatorIt;
 
     std::atomic<int64_t> allocatedBytes { 0 };
-    std::atomic<int64_t> allocationLimit { 0 };
+    std::atomic<int64_t> allocationLimit { UNLIMIT };
     std::atomic<int64_t> peakAllocated { 0 };
     std::atomic<int64_t> reservation { 0 };
 
     BaseAllocator *parentAllocator;
     MemoryPool *pool = GetMemoryPool();
 };
+BaseAllocator *GetProcessRootAllocator();
+
+void SetRootAllocatorLimit(int64_t limit);
 }
 }
 #endif // __BASE_ALLOCATOR_H__

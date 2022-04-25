@@ -215,8 +215,7 @@ TEST(VectorAllocator, recycleDeletedTracer)
 
 TEST(VectorAllocator, basic)
 {
-    VectorAllocator *vectorAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VectorAllocator_basic");
+    VectorAllocator *vectorAllocator = GetProcessGlobalVecAllocator()->NewChildAllocator("VectorAllocator_basic");
     int64_t limit = 4096;
     int64_t subLimit = 2048;
     int size = 8;
@@ -257,7 +256,7 @@ TEST(VectorAllocator, beyondLimit)
     int64_t limit = 2048;
     int64_t subLimit = 1024;
     int32_t size = 300;
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("parent", limit, 0);
+    VectorAllocator *vecAllocator = GetProcessGlobalVecAllocator()->NewChildAllocator("parent", limit, 0);
     vecAllocator->SetLimit(limit);
     VectorAllocator *subVecAllocator = vecAllocator->NewChildAllocator("operator", subLimit, 0);
 

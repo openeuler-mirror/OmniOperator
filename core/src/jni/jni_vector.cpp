@@ -239,7 +239,7 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getScop
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setRootAllocatorLimitNative
         (JNIEnv *env, jclass jcls, jlong jLimit)
 {
-    omniruntime::mem::BaseAllocator::SetRootAllocatorLimit(jLimit);
+    omniruntime::mem::SetRootAllocatorLimit(jLimit);
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getAllocatedMemoryNative
@@ -271,7 +271,7 @@ JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getC
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator
         (JNIEnv *env, jclass jcls)
 {
-    return reinterpret_cast<uintptr_t>(VectorAllocator::GetGlobalAllocator());
+    return reinterpret_cast<uintptr_t>(omniruntime::vec::GetProcessGlobalVecAllocator());
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative

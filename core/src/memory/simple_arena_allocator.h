@@ -16,7 +16,7 @@ namespace mem {
 class SimpleArenaAllocator {
 public:
     explicit SimpleArenaAllocator(int64_t minChunkSize = 4096,
-        BaseAllocator *allocator = BaseAllocator::GetRootAllocator())
+        BaseAllocator *allocator = mem::GetProcessRootAllocator())
         : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL), allocator(allocator)
     {}
 
