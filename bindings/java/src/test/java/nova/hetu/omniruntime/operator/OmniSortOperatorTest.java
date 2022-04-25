@@ -370,8 +370,8 @@ public class OmniSortOperatorTest {
         OmniSortOperatorFactory sortOperatorFactoryWithoutJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
                 sortCols, ascendings, nullFirsts, false);
         OmniOperator sortOperatorWithoutJit = sortOperatorFactoryWithoutJit.createOperator();
-        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator(
-            "sort_testSortComparePref", VecAllocator.UNLIMIT, 0);
+        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("sort_testSortComparePref",
+                VecAllocator.UNLIMIT, 0);
         ImmutableList<VecBatch> vecsWithoutJit = buildVecs(vecAllocator);
 
         long start = System.currentTimeMillis();
@@ -519,9 +519,9 @@ public class OmniSortOperatorTest {
         long reservation = 1 << 23;
         long limit = 1 << 28;
         VecAllocator parentAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR
-            .newChildAllocator("SortTest_AllocatorStatistics_parent", limit, reservation);
+                .newChildAllocator("SortTest_AllocatorStatistics_parent", limit, reservation);
         VecAllocator subAllocator = parentAllocator.newChildAllocator("SortTest_AllocatorStatistics_sub", limit,
-            reservation);
+                reservation);
 
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};
@@ -529,17 +529,15 @@ public class OmniSortOperatorTest {
         int[] nullFirsts = {0, 0};
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
-            ascendings, nullFirsts);
+                ascendings, nullFirsts);
 
         ConcurrentHashMap<String, VecAllocator> opAllocatorMap = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap = new ConcurrentHashMap<>();
         ImmutableList<VecBatch> vecs = buildVecs(subAllocator);
 
         final int threadNum = 4;
-        final int corePoolSize = 10;
-        final int maximumPoolSize = 50;
-        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(threadNum));
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(10, 50, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadNum));
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
 
         long subAllocatorMemInit = subAllocator.getAllocatedMemory();
@@ -574,8 +572,8 @@ public class OmniSortOperatorTest {
     }
 
     private void multiThreadsOpTask(VecAllocator opAllocator, OmniSortOperatorFactory sortOperatorFactory,
-        ImmutableList<VecBatch> vecs, ConcurrentHashMap<String, VecAllocator> opAllocatorMap,
-        ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap) {
+            ImmutableList<VecBatch> vecs, ConcurrentHashMap<String, VecAllocator> opAllocatorMap,
+            ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap) {
         OmniOperator sortOperator = sortOperatorFactory.createOperator(opAllocator);
         opAllocatorMap.put(opAllocator.getScope(), opAllocator);
         List<VecBatch> vecBatchList = new ArrayList<>();
@@ -598,8 +596,8 @@ public class OmniSortOperatorTest {
     }
 
     private void opAllocatorStatisticsCheck(ConcurrentHashMap<String, List<VecBatch>> vecBatchListMap,
-        ConcurrentHashMap<String, VecAllocator> opAllocatorMap, VecAllocator parentVecAllocator,
-        VecAllocator subVecAllocator, long subAllocatorMemInit) {
+            ConcurrentHashMap<String, VecAllocator> opAllocatorMap, VecAllocator parentVecAllocator,
+            VecAllocator subVecAllocator, long subAllocatorMemInit) {
         // 1048576(4 * 25000 * 8) + 131072(4 * 25000 * 1)
         long unitLongVecAllocated = 1179648L;
         assertEquals(subAllocatorMemInit, totalPageCount * 2 * unitLongVecAllocated);

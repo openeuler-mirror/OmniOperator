@@ -1,10 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Count aggregate
  */
 #ifndef OMNI_RUNTIME_COUNT_ALL_AGGREGATOR_H
 #define OMNI_RUNTIME_COUNT_ALL_AGGREGATOR_H
+
 #include "aggregator.h"
+
 namespace omniruntime {
 namespace op {
 class CountAllAggregator : public Aggregator {

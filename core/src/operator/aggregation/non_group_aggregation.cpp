@@ -1,10 +1,8 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Aggregation Source File
  */
 #include "non_group_aggregation.h"
-#include "jit/annotation.h"
-#include "operator/optimization.h"
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"

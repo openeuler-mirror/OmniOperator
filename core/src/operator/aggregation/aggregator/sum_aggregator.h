@@ -1,14 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Sum aggregator
- * Author: Songling Liu
- * Create: 2021-12-24
- * Notes: None
  */
-
 #ifndef OMNI_RUNTIME_SUM_AGGREGATOR_H
 #define OMNI_RUNTIME_SUM_AGGREGATOR_H
+
 #include "aggregator.h"
+
 namespace omniruntime {
 namespace op {
 template <typename V, typename IN, typename ResultType> class SumAggregator : public Aggregator {
@@ -25,7 +23,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (state.val == nullptr) {
@@ -39,7 +37,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         auto curVal = (static_cast<V *>(vector))->GetValue(offset);

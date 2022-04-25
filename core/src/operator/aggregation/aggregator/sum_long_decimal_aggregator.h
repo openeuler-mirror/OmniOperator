@@ -1,12 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Sum aggregate for long decimal
  */
 #ifndef OMNI_RUNTIME_SUM_LONG_DECIMAL_AGGREGATOR_H
 #define OMNI_RUNTIME_SUM_LONG_DECIMAL_AGGREGATOR_H
+
 #include "aggregator.h"
 #include "type/decimal_operations.h"
-
 
 namespace omniruntime {
 namespace op {
@@ -29,7 +29,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (state.val == nullptr) {
@@ -76,7 +76,7 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
-        if (UNLIKELY(vector->IsValueNull(offset))) {
+        if (vector->IsValueNull(offset)) {
             return;
         }
         if (inputRaw) {
