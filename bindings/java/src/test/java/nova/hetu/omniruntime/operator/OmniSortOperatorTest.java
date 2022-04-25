@@ -401,7 +401,6 @@ public class OmniSortOperatorTest {
             assertVecBatchEquals(resultWithoutJit, resultWithJit);
             freeVecBatch(resultWithoutJit);
             freeVecBatch(resultWithJit);
-            freeVecBatch(resultWithoutJit);
         }
 
         sortOperatorWithoutJit.close();
