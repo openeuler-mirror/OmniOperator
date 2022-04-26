@@ -22,7 +22,7 @@ namespace TopnTest {
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 {
     // construct input data
-    const int32_t dataSize = 100000000;
+    const int32_t dataSize = 10000000;
     const int32_t expectedDataSize = 5;
 
     // prepare data
@@ -119,7 +119,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
 {
     // construct input data
-    const int32_t dataSize = 100000000;
+    const int32_t dataSize = 10000000;
     const int32_t expectedDataSize = 5;
 
     // prepare data
@@ -224,8 +224,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     auto s = clock();
 
@@ -280,8 +278,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -330,8 +326,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -383,8 +377,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -433,8 +425,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -482,8 +472,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -536,8 +524,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -596,8 +582,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -662,8 +646,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -731,8 +713,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -797,8 +777,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -932,8 +910,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1088,8 +1064,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1158,8 +1132,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1216,8 +1188,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1275,8 +1245,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1337,8 +1305,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1396,8 +1362,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1441,8 +1405,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1486,8 +1448,6 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1530,8 +1490,6 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, sortColCount);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, sortColCount);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 

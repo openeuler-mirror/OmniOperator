@@ -34,8 +34,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -72,8 +71,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -112,8 +110,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -324,8 +321,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
         sortExprs, ascendings, nullFirsts, 1, operatorConfig);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 1, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch1);
     sortOperator->AddInput(vecBatch2);
@@ -369,8 +365,7 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
         sortExprs, ascendings, nullFirsts, 1, operatorConfig);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 1, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch1);
     sortOperator->AddInput(vecBatch2);

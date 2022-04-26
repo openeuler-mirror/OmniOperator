@@ -56,7 +56,6 @@ if [ "$1" != 'coverage' ]; then
 
     echo mkdir -p $targz_name
 
-
     if [ -f "$targz_name.tar.gz" ]; then
       rm -rf $targz_name.tar.gz
     fi
@@ -70,6 +69,3 @@ if [ "$1" != 'coverage' ]; then
     tar -zcvf $targz_name.tar.gz $targz_name
     zip $zip_name.zip $targz_name.tar.gz
 fi
-
-
-
