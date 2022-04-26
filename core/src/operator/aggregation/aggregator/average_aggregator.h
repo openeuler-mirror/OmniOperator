@@ -78,10 +78,6 @@ public:
             auto avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
             double avgVal = avgValVector->GetValue(offset);
             int64_t avgCnt = avgCountVector->GetValue(offset);
-            if (avgCnt == 0) {
-                // Fixme use error code
-                LogError("Divisor should not be zero! Offset = %d", offset);
-            }
             auto ptr = executionContext->GetArena()->Allocate(sizeof(double));
             *reinterpret_cast<double *>(ptr) = avgVal;
             state.avgVal = ptr;
@@ -95,6 +91,10 @@ public:
             ContainerVector *v = static_cast<ContainerVector *>(vector);
             if (state.val == nullptr) {
                 v->SetValueNull(rowIndex);
+                auto doubleVector = reinterpret_cast<DoubleVector *>(v->GetValue(0));
+                doubleVector->SetValue(rowIndex, 0);
+                auto longVector = reinterpret_cast<LongVector *>(v->GetValue(1));
+                longVector->SetValue(rowIndex, 0);
                 return;
             }
             if (state.avgCnt == 0) {
@@ -106,12 +106,9 @@ public:
             longVector->SetValue(rowIndex, state.avgCnt);
         } else {
             auto v = static_cast<DoubleVector *>(vector);
-            if (state.val == nullptr) {
+            if (state.avgCnt <= 0 || state.val == nullptr) {
                 v->SetValueNull(rowIndex);
                 return;
-            }
-            if (state.avgCnt <= 0) {
-                LogError("Divisor has to be larger than 0!");
             }
             auto currentVal = *(static_cast<ResultType *>(state.avgVal));
             auto result = currentVal / state.avgCnt;
