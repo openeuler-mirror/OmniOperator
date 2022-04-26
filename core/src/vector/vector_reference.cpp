@@ -7,7 +7,7 @@
 
 namespace omniruntime {
 namespace vec {
-Chunk *VectorReference::zeroChunk = Chunk::NewChunk(mem::BaseAllocator::GetRootAllocator(), 0);
+Chunk *VectorReference::zeroChunk = Chunk::NewChunk(mem::GetProcessRootAllocator(), 0);
 /*
  * Encoding : values | nulls | offsets(option)
  */

@@ -21,7 +21,7 @@ int64_t BaseAllocator::AllocatedBytesInternal(int64_t size)
     int64_t parentLimit = UNLIMIT;
     if (beyondReservation > 0 && parentAllocator) {
         int64_t increment = std::min(beyondReservation, size);
-        parentLimit =  parentAllocator->AllocatedBytesInternal(increment);
+        parentLimit = parentAllocator->AllocatedBytesInternal(increment);
     }
 
     bool beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
@@ -68,6 +68,17 @@ void BaseAllocator::RemoveFromParent()
         parentAllocator->childAllocators.erase(childAllocatorIt);
         childAllocatorIt = parentAllocator->childAllocators.end();
     }
+}
+
+BaseAllocator *GetProcessRootAllocator()
+{
+    return BaseAllocator::GetRootAllocator();
+}
+
+void SetRootAllocatorLimit(int64_t limit)
+{
+    LogInfo("set root allocator limit:%ld Byte", limit);
+    GetProcessRootAllocator()->SetLimit(limit);
 }
 } // namespace mem
 } // namespace omniruntime
