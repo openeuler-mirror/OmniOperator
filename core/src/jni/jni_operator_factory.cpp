@@ -78,7 +78,8 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
-    jstring jAggType, jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial)
+    jstring jAggType, jintArray jAggFuncType, jintArray jMaskCols, jstring jOutPutTye, jboolean inputRaw,
+    jboolean outputPartial)
 {
     auto groupByTypesCharPtr = env->GetStringUTFChars(jGroupByType, JNI_FALSE);
     auto groupByDataTypes = Deserialize(groupByTypesCharPtr);
@@ -95,8 +96,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
-    jstring jAggType, jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial,
-    jlong jitContext)
+    jstring jAggType, jintArray jAggFuncType, jintArray jMaskCols, jstring jOutPutTye, jboolean inputRaw,
+    jboolean outputPartial, jlong jitContext)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
@@ -110,6 +111,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     GetColumnsFromExpressions(env, jAggChannel, aggCols, aggInputChannelNum);
     auto aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    jint *maskColumns = env->GetIntArrayElements(jMaskCols, JNI_FALSE);
     auto outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
 
     auto groupByDataTypes = Deserialize(groupByTypesCharPtr);
@@ -126,6 +128,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     PrepareContext aggColContext = { (uint32_t *)aggCols, aggInputChannelNum };
     PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggInputChannelNum };
     PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
+    PrepareContext maskColumnContext = { (uint32_t *)maskColumns, aggNum };
 
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
@@ -141,7 +144,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByDataTypes, aggColContext,
-        aggDataTypes, outDataTypes, aggFuncTypeContext, inputRaw, outputPartial);
+        aggDataTypes, outDataTypes, aggFuncTypeContext, maskColumnContext, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
@@ -933,7 +936,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
-    jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial)
+    jintArray jAggFuncType, jintArray jMaskCols, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial)
 {
     size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
     std::string groupByKeys[groupByNum];
@@ -955,7 +958,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
-    jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial, jlong jitContext)
+    jintArray jAggFuncType, jintArray jMaskCols, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial,
+    jlong jitContext)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
@@ -968,6 +972,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     GetExpressions(env, jAggChannel, aggKeys, aggNum);
 
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    jint *maskColumns = env->GetIntArrayElements(jMaskCols, JNI_FALSE);
 
     auto outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceType, JNI_FALSE);
@@ -983,7 +988,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
     omniruntime::op::HashAggregationWithExprOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprs, aggNum,
-        sourceDataTypes, outDataTypes, (uint32_t *)aggFuncTypes, inputRaw, outputPartial);
+        sourceDataTypes, outDataTypes, (uint32_t *)aggFuncTypes, (uint32_t *)maskColumns, inputRaw, outputPartial);
 
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));

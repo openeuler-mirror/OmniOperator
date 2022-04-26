@@ -15,7 +15,7 @@ using namespace omniruntime::type;
 HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
     const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
-    const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
+    const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial)
 {
     uint32_t projectColNum = groupByNum + aggNum;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
@@ -55,10 +55,11 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     PrepareContext groupByCol = { static_cast<uint32_t *>(groupByCols), groupByNum };
     PrepareContext aggCol = { static_cast<uint32_t *>(aggCols), aggNum };
     PrepareContext aggFunc = { aggFuncTypes, aggNum };
+    PrepareContext maskColumnContext = { maskColumns, aggNum };
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *(this->groupByTypes.get()), aggCol,
-        *(this->aggTypes.get()), aggOutputTypes, aggFunc, inputRaw, outputPartial);
+        *(this->aggTypes.get()), aggOutputTypes, aggFunc, maskColumnContext, inputRaw, outputPartial);
     this->hashAggOperatorFactory->Init();
 }
 

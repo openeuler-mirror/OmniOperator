@@ -14,11 +14,9 @@ namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
     AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<int32_t> &aggInputCols,
-        std::vector<int32_t> &maskColIds, omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw,
-        bool outputPartial)
+        omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
         : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
           aggInputCols(aggInputCols),
-          maskCols(maskColIds),
           aggOutputTypes(aggOutputTypes)
     {
         for (uint32_t i = 0; i < aggregators.size(); i++) {
@@ -45,11 +43,10 @@ public:
     AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, PrepareContext aggFuncTypesContext,
         PrepareContext aggInputColsContext, PrepareContext maskColsContext,
         omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
-        : AggregationCommonOperatorFactory(inputRaw, outputPartial),
+        : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsContext),
           sourceTypes(sourceTypes),
           aggFuncTypesContext(aggFuncTypesContext),
           aggInputColsContext(aggInputColsContext),
-          maskColsContext(maskColsContext),
           aggOutputTypes(aggOutputTypes)
     {}
 
@@ -58,17 +55,12 @@ public:
     OmniStatus Close() override;
 
 private:
-    template <class T> void CreateAggregatorFactory(int32_t maskCol);
-
-private:
     omniruntime::type::DataTypes sourceTypes;
     PrepareContext aggFuncTypesContext;
     PrepareContext aggInputColsContext;
-    PrepareContext maskColsContext;
     omniruntime::type::DataTypes aggOutputTypes;
     std::vector<omniruntime::type::DataType> aggInputTypes;
     std::vector<int32_t> aggInputCols;
-    std::vector<int32_t> maskCols;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };
 } // end op

@@ -17,8 +17,8 @@ class HashAggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     HashAggregationWithExprOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &groupByKeys,
         uint32_t groupByNum, const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum,
-        const DataTypes &sourceDataTypes, const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw,
-        bool outputPartial);
+        const DataTypes &sourceDataTypes, const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes,
+        uint32_t *maskColumns, bool inputRaw, bool outputPartial);
 
     ~HashAggregationWithExprOperatorFactory() override;
 

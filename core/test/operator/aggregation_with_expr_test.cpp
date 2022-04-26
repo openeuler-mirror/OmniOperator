@@ -49,10 +49,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     std::vector<Expr *> aggKeys = { mulExpr, new FieldExpr(3, IntType()) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
     JitContext *jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto *hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
-        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
@@ -117,10 +118,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     std::vector<Expr *> aggKeys = { mulExpr, addExpr2 };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
     auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
-        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
@@ -170,10 +172,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     std::vector<Expr *> aggKeys = { new FieldExpr(1, LongType()), new FieldExpr(3, IntType()) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
     auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
-        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
