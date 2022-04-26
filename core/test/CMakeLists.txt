@@ -8,7 +8,11 @@ add_subdirectory(memory)
 add_subdirectory(benchmark)
 add_subdirectory(parser)
 add_subdirectory(type)
-
+if (DEFINED ENABLE_DT)
+    if (${ENABLE_DT} STREQUAL "ON")
+        add_subdirectory(dt)
+    endif ()
+endif ()
 # configure
 set(OM_TEST_TARGET omtest)
 set(MY_LINK

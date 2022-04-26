@@ -5,4 +5,4 @@
 #cmakedefine DEBUG_LLVM
 #cmakedefine DISABLE_JIT
 #cmakedefine COVERAGE
-#cmakedefine DISABLE_CHECKER
+#cmakedefine DISABLE_CPU_CHECKER

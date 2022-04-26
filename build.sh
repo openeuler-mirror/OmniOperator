@@ -7,22 +7,22 @@ set -e
 targz_name=boostkit-omniop-operator-1.0.0-aarch64
 zip_name=BoostKit-omniop_1.0.0
 
-echo "Start build C++ modules"
+echo "Start build C++ modules using $1"
 cd core/build
 echo "-- Enter" $(dirname $(readlink -f $0))
-if [ "$1" = 'coverage' ]; then
-    echo "-- Enable coverage"
-    sh build.sh $*
+if [ "$1" = 'coverage-c++' ]; then
+    echo "-- Enable coverage for c++"
+    sh build.sh coverage --disable-jit
     ./test/omtest --gtest_output=xml:test_detail.xml
     lcov --d ../ --c --output-file test.info --rc lcov_branch_coverage=1
     genhtml test.info -o test_coverage --branch-coverage --rc lcov_branch_coverage=1
 else
-    echo "-- Disable coverage"
-    sh build.sh $*
+    echo "-- Disable coverage for c++"
+    sh build.sh release
     ./test/omtest --gtest_output=xml:test_detail.xml
 fi
 
-echo "Start build java modules"
+echo "Start build java modules using $1"
 cd ../../bindings/java
 wget http://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.jar --proxy=off
 wget http://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.pom --proxy=off
@@ -31,11 +31,14 @@ mvn install:install-file -Dfile=devtestcov-maven-plugin-2.1.1.jar -DpomFile=devt
 rm -r devtestcov-maven-plugin-2.1.1.jar
 rm -r devtestcov-maven-plugin-2.1.1.pom
 
-if [ "$1" = 'coverage' ]; then
-    echo "-- Enable coverage"
-    mvn clean devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
+if [ "$1" = 'coverage-java' ]; then
+    echo "-- Enable coverage for java"
+    mvn clean install devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
+elif [ "$1" = 'coverage-c++' ]; then
+    echo "-- Disable coverage for java and skip tests"
+    mvn clean install -DskipTests
 else
-    echo "-- Disable coverage"
+    echo "-- Disable coverage for java"
     mvn clean install
 fi
 

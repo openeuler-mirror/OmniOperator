@@ -24,7 +24,7 @@ lib_home=$OMNI_HOME/lib
 
 echo "lib_home = $lib_home, LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
 
-rm -rf $lib_home/*.so $lib_home/ir $lib_home/jit_libs
+rm -rf $lib_home/libboostkit*.so $lib_home/ir $lib_home/jit_libs
 echo "-- Enter" $(dirname $(readlink -f $0))
 cd $(dirname $(readlink -f $0))
 rm -rf $(ls | grep -v "build.sh")
@@ -57,7 +57,10 @@ append_options()
               options="$options -DDISABLE_JIT=ON"
             elif [ "$i" = '--disable-cpuchecker' ]; then
               echo "-- Disable CPU checker"
-              options="$options -DDISABLE_CHECKER=ON"
+              options="$options -DDISABLE_CPU_CHECKER=ON"
+            elif [ "$i" = '--enable-dt' ]; then
+              echo "-- Enable DT checker"
+              options="$options -DENABLE_DT=ON -DCOVERAGE=ON"
             fi
         fi
     done

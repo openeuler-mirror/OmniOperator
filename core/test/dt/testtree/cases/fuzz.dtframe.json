@@ -1,0 +1,77 @@
+{
+  "METADATA": {
+	"description": "omniOperatorJit DT case",
+	"version": "1.0.0",
+	"author": "",
+	"date": "2022-04-12"
+  },
+  "DATA": [
+	{
+	  "fuzzStrVar1": {
+		"initValue": "abcdedf",
+		"maxLen": 20
+	  },
+	  "fuzzIntRange1_1": {
+		"initValue": 1,
+		"range": [
+		  1,
+		  4096
+		],
+		"rangeMode": "in"
+	  },
+	  "fuzzIntRange1_2": {
+		"initValue": 1,
+		"range": [
+		  20,
+		  20
+		],
+		"rangeMode": "in"
+	  },
+	  "fuzzStrVar2": {
+		"initValue": "abcdedf",
+		"maxLen": 65536
+	  },
+	  "fuzzIntRange2_1": {
+		"initValue": 1,
+		"range": [
+		  1,
+		  128
+		],
+		"rangeMode": "in"
+	  },
+	  "fuzzIntRange2_2": {
+		"initValue": 1,
+		"range": [
+		  65536,
+		  65536
+		],
+		"rangeMode": "in"
+	  }
+	}
+  ],
+  "TEST": [
+	{
+	  "SUITE_NAME": "suite-01",
+	  "CASES": [
+		{
+		  "id": "case1",
+		  "apiName": "GlobalFuzz(0, 0, true, 0, 0, 0, $fuzzStrVar1, $fuzzIntRange1_1, $fuzzIntRange1_2)",
+		  "exeMode": "fuzz",
+		  "fuzzConfig": {
+			"count": 50000000,
+			"singleCaseFuzzTimeoutInSecond": 10800
+		  }
+		},
+		{
+		  "id": "case2",
+		  "apiName": "GlobalFuzz(0, 0, true, 0, 0, 0, $fuzzStrVar2, $fuzzIntRange2_1, $fuzzIntRange2_2)",
+		  "exeMode": "fuzz",
+		  "fuzzConfig": {
+			"count": 50000000,
+			"singleCaseFuzzTimeoutInSecond": 10800
+		  }
+		}
+	  ]
+	}
+  ]
+}
