@@ -4015,8 +4015,12 @@ TEST(CodeGenTest, JSONFunc)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
+
+    delete context;
     delete[] bitmap;
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
     delete expr;

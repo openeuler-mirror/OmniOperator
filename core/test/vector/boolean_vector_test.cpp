@@ -154,6 +154,7 @@ TEST(BooleanVector, copyPositions)
         EXPECT_EQ(copyPostionVector->GetValue(i), originalVector->GetValue(possions[i]));
     }
 
+    delete[] possions;
     delete originalVector;
     delete copyPostionVector;
     delete allocator;

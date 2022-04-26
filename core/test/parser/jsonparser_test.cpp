@@ -232,7 +232,7 @@ string GetFuncTestJson(int32_t rt, const string &func, const vector<string> &arg
 
 class TestExpr {
 public:
-    DataType *dataType = nullptr;
+    unique_ptr<DataType> dataType = nullptr;
 
     virtual bool isEqual(Expr *that) const
     {
@@ -248,13 +248,13 @@ class TestLiteralExpr : public TestExpr {
 public:
     TestLiteralExpr(DataType &dt, int32_t colVal) : expr(new LiteralExpr(colVal, make_unique<DataType>(dt)))
     {
-        dataType = &(expr->GetReturnType());
+        dataType = make_unique<DataType>(expr->GetReturnType());
     }
 
     template <typename T>
     explicit TestLiteralExpr(T val, DataType &dt) : expr(new LiteralExpr(val, make_unique<DataType>(dt)))
     {
-        dataType = &(expr->GetReturnType());
+        dataType = make_unique<DataType>(expr->GetReturnType());
     }
 
     // get default expr of null type-dt expression
@@ -297,7 +297,7 @@ class TestFieldExpr : public TestExpr {
 public:
     TestFieldExpr(int32_t dt, int32_t colVal) : expr(new FieldExpr(colVal, make_unique<DataType>(dt)))
     {
-        dataType = &(expr->GetReturnType());
+        dataType = make_unique<DataType>(expr->GetReturnType());
     }
 
     ~TestFieldExpr() override
@@ -329,7 +329,7 @@ class TestBinaryExpr : public TestExpr {
 public:
     TestBinaryExpr(Operator op, TestExpr *left, TestExpr *right, DataTypePtr dt) : op(op), left(left), right(right)
     {
-        dataType = dt.release();
+        dataType = std::move(dt);
     }
 
     ~TestBinaryExpr() override
@@ -362,7 +362,7 @@ class TestUnaryExpr : public TestExpr {
 public:
     TestUnaryExpr(Operator op, TestExpr *expr) : op(op), expr(expr)
     {
-        dataType = BooleanType().release();
+        dataType = BooleanType();
     }
 
     ~TestUnaryExpr() override
@@ -395,7 +395,7 @@ public:
     TestBetweenExpr(TestExpr *value, TestExpr *lower, TestExpr *upper)
         : value(value), lowerBound(lower), upperBound(upper)
     {
-        dataType = BooleanType().release();
+        dataType = BooleanType();
     }
 
     ~TestBetweenExpr() override
@@ -429,7 +429,7 @@ class TestCoalesceExpr : public TestExpr {
 public:
     TestCoalesceExpr(TestExpr *value1, TestExpr *value2) : value1(value1), value2(value2)
     {
-        dataType = value1->dataType;
+        dataType = std::move(value1->dataType);
     }
 
     ~TestCoalesceExpr() override
@@ -462,7 +462,7 @@ public:
     TestFuncExpr(DataType &rt, string funcName, vector<TestExpr *> args)
         : funcName(std::move(funcName)), args(std::move(args))
     {
-        dataType = &rt;
+        dataType = make_unique<DataType>(rt);
     }
 
     ~TestFuncExpr() override
@@ -498,7 +498,7 @@ public:
     TestSwitchExpr(vector<pair<TestExpr *, TestExpr *>> whenClause, TestExpr *elseExpr)
         : whenClause(std::move(whenClause)), elseExpr(elseExpr)
     {
-        dataType = elseExpr->dataType;
+        dataType = std::move(elseExpr->dataType);
     }
 
     ~TestSwitchExpr() override
@@ -538,7 +538,7 @@ class TestIfExpr : public TestExpr {
 public:
     TestIfExpr(TestBinaryExpr *cond, TestExpr *tExr, TestExpr *fExp) : condition(cond), tExpr(tExr), fExpr(fExp)
     {
-        dataType = tExr->dataType;
+        dataType = std::move(tExr->dataType);
     }
 
     ~TestIfExpr() override
@@ -571,7 +571,7 @@ class TestInExpr : public TestExpr {
 public:
     explicit TestInExpr(vector<TestExpr *> args) : args(std::move(args))
     {
-        dataType = BooleanType().release();
+        dataType = BooleanType();
     }
 
     ~TestInExpr() override
@@ -677,6 +677,7 @@ TEST(JSONParserTest, Literal_Unknown_Null)
     // None type default DataExpr
     TestLiteralExpr expectedExpr(OMNI_NONE);
     expectedExpr.isEqual(noneWithNull);
+    delete noneWithNull;
 }
 
 TEST(JSONParserTest, Literal_Int32_Null)
@@ -686,6 +687,7 @@ TEST(JSONParserTest, Literal_Int32_Null)
     // Int32 default DataExpr
     TestLiteralExpr expectedExpr(OMNI_INT);
     expectedExpr.isEqual(nullInt32);
+    delete nullInt32;
 }
 
 TEST(JSONParserTest, FieldReference)

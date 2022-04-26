@@ -108,6 +108,8 @@ TEST(ParseTest, parseNotOperation)
     FieldExpr *colExpr = static_cast<FieldExpr *>(notExpr->exp);
     EXPECT_EQ(colExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(colExpr->colVal, 0);
+
+    delete result;
 }
 
 // Test Arithmetic Binary Operations
@@ -354,6 +356,8 @@ TEST(ParseTest, parseBetweenOperation)
     EXPECT_EQ(upperExpr->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(upperExpr->colVal, 2);
     EXPECT_EQ(upperExpr->GetReturnTypeId(), OMNI_LONG);
+
+    delete result;
 }
 
 // Test In expression
@@ -383,6 +387,8 @@ TEST(ParseTest, parseInOperation)
     EXPECT_EQ(arg2->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg2->colVal, 2);
     EXPECT_EQ(arg2->GetReturnTypeId(), OMNI_LONG);
+
+    delete result;
 }
 
 // Test coalesce expression
@@ -406,6 +412,8 @@ TEST(ParseTest, parseCoalesceOperation)
     EXPECT_EQ(value2->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value2->colVal, 0);
     EXPECT_EQ(value2->GetReturnTypeId(), OMNI_INT);
+
+    delete result;
 }
 
 // Test If expression
@@ -433,6 +441,8 @@ TEST(ParseTest, parseIfOperation)
 
     EXPECT_EQ(fExpr->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_STREQ(fExpr->stringVal->c_str(), "hello");
+
+    delete result;
 }
 
 // Test IsNull expression
@@ -451,6 +461,8 @@ TEST(ParseTest, parseIsNullOperation)
     EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_CHAR);
+
+    delete result;
 }
 
 // Test IsNotNull expression
@@ -471,6 +483,8 @@ TEST(ParseTest, parseIsNotNullOperation)
     EXPECT_EQ(value->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_CHAR);
+
+    delete result;
 }
 
 // Test Cast expression
@@ -491,6 +505,8 @@ TEST(ParseTest, parseCastOperation)
     EXPECT_EQ(arg0->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_INT);
+
+    delete result;
 }
 
 // Test abs expression
@@ -511,6 +527,8 @@ TEST(ParseTest, parseAbsOperation)
     EXPECT_EQ(arg0->GetType(), omniruntime::expressions::ExprType::FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_DOUBLE);
+
+    delete result;
 }
 
 // test substr
@@ -541,6 +559,8 @@ TEST(ParseTest, parseSubstrOperation)
     EXPECT_EQ(length->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(length->intVal, 6);
     EXPECT_EQ(length->GetReturnTypeId(), OMNI_INT);
+
+    delete result;
 }
 
 // test concat
@@ -566,6 +586,8 @@ TEST(ParseTest, parseConcatOperation)
     EXPECT_EQ(value2->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_STREQ(value2->stringVal->c_str(), "hello");
     EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VARCHAR);
+
+    delete result;
 }
 
 // Test Like
@@ -591,6 +613,8 @@ TEST(ParseTest, parseLikeOperation)
     EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_STREQ(index->stringVal->c_str(), ".*hello");
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VARCHAR);
+
+    delete result;
 }
 
 // Test mm3hash
@@ -616,6 +640,8 @@ TEST(ParseTest, parseMM3HashOperation)
     EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->intVal, 2);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
+
+    delete result;
 }
 
 // Test combine hash
@@ -641,6 +667,8 @@ TEST(ParseTest, parseCombineHashOperation)
     EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->longVal, 2);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_LONG);
+
+    delete result;
 }
 
 // Test pmod hash
@@ -666,6 +694,8 @@ TEST(ParseTest, parsePmodOperation)
     EXPECT_EQ(index->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(index->intVal, 5);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_INT);
+
+    delete result;
 }
 
 // Test null expr
@@ -678,6 +708,8 @@ TEST(ParseTest, parseNullExprOperation)
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result, nullptr);
+
+    delete result;
 }
 
 // test if column is null
@@ -691,6 +723,8 @@ TEST(ParseTest, parseNullStringOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     FieldExpr *nullExpr = static_cast<FieldExpr *>(result);
     EXPECT_TRUE(nullExpr->isNull);
+
+    delete result;
 }
 
 TEST(ParseTest, ParseExpressions)
@@ -721,5 +755,9 @@ TEST(ParseTest, ParseExpressions)
     EXPECT_EQ(addLeft->colVal, 1);
     EXPECT_EQ(addRight->GetType(), omniruntime::expressions::ExprType::LITERAL_E);
     EXPECT_EQ(addRight->longVal, 1);
+
+    for (auto i = 0; i < 2; i++) {
+        delete result.at(i);
+    }
 }
 }

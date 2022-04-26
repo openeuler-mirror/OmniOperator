@@ -580,6 +580,8 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
         CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+
+    delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(resBatch);
 }
@@ -640,6 +642,8 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
         CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+
+    delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(resBatch);
 }
@@ -714,6 +718,8 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
         expectData4, expectData5, expectData6);
 
     EXPECT_TRUE(VecBatchMatch(result[0], expectVecBatch));
+
+    delete[] input;
     VectorHelper::FreeVecBatches(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 }
@@ -769,6 +775,8 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
 
     VectorHelper::FreeVecBatches(result);
+
+    delete[] input;
 }
 
 TEST(HashAggregationOperatorTest, verify_distinct_correctness)
@@ -1075,6 +1083,8 @@ TEST(AggregationOperatorTest, verify_correctness)
     EXPECT_EQ(result1[0]->GetRowCount(), 1);
     EXPECT_EQ(result1[0]->GetVectorCount(), 5);
 
+    delete[] input1;
+    delete[] input2;
     omniruntime::op::Operator::DeleteOperator(aggregate3);
     VectorHelper::FreeVecBatches(result1);
 }
@@ -1211,6 +1221,7 @@ TEST(AggregationOperatorTest, avg_correctness_test)
     EXPECT_EQ(result[0]->GetVectorCount(), 1);
     EXPECT_EQ(result[0]->GetRowCount(), 1);
 
+    delete[] input;
     VectorHelper::FreeVecBatches(result);
     Operator::DeleteOperator(aggregate);
 }
@@ -1464,6 +1475,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     std::cout << "HashAgg without OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
     delete perfUtil;
+    delete[] input1;
+    delete[] input2;
     Operator::DeleteOperator(jitGroupBy);
     Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
@@ -1576,8 +1589,9 @@ TEST(HashAggregationOperatorTest, multi_stage)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
-    VectorHelper::PrintVecBatch(resultFromFinal[0]);
-    VectorHelper::PrintVecBatch(expectVecBatch);
+
+    delete[] input1;
+    delete[] input2;
     VectorHelper::FreeVecBatches(resultFromFinal);
     VectorHelper::FreeVecBatch(expectVecBatch);
 }
