@@ -24,19 +24,26 @@ public:
     {
         int32_t offset;
         Vector *maskVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(maskColumnId), rowIndex, offset);
-        bool *maskValues = static_cast<bool *>(maskVector->GetValues());
         if (maskVector->IsValueNull(offset)) {
             return;
         }
 
-        if (maskValues[offset]) {
+        if (static_cast<BooleanVector *>(maskVector)->GetValue(offset)) {
             realAggregator->ProcessGroup(state, vectorBatch, rowIndex);
         }
     }
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        realAggregator->InitiateGroup(state, vectorBatch, rowIndex);
+        int32_t offset;
+        Vector *maskVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(maskColumnId), rowIndex, offset);
+        if (maskVector->IsValueNull(offset)) {
+            return;
+        }
+
+        if (static_cast<BooleanVector *>(maskVector)->GetValue(offset)) {
+            realAggregator->InitiateGroup(state, vectorBatch, rowIndex);
+        }
     }
 
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
