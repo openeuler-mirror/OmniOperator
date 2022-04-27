@@ -59,7 +59,7 @@ public:
             return nullptr;
         }
 
-        if (vectorBatchIndex >= this->vecBatchFreeFlagDeque.size()) {
+        if (static_cast<size_t>(vectorBatchIndex) >= this->vecBatchFreeFlagDeque.size()) {
             return nullptr;
         }
         // relate vector have freed

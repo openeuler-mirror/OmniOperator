@@ -60,25 +60,27 @@ inline void VectorSwap(uint64_t *valueAddresses, int32_t from, int32_t l, int32_
     }
 }
 
-// return error number
-int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
+void PagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
 {
-    uint32_t vecBatchCount = vecBatches.size();
+    inputVecBatches.push_back(vecBatch);
+    positionCount += vecBatch->GetRowCount();
+}
+
+void PagesIndex::Prepare()
+{
+    int32_t vecBatchCount = inputVecBatches.size();
     uint32_t columnCount = this->typesCount;
 
-    for (uint32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-        this->positionCount += static_cast<uint32_t>(vecBatches[vecBatchIdx]->GetRowCount());
-    }
     this->valueAddresses = new uint64_t[this->positionCount];
     this->columns = new Vector **[columnCount];
     for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
         this->columns[colIdx] = new Vector *[vecBatchCount];
     }
 
-    uint32_t valueIndex = 0;
-    for (uint32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-        VectorBatch *vecBatch = vecBatches[vecBatchIdx];
-        uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
+    int32_t valueIndex = 0;
+    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+        VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
+        auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
         // generate value address.
         for (uint32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
             uint64_t valueAddress = EncodeSyntheticAddress(vecBatchIdx, rowIdx);
@@ -90,7 +92,6 @@ int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
             this->columns[colIdx][vecBatchIdx] = vecBatch->GetVector(static_cast<int32_t>(colIdx));
         }
     }
-    return 0;
 }
 
 template <typename V>
@@ -616,7 +617,7 @@ void QuickSortColumnDec128(const int32_t sortAscendings, const int32_t sortNullF
 }
 
 std::vector<std::tuple<int32_t, int32_t>> GetRanges(uint64_t *valueAddresses, Vector **columns, int32_t from,
-    int32_t to, CompareFunc compareFunc)
+    int32_t to, OperatorUtil::CompareFunc compareFunc)
 {
     std::vector<std::tuple<int32_t, int32_t>> ranges;
     uint64_t valueAddress = valueAddresses[from];
@@ -876,16 +877,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
 
 PagesIndex::~PagesIndex()
 {
-    if (this->columns != nullptr) {
-        for (uint32_t colIdx = 0; colIdx < this->typesCount; ++colIdx) {
-            delete[] this->columns[colIdx];
-        }
-        delete[] this->columns;
-    }
-
-    if (this->valueAddresses != nullptr) {
-        delete[] this->valueAddresses;
-    }
+    Clear();
 }
 
 template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *outputVector, int32_t outputIndex)
@@ -958,6 +950,46 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
         SetVarcharValue(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
     }
     return outputVector;
+}
+
+void PagesIndex::GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vector<int32_t> &outputCols,
+    std::vector<VectorBatch *> &sortedVecBatches)
+{
+    std::vector<DataType> types(dataTypes, dataTypes + typesCount);
+    int32_t outputColsCount = outputCols.size();
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(types, outputCols.data(), outputColsCount);
+    int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
+    sortedVecBatches.reserve(vecBatchCount);
+
+    VectorBatch *result = nullptr;
+    int32_t offset = 0;
+    int32_t rowCount = 0;
+    for (int32_t i = 0; i < vecBatchCount; i++) {
+        rowCount = std::min(maxRowCount, static_cast<int32_t>(positionCount) - offset);
+        result = new VectorBatch(outputColsCount, rowCount);
+        GetOutput(outputCols.data(), outputColsCount, result, dataTypeIds, offset, rowCount, vectorAllocator);
+        offset += rowCount;
+        sortedVecBatches.push_back(result);
+    }
+}
+
+void PagesIndex::Clear()
+{
+    if (columns != nullptr) {
+        for (uint32_t colIdx = 0; colIdx < typesCount; ++colIdx) {
+            delete[] columns[colIdx];
+        }
+        delete[] columns;
+        columns = nullptr;
+    }
+
+    if (valueAddresses != nullptr) {
+        delete[] valueAddresses;
+        valueAddresses = nullptr;
+    }
+    positionCount = 0;
+    VectorHelper::FreeVecBatches(inputVecBatches);
+    inputVecBatches.clear();
 }
 }
 }

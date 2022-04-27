@@ -11,6 +11,7 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -191,9 +192,9 @@ public class OmniProjectOperatorTest {
                 + "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, "
                 + "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
         OmniProjectOperatorFactory.JitContext factory1 = new OmniProjectOperatorFactory.JitContext(projectionsJSON,
-                types, 1);
+                types, 1, new OperatorConfig());
         OmniProjectOperatorFactory.JitContext factory2 = new OmniProjectOperatorFactory.JitContext(projectionsJSON,
-                types, 1);
+                types, 1, new OperatorConfig());
         OmniProjectOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

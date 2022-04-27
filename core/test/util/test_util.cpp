@@ -196,7 +196,7 @@ VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
     return vectorBatch;
 }
 
-VectorBatch *CreateEmptyVectorBatch(std::vector<DataType> &dataTypes)
+VectorBatch *CreateEmptyVectorBatch(const std::vector<DataType> &dataTypes)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator();
     VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
@@ -505,7 +505,7 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
     std::vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
         [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
-    for (int i = 0; i < argTypes.size(); i++) {
+    for (size_t i = 0; i < argTypes.size(); i++) {
         if (argTypes[i] == omniruntime::type::OMNI_DATE32) {
             argTypes[i] = omniruntime::type::OMNI_INT;
         }
@@ -516,5 +516,10 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
         return new FuncExpr(funcName, args, std::move(returnType), function);
     }
     return nullptr;
+}
+
+std::string GenerateSpillPath()
+{
+    return get_current_dir_name() + std::string("/") + std::to_string(time(0));
 }
 }

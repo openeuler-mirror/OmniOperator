@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.limit;
@@ -9,6 +9,7 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 import nova.hetu.omniruntime.utils.OmniErrorType;
@@ -33,15 +34,16 @@ public class OmniDistinctLimitOperatorFactory
      * @param distinctCols the column index
      * @param hashCol col index of precomputed hash values
      * @param limit the limit count
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit,
-            boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(sourceTypes, distinctCols, hashCol, limit), isJitEnabled));
+            OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(sourceTypes, distinctCols, hashCol, limit, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni distinct limit operator factory with jit default.
+     * Instantiates a new Omni distinct limit operator factory with default operator
+     * config.
      *
      * @param sourceTypes the data types of each column
      * @param distinctCols the column index
@@ -49,7 +51,7 @@ public class OmniDistinctLimitOperatorFactory
      * @param limit the limit count
      */
     public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
-        this(sourceTypes, distinctCols, hashCol, limit, true);
+        this(sourceTypes, distinctCols, hashCol, limit, new OperatorConfig(true));
     }
 
     private static native long createDistinctLimitOperatorFactory(String sourceTypes, int[] distinctCols, int hashCol,
@@ -67,7 +69,7 @@ public class OmniDistinctLimitOperatorFactory
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private static Set<DataType.DataTypeId> supportTypes = new HashSet<DataType.DataTypeId>() {
             {
                 add(DataType.DataTypeId.OMNI_INT);
@@ -82,10 +84,13 @@ public class OmniDistinctLimitOperatorFactory
             }
         };
 
-        private DataType[] sourceTypes;
-        private int[] distinctCols;
-        private int hashCol;
-        private long limit;
+        private final DataType[] sourceTypes;
+
+        private final int[] distinctCols;
+
+        private final int hashCol;
+
+        private final long limit;
 
         /**
          * Instantiates a new Context.
@@ -94,8 +99,11 @@ public class OmniDistinctLimitOperatorFactory
          * @param distinctCols the column index
          * @param hashCol col index of precomputed hash values
          * @param limit the limit count
+         * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
+        public JitContext(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit,
+                OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = requireNonNull(sourceTypes, "Source types array is null.");
             this.distinctCols = requireNonNull(distinctCols, "Distinct cols array is null.");
             checkDataType();
@@ -121,12 +129,13 @@ public class OmniDistinctLimitOperatorFactory
                 return false;
             }
             JitContext context = (JitContext) obj;
-            return this.limit == context.limit;
+            return limit == context.limit && operatorConfig.equals(context.operatorConfig);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(distinctCols), this.limit, this.hashCol);
+            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(distinctCols), limit, hashCol,
+                    operatorConfig);
         }
     }
 
@@ -140,10 +149,9 @@ public class OmniDistinctLimitOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

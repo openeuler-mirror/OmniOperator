@@ -19,6 +19,7 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.type.CharDataType;
@@ -67,7 +68,8 @@ public class OmniHashJoinOperatorsTest {
         int buildPageCount = 10;
 
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactoryWithoutJit = new OmniHashBuilderOperatorFactory(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount, false);
+                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
+                new OperatorConfig(false));
         OmniOperator hashBuilderOperatorWithoutJit = hashBuilderOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> buildVecsWithoutJit = buildVecs(buildPageCount);
 
@@ -88,7 +90,7 @@ public class OmniHashJoinOperatorsTest {
 
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactoryWithoutJit = new OmniLookupJoinOperatorFactory(
                 probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactoryWithoutJit, false);
+                hashBuilderOperatorFactoryWithoutJit, new OperatorConfig(false));
         OmniOperator lookupJoinOperatorWithoutJit = lookupJoinOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> probeVecsWithoutJit = buildVecs(probePageCount);
 
@@ -99,7 +101,8 @@ public class OmniHashJoinOperatorsTest {
         System.out.println("LookupJoin without jit use " + (end - start) + " ms.");
 
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactoryWithJit = new OmniHashBuilderOperatorFactory(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount, true);
+                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
+                new OperatorConfig(true));
         OmniOperator hashBuilderOperatorWithJit = hashBuilderOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> buildVecsWithJit = buildVecs(buildPageCount);
 
@@ -113,7 +116,7 @@ public class OmniHashJoinOperatorsTest {
 
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactoryWithJit = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactoryWithJit, true);
+                hashBuilderOperatorFactoryWithJit, new OperatorConfig(true));
         OmniOperator lookupJoinOperatorWithJit = lookupJoinOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> probeVecsWithJit = buildVecs(probePageCount);
 
@@ -723,12 +726,12 @@ public class OmniHashJoinOperatorsTest {
         DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] buildHashCols = {0};
         int operatorCount = 1;
-        OmniHashBuilderOperatorFactory.JitContext hashBuilderOperatorFactory1 =
-                new OmniHashBuilderOperatorFactory.JitContext(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
-        OmniHashBuilderOperatorFactory.JitContext hashBuilderOperatorFactory2 =
-                new OmniHashBuilderOperatorFactory.JitContext(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+        OmniHashBuilderOperatorFactory.JitContext hashBuilderOperatorFactory1 = new OmniHashBuilderOperatorFactory.JitContext(
+                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
+                new OperatorConfig());
+        OmniHashBuilderOperatorFactory.JitContext hashBuilderOperatorFactory2 = new OmniHashBuilderOperatorFactory.JitContext(
+                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
+                new OperatorConfig());
         OmniHashBuilderOperatorFactory.JitContext hashBuilderOperatorFactory3 = null;
         assertTrue(hashBuilderOperatorFactory1.equals(hashBuilderOperatorFactory2));
         assertTrue(hashBuilderOperatorFactory1.equals(hashBuilderOperatorFactory1));
@@ -739,12 +742,12 @@ public class OmniHashJoinOperatorsTest {
         int[] probeHashCols = {0};
         int[] buildOutputCols = {0, 1};
         DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
-        OmniLookupJoinOperatorFactory.JitContext lookupJoinOperatorFactory1 =
-                new OmniLookupJoinOperatorFactory.JitContext(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER);
-        OmniLookupJoinOperatorFactory.JitContext lookupJoinOperatorFactory2 =
-                new OmniLookupJoinOperatorFactory.JitContext(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER);
+        OmniLookupJoinOperatorFactory.JitContext lookupJoinOperatorFactory1 = new OmniLookupJoinOperatorFactory.JitContext(
+                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                new OperatorConfig());
+        OmniLookupJoinOperatorFactory.JitContext lookupJoinOperatorFactory2 = new OmniLookupJoinOperatorFactory.JitContext(
+                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                new OperatorConfig());
         OmniLookupJoinOperatorFactory.JitContext lookupJoinOperatorFactory3 = null;
 
         assertTrue(lookupJoinOperatorFactory1.equals(lookupJoinOperatorFactory2));

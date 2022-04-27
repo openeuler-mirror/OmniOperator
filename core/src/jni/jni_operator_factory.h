@@ -31,10 +31,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory
  * Method:    createSortOperatorFactory
- * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[I)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[IJLjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(
-    JNIEnv *, jclass, jstring, jintArray, jobjectArray, jintArray, jintArray, jlong);
+    JNIEnv *, jclass, jstring, jintArray, jobjectArray, jintArray, jintArray, jlong, jstring);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory
@@ -193,11 +193,11 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory
  * Method:    createSortWithExprOperatorFactory
- * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[IJ)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[IJLjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createSortWithExprOperatorFactory(JNIEnv *,
-    jclass, jstring, jintArray, jobjectArray, jintArray, jintArray, jlong);
+    jclass, jstring, jintArray, jobjectArray, jintArray, jintArray, jlong, jstring);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory

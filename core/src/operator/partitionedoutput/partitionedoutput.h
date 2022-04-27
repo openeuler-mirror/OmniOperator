@@ -40,20 +40,19 @@ void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, 
 
 class PartitionedOutputOperatorFactory : public OperatorFactory {
 public:
-    PartitionedOutputOperatorFactory(const DataTypes &sourceTypes,
-        int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel, int32_t *partitionChannels,
-        int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition, int32_t bucketToPartitionCount,
-        bool isHashPrecomputed, int32_t *hashChannelTypes, int32_t hashChannelTypesCount, int32_t *hashChannels,
-        int32_t hashChannelsCount);
+    PartitionedOutputOperatorFactory(const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
+        int32_t nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
+        int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
+        int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperatorFactory() override;
 
-    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(
-        const DataTypes &sourceTypesField, int32_t sourceTypeCountField, bool replicatesAnyRowField,
-        int32_t nullChannelField, int32_t *partitionChannelsField, int32_t partitionChannelsCountField,
-        int32_t partitionCountField, int32_t *bucketToPartitionField, int32_t bucketToPartitionCountField,
-        bool hashPrecomputed, int32_t *hashChannelTypesField, int32_t hashChannelTypesCountField,
-        int32_t *hashChannelsField, int32_t hashChannelsCountField);
+    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(const DataTypes &sourceTypesField,
+        int32_t sourceTypeCountField, bool replicatesAnyRowField, int32_t nullChannelField,
+        int32_t *partitionChannelsField, int32_t partitionChannelsCountField, int32_t partitionCountField,
+        int32_t *bucketToPartitionField, int32_t bucketToPartitionCountField, bool hashPrecomputed,
+        int32_t *hashChannelTypesField, int32_t hashChannelTypesCountField, int32_t *hashChannelsField,
+        int32_t hashChannelsCountField);
 
     Operator *CreateOperator() override;
 

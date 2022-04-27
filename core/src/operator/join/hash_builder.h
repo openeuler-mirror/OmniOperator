@@ -51,10 +51,9 @@ public:
 private:
     const type::DataTypes &buildTypes;
     std::vector<int32_t> buildHashCols;
-    std::unique_ptr<PagesIndex> pagesIndex;
-    int32_t partitionIndex;
     JoinHashTables *hashTables;
-    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
+    int32_t partitionIndex;
+    std::unique_ptr<PagesIndex> pagesIndex;
 };
 } // end of op
 } // end of omniruntime

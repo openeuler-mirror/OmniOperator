@@ -13,6 +13,7 @@ import static org.testng.Assert.assertTrue;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -69,7 +70,7 @@ public class OmniWindowOperatorTest {
         OmniWindowOperatorFactory windowOperatorFactoryWithoutJit = new OmniWindowOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                false);
+                new OperatorConfig(false));
         OmniOperator windowOperatorWithoutJit = windowOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
 
@@ -84,7 +85,7 @@ public class OmniWindowOperatorTest {
         OmniWindowOperatorFactory windowOperatorFactoryWithJit = new OmniWindowOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                true);
+                new OperatorConfig(true));
         OmniOperator windowOperatorWithJit = windowOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> vecsWithJit = buildVecs();
 
@@ -222,10 +223,12 @@ public class OmniWindowOperatorTest {
         int[] outputChannels = {0, 1};
         OmniWindowOperatorFactory.JitContext factory1 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
+                new OperatorConfig());
         OmniWindowOperatorFactory.JitContext factory2 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
+                new OperatorConfig());
         OmniWindowOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

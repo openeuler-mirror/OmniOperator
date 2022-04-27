@@ -51,9 +51,9 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder()
     smjScanner = new SortMergeJoinScanner(*streamedTypes, streamedKeysCols.data(), streamedKeysCols.size(),
         streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, false);
 
-    joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(),
-        streamedOutputCols.size(), streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(),
-        bufferedOutputCols.size(), bufferedTblPagesIndex, filter, vecAllocator);
+    joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
+        streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
+        bufferedTblPagesIndex, filter, vecAllocator);
 }
 
 int32_t SortMergeJoinOperator::GetJoinResult()

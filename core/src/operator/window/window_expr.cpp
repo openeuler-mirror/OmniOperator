@@ -2,10 +2,7 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: window implementations
  */
-#include "../window/window_expr.h"
-#include "../sort/sort.h"
-#include "../status.h"
-#include "../util/operator_util.h"
+#include "window_expr.h"
 
 using namespace std;
 namespace omniruntime {

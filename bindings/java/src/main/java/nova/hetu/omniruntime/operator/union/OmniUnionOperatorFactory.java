@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.union;
@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator.union;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -24,20 +25,20 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      *
      * @param sourceTypes the source type
      * @param isDistinct mark union or union all
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
-    public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(sourceTypes, isDistinct), isJitEnabled));
+    public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct, OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(sourceTypes, isDistinct, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni union operator factory with jit default.
+     * Instantiates a new Omni union operator factory with default operator config.
      *
      * @param sourceTypes the source type
      * @param isDistinct mark union or union all
      */
     public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct) {
-        this(sourceTypes, isDistinct, true);
+        this(sourceTypes, isDistinct, new OperatorConfig(true));
     }
 
     @Override
@@ -56,7 +57,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] sourceTypes;
 
         private final boolean isDistinct;
@@ -66,8 +67,10 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
          *
          * @param sourceTypes the source types
          * @param isDistinct the is distinct
+         * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, boolean isDistinct) {
+        public JitContext(DataType[] sourceTypes, boolean isDistinct, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.isDistinct = isDistinct;
         }
@@ -84,12 +87,13 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
             if (obj instanceof JitContext) {
                 context = (JitContext) obj;
             }
-            return isDistinct == context.isDistinct && Arrays.equals(sourceTypes, context.sourceTypes);
+            return isDistinct == context.isDistinct && Arrays.equals(sourceTypes, context.sourceTypes)
+                    && operatorConfig.equals(context.operatorConfig);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(sourceTypes), isDistinct);
+            return Objects.hash(Arrays.hashCode(sourceTypes), isDistinct, operatorConfig);
         }
     }
 
@@ -103,10 +107,9 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

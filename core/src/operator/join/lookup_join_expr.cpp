@@ -66,8 +66,8 @@ LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 
 int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projectFuncs, probeHashCols,
-                                                                 vecAllocator);
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectVectors(vecBatch, probeTypes, projectFuncs, probeHashCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         lookupJoinOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

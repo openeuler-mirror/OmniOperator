@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.join;
@@ -10,6 +10,7 @@ import nova.hetu.omniruntime.constants.JoinType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -32,17 +33,17 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      * @param outputChannels output of streamed table
      * @param joinType join type
      * @param filter condition for not equal expression
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
-            int[] outputChannels, JoinType joinType, Optional<String> filter, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter),
-                isJitEnabled));
+            int[] outputChannels, JoinType joinType, Optional<String> filter, OperatorConfig operatorConfig) {
+        super(new FactoryContext(
+                new JitContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni sort merge streamed table factory with jit
-     * default.
+     * Instantiates a new Omni sort merge streamed table factory with default
+     * operator config.
      *
      * @param sourceTypes the all input vector types
      * @param equalKeyExprs equal condition key expressions
@@ -52,7 +53,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      */
     public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
             int[] outputChannels, JoinType joinType, Optional<String> filter) {
-        this(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, true);
+        this(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, new OperatorConfig(true));
     }
 
     private static native long createSmjStreamedTableWithExprOperatorFactory(String sourceTypes, String[] equalKeyExprs,
@@ -75,7 +76,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      *
      * @since 2021-10-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] sourceTypes;
 
         private final String[] equalKeyExprs;
@@ -94,9 +95,11 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
          * @param outputChannels output of streamed table
          * @param joinType join type
          * @param filter condition for not equal expression
+         * @param operatorConfig the operator config
          */
         public JitContext(DataType[] sourceTypes, String[] equalKeyExprs, int[] outputChannels, JoinType joinType,
-                Optional<String> filter) {
+                Optional<String> filter, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes");
             this.equalKeyExprs = requireNonNull(equalKeyExprs, "equalKeyExprs");
             this.outputChannels = requireNonNull(outputChannels, "outputChannels");
@@ -107,7 +110,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(equalKeyExprs),
-                    Arrays.hashCode(outputChannels), joinType, filter);
+                    Arrays.hashCode(outputChannels), joinType, filter, operatorConfig);
         }
 
         @Override
@@ -121,7 +124,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
             JitContext that = (JitContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(equalKeyExprs, that.equalKeyExprs)
                     && Arrays.equals(outputChannels, that.outputChannels) && joinType == that.joinType
-                    && filter.equals(that.filter);
+                    && filter.equals(that.filter) && operatorConfig.equals(that.operatorConfig);
         }
     }
 
@@ -135,10 +138,9 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
             setNeedCache(false);
         }
 

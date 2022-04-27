@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * @Description: sort implementations
  */
 #include "sort.h"
@@ -8,6 +8,8 @@
 #include "vector/vector_common.h"
 #include "vector/vector_helper.h"
 #include "operator/util/operator_util.h"
+#include "operator/spill/vector_batch_spiller.h"
+#include "util/omni_exception.h"
 
 using namespace std;
 namespace omniruntime {
@@ -15,7 +17,9 @@ namespace op {
 using namespace omniruntime::vec;
 
 SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
-    int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
+    int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
+    const OperatorConfig &operatorConfig)
+    : operatorConfig(operatorConfig)
 {
     this->sourceTypes = std::make_unique<DataTypes>(dataTypes);
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
@@ -24,26 +28,37 @@ SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *ou
     this->sortNullFirsts.insert(this->sortNullFirsts.end(), sortNullFirsts, sortNullFirsts + sortColCount);
 }
 
-SortOperatorFactory::~SortOperatorFactory() {}
+SortOperatorFactory::~SortOperatorFactory() = default;
 
 SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
     int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
+    OperatorConfig defaultConfig;
+    return CreateSortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts,
+        sortColCount, defaultConfig);
+}
+
+SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
+    int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
+    const OperatorConfig &operatorConfig)
+{
+    OperatorConfig::CheckOperatorConfig(operatorConfig);
     auto pOperatorFactory = new SortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings,
-        sortNullFirsts, sortColCount);
+        sortNullFirsts, sortColCount, operatorConfig);
     return pOperatorFactory;
 }
 
 Operator *SortOperatorFactory::CreateOperator()
 {
-    auto pSortOperator = new SortOperator(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts);
+    auto pSortOperator =
+        new SortOperator(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts, operatorConfig);
     return pSortOperator;
 }
 
 // function implements for class Sort
 SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
-    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts)
-    : sourceTypes(dataTypes)
+    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, const OperatorConfig &operatorConfig)
+    : sourceTypes(dataTypes), operatorConfig(operatorConfig)
 {
     this->outputCols = outputCols;
     this->sortCols = sortCols;
@@ -52,67 +67,127 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->pagesIndex = std::make_unique<PagesIndex>(dataTypes);
 }
 
-SortOperator::~SortOperator() {}
+SortOperator::~SortOperator() = default;
 
 int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 {
-    inputVecBatches.push_back(vecBatch);
+    if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
+        auto result = SpillToDisk();
+        pagesIndex->Clear();
+        if (result != ErrorCode::SUCCESS) {
+            throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
+        }
+    }
+
+    pagesIndex->AddVecBatch(vecBatch);
     return 0;
 }
 
 // return error code
 int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
-    pagesIndex->AddVecBatches(inputVecBatches);
-
-    int32_t positionCount = pagesIndex->GetPositionCount();
-    if (positionCount <= 0) {
-        return 0;
+    if (spiller == nullptr) {
+        GetOutputFromMemory(outputPages);
+    } else {
+        MergeFromDiskAndMemory(outputPages);
     }
 
-    int32_t sortColCount = static_cast<int32_t>(sortCols.size());
-    int32_t outputColsCount = static_cast<int32_t>(outputCols.size());
-
-    // first, sort
-    int32_t to = positionCount;
-    int32_t from = 0;
-    int32_t sortColTypes[sortColCount];
-    for (int32_t i = 0; i < sortColCount; i++) {
-        sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
-    }
-
-    auto quickSortStart = START();
-    pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount, from,
-        to);
-    OP_DEBUG_LOG("quick sort elapsed time : %ld ms.", END(quickSortStart));
-
-    // next, get output
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(sourceTypes.Get(), outputCols.data(), outputColsCount);
-    int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
-    outputPages.reserve(vecBatchCount);
-
-    VectorBatch *vecBatch = nullptr;
-    int32_t position = 0;
-    int32_t rowCount = 0;
-    for (int32_t i = 0; i < vecBatchCount; i++) {
-        rowCount = min(maxRowCount, positionCount - position);
-        auto start = START();
-        OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
-        vecBatch = new VectorBatch(outputColsCount, rowCount);
-        pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
-            this->vecAllocator);
-        OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));
-        position += rowCount;
-        outputPages.push_back(vecBatch);
-    }
+    pagesIndex->Clear();
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
 OmniStatus SortOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
+    if (comparator) {
+        delete comparator;
+    }
+    if (spiller) {
+        delete spiller;
+    }
     return OMNI_STATUS_NORMAL;
+}
+
+ErrorCode SortOperator::SpillToDisk()
+{
+    pagesIndex->Prepare();
+
+    Sort();
+
+    if (spiller == nullptr) {
+        comparator = new VecBatchWithPositionComparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts);
+        spiller = new VectorBatchSpiller(operatorConfig.GetSpillConfig()->GetSpillPath(), sourceTypes, outputCols,
+            comparator, vecAllocator);
+        spiller->SetSpillTracker(GetRootSpillTracker().CreateSpillTracker());
+    }
+
+    // spill data from memory to disk
+    std::vector<VectorBatch *> vecBatchesForSpill;
+    GetVecBatchesForSpill(vecBatchesForSpill);
+
+    VectorBatchUnitIter iter(vecBatchesForSpill);
+    auto result = spiller->Spill(iter);
+    VectorHelper::FreeVecBatches(vecBatchesForSpill);
+    return result;
+}
+
+void SortOperator::Sort()
+{
+    int32_t positionCount = pagesIndex->GetRowCount();
+    int32_t sortColCount = sortCols.size();
+    int32_t to = positionCount;
+    int32_t from = 0;
+    int32_t sortColTypes[sortColCount];
+    for (int32_t i = 0; i < sortColCount; i++) {
+        sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
+    }
+    pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount, from,
+        to);
+}
+
+void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesForSpill)
+{
+    int32_t typesCount = sourceTypes.GetSize();
+    std::vector<int32_t> outputCols(typesCount);
+    for (int32_t i = 0; i < typesCount; i++) {
+        outputCols[i] = i;
+    }
+
+    pagesIndex->GetSortedVecBatches(vecAllocator, outputCols, vecBatchesForSpill);
+}
+
+void SortOperator::GetOutputFromMemory(vector<VectorBatch *> &outputPages)
+{
+    if (pagesIndex->GetRowCount() <= 0) {
+        return;
+    }
+
+    pagesIndex->Prepare();
+    // first step, sort
+    Sort();
+    // second step, get sorted vector batches
+    pagesIndex->GetSortedVecBatches(vecAllocator, outputCols, outputPages);
+}
+
+void SortOperator::MergeFromDiskAndMemory(vector<VectorBatch *> &outputPages)
+{
+    std::vector<VectorBatch *> vecBatchesForSpill;
+    if (pagesIndex->GetRowCount() > 0) {
+        pagesIndex->Prepare();
+        // first step, sort
+        Sort();
+        // second step, get sorted vector batches
+        GetVecBatchesForSpill(vecBatchesForSpill);
+    }
+
+    // third step, merge data from disk and memory
+    VectorBatchUnitIter memoryIter(vecBatchesForSpill);
+    spiller->MergeFromDiskAndMemory(memoryIter);
+    while (spiller->HasNext()) {
+        VectorBatchUnit *vectorBatchUnit = static_cast<VectorBatchUnit *>(spiller->Next());
+        outputPages.push_back(vectorBatchUnit->GetVectorBatch());
+        delete vectorBatchUnit;
+    }
 }
 } // end of namespace op
 } // end of namespace omniruntime

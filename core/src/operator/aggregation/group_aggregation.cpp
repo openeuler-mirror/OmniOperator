@@ -210,7 +210,7 @@ OmniStatus HashAggregationOperator::Init()
         sourceTypes[c.idx] = static_cast<int32_t>(c.input.GetId());
     }
 
-    for (int32_t idx = 0; idx < aggInputColsSize; idx++) {
+    for (size_t idx = 0; idx < aggInputColsSize; idx++) {
         sourceTypes[idx + groupByColsSize] = static_cast<int32_t>(aggInputTypes.Get()[idx].GetId());
     }
     executionContext = std::make_unique<ExecutionContext>();
@@ -339,13 +339,13 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     auto aggColIdx = std::make_unique<int32_t[]>(aggColNum);
     auto aggFuncTypes = std::make_unique<int32_t[]>(aggNum);
 
-    for (int32_t i = 0; i < groupColNum; ++i) {
+    for (size_t i = 0; i < groupColNum; ++i) {
         groupByColIdx[i] = this->groupByCols[i].idx;
     }
-    for (int32_t i = 0; i < aggColNum; ++i) {
+    for (size_t i = 0; i < aggColNum; ++i) {
         aggColIdx[i] = this->aggInputCols[i];
     }
-    for (int32_t i = 0; i < aggNum; i++) {
+    for (size_t i = 0; i < aggNum; i++) {
         aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
     // verify whether input types match operator's types

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * @Description: sort implementations
  */
 #ifndef __SORT_H__
@@ -7,8 +7,12 @@
 
 #include <vector>
 #include <memory>
+#include "util/error_code.h"
 #include "operator/operator_factory.h"
+#include "operator/config/operator_config.h"
 #include "operator/pages_index.h"
+#include "operator/spill/spiller.h"
+#include "operator/spill/vector_batch_merger.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
 
@@ -17,13 +21,18 @@ namespace op {
 class SortOperatorFactory : public OperatorFactory {
 public:
     SortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
-        int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
+        int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
+        const OperatorConfig &operatorConfig);
 
     ~SortOperatorFactory() override;
 
     static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols,
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount);
+
+    static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &vecTypes, int32_t *outputCols,
+        int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortColCount, const OperatorConfig &operatorConfig);
 
     Operator *CreateOperator() override;
 
@@ -68,12 +77,14 @@ private:
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
+    OperatorConfig operatorConfig;
 };
 
 class SortOperator : public Operator {
 public:
     SortOperator(const type::DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
-        std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts);
+        std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts,
+        const OperatorConfig &operatorConfig);
 
     ~SortOperator() override;
 
@@ -124,13 +135,23 @@ public:
     }
 
 private:
-    const type::DataTypes &sourceTypes;
+    ErrorCode SpillToDisk();
+    void Sort();
+    void GetVecBatchesForSpill(std::vector<omniruntime::vec::VectorBatch *> &vecBatchesForSpill);
+    void GetOutputFromMemory(std::vector<VectorBatch *> &outputPages);
+    void MergeFromDiskAndMemory(std::vector<VectorBatch *> &outputPages);
+
+    type::DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
     std::unique_ptr<PagesIndex> pagesIndex;
-    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
+
+    // for spill
+    OperatorConfig operatorConfig;
+    VecBatchWithPositionComparator *comparator = nullptr;
+    Spiller *spiller = nullptr;
 };
 } // end of namespace op
 } // end of namespace omniruntime

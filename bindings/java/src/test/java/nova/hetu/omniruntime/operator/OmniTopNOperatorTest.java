@@ -12,6 +12,7 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.topn.OmniTopNOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -65,7 +66,7 @@ public class OmniTopNOperatorTest {
         int[] sortNullFirsts = {0, 0};
 
         OmniTopNOperatorFactory topNOperatorFactoryWithoutJit = new OmniTopNOperatorFactory(sourceTypes, limitN,
-                sortCols, sotrAscendings, sortNullFirsts, false);
+                sortCols, sotrAscendings, sortNullFirsts, new OperatorConfig(false));
         OmniOperator topNOperatorWithoutJit = topNOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
 
@@ -78,7 +79,7 @@ public class OmniTopNOperatorTest {
         System.out.println("TopN without jit use " + (end - start) + " ms.");
 
         OmniTopNOperatorFactory topNOperatorFactoryWithJit = new OmniTopNOperatorFactory(sourceTypes, limitN, sortCols,
-                sotrAscendings, sortNullFirsts, true);
+                sotrAscendings, sortNullFirsts, new OperatorConfig(true));
         OmniOperator topNOperatorWithJit = topNOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> vecsWithJit = buildVecs();
 
@@ -259,9 +260,9 @@ public class OmniTopNOperatorTest {
         int[] nullFirst = {0};
         int expectedRowSize = 5;
         OmniTopNOperatorFactory.JitContext factory1 = new OmniTopNOperatorFactory.JitContext(sourceTypes,
-                expectedRowSize, sortCols, sortAsc, nullFirst);
+                expectedRowSize, sortCols, sortAsc, nullFirst, new OperatorConfig());
         OmniTopNOperatorFactory.JitContext factory2 = new OmniTopNOperatorFactory.JitContext(sourceTypes,
-                expectedRowSize, sortCols, sortAsc, nullFirst);
+                expectedRowSize, sortCols, sortAsc, nullFirst, new OperatorConfig());
         OmniTopNOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.limit;
@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator.limit;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 
 import java.util.Objects;
 
@@ -20,19 +21,19 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      * Instantiates a new Omni limit operator factory.
      *
      * @param limit the limit count
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
-    public OmniLimitOperatorFactory(long limit, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(limit), isJitEnabled));
+    public OmniLimitOperatorFactory(long limit, OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(limit, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni limit operator factory with jit default.
+     * Instantiates a new Omni limit operator factory with default operator config.
      *
      * @param limit the limit count
      */
     public OmniLimitOperatorFactory(long limit) {
-        this(limit, true);
+        this(limit, new OperatorConfig(true));
     }
 
     @Override
@@ -48,10 +49,17 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
-        private long limit;
+    public static class JitContext extends OmniJitContext {
+        private final long limit;
 
-        public JitContext(long limit) {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param limit the limit count
+         * @param operatorConfig the operator config
+         */
+        public JitContext(long limit, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.limit = limit;
         }
 
@@ -64,12 +72,12 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
                 return false;
             }
             JitContext context = (JitContext) obj;
-            return this.limit == context.limit;
+            return limit == context.limit && operatorConfig.equals(context.operatorConfig);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(this.limit);
+            return Objects.hash(this.limit, operatorConfig);
         }
     }
 
@@ -83,10 +91,9 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

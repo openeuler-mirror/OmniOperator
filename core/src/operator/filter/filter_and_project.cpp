@@ -34,7 +34,12 @@ RowFilterFunc RowFilter::Create()
 }
 
 SimpleFilter::SimpleFilter(const Expr &expression)
-    : codegen(nullptr), expression(&expression), func(nullptr), resultLength(nullptr), isResultNull(nullptr)
+    : codegen(nullptr),
+      expression(&expression),
+      func(nullptr),
+      isResultNull(nullptr),
+      resultLength(nullptr),
+      initialized(false)
 {}
 
 SimpleFilter::~SimpleFilter()

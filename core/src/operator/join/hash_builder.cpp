@@ -58,20 +58,20 @@ HashBuilderOperator::~HashBuilderOperator()
 
 int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
-    inputVecBatches.push_back(vecBatch);
+    pagesIndex->AddVecBatch(vecBatch);
     return 0;
 }
 
 int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
     // add vecBatches into PagesIndex
-    pagesIndex->AddVecBatches(inputVecBatches);
+    pagesIndex->Prepare();
 
     // build JoinHashTable
     auto pagesHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(), buildTypes.GetIds(), buildTypes.GetSize(),
         buildHashCols.data(), buildHashCols.size());
     auto joinHashTable =
-        new JoinHashTable(pagesHashStrategy, pagesIndex->GetValueAddresses(), pagesIndex->GetPositionCount());
+        new JoinHashTable(pagesHashStrategy, pagesIndex->GetValueAddresses(), pagesIndex->GetRowCount());
     hashTables->AddHashTable(partitionIndex, joinHashTable);
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
@@ -79,7 +79,7 @@ int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch
 
 OmniStatus HashBuilderOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
+    pagesIndex->Clear();
     return OMNI_STATUS_NORMAL;
 }
 } // end of op

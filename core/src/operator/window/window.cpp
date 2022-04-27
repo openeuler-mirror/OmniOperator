@@ -4,7 +4,6 @@
  */
 
 #include "window.h"
-#include "../sort/sort.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -154,14 +153,14 @@ WindowOperator::~WindowOperator()
 
 int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
 {
-    inputVecBatches.push_back(vecBatch);
+    pagesIndex->AddVecBatch(vecBatch);
     return 0;
 }
 
 int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
     Initialization();
-    int32_t positionCount = pagesIndex->GetPositionCount();
+    int32_t positionCount = pagesIndex->GetRowCount();
     int finalOutputColsCount = 0;
     if (positionCount <= 0) {
         return 0;
@@ -200,7 +199,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         outputPages.push_back(vecBatch);
     }
 
-    VectorHelper::FreeVecBatches(this->inputVecBatches);
+    pagesIndex->Clear();
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
@@ -222,7 +221,7 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
             int32_t partitionStart = partition == nullptr ? 0 : partition->GetPartitionEnd();
-            if (partitionStart >= pagesIndex->GetPositionCount()) {
+            if (partitionStart >= pagesIndex->GetRowCount()) {
                 partition = nullptr;
                 break;
             }
@@ -281,7 +280,7 @@ void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypesF
 
 void WindowOperator::Initialization()
 {
-    pagesIndex->AddVecBatches(inputVecBatches);
+    pagesIndex->Prepare();
 
     // right now we assume the pregroup and presort are null
     preGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
@@ -301,14 +300,14 @@ void WindowOperator::FinishPagesIndex()
 
 void WindowOperator::SortPagesIndexIfNecessary()
 {
-    if (pagesIndex->GetPositionCount() > 1 && sortColCount != 0) {
+    if (pagesIndex->GetRowCount() > 1 && sortColCount != 0) {
         int32_t sortColTypes[sortColCount];
         for (int32_t i = 0; i < sortColCount; i++) {
             sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
         }
 
         int32_t startPosition = 0;
-        auto positionCount = pagesIndex->GetPositionCount();
+        auto positionCount = pagesIndex->GetRowCount();
         while (startPosition < positionCount) {
             int32_t endPosition = FindGroupEnd(pagesIndex.get(), preSortedPartitionHashStrategy.get(), startPosition);
             pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount,
@@ -321,7 +320,7 @@ void WindowOperator::SortPagesIndexIfNecessary()
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition)
 {
     int32_t left = startPosition;
-    int32_t right = pagesIndex->GetPositionCount();
+    int32_t right = pagesIndex->GetRowCount();
 
     while (left + 1 < right) {
         int32_t middle = left + (right - left) / MID_SEARCH_FACTOR;

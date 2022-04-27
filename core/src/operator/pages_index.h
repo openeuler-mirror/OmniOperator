@@ -14,33 +14,50 @@
 #include "operator_factory.h"
 #include "vector/vector_helper.h"
 #include "util/operator_util.h"
+#include "operator/memory_builder.h"
 
 namespace omniruntime {
 namespace op {
-class PagesIndex {
+class PagesIndex : public MemoryBuilder {
 public:
     explicit PagesIndex(const omniruntime::type::DataTypes &types);
-    ~PagesIndex();
-    int32_t AddVecBatches(std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
+
+    ~PagesIndex() override;
+
+    void AddVecBatch(omniruntime::vec::VectorBatch *vecBatch);
+
+    void Prepare();
+
     void Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
         const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to) const;
+
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length,
         omniruntime::vec::VectorAllocator *vecAllocator) const;
+
+    std::vector<omniruntime::vec::VectorBatch *> GetSortedVecBatch(VectorAllocator *vecAllocator);
+
+    void GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vector<int32_t> &outputCols,
+        std::vector<omniruntime::vec::VectorBatch *> &sortedVecBatches);
+
+    void Clear();
 
     const int32_t *GetTypes() const
     {
         return dataTypeIds;
     }
+
     int32_t GetTypesCount() const
     {
         return typesCount;
     }
+
     uint64_t *GetValueAddresses() const
     {
         return this->valueAddresses;
     }
-    int32_t GetPositionCount() const
+
+    int64_t GetRowCount() override
     {
         return this->positionCount;
     }
@@ -57,6 +74,7 @@ private:
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
     uint64_t *valueAddresses;
     uint32_t positionCount;
+    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;
@@ -75,12 +93,9 @@ inline uint32_t DecodePosition(uint64_t sliceAddress)
     return static_cast<uint32_t>(sliceAddress);
 }
 
-using CompareFunc = int32_t (*)(omniruntime::vec::Vector *leftVector, int32_t leftPosition,
-    omniruntime::vec::Vector *rightVector, int32_t rightPosition);
-
 static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts,
     const uint64_t *valueAddresses, omniruntime::vec::Vector **columns, int32_t leftPosition, int32_t rightPosition,
-    CompareFunc compareFunc)
+    omniruntime::op::OperatorUtil::CompareFunc compareFunc)
 {
     int64_t leftValueAddress = valueAddresses[leftPosition];
     uint32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
@@ -93,10 +108,10 @@ static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t
     omniruntime::vec::Vector *rightColumn = columns[rightColumnIndex];
     int32_t originalLeftColumnPosition;
     int32_t originalRightColumnPosition;
-    leftColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(leftColumn, static_cast<int32_t>(leftColumnPosition),
-        originalLeftColumnPosition);
-    rightColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(rightColumn, static_cast<int32_t>(rightColumnPosition),
-        originalRightColumnPosition);
+    leftColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(leftColumn,
+        static_cast<int32_t>(leftColumnPosition), originalLeftColumnPosition);
+    rightColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(rightColumn,
+        static_cast<int32_t>(rightColumnPosition), originalRightColumnPosition);
     int32_t compare = omniruntime::op::OperatorUtil::CompareNull(leftColumn, originalLeftColumnPosition, rightColumn,
         originalRightColumnPosition, sortNullFirsts);
     if (compare == omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER) {

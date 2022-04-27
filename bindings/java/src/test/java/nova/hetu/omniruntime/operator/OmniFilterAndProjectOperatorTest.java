@@ -14,6 +14,7 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -1445,12 +1446,12 @@ public class OmniFilterAndProjectOperatorTest {
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
                         + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
-                types, projectionsJSON, 1);
+                types, projectionsJSON, 1, new OperatorConfig());
         OmniFilterAndProjectOperatorFactory.JitContext factory2 = new OmniFilterAndProjectOperatorFactory.JitContext(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
                         + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
-                types, projectionsJSON, 1);
+                types, projectionsJSON, 1, new OperatorConfig());
         OmniFilterAndProjectOperatorFactory.JitContext factory3 = null;
 
         assertTrue(factory1.equals(factory2));

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * @Description: sort operator test implementations
  */
 
@@ -15,6 +15,8 @@ using namespace omniruntime::expressions;
 using namespace TestUtil;
 
 namespace SortWithExprTest {
+const uint64_t MAX_SPILL_BYTES = (1L << 20);
+
 TEST(SortWithExprTest, TestSortZeroExprColumns)
 {
     const int32_t dataSize = 5;
@@ -290,6 +292,98 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     expectVecBatch->GetVector(1)->SetValueNull(1);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
+{
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType() }));
+
+    const int32_t dataSize1 = 5;
+    int32_t data1[dataSize1] = {4, 3, 2, 1, 0};
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1);
+
+    const int32_t dataSize2 = 1;
+    int32_t data2[dataSize2] = {8};
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data2);
+
+    const int32_t dataSize3 = 4;
+    int32_t data3[dataSize3] = {7, 9, 6, 5};
+    auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize3, data3);
+
+    int outputCols[1] = {0};
+    auto col0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> sortExprs { col0 };
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {true};
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 4);
+    OperatorConfig operatorConfig(spillConfig);
+
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
+        sortExprs, ascendings, nullFirsts, 1, operatorConfig);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 1, sortExprs, ascendings, nullFirsts);
+    operatorFactory->SetJitContext(jitContext);
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch1);
+    sortOperator->AddInput(vecBatch2);
+    sortOperator->AddInput(vecBatch3);
+    std::vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    auto totalDataSize = dataSize1 + dataSize2 + dataSize3;
+    int32_t expectData[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    // free memory
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(SortWithExprTest, TestSortSpillWithOneRecord)
+{
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType() }));
+
+    const int32_t dataSize = 1;
+    int32_t data1[dataSize] = {3};
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1);
+
+    int32_t data2[dataSize] = {8};
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data2);
+
+    int32_t data3[dataSize] = {6};
+    auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize, data3);
+
+    int outputCols[1] = {0};
+    auto col0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> sortExprs { col0 };
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {true};
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
+    OperatorConfig operatorConfig(spillConfig);
+
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
+        sortExprs, ascendings, nullFirsts, 1, operatorConfig);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 1, sortExprs, ascendings, nullFirsts);
+    operatorFactory->SetJitContext(jitContext);
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch1);
+    sortOperator->AddInput(vecBatch2);
+    sortOperator->AddInput(vecBatch3);
+    std::vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    auto totalDataSize = dataSize * 3;
+    int32_t expectData[] = {3, 6, 8};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: JNI Operator Factory Source File
  */
 
@@ -25,7 +25,9 @@
 #include "operator/window/window_expr.h"
 #include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
+#include "operator/config/operator_config.h"
 #include "config.h"
+#include "jni_common_def.h"
 
 using namespace omniruntime::op;
 using namespace std;
@@ -40,15 +42,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 {
     JNI_DEBUG_LOG("create omni operator starting.");
     auto start = START();
-    VectorAllocator *vectorAllocator = (VectorAllocator *)jNativeVecAllocatorObj;
     OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
-    auto jitContext = operatorFactory->GetJitContext();
     omniruntime::op::Operator *nativeOperator = nullptr;
 
 #if defined(DEBUG_OPERATOR)
     nativeOperator = operatorFactory->CreateOperator();
     JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
 #else
+    auto jitContext = operatorFactory->GetJitContext();
     if (jitContext == nullptr) {
         nativeOperator = operatorFactory->CreateOperator();
         JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
@@ -58,6 +59,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
         JNI_DEBUG_LOG("JIT create omni operator finished, elapsed time: %ld ms.", END(start));
     }
 #endif
+    auto vectorAllocator = reinterpret_cast<VectorAllocator *>(jNativeVecAllocatorObj);
     nativeOperator->SetVecAllocator(vectorAllocator);
     return reinterpret_cast<int64_t>(nativeOperator);
 }
@@ -65,7 +67,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t *columns, int32_t length)
 {
     for (int32_t i = 0; i < length; i++) {
-        jstring jSortCol = static_cast<jstring>(env->GetObjectArrayElement(jExpressions, i));
+        auto jSortCol = static_cast<jstring>(env->GetObjectArrayElement(jExpressions, i));
         const char *columnString = env->GetStringUTFChars(jSortCol, JNI_FALSE);
         columns[i] = std::stoi(columnString + 1);
         env->ReleaseStringUTFChars(jSortCol, columnString);
@@ -74,7 +76,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                           */
+ *                                                                               */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -92,7 +94,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                           */
+ *                                                                               */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -158,7 +160,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                           */
+ *                                                                               */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
@@ -170,7 +172,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
 /**
  * Return an AggregationFactory object address.
- *                                                                            */
+ *                                                                                */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
@@ -234,16 +236,17 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortJitCo
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory
  * Method:    createSortOperatorFactory
- * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[I)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[IJLjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jOutputCols, jobjectArray jSortCols,
-    jintArray jAscendings, jintArray jNullFirsts, jlong jitContext)
+    jintArray jAscendings, jintArray jNullFirsts, jlong jitContext, jstring jOperatorConfig)
 {
     JNI_DEBUG_LOG("create sort operator factory starting.");
     auto start = START();
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputColsArr = env->GetIntArrayElements(jOutputCols, JNI_FALSE);
+    auto outputColsCount = env->GetArrayLength(jOutputCols);
     auto sortColsCount = env->GetArrayLength(jSortCols);
     int32_t sortColsArr[sortColsCount];
     GetColumnsFromExpressions(env, jSortCols, sortColsArr, sortColsCount);
@@ -251,16 +254,20 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
-    auto outputColsCount = env->GetArrayLength(jOutputCols);
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
-    auto sortOperatorFactory = omniruntime::op::SortOperatorFactory::CreateSortOperatorFactory(sourceDataTypes,
-        outputColsArr, outputColsCount, sortColsArr, ascendingsArr, nullFirstsArr, sortColsCount);
-
+    omniruntime::op::SortOperatorFactory *sortOperatorFactory = nullptr;
+    JNI_METHOD_START
+    sortOperatorFactory = omniruntime::op::SortOperatorFactory::CreateSortOperatorFactory(sourceDataTypes,
+        outputColsArr, outputColsCount, sortColsArr, ascendingsArr, nullFirstsArr, sortColsCount, operatorConfig);
+    JNI_METHOD_END(0)
     sortOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create sort operator factory finished, elapsed time: %ld ms.", END(start));
-
-    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
     return (int64_t)sortOperatorFactory;
 }
@@ -698,7 +705,7 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createSortWithExprOperatorFactory(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jOutputCols, jobjectArray jSortKeys, jintArray jAscendings,
-    jintArray jNullFirsts, jlong jitContext)
+    jintArray jNullFirsts, jlong jitContext, jstring jOperatorConfig)
 {
     JNI_DEBUG_LOG("create sort with expression operator factory starting.");
     auto start = START();
@@ -714,14 +721,21 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
     auto sourceDataTypes = Deserialize(sourceTypesChars);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesChars);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     // parse the expressions
     Parser parser;
     std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs =
         parser.ParseExpressions(sortKeysArr, sortKeysCount, sourceDataTypes);
 
     JNI_DEBUG_LOG("before create sort with expression operator factory elapsed time: %ld ms.", END(start));
-    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceDataTypes, outputCols,
-        outputColsCount, sortKeysArrExprs, ascendings, nullFirsts, sortKeysCount);
+    SortWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceDataTypes, outputCols,
+        outputColsCount, sortKeysArrExprs, ascendings, nullFirsts, sortKeysCount, operatorConfig);
+    JNI_METHOD_END(0)
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create sort with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1008,8 +1022,6 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     std::string sortKeysArr[sortKeysCount];
     GetExpressions(env, jSortKeys, sortKeysArr, sortKeysCount);
-    jint *sortAscendings = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
-    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
 
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);

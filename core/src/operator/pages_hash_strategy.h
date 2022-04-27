@@ -68,7 +68,7 @@ public:
     bool IsPositionNull(int32_t pageIndex, int rowIndex) const
     {
         int32_t originalRowIndex;
-        for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+        for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
             omniruntime::vec::Vector *vector = buildHashColumns[columnIdx][pageIndex];
             vector = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(vector, rowIndex, originalRowIndex);
             if (vector->IsValueNull(originalRowIndex)) {
