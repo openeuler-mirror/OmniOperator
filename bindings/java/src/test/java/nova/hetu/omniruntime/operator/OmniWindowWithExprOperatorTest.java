@@ -10,6 +10,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.constants.FunctionType;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -83,10 +84,12 @@ public class OmniWindowWithExprOperatorTest {
         DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
         OmniWindowWithExprOperatorFactory.JitContext factory1 = new OmniWindowWithExprOperatorFactory.JitContext(
                 sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
-                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType);
+                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType,
+                new OperatorConfig());
         OmniWindowWithExprOperatorFactory.JitContext factory2 = new OmniWindowWithExprOperatorFactory.JitContext(
                 sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
-                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType);
+                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType,
+                new OperatorConfig());
         OmniWindowWithExprOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

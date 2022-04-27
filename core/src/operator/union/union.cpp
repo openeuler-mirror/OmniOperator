@@ -15,8 +15,7 @@ UnionOperatorFactory::UnionOperatorFactory(const type::DataTypes &sourceTypes, i
 
 UnionOperatorFactory::~UnionOperatorFactory() {}
 
-UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(
-    const type::DataTypes &sourceTypesField,
+UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const type::DataTypes &sourceTypesField,
     int32_t sourceTypesCountField, bool distinct)
 {
     auto uOperatorFactory = new UnionOperatorFactory(sourceTypesField, sourceTypesCountField, distinct);

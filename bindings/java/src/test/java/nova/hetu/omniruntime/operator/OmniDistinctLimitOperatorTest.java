@@ -10,6 +10,7 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.limit.OmniDistinctLimitOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -137,9 +138,9 @@ public class OmniDistinctLimitOperatorTest {
 
         int[] distinctCols = {0, 1};
         OmniDistinctLimitOperatorFactory.JitContext factory1 = new OmniDistinctLimitOperatorFactory.JitContext(
-                sourceTypes, distinctCols, 2, sourceDatas1[0].length);
+                sourceTypes, distinctCols, 2, sourceDatas1[0].length, new OperatorConfig());
         OmniDistinctLimitOperatorFactory.JitContext factory2 = new OmniDistinctLimitOperatorFactory.JitContext(
-                sourceTypes, distinctCols, 2, sourceDatas1[0].length);
+                sourceTypes, distinctCols, 2, sourceDatas1[0].length, new OperatorConfig());
         OmniDistinctLimitOperatorFactory.JitContext factory3 = null;
 
         assertTrue(factory1.equals(factory2));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.topn;
@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator.topn;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -28,17 +29,17 @@ public class OmniTopNWithExprOperatorFactory
      * @param sortKeys the sort keys
      * @param sortAssendings the sort assendings
      * @param sortNullFirsts the sort null firsts
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniTopNWithExprOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
-            int[] sortNullFirsts, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts),
-                isJitEnabled));
+            int[] sortNullFirsts, OperatorConfig operatorConfig) {
+        super(new FactoryContext(
+                new JitContext(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni top n with expression operator factory with jit
-     * default.
+     * Instantiates a new Omni top n with expression operator factory with default
+     * operator config.
      *
      * @param sourceTypes the source types
      * @param limitN the limit n
@@ -48,7 +49,7 @@ public class OmniTopNWithExprOperatorFactory
      */
     public OmniTopNWithExprOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
             int[] sortNullFirsts) {
-        this(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, true);
+        this(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, new OperatorConfig(true));
     }
 
     private static native long createTopNWithExprOperatorFactory(String sourceTypes, int limitN, String[] sortKeys,
@@ -69,7 +70,7 @@ public class OmniTopNWithExprOperatorFactory
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] sourceTypes;
 
         private final int limitN;
@@ -88,9 +89,11 @@ public class OmniTopNWithExprOperatorFactory
          * @param sortKeys the sort cols
          * @param sortAssendings the sort assendings
          * @param sortNullFirsts the sort null firsts
+         * @param operatorConfig the operator config
          */
         public JitContext(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
-                int[] sortNullFirsts) {
+                int[] sortNullFirsts, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
             this.sortKeys = sortKeys;
@@ -101,7 +104,7 @@ public class OmniTopNWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), limitN, Arrays.hashCode(sortKeys),
-                    Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts), operatorConfig);
         }
 
         @Override
@@ -116,7 +119,8 @@ public class OmniTopNWithExprOperatorFactory
             return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes)
                     && Arrays.equals(sortKeys, context.sortKeys)
                     && Arrays.equals(sortAssendings, context.sortAssendings)
-                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts);
+                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
+                    && operatorConfig.equals(context.operatorConfig);
         }
     }
 
@@ -130,10 +134,9 @@ public class OmniTopNWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

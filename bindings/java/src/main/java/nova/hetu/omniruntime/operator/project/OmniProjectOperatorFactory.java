@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.project;
@@ -9,6 +9,7 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -28,20 +29,21 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      *
      * @param expressions the expressions
      * @param inputTypes the input types
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
-    public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(expressions, inputTypes), isJitEnabled));
+    public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(expressions, inputTypes, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni project operator factory with jit default.
+     * Instantiates a new Omni project operator factory with default operator
+     * config.
      *
      * @param expressions the expressions
      * @param inputTypes the input types
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes) {
-        this(expressions, inputTypes, true);
+        this(expressions, inputTypes, new OperatorConfig(true));
     }
 
     /**
@@ -51,23 +53,23 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      * @param expressions the expressions
      * @param inputTypes the input types
      * @param parseFormat the parse format
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat,
-            boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat), isJitEnabled));
+            OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat, operatorConfig)));
     }
 
     /**
      * Instantiates a new Omni project operator factory with configured expression
-     * parsing format with jit default.
+     * parsing format with default operator config.
      *
      * @param expressions the expressions
      * @param inputTypes the input types
      * @param parseFormat the parse format
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat) {
-        this(expressions, inputTypes, parseFormat, true);
+        this(expressions, inputTypes, parseFormat, new OperatorConfig(true));
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
@@ -97,7 +99,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] inputTypes;
 
         private final String[] expressions;
@@ -109,9 +111,10 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          *
          * @param expressions the expressions
          * @param inputTypes the input types
+         * @param operatorConfig the operator config
          */
-        public JitContext(String[] expressions, DataType[] inputTypes) {
-            this(expressions, inputTypes, 0);
+        public JitContext(String[] expressions, DataType[] inputTypes, OperatorConfig operatorConfig) {
+            this(expressions, inputTypes, 0, operatorConfig);
         }
 
         /**
@@ -120,8 +123,10 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * @param expressions the expressions
          * @param inputTypes the input types
          * @param parseFormat the parse format
+         * @param operatorConfig the operator config
          */
-        public JitContext(String[] expressions, DataType[] inputTypes, int parseFormat) {
+        public JitContext(String[] expressions, DataType[] inputTypes, int parseFormat, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expressions = requireNonNull(expressions, "Expressions is null.");
             this.parseFormat = parseFormat;
@@ -129,7 +134,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(expressions), Arrays.hashCode(inputTypes));
+            return Objects.hash(Arrays.hashCode(expressions), Arrays.hashCode(inputTypes), operatorConfig);
         }
 
         @Override
@@ -142,7 +147,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
             }
             JitContext that = (JitContext) obj;
             return Arrays.equals(expressions, that.expressions) && Arrays.equals(inputTypes, that.inputTypes)
-                    && parseFormat == that.parseFormat;
+                    && parseFormat == that.parseFormat && operatorConfig.equals(that.operatorConfig);
         }
     }
 
@@ -156,10 +161,9 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

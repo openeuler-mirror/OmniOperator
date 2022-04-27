@@ -12,6 +12,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -190,12 +191,10 @@ public class OmniHashJoinWithExprOperatorsTest {
         DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         String[] buildHashKeys = {"ADD:2(#0, 50:2)"};
         int operatorCount = 1;
-        OmniHashBuilderWithExprOperatorFactory.JitContext hashBuilderOperatorFactory1 =
-                new OmniHashBuilderWithExprOperatorFactory.JitContext(
-                buildTypes, buildHashKeys, Optional.empty(), operatorCount);
-        OmniHashBuilderWithExprOperatorFactory.JitContext hashBuilderOperatorFactory2 =
-                new OmniHashBuilderWithExprOperatorFactory.JitContext(
-                buildTypes, buildHashKeys, Optional.empty(), operatorCount);
+        OmniHashBuilderWithExprOperatorFactory.JitContext hashBuilderOperatorFactory1 = new OmniHashBuilderWithExprOperatorFactory.JitContext(
+                buildTypes, buildHashKeys, Optional.empty(), operatorCount, new OperatorConfig());
+        OmniHashBuilderWithExprOperatorFactory.JitContext hashBuilderOperatorFactory2 = new OmniHashBuilderWithExprOperatorFactory.JitContext(
+                buildTypes, buildHashKeys, Optional.empty(), operatorCount, new OperatorConfig());
         OmniHashBuilderWithExprOperatorFactory.JitContext hashBuilderOperatorFactory3 = null;
         assertTrue(hashBuilderOperatorFactory1.equals(hashBuilderOperatorFactory2));
         assertTrue(hashBuilderOperatorFactory1.equals(hashBuilderOperatorFactory1));
@@ -206,12 +205,12 @@ public class OmniHashJoinWithExprOperatorsTest {
         String[] probeHashKeys = {"ADD:2(#0, 50:2)"};
         int[] buildOutputCols = {1};
         DataType[] buildOutputTypes = {LongDataType.LONG};
-        OmniLookupJoinWithExprOperatorFactory.JitContext lookupJoinOperatorFactory1 =
-                new OmniLookupJoinWithExprOperatorFactory.JitContext(
-                probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER);
-        OmniLookupJoinWithExprOperatorFactory.JitContext lookupJoinOperatorFactory2 =
-                new OmniLookupJoinWithExprOperatorFactory.JitContext(
-                probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER);
+        OmniLookupJoinWithExprOperatorFactory.JitContext lookupJoinOperatorFactory1 = new OmniLookupJoinWithExprOperatorFactory.JitContext(
+                probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                new OperatorConfig());
+        OmniLookupJoinWithExprOperatorFactory.JitContext lookupJoinOperatorFactory2 = new OmniLookupJoinWithExprOperatorFactory.JitContext(
+                probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                new OperatorConfig());
         OmniLookupJoinWithExprOperatorFactory.JitContext lookupJoinOperatorFactory3 = null;
 
         assertTrue(lookupJoinOperatorFactory1.equals(lookupJoinOperatorFactory2));

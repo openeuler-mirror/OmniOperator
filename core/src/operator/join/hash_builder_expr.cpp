@@ -20,7 +20,6 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
         hashTableCount);
 }
 
-
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
     int32_t hashTableCount)
@@ -60,8 +59,8 @@ HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 
 int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols,
-                                                                 vecAllocator);
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         hashBuilderOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

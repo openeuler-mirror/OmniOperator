@@ -75,7 +75,7 @@ bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRow
     bool result = true;
 
     int32_t originalLeftRowIndex, originalRightRowIndex;
-    for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
+    for (uint32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftRowIndex, originalLeftRowIndex);
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
@@ -96,7 +96,7 @@ bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowInd
 {
     bool result = true;
     int32_t originalBuildRowIndex, originalProbeRowIndex;
-    for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
+    for (uint32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
         buildColumn = VectorHelper::ExpandVectorAndIndex(buildColumn, buildRowIndex, originalBuildRowIndex);
@@ -121,7 +121,7 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
     bool result = true;
 
     int32_t originalLeftRowIndex, originalRightRowIndex;
-    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+    for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
         leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftRowIndex, originalLeftRowIndex);

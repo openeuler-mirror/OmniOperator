@@ -15,7 +15,10 @@ import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
+import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory.FactoryContext;
+import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory.JitContext;
 import nova.hetu.omniruntime.type.CharDataType;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Date32DataType;
@@ -360,7 +363,7 @@ public class OmniSortOperatorTest {
      * Test sort performance whether with jit or not.
      */
     @Test
-    public void testSortComparePref() {
+    public void testSortComparePerf() {
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};
@@ -368,7 +371,7 @@ public class OmniSortOperatorTest {
         int[] nullFirsts = {0, 0};
 
         OmniSortOperatorFactory sortOperatorFactoryWithoutJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
-                sortCols, ascendings, nullFirsts, false);
+                sortCols, ascendings, nullFirsts, new OperatorConfig(false));
         OmniOperator sortOperatorWithoutJit = sortOperatorFactoryWithoutJit.createOperator();
         VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("sort_testSortComparePref",
                 VecAllocator.UNLIMIT, 0);
@@ -383,7 +386,7 @@ public class OmniSortOperatorTest {
         System.out.println("Sort without jit use " + (end - start) + " ms.");
 
         OmniSortOperatorFactory sortOperatorFactoryWithJit = new OmniSortOperatorFactory(sourceTypes, outputCols,
-                sortCols, ascendings, nullFirsts, true);
+                sortCols, ascendings, nullFirsts, new OperatorConfig(true));
         OmniOperator sortOperatorWithJit = sortOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> vecsWithJit = buildVecs(vecAllocator);
 
@@ -482,13 +485,21 @@ public class OmniSortOperatorTest {
         int[] ascendings = {0, 0};
         int[] nullFirsts = {1, 1};
         OmniSortOperatorFactory.JitContext factory1 = new OmniSortOperatorFactory.JitContext(sourceTypes, outputCols,
-                sortCols, ascendings, nullFirsts);
+                sortCols, ascendings, nullFirsts, new OperatorConfig());
         OmniSortOperatorFactory.JitContext factory2 = new OmniSortOperatorFactory.JitContext(sourceTypes, outputCols,
-                sortCols, ascendings, nullFirsts);
+                sortCols, ascendings, nullFirsts, new OperatorConfig());
         OmniSortOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));
         assertFalse(factory1.equals(factory3));
+
+        FactoryContext factoryContext1 = new FactoryContext(
+                new JitContext(sourceTypes, outputCols, sortCols, ascendings, nullFirsts, new OperatorConfig(true)));
+        FactoryContext factoryContext2 = new FactoryContext(
+                new JitContext(sourceTypes, outputCols, sortCols, ascendings, nullFirsts, new OperatorConfig(true)));
+        FactoryContext factoryContext3 = null;
+        assertTrue(factoryContext1.equals(factoryContext2));
+        assertFalse(factoryContext1.equals(factoryContext3));
     }
 
     private ImmutableList<VecBatch> buildVecs(VecAllocator vecAllocator) {

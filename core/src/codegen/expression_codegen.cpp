@@ -1244,7 +1244,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
     Value *isNull = llvm::ConstantInt::get(*context, APInt(1, 0));
     Type *retType = llvmTypes->ToLLVMType(iExpr->GetReturnTypeId());
     // Handle types correctly
-    for (auto i = 1; i < iExpr->arguments.size(); i++) {
+    for (size_t i = 1; i < iExpr->arguments.size(); i++) {
         // initialize tmpCmpData
         Value *tmpCmpData = llvmTypes->CreateConstantBool(false);
         Value *tmpCmpNull = llvmTypes->CreateConstantBool(false);

@@ -20,6 +20,8 @@ import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
+import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.JitContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -54,7 +56,8 @@ public class OmniAggregationOperatorTest {
         int[] maskChannels = {-1, -1};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factoryWithJit = new OmniAggregationOperatorFactory(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false, true);
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false,
+                new OperatorConfig(true));
         OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
@@ -74,7 +77,8 @@ public class OmniAggregationOperatorTest {
         System.out.println("Aggregation with jit use " + (end1 - start1) + " ms.");
 
         OmniAggregationOperatorFactory factoryWithoutJit = new OmniAggregationOperatorFactory(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false, false);
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false,
+                new OperatorConfig(false));
         OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
@@ -160,11 +164,11 @@ public class OmniAggregationOperatorTest {
         int[] aggInputChannels = {0, 1, 2, 3};
         int[] maskChannels = {-1, -1, -1, -1};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
-        OmniAggregationOperatorFactory.JitContext factory1 = new OmniAggregationOperatorFactory.JitContext(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
-        OmniAggregationOperatorFactory.JitContext factory2 = new OmniAggregationOperatorFactory.JitContext(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
-        OmniAggregationOperatorFactory.FactoryContext factory3 = null;
+        JitContext factory1 = new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
+                aggOutputTypes, true, false, new OperatorConfig());
+        JitContext factory2 = new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
+                aggOutputTypes, true, false, new OperatorConfig());
+        JitContext factory3 = null;
 
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

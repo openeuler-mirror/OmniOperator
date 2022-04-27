@@ -8,6 +8,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
+
 import org.testng.annotations.Test;
 
 import java.util.Objects;
@@ -85,7 +87,7 @@ public class OmniOperatorFactoryTest {
          * @param context the context
          */
         public MockOperatorFactory(long context) {
-            super(new FactoryContext(new JitContext(context)));
+            super(new FactoryContext(new JitContext(context, new OperatorConfig())));
         }
 
         @Override
@@ -98,15 +100,17 @@ public class OmniOperatorFactoryTest {
          *
          * @since 2021-7-13
          */
-        public static class JitContext implements OmniJitContext {
+        public static class JitContext extends OmniJitContext {
             private final long context;
 
             /**
              * Instantiates a new Mock context.
              *
              * @param context the context
+             * @param operatorConfig the operator config
              */
-            public JitContext(long context) {
+            public JitContext(long context, OperatorConfig operatorConfig) {
+                super(operatorConfig);
                 this.context = context;
             }
 
@@ -142,19 +146,9 @@ public class OmniOperatorFactoryTest {
              * Instantiates a new Context.
              *
              * @param jitContext jitContext input
-             * @param isJitEnabled whether the jit is enabled
-             */
-            public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-                super(jitContext, isJitEnabled);
-            }
-
-            /**
-             * Instantiates a new Context without jit default.
-             *
-             * @param jitContext jitContext input
              */
             public FactoryContext(JitContext jitContext) {
-                this(jitContext, false);
+                super(jitContext);
             }
 
             @Override

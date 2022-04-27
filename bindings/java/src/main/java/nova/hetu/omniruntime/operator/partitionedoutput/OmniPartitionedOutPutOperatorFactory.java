@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.partitionedoutput;
@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator.partitionedoutput;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -33,18 +34,18 @@ public class OmniPartitionedOutPutOperatorFactory
      * @param isHashPrecomputed the is hash precomputed
      * @param hashChannelTypes the hash channel types
      * @param hashChannels the hash channels
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean isReplicatesAnyRow,
             OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
-            boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels, boolean isJitEnabled) {
+            boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels, OperatorConfig operatorConfig) {
         super(new FactoryContext(new JitContext(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels,
-                partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels), isJitEnabled));
+                partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni partitioned out put operator factory with jit
-     * default.
+     * Instantiates a new Omni partitioned out put operator factory with default
+     * operator config.
      *
      * @param sourceTypes the source types
      * @param isReplicatesAnyRow the replicates any row
@@ -60,7 +61,7 @@ public class OmniPartitionedOutPutOperatorFactory
             OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels) {
         this(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
-                isHashPrecomputed, hashChannelTypes, hashChannels, true);
+                isHashPrecomputed, hashChannelTypes, hashChannels, new OperatorConfig(true));
     }
 
     private static native long createPartitionedOutputOperatorFactory(String sourceTypes, boolean isReplicatesAnyRow,
@@ -87,7 +88,7 @@ public class OmniPartitionedOutPutOperatorFactory
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] sourceTypes;
 
         private final boolean isReplicatesAnyRow;
@@ -118,10 +119,12 @@ public class OmniPartitionedOutPutOperatorFactory
          * @param isHashPrecomputed the is hash precomputed
          * @param hashChannelTypes the hash channel types
          * @param hashChannels the hash channels
+         * @param operatorConfig the operator config
          */
         public JitContext(DataType[] sourceTypes, boolean isReplicatesAnyRow, OptionalInt nullChannel,
                 int[] partitionChannels, int partitionCount, int[] bucketToPartition, boolean isHashPrecomputed,
-                DataType[] hashChannelTypes, int[] hashChannels) {
+                DataType[] hashChannelTypes, int[] hashChannels, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.isReplicatesAnyRow = isReplicatesAnyRow;
             this.nullChannel = nullChannel;
@@ -152,14 +155,16 @@ public class OmniPartitionedOutPutOperatorFactory
                     && Arrays.equals(bucketToPartition, context.bucketToPartition)
                     && context.isHashPrecomputed == isHashPrecomputed
                     && Arrays.equals(hashChannelTypes, context.hashChannelTypes)
-                    && Arrays.equals(hashChannels, context.hashChannels);
+                    && Arrays.equals(hashChannels, context.hashChannels)
+                    && operatorConfig.equals(context.operatorConfig);
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), isReplicatesAnyRow, nullChannel,
                     Arrays.hashCode(partitionChannels), partitionCount, Arrays.hashCode(bucketToPartition),
-                    isHashPrecomputed, Arrays.hashCode(hashChannelTypes), Arrays.hashCode(hashChannels));
+                    isHashPrecomputed, Arrays.hashCode(hashChannelTypes), Arrays.hashCode(hashChannels),
+                    operatorConfig);
         }
     }
 
@@ -173,10 +178,9 @@ public class OmniPartitionedOutPutOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

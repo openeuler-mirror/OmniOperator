@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.join;
@@ -9,6 +9,7 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -31,16 +32,18 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      * @param sortChannel the sort channel
      * @param searchExpressions the search expressions
      * @param operatorCount the operator count
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
-            Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount, boolean isJitEnabled) {
+            Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount,
+            OperatorConfig operatorConfig) {
         super(new FactoryContext(new JitContext(buildTypes, buildHashCols, filterExpression, sortChannel,
-                searchExpressions, operatorCount), isJitEnabled));
+                searchExpressions, operatorCount, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni hash builder operator factory with jit default.
+     * Instantiates a new Omni hash builder operator factory with default operator
+     * config.
      *
      * @param buildTypes the build types
      * @param buildHashCols the build hash cols
@@ -51,7 +54,8 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      */
     public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
             Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount) {
-        this(buildTypes, buildHashCols, filterExpression, sortChannel, searchExpressions, operatorCount, true);
+        this(buildTypes, buildHashCols, filterExpression, sortChannel, searchExpressions, operatorCount,
+                new OperatorConfig(true));
     }
 
     private static native long createHashBuilderOperatorFactory(String buildTypes, int[] buildHashCols,
@@ -73,7 +77,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] buildTypes;
 
         private final int[] buildHashCols;
@@ -95,9 +99,12 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
          * @param sortChannel the sort channel
          * @param searchExpressions the search expressions
          * @param operatorCount the operator count
+         * @param operatorConfig the operator config
          */
         public JitContext(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
-                Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount) {
+                Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount,
+                OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashCols = requireNonNull(buildHashCols, "buildHashCols");
             this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
@@ -109,7 +116,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashCols), filterExpression,
-                    sortChannel, Arrays.hashCode(searchExpressions), operatorCount);
+                    sortChannel, Arrays.hashCode(searchExpressions), operatorCount, operatorConfig);
         }
 
         @Override
@@ -123,7 +130,8 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
             JitContext that = (JitContext) obj;
             return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildHashCols, that.buildHashCols)
                     && filterExpression.equals(that.filterExpression) && sortChannel.equals(sortChannel)
-                    && Arrays.equals(searchExpressions, that.searchExpressions) && operatorCount == that.operatorCount;
+                    && Arrays.equals(searchExpressions, that.searchExpressions) && operatorCount == that.operatorCount
+                    && operatorConfig.equals(that.operatorConfig);
         }
     }
 
@@ -137,10 +145,9 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
             setNeedCache(false);
         }
 

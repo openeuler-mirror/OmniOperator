@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.filter;
@@ -9,6 +9,7 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -32,22 +33,23 @@ public class OmniFilterAndProjectOperatorFactory
      * @param expression the expression
      * @param inputTypes the input types
      * @param projections the projections
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
-            boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(expression, inputTypes, projections), isJitEnabled));
+            OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(expression, inputTypes, projections, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni filter and project operator factory with jit.
+     * Instantiates a new Omni filter and project operator factory with default
+     * operator config.
      *
      * @param expression the expression
      * @param inputTypes the input types
      * @param projections the projections
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections) {
-        this(expression, inputTypes, projections, true);
+        this(expression, inputTypes, projections, new OperatorConfig(true));
     }
 
     /**
@@ -58,16 +60,16 @@ public class OmniFilterAndProjectOperatorFactory
      * @param inputTypes the input types
      * @param projections the projections
      * @param parseFormat the format to parse expression into
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
-            int parseFormat, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(expression, inputTypes, projections, parseFormat), isJitEnabled));
+            int parseFormat, OperatorConfig operatorConfig) {
+        super(new FactoryContext(new JitContext(expression, inputTypes, projections, parseFormat, operatorConfig)));
     }
 
     /**
      * Instantiates a new Omni filter and project operator factory with configured
-     * expression parsing format with jit default.
+     * expression parsing format with default operator config.
      *
      * @param expression the expression
      * @param inputTypes the input types
@@ -76,7 +78,7 @@ public class OmniFilterAndProjectOperatorFactory
      */
     public OmniFilterAndProjectOperatorFactory(String expression, DataType[] inputTypes, List<String> projections,
             int parseFormat) {
-        this(expression, inputTypes, projections, parseFormat, true);
+        this(expression, inputTypes, projections, parseFormat, new OperatorConfig(true));
     }
 
     private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
@@ -107,7 +109,7 @@ public class OmniFilterAndProjectOperatorFactory
      *
      * @since 2021-06-30
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] inputTypes;
 
         private final String expression;
@@ -122,9 +124,11 @@ public class OmniFilterAndProjectOperatorFactory
          * @param expression the expression
          * @param inputTypes the input types
          * @param projections the projections
+         * @param operatorConfig the operator config
          */
-        public JitContext(String expression, DataType[] inputTypes, List<String> projections) {
-            this(expression, inputTypes, projections, 0);
+        public JitContext(String expression, DataType[] inputTypes, List<String> projections,
+                OperatorConfig operatorConfig) {
+            this(expression, inputTypes, projections, 0, operatorConfig);
         }
 
         /**
@@ -134,8 +138,11 @@ public class OmniFilterAndProjectOperatorFactory
          * @param inputTypes the input types
          * @param projections the projections
          * @param parseFormat the parsing format of expressions
+         * @param operatorConfig the operator config
          */
-        public JitContext(String expression, DataType[] inputTypes, List<String> projections, int parseFormat) {
+        public JitContext(String expression, DataType[] inputTypes, List<String> projections, int parseFormat,
+                OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expression = requireNonNull(expression, "Expression is null.");
             this.projections = requireNonNull(projections, "Project indices is null.");
@@ -144,7 +151,8 @@ public class OmniFilterAndProjectOperatorFactory
 
         @Override
         public int hashCode() {
-            return Objects.hash(expression, Arrays.hashCode(inputTypes), Objects.hashCode(projections), parseFormat);
+            return Objects.hash(expression, Arrays.hashCode(inputTypes), Objects.hashCode(projections), parseFormat,
+                    operatorConfig);
         }
 
         @Override
@@ -159,7 +167,7 @@ public class OmniFilterAndProjectOperatorFactory
             return Objects.equals(expression, that.expression) && Arrays.equals(inputTypes, that.inputTypes)
                     && Objects.equals(projections.stream().sorted().collect(Collectors.toList()),
                             that.projections.stream().sorted().collect(Collectors.toList()))
-                    && parseFormat == that.parseFormat;
+                    && parseFormat == that.parseFormat && operatorConfig.equals(that.operatorConfig);
         }
     }
 
@@ -173,10 +181,9 @@ public class OmniFilterAndProjectOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

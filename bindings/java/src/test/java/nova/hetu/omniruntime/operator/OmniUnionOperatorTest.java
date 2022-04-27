@@ -12,6 +12,7 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -142,8 +143,10 @@ public class OmniUnionOperatorTest {
     @Test
     public void testFactoryJitContextEquals() {
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
-        OmniUnionOperatorFactory.JitContext factory1 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false);
-        OmniUnionOperatorFactory.JitContext factory2 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false);
+        OmniUnionOperatorFactory.JitContext factory1 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false,
+                new OperatorConfig());
+        OmniUnionOperatorFactory.JitContext factory2 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false,
+                new OperatorConfig());
         OmniUnionOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

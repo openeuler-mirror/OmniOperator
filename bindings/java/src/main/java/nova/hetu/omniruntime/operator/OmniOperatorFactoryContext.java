@@ -33,10 +33,9 @@ public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
      * Instantiates a new Omni operator factory context.
      *
      * @param jitContext the jit context
-     * @param isJitEnabled whether the jit is enabled
      */
-    public OmniOperatorFactoryContext(T jitContext, boolean isJitEnabled) {
-        if (!isJitEnabled) {
+    public OmniOperatorFactoryContext(T jitContext) {
+        if (!jitContext.operatorConfig.isJitEnabled()) {
             this.nativeJitContext = 0L;
         } else {
             try {

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * @Description: sort implementations
  */
 
@@ -20,9 +20,13 @@ public:
         int32_t *outputCols, int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys,
         int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount);
 
+    static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::DataTypes &sourceTypes,
+        int32_t *outputCols, int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys,
+        int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig);
+
     SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
-        int32_t sortKeysCount);
+        int32_t sortKeysCount, const OperatorConfig &operatorConfig);
 
     ~SortWithExprOperatorFactory() override;
 

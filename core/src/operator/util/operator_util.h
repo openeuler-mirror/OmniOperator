@@ -31,6 +31,9 @@ public:
     static const int32_t SIZE_OF_DECIMAL128 = SIZE_OF_LONG << 1;
     static const int32_t SIZE_OF_DATE32 = SIZE_OF_INT;
 
+    using CompareFunc = int32_t (*)(omniruntime::vec::Vector *leftVector, int32_t leftPosition,
+        omniruntime::vec::Vector *rightVector, int32_t rightPosition);
+
     static int32_t GetTypeSize(const DataType &vecType)
     {
         switch (vecType.GetId()) {
@@ -211,10 +214,12 @@ public:
         std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
+        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
+        VectorAllocator *allocator);
 
     static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
+        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
+        VectorAllocator *allocator);
 
 private:
     static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,

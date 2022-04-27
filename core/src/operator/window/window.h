@@ -6,10 +6,10 @@
 #define __WINDOW_H__
 
 #include <vector>
-#include "../operator.h"
-#include "../operator_factory.h"
-#include "../pages_index.h"
-#include "../../type/data_types.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "operator/pages_index.h"
+#include "type/data_types.h"
 #include "window_partition.h"
 
 namespace omniruntime {
@@ -209,7 +209,6 @@ private:
     std::unique_ptr<PagesHashStrategy> peerGroupHashStrategy = nullptr;
     std::unique_ptr<WindowPartition> partition;
     std::vector<std::unique_ptr<WindowFunction>> windowFunctions;
-    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.window;
@@ -10,6 +10,7 @@ import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -38,19 +39,19 @@ public class OmniWindowWithExprOperatorFactory
      * @param expectedPositions the expected positions
      * @param argumentKeys the argument keys
      * @param windowFunctionReturnType the window function return type
-     * @param isJitEnabled whether the jit is enabled
+     * @param operatorConfig the operator config
      */
     public OmniWindowWithExprOperatorFactory(DataType[] sourceTypes, int[] outputChannels,
             FunctionType[] windowFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels,
             int[] sortOrder, int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions,
-            String[] argumentKeys, DataType[] windowFunctionReturnType, boolean isJitEnabled) {
+            String[] argumentKeys, DataType[] windowFunctionReturnType, OperatorConfig operatorConfig) {
         super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
                 preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
-                argumentKeys, windowFunctionReturnType), isJitEnabled));
+                argumentKeys, windowFunctionReturnType, operatorConfig)));
     }
 
     /**
-     * Instantiates a new Omni window operator factory with jit default.
+     * Instantiates a new Omni window operator factory with default operator config.
      *
      * @param sourceTypes the source types
      * @param outputChannels the output channels
@@ -71,7 +72,7 @@ public class OmniWindowWithExprOperatorFactory
             String[] argumentKeys, DataType[] windowFunctionReturnType) {
         this(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
                 sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentKeys,
-                windowFunctionReturnType, true);
+                windowFunctionReturnType, new OperatorConfig(true));
     }
 
     private static native long createWindowWithExprJitContext(String sourceTypes, int[] outputChannels,
@@ -99,7 +100,7 @@ public class OmniWindowWithExprOperatorFactory
      *
      * @since 20210630
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] sourceTypes;
 
         private final int[] outputChannels;
@@ -139,11 +140,13 @@ public class OmniWindowWithExprOperatorFactory
          * @param expectedPositions the expected positions
          * @param argumentKeys the argument channels
          * @param windowFunctionReturnType the window function return type
+         * @param operatorConfig the operator config
          */
         public JitContext(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
                 int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
                 int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
-                DataType[] windowFunctionReturnType) {
+                DataType[] windowFunctionReturnType, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.outputChannels = outputChannels;
             this.windFunction = windowFunction;
@@ -164,7 +167,7 @@ public class OmniWindowWithExprOperatorFactory
                     Arrays.hashCode(windFunction), Arrays.hashCode(partitionChannels),
                     Arrays.hashCode(preGroupedChannels), Arrays.hashCode(sortChannels), Arrays.hashCode(sortOrder),
                     Arrays.hashCode(sortNullFirsts), preSortedChannelPrefix, expectedPositions,
-                    Arrays.hashCode(argumentKeys), Arrays.hashCode(windowFunctionReturnType));
+                    Arrays.hashCode(argumentKeys), Arrays.hashCode(windowFunctionReturnType), operatorConfig);
         }
 
         @Override
@@ -185,7 +188,8 @@ public class OmniWindowWithExprOperatorFactory
                     && Arrays.equals(sortChannels, context.sortChannels) && Arrays.equals(sortOrder, context.sortOrder)
                     && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
                     && Arrays.equals(argumentKeys, context.argumentKeys)
-                    && Arrays.equals(windowFunctionReturnType, context.windowFunctionReturnType);
+                    && Arrays.equals(windowFunctionReturnType, context.windowFunctionReturnType)
+                    && operatorConfig.equals(context.operatorConfig);
         }
     }
 
@@ -199,10 +203,9 @@ public class OmniWindowWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

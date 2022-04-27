@@ -255,7 +255,6 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
         for (int i = 0; i < hashChannelsCount; ++i) {
             int32_t tmpRowIndex = rowIndex;
             int32_t originalTmpRowIndex;
-            int type = hashChannelTypes[i];
             Vector *vector = vecBatch->GetVector(startVecIndex + hashChannels[i]);
             long hash = 0;
             vector = VectorHelper::ExpandVectorAndIndex(vector, tmpRowIndex, originalTmpRowIndex);

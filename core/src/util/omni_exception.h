@@ -16,7 +16,9 @@ static std::string kMemCapExceeded = "MEM_CAP_EXCEEDED";
 
 class OmniException : public std::exception {
 public:
-    OmniException(std::string &errorCode, std::string &message) : errorCode(errorCode), message(message) {}
+    OmniException(const std::string &errorCode, const std::string &message) : errorCode(errorCode), message(message) {}
+
+    OmniException(const char *errorCode, const char *message) : errorCode(errorCode), message(message) {}
 
     const char *what() const noexcept override
     {

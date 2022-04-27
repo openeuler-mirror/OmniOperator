@@ -6,11 +6,6 @@
 #define __WINDOW_EXPR_H__
 
 #include <vector>
-#include "../operator.h"
-#include "../operator_factory.h"
-#include "../pages_index.h"
-#include "../../type/data_types.h"
-#include "window_partition.h"
 #include "window.h"
 
 namespace omniruntime {

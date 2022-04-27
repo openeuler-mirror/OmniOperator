@@ -8,8 +8,10 @@ import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 
 import nova.hetu.omniruntime.OmniLibs;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.util.concurrent.ExecutionException;
@@ -46,7 +48,9 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
             }
             this.context = context;
         } catch (ExecutionException e) {
-            throw new RuntimeException("Get instance failed.");
+            throw new RuntimeException("Get operator factory instance failed.");
+        } catch (UncheckedExecutionException e) {
+            throw new OmniRuntimeException(e.getCause().getMessage());
         }
     }
 

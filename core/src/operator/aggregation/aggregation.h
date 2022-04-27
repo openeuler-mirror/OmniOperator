@@ -34,15 +34,18 @@ public:
     AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial, PrepareContext maskColsContext)
         : inputRaw(inputRaw), outputPartial(outputPartial)
     {
-        for (int i = 0; i < maskColsContext.len; ++i) {
+        for (size_t i = 0; i < maskColsContext.len; ++i) {
             maskCols.push_back(maskColsContext.context[i]);
         }
     }
+
     ~AggregationCommonOperatorFactory() override {};
+
     std::vector<int32_t> &GetMaskColumns()
     {
         return maskCols;
     }
+
     virtual OmniStatus Init() = 0;
     virtual OmniStatus Close() = 0;
 

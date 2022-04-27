@@ -93,12 +93,12 @@ public:
     bool Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext);
 
 private:
-    std::unique_ptr<ExpressionCodeGen> codegen = nullptr;
+    std::unique_ptr<ExpressionCodeGen> codegen;
     const expressions::Expr *expression;
     SimpleRowExprEvalFunc func;
     bool *isResultNull;
     int32_t *resultLength;
-    bool initialized = false;
+    bool initialized;
 };
 
 class Filter {

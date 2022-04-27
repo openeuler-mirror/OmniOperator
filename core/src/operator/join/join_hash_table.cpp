@@ -53,7 +53,7 @@ uint32_t NumberOfTrailingZeros(uint32_t value)
 
 void ArraysFill(uint32_t *array, uint32_t size, uint32_t value)
 {
-    for (int32_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         array[i] = value;
     }
 }
@@ -67,7 +67,7 @@ JoinHashTables::JoinHashTables(uint32_t hashTableCount)
       probeTypes(nullptr),
       buildTypes(nullptr)
 {
-    for (int32_t idx = 0; idx < hashTableCount; idx++) {
+    for (uint32_t idx = 0; idx < hashTableCount; idx++) {
         this->hashTables[idx] = nullptr;
     }
 }
@@ -132,7 +132,7 @@ bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, ui
     memset_s(nulls, sizeof(nulls), 0, sizeof(nulls));
     memset_s(lengths, sizeof(lengths), 0, sizeof(lengths));
     for (auto iter = usedVectors.begin(); iter != usedVectors.end(); ++iter) {
-        int32_t vecIdx = *iter;
+        auto vecIdx = static_cast<uint32_t>(*iter);
         auto vector =
             (vecIdx < probeColsCount) ? probeColumns[vecIdx] : buildColumns[vecIdx - probeColsCount][vecBatchIndex];
         auto position = static_cast<int32_t>((vecIdx < probeColsCount) ? probePosition : buildPosition);

@@ -6,6 +6,7 @@
 #include <memory>
 #include "window_function.h"
 
+using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
 

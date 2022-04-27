@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * @Description: sort operator test implementations
  */
 #include <thread>
@@ -26,6 +26,7 @@ const int32_t DISTINCT_VALUE_COUNT = 4;
 const int32_t REPEAT_COUNT = 250000;
 const int32_t COLUMN_COUNT_2 = 2;
 const int32_t COLUMN_COUNT_4 = 4;
+const uint64_t MAX_SPILL_BYTES = (1L << 20);
 
 void BuildVectorValues(LongVector *vector)
 {
@@ -84,7 +85,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     operatorFactory->SetJitContext(jitContext);
 
     clock_t start = clock();
-    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
@@ -753,7 +754,8 @@ VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas
     }
     for (int32_t i = 1; i < totalDataSize; i++) {
         for (int32_t j = 0; j < sourceTypesSize; j++) {
-            if ((i == j + 1) && hasNull && (sourceTypeIds[j] == OMNI_VARCHAR || sourceTypeIds[j] == OMNI_CHAR)) {
+            if (((i % sourceTypesSize) == j + 1) && hasNull &&
+                (sourceTypeIds[j] == OMNI_VARCHAR || sourceTypeIds[j] == OMNI_CHAR)) {
                 static_cast<VarcharVector *>(sourceVectors[j])->SetValueNull(i);
             } else if ((i == j + 1) && hasNull) {
                 sourceVectors[j]->SetValueNull(i);
@@ -794,15 +796,16 @@ VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortData
     for (int32_t i = 0; i < sourceTypesSize; i++) {
         expectVectors[i] = VectorHelper::CreateVector(vectorAllocator, OMNI_VEC_ENCODING_FLAT, sourceTypeIds[i],
             sourceTypesVec[i].GetWidth() * totalDataSize, totalDataSize);
-        VectorHelper::SetValue(expectVectors[i], 0, sortDatas[i]);
     }
-    for (int32_t i = 1; i < totalDataSize; i++) {
-        for (int32_t j = sourceTypesSize - 1; j >= 0; j--) {
-            if ((i + j == sourceTypesSize) && hasNull) {
-                expectVectors[j]->SetValueNull(i);
-                continue;
+
+    for (int32_t i = 0; i < dataSize; i++) {
+        int32_t index = i * loopCount;
+        for (int32_t loopIdx = 0; loopIdx < loopCount; loopIdx++) {
+            for (int32_t colIdx = sourceTypesSize - 1; colIdx >= 0; colIdx--) {
+                ((i + colIdx == sourceTypesSize) && hasNull) ?
+                    expectVectors[colIdx]->SetValueNull(index + loopIdx) :
+                    VectorHelper::SetValue(expectVectors[colIdx], index + loopIdx, sortDatas[colIdx]);
             }
-            VectorHelper::SetValue(expectVectors[j], i, sortDatas[j]);
         }
     }
 
@@ -952,6 +955,187 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
     sortOperator->GetOutput(outputVecBatches);
 
     auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortZeroRowCountInMemory)
+{
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
+        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    int32_t sourceTypesSize = sourceTypes.GetSize();
+    int32_t outputCols[sourceTypesSize];
+    int32_t sortCols[sourceTypesSize];
+    int32_t ascendings[sourceTypesSize];
+    int32_t nullFirsts[sourceTypesSize];
+    for (int32_t i = 0; i < sourceTypesSize; i++) {
+        outputCols[i] = i;
+        sortCols[i] = i;
+        ascendings[i] = 1;
+        nullFirsts[i] = 0;
+    }
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize);
+    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
+        sourceTypesSize);
+    operatorFactory->SetJitContext(jitContext);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+
+    auto sourceVecBatch = CreateEmptyVectorBatch(sourceTypes.Get());
+    sortOperator->AddInput(sourceVecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+    EXPECT_EQ(outputVecBatches.size(), 0);
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
+{
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    auto sourceTypesSize = sourceTypes.GetSize();
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {1, 1};
+    int32_t nullFirsts[] = {0, 0};
+
+    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", 5);
+    OperatorConfig operatorConfig1(spillConfig1);
+    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
+        ascendings, nullFirsts, sourceTypesSize, operatorConfig1),
+        omniruntime::exception::OmniException);
+
+    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "/", 5);
+    OperatorConfig operatorConfig2(spillConfig2);
+    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
+        ascendings, nullFirsts, sourceTypesSize, operatorConfig2),
+        omniruntime::exception::OmniException);
+
+    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, GenerateSpillPath(), INT64_MAX);
+    OperatorConfig operatorConfig3(spillConfig3);
+    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
+        ascendings, nullFirsts, sourceTypesSize, operatorConfig3),
+        omniruntime::exception::OmniException);
+
+    SpillConfig spillConfig4(SPILL_CONFIG_NONE, true, "+-ab23", 5);
+    OperatorConfig operatorConfig4(spillConfig4);
+    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
+        ascendings, nullFirsts, sourceTypesSize, operatorConfig4),
+        omniruntime::exception::OmniException);
+}
+
+TEST(NativeOmniSortTest, TestSortSpillWithDictionaryAndNulls)
+{
+    // all types: int, long, boolean, double, date32, decimal, decimal128, varchar, char
+    int32_t intValue = 20;
+    int64_t longValue = 20;
+    bool boolValue = true;
+    double doubleValue = 20.0;
+    Decimal128 decimal128(20, 0);
+    std::string stringValue("20");
+    const int32_t dataSize = 10;
+    void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
+        &stringValue, &stringValue};
+
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
+        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    int32_t sourceTypesSize = sourceTypes.GetSize();
+    int32_t outputCols[sourceTypesSize];
+    int32_t sortCols[sourceTypesSize];
+    int32_t ascendings[sourceTypesSize];
+    int32_t nullFirsts[sourceTypesSize];
+    for (int32_t i = 0; i < sourceTypesSize; i++) {
+        outputCols[i] = i;
+        sortCols[i] = i;
+        ascendings[i] = 1;
+        nullFirsts[i] = 0;
+    }
+    auto vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort_TestSortSpillWithDictionaryAndNulls");
+    auto sourceVecBatch1 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
+    auto sourceVecBatch2 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
+    auto sourceVecBatch3 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
+
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 5);
+    OperatorConfig operatorConfig(spillConfig);
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
+    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
+        sourceTypesSize);
+    operatorFactory->SetJitContext(jitContext);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+
+    sortOperator->AddInput(sourceVecBatch1);
+    sortOperator->AddInput(sourceVecBatch2);
+    sortOperator->AddInput(sourceVecBatch3);
+
+    vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, dataSize, 3, vecAllocator, true);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortZeroRowCountInMemoryWithSpill)
+{
+    // all types: int, long, boolean, double, date32, decimal, decimal128, varchar, char
+    int32_t intValue = 20;
+    int64_t longValue = 20;
+    bool boolValue = true;
+    double doubleValue = 20.0;
+    Decimal128 decimal128(20, 0);
+    std::string stringValue("20");
+    const int32_t dataSize = 10;
+    void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
+        &stringValue, &stringValue};
+
+    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
+        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    int32_t sourceTypesSize = sourceTypes.GetSize();
+    int32_t outputCols[sourceTypesSize];
+    int32_t sortCols[sourceTypesSize];
+    int32_t ascendings[sourceTypesSize];
+    int32_t nullFirsts[sourceTypesSize];
+    for (int32_t i = 0; i < sourceTypesSize; i++) {
+        outputCols[i] = i;
+        sortCols[i] = i;
+        ascendings[i] = 1;
+        nullFirsts[i] = 0;
+    }
+    auto vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort_TestSortZeroRowCountInMemoryWithSpill");
+    auto sourceVecBatch1 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
+    auto sourceVecBatch2 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 1, vecAllocator, true, true);
+    auto sourceVecBatch3 = CreateEmptyVectorBatch(sourceTypes.Get());
+
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 5);
+    OperatorConfig operatorConfig(spillConfig);
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
+    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
+        sourceTypesSize);
+    operatorFactory->SetJitContext(jitContext);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+
+    sortOperator->AddInput(sourceVecBatch1);
+    sortOperator->AddInput(sourceVecBatch2);
+    sortOperator->AddInput(sourceVecBatch3);
+
+    vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    auto expectVecBatch = CreateSortExpectForAllTypes(sourceTypes, sortDatas, dataSize, 2, vecAllocator, true);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);

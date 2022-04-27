@@ -10,7 +10,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
+import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory.JitContext;
 import nova.hetu.omniruntime.type.CharDataType;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
@@ -43,11 +45,9 @@ public class OmniPartionOutOperatorTest {
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
         DataType[] sourceTypes = {VarcharDataType.VARCHAR};
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
-                new OmniPartitionedOutPutOperatorFactory(
-                        sourceTypes, false, nullChannel,
-                        partitionChannels, partitionCount, bucketToPartition,
-                        false, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
+                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
+                hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -76,11 +76,9 @@ public class OmniPartionOutOperatorTest {
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
         DataType[] sourceTypes = {VarcharDataType.VARCHAR};
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
-                new OmniPartitionedOutPutOperatorFactory(
-                        sourceTypes, false, nullChannel,
-                        partitionChannels, partitionCount, bucketToPartition,
-                        false, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
+                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
+                hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -109,11 +107,9 @@ public class OmniPartionOutOperatorTest {
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
         DataType[] sourceTypes = {CharDataType.CHAR};
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
-                new OmniPartitionedOutPutOperatorFactory(
-                        sourceTypes, false, nullChannel,
-                        partitionChannels, partitionCount, bucketToPartition,
-                        false, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
+                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
+                hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -130,6 +126,7 @@ public class OmniPartionOutOperatorTest {
 
     @Test
     public void testFactoryJitContextEquals() {
+        DataType[] sourceTypes = {CharDataType.CHAR};
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
         int partitionCount = 1;
@@ -137,20 +134,11 @@ public class OmniPartionOutOperatorTest {
         DataType[] hashChannelTypes = {CharDataType.CHAR};
         int[] hashChannels = {0};
 
-        DataType[] buildTypes = {new CharDataType(3), new CharDataType(3)};
-        Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
-        VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
-        DataType[] sourceTypes = {CharDataType.CHAR};
-
-        OmniPartitionedOutPutOperatorFactory.JitContext factory1 =
-                new OmniPartitionedOutPutOperatorFactory.JitContext(
-                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
-                hashChannelTypes, hashChannels);
-        OmniPartitionedOutPutOperatorFactory.JitContext factory2 =
-                new OmniPartitionedOutPutOperatorFactory.JitContext(
-                sourceTypes, false, nullChannel, partitionChannels, partitionCount, bucketToPartition, false,
-                hashChannelTypes, hashChannels);
-        OmniPartitionedOutPutOperatorFactory.JitContext factory3 = null;
+        JitContext factory1 = new JitContext(sourceTypes, false, nullChannel, partitionChannels, partitionCount,
+                bucketToPartition, false, hashChannelTypes, hashChannels, new OperatorConfig());
+        JitContext factory2 = new JitContext(sourceTypes, false, nullChannel, partitionChannels, partitionCount,
+                bucketToPartition, false, hashChannelTypes, hashChannels, new OperatorConfig());
+        JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));
         assertFalse(factory1.equals(factory3));

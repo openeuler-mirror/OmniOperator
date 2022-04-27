@@ -388,7 +388,7 @@ JoinProbe::~JoinProbe()
 bool JoinProbe::AdvanceNextPosition()
 {
     position++;
-    return position < positionCount;
+    return position < static_cast<int32_t>(positionCount);
 }
 
 uint64_t JoinProbe::GetCurrentJoinPosition(const JoinHashTables *hashTables) const

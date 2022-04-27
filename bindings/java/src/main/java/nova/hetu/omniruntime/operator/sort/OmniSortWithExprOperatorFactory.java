@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.sort;
@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator.sort;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
 
@@ -28,31 +29,32 @@ public class OmniSortWithExprOperatorFactory
      * @param sortKeys the sort keys
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
-     * @param isJitEnabled whether the jit is enabled
      */
     public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
-            int[] sortAscendings, int[] sortNullFirsts, boolean isJitEnabled) {
-        super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts),
-                isJitEnabled));
+            int[] sortAscendings, int[] sortNullFirsts) {
+        super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts,
+                OperatorConfig.NONE)));
     }
 
     /**
-     * Instantiates a new Omni sort with expression operator factory with jit
-     * default.
+     * Instantiates a new Omni sort with expression operator factory with default
+     * operator config.
      *
      * @param sourceTypes the source types
      * @param outputColumns the output columns
      * @param sortKeys the sort keys
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
+     * @param operatorConfig the operator config
      */
     public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
-            int[] sortAscendings, int[] sortNullFirsts) {
-        this(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts, true);
+            int[] sortAscendings, int[] sortNullFirsts, OperatorConfig operatorConfig) {
+        super(new FactoryContext(
+                new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts, operatorConfig)));
     }
 
     private static native long createSortWithExprOperatorFactory(String sourceTypes, int[] outputCols,
-            String[] sortKeys, int[] ascendings, int[] nullFirsts, long jitContext);
+            String[] sortKeys, int[] ascendings, int[] nullFirsts, long jitContext, String operatorConfig);
 
     private static native long createSortWithExprJitContext(String sourceTypes, int[] outputCols, String[] sortKeys,
             int[] ascendings, int[] nullFirsts);
@@ -62,7 +64,7 @@ public class OmniSortWithExprOperatorFactory
         JitContext context = factoryContext.getJitContext();
         return createSortWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.outputColumns, context.sortKeys, context.sortAscendings, context.sortNullFirsts,
-                factoryContext.getNativeJitContext());
+                factoryContext.getNativeJitContext(), OperatorConfig.serialize(context.getOperatorConfig()));
     }
 
     /**
@@ -70,7 +72,7 @@ public class OmniSortWithExprOperatorFactory
      *
      * @since 2021-10-16
      */
-    public static class JitContext implements OmniJitContext {
+    public static class JitContext extends OmniJitContext {
         private final DataType[] sourceTypes;
 
         private final int[] outputColumns;
@@ -89,9 +91,11 @@ public class OmniSortWithExprOperatorFactory
          * @param sortKeys the sort keys
          * @param sortAscendings the sort ascendings
          * @param sortNullFirsts the sort null firsts
+         * @param operatorConfig the operator config
          */
         public JitContext(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings,
-                int[] sortNullFirsts) {
+                int[] sortNullFirsts, OperatorConfig operatorConfig) {
+            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
             this.sortKeys = sortKeys;
@@ -102,7 +106,7 @@ public class OmniSortWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns), Arrays.hashCode(sortKeys),
-                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts), operatorConfig);
         }
 
         @Override
@@ -116,7 +120,7 @@ public class OmniSortWithExprOperatorFactory
             JitContext that = (JitContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
                     && Arrays.equals(sortKeys, that.sortKeys) && Arrays.equals(sortAscendings, that.sortAscendings)
-                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts) && operatorConfig.equals(that.operatorConfig);
         }
     }
 
@@ -130,10 +134,9 @@ public class OmniSortWithExprOperatorFactory
          * Instantiates a new Context.
          *
          * @param jitContext the jit context
-         * @param isJitEnabled whether the jit is enabled
          */
-        public FactoryContext(JitContext jitContext, boolean isJitEnabled) {
-            super(jitContext, isJitEnabled);
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
         }
 
         @Override

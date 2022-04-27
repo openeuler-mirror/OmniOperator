@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -55,7 +56,8 @@ public class OmniHashAggregationOperatorTest {
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
 
         OmniHashAggregationOperatorFactory factoryWithJit = new OmniHashAggregationOperatorFactory(groupByChannel,
-                groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false, true);
+                groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
+                new OperatorConfig(true));
         OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
@@ -75,7 +77,8 @@ public class OmniHashAggregationOperatorTest {
         System.out.println("HashAggregation with jit use " + (end1 - start1) + " ms.");
 
         OmniHashAggregationOperatorFactory factoryWithoutJit = new OmniHashAggregationOperatorFactory(groupByChannel,
-                groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false, false);
+                groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
+                new OperatorConfig(false));
         OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
@@ -219,9 +222,11 @@ public class OmniHashAggregationOperatorTest {
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
 
         OmniHashAggregationOperatorFactory.JitContext factory1 = new OmniHashAggregationOperatorFactory.JitContext(
-                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
+                new OperatorConfig());
         OmniHashAggregationOperatorFactory.JitContext factory2 = new OmniHashAggregationOperatorFactory.JitContext(
-                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
+                new OperatorConfig());
         OmniHashAggregationOperatorFactory.JitContext factory3 = null;
 
         assertTrue(factory1.equals(factory2));

@@ -23,8 +23,8 @@ public:
         const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
         DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator);
 
-    int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
-        std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses);
+    int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
+        std::vector<int64_t> &bufferedTableValueAddresses);
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages);
 

@@ -11,6 +11,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.topn.OmniTopNWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
@@ -139,9 +140,9 @@ public class OmniTopNWithExprOperatorTest {
         int[] nullFirst = {0, 0};
         int expectedRowSize = 5;
         OmniTopNWithExprOperatorFactory.JitContext factory1 = new OmniTopNWithExprOperatorFactory.JitContext(
-                sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst);
+                sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst, new OperatorConfig());
         OmniTopNWithExprOperatorFactory.JitContext factory2 = new OmniTopNWithExprOperatorFactory.JitContext(
-                sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst);
+                sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst, new OperatorConfig());
         OmniTopNWithExprOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

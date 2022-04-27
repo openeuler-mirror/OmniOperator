@@ -107,38 +107,25 @@ private:
 
     int32_t CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex);
 
-    JoinType joinType;
-
-    int32_t *streamedTableKeysCols;
-
-    int32_t *bufferedTableKeysCols;
-
     std::unique_ptr<omniruntime::type::DataTypes> streamedTableKeysTypes;
-
+    JoinType joinType;
+    int32_t *streamedTableKeysCols;
+    int32_t *bufferedTableKeysCols;
     int32_t keyColsCount;
-
-    DynamicPagesIndex *streamedPagesIndex;
-
-    DynamicPagesIndex *bufferedPagesIndex;
 
     // for non-inner-join
     bool firstMatch;
 
-    std::vector<bool> isPreKeyMatched;
-
-    std::vector<int64_t> streamedValueAddress;
-
-    std::vector<int64_t> bufferedValueAddress;
-
-    int64_t preStreamedValueAddress;
-
-    std::vector<int64_t> preBufferedValueAddress;
-
-    std::unique_ptr<JoinStatus> preStatus;
-
     int32_t streamedPagesIndexPosition;
-
     int32_t bufferedPagesIndexPosition;
+    DynamicPagesIndex *streamedPagesIndex;
+    DynamicPagesIndex *bufferedPagesIndex;
+    int64_t preStreamedValueAddress;
+    std::unique_ptr<JoinStatus> preStatus;
+    std::vector<bool> isPreKeyMatched;
+    std::vector<int64_t> streamedValueAddress;
+    std::vector<int64_t> bufferedValueAddress;
+    std::vector<int64_t> preBufferedValueAddress;
 };
 
 constexpr uint32_t STREAM_SHIFT_24 = 24;
