@@ -46,10 +46,8 @@ VectorBatch *CreateInput(VectorAllocator *vectorAllocator, const int32_t numRows
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
                 for (int j = 0; j < numRows; ++j) {
-                    // std::cout << "row: " << j << std::endl;
                     int64_t addr = reinterpret_cast<int64_t *>(allData[i])[j];
                     std::string s(reinterpret_cast<char *>(addr));
-                    // std::cout << "s: " << s << std::endl;
                     ((VarcharVector *)vecBatch->GetVector(i))
                         ->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
                 }
@@ -260,6 +258,179 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     delete vecAllocator;
 }
 
+TEST(ProjectionTest, MakeDecimal64ToDiffScale)
+{
+    const int32_t numRows = 1000;
+    int64_t *col1 = MakeLongs(numRows);
+    const int32_t numCols = 1;
+    std::vector<DataType> vecOfTypes = { DataType(Decimal64DataType(7, 2)) };
+    auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
+    LiteralExpr *precision1 = new LiteralExpr(7, IntType());
+    LiteralExpr *scale1 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision1 = new LiteralExpr(7, IntType());
+    LiteralExpr *new_scale1 = new LiteralExpr(4, IntType());
+    auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
+    LiteralExpr *precision2 = new LiteralExpr(7, IntType());
+    LiteralExpr *scale2 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision2 = new LiteralExpr(7, IntType());
+    LiteralExpr *new_scale2 = new LiteralExpr(0, IntType());
+
+    std::string MakeStr = "MakeDecimal";
+    std::vector<Expr *> args1 { data1, precision1, scale1, new_precision1, new_scale1 };
+    std::vector<Expr *> args2 { data2, precision2, scale2, new_precision2, new_scale2 };
+    auto makeExpr1 = GetFuncExpr(MakeStr, args1, Decimal64Type(7, 4));
+    auto makeExpr2 = GetFuncExpr(MakeStr, args2, Decimal64Type(7, 0));
+    std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
+
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("MakeDecimal64ToDiffScale");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        long val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        long val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val0, i * 100);
+        EXPECT_EQ(val1, i / 100);
+    }
+
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, MakeDecimal128ToDiffScale)
+{
+    const int32_t numRows = 1000;
+    int64_t *col1 = MakeDecimals(numRows);
+    const int32_t numCols = 1;
+    std::vector<DataType> vecOfTypes = { DataType(Decimal128DataType(38, 2)) };
+    auto data1 = new FieldExpr(0, Decimal128Type(38, 2));
+    LiteralExpr *precision1 = new LiteralExpr(38, IntType());
+    LiteralExpr *scale1 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision1 = new LiteralExpr(38, IntType());
+    LiteralExpr *new_scale1 = new LiteralExpr(4, IntType());
+    auto data2 = new FieldExpr(0, Decimal128Type(7, 2));
+    LiteralExpr *precision2 = new LiteralExpr(38, IntType());
+    LiteralExpr *scale2 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision2 = new LiteralExpr(38, IntType());
+    LiteralExpr *new_scale2 = new LiteralExpr(0, IntType());
+
+    std::string MakeStr = "MakeDecimal";
+    std::vector<Expr *> args1 { data1, precision1, scale1, new_precision1, new_scale1 };
+    std::vector<Expr *> args2 { data2, precision2, scale2, new_precision2, new_scale2 };
+    auto makeExpr1 = GetFuncExpr(MakeStr, args1, Decimal128Type(38, 4));
+    auto makeExpr2 = GetFuncExpr(MakeStr, args2, Decimal128Type(38, 0));
+    std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
+
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("MakeDecimal128ToDiffScale");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val1.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i * 100);
+        EXPECT_EQ(val1.LowBits(), round((double) i / 100));
+    }
+
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
+{
+    const int32_t numRows = 1000;
+    int64_t *col1 = MakeLongs(numRows);
+    const int32_t numCols = 1;
+    std::vector<DataType> vecOfTypes = { DataType(Decimal64DataType(7, 2)) };
+    auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
+    LiteralExpr *precision1 = new LiteralExpr(7, IntType());
+    LiteralExpr *scale1 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision1 = new LiteralExpr(38, IntType());
+    LiteralExpr *new_scale1 = new LiteralExpr(2, IntType());
+
+
+    auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
+    LiteralExpr *precision2 = new LiteralExpr(7, IntType());
+    LiteralExpr *scale2 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision2 = new LiteralExpr(38, IntType());
+    LiteralExpr *new_scale2 = new LiteralExpr(4, IntType());
+
+    auto data3 = new FieldExpr(0, Decimal64Type(7, 2));
+    LiteralExpr *precision3 = new LiteralExpr(7, IntType());
+    LiteralExpr *scale3 = new LiteralExpr(2, IntType());
+    LiteralExpr *new_precision3 = new LiteralExpr(38, IntType());
+    LiteralExpr *new_scale3 = new LiteralExpr(0, IntType());
+
+    std::string MakeStr = "MakeDecimal";
+    std::vector<Expr *> args1 { data1, precision1, scale1, new_precision1, new_scale1 };
+    std::vector<Expr *> args2 { data2, precision2, scale2, new_precision2, new_scale2 };
+    std::vector<Expr *> args3 { data3, precision3, scale3, new_precision3, new_scale3 };
+    auto makeExpr1 = GetFuncExpr(MakeStr, args1, Decimal128Type(38, 2));
+    auto makeExpr2 = GetFuncExpr(MakeStr, args2, Decimal128Type(38, 4));
+    auto makeExpr3 = GetFuncExpr(MakeStr, args3, Decimal128Type(38, 0));
+    std::vector<Expr *> exprs = { makeExpr1, makeExpr2, makeExpr3 };
+
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("MakeDecimal64To128WithDiffScale");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        Decimal128 val2 = ((Decimal128Vector *)ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val1.HighBits(), 0);
+        EXPECT_EQ(val2.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i);
+        EXPECT_EQ(val1.LowBits(), i * 100);
+        EXPECT_EQ(val2.LowBits(), round((double) i / 100));
+    }
+
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
 TEST(ProjectionTest, Simple)
 {
     const int32_t numRows = 1000;
@@ -309,13 +480,14 @@ TEST(ProjectionTest, Simple)
     delete vecAllocator;
 }
 
-TEST(ProjectionTest, WithNullValues)
+TEST(ProjectionTest, AbsWithNullValues)
 {
     const int32_t numRows = 1000;
     int32_t *col1 = MakeInts(numRows, -5);
     int64_t *col2 = MakeLongs(numRows, -5);
-    const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
+    int64_t *col3 = MakeLongs(numRows, -5);
+    const int32_t numCols = 3;
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DECIMAL64) };
     auto data1 = new FieldExpr(0, IntType());
     std::string funcStr = "abs";
     std::vector<Expr *> args1;
@@ -327,42 +499,55 @@ TEST(ProjectionTest, WithNullValues)
     args2.push_back(data2);
     auto absExpr2 = GetFuncExpr(funcStr, args2, LongType());
 
-    std::vector<Expr *> exprs = { absExpr1, absExpr2 };
+    auto data3 = new FieldExpr(2, Decimal64Type(7, 2));
+    std::vector<Expr *> args3;
+    args3.push_back(data3);
+    auto absExpr3 = GetFuncExpr(funcStr, args3, Decimal64Type(7, 2));
+
+    std::vector<Expr *> exprs = { absExpr1, absExpr2, absExpr3 };
+
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_WithNullValues");
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+                                reinterpret_cast<int64_t>(col3)};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_AbsWithNullValues");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     for (int i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
             t->GetVector(0)->SetValueNull(i);
             t->GetVector(1)->SetValueNull(i);
+            t->GetVector(2)->SetValueNull(i);
         }
     }
 
-    auto copy = DuplicateVectorBatch(t);
-    op->AddInput(copy);
+    op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
         if (i % 2 == 0) {
             EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
             EXPECT_TRUE(ret[0]->GetVector(1)->IsValueNull(i));
+            EXPECT_TRUE(ret[0]->GetVector(2)->IsValueNull(i));
         } else {
             EXPECT_FALSE(ret[0]->GetVector(0)->IsValueNull(i));
             EXPECT_FALSE(ret[0]->GetVector(1)->IsValueNull(i));
+            EXPECT_FALSE(ret[0]->GetVector(2)->IsValueNull(i));
             int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
             int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+            int64_t val2 = ((LongVector *)ret[0]->GetVector(2))->GetValue(i);
             EXPECT_EQ(val0, abs(i - 5));
             EXPECT_EQ(val1, abs(i - 5));
+            EXPECT_EQ(val2, abs(i - 5));
         }
     }
-    VectorHelper::FreeVecBatch(t);
+
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
+    delete[] col3;
     delete op;
     delete factory;
     delete vecAllocator;
@@ -1104,7 +1289,7 @@ TEST(ProjectionTest, Decimal128Arithmetic)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
+TEST(ProjectionTest, DISABLED_Decimal128Arithmetic2)
 {
     // currently fails
     const int32_t numRows = 10;
@@ -1163,7 +1348,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic2)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
+TEST(ProjectionTest, DISABLED_Decimal128Arithmetic3)
 {
     // currently fails
     const int32_t numRows = 10;
@@ -1224,7 +1409,7 @@ TEST(ProjectTest, DISABLED_Decimal128Arithmetic3)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, Decimal128Multiply)
+TEST(ProjectionTest, Decimal128Multiply)
 {
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
@@ -1263,7 +1448,7 @@ TEST(ProjectTest, Decimal128Multiply)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, Decimal128Divide)
+TEST(ProjectionTest, Decimal128Divide)
 {
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
@@ -1301,7 +1486,7 @@ TEST(ProjectTest, Decimal128Divide)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, MultipleDecimal128Columns)
+TEST(ProjectionTest, MultipleDecimal128Columns)
 {
     const int32_t numRows = 100;
     int64_t *col1 = MakeDecimals(numRows);
@@ -1357,7 +1542,7 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, StringSubstr)
+TEST(ProjectionTest, StringSubstr)
 {
     vector<string *> strings;
 
@@ -1442,7 +1627,7 @@ TEST(ProjectTest, StringSubstr)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, SlicedDictionaryVecTest)
+TEST(ProjectionTest, SlicedDictionaryVecTest)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
@@ -1513,7 +1698,7 @@ TEST(ProjectTest, SlicedDictionaryVecTest)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
+TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 10;
@@ -1572,7 +1757,7 @@ TEST(ProjectTest, SlicedDictionaryVecWithNullTest)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, Tpcds96)
+TEST(ProjectionTest, Tpcds96)
 {
     const int32_t numRows = 21;
     int64_t *col0 = new int64_t[21];
@@ -1657,7 +1842,7 @@ TEST(ProjectTest, Tpcds96)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, Round)
+TEST(ProjectionTest, Round)
 {
     const int32_t numRows = 1000;
     int32_t *col0 = MakeInts(numRows, -5);
@@ -1791,7 +1976,7 @@ TEST(ProjectTest, Round)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, ConcatStrAndChar)
+TEST(ProjectionTest, ConcatStrAndChar)
 {
     vector<string *> strings;
 
@@ -1856,7 +2041,7 @@ TEST(ProjectTest, ConcatStrAndChar)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, varcharExpand)
+TEST(ProjectionTest, varcharExpand)
 {
     vector<string *> strings;
 
@@ -1951,7 +2136,7 @@ TEST(ProjectTest, varcharExpand)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, testDivDecimal128)
+TEST(ProjectionTest, testDivDecimal128)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -1985,7 +2170,7 @@ TEST(ProjectTest, testDivDecimal128)
 }
 
 
-TEST(ProjectTest, testAddDecimal128)
+TEST(ProjectionTest, testAddDecimal128)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2018,7 +2203,7 @@ TEST(ProjectTest, testAddDecimal128)
     delete vecAllocator;
 }
 
-TEST(ProjectTest, testDecimal128Between)
+TEST(ProjectionTest, testDecimal128Between)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2036,7 +2221,7 @@ TEST(ProjectTest, testDecimal128Between)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128Between");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128Between");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
@@ -2052,7 +2237,7 @@ TEST(ProjectTest, testDecimal128Between)
 }
 
 
-TEST(ProjectTest, testDecimal128In)
+TEST(ProjectionTest, testDecimal128In)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2087,7 +2272,7 @@ TEST(ProjectTest, testDecimal128In)
 }
 
 
-TEST(ProjectTest, testDecimal128Comprehensive)
+TEST(ProjectionTest, testDecimal128Comprehensive)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2140,7 +2325,7 @@ TEST(ProjectTest, TestAndExprWithNull)
     auto andRight = new FieldExpr(1, BooleanType());
     BinaryExpr *andExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, andLeft, andRight, BooleanType());
     std::vector<Expr *> exprs = { andExpr };
-    std::vector<DataType> vecOfTypes = {DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN)};
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN) };
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2193,7 +2378,7 @@ TEST(ProjectTest, TestOrExprWithNull)
     auto orRight = new FieldExpr(1, BooleanType());
     BinaryExpr *orExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, orLeft, orRight, BooleanType());
     std::vector<Expr *> exprs = { orExpr };
-    std::vector<DataType> vecOfTypes = {DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN)};
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN) };
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2236,15 +2421,15 @@ TEST(ProjectTest, TestOrExprWithNull)
 }
 
 
-TEST(ProjectTest, testSubDecimal64)
+TEST(ProjectionTest, testSubDecimal64)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
     auto subLeft = new LiteralExpr(4321563L, Decimal64Type(7, 3));
     auto subRight = new LiteralExpr(123468L, Decimal64Type(6, 4));
 
-    BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight,
-                                         Decimal64Type(8, 4));
+    BinaryExpr *subExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal64Type(8, 4));
 
     std::vector<Expr *> exprs = { subExpr };
     const int32_t numCols = 0;
@@ -2253,8 +2438,7 @@ TEST(ProjectTest, testSubDecimal64)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorAllocator *vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testSubDecimal64");
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testSubDecimal64");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
@@ -2267,16 +2451,45 @@ TEST(ProjectTest, testSubDecimal64)
     delete factory;
 }
 
+TEST(ProjectionTest, testMulDecimal64)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto mulLeft = new LiteralExpr(100L, Decimal64Type(7, 2));
+    auto mulRight = new LiteralExpr(100L, Decimal64Type(7, 2));
 
-TEST(ProjectTest, testDivDecimal64)
+    BinaryExpr *mulExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal64Type(7, 2));
+
+    std::vector<Expr *> exprs = { mulExpr };
+    const int32_t numCols = 0;
+    std::vector<DataType> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testMulDecimal64");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0, 100L);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, testDivDecimal64)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
     auto addLeft = new LiteralExpr(1225L, Decimal64Type(4, 2));
     auto addRight = new LiteralExpr(125L, Decimal64Type(3, 2));
 
-    BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, addLeft, addRight,
-                                         Decimal64Type(2, 1));
+    BinaryExpr *divExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::DIV, addLeft, addRight, Decimal64Type(2, 1));
 
     std::vector<Expr *> exprs = { divExpr };
     const int32_t numCols = 0;
@@ -2285,8 +2498,7 @@ TEST(ProjectTest, testDivDecimal64)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorAllocator *vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDivDecimal64");
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDivDecimal64");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
@@ -2299,8 +2511,47 @@ TEST(ProjectTest, testDivDecimal64)
     delete factory;
 }
 
+TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
+{
+    const int32_t numRows = 1;
+    auto addLeft = new LiteralExpr(-999999999999999999L, Decimal64Type(18, 0));
+    auto addRight = new LiteralExpr(2L, Decimal64Type(18, 0));
+    BinaryExpr *addExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(19, 0));
+    auto subLeft = new LiteralExpr(-999999999999999999L, Decimal64Type(18, 0));
+    auto subRight = new LiteralExpr(2L, Decimal64Type(18, 0));
 
-TEST(ProjectTest, testDecimal64In)
+    BinaryExpr *subExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal128Type(19, 0));
+    std::vector<Expr *> exprs = { addExpr, subExpr };
+
+    const int32_t numCols = 0;
+    std::vector<DataType> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64ArithOutputDecimal128");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
+    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0.HighBits(), 1L << 63);
+    EXPECT_EQ(val0.LowBits(), 999999999999999997L);
+    Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(0);
+    EXPECT_EQ(val1.HighBits(), 1L << 63);
+    EXPECT_EQ(val1.LowBits(), 1000000000000000001);
+
+    VectorHelper::FreeVecBatches(ret);
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, testDecimal64In)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2320,8 +2571,7 @@ TEST(ProjectTest, testDecimal64In)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorAllocator *vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64In");
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64In");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
@@ -2333,7 +2583,7 @@ TEST(ProjectTest, testDecimal64In)
     delete factory;
 }
 
-TEST(ProjectTest, testDecimal64Between)
+TEST(ProjectionTest, testDecimal64Between)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2350,8 +2600,7 @@ TEST(ProjectTest, testDecimal64Between)
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
-    VectorAllocator *vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Between");
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Between");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
@@ -2364,7 +2613,7 @@ TEST(ProjectTest, testDecimal64Between)
     delete factory;
 }
 
-TEST(ProjectTest, testDecimal64Comprehensive)
+TEST(ProjectionTest, testDecimal64Comprehensive)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
@@ -2390,7 +2639,7 @@ TEST(ProjectTest, testDecimal64Comprehensive)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Comprehensive");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Comprehensive");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
@@ -2402,13 +2651,13 @@ TEST(ProjectTest, testDecimal64Comprehensive)
     delete factory;
 }
 
-TEST(ProjectTest, Decimal64ColDivide)
+TEST(ProjectionTest, Decimal64ColDivide)
 {
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows, -500);
     LiteralExpr *divRight = new LiteralExpr(92122L, Decimal64Type(8, 4));
-    BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV,
-                                         new FieldExpr(0, Decimal64Type(8, 4)), divRight, Decimal64Type(8, 4));
+    BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, new FieldExpr(0, Decimal64Type(8, 4)),
+        divRight, Decimal64Type(8, 4));
     std::vector<Expr *> exprs = { divExpr };
 
     const int32_t numCols = 1;

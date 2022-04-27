@@ -89,7 +89,7 @@ protected:
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     // Helper functions and main function for parsing binary expressions
-    llvm::Value *BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+    void BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     llvm::Value *BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
@@ -111,16 +111,15 @@ protected:
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 
 
-    std::pair<llvm::Value*, llvm::Value*> RescaleDecimals(omniruntime::expressions::Expr &expr, CodeGenValue &left,
+    std::pair<llvm::Value *, llvm::Value *> RescaleDecimals(omniruntime::expressions::Expr &expr, CodeGenValue &left,
         CodeGenValue &right, int scaleDiff, omniruntime::type::DataTypeId typeId);
 
     bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, std::shared_ptr<CodeGenValue> val,
         std::shared_ptr<CodeGenValue> lowerVal, std::shared_ptr<CodeGenValue> upperVal,
-        std::pair<llvm::Value**, llvm::Value**> cmpPair);
+        std::pair<llvm::Value **, llvm::Value **> cmpPair);
 
-    void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-
+    void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,
+        llvm::Value *leftIsNull, llvm::Value *rightIsNull);
 
 
     virtual llvm::Function *CreateFunction();
@@ -151,9 +150,20 @@ private:
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::type::DataType dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
-    void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
-        llvm::Value *rightNull);
-
+    void Decimal64MultiplyHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *output,
+        llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    void InExprIntegerHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare, llvm::Value *&tmpCmpData,
+        llvm::Value *&tmpCmpNull);
+    void InExprDecimal64Helper(const omniruntime::expressions::InExpr &inExpr, size_t i,
+        CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
+        llvm::Value *&tmpCmpNull);
+    void InExprDoubleHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare, llvm::Value *&tmpCmpData,
+        llvm::Value *&tmpCmpNull);
+    void InExprStringHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare, llvm::Value *&tmpCmpData,
+        llvm::Value *&tmpCmpNull);
+    void InExprDecimal128Helper(const omniruntime::expressions::InExpr &inExpr, llvm::Type *retType, size_t i,
+        CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
+        llvm::Value *&tmpCmpNull);
 };
 
 #endif

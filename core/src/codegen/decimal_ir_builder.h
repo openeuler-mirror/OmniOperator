@@ -10,7 +10,7 @@
 #include <llvm/IR/Value.h>
 #include "llvm/IR/IRBuilder.h"
 #include "codegen_value.h"
-#include "../type/data_type.h"
+#include "type/data_type.h"
 #include "codegen_utils.h"
 
 
@@ -32,11 +32,11 @@ public:
     // Combine the two parts into an i128
     llvm::Value *ToInt128(llvm::Value *high, llvm::Value *low) const;
     void AddScaleMultiplier(llvm::IntegerType *integerType, llvm::Type *type, int32_t defaultPrecision,
-    std::string multipliersName) const;
-    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
-    llvm::Value &rightScale, llvm::Value **scaledLeft, llvm::Value **scaledRight, omniruntime::type::DataTypeId typeId);
+        const std::string &multipliersName) const;
+    void ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue, llvm::Value &rightScale,
+        llvm::Value **scaledLeft, llvm::Value **scaledRight, omniruntime::type::DataTypeId typeId);
     llvm::Value *ScaleValue(llvm::Value &value, llvm::Value &delta, omniruntime::type::DataTypeId typeId);
-    llvm::Value *GetScaleMultiplier(llvm::Value &delta, std::string multipliersName);
+    llvm::Value *GetScaleMultiplier(llvm::Value &delta, const std::string &multipliersName);
     llvm::Value *BuildIfElse(llvm::Value &condition, llvm::Type &return_type, std::function<llvm::Value *()> then_func,
         std::function<llvm::Value *()> else_func);
     void AddGlobalVariables();
@@ -44,10 +44,10 @@ public:
     friend class ExpressionCodeGen;
 
     const int32_t DECIMAL128_DEFAULT_PRECISION = 38;
-    const int32_t DECIMAL64_DEFAULT_PRECISION = 19;
+    const int32_t DECIMAL64_DEFAULT_PRECISION = 18;
 
 private:
-    llvm::Type * GetLLVMType(omniruntime::type::DataTypeId typeId);
+    llvm::Type *GetLLVMType(omniruntime::type::DataTypeId typeId);
     std::string GetMultipliersName(omniruntime::type::DataTypeId typeId);
 
     llvm::LLVMContext &context;

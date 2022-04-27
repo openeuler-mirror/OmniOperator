@@ -324,45 +324,106 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
     (*rightPhi)->addIncoming(right, incomingBlock);
 }
 
+void ExpressionCodeGen::Decimal64MultiplyHelper(const BinaryExpr *binaryExpr, Value *output, Value *leftIsNull,
+    Value *rightIsNull)
+{
+    PHINode *phi;
+    Value *rescaleValue;
+    BasicBlock *incomingBlock, *rescaleBlock, *nextInst;
+
+    incomingBlock = builder->GetInsertBlock();
+    rescaleBlock = BasicBlock::Create(*context, "rescaleBlock", builder->GetInsertBlock()->getParent());
+    nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
+
+    Value *leftScale = llvmTypes->CreateConstantInt(binaryExpr->left->GetReturnType().GetScale());
+    Value *rightScale = llvmTypes->CreateConstantInt(binaryExpr->right->GetReturnType().GetScale());
+    Value *returnScale = llvmTypes->CreateConstantInt(binaryExpr->GetReturnType().GetScale());
+    Value *deltaScale = builder->CreateSub(builder->CreateAdd(leftScale, rightScale), returnScale);
+    Value *rescaleCond = builder->CreateICmpNE(deltaScale, llvmTypes->CreateConstantLong(0));
+
+    builder->CreateCondBr(rescaleCond, rescaleBlock, nextInst);
+    builder->SetInsertPoint(rescaleBlock);
+    std::vector<Value *> argVals { output, deltaScale };
+    std::vector<DataTypeId> params { OMNI_DECIMAL64, OMNI_INT };
+    Type *returnType = llvmTypes->ToLLVMType(OMNI_DECIMAL64);
+    std::string funcId = FunctionSignature(downScaleDec64Str, params, OMNI_DECIMAL64).ToString();
+    rescaleValue = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
+    builder->CreateBr(nextInst);
+
+    builder->SetInsertPoint(nextInst);
+    int numberOfPaths = 2;
+    phi = builder->CreatePHI(output->getType(), numberOfPaths, "iftmp");
+    phi->addIncoming(output, incomingBlock);
+    phi->addIncoming(rescaleValue, rescaleBlock);
+    this->value = make_shared<CodeGenValue>(phi, builder->CreateOr(leftIsNull, rightIsNull));
+}
+
 // Helper methods to parse binary expressions
-Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-    Value *leftIsNull, Value *rightIsNull)
+void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
+    Value *output = nullptr;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(left, right, "relational_lt"));
+            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(left, right, "relational_lt"));
+            break;
         case omniruntime::expressions::Operator::GT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(left, right, "relational_gt"));
+            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(left, right, "relational_gt"));
+            break;
         case omniruntime::expressions::Operator::LTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(left, right, "relational_le"));
+            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(left, right, "relational_le"));
+            break;
         case omniruntime::expressions::Operator::GTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(left, right, "relational_ge"));
+            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(left, right, "relational_ge"));
+            break;
         case omniruntime::expressions::Operator::EQ:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(left, right, "relational_eq"));
+            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(left, right, "relational_eq"));
+            break;
         case omniruntime::expressions::Operator::NEQ:
-            return builder->CreateAnd(isNeitherNull,
+            output = builder->CreateAnd(isNeitherNull,
                 builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq"));
+            break;
         case omniruntime::expressions::Operator::ADD:
-            return builder->CreateAdd(leftPhi, rightPhi, "arithmetic_add");
+            output = builder->CreateAdd(leftPhi, rightPhi, "arithmetic_add");
+            break;
         case omniruntime::expressions::Operator::SUB:
-            return builder->CreateSub(leftPhi, rightPhi, "arithmetic_sub");
+            output = builder->CreateSub(leftPhi, rightPhi, "arithmetic_sub");
+            break;
         case omniruntime::expressions::Operator::MUL:
-            return builder->CreateMul(leftPhi, right, "arithmetic_mul");
+            output = builder->CreateMul(leftPhi, right, "arithmetic_mul");
+            break;
         case omniruntime::expressions::Operator::DIV:
-            return builder->CreateSDiv(leftPhi, rightPhi, "arithmetic_div");
+            output = builder->CreateSDiv(leftPhi, rightPhi, "arithmetic_div");
+            break;
         case omniruntime::expressions::Operator::MOD:
-            return builder->CreateSRem(leftPhi, rightPhi, "arithmetic_mod");
+            output = builder->CreateSRem(leftPhi, rightPhi, "arithmetic_mod");
+            break;
         default:
-            std::cout << "Unsupported int/long binary operator " << static_cast<uint32_t>(binaryExpr->op) << std::endl;
-            return nullptr;
+            LogWarn("Unsupported int/long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            return;
+    }
+
+    // Only add, minus, multiply promote decimal64 to decimal128, div doesn't.
+    if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL128) {
+        std::vector<DataTypeId> params { OMNI_DECIMAL64 };
+        Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
+        std::string funcId = FunctionSignature("CAST", params, OMNI_DECIMAL128).ToString();
+        auto ret = decimalIRBuilder->CallDecimalFunction(funcId, returnType, { output });
+        this->value = decimalIRBuilder->BuildDecimalValue(ret, binaryExpr->GetReturnType(),
+            builder->CreateOr(leftIsNull, rightIsNull));
+    } else if (binaryExpr->op == omniruntime::expressions::Operator::MUL &&
+        binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
+        Decimal64MultiplyHelper(binaryExpr, output, leftIsNull, rightIsNull);
+    } else {
+        this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
 }
 
-void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-    Value *leftIsNull, Value *rightIsNull)
+void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull)
 {
     if (binaryExpr->op == omniruntime::expressions::Operator::DIV) {
         PHINode *leftPhi, *rightPhi;
@@ -376,8 +437,7 @@ void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *lef
         output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
         this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     } else {
-        this->value = make_shared<CodeGenValue>(this->BinaryExprIntHelper(binaryExpr, left, right,
-            leftIsNull, rightIsNull), builder->CreateOr(leftIsNull, rightIsNull));
+        this->BinaryExprIntHelper(binaryExpr, left, right, leftIsNull, rightIsNull);
     }
 }
 
@@ -409,9 +469,10 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
         case omniruntime::expressions::Operator::DIV:
             return builder->CreateFDiv(leftPhi, rightPhi, "farithmetic_div");
-        default:
-            std::cout << "Unsupported double binary operator " << static_cast<uint32_t>(binaryExpr->op) << std::endl;
+        default: {
+            LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
+        }
     }
 }
 
@@ -440,9 +501,10 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
         case omniruntime::expressions::Operator::NEQ:
             return builder->CreateAnd(isNeitherNull, builder->CreateICmpNE(
                 this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
-        default:
-            std::cout << "Unsupported string binary operator " << static_cast<uint32_t>(binaryExpr->op) << std::endl;
+        default: {
+            LogWarn("Unsupported string binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
+        }
     }
 }
 
@@ -509,9 +571,11 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
             output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
             break;
         }
-        default:
-            std::cout << "Unsupported string binary operator " << static_cast<uint32_t>(binaryExpr->op) << std::endl;
+        default: {
+            LogWarn("Unsupported string binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             output = nullptr;
+            break;
+        }
     }
 
     if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL128) {
@@ -556,7 +620,7 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<llvm::Function::
         } else if (argName == "dictionaryVectors") {
             codegenContext->dictionaryVectors = &arg;
         } else {
-            LLVM_DEBUG_LOG("Invalid argument %s", argName.c_str());
+            LogWarn("Invalid argument %s", argName.c_str());
             return false;
         }
     }
@@ -725,7 +789,7 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             break;
         }
         default: {
-            LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", lExpr.GetReturnTypeId());
+            LogWarn("Unsupported data type in Data Expr %d", lExpr.GetReturnTypeId());
             codeGenValue =
                 new CodeGenValue(llvmTypes->CreateConstantBool(lExpr.boolVal), llvmTypes->CreateConstantBool(false));
             break;
@@ -763,7 +827,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType dataType, Value *row
             dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
             break;
         default:
-            LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", typeId);
+            LogWarn("Unsupported dictionary value type: %d", typeId);
             return nullptr;
     }
     auto dictionaryFunc = module->getFunction(FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId());
@@ -907,7 +971,7 @@ CodeGenValuePtr CreateInvalidCodeGenValue()
     return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
 }
 
-std::pair<Value*, Value*> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeGenValue &left, CodeGenValue &right,
+std::pair<Value *, Value *> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeGenValue &left, CodeGenValue &right,
     int scaleDiff, DataTypeId typeId)
 {
     auto scaledLeft = left.data;
@@ -917,24 +981,23 @@ std::pair<Value*, Value*> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeGen
     auto rightScaleValue = (Value *)static_cast<DecimalValue &>(right).GetScale();
     bool scaleBothValues = false;
     if (expr.GetType() == omniruntime::expressions::ExprType::BINARY_E) {
-        BinaryExpr &bExpr = static_cast<BinaryExpr&>(expr);
+        BinaryExpr &bExpr = static_cast<BinaryExpr &>(expr);
         if (bExpr.op == omniruntime::expressions::Operator::DIV) {
             int32_t scale = bExpr.GetReturnType().GetScale() + scaleDiff;
             scaledLeft = decimalIRBuilder->ScaleValue(*left.data, *llvmTypes->CreateConstantInt(scale), typeId);
         } else if (bExpr.op == omniruntime::expressions::Operator::ADD ||
-        bExpr.op == omniruntime::expressions::Operator::SUB) {
+            bExpr.op == omniruntime::expressions::Operator::SUB) {
             scaleBothValues = true;
         }
     }
     if (expr.GetType() != omniruntime::expressions::ExprType::BINARY_E || scaleBothValues) {
         if (scaleDiff != 0) {
-            decimalIRBuilder->ScaleValues(*(left.data), *leftScaleValue, *(right.data), *rightScaleValue,
-                &scaledLeft, &scaledRight, typeId);
+            decimalIRBuilder->ScaleValues(*(left.data), *leftScaleValue, *(right.data), *rightScaleValue, &scaledLeft,
+                &scaledRight, typeId);
         }
     }
     return std::make_pair(scaledLeft, scaledRight);
 }
-
 
 void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 {
@@ -966,26 +1029,24 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
         this->value = make_shared<CodeGenValue>(builder->CreateAnd(leftValue, rightValue, "logical_and"),
             builder->CreateOr(builder->CreateAnd(leftNull, rightNull),
-                builder->CreateOr(builder->CreateAnd(leftNull, rightValue), builder->CreateAnd(rightNull, leftValue))));
+            builder->CreateOr(builder->CreateAnd(leftNull, rightValue), builder->CreateAnd(rightNull, leftValue))));
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
         this->value = make_shared<CodeGenValue>(builder->CreateOr(leftValue, rightValue, "logical_or"),
-        builder->CreateOr(builder->CreateAnd(leftNull, rightNull),
-        builder->CreateOr(builder->CreateAnd(leftNull, builder->CreateNot(rightValue)),
+            builder->CreateOr(builder->CreateAnd(leftNull, rightNull),
+            builder->CreateOr(builder->CreateAnd(leftNull, builder->CreateNot(rightValue)),
             builder->CreateAnd(rightNull, builder->CreateNot(leftValue)))));
         return;
     }
 
     if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_LONG ||
         bExpr->left->GetReturnTypeId() == OMNI_DATE32) {
-        this->value =
-            make_shared<CodeGenValue>(this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
-            builder->CreateOr(leftNull, rightNull));
+        this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull, rightNull);
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(), bExpr->right->dataType->GetScale() -
-                        bExpr->left->dataType->GetScale(), bExpr->GetReturnTypeId());
+        auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
+            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), bExpr->GetReturnTypeId());
         auto scaledLeft = scaledValues.first;
         auto scaledRight = scaledValues.second;
         this->Decimal64Helper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
@@ -1001,14 +1062,14 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             builder->CreateOr(leftNull, rightNull));
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL128) {
-        auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(), bExpr->right->dataType->GetScale() -
-                        bExpr->left->dataType->GetScale(), bExpr->GetReturnTypeId());
+        auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
+            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), bExpr->GetReturnTypeId());
         auto scaledLeft = scaledValues.first;
         auto scaledRight = scaledValues.second;
         this->BinaryExprDecimalHelper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
         return;
     }
-    LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
+    LogWarn("Unsupported binary operator %d", bExpr->op);
     this->value = CreateInvalidCodeGenValue();
 }
 
@@ -1060,10 +1121,10 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_length");
 
     AllocaInst *resultPrecisionPtr =
-            builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_precision");
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_precision");
 
     AllocaInst *resultScalePtr =
-            builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_scale");
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_scale");
 
     condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(0), func));
     trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(0), func));
@@ -1086,17 +1147,18 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
             func->getBasicBlockList().push_back(condBlockList[i]);
         }
 
-        auto elseBranch =  falseBlock;
-        if (i < size - 1)
+        auto elseBranch = falseBlock;
+        if (i < size - 1) {
             elseBranch = condBlockList[i + 1];
+        }
         builder->SetInsertPoint(condBlockList[i]);
         CodeGenValuePtr evCond = VisitExpr(*cond);
         if (!evCond->IsValidValue()) {
             this->value = CreateInvalidCodeGenValue();
             return;
         }
-        builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data),
-            trueBlockList[i], elseBranch);
+        builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data), trueBlockList[i],
+            elseBranch);
 
         builder->SetInsertPoint(trueBlockList[i]);
         auto evTrue = VisitExpr(*resExpr);
@@ -1109,8 +1171,9 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
             builder->CreateStore(evTrue->length, resultLengthPtr);
         } else if (TypeUtil::IsDecimalType(switchExpr.GetReturnTypeId())) {
-            builder->CreateStore((Value *)static_cast<DecimalValue*>(evTrue.get())->GetPrecision(), resultPrecisionPtr);
-            builder->CreateStore((Value *)static_cast<DecimalValue*>(evTrue.get())->GetScale(), resultScalePtr);
+            builder->CreateStore((Value *)static_cast<DecimalValue *>(evTrue.get())->GetPrecision(),
+                resultPrecisionPtr);
+            builder->CreateStore((Value *)static_cast<DecimalValue *>(evTrue.get())->GetScale(), resultScalePtr);
         }
         builder->CreateBr(mergeBlock);
     }
@@ -1127,8 +1190,8 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
         builder->CreateStore(evFalse->length, resultLengthPtr);
     } else if (TypeUtil::IsDecimalType(switchExpr.GetReturnTypeId())) {
-        builder->CreateStore((Value *)static_cast<DecimalValue*>(evFalse.get())->GetPrecision(), resultPrecisionPtr);
-        builder->CreateStore((Value *)static_cast<DecimalValue*>(evFalse.get())->GetScale(), resultScalePtr);
+        builder->CreateStore((Value *)static_cast<DecimalValue *>(evFalse.get())->GetPrecision(), resultPrecisionPtr);
+        builder->CreateStore((Value *)static_cast<DecimalValue *>(evFalse.get())->GetScale(), resultScalePtr);
     }
     builder->CreateBr(mergeBlock);
 
@@ -1139,10 +1202,10 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
             builder->CreateLoad(resultLengthPtr));
     } else if (TypeUtil::IsDecimalType(switchExpr.GetReturnTypeId())) {
         this->value = make_shared<DecimalValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
-             builder->CreateLoad(resultPrecisionPtr), builder->CreateLoad(resultScalePtr));
+            builder->CreateLoad(resultPrecisionPtr), builder->CreateLoad(resultScalePtr));
     } else {
-        this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr),
-            builder->CreateLoad(resultNullPtr));
+        this->value =
+            make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
     }
 }
 
@@ -1241,9 +1304,8 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
     Value *inArray = llvm::ConstantInt::get(*context, APInt(1, 0));
     Value *isNull = llvm::ConstantInt::get(*context, APInt(1, 0));
     Type *retType = llvmTypes->ToLLVMType(iExpr->GetReturnTypeId());
-    // Handle types correctly
+
     for (size_t i = 1; i < iExpr->arguments.size(); i++) {
-        // initialize tmpCmpData
         Value *tmpCmpData = llvmTypes->CreateConstantBool(false);
         Value *tmpCmpNull = llvmTypes->CreateConstantBool(false);
 
@@ -1268,74 +1330,100 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             case OMNI_INT:
             case OMNI_DATE32:
             case OMNI_LONG: {
-                tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                    builder->CreateAnd(builder->CreateNot(argiValue->isNull),
-                    builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
-                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                InExprIntegerHelper(argiValue, valueToCompare, tmpCmpData, tmpCmpNull);
                 break;
             }
             case OMNI_DECIMAL64: {
-                auto scaledValues = RescaleDecimals(*iExpr, *valueToCompare, *argiValue,
-                    inExpr.arguments[i]->dataType->GetScale() - inExpr.arguments[0]->dataType->GetScale(),
-                    OMNI_DECIMAL64);
-                auto scaledCompareTo = scaledValues.first;
-                auto scaledArgi = scaledValues.second;
-
-                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
-                                           builder->CreateICmpEQ(scaledCompareTo, scaledArgi)));
-                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
-                    break;
-                }
+                InExprDecimal64Helper(inExpr, i, valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
+                break;
+            }
             case OMNI_DOUBLE: {
-                tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                    builder->CreateAnd(builder->CreateNot(argiValue->isNull),
-                    builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
-                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                InExprDoubleHelper(argiValue, valueToCompare, tmpCmpData, tmpCmpNull);
                 break;
             }
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
-                tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                    builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(
-                    this->StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
-                    llvmTypes->CreateConstantInt(0))));
-                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                InExprStringHelper(argiValue, valueToCompare, tmpCmpData, tmpCmpNull);
                 break;
             }
             case OMNI_DECIMAL128: {
-                std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
-                std::string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
-
-                auto scaledValues = RescaleDecimals(*iExpr, *valueToCompare, *argiValue,
-                    inExpr.arguments[i]->dataType->GetScale() - inExpr.arguments[0]->dataType->GetScale(),
-                    OMNI_DECIMAL128);
-
-                auto scaledCompareTo = scaledValues.first;
-                auto scaledArgi = scaledValues.second;
-
-                tmpCmpData = builder->CreateICmpSLE(
-                    decimalIRBuilder->CallDecimalFunction(funcId, retType, { scaledCompareTo, scaledArgi }),
-                    llvmTypes->CreateConstantInt(0));
-
-                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                InExprDecimal128Helper(inExpr, retType, i, valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
                 break;
             }
             default: {
-                LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->GetReturnTypeId());
+                LogWarn("Unsupported data type in IN expr %d", iExpr->arguments[0]->GetReturnTypeId());
                 this->value = CreateInvalidCodeGenValue();
                 return;
             }
         }
-        // restore types
         inArray = builder->CreateAnd(builder->CreateNot(tmpCmpNull), builder->CreateOr(inArray, tmpCmpData));
         isNull = builder->CreateOr(isNull, tmpCmpNull);
     }
     this->value = make_shared<CodeGenValue>(inArray, isNull);
 }
 
+void ExpressionCodeGen::InExprDecimal128Helper(const InExpr &inExpr, Type *retType, size_t i,
+    CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData, Value *&tmpCmpNull)
+{
+    auto iExpr = const_cast<InExpr *>(&inExpr);
+    vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
+    string funcId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
+
+    auto scaledValues = RescaleDecimals(*iExpr, *valueToCompare, *argiValue,
+        inExpr.arguments[i]->dataType->GetScale() - inExpr.arguments[0]->dataType->GetScale(), OMNI_DECIMAL128);
+
+    auto scaledCompareTo = scaledValues.first;
+    auto scaledArgi = scaledValues.second;
+
+    tmpCmpData =
+        builder->CreateICmpSLE(decimalIRBuilder->CallDecimalFunction(funcId, retType, { scaledCompareTo, scaledArgi }),
+        llvmTypes->CreateConstantInt(0));
+
+    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+}
+
+void ExpressionCodeGen::InExprStringHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare,
+    Value *&tmpCmpData, Value *&tmpCmpNull)
+{
+    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+        builder->CreateICmpEQ(StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, value->length),
+        llvmTypes->CreateConstantInt(0))));
+    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+}
+
+void ExpressionCodeGen::InExprDoubleHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare,
+    Value *&tmpCmpData, Value *&tmpCmpNull)
+{
+    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
+        builder->CreateNot(argiValue->isNull), builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
+    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+}
+
+void ExpressionCodeGen::InExprDecimal64Helper(const InExpr &inExpr, size_t i,
+    CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData, Value *&tmpCmpNull)
+{
+    auto iExpr = const_cast<InExpr *>(&inExpr);
+    auto scaledValues = RescaleDecimals(*iExpr, *valueToCompare, *argiValue,
+        inExpr.arguments[i]->dataType->GetScale() - inExpr.arguments[0]->dataType->GetScale(), OMNI_DECIMAL64);
+    auto scaledCompareTo = scaledValues.first;
+    auto scaledArgi = scaledValues.second;
+
+    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+        builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(scaledCompareTo, scaledArgi)));
+    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+}
+
+void ExpressionCodeGen::InExprIntegerHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare,
+    Value *&tmpCmpData, Value *&tmpCmpNull)
+{
+    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
+        builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
+    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+}
+
 bool ExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, shared_ptr<CodeGenValue> val,
-    shared_ptr<CodeGenValue> lowerVal, shared_ptr<CodeGenValue> upperVal, std::pair<Value**, Value**> cmpPair)
+    shared_ptr<CodeGenValue> lowerVal, shared_ptr<CodeGenValue> upperVal, std::pair<Value **, Value **> cmpPair)
 {
     Type *retType = llvmTypes->ToLLVMType(bExpr.GetReturnTypeId());
     auto cmpLeft = cmpPair.first;
@@ -1352,8 +1440,8 @@ bool ExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, shared_ptr<Co
     } else if (TypeUtil::IsStringType(bExpr.value->GetReturnTypeId())) {
         *cmpLeft = builder->CreateICmpSLE(this->StringCmp(lowerVal->data, lowerVal->length, val->data, val->length),
             llvmTypes->CreateConstantInt(0));
-        *cmpRight = builder->CreateICmpSLE(this->StringCmp(val->data, val->length, upperVal->data,
-            upperVal->length), llvmTypes->CreateConstantInt(0));
+        *cmpRight = builder->CreateICmpSLE(this->StringCmp(val->data, val->length, upperVal->data, upperVal->length),
+            llvmTypes->CreateConstantInt(0));
         return true;
     } else if (TypeUtil::IsDecimalType(bExpr.value->GetReturnTypeId())) {
         auto retTypeId = bExpr.value->GetReturnTypeId();
@@ -1429,7 +1517,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     auto isAnyNull = builder->CreateOr(builder->CreateOr(valNull, lowerValNull), upperValNull);
     auto isNeitherNull = builder->CreateNot(isAnyNull);
     Value *cmpLeft, *cmpRight;
-    std::pair<llvm::Value**, llvm::Value**> cmpPair = std::make_pair(&cmpLeft, &cmpRight);
+    std::pair<llvm::Value **, llvm::Value **> cmpPair = std::make_pair(&cmpLeft, &cmpRight);
     bool supportedType = VisitBetweenExprHelper(*bExpr, val, lowerVal, upperVal, cmpPair);
 
     if (supportedType) {
@@ -1442,7 +1530,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         return;
     }
 
-    LLVM_DEBUG_LOG("Error: unsupported data type for between %d", valueTypeId);
+    LogError("Unsupported data type for between %d", valueTypeId);
     this->value = CreateInvalidCodeGenValue();
 }
 
@@ -1563,6 +1651,10 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     for (int i = 0; i < numArgs; i++) {
         Expr *argN = fExpr.arguments[i];
         resultPtr = VisitExpr(*argN);
+        if (!resultPtr->IsValidValue()) {
+            this->value = CreateInvalidCodeGenValue();
+            return;
+        }
         argVals.push_back(resultPtr->data);
         isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
@@ -1606,7 +1698,6 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
             auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
         } else {
-            std::cout << "Unable to generate function " << fExpr.funcName.c_str() << std::endl;
             LogWarn("Unable to generate function : %s", fExpr.funcName.c_str());
             this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
             return;

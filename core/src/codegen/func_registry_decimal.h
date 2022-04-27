@@ -14,6 +14,7 @@ const std::string subDec128Str = "Sub_decimal128";
 const std::string mulDec128Str = "Mul_decimal128";
 const std::string divDec128Str = "Div_decimal128";
 const std::string divDec64Str = "Div_decimal64";
+const std::string downScaleDec64Str = "DownScale_decimal64";
 
 namespace omniruntime {
 class DecimalFunctionRegistry : public BaseFunctionRegistry {

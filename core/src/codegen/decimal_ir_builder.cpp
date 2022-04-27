@@ -8,8 +8,8 @@
 
 using namespace omniruntime::type;
 
-void DecimalIRBuilder::AddScaleMultiplier(llvm::IntegerType *integerType, llvm::Type *type,
-    int32_t defaultPrecision, std::string multipliersName) const
+void DecimalIRBuilder::AddScaleMultiplier(llvm::IntegerType *integerType, llvm::Type *type, int32_t defaultPrecision,
+    const std::string &multipliersName) const
 {
     std::string value = "1";
     std::vector<llvm::Constant *> scaleMultipliers;
@@ -23,7 +23,7 @@ void DecimalIRBuilder::AddScaleMultiplier(llvm::IntegerType *integerType, llvm::
     auto initializer = llvm::ConstantArray::get(arrayType, llvm::ArrayRef<llvm::Constant *>(scaleMultipliers));
 
     auto globalScaleMultipliers = new llvm::GlobalVariable(this->module, arrayType, true,
-    llvm::GlobalValue::LinkOnceAnyLinkage, initializer, multipliersName);
+        llvm::GlobalValue::LinkOnceAnyLinkage, initializer, multipliersName);
     int32_t alignment = 16;
     globalScaleMultipliers->setAlignment(llvm::MaybeAlign(alignment));
 }
@@ -31,10 +31,10 @@ void DecimalIRBuilder::AddScaleMultiplier(llvm::IntegerType *integerType, llvm::
 void DecimalIRBuilder::AddGlobalVariables()
 {
     LLVMTypes llvmTypes(context);
-    AddScaleMultiplier(llvm::Type::getInt128Ty(this->context), llvmTypes.I128Type(),
-                       DECIMAL128_DEFAULT_PRECISION, this->scale128MultipliersName);
-    AddScaleMultiplier(llvm::Type::getInt64Ty(this->context), llvmTypes.I64Type(),
-                       DECIMAL64_DEFAULT_PRECISION, this->scale64MultipliersName);
+    AddScaleMultiplier(llvm::Type::getInt128Ty(this->context), llvmTypes.I128Type(), DECIMAL128_DEFAULT_PRECISION,
+        this->scale128MultipliersName);
+    AddScaleMultiplier(llvm::Type::getInt64Ty(this->context), llvmTypes.I64Type(), DECIMAL64_DEFAULT_PRECISION,
+        this->scale64MultipliersName);
 }
 
 void DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScale, llvm::Value &rightValue,
@@ -50,7 +50,7 @@ void DecimalIRBuilder::ScaleValues(llvm::Value &leftValue, llvm::Value &leftScal
     *scaledRight = ScaleValue(rightValue, *rightDelta, typeId);
 }
 
-llvm::Value *DecimalIRBuilder::GetScaleMultiplier(llvm::Value &delta, std::string multipliersName)
+llvm::Value *DecimalIRBuilder::GetScaleMultiplier(llvm::Value &delta, const std::string &multipliersName)
 {
     LLVMTypes llvmTypes(context);
     auto constArray = this->module.getGlobalVariable(multipliersName);
@@ -160,7 +160,6 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
         llvm::InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);
     } else {
-        std::cout << "Unable to generate function " << fnName << std::endl;
         LogWarn("Unable to generate function : %s", fnName.c_str());
     }
     return result;
@@ -185,7 +184,8 @@ llvm::Type *DecimalIRBuilder::GetLLVMType(DataTypeId typeId)
         case OMNI_DECIMAL64:
             return llvmTypes.I64Type();
         default:
-            LogError("%d Is not supported", typeId);
+            LogWarn("%d Is not supported", typeId);
+            return llvmTypes.I64Type();
     }
 }
 
@@ -198,6 +198,7 @@ std::string DecimalIRBuilder::GetMultipliersName(DataTypeId typeId)
         case OMNI_DECIMAL64:
             return this->scale64MultipliersName;
         default:
-            LogError("%d Is not supported", typeId);
+            LogWarn("%d Is not supported", typeId);
+            return this->scale64MultipliersName;
     }
 }

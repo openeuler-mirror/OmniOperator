@@ -107,23 +107,23 @@ public:
 
     static inline void ThrowDivideZero()
     {
-        throw OmniException("Decimal", "Divide zero");
+        throw OmniException("DIVIDE ZERO", "Decimal divide zero");
     }
 
     static inline void ThrowOverflow()
     {
-        throw OmniException("Decimal", "Overflow");
+        throw OmniException("OVERFLOW", "Decimal overflow");
     }
 
     static inline void ThrowIllegalState()
     {
-        throw OmniException("Decimal", "Illegal state");
+        throw OmniException("ILLEGAL STATE", "Decimal illegal state");
     }
 
     static inline void ThrowIfOverflows(Decimal128 &decimal)
     {
         if (ExceedsOrEqualTenToThirtyEight(decimal)) {
-            throw OmniException("Decimal overflow", "Decimal exceeds maximum.");
+            throw OmniException("OVERFLOW", "Decimal exceeds maximum value.");
         }
     }
 
