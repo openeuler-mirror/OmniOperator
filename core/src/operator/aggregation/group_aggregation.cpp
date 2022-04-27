@@ -23,39 +23,6 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::type;
 
-static void VerifyInputTypes(omniruntime::vec::VectorBatch *vectorBatch, int32_t *groupByIdx, int32_t groupByNum,
-    int32_t *aggIdx, int32_t aggNum, int32_t *sourceTypes, int32_t *aggFuncTypes)
-{
-#ifdef DEBUG_OPERATOR
-    for (int32_t i = 0; i < groupByNum; ++i) {
-        auto vector = vectorBatch->GetVector(groupByIdx[i]);
-        auto typeId = vector->GetTypeId();
-        if (vector->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
-            typeId = static_cast<omniruntime::vec::DictionaryVector *>(vector)->ExtractDictionaryTypeId();
-        }
-        if (typeId != sourceTypes[groupByIdx[i]]) {
-            LogWarn("Group by vector type %d != operator column type %d!", typeId, sourceTypes[groupByIdx[i]]);
-        }
-    }
-    uint32_t aggInputIndex = 0;
-    for (int32_t i = 0; i < aggNum; ++i) {
-        uint32_t aggregateType = aggFuncTypes[i];
-        if (aggregateType != OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-            auto vector = vectorBatch->GetVector(aggIdx[aggInputIndex]);
-            auto typeId = vector->GetTypeId();
-            if (vector->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
-                typeId = static_cast<omniruntime::vec::DictionaryVector *>(vector)->ExtractDictionaryTypeId();
-            }
-            if (typeId != sourceTypes[aggIdx[aggInputIndex]]) {
-                LogWarn("Aggregate vector type %d != operator column type %d!", typeId,
-                    sourceTypes[aggIdx[aggInputIndex]]);
-            }
-            aggInputIndex++;
-        }
-    }
-#endif
-}
-
 template void HashFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash);
 
@@ -348,9 +315,6 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     for (size_t i = 0; i < aggNum; i++) {
         aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
-    // verify whether input types match operator's types
-    VerifyInputTypes(vecBatch, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggNum, this->sourceTypes,
-        aggFuncTypes.get());
 
     uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
     this->InLoop(vecBatch, rowCount, groupByColIdx.get(), groupColNum, aggNum);
