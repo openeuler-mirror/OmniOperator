@@ -10,6 +10,7 @@ import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_FINISHED;
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 import static org.testng.Assert.assertEquals;
 
+import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.constants.Status;
 
@@ -44,5 +45,16 @@ public class ConstantLoadTest {
     public void testEquals() {
         Status status = OMNI_STATUS_NORMAL;
         assertEquals(status.getValue(), 0);
+    }
+
+    /**
+     * Test getVersion.
+     */
+    @Test
+    public void testGetVersion() {
+        String version = OmniLibs.getVersion();
+        String expected = "Software-Title: boostkit-omnioperatorjit" + System.lineSeparator()
+                + "Software-Version: 1.0.0" + System.lineSeparator() + "Software-Vendor: Kunpeng BoostKit";
+        assertEquals(version, expected);
     }
 }

@@ -8,6 +8,7 @@ add_subdirectory(vector)
 add_subdirectory(codegen)
 add_subdirectory(expression)
 add_subdirectory(type)
+add_subdirectory(cpu_checker)
 
 set(OM_TARGET ${OMNI_RUNTIME_SO})
 

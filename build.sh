@@ -36,7 +36,7 @@ if [ "$1" = 'coverage' ]; then
     mvn clean devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
 else
     echo "-- Disable coverage"
-    mvn clean install -DskipTests
+    mvn clean install
 fi
 
 if [ "$1" != 'coverage' ]; then

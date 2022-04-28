@@ -15,6 +15,7 @@
 #include "memory_pool.h"
 #include "util/debug.h"
 #include "util/omni_exception.h"
+#include "cpu_checker/omniruntime_cpu_checker.h"
 
 namespace omniruntime {
 namespace mem {
@@ -112,6 +113,10 @@ public:
 
     static BaseAllocator *GetRootAllocator()
     {
+        static int ret = (KunpengCpuCheck() == 0 || QingsongCpuCheck() == 0);
+        if (!ret) {
+            throw OmniException("CPU_CHECK_ERROR", "CPU check failed");
+        }
         static std::string ROOT_SCOPE_NAME = "___ROOT_SCOPE___";
         static BaseAllocator ROOT_ALLOCATOR(nullptr, ROOT_SCOPE_NAME, UNLIMIT);
         return &ROOT_ALLOCATOR;

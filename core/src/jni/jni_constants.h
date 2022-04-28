@@ -13,6 +13,13 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstants(JNIEnv *env, jclass ignore);
 
+/*
+ * Class:     nova_hetu_omniruntime_OmniLibs
+ * Method:    getVersion
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_OmniLibs_getVersion(JNIEnv *env, jclass ignore);
+
 #ifdef __cplusplus
 }
 #endif
