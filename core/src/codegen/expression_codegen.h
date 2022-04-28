@@ -138,8 +138,6 @@ private:
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::type::DataType dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
-    void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
-        llvm::Value *rightNull);
 };
 
 #endif
