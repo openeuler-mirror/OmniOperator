@@ -95,10 +95,10 @@ void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector
     depConfig.close();
 }
 
-LibraryLoader::LibraryLoader() noexcept: neededLibs()
+LibraryLoader::LibraryLoader() noexcept : neededLibs()
 {
-    unordered_map<string, CoreLibrary> baseLibs = { { "stdc++", CoreLibrary("libstdc++.so", "stdc++") },
-        { "operator", CoreLibrary("libboostkit-omniop-operator-1.0.0-aarch64.so", "operator", 1) } };
+    unordered_map<string, CoreLibrary> baseLibs = { { "operator",
+        CoreLibrary("libboostkit-omniop-operator-1.0.0-aarch64.so", "operator") } };
 
     ParseExtraDependencies(baseLibs, neededLibs);
 
@@ -173,25 +173,6 @@ void ChooseCandidates(unordered_map<string, vector<string>> &candidates, vector<
     }
 }
 
-static int LibCallback(struct dl_phdr_info *info, size_t size, void *data)
-{
-    if (info->dlpi_name == nullptr) {
-        return 0;
-    }
-    string name = info->dlpi_name;
-    if (name.length() == 0) {
-        return 0;
-    }
-    auto endIdx = name.find_last_of("/");
-    if (endIdx == string::npos || LibraryLoader::ExtractFileName(name).find("libstdc++.so") == string::npos) {
-        return 0;
-    }
-    auto *vec = static_cast<vector<string> *>(data);
-    name = name.substr(0, endIdx);
-    vec->push_back(name);
-    return 0;
-}
-
 vector<string> LibraryLoader::LoadLibraries(string allPaths) noexcept
 {
     unordered_map<string, vector<string>> candidates;
@@ -200,7 +181,6 @@ vector<string> LibraryLoader::LoadLibraries(string allPaths) noexcept
     }
     vector<string> paths;
     vector<string> toSearch = SplitPaths(allPaths);
-    dl_iterate_phdr(LibCallback, &toSearch);
     for (auto &p : toSearch) {
         SearchPath(p, candidates);
     }
