@@ -45,6 +45,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
     omniruntime::op::Operator *nativeOperator = nullptr;
 
+    JNI_METHOD_START
 #if defined(DEBUG_OPERATOR)
     nativeOperator = operatorFactory->CreateOperator();
     JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
@@ -59,6 +60,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
         JNI_DEBUG_LOG("JIT create omni operator finished, elapsed time: %ld ms.", END(start));
     }
 #endif
+    JNI_METHOD_END(0)
+
     auto vectorAllocator = reinterpret_cast<VectorAllocator *>(jNativeVecAllocatorObj);
     nativeOperator->SetVecAllocator(vectorAllocator);
     return reinterpret_cast<int64_t>(nativeOperator);
