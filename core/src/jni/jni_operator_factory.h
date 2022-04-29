@@ -94,21 +94,21 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory
  * Method:    CreateWindowJitContext
- * Signature: ([I[I[I[I[I[I[I[III[I[I)J
+ * Signature: ([I[I[I[I[I[I[I[III[I[I[I[I[I[I[I)J
  */
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowJitContext(JNIEnv *, jobject, jstring,
-    jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint, jint, jintArray, jstring);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowJitContext(
+    JNIEnv *, jobject, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint, jint,
+    jintArray, jstring, jintArray, jintArray, jintArray, jintArray, jintArray);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory
  * Method:    CreateWindowOperatorFactory
- * Signature: ([I[I[I[I[I[I[I[III[I[I)J
+ * Signature: ([I[I[I[I[I[I[I[III[I[I[I[I[I[I[I)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory(JNIEnv *, jobject,
     jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint, jint, jintArray,
-    jstring, jlong);
+    jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory
@@ -238,12 +238,12 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_createWindowWithExprJitContext(JNIEnv *,
     jobject, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint, jint,
-    jobjectArray, jstring);
+    jobjectArray, jstring, jintArray, jintArray, jintArray, jintArray, jintArray);
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_createWindowWithExprOperatorFactory(
     JNIEnv *, jobject, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint, jint,
-    jobjectArray, jstring, jlong);
+    jobjectArray, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory

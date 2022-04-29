@@ -20,7 +20,9 @@ public:
         int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
         int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-        const type::DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount);
+        const type::DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount,
+        int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
+        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField);
 
     ~WindowOperatorFactory() override;
 
@@ -30,7 +32,9 @@ public:
         int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
         int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField,
         int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
-        int32_t *argumentChannelsField, int32_t argumentChannelsCountField);
+        int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
+        int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
+        int32_t *windowFrameEndChannelsField);
 
     Operator *CreateOperator() override;
 
@@ -139,6 +143,31 @@ public:
         return argumentChannelsCount;
     }
 
+    int32_t *GetWindowFrameTypes() const
+    {
+        return const_cast<int32_t *>(windowFrameTypes.data());
+    }
+
+    int32_t *GetWindowFrameStartTypes() const
+    {
+        return const_cast<int32_t *>(windowFrameStartTypes.data());
+    }
+
+    int32_t *GetWindowFrameStartChannels() const
+    {
+        return const_cast<int32_t *>(windowFrameStartChannels.data());
+    }
+
+    int32_t *GetWindowFrameEndTypes() const
+    {
+        return const_cast<int32_t *>(windowFrameEndTypes.data());
+    }
+
+    int32_t *GetWindowFrameEndChannels() const
+    {
+        return const_cast<int32_t *>(windowFrameEndChannels.data());
+    }
+
     OmniStatus Init();
 
 private:
@@ -160,6 +189,11 @@ private:
     std::unique_ptr<type::DataTypes> allTypes;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
+    std::vector<int32_t> windowFrameTypes;
+    std::vector<int32_t> windowFrameStartTypes;
+    std::vector<int32_t> windowFrameStartChannels;
+    std::vector<int32_t> windowFrameEndTypes;
+    std::vector<int32_t> windowFrameEndChannels;
 };
 
 class WindowOperator : public Operator {
@@ -169,7 +203,10 @@ public:
         int32_t partitionCount, std::vector<int32_t> &preGroupedCols, int32_t preGroupedCount,
         std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts,
         int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-        const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount);
+        const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount,
+        const std::vector<int32_t> &windowFrameTypes, const std::vector<int32_t> &windowFrameStartTypes,
+        const std::vector<int32_t> &windowFrameStartChannels, const std::vector<int32_t> &windowFrameEndTypes,
+        const std::vector<int32_t> &windowFrameEndChannels);
 
     ~WindowOperator() override;
 
@@ -211,6 +248,11 @@ private:
     std::vector<std::unique_ptr<WindowFunction>> windowFunctions;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
+    const std::vector<int32_t> &windowFrameTypes;
+    const std::vector<int32_t> &windowFrameStartTypes;
+    const std::vector<int32_t> &windowFrameStartChannels;
+    const std::vector<int32_t> &windowFrameEndTypes;
+    const std::vector<int32_t> &windowFrameEndChannels;
 
     void Initialization();
 

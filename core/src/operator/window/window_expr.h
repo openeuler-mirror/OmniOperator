@@ -17,7 +17,9 @@ public:
         int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
         const type::DataTypes &outputDataTypes, const std::vector<omniruntime::expressions::Expr *> &argumentKeys,
-        int32_t argumentChannelsCount);
+        int32_t argumentChannelsCount, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
+        int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
+        int32_t *windowFrameEndChannelsField);
 
     ~WindowWithExprOperatorFactory() override;
 
@@ -26,7 +28,9 @@ public:
         int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount,
         int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
         int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
-        const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount);
+        const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
+        int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
+        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField);
 
     Operator *CreateOperator() override;
 

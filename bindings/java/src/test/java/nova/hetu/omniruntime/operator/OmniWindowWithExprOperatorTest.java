@@ -4,12 +4,18 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_CURRENT_ROW;
+import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING;
+import static nova.hetu.omniruntime.constants.OmniWindowFrameType.OMNI_FRAME_TYPE_RANGE;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.constants.FunctionType;
+import nova.hetu.omniruntime.constants.OmniWindowFrameBoundType;
+import nova.hetu.omniruntime.constants.OmniWindowFrameType;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -42,6 +48,11 @@ public class OmniWindowWithExprOperatorTest {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         int[] outputChannels = {0, 1, 2};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -52,7 +63,8 @@ public class OmniWindowWithExprOperatorTest {
         DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
         OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType);
+                sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType, windowFrameTypes,
+                windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
         VecBatch vecBatch = buildData();
@@ -74,6 +86,11 @@ public class OmniWindowWithExprOperatorTest {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         int[] outputChannels = {0, 1, 2};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -85,11 +102,13 @@ public class OmniWindowWithExprOperatorTest {
         OmniWindowWithExprOperatorFactory.JitContext factory1 = new OmniWindowWithExprOperatorFactory.JitContext(
                 sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
                 sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType,
-                new OperatorConfig());
+                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
+                winddowFrameEndChannels, new OperatorConfig());
         OmniWindowWithExprOperatorFactory.JitContext factory2 = new OmniWindowWithExprOperatorFactory.JitContext(
                 sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
                 sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType,
-                new OperatorConfig());
+                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
+                winddowFrameEndChannels, new OperatorConfig());
         OmniWindowWithExprOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

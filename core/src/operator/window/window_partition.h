@@ -6,6 +6,7 @@
 #define __WINDOW_PARTITION_H__
 
 #include <vector>
+#include "type/data_types.h"
 #include "operator/pages_index.h"
 #include "window_function.h"
 #include "operator/pages_hash_strategy.h"
@@ -35,8 +36,8 @@ private:
 
 class WindowPartition {
 public:
-    WindowPartition(omniruntime::op::PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd,
-        int32_t *outputChannels, int32_t outputChannelsCount,
+    WindowPartition(const type::DataTypes &sourceTypes, omniruntime::op::PagesIndex *pagesIndex, int32_t partitionStart,
+        int32_t partitionEnd, int32_t *outputChannels, int32_t outputChannelsCount,
         std::vector<std::unique_ptr<WindowFunction>> &windowFunctions,
         omniruntime::op::PagesHashStrategy *peerGroupHashStrategy);
 
@@ -56,12 +57,27 @@ public:
 
     void UpdatePeerGroup();
 
-    std::unique_ptr<Range> GetFrameRange()
-    {
-        return std::make_unique<Range>(0, peerGroupEnd - partitionStart - 1);
-    }
+private:
+    std::unique_ptr<Range> GetFrameRange(WindowFrameInfo *frameInfo);
+
+    bool IsEmptyFrame(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition);
+
+    int32_t GetFrameStart(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition);
+
+    int32_t GetFrameEnd(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition);
+
+    static int32_t Preceding(int32_t rowPosition, int64_t value);
+
+    static int32_t Following(int32_t rowPosition, int32_t endPosition, int64_t value);
+
+    int64_t GetStartValue(WindowFrameInfo *frameInfo);
+
+    int64_t GetEndValue(WindowFrameInfo *frameInfo);
+
+    int64_t GetFrameValue(int32_t channel, std::string &valueTypeName);
 
 private:
+    const type::DataTypes &sourceTypes;
     omniruntime::op::PagesIndex *pagesIndex;
     int32_t partitionStart;
     int32_t partitionEnd;

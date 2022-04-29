@@ -275,11 +275,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
     return (int64_t)sortOperatorFactory;
 }
 
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowJitContext(JNIEnv *env, jobject jObj,
-    jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction, jintArray jPartitionChannels,
-    jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder, jintArray jSortNullFirsts,
-    jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels, jstring jWindowFunctionReturnType)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowJitContext(
+    JNIEnv *env, jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
+    jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
+    jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels,
+    jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
@@ -315,7 +316,9 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels,
-    jstring jWindowFunctionReturnType, jlong jitContext)
+    jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels,
+    jlong jitContext)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
@@ -326,6 +329,12 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     jint *argumentChannels = env->GetIntArrayElements(jArgumentChannels, JNI_FALSE);
+    jint *windowFrameTypes = env->GetIntArrayElements(jWindowFrameTypes, JNI_FALSE);
+    jint *windowFrameStartTypes = env->GetIntArrayElements(jWindowFrameStartTypes, JNI_FALSE);
+    jint *windowFrameStartChannels = env->GetIntArrayElements(jWindowFrameStartChannels, JNI_FALSE);
+    jint *windowFrameEndTypes = env->GetIntArrayElements(jWindowFrameEndTypes, JNI_FALSE);
+    jint *windowFrameEndChannels = env->GetIntArrayElements(jWindowFrameEndChannels, JNI_FALSE);
+
     auto windowFunctionReturnTypeCharPtr = env->GetStringUTFChars(jWindowFunctionReturnType, JNI_FALSE);
 
     auto inputDataTypes = Deserialize(sourceTypesCharPtr);
@@ -348,7 +357,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
         omniruntime::op::WindowOperatorFactory::CreateWindowOperatorFactory(inputDataTypes, outputChannels,
         outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels,
         preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix,
-        expectedPositions, allTypes, argumentChannels, argumentChannelsCount);
+        expectedPositions, allTypes, argumentChannels, argumentChannelsCount, windowFrameTypes, windowFrameStartTypes,
+        windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
     windowOperatorFactory->Init();
     windowOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
@@ -870,7 +880,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jobjectArray jArgumentKeys,
-    jstring jWindowFunctionReturnType)
+    jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
@@ -908,7 +919,9 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     JNIEnv *env, jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jobjectArray jArgumentKeys,
-    jstring jWindowFunctionReturnType, jlong jitContext)
+    jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels,
+    jlong jitContext)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
@@ -918,6 +931,12 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     jint *sortChannels = env->GetIntArrayElements(jSortChannels, JNI_FALSE);
     jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    jint *windowFrameTypes = env->GetIntArrayElements(jWindowFrameTypes, JNI_FALSE);
+    jint *windowFrameStartTypes = env->GetIntArrayElements(jWindowFrameStartTypes, JNI_FALSE);
+    jint *windowFrameStartChannels = env->GetIntArrayElements(jWindowFrameStartChannels, JNI_FALSE);
+    jint *windowFrameEndTypes = env->GetIntArrayElements(jWindowFrameEndTypes, JNI_FALSE);
+    jint *windowFrameEndChannels = env->GetIntArrayElements(jWindowFrameEndChannels, JNI_FALSE);
+
     auto argumentKeysArrCount = env->GetArrayLength(jArgumentKeys);
     std::string argumentKeysArr[argumentKeysArrCount];
     GetExpressions(env, jArgumentKeys, argumentKeysArr, argumentKeysArrCount);
@@ -941,7 +960,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
         omniruntime::op::WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputDataTypes,
         outputChannels, outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount,
         preGroupedChannels, preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount,
-        preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeysArrExprs, argumentKeysCount);
+        preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeysArrExprs, argumentKeysCount,
+        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
     windowWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 

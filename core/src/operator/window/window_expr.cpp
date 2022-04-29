@@ -14,7 +14,9 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
     int32_t expectedPositions, const type::DataTypes &outputDataTypes,
-    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount)
+    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
+    int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
     std::vector<DataType> newTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
@@ -40,7 +42,9 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     this->operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes.get()),
         newOutputCols, newOutputColsCount, windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount,
         preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix,
-        expectedPositions, allTypes, this->argumentChannels.data(), argumentChannelsCount);
+        expectedPositions, allTypes, this->argumentChannels.data(), argumentChannelsCount, windowFrameTypesField,
+        windowFrameStartTypesField, windowFrameStartChannelsField, windowFrameEndTypesField,
+        windowFrameEndChannelsField);
 }
 
 WindowWithExprOperatorFactory::~WindowWithExprOperatorFactory()
@@ -53,12 +57,15 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols,
     int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
-    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount)
+    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
+    int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
     auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
-        argumentChannelsCount);
+        argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
+        windowFrameEndTypesField, windowFrameEndChannelsField);
     return factory;
 }
 

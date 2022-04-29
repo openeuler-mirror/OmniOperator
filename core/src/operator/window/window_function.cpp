@@ -17,11 +17,15 @@ WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
 
 WindowIndex::~WindowIndex() = default;
 
-RankingWindowFunction::RankingWindowFunction() : windowIndex(nullptr), currentPeerGroupStart(0), currentPosition(0) {}
+RankingWindowFunction::RankingWindowFunction(std::unique_ptr<WindowFrameInfo> frame)
+    : WindowFunction(std::move(frame)), windowIndex(nullptr), currentPeerGroupStart(0), currentPosition(0)
+{}
 
 RankingWindowFunction::~RankingWindowFunction() = default;
 
-RankFunction::RankFunction() : rank(0), count(1) {}
+RankFunction::RankFunction(std::unique_ptr<WindowFrameInfo> frame)
+    : RankingWindowFunction(std::move(frame)), rank(0), count(1)
+{}
 
 RankFunction::~RankFunction() = default;
 
@@ -74,8 +78,10 @@ void RowNumberFunction::RankingProcessRow(Vector *column, int32_t index, bool ne
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-    const DataType &inputType, const DataType &outputType, VectorAllocator *allocator)
-    : windowIndex(nullptr),
+    const DataType &inputType, const DataType &outputType, VectorAllocator *allocator,
+    std::unique_ptr<WindowFrameInfo> frame)
+    : WindowFunction(std::move(frame)),
+      windowIndex(nullptr),
       argumentChannels(argumentChannels),
       currentStart(0),
       currentEnd(0),
