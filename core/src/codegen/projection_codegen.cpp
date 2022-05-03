@@ -320,6 +320,10 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type *> args = GetSingleProjectArguments(*context);
     llvm::Function *baseFunc = this->CreateFunction();
+    if (baseFunc == nullptr) {
+        return 0;
+    }
+
     FunctionType *funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
     llvm::Function *funcDecl =
         llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());

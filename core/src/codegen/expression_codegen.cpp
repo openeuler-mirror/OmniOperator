@@ -979,21 +979,18 @@ std::pair<Value *, Value *> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeG
 
     auto leftScaleValue = (Value *)static_cast<DecimalValue &>(left).GetScale();
     auto rightScaleValue = (Value *)static_cast<DecimalValue &>(right).GetScale();
-    bool scaleBothValues = false;
     if (expr.GetType() == omniruntime::expressions::ExprType::BINARY_E) {
-        BinaryExpr &bExpr = static_cast<BinaryExpr &>(expr);
+        auto &bExpr = static_cast<BinaryExpr &>(expr);
         if (bExpr.op == omniruntime::expressions::Operator::DIV) {
             int32_t scale = bExpr.GetReturnType().GetScale() + scaleDiff;
             scaledLeft = decimalIRBuilder->ScaleValue(*left.data, *llvmTypes->CreateConstantInt(scale), typeId);
         } else if (bExpr.op == omniruntime::expressions::Operator::ADD ||
-            bExpr.op == omniruntime::expressions::Operator::SUB) {
-            scaleBothValues = true;
-        }
-    }
-    if (expr.GetType() != omniruntime::expressions::ExprType::BINARY_E || scaleBothValues) {
-        if (scaleDiff != 0) {
-            decimalIRBuilder->ScaleValues(*(left.data), *leftScaleValue, *(right.data), *rightScaleValue, &scaledLeft,
-                &scaledRight, typeId);
+        bExpr.op == omniruntime::expressions::Operator::SUB ||
+        bExpr.op == omniruntime::expressions::Operator::MOD) {
+            if (scaleDiff != 0) {
+                decimalIRBuilder->ScaleValues(*(left.data), *leftScaleValue, *(right.data), *rightScaleValue,
+                    &scaledLeft, &scaledRight, typeId);
+            }
         }
     }
     return std::make_pair(scaledLeft, scaledRight);

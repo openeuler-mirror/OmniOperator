@@ -28,6 +28,10 @@ RowProjFunc RowProjection::Create()
     }
     this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
+    if (fPtr == 0) {
+        return nullptr;
+    }
+
     void *refFunc = &fPtr;
     auto castedRef = static_cast<RowProjFunc *>(refFunc);
     return *castedRef;

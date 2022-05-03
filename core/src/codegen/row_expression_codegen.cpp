@@ -124,6 +124,10 @@ Function *RowExpressionCodeGen::CreateFunction()
 
     // Generate code
     auto result = VisitExpr(*expr);
+    if (!result->IsValidValue()) {
+        return nullptr;
+    }
+
     int32_t outputLengthIndex = 4;
     // Update final output Length
     if (result->length != nullptr) {
@@ -147,7 +151,10 @@ int64_t RowExpressionCodeGen::GetFunction()
     std::cout << std::endl;
 #endif
 
-    this->CreateFunction();
+    auto func = this->CreateFunction();
+    if (func == nullptr) {
+        return 0;
+    }
 
     OptimizeFunctionsAndModule();
 

@@ -28,6 +28,9 @@ RowFilterFunc RowFilter::Create()
 {
     this->codegen = FilterCodeGen::Create("single_row_filter", *this->expression);
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
+    if (fAddr == 0) {
+        return nullptr;
+    }
     void *refFunc = &fAddr;
     auto castedRef = static_cast<RowFilterFunc *>(refFunc);
     return *castedRef;
@@ -67,6 +70,11 @@ bool SimpleFilter::Initialize()
     }
 
     int64_t fAddr = this->codegen->GetFunction();
+    if (fAddr == 0) {
+        LogWarn("Unable to generate function for simple filter");
+        return false;
+    }
+
     void *refFunc = &fAddr;
     this->func = *static_cast<SimpleRowExprEvalFunc *>(refFunc);
     this->initialized = true;
