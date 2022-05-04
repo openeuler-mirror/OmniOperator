@@ -20,8 +20,26 @@ public:
         return &arena;
     }
 
+    void SetError(std::string message)
+    {
+        hasError = true;
+        errorMessage = std::move(message);
+    }
+
+    bool HasError() const
+    {
+        return hasError;
+    }
+
+    std::string GetError() const
+    {
+        return errorMessage;
+    }
+
 private:
     mem::SimpleArenaAllocator arena;
+    bool hasError = false;
+    std::string errorMessage;
 };
 } // namespace op
 } // namespace omniruntime

@@ -72,6 +72,31 @@ To add new functions to omni-runtime, follow the steps below. You will need to m
    }
    ```
 
+## Exception handling
+
+When registering function, set `setExecutionContext` to `true`:
+```c++
+Function(reinterpret_cast<void*>(Increment<int32_t>), "Increment", {}, {OMNI_INT}, OMNI_INT, true)
+```
+
+In your function whenever you need to throw an error or exception, set error message in the execution context by using helper function `SetError` in `context_helper.h`:
+```c++
+#include "context_helper.h"
+
+// Make sure you have the contextPtr as the first arg in your function
+extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y)
+{
+    if (y == 0) {
+        char message[] = "Divided by zero error!";
+        SetError(contextPtr, message, sizeof(message)/sizeof(char));
+        return 0;
+    }
+    return round(double(x)/y);
+}
+```
+
+`Filter` and `Projection` operators will throw `OMNI_EXCEPTION` which will be caught at JNI layer and be returned to engine side.
+
 # Adding new functions
 ## OmniRuntime Function Class
 ```

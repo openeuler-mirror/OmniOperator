@@ -76,6 +76,30 @@ std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<Data
     return args;
 }
 
+Constant *ExpressionCodeGen::CreateStringConstant(std::string s)
+{
+    auto charType = Type::getInt8Ty(*context);
+    std::vector<llvm::Constant *> chars(s.size());
+    for (unsigned int i = 0; i < s.size(); i++) {
+        chars[i] = ConstantInt::get(charType, s[i]);
+    }
+    chars.push_back(llvm::ConstantInt::get(charType, 0));
+    auto stringType = llvm::ArrayType::get(charType, chars.size());
+
+    // Create the declaration statement
+    this->numGlobalValues++;
+    auto globalDeclaration = static_cast<llvm::GlobalVariable *>(
+            module->getOrInsertGlobal("string" + std::to_string(this->numGlobalValues), stringType));
+    globalDeclaration->setInitializer(llvm::ConstantArray::get(stringType, chars));
+    globalDeclaration->setConstant(true);
+    globalDeclaration->setLinkage(llvm::GlobalValue::LinkageTypes::PrivateLinkage);
+    globalDeclaration->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+    // Return a cast to an i8*
+    auto stringPtr = llvm::ConstantExpr::getBitCast(globalDeclaration, charType->getPointerTo());
+    return stringPtr;
+}
+
 /**
  * Usage example: std::vector<Value *> values;
  * values.push_back(value1);
@@ -84,25 +108,8 @@ std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<Data
  */
 void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value *> &values)
 {
-    auto charType = Type::getInt8Ty(*context);
-    std::vector<llvm::Constant *> chars(format.size());
-    for (unsigned int i = 0; i < format.size(); i++) {
-        chars[i] = ConstantInt::get(charType, format[i]);
-    }
-    chars.push_back(llvm::ConstantInt::get(charType, 0));
-    auto stringType = llvm::ArrayType::get(charType, chars.size());
-
-    // Create the declaration statement
-    this->numGlobalValues++;
-    auto globalDeclaration = static_cast<llvm::GlobalVariable *>(
-        module->getOrInsertGlobal("string" + std::to_string(this->numGlobalValues), stringType));
-    globalDeclaration->setInitializer(llvm::ConstantArray::get(stringType, chars));
-    globalDeclaration->setConstant(true);
-    globalDeclaration->setLinkage(llvm::GlobalValue::LinkageTypes::PrivateLinkage);
-    globalDeclaration->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
     // Return a cast to an i8*
-    auto formatPtr = llvm::ConstantExpr::getBitCast(globalDeclaration, charType->getPointerTo());
+    auto formatPtr = CreateStringConstant(std::move(format));
     std::vector<Value *> args;
     args.push_back(formatPtr);
     for (auto v : values) {
@@ -358,6 +365,75 @@ void ExpressionCodeGen::Decimal64MultiplyHelper(const BinaryExpr *binaryExpr, Va
     this->value = make_shared<CodeGenValue>(phi, builder->CreateOr(leftIsNull, rightIsNull));
 }
 
+Value *ExpressionCodeGen::HandleDivideByZero(Value *divisorValue, DataTypeId type)
+{
+    BasicBlock *incomingBlock, *zeroBlock, *nextInst;
+    Value *zeroCond;
+    PHINode *phi;
+
+    incomingBlock = builder->GetInsertBlock();
+    zeroBlock = BasicBlock::Create(*context, "zeroBlock", builder->GetInsertBlock()->getParent());
+    nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
+
+    Value *zero;
+    Value *defaultValue;
+    // Set the divisor values to 1 by default when they are 0
+    // to avoid segfaults and return error at the same time
+    switch (type) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            zero = llvmTypes->CreateConstantInt(0);
+            defaultValue = llvmTypes->CreateConstantInt(1);
+            break;
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+        case OMNI_DECIMAL128:
+            zero = llvmTypes->CreateConstantLong(0);
+            defaultValue = llvmTypes->CreateConstantLong(1);
+            break;
+        case OMNI_DOUBLE:
+            zero = llvmTypes->CreateConstantDouble(0);
+            defaultValue = llvmTypes->CreateConstantDouble(1);
+            break;
+        default:
+            zero = nullptr;
+            defaultValue = nullptr;
+    }
+
+    if (type == OMNI_DOUBLE) {
+        zeroCond = builder->CreateFCmpUEQ(zero, divisorValue);
+    } else {
+        zeroCond = builder->CreateICmpEQ(zero, divisorValue);
+    }
+
+    builder->CreateCondBr(zeroCond, zeroBlock, nextInst);
+    builder->SetInsertPoint(zeroBlock);
+
+    auto executionContext = this->codegenContext->executionContext;
+    string message = "Divided by zero!";
+    auto msgLength = llvmTypes->CreateConstantInt(message.length());
+
+    // Return a cast to an i8*
+    auto msgPtr = CreateStringConstant(message);
+    std::vector<Value *> args;
+    args.push_back(executionContext);
+    args.push_back(msgPtr);
+    args.push_back(msgLength);
+
+    std::vector<DataTypeId> params { OMNI_LONG, OMNI_VARCHAR };
+    std::string funcId = FunctionSignature("ContextSetError", params, OMNI_BOOLEAN).ToString();
+    auto f = module->getFunction(funcId);
+    builder->CreateCall(f, args, "set_error_call");
+
+    builder->CreateBr(nextInst);
+    builder->SetInsertPoint(nextInst);
+    int numberOfPaths = 2;
+    phi = builder->CreatePHI(divisorValue->getType(), numberOfPaths, "iftmp");
+    phi->addIncoming(defaultValue, zeroBlock);
+    phi->addIncoming(divisorValue, incomingBlock);
+    return phi;
+}
+
 // Helper methods to parse binary expressions
 void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
     Value *rightIsNull)
@@ -395,9 +471,11 @@ void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value 
         case omniruntime::expressions::Operator::MUL:
             output = builder->CreateMul(leftPhi, right, "arithmetic_mul");
             break;
-        case omniruntime::expressions::Operator::DIV:
-            output = builder->CreateSDiv(leftPhi, rightPhi, "arithmetic_div");
+        case omniruntime::expressions::Operator::DIV: {
+            auto divisor = HandleDivideByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
+            output = builder->CreateSDiv(leftPhi, divisor, "arithmetic_div");
             break;
+        }
         case omniruntime::expressions::Operator::MOD:
             output = builder->CreateSRem(leftPhi, rightPhi, "arithmetic_mod");
             break;
@@ -434,7 +512,7 @@ void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *lef
         std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId() };
         Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
         std::string funcId = FunctionSignature(divDec64Str, params, OMNI_DECIMAL64).ToString();
-        output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
+        output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
         this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     } else {
         this->BinaryExprIntHelper(binaryExpr, left, right, leftIsNull, rightIsNull);
@@ -467,7 +545,8 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return builder->CreateFSub(leftPhi, rightPhi, "farithmetic_sub");
         case omniruntime::expressions::Operator::MUL:
             return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
-        case omniruntime::expressions::Operator::DIV:
+        case omniruntime::expressions::Operator::DIV: {
+            auto divisor = HandleDivideByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
             return builder->CreateFDiv(leftPhi, rightPhi, "farithmetic_div");
         default: {
             LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
@@ -568,7 +647,7 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
         }
         case omniruntime::expressions::Operator::DIV: {
             std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
-            output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
+            output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
             break;
         }
         default: {
@@ -963,7 +1042,6 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     } else {
         this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
     }
-    return;
 }
 
 CodeGenValuePtr CreateInvalidCodeGenValue()

@@ -124,10 +124,15 @@ llvm::Value *DecimalIRBuilder::ToInt128(llvm::Value *high, llvm::Value *low) con
 }
 
 llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, llvm::Type *retType,
-    const std::vector<llvm::Value *> &args)
+    const std::vector<llvm::Value *> &args, llvm::Value *executionContextPtr)
 {
     LLVMTypes llvmTypes(context);
     std::vector<llvm::Value *> disassembledArgs;
+
+    if (executionContextPtr != nullptr) {
+        disassembledArgs.push_back(executionContextPtr);
+    }
+
     for (auto &arg : args) {
         if (arg->getType() == llvmTypes.I128Type()) {
             // split i128 arg into two int64s.

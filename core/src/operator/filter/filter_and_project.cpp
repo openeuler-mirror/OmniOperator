@@ -189,6 +189,14 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t numSelectedRows = this->filter->apply(data.data(), rowCount, selectedRows, bitmap, offsets,
         reinterpret_cast<int64_t>(context), dictionaries);
+    if (context->HasError()) {
+        // resource cleanup
+        context->GetArena()->Reset();
+        VectorHelper::FreeVecBatch(vecBatch);
+
+        string errorMessage = context->GetError();
+        throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+    }
     if (numSelectedRows <= 0) {
         for (auto &dictionaryVec : dictionaryVecs) {
             delete dictionaryVec;
@@ -203,6 +211,19 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         // vecData and bitmap won't be used for filter projection
         Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data,
             bitmap, offsets, context, dictionaries);
+        if (context->HasError()) {
+            // resource cleanup
+            for (auto &dictionaryVec : dictionaryVecs) {
+                delete dictionaryVec;
+            }
+            data.clear();
+            VectorHelper::FreeVecBatch(vecBatch);
+            delete[] selectedRows;
+            context->GetArena()->Reset();
+
+            string errorMessage = context->GetError();
+            throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
         projectedVecs->SetVector(i, col);
     }
 

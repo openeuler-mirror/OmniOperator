@@ -85,10 +85,12 @@ protected:
         omniruntime::type::DataTypeId &retTypeId, bool needsContext);
 
     llvm::Value *GetIntToPtr(omniruntime::type::DataTypeId typeId, llvm::Value *elementAddr);
+    llvm::Constant *CreateStringConstant(std::string s);
     void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     // Helper functions and main function for parsing binary expressions
+    llvm::Value *HandleDivideByZero(llvm::Value *divisorValue, omniruntime::type::DataTypeId type);
     void BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     llvm::Value *BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
