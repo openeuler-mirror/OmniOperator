@@ -192,7 +192,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             outPtrType = llvmTypes->I1PtrType();
             break;
         default:
-            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnType());
+            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnTypeId());
             break;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);

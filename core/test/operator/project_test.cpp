@@ -27,6 +27,9 @@ VectorBatch *CreateInput(VectorAllocator *vectorAllocator, const int32_t numRows
     vecBatch->NewVectors(vectorAllocator, inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypeIds[i]) {
+            case OMNI_BOOLEAN:
+                ((BooleanVector *)vecBatch->GetVector(i))->SetValues(0, (bool *)allData[i], numRows);
+                break;
             case OMNI_INT:
                 ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
                 break;
@@ -2118,6 +2121,112 @@ TEST(ProjectTest, trstDecimalComprehensive)
 
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectTest, TestAndExprWithNull)
+{
+    const int32_t numRows = 9;
+    bool col1[numRows] = {true, true, true, false, false, false, true, false, false};
+    bool col2[numRows] = {true, false, true, true, false, false, true, false, false};
+
+    const int32_t numCols = 2;
+    auto andLeft = new FieldExpr(0, BooleanType());
+    auto andRight = new FieldExpr(1, BooleanType());
+    BinaryExpr *andExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, andLeft, andRight, BooleanType());
+    std::vector<Expr *> exprs = { andExpr };
+    std::vector<DataType> vecOfTypes = {DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN)};
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2) };
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestAndExprWithNull");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    t->GetVector(0)->SetValueNull(6);
+    t->GetVector(0)->SetValueNull(7);
+    t->GetVector(0)->SetValueNull(8);
+
+    t->GetVector(1)->SetValueNull(2);
+    t->GetVector(1)->SetValueNull(5);
+    t->GetVector(1)->SetValueNull(8);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        bool val = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(i);
+        bool isValNull = ((BooleanVector *)ret[0]->GetVector(0))->IsValueNull(i);
+        if (i == 0) {
+            EXPECT_TRUE(val);
+            EXPECT_FALSE(isValNull);
+        } else if (i == 2 || i == 6 || i == 8) {
+            EXPECT_TRUE(isValNull);
+        } else {
+            EXPECT_FALSE(val);
+            EXPECT_FALSE(isValNull);
+        }
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectTest, TestOrExprWithNull)
+{
+    const int32_t numRows = 9;
+    bool col1[numRows] = {true, true, true, false, false, false, true, false, false};
+    bool col2[numRows] = {true, false, true, true, false, false, true, false, false};
+
+    const int32_t numCols = 2;
+    auto orLeft = new FieldExpr(0, BooleanType());
+    auto orRight = new FieldExpr(1, BooleanType());
+    BinaryExpr *orExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, orLeft, orRight, BooleanType());
+    std::vector<Expr *> exprs = { orExpr };
+    std::vector<DataType> vecOfTypes = {DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN)};
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2) };
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestOrExprWithNull");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    t->GetVector(0)->SetValueNull(6);
+    t->GetVector(0)->SetValueNull(7);
+    t->GetVector(0)->SetValueNull(8);
+
+    t->GetVector(1)->SetValueNull(2);
+    t->GetVector(1)->SetValueNull(5);
+    t->GetVector(1)->SetValueNull(8);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        bool val = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(i);
+        bool isValNull = ((BooleanVector *)ret[0]->GetVector(0))->IsValueNull(i);
+        if (i == 4) {
+            EXPECT_FALSE(val);
+            EXPECT_FALSE(isValNull);
+        } else if (i == 5 || i == 7 || i == 8) {
+            EXPECT_TRUE(isValNull);
+        } else {
+            EXPECT_TRUE(val);
+            EXPECT_FALSE(isValNull);
+        }
+    }
+
+    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete op;

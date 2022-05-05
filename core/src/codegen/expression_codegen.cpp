@@ -915,13 +915,16 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     Value *rightNull = right->isNull;
 
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
-        this->value = make_shared<CodeGenValue>(builder->CreateAnd(builder->CreateNot(leftNull), builder->CreateAnd(
-            builder->CreateNot(rightNull), builder->CreateAnd(leftValue, rightValue, "logical_and"))),
-            builder->CreateOr(leftNull, rightNull));
+        this->value = make_shared<CodeGenValue>(builder->CreateAnd(leftValue, rightValue, "logical_and"),
+            builder->CreateOr(builder->CreateAnd(leftNull, rightNull),
+                builder->CreateOr(builder->CreateAnd(leftNull, rightValue), builder->CreateAnd(rightNull, leftValue))));
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
-        CreateOrExprHelper(leftValue, leftNull, rightValue, rightNull);
+        this->value = make_shared<CodeGenValue>(builder->CreateOr(leftValue, rightValue, "logical_or"),
+        builder->CreateOr(builder->CreateAnd(leftNull, rightNull),
+        builder->CreateOr(builder->CreateAnd(leftNull, builder->CreateNot(rightValue)),
+            builder->CreateAnd(rightNull, builder->CreateNot(leftValue)))));
         return;
     }
 
@@ -961,63 +964,6 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
     this->value = CreateInvalidCodeGenValue();
-}
-
-void ExpressionCodeGen::CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
-    llvm::Value *rightNull)
-{
-    Value *trueValue = llvmTypes->CreateConstantBool(true);
-    Value *falseValue = llvmTypes->CreateConstantBool(false);
-
-    AllocaInst *resultValuePtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "result_value");
-    AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "result_null");
-
-    BasicBlock *neitherNullBlock = BasicBlock::Create(*context, "NEITHER_NULL_BLOCK", func);
-    BasicBlock *eitherNullBlock = BasicBlock::Create(*context, "EITHER_NULL_BLOCK");
-    BasicBlock *mergeBlock = BasicBlock::Create(*context, "END_OF_OR");
-
-    auto isNeitherNull = builder->CreateNot(builder->CreateOr(leftNull, rightNull));
-
-    builder->CreateCondBr(isNeitherNull, neitherNullBlock, eitherNullBlock);
-    builder->SetInsertPoint(neitherNullBlock);
-
-    builder->CreateStore(builder->CreateOr(leftValue, rightValue), resultValuePtr);
-    builder->CreateStore(falseValue, resultNullPtr);
-    builder->CreateBr(mergeBlock);
-
-    func->getBasicBlockList().push_back(eitherNullBlock);
-    builder->SetInsertPoint(eitherNullBlock);
-
-    BasicBlock *leftNotNullBlock = BasicBlock::Create(*context, "LEFT_NOT_NULL_BLOCK", func);
-    BasicBlock *leftNullBlock = BasicBlock::Create(*context, "LEFT_NULL_BLOCK");
-
-    builder->CreateCondBr(builder->CreateNot(leftNull), leftNotNullBlock, leftNullBlock);
-    builder->SetInsertPoint(leftNotNullBlock);
-    builder->CreateStore(leftValue, resultValuePtr);
-    builder->CreateStore(falseValue, resultNullPtr);
-    builder->CreateBr(mergeBlock);
-
-    func->getBasicBlockList().push_back(leftNullBlock);
-    builder->SetInsertPoint(leftNullBlock);
-
-    BasicBlock *rightNotNullBlock = BasicBlock::Create(*context, "RIGHT_NOT_NULL_BLOCK", func);
-    BasicBlock *bothNullBlock = BasicBlock::Create(*context, "BOTH_NULL_BLOCK");
-
-    builder->CreateCondBr(builder->CreateNot(rightNull), rightNotNullBlock, bothNullBlock);
-    builder->SetInsertPoint(rightNotNullBlock);
-    builder->CreateStore(rightValue, resultValuePtr);
-    builder->CreateStore(falseValue, resultNullPtr);
-    builder->CreateBr(mergeBlock);
-
-    func->getBasicBlockList().push_back(bothNullBlock);
-    builder->SetInsertPoint(bothNullBlock);
-    builder->CreateStore(rightValue, resultValuePtr);
-    builder->CreateStore(trueValue, resultNullPtr);
-    builder->CreateBr(mergeBlock);
-
-    func->getBasicBlockList().push_back(mergeBlock);
-    builder->SetInsertPoint(mergeBlock);
-    this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
 }
 
 void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
