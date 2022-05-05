@@ -11,6 +11,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 import nova.hetu.omniruntime.OmniLibs;
+import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
@@ -28,6 +29,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
 
     static {
         OmniLibs.load();
+        NativeLog.getInstance();
     }
 
     private final long nativeOperatorFactory;

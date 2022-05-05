@@ -8,6 +8,7 @@
 #include <chrono>
 #include <stdexcept>
 #include "../../config.h"
+#include "util/global_log.h"
 
 using Time = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
@@ -61,28 +62,36 @@ using fsec = std::chrono::duration<float>;
 #define LogTrace(format, ...)
 #endif
 
-#if defined(DEBUG) || defined(TRACE)
 #define LogDebug(format, ...)                                                                        \
     do {                                                                                             \
-        printf("[DEBUG][%s][%s][%d]:" format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+        char logBuf[GLOBAL_LOG_BUF_SIZE];                                                            \
+        LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                            \
+        std::string logString(logBuf);                                                               \
+        Log(logString, LogType::LOG_DEBUG);                                                          \
     } while (0)
-#else
-#define LogDebug(format, ...)
-#endif
 
 #define LogInfo(format, ...)                                                                        \
     do {                                                                                            \
-        printf("[INFO][%s][%s][%d]:" format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+        char logBuf[GLOBAL_LOG_BUF_SIZE];                                                           \
+        LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                           \
+        std::string logString(logBuf);                                                              \
+        Log(logString, LogType::LOG_INFO);                                                          \
     } while (0)
 
 #define LogWarn(format, ...)                                                                        \
     do {                                                                                            \
-        printf("[WARN][%s][%s][%d]:" format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+        char logBuf[GLOBAL_LOG_BUF_SIZE];                                                           \
+        LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                           \
+        std::string logString(logBuf);                                                              \
+        Log(logString, LogType::LOG_WARN);                                                          \
     } while (0)
 
-#define LogError(format, ...)                                                                        \
-    do {                                                                                             \
-        printf("[ERROR][%s][%s][%d]:" format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+#define LogError(format, ...)                                                                       \
+    do {                                                                                            \
+        char logBuf[GLOBAL_LOG_BUF_SIZE];                                                           \
+        LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                           \
+        std::string logString(logBuf);                                                              \
+        Log(logString, LogType::LOG_ERROR);                                                         \
     } while (0)
 
 #if defined(DEBUG) || defined(TRACE)

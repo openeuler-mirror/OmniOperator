@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import nova.hetu.omniruntime.OmniLibs;
+import nova.hetu.omniruntime.utils.NativeLog;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -23,6 +24,7 @@ public abstract class Constant implements Serializable {
     static {
         OmniLibs.load();
         loadConstants();
+        NativeLog.getInstance();
     }
 
     private final int value;

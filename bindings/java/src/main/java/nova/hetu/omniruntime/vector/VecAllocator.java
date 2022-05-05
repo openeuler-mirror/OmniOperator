@@ -5,6 +5,7 @@
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.OmniLibs;
+import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.ParseUtil;
 import sun.misc.VM;
 
@@ -26,6 +27,7 @@ public class VecAllocator implements AutoCloseable {
 
     static {
         OmniLibs.load();
+        NativeLog.getInstance();
         // parse environment variable OMNI_OFFHEAP_MEMORY_SIZE
         String memorySize = System.getenv("OMNI_OFFHEAP_MEMORY_SIZE");
         long rootLimit = memorySize == null ? VM.maxDirectMemory() : ParseUtil.parserMemoryParameters(memorySize);
