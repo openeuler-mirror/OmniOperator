@@ -23,6 +23,7 @@
         <openhft.version>3.2.4</openhft.version>
         <fastjson.version>1.2.78</fastjson.version>
         <jacoco.version>0.7.9</jacoco.version>
+        <log.version>1.7.30</log.version>
     </properties>
 
     <dependencies>
@@ -77,6 +78,11 @@
             <artifactId>arrow-memory-core</artifactId>
             <version>${arrow.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${log.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.arrow</groupId>

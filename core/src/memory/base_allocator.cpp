@@ -52,8 +52,9 @@ void BaseAllocator::Close()
     int64_t currentAllocated = allocatedBytes.load(std::memory_order_relaxed);
     if (currentAllocated > 0) {
         ReleaseBytes(currentAllocated);
-        LogWarn("Memory leak in allocator:%s,leak size in bytes is:%ld, stack is:%s", scope.c_str(), currentAllocated,
-            TraceUtil::GetStack().c_str());
+        // here the jvm is freed so log should be redirected to std out
+        std::cout << "Memory leak in allocator:" << scope.c_str() << ",leak size in bytes is:" << currentAllocated <<
+            ", stack is:" << TraceUtil::GetStack().c_str() << std::endl;
     }
 
     ReleaseReservation();
