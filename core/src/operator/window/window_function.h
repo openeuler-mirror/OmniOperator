@@ -40,13 +40,98 @@ private:
     int32_t size;
 };
 
+using FrameType = enum FrameType {
+    OMNI_FRAME_TYPE_RANGE = 0,
+    OMNI_FRAME_TYPE_ROWS = 1
+};
+
+using FrameBoundType = enum FrameBoundType {
+    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING = 0,
+    OMNI_FRAME_BOUND_PRECEDING = 1,
+    OMNI_FRAME_BOUND_CURRENT_ROW = 2,
+    OMNI_FRAME_BOUND_FOLLOWING = 3,
+    OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING = 4
+};
+
+class WindowFrameInfo {
+public:
+    WindowFrameInfo()
+        : type(OMNI_FRAME_TYPE_RANGE),
+          startType(OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING),
+          startChannel(INVALID_BOUND_CHANNEL),
+          endType(OMNI_FRAME_BOUND_CURRENT_ROW),
+          endChannel(INVALID_BOUND_CHANNEL)
+    {}
+
+    WindowFrameInfo(FrameType framType, FrameBoundType frameStartType, int32_t frameStartCol,
+        FrameBoundType frameEndType, int32_t frameEndCol)
+        : type(framType),
+          startType(frameStartType),
+          startChannel(frameStartCol),
+          endType(frameEndType),
+          endChannel(frameEndCol)
+    {}
+
+    ~WindowFrameInfo() {}
+
+    FrameType getType()
+    {
+        return type;
+    }
+
+    FrameBoundType getStartType()
+    {
+        return startType;
+    }
+
+    int32_t getStartChannel()
+    {
+        return startChannel;
+    }
+
+    FrameBoundType getEndType()
+    {
+        return endType;
+    }
+
+    int32_t getEndChannel()
+    {
+        return endChannel;
+    }
+
+public:
+    static const int32_t INVALID_BOUND_CHANNEL = -1;
+
+private:
+    FrameType type;
+    FrameBoundType startType;
+    int32_t startChannel;
+    FrameBoundType endType;
+    int32_t endChannel;
+};
+
 class WindowFunction {
 public:
-    WindowFunction() = default;
-    virtual ~WindowFunction() = default;
+    WindowFunction()
+    {
+        frameInfo = std::make_unique<WindowFrameInfo>();
+    }
+
+    WindowFunction(std::unique_ptr<WindowFrameInfo> frame) : frameInfo(std::move(frame)) {}
+
+    virtual ~WindowFunction() {}
+
     virtual void Reset(WindowIndex *windowIndex) {};
     virtual void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart,
         int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
+
+    WindowFrameInfo *GetWindowFrameInfo()
+    {
+        return frameInfo.get();
+    };
+
+private:
+    std::unique_ptr<WindowFrameInfo> frameInfo;
 };
 
 class RankingWindowFunction : public WindowFunction {
@@ -57,7 +142,7 @@ public:
     virtual void Reset() {};
     virtual void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup,
         int32_t peerGroupCount, int32_t currentPositionIndex) {};
-    RankingWindowFunction();
+    RankingWindowFunction(std::unique_ptr<WindowFrameInfo> frame);
     ~RankingWindowFunction() override;
 
 protected:
@@ -70,7 +155,7 @@ private:
 
 class RankFunction : public RankingWindowFunction {
 public:
-    RankFunction();
+    RankFunction(std::unique_ptr<WindowFrameInfo> frame);
     ~RankFunction() override;
     void Reset() override;
     void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
@@ -83,7 +168,7 @@ private:
 
 class RowNumberFunction : public RankingWindowFunction {
 public:
-    RowNumberFunction() = default;
+    RowNumberFunction(std::unique_ptr<WindowFrameInfo> frame) : RankingWindowFunction(std::move(frame)) {};
     ~RowNumberFunction() override = default;
     void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
@@ -93,7 +178,7 @@ class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
         const omniruntime::type::DataType &inputType, const omniruntime::type::DataType &outputType,
-        omniruntime::vec::VectorAllocator *allocator);
+        omniruntime::vec::VectorAllocator *allocator, std::unique_ptr<WindowFrameInfo> frame);
     ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,

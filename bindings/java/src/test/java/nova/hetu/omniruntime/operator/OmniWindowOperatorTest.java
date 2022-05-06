@@ -4,8 +4,12 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_CURRENT_ROW;
+import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING;
+import static nova.hetu.omniruntime.constants.OmniWindowFrameType.OMNI_FRAME_TYPE_RANGE;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -13,6 +17,8 @@ import static org.testng.Assert.assertTrue;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
+import nova.hetu.omniruntime.constants.OmniWindowFrameBoundType;
+import nova.hetu.omniruntime.constants.OmniWindowFrameType;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
@@ -57,6 +63,13 @@ public class OmniWindowOperatorTest {
         int[] outputChannels = {0, 1};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
                 FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1, -1, -1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1, -1, -1};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -70,7 +83,8 @@ public class OmniWindowOperatorTest {
         OmniWindowOperatorFactory windowOperatorFactoryWithoutJit = new OmniWindowOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                new OperatorConfig(false));
+                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
+                winddowFrameEndChannels, new OperatorConfig(false));
         OmniOperator windowOperatorWithoutJit = windowOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
 
@@ -85,7 +99,8 @@ public class OmniWindowOperatorTest {
         OmniWindowOperatorFactory windowOperatorFactoryWithJit = new OmniWindowOperatorFactory(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                new OperatorConfig(true));
+                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
+                winddowFrameEndChannels, new OperatorConfig(true));
         OmniOperator windowOperatorWithJit = windowOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> vecsWithJit = buildVecs();
 
@@ -119,6 +134,11 @@ public class OmniWindowOperatorTest {
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputChannels = {0, 1};
         FunctionType[] windowFunction = {FunctionType.OMNI_WINDOW_TYPE_RANK};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -130,7 +150,8 @@ public class OmniWindowOperatorTest {
         DataType[] windowFunctionReturnType = {LongDataType.LONG};
         OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(sourceTypes, outputChannels,
                 windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
-                preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+                preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType, windowFrameTypes,
+                windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
         VecBatch vecBatch = buildData();
@@ -171,6 +192,12 @@ public class OmniWindowOperatorTest {
         int[] outputChannels = {0, 1};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
                 FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1, -1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1, -1};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -182,7 +209,8 @@ public class OmniWindowOperatorTest {
         DataType[] windowFunctionReturnType = {LongDataType.LONG, LongDataType.LONG};
         OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(sourceTypes, outputChannels,
                 windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
-                preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+                preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType, windowFrameTypes,
+                windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
         VecBatch vecBatch = buildData();
@@ -210,6 +238,12 @@ public class OmniWindowOperatorTest {
     public void testFactoryJitContextEquals() {
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
                 FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1, -1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1, -1};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -224,11 +258,13 @@ public class OmniWindowOperatorTest {
         OmniWindowOperatorFactory.JitContext factory1 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                new OperatorConfig());
+                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
+                winddowFrameEndChannels, new OperatorConfig());
         OmniWindowOperatorFactory.JitContext factory2 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                new OperatorConfig());
+                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
+                winddowFrameEndChannels, new OperatorConfig());
         OmniWindowOperatorFactory.JitContext factory3 = null;
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));

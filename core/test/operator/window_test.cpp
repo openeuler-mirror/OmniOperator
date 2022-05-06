@@ -129,6 +129,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -141,7 +146,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -181,6 +187,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     int32_t ascendings[0] = {};
     int32_t nullFirsts[0] = {};
     int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
     int32_t partitionCols[1] = {2};
     int32_t preGroupedCols[0] = {};
 
@@ -193,7 +204,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 0,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *test = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -231,6 +243,11 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_RANK};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -243,7 +260,8 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -283,6 +301,11 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_RANK};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
     int32_t partitionCols[0] = {};
     int32_t preGroupedCols[0] = {};
 
@@ -295,7 +318,8 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -321,7 +345,6 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 {
     // construct the input data
@@ -336,6 +359,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[2] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[2] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[2] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[2] = {-1, -1};
+    int32_t windowFrameEndTypes[2] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[2] = {-1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -349,7 +377,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -393,6 +422,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[2] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[2] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[2] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[2] = {-1, -1};
+    int32_t windowFrameEndTypes[2] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[2] = {-1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -406,7 +440,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -452,6 +487,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     int32_t ascendings[0] = {};
     int32_t nullFirsts[0] = {};
     int32_t windowFunctionTypes[2] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[2] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[2] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[2] = {-1, -1};
+    int32_t windowFrameEndTypes[2] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[2] = {-1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -465,7 +505,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 0,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -515,6 +556,16 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFrameTypes[5] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[5] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[5] = {-1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[5] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[5] = {-1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -529,7 +580,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 5, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 5);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 5, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -582,6 +634,16 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     int32_t nullFirsts[0] = {};
     int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFrameTypes[5] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[5] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[5] = {-1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[5] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[5] = {-1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -596,7 +658,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         3, windowFunctionTypes, 5, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 0,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 5);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 5, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -658,6 +721,27 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
         OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
         OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK};
+    int32_t windowFrameTypes[colCount] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[colCount] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[colCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[colCount] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[colCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -689,7 +773,8 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, colCount, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts,
-        1, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        1, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -783,6 +868,27 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
         OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
         OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
         OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER};
+    int32_t windowFrameTypes[colCount] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                      OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[colCount] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                               OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[colCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[colCount] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                         OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[colCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -814,7 +920,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, colCount, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts,
-        1, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0);
+        1, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -906,6 +1013,19 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    int32_t windowFrameTypes[7] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[7] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[7] = {-1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[7] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[7] = {-1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -922,7 +1042,8 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -998,6 +1119,19 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     int32_t nullFirsts[1] = {false};
     int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
+    int32_t windowFrameTypes[7] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[7] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[7] = {-1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[7] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[7] = {-1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1013,7 +1147,8 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1086,6 +1221,21 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX};
+    int32_t windowFrameTypes[9] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[9] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[9] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1102,7 +1252,8 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 9);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 9, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1179,6 +1330,21 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
         OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
         OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFrameTypes[9] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[9] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[9] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1195,7 +1361,8 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 9);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 9, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1273,6 +1440,21 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+    int32_t windowFrameTypes[9] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[9] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[9] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1289,7 +1471,8 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 9);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 9, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1367,6 +1550,22 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    int32_t windowFrameTypes[10] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[10] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[10] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1381,7 +1580,8 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 10, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 10);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 10, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1462,6 +1662,22 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    int32_t windowFrameTypes[10] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[10] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                     OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[10] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                   OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1476,7 +1692,8 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         colCount, windowFunctionTypes, 10, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 10);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 10, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1561,6 +1778,19 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int32_t windowFunctionTypes[7] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_AGGREGATION_TYPE_SUM,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_MIN};
+    int32_t windowFrameTypes[7] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                               OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[7] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                    OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[7] = {-1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[7] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                  OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[7] = {-1, -1, -1, -1, -1, -1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1576,7 +1806,8 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
         9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
@@ -1625,6 +1856,11 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int32_t outputCols[2] = {0, 1};
     int32_t windowFunctionTypes[2] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    int32_t windowFrameTypes[2] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[2] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[2] = {-1, -1};
+    int32_t windowFrameEndTypes[2] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[2] = {-1, -1};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
     int32_t sortCols[1] = {1};
@@ -1638,7 +1874,8 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     // dealing data with the operator
     WindowOperatorFactory *operatorFactoryWithJit = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes,
         outputCols, 2, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     operatorFactoryWithJit->Init();
     std::cout << "after create factory" << std::endl;
     JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactoryWithJit);
@@ -1679,7 +1916,8 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 
     WindowOperatorFactory *operatorFactoryWithoutJit = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes,
         outputCols, 2, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2);
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     operatorFactoryWithoutJit->Init();
     std::cout << "after create factory" << std::endl;
     WindowOperator *windowOperatorWithoutJit =
@@ -1726,5 +1964,214 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     }
     VectorHelper::FreeVecBatches(resultWithJit);
     VectorHelper::FreeVecBatches(resultWithoutJit);
+}
+
+TEST(NativeOmniWindowOperatorTest, testFrameBound)
+{
+    // construct the input data
+    const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
+    DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(20), VarcharDataType(20), LongDataType() }));
+    std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
+                                   "apple", "orange", "banana", "apple"};
+    std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01",
+                                   "2020-12-01", "2020-12-02", "2020-12-07", "2020-12-04", "2021-01-01", "2021-01-01",
+                                   "2021-01-01", "2021-02-01"};
+    int64_t data2[MY_DATA_SIZE] = {7400, 8000, 7800, 7000, 7500, 6500, 4500, 8500, 9000, 8000, 8500, 9500};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, MY_DATA_SIZE, data0, data1, data2);
+
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+    int32_t argumentChannels[1] = {2};
+    int32_t outputCols[3] = {0, 1, 2};
+    int32_t windowFunctionTypes[1] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[1] = {-1};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(
+        std::vector<DataType>({ VarcharDataType(20), VarcharDataType(20), LongDataType(), LongDataType() }));
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 1, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
+    operatorFactory->SetJitContext(jitContext);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->GetOutput(outputVecBatches);
+
+    // construct the output data
+    DataTypes expectTypes(
+        std::vector<DataType>({ VarcharDataType(20), VarcharDataType(20), LongDataType(), LongDataType() }));
+    std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
+                                         "banana", "banana", "banana", "orange"};
+    std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
+                                         "2020-11-01", "2020-12-01", "2020-12-02", "2020-12-04", "2020-12-07",
+                                         "2021-01-01", "2021-01-01"};
+    int64_t expectData3[MY_DATA_SIZE] = {7000, 8000, 9000, 9500, 7800, 7400, 7500, 6500, 8500, 4500, 8500, 8000};
+    int64_t expectData4[MY_DATA_SIZE] = {1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 1};
+
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
+}
+
+TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
+{
+    // construct the input data
+    const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
+    DataTypes sourceTypes(std::vector<DataType>(
+        { VarcharDataType(20), VarcharDataType(20), LongDataType(), IntDataType(), IntDataType() }));
+    std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
+                                   "apple", "orange", "banana", "apple"};
+    std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01", "2020-12-01",
+                                       "2020-12-02", "2020-12-07", "2020-12-04", "2021-01-01", "2021-01-01",
+                                       "2021-01-01", "2021-02-01"};
+    int64_t data2[MY_DATA_SIZE] = {7400, 8000, 7800, 7000, 7500, 6500, 4500, 8500, 9000, 8000, 8500, 9500};
+    int32_t data3[MY_DATA_SIZE] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // frame start col
+    int32_t data4[MY_DATA_SIZE] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}; // frane end col
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, MY_DATA_SIZE, data0, data1, data2, data3, data4);
+
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+    int32_t argumentChannels[1] = {2};
+    int32_t outputCols[5] = {0, 1, 2, 3, 4};
+    int32_t windowFunctionTypes[1] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_ROWS};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {3};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_FOLLOWING};
+    int32_t windowFrameEndChannels[1] = {4};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(std::vector<DataType>(
+        { VarcharDataType(20), VarcharDataType(20), LongDataType(), IntDataType(), IntDataType(), LongDataType() }));
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        5, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 1, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
+    operatorFactory->SetJitContext(jitContext);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->GetOutput(outputVecBatches);
+
+    // construct the output data
+    DataTypes expectTypes(std::vector<DataType>(
+        { VarcharDataType(20), VarcharDataType(20), LongDataType(), IntDataType(), IntDataType(), LongDataType() }));
+    std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
+                                         "banana", "banana", "banana", "orange"};
+    std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
+                                         "2020-11-01", "2020-12-01", "2020-12-02", "2020-12-04", "2020-12-07",
+                                         "2021-01-01", "2021-01-01"};
+    int64_t expectData3[MY_DATA_SIZE] = {7000, 8000, 9000, 9500, 7800, 7400, 7500, 6500, 8500, 4500, 8500, 8000};
+    int32_t expectData4[MY_DATA_SIZE] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // frame start col
+    int32_t expectData5[MY_DATA_SIZE] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}; // frane end col
+    int64_t expectData6[MY_DATA_SIZE] = {3, 4, 3, 2, 3, 4, 4, 4, 4, 3, 2, 1};
+
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
+        expectData4, expectData5, expectData6);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
+}
+
+TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
+{
+    // construct the input data
+    const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
+    DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(20), VarcharDataType(20), LongDataType() }));
+    std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
+                                   "apple", "orange", "banana", "apple"};
+    std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01", "2020-12-01",
+                                       "2020-12-02", "2020-12-07", "2020-12-04", "2021-01-01", "2021-01-01",
+                                       "2021-01-01", "2021-02-01"};
+    int64_t data2[MY_DATA_SIZE] = {7400, 8000, 7800, 7000, 7500, 6500, 4500, 8500, 9000, 8000, 8500, 9500};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, MY_DATA_SIZE, data0, data1, data2);
+
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+    int32_t argumentChannels[1] = {2};
+    int32_t outputCols[5] = {0, 1, 2};
+    int32_t windowFunctionTypes[1] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+    int32_t windowFrameTypes[1] = {OMNI_FRAME_TYPE_ROWS};
+    int32_t windowFrameStartTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[1] = {-1};
+    int32_t windowFrameEndTypes[1] = {OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING};
+    int32_t windowFrameEndChannels[1] = {-1};
+
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+
+    DataTypes allTypes(
+        std::vector<DataType>({ VarcharDataType(20), VarcharDataType(20), LongDataType(), LongDataType() }));
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 1, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
+    operatorFactory->SetJitContext(jitContext);
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+
+    windowOperator->AddInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->GetOutput(outputVecBatches);
+
+    // construct the output data
+    DataTypes expectTypes(
+        std::vector<DataType>({ VarcharDataType(20), VarcharDataType(20), LongDataType(), LongDataType() }));
+    std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
+                                         "banana", "banana", "banana", "orange"};
+    std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
+                                         "2020-11-01", "2020-12-01", "2020-12-02", "2020-12-04", "2020-12-07",
+                                         "2021-01-01", "2021-01-01"};
+    int64_t expectData3[MY_DATA_SIZE] = {7000, 8000, 9000, 9500, 7800, 7400, 7500, 6500, 8500, 4500, 8500, 8000};
+    int64_t expectData4[MY_DATA_SIZE] = {4, 4, 4, 4, 7, 7, 7, 7, 7, 7, 7, 1};
+
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }
 }

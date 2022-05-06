@@ -12,10 +12,11 @@ using namespace std;
 
 namespace omniruntime {
 namespace op {
-WindowPartition::WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd,
-    int32_t *outputChannels, int32_t outputChannelsCount, vector<unique_ptr<WindowFunction>> &windowFunctions,
-    PagesHashStrategy *peerGroupHashStrategy)
-    : pagesIndex(pagesIndex),
+WindowPartition::WindowPartition(const type::DataTypes &sourceTypes, PagesIndex *pagesIndex, int32_t partitionStart,
+    int32_t partitionEnd, int32_t *outputChannels, int32_t outputChannelsCount,
+    vector<unique_ptr<WindowFunction>> &windowFunctions, PagesHashStrategy *peerGroupHashStrategy)
+    : sourceTypes(sourceTypes),
+      pagesIndex(pagesIndex),
       partitionStart(partitionStart),
       partitionEnd(partitionEnd),
       outputChannels(outputChannels),
@@ -47,7 +48,7 @@ void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index)
     }
 
     for (auto &windowFunction : windowFunctions) {
-        unique_ptr<Range> range = GetFrameRange();
+        unique_ptr<Range> range = GetFrameRange(windowFunction->GetWindowFrameInfo());
         windowFunction->ProcessRow(vecBatch->GetVector(channel), index, peerGroupStart - partitionStart,
             peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
         channel++;
@@ -79,6 +80,162 @@ void WindowPartition::UpdatePeerGroup()
         PositionEqualsPosition(pagesIndex, peerGroupHashStrategy, peerGroupStart, peerGroupEnd)) {
         peerGroupEnd++;
     }
+}
+
+std::unique_ptr<Range> WindowPartition::GetFrameRange(WindowFrameInfo *frameInfo)
+{
+    int32_t rowPosition = currentPosition - partitionStart;
+    int32_t endPosition = partitionEnd - partitionStart - 1;
+
+    // handle empty frame
+    if (IsEmptyFrame(frameInfo, rowPosition, endPosition)) {
+        return std::make_unique<Range>(-1, -1);
+    }
+
+    int32_t frameStart = GetFrameStart(frameInfo, rowPosition, endPosition);
+    int32_t frameEnd = GetFrameEnd(frameInfo, rowPosition, endPosition);
+
+    return std::make_unique<Range>(frameStart, frameEnd);
+}
+
+int32_t WindowPartition::GetFrameStart(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition)
+{
+    int32_t frameStart;
+
+    if (frameInfo->getStartType() == OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING) {
+        frameStart = 0;
+    } else if (frameInfo->getStartType() == OMNI_FRAME_BOUND_PRECEDING) {
+        frameStart = Preceding(rowPosition, GetStartValue(frameInfo));
+    } else if (frameInfo->getStartType() == OMNI_FRAME_BOUND_FOLLOWING) {
+        frameStart = Following(rowPosition, endPosition, GetStartValue(frameInfo));
+    } else if (frameInfo->getType() == OMNI_FRAME_TYPE_RANGE) {
+        frameStart = peerGroupStart - partitionStart;
+    } else {
+        frameStart = rowPosition;
+    }
+
+    return frameStart;
+}
+
+int32_t WindowPartition::GetFrameEnd(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition)
+{
+    int32_t frameEnd;
+
+    if (frameInfo->getEndType() == OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING) {
+        frameEnd = endPosition;
+    } else if (frameInfo->getEndType() == OMNI_FRAME_BOUND_PRECEDING) {
+        frameEnd = Preceding(rowPosition, GetEndValue(frameInfo));
+    } else if (frameInfo->getEndType() == OMNI_FRAME_BOUND_FOLLOWING) {
+        frameEnd = Following(rowPosition, endPosition, GetEndValue(frameInfo));
+    } else if (frameInfo->getType() == OMNI_FRAME_TYPE_RANGE) {
+        frameEnd = peerGroupEnd - partitionStart - 1;
+    } else {
+        frameEnd = rowPosition;
+    }
+
+    return frameEnd;
+}
+
+bool WindowPartition::IsEmptyFrame(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition)
+{
+    FrameBoundType startType = frameInfo->getStartType();
+    FrameBoundType endType = frameInfo->getEndType();
+
+    int32_t positions = endPosition - rowPosition;
+
+    if ((startType == OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING) && (endType == OMNI_FRAME_BOUND_PRECEDING)) {
+        return GetEndValue(frameInfo) > rowPosition;
+    }
+
+    if ((startType == OMNI_FRAME_BOUND_FOLLOWING) && (endType == OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING)) {
+        return GetStartValue(frameInfo) > positions;
+    }
+
+    if (startType != endType) {
+        return false;
+    }
+
+    FrameBoundType boundType = frameInfo->getStartType();
+    if ((boundType != OMNI_FRAME_BOUND_PRECEDING) && (boundType != OMNI_FRAME_BOUND_FOLLOWING)) {
+        return false;
+    }
+
+    int64_t start = GetStartValue(frameInfo);
+    int64_t end = GetEndValue(frameInfo);
+
+    if (boundType == OMNI_FRAME_BOUND_PRECEDING) {
+        return (start < end) || ((start > rowPosition) && (end > rowPosition));
+    }
+
+    return (start > end) || (start > positions);
+}
+
+int32_t WindowPartition::Preceding(int32_t rowPosition, int64_t value)
+{
+    if (value > rowPosition) {
+        return 0;
+    }
+    return (rowPosition - value);
+}
+
+int32_t WindowPartition::Following(int32_t rowPosition, int32_t endPosition, int64_t value)
+{
+    if (value > (endPosition - rowPosition)) {
+        return endPosition;
+    }
+    return (rowPosition + value);
+}
+
+int64_t WindowPartition::GetStartValue(WindowFrameInfo *frameInfo)
+{
+    std::string rangeType("windowFrameStart");
+    return GetFrameValue(frameInfo->getStartChannel(), rangeType);
+}
+
+int64_t WindowPartition::GetEndValue(WindowFrameInfo *frameInfo)
+{
+    std::string rangeType("windowFrameEnd");
+    return GetFrameValue(frameInfo->getEndChannel(), rangeType);
+}
+
+int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeName)
+{
+    int64_t value = 0L;
+
+    uint64_t valueAddress = pagesIndex->GetValueAddresses()[this->currentPosition];
+    int32_t vecBatchIndex = static_cast<int32_t>(DecodeSliceIndex(valueAddress));
+    int32_t rowIndex = static_cast<int32_t>(DecodePosition(valueAddress));
+
+    Vector ***columnVectors = pagesIndex->GetColumns();
+    Vector *columnVector = columnVectors[channel][vecBatchIndex];
+    int32_t originalRowIndex;
+    Vector *originalVector = nullptr;
+    const int32_t *sourceTypeIds = sourceTypes.GetIds();
+    int32_t typeId = sourceTypeIds[channel];
+
+    originalVector = VectorHelper::ExpandVectorAndIndex(columnVector, rowIndex, originalRowIndex);
+    if (originalVector->IsValueNull(originalRowIndex)) {
+        LogError("%s column value is null(position=%d).", valueTypeName.data(), currentPosition);
+        return value;
+    }
+
+    switch (typeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            value = static_cast<int64_t>((static_cast<IntVector *>(originalVector))->GetValue(originalRowIndex));
+            break;
+
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            value = static_cast<int64_t>((static_cast<LongVector *>(originalVector))->GetValue(originalRowIndex));
+            break;
+
+        default:
+            LogError("Invalid data type(%d) for %s column.", typeId, valueTypeName.data());
+            break;
+    }
+
+    return value;
 }
 }
 }

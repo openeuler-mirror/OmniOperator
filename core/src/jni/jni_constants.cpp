@@ -7,6 +7,7 @@
 #include "operator/status.h"
 #include "operator/aggregation/aggregator/aggregator.h"
 #include "operator/join/lookup_join.h"
+#include "operator/window/window_function.h"
 
 using namespace omniruntime::vec;
 
@@ -48,4 +49,17 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
     DEFINE_CONSTANT(OMNI_JOIN_TYPE_LEFT);
     DEFINE_CONSTANT(OMNI_JOIN_TYPE_RIGHT);
     DEFINE_CONSTANT(OMNI_JOIN_TYPE_FULL);
+
+    cls = env->FindClass("nova/hetu/omniruntime/constants/OmniWindowFrameType");
+    fieldName = "Lnova/hetu/omniruntime/constants/OmniWindowFrameType;";
+    DEFINE_CONSTANT(OMNI_FRAME_TYPE_RANGE);
+    DEFINE_CONSTANT(OMNI_FRAME_TYPE_ROWS);
+
+    cls = env->FindClass("nova/hetu/omniruntime/constants/OmniWindowFrameBoundType");
+    fieldName = "Lnova/hetu/omniruntime/constants/OmniWindowFrameBoundType;";
+    DEFINE_CONSTANT(OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING);
+    DEFINE_CONSTANT(OMNI_FRAME_BOUND_PRECEDING);
+    DEFINE_CONSTANT(OMNI_FRAME_BOUND_CURRENT_ROW);
+    DEFINE_CONSTANT(OMNI_FRAME_BOUND_FOLLOWING);
+    DEFINE_CONSTANT(OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING);
 }
