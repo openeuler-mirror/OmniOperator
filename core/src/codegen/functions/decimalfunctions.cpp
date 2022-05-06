@@ -3,8 +3,8 @@
  * Description: registry math function name
  */
 #include "decimalfunctions.h"
-#include "context_helper.h"
 #include <cmath>
+#include "context_helper.h"
 #include "type/decimal_operations.h"
 
 using namespace omniruntime::type;
@@ -56,16 +56,16 @@ extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
-    uint64_t *outLowPtr)
+extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+    int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128 lValue(xHigh, xLow);
     Decimal128 rValue(yHigh, yLow);
     if (yHigh == 0 && yLow == 0) {
         *outHighPtr = 0;
         *outLowPtr = 0;
-        char message[] = "Divided by zero error!";
-        SetError(contextPtr, message, sizeof(message)/sizeof(char));
+        char message[] = "Division by zero error!";
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
         return;
     }
     Decimal128 result = DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0);
@@ -158,15 +158,15 @@ extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y)
 {
     if (y == 0) {
         char message[] = "Divided by zero error!";
-        SetError(contextPtr, message, sizeof(message)/sizeof(char));
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
         return 0;
     }
-    return (int64_t) round(double(x) / y);
+    return (int64_t)round(double(x) / y);
 }
 
 extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y)
 {
-    return (int64_t) round(x / pow(10, y));
+    return (int64_t)round(x / pow(10, y));
 }
 }
 }

@@ -90,7 +90,7 @@ protected:
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     // Helper functions and main function for parsing binary expressions
-    llvm::Value *HandleDivideByZero(llvm::Value *divisorValue, omniruntime::type::DataTypeId type);
+    llvm::Value *HandleDivisionByZero(llvm::Value *divisorValue, omniruntime::type::DataTypeId type);
     void BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     llvm::Value *BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
