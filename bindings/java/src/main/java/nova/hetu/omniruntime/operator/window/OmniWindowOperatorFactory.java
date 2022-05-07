@@ -40,32 +40,6 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
      * @param expectedPositions the expected positions
      * @param argumentChannels the argument channels
      * @param windowFunctionReturnType the window function return type
-     * @param operatorConfig the operator config
-     */
-    public OmniWindowOperatorFactory(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
-            int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
-            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
-            DataType[] windowFunctionReturnType, OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
-                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
-                argumentChannels, windowFunctionReturnType, operatorConfig)));
-    }
-
-    /**
-     * Instantiates a new Omni window operator factory.
-     *
-     * @param sourceTypes the source types
-     * @param outputChannels the output channels
-     * @param windowFunction the window function
-     * @param partitionChannels the partition channels
-     * @param preGroupedChannels the pre grouped channels
-     * @param sortChannels the sort channels
-     * @param sortOrder the sort order
-     * @param sortNullFirsts the sort null firsts
-     * @param preSortedChannelPrefix the pre sorted channel prefix
-     * @param expectedPositions the expected positions
-     * @param argumentChannels the argument channels
-     * @param windowFunctionReturnType the window function return type
      * @param windowFrameTypes frame types of the window
      * @param windowFrameStartTypes start types of frame in window
      * @param winddowFrameStartChannels channels value of frame start value
@@ -84,31 +58,6 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
                 preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
                 argumentChannels, windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes,
                 winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels, operatorConfig)));
-    }
-
-    /**
-     * Instantiates a new Omni window operator factory with default operator config.
-     *
-     * @param sourceTypes the source types
-     * @param outputChannels the output channels
-     * @param windowFunction the window function
-     * @param partitionChannels the partition channels
-     * @param preGroupedChannels the pre grouped channels
-     * @param sortChannels the sort channels
-     * @param sortOrder the sort order
-     * @param sortNullFirsts the sort null firsts
-     * @param preSortedChannelPrefix the pre sorted channel prefix
-     * @param expectedPositions the expected positions
-     * @param argumentChannels the argument channels
-     * @param windowFunctionReturnType the window function return type
-     */
-    public OmniWindowOperatorFactory(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
-            int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
-            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
-            DataType[] windowFunctionReturnType) {
-        this(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
-                sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels,
-                windowFunctionReturnType, new OperatorConfig(true));
     }
 
     /**
@@ -208,59 +157,6 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
         private final OmniWindowFrameBoundType[] frameEndTypes;
 
         private final int[] frameEndChannels;
-
-        /**
-         * Instantiates a new Context.
-         *
-         * @param sourceTypes the source types
-         * @param outputChannels the output channels
-         * @param windowFunction the window function
-         * @param partitionChannels the partition channels
-         * @param preGroupedChannels the pre grouped channels
-         * @param sortChannels the sort channels
-         * @param sortOrder the sort order
-         * @param sortNullFirsts the sort null firsts
-         * @param preSortedChannelPrefix the pre sorted channel prefix
-         * @param expectedPositions the expected positions
-         * @param argumentChannels the argument channels
-         * @param windowFunctionReturnType the window function return type
-         * @param operatorConfig the operator config
-         */
-        public JitContext(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
-                int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
-                int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
-                DataType[] windowFunctionReturnType, OperatorConfig operatorConfig) {
-            super(operatorConfig);
-            this.sourceTypes = sourceTypes;
-            this.outputChannels = outputChannels;
-            this.windFunction = windowFunction;
-            this.partitionChannels = partitionChannels;
-            this.preGroupedChannels = preGroupedChannels;
-            this.sortChannels = sortChannels;
-            this.sortOrder = sortOrder;
-            this.sortNullFirsts = sortNullFirsts;
-            this.preSortedChannelPrefix = preSortedChannelPrefix;
-            this.expectedPositions = expectedPositions;
-            this.argumentChannels = argumentChannels;
-            this.windowFunctionReturnType = windowFunctionReturnType;
-
-            /*
-             * these code and constructor needs to be deleted when all engine adapter
-             * finished
-             */
-            this.frameTypes = new OmniWindowFrameType[windowFunction.length];
-            this.frameStartTypes = new OmniWindowFrameBoundType[windowFunction.length];
-            this.frameStartChannels = new int[windowFunction.length];
-            this.frameEndTypes = new OmniWindowFrameBoundType[windowFunction.length];
-            this.frameEndChannels = new int[windowFunction.length];
-            for (int i = 0; i < windowFunction.length; i++) {
-                this.frameTypes[i] = OmniWindowFrameType.OMNI_FRAME_TYPE_RANGE;
-                this.frameStartTypes[i] = OmniWindowFrameBoundType.OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING;
-                this.frameStartChannels[i] = -1;
-                this.frameEndTypes[i] = OmniWindowFrameBoundType.OMNI_FRAME_BOUND_CURRENT_ROW;
-                this.frameEndChannels[i] = -1;
-            }
-        }
 
         /**
          * Instantiates a new Context.

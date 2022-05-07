@@ -50,14 +50,10 @@ public:
     virtual OmniStatus Close() = 0;
 
     template <class T>
-    void CreateAggregatorFactory(std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories, int32_t maskCol)
-    {
-        if (maskCol == Aggregator::INVALID_MASK_COL) {
-            aggregatorFactories.push_back(std::make_unique<T>());
-        } else {
-            aggregatorFactories.push_back(std::make_unique<MaskAggregatorFactory<T>>(maskCol));
-        }
-    }
+    void CreateAggregatorFactory(std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories, int32_t maskCol);
+
+    OmniStatus CreateAggregatorFactories(std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories,
+        const PrepareContext &funcTypesContext, const std::vector<int32_t> &maskCols);
 
 protected:
     int inputRaw;
