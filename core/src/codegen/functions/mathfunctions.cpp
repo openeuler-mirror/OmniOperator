@@ -38,12 +38,12 @@ extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
 
 extern "C" DLLEXPORT int32_t CastDoubleToInt32(double x)
 {
-    return static_cast<int32_t>(x);
+    return static_cast<int32_t>(Round(x, 0));
 }
 
 extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x)
 {
-    return static_cast<int64_t>(x);
+    return static_cast<int64_t>(Round(x, 0));
 }
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)
