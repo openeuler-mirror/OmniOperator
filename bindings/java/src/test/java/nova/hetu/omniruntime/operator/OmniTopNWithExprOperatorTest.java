@@ -7,6 +7,9 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -31,7 +34,10 @@ public class OmniTopNWithExprOperatorTest {
     @Test
     public void testTopNWithAllExpr() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
-        String[] sortKeys = {"ADD:1(#0, 5:1)", "MODULUS:2(#2, 3:2)"};
+        String[] sortKeys = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5)),
+                omniJsonFourArithmeticExpr("MODULUS", 2, getOmniJsonFieldReference(2, 2),
+                        getOmniJsonLiteral(2, false, 3))};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
 
@@ -66,7 +72,8 @@ public class OmniTopNWithExprOperatorTest {
     @Test
     public void testTopNWithPartialExpr() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
-        String[] sortKeys = {"#0", "MODULUS:2(#2, 3:2)"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), omniJsonFourArithmeticExpr("MODULUS", 2,
+                getOmniJsonFieldReference(2, 2), getOmniJsonLiteral(2, false, 3))};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
 
@@ -101,7 +108,7 @@ public class OmniTopNWithExprOperatorTest {
     @Test
     public void testTopNWithNoExpr() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
-        String[] sortKeys = {"#0", "#2"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 2)};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
 
@@ -135,7 +142,7 @@ public class OmniTopNWithExprOperatorTest {
     @Test
     public void testFactoryJitContextEquals() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
-        String[] sortKeys = {"#0", "#2"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 2)};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
         int expectedRowSize = 5;

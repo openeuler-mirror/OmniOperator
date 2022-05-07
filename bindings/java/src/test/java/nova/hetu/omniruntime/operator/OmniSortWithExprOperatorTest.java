@@ -7,6 +7,9 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -50,7 +53,7 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -79,7 +82,9 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 5:1)", "#1"};
+        String[] sortKeys = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5)),
+                getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -108,7 +113,9 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
+        String[] sortKeys = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5)),
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonLiteral(1, false, 5), getOmniJsonFieldReference(1, 1))};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -141,7 +148,9 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
+        String[] sortKeys = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5)),
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonLiteral(1, false, 5), getOmniJsonFieldReference(1, 1))};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -164,7 +173,9 @@ public class OmniSortWithExprOperatorTest {
     public void testFactoryJitContextEquals() {
         DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
+        String[] sortKeys = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5)),
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonLiteral(1, false, 5), getOmniJsonFieldReference(1, 1))};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory.JitContext factory1 = new OmniSortWithExprOperatorFactory.JitContext(
@@ -184,7 +195,7 @@ public class OmniSortWithExprOperatorTest {
     public void TestSortSpillWithMultiRecords() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -224,7 +235,7 @@ public class OmniSortWithExprOperatorTest {
     public void TestSortSpillWithOneRecord() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -257,12 +268,11 @@ public class OmniSortWithExprOperatorTest {
         sortWithExprOperatorFactory.close();
     }
 
-    @Test(expectedExceptions = OmniRuntimeException.class,
-            expectedExceptionsMessageRegExp = "Enable spill but do not config spill path.")
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "Enable spill but do not config spill path.")
     public void TestSortSpillWithEmptyPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory1 = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -276,7 +286,7 @@ public class OmniSortWithExprOperatorTest {
     public void TestSortSpillWithExistedPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -288,7 +298,7 @@ public class OmniSortWithExprOperatorTest {
     public void TestSortSpillWithInvalidSpillSize() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
@@ -300,7 +310,7 @@ public class OmniSortWithExprOperatorTest {
     public void TestSortSpillWithInvalidPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"#0", "#1"};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,

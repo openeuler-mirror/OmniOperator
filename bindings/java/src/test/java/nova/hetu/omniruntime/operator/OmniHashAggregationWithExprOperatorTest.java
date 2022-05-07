@@ -11,6 +11,9 @@ import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -46,8 +49,8 @@ public class OmniHashAggregationWithExprOperatorTest {
      */
     @Test
     public void testHashAggregationWithExprComparePref() {
-        String[] groupByChannel = {"#0", "#1"};
-        String[] aggChannels = {"#3"};
+        String[] groupByChannel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(2, 1)};
+        String[] aggChannels = {getOmniJsonFieldReference(2, 3)};
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
@@ -108,8 +111,10 @@ public class OmniHashAggregationWithExprOperatorTest {
 
     @Test
     public void testHashAggWithPartialExpr() {
-        String[] groupByChanel = {"MODULUS:2(#0, 3:2)", "#2"};
-        String[] aggChannels = {"MULTIPLY:2(#1, 5:2)", "#3"};
+        String[] groupByChanel = {omniJsonFourArithmeticExpr("MODULUS", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 3)), getOmniJsonFieldReference(1, 2)};
+        String[] aggChannels = {omniJsonFourArithmeticExpr("MULTIPLY", 2, getOmniJsonFieldReference(2, 1),
+                getOmniJsonLiteral(2, false, 5)), getOmniJsonFieldReference(1, 3)};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
@@ -144,8 +149,14 @@ public class OmniHashAggregationWithExprOperatorTest {
 
     @Test
     public void testHashAggWithAllExpr() {
-        String[] groupByChanel = {"MODULUS:2(#0, 3:2)", "ADD:1(#2, 5:1)"};
-        String[] aggChannels = {"MULTIPLY:2(#1, 5:2)", "ADD:1(#3, 5:1)"};
+        String[] groupByChanel = {
+                omniJsonFourArithmeticExpr("MODULUS", 2, getOmniJsonFieldReference(2, 0),
+                        getOmniJsonLiteral(2, false, 3)),
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 2), getOmniJsonLiteral(1, false, 5))};
+        String[] aggChannels = {
+                omniJsonFourArithmeticExpr("MULTIPLY", 2, getOmniJsonFieldReference(2, 1),
+                        getOmniJsonLiteral(2, false, 5)),
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 3), getOmniJsonLiteral(1, false, 5))};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
@@ -180,8 +191,8 @@ public class OmniHashAggregationWithExprOperatorTest {
 
     @Test
     public void testHashAggWithNoExpr() {
-        String[] groupByChanel = {"#0", "#2"};
-        String[] aggChannels = {"#1", "#3"};
+        String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
+        String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
@@ -216,8 +227,8 @@ public class OmniHashAggregationWithExprOperatorTest {
 
     @Test
     public void testFactoryJitContextEquals() {
-        String[] groupByChanel = {"#0", "#2"};
-        String[] aggChannels = {"#1", "#3"};
+        String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
+        String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};

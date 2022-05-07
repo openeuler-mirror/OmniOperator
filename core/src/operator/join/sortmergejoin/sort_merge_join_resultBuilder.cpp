@@ -4,6 +4,7 @@
  */
 #include "sort_merge_join_resultBuilder.h"
 #include <memory>
+#include "expression/jsonparser/jsonparser.h"
 #include "operator/pages_index.h"
 
 namespace omniruntime {
@@ -43,8 +44,7 @@ void JoinResultBuilder::JoinFilterCodeGen()
         allTypes.insert(allTypes.end(), leftTableOutputTypes.Get().begin(), leftTableOutputTypes.Get().end());
         allTypes.insert(allTypes.end(), rightTableOutputTypes.Get().begin(), rightTableOutputTypes.Get().end());
         DataTypes dataTypes(allTypes);
-        omniruntime::expressions::Expr *filterExpr =
-            parser.ParseRowExpression(filterExpStr, dataTypes, dataTypes.GetSize());
+        omniruntime::expressions::Expr *filterExpr = JSONParser::ParseJSON(nlohmann::json::parse(filterExpStr));
         executionContext = new ExecutionContext();
         executionContext->GetArena()->SetAllocator(vecAllocator);
         simpleFilter = new SimpleFilter(*filterExpr);

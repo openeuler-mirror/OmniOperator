@@ -8,6 +8,11 @@ import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
+import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
+import static nova.hetu.omniruntime.util.TestUtils.omniJsonNotEqualExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -44,7 +49,8 @@ public class OmniHashJoinWithExprOperatorsTest {
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
-        String[] buildHashKeys = {"ADD:2(#0, 50:2)"};
+        String[] buildHashKeys = {omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 50))};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashKeys, Optional.empty(), operatorCount);
@@ -58,7 +64,8 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:2(#0, 50:2)"};
+        String[] probeHashKeys = {omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 50))};
         int[] buildOutputCols = {1};
         DataType[] buildOutputTypes = {LongDataType.LONG};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
@@ -96,7 +103,8 @@ public class OmniHashJoinWithExprOperatorsTest {
         buildVecs[1] = TestUtils.createDictionaryVec(buildTypes[1], buildDatas[1], ids);
         VecBatch buildVecBatch = new VecBatch(buildVecs);
 
-        String[] buildHashKeys = {"ADD:2(#0, 50:2)"};
+        String[] buildHashKeys = {omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 50))};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashKeys, Optional.empty(), operatorCount);
@@ -113,7 +121,8 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = new VecBatch(probeVecs);
 
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:2(#0, 50:2)"};
+        String[] probeHashKeys = {omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 50))};
         int[] buildOutputCols = {1};
         DataType[] buildOutputTypes = {LongDataType.LONG};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
@@ -147,9 +156,15 @@ public class OmniHashJoinWithExprOperatorsTest {
                 {"35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904"}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
-        String[] buildHashCols = {"#0"};
+        String[] buildHashCols = {getOmniJsonFieldReference(1, 0)};
         int operatorCount = 1;
-        String filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+        String filterExpression = omniJsonNotEqualExpr(
+                omniFunctionExpr("substr", 15,
+                        getOmniJsonFieldReference(15, 1) + "," + getOmniJsonLiteral(1, false, 1) + ","
+                                + getOmniJsonLiteral(1, false, 5)),
+                omniFunctionExpr("substr", 15,
+                        getOmniJsonFieldReference(15, 3) + "," + getOmniJsonLiteral(1, false, 1)
+                        + "," + getOmniJsonLiteral(1, false, 5)));
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashCols, Optional.of(filterExpression), operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
@@ -162,7 +177,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {0, 1};
-        String[] probeHashCols = {"#0"};
+        String[] probeHashCols = {getOmniJsonFieldReference(1, 0)};
         int[] buildOutputCols = {0, 1};
         DataType[] buildOutputTypes = {IntDataType.INTEGER, new VarcharDataType(5)};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
@@ -189,7 +204,8 @@ public class OmniHashJoinWithExprOperatorsTest {
     @Test
     public void testFactoryJitContextEquals() {
         DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
-        String[] buildHashKeys = {"ADD:2(#0, 50:2)"};
+        String[] buildHashKeys = {omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 50))};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory.JitContext hashBuilderOperatorFactory1 = new OmniHashBuilderWithExprOperatorFactory.JitContext(
                 buildTypes, buildHashKeys, Optional.empty(), operatorCount, new OperatorConfig());
@@ -202,7 +218,8 @@ public class OmniHashJoinWithExprOperatorsTest {
 
         DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:2(#0, 50:2)"};
+        String[] probeHashKeys = {omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0),
+                getOmniJsonLiteral(2, false, 50))};
         int[] buildOutputCols = {1};
         DataType[] buildOutputTypes = {LongDataType.LONG};
         OmniLookupJoinWithExprOperatorFactory.JitContext lookupJoinOperatorFactory1 = new OmniLookupJoinWithExprOperatorFactory.JitContext(
