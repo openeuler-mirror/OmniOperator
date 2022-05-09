@@ -21,4 +21,11 @@ public class OmniLibs {
     public static void load() {
         System.loadLibrary(OMNI_RUNTIME);
     }
+
+    /**
+     * Geting the version
+     *
+     * @return the version string
+     */
+    public static native String getVersion();
 }

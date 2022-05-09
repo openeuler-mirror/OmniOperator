@@ -200,7 +200,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig(generateSpillPath(), 5)));
+                new OperatorConfig(false, new SparkSpillConfig(true, generateSpillPath(), 1024, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5, 3, 2, 6, 1}, {5L, 3L, 2L, 6L, 1L}};
@@ -240,7 +240,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig(generateSpillPath(), 1)));
+                new OperatorConfig(false, new SparkSpillConfig(true, generateSpillPath(), 1024, 1)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5}, {3L}};
