@@ -4,29 +4,21 @@
 
 #include <vector>
 #include "gtest/gtest.h"
-#include "llvm/Support/DynamicLibrary.h"
 #include "jit/compiler/library_loader.h"
 #include "../../libconfig.h"
+
 namespace omniruntime {
-    using namespace std;
-    using namespace llvm::sys;
-    using namespace omniruntime::LibConfig;
+using namespace std;
+using namespace omniruntime::LibConfig;
 
-    TEST(LoadTest, All) {
-        LibraryLoader ll;
-        EXPECT_FALSE(ll.FinishedLoading());
+TEST(LoadTest, All)
+{
+    LibraryLoader ll;
+    auto shouldOK = ll.LoadedLibraries(GetLibPath());
+    EXPECT_TRUE(shouldOK);
 
-        auto vec = ll.LoadLibraries("/usr/local/lib/:/home/llvm/lib/:" + GetLibPath() +
-                                    ":/usr/lib/gcc/x86_64-redhat-linux/4.8.5/:/usr/lib/gcc/x86_64-linux-gnu/7/");
-        string err;
-        for (auto &s : vec) {
-            std::cout << "Loading " << s << std::endl;
-            bool res = DynamicLibrary::LoadLibraryPermanently(s.c_str(), &err);
-            EXPECT_FALSE(res);
-            if (res) {
-                std::cerr << "Error: " << err << std::endl;
-            }
-        }
-        EXPECT_TRUE(ll.FinishedLoading());
-    }
+    auto shouldFail = ll.LoadedLibraries(
+        "/usr/local/lib/:/home/llvm/lib/:/usr/lib/gcc/x86_64-redhat-linux/4.8.5/:/usr/lib/gcc/x86_64-linux-gnu/7/");
+    EXPECT_FALSE(shouldFail);
+}
 }

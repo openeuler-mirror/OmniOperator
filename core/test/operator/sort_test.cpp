@@ -1017,12 +1017,6 @@ TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
         ascendings, nullFirsts, sourceTypesSize, operatorConfig2),
         omniruntime::exception::OmniException);
 
-    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, GenerateSpillPath(), INT64_MAX);
-    OperatorConfig operatorConfig3(spillConfig3);
-    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
-        ascendings, nullFirsts, sourceTypesSize, operatorConfig3),
-        omniruntime::exception::OmniException);
-
     SpillConfig spillConfig4(SPILL_CONFIG_NONE, true, "+-ab23", 5);
     OperatorConfig operatorConfig4(spillConfig4);
     EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,

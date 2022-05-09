@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include "library_loader.h"
+#include <llvm/Support/DynamicLibrary.h>
 #include "../../../libconfig.h"
 #include "util/debug.h"
+#include "library_loader.h"
 
 using namespace std;
 using namespace omniruntime::LibConfig;
@@ -46,7 +47,7 @@ void CoreLibrary::SetPreferredPath(std::string path)
     this->preferredPath = path;
 }
 
-string LibraryLoader::ExtractFileName(std::string path)
+string LibraryLoader::ExtractFileName(const std::string &path)
 {
     int32_t idx = path.find_last_of("/");
     return path.substr(idx + 1);
@@ -173,26 +174,23 @@ void ChooseCandidates(unordered_map<string, vector<string>> &candidates, vector<
     }
 }
 
-vector<string> LibraryLoader::LoadLibraries(string allPaths) noexcept
+bool LibraryLoader::LoadedLibraries(const string &allPaths) noexcept
 {
-    unordered_map<string, vector<string>> candidates;
+    using namespace llvm::sys;
     for (auto &lib : neededLibs) {
-        candidates.insert({ lib.File(), vector<string>() });
+        string err;
+        std::string filePath(allPaths);
+        filePath.append(lib.File());
+        if (DynamicLibrary::LoadLibraryPermanently(filePath.c_str(), &err)) {
+            llvm::errs() << "Failed to load core library at path " << filePath << "\n";
+            llvm::errs() << err << "\n";
+            return false;
+        } else {
+            LLVM_DEBUG_LOG("Successfully loaded core library at path %s", filePath.c_str());
+            return true;
+        }
     }
-    vector<string> paths;
-    vector<string> toSearch = SplitPaths(allPaths);
-    for (auto &p : toSearch) {
-        SearchPath(p, candidates);
-    }
-
-    ChooseCandidates(candidates, neededLibs, paths);
-
-    return paths;
-}
-
-bool LibraryLoader::FinishedLoading()
-{
-    return neededLibs.size() == 0;
+    return true;
 }
 
 string LibraryLoader::ResolveSymlink(const std::string &path)

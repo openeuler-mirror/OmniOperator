@@ -71,7 +71,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     return OperatorConfig { resultSpillConfig };
 }
 
-void CheckHasEnoughDiskSpace(const char *spillPathChars, const SpillConfig &spillConfig)
+void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)
 {
     struct statfs diskInfo;
     auto result = statfs(spillPathChars, &diskInfo);
@@ -80,14 +80,16 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, const SpillConfig &spil
         throw exception::OmniException(GetErrorCode(ErrorCode::DISK_STAT_FAILED),
             GetErrorMessage(ErrorCode::DISK_STAT_FAILED));
     }
-    uint64_t availableDiskSize = diskInfo.f_bavail * diskInfo.f_bsize;
+
+    auto availableDiskSize =
+        static_cast<uint64_t>(static_cast<double>(diskInfo.f_bavail * diskInfo.f_bsize) * DEFAULT_AVAILABLE_THRESHOLD);
     auto maxSpillBytes = spillConfig.GetMaxSpillBytes();
-    if (static_cast<uint64_t>(static_cast<double>(availableDiskSize) * DEFAULT_AVAILABLE_THRESHOLD) < maxSpillBytes) {
+    if (availableDiskSize < maxSpillBytes) {
+        spillConfig.SetMaxSpillBytes(availableDiskSize);
         std::string message = GetErrorMessage(ErrorCode::DISK_SPACE_NOT_ENOUGH) +
             "The disk available size:" + std::to_string(availableDiskSize / GB_UNIT) +
             "GB and the max spill size:" + std::to_string(maxSpillBytes / GB_UNIT) + "GB.";
-        rmdir(spillPathChars);
-        throw exception::OmniException(GetErrorCode(ErrorCode::DISK_SPACE_NOT_ENOUGH), message);
+        LogWarn("%s", message.c_str());
     }
 }
 

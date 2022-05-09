@@ -16,9 +16,12 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
+#include <mutex>
 #include "harden_optimizer.h"
 #include "jit/annotation.h"
 #include "util/debug.h"
+#include "../../../libconfig.h"
+#include "util/omni_exception.h"
 #include "llvm_compiler.h"
 
 using llvm::Module;
@@ -31,6 +34,9 @@ using std::unique_ptr;
 
 namespace omniruntime {
 namespace jit {
+std::once_flag loadLibrariesInitFlag;
+LibraryLoader LLVMCompiler::ll;
+
 LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
 {
     llvm::InitializeNativeTarget();
@@ -40,7 +46,7 @@ LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
     this->layout = std::make_unique<llvm::StringRef>();
     this->builder = std::make_unique<llvm::IRBuilder<>>(*context);
 
-    LoadExtraLibraries();
+    std::call_once(loadLibrariesInitFlag, LoadExtraLibraries);
 }
 
 LLVMCompiler::~LLVMCompiler()
@@ -68,32 +74,13 @@ bool LLVMCompiler::LoadModule(std::string templatePath)
     return true;
 }
 
-LibraryLoader LLVMCompiler::ll;
-
-static std::string TransEnv(const char *srcEnv)
-{
-    return { srcEnv };
-}
-
 void LLVMCompiler::LoadExtraLibraries()
 {
-    using namespace llvm::sys;
-    const char *envVal = std::getenv("LD_LIBRARY_PATH");
-    if (envVal == nullptr) {
-        LLVM_DEBUG_LOG("Failed get ld library path");
-        return;
+    auto ret = ll.LoadedLibraries(omniruntime::LibConfig::GetLibPath());
+    if (!ret) {
+        throw exception::OmniException("LOAD_LIBRARY_FAILED", "Load extra libraries failed.");
     }
-    StringOrNull ev = TransEnv(envVal);
-    auto vec = ll.LoadLibraries(ev.msg());
-    string err;
-    for (auto &s : vec) {
-        if (DynamicLibrary::LoadLibraryPermanently(s.c_str(), &err)) {
-            llvm::errs() << "Failed to load core library at path " << s << "\n";
-            llvm::errs() << err << "\n";
-        } else {
-            LLVM_DEBUG_LOG("Successfully loaded core library at path %s", s.c_str());
-        }
-    }
+    LogInfo("Load extra libraries successfully");
 }
 
 bool LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimizations,

@@ -64,6 +64,11 @@ public:
         return maxSpillBytes;
     }
 
+    void SetMaxSpillBytes(uint64_t maxSpillSize)
+    {
+        this->maxSpillBytes = maxSpillSize;
+    }
+
 protected:
     static constexpr uint64_t DEFAULT_MAX_SPILL_BYTES = 100UL * (1 << 30);
     SpillConfigId spillConfigId;
