@@ -12,8 +12,6 @@
 
 namespace omniruntime {
 namespace exception {
-static std::string kMemCapExceeded = "MEM_CAP_EXCEEDED";
-
 class OmniException : public std::exception {
 public:
     OmniException(const std::string &errorCode, const std::string &message) : errorCode(errorCode), message(message) {}

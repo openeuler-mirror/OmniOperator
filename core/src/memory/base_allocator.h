@@ -16,6 +16,7 @@
 #include "util/debug.h"
 #include "util/omni_exception.h"
 #include "cpu_checker/omniruntime_cpu_checker.h"
+#include "util/error_code.h"
 
 namespace omniruntime {
 namespace mem {
@@ -94,8 +95,8 @@ public:
         if (limit != UNLIMIT) {
             ReleaseBytes(size);
             // throw memory cap exceeded exception
-            auto message = "Exceeded memory cap of MB:" + std::to_string(limit / 1024 / 1024);
-            throw OmniException(kMemCapExceeded, message);
+            auto message = op::GetErrorMessage(op::ErrorCode::MEM_CAP_EXCEEDED) + std::to_string(limit / 1024 / 1024);
+            throw OmniException(op::GetErrorCode(op::ErrorCode::MEM_CAP_EXCEEDED), message);
         }
     }
 

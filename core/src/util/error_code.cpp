@@ -21,7 +21,9 @@ static std::unordered_map<ErrorCode, std::pair<std::string, std::string>> errorM
         { ErrorCode::WRITE_FAILED, { "WRITE_FAILED", "Write data to file failed." } },
         { ErrorCode::EXCEED_SPILL_THRESHOLD,{ "EXCEED_SPILL_THRESHOLD", "Current the data size of spill "
             "exceeds the limit." } },
-        { ErrorCode::READ_FAILED, { "READ_FAILED", "Read data from file failed." } } };
+        { ErrorCode::READ_FAILED, { "READ_FAILED", "Read data from file failed." } },
+        { ErrorCode::LOAD_LAZY_VECTOR_FAILED, { "LOAD_LAZY_VECTOR_FAILED", "Load lazy vector failed."} },
+        { ErrorCode::MEM_CAP_EXCEEDED, { "MEM_CAP_EXCEEDED", "Exceeded memory cap of MB:"} } };
 
 std::string &GetErrorCode(const ErrorCode &errorCode)
 {
