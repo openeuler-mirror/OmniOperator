@@ -21,7 +21,9 @@ enum class ErrorCode {
     UNLINK_FAILED,
     WRITE_FAILED,
     EXCEED_SPILL_THRESHOLD,
-    READ_FAILED
+    READ_FAILED,
+    LOAD_LAZY_VECTOR_FAILED,
+    MEM_CAP_EXCEEDED
 };
 
 std::string &GetErrorCode(const ErrorCode &errorCode);

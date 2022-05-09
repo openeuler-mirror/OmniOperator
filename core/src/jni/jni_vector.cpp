@@ -185,7 +185,9 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative(
 {
     Vector *nativeVectorSrc = TransformVector(jNativeVectorSrc);
     Vector *nativeVectorDest = TransformVector(jNativeVectorDest);
+    JNI_METHOD_START
     nativeVectorDest->Append(nativeVectorSrc, (int32_t)jOffSet, (int32_t)jLength);
+    JNI_METHOD_END()
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *env,
@@ -271,7 +273,11 @@ JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getC
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator
         (JNIEnv *env, jclass jcls)
 {
-    return reinterpret_cast<uintptr_t>(omniruntime::vec::GetProcessGlobalVecAllocator());
+    int64_t globalVectorAllocatorAddr = 0;
+    JNI_METHOD_START
+    globalVectorAllocatorAddr = reinterpret_cast<uintptr_t>(omniruntime::vec::GetProcessGlobalVecAllocator());
+    JNI_METHOD_END(globalVectorAllocatorAddr)
+    return globalVectorAllocatorAddr;
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative
@@ -312,7 +318,9 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictio
 {
     DictionaryVector *nativeVector = reinterpret_cast<DictionaryVector *>(jNativeVector);
     Vector *nativeDictionary = TransformVector(jNativeDictionary);
+    JNI_METHOD_START
     nativeVector->SetDictionary(nativeDictionary->Slice(0, nativeDictionary->GetSize()));
+    JNI_METHOD_END();
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *env, jclass jcls,
@@ -334,5 +342,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataC
     jlong jNativeVector, jint jToCapacityInBytes)
 {
     Vector *nativeVector = TransformVector(jNativeVector);
-    return nativeVector->ExpandDataCapacity(jToCapacityInBytes);
+    int64_t valueAddr = 0;
+    JNI_METHOD_START
+    valueAddr = nativeVector->ExpandDataCapacity(jToCapacityInBytes);
+    JNI_METHOD_END(valueAddr)
+    return valueAddr;
 }
