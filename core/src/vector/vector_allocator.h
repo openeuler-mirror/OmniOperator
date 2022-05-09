@@ -8,7 +8,9 @@
 #include <string>
 #include "vector_reference.h"
 #include "type/data_type.h"
+#ifdef DEBUG_VECTOR
 #include "tracer/vector_leak_detector.h"
+#endif
 #include "memory/base_allocator.h"
 
 const static std::string GLOBAL_SCOPE_NAME = "___GLOBAL_SCOPE___";
@@ -30,10 +32,12 @@ public:
 
     void ResizeVectorData(Vector *vector, int32_t toCapacityInBytes);
 
+#ifdef DEBUG_VECTOR
     VectorLeakDetector &GetLeakDetector()
     {
         return leakDetector;
     }
+#endif
 
     VectorAllocator *NewChildAllocator(const std::string &scope, int64_t limit = UNLIMIT,
         int64_t reservation = 0) override;
@@ -50,7 +54,9 @@ protected:
 
 private:
     static constexpr int64_t DEFAULT_RESERVATION = 1 << 20;
+#ifdef DEBUG_VECTOR
     VectorLeakDetector leakDetector;
+#endif
 };
 
 VectorAllocator *GetProcessGlobalVecAllocator();

@@ -114,5 +114,10 @@ void VectorLeakDetector::RecycleDeletedTracer()
     // recycle end, set flag false
     recycling.store(false);
 }
+
+void VectorLeakDetector::SetScope(const std::string &newScope)
+{
+    this->scope = newScope;
+}
 }
 }

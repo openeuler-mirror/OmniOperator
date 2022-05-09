@@ -10,8 +10,12 @@
 namespace omniruntime {
 namespace vec {
 VectorAllocator::VectorAllocator(BaseAllocator *parent, const std::string &scope, int64_t limit, int64_t reservation)
-    : BaseAllocator(parent, scope, limit, reservation), leakDetector(scope)
-{}
+    : BaseAllocator(parent, scope, limit, reservation)
+{
+#ifdef DEBUG_VECTOR
+    leakDetector.SetScope(scope);
+#endif
+}
 
 VectorAllocator::~VectorAllocator() {}
 

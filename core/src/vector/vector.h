@@ -5,12 +5,13 @@
 #ifndef __VECTOR_H__
 #define __VECTOR_H__
 
-#include "../util/debug.h"
-#include "../util/compiler_util.h"
-#include "../type/data_type.h"
+#include "util/debug.h"
+#include "util/compiler_util.h"
+#include "type/data_type.h"
 #include "vector_reference.h"
 #include "vector_allocator.h"
 #include "vector_encoding.h"
+#include "tracer/vector_tracer.h"
 
 namespace omniruntime {
 namespace vec {
