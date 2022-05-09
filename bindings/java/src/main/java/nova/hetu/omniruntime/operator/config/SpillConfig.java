@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -20,7 +21,7 @@ import java.util.Objects;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "name")
 @JsonSubTypes(value = {@JsonSubTypes.Type(value = SparkSpillConfig.class, name = "SparkSpillConfig")})
-public class SpillConfig {
+public class SpillConfig implements Serializable {
     /**
      * NONE spill config.
      */
@@ -35,6 +36,8 @@ public class SpillConfig {
      * The default max spill bytes.
      */
     public static final long DEFAULT_MAX_SPILL_BYTES = 100L * (1 << 30); // 100GB
+
+    private static final long serialVersionUID = -1420544948753374714L;
 
     private SpillConfigId spillConfigId;
 
