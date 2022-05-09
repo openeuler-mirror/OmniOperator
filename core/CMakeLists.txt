@@ -95,3 +95,6 @@ message(STATUS "Option DISABLE_JIT: ${DISABLE_JIT}")
 
 option(COVERAGE "Disable OmniJit to optimize operator" OFF)
 message(STATUS "Option COVERAGE: ${COVERAGE}")
+
+option(COVERAGE "Disable CPU checker to optimize operator" OFF)
+message(STATUS "Option COVERAGE: ${DISABLE_CHECKER}")

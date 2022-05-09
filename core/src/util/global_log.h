@@ -18,11 +18,11 @@ extern "C" {
 #endif
 
 #define LogsInfoMacro(stringStream, formatStr) \
-    stringStream << "[" << __FILE__ << "][" << __FUNCTION__ << "][" << __LINE__ << "]" << formatStr;
+    stringStream << "[" << __FILE__ << "][" << __FUNCTION__ << "][" << __LINE__ << "]" << formatStr
 
 #define LogsInfoVargMacro(logBuf, format, ...)                                                                   \
     snprintf_s(logBuf, GLOBAL_LOG_BUF_SIZE, GLOBAL_LOG_BUF_SIZE, "[%s][%s][%d]:" format, __FILE__, __FUNCTION__, \
-        __LINE__, ##__VA_ARGS__);
+        __LINE__, ##__VA_ARGS__)
 
 enum class LogType {
     LOG_DEBUG = 0,
