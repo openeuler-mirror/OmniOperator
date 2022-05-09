@@ -16,7 +16,7 @@ namespace vec {
 class Vector;
 class VectorLeakDetector {
 public:
-    explicit VectorLeakDetector(const std::string scope);
+    explicit VectorLeakDetector(const std::string scope = "");
 
     ~VectorLeakDetector();
 
@@ -28,8 +28,11 @@ public:
 
     VectorTracer *RemoveTracer(std::atomic<VectorTracer *> &head);
 
+    void SetScope(const std::string &newScope);
+
 private:
-    const std::string scope;
+
+    std::string scope;
     const static int32_t bucketNum = 1024;
     const static int32_t recycleThreshold = 1024;
     std::unique_ptr<std::atomic<VectorTracer *>[]> buckets;
