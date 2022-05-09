@@ -14,7 +14,7 @@
 
 int KunpengCpuCheck()
 {
-#ifdef DEBUG
+#ifdef DISABLE_CHECKER
     return 0;
 #endif
     unsigned long int midrEl1;
@@ -29,7 +29,7 @@ int KunpengCpuCheck()
 
 int DoQingsongCpuCheck(char *file)
 {
-#ifdef DEBUG
+#ifdef DISABLE_CHECKER
     return 0;
 #endif
     int fd;

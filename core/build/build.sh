@@ -55,6 +55,9 @@ append_options()
             elif [ "$i" = '--disable-jit' ]; then
               echo "-- Disable JIT"
               options="$options -DDISABLE_JIT=ON"
+            elif [ "$i" = '--disable-cpuchecker' ]; then
+              echo "-- Disable CPU checker"
+              options="$options -DDISABLE_CHECKER=ON"
             fi
         fi
     done
@@ -75,10 +78,7 @@ if [ $# != 0 ] ; then
   elif [ "$1" = 'release' ];then
     echo "-- Enable Release"
     options="$options -DCMAKE_BUILD_TYPE=Release"
-    if [ "$2" = '--disable-jit' ]; then
-      echo "-- Disable JIT"
-      options="$options -DDISABLE_JIT=ON"
-    fi
+    append_options $*
   elif [ "$1" = 'coverage' ]; then
       echo "-- Enable Coverage"
       options="$options -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON"
