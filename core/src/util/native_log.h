@@ -17,6 +17,7 @@ extern jmethodID logInfoId;
 extern jmethodID logDebugId;
 extern JavaVM *localJVM;
 extern jobject oplogObj;
+extern int g_logLevel;
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_utils_NativeLog_initLog(JNIEnv *env, jclass jclz);
 

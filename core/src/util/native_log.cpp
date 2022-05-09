@@ -14,6 +14,12 @@ jmethodID logInfoId;
 jmethodID logDebugId;
 JavaVM *localJVM;
 jobject oplogObj;
+int g_logLevel;
+
+int GetLogLevel()
+{
+    return g_logLevel;
+}
 
 void Log(const std::string &logStr, LogType logLev)
 {
@@ -53,6 +59,28 @@ void FreeLog()
     tmpEnv->DeleteLocalRef(oplogObj);
 }
 
+void InitLevel(JNIEnv *env)
+{
+    jclass logClass = env->FindClass("org/slf4j/Logger");
+    jmethodID logDebugLevelId = env->GetMethodID(logClass, "isDebugEnabled", "()Z");
+    jmethodID logInfoLevelId = env->GetMethodID(logClass, "isInfoEnabled", "()Z");
+    jmethodID logWarnLevelId = env->GetMethodID(logClass, "isWarnEnabled", "()Z");
+    jmethodID logErrorLevelId = env->GetMethodID(logClass, "isErrorEnabled", "()Z");
+
+    if (env->CallBooleanMethod(oplogObj, logDebugLevelId)) {
+        g_logLevel = static_cast<int>(LogType::LOG_DEBUG);
+    } else if (env->CallBooleanMethod(oplogObj, logInfoLevelId)) {
+        g_logLevel = static_cast<int>(LogType::LOG_INFO);
+    } else if (env->CallBooleanMethod(oplogObj, logWarnLevelId)) {
+        g_logLevel = static_cast<int>(LogType::LOG_WARN);
+    } else if (env->CallBooleanMethod(oplogObj, logErrorLevelId)) {
+        g_logLevel = static_cast<int>(LogType::LOG_ERROR);
+    } else {
+        g_logLevel = static_cast<int>(LogType::LOG_ERROR) + 1;
+    }
+    return;
+}
+
 JNIEXPORT void Java_nova_hetu_omniruntime_utils_NativeLog_initLog(JNIEnv *env, jclass jclz)
 {
     jfieldID logId = env->GetStaticFieldID(jclz, "logger", "Lorg/slf4j/Logger;");
@@ -70,6 +98,8 @@ JNIEXPORT void Java_nova_hetu_omniruntime_utils_NativeLog_initLog(JNIEnv *env, j
 
     // get debug method
     logDebugId = env->GetMethodID(logClass, "debug", "(Ljava/lang/String;)V");
+
+    InitLevel(env);
 
     env->GetJavaVM(&localJVM);
 }
