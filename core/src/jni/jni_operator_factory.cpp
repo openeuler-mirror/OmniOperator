@@ -79,7 +79,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                               */
+ *                                                                                 */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -91,13 +91,16 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     env->ReleaseStringUTFChars(jGroupByType, groupByTypesCharPtr);
     auto aggFuncsCount = env->GetArrayLength(jAggFuncType);
 
-    auto jitContext = CreateHashAggregationJitContext(groupByDataTypes, aggFuncsCount);
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateHashAggregationJitContext(groupByDataTypes, aggFuncsCount);
+    JNI_METHOD_END(0)
     return reinterpret_cast<uint64_t>(jitContext);
 }
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                               */
+ *                                                                                 */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -149,19 +152,22 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                               */
+ *                                                                                 */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
     jstring jAggOutputTypes, jboolean inputRaw, jboolean outputPartial)
 {
-    auto jitContext = CreateAggregationJitContext();
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateAggregationJitContext();
+    JNI_METHOD_END(0)
     return reinterpret_cast<uint64_t>(jitContext);
 }
 
 /**
  * Return an AggregationFactory object address.
- *                                                                                */
+ *                                                                                  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
@@ -214,9 +220,11 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortJitCo
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
     auto outputColsCount = env->GetArrayLength(jOutputCols);
 
-    auto jitContext = CreateSortJitContext(sourceDataTypes, outputColsArr, outputColsCount, sortColsArr, ascendingsArr,
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateSortJitContext(sourceDataTypes, outputColsArr, outputColsCount, sortColsArr, ascendingsArr,
         nullFirstsArr, sortColsCount);
-
+    JNI_METHOD_END(0)
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
     return (int64_t)jitContext;
@@ -288,10 +296,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
     allTypesVec.insert(allTypesVec.end(), outputDataTypes.Get().begin(), outputDataTypes.Get().end());
     DataTypes allTypes(allTypesVec);
 
-    JitContext *jitContext = CreateWindowJitContext(inputDataTypes, outputChannels, outputColsCount, partitionChannels,
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateWindowJitContext(inputDataTypes, outputChannels, outputColsCount, partitionChannels,
         partitionCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, const_cast<int32_t *>(allTypes.GetIds()),
         allTypes.GetSize());
-
+    JNI_METHOD_END(0)
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
     return (int64_t)jitContext;
@@ -366,7 +376,10 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNJitCo
     auto sourceTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
-    auto jitContext = CreateTopNJitContext(sourceTypes, sortCols, sortColCount);
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateTopNJitContext(sourceTypes, sortCols, sortColCount);
+    JNI_METHOD_END(0)
     return (int64_t)jitContext;
 }
 
@@ -497,7 +510,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
     auto buildHashColsArr = env->GetIntArrayElements(jBuildHashCols, JNI_FALSE);
 
     auto buildDataTypes = Deserialize(buildTypesCharPtr);
-    auto jitContext = CreateHashBuilderJitContext(buildDataTypes, buildHashColsArr, buildHashColsCount);
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateHashBuilderJitContext(buildDataTypes, buildHashColsArr, buildHashColsCount);
+    JNI_METHOD_END(0)
     env->ReleaseStringUTFChars(jBuildTypes, buildTypesCharPtr);
     return (int64_t)(jitContext);
 }
@@ -542,9 +558,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
 
     auto probeDataTypes = Deserialize(probeTypesCharPtr);
     auto buildOutputDataTypes = Deserialize(buildOutputTypesCharPtr);
-    auto jitContext = CreateLookupJoinJitContext(probeDataTypes, probeOutputColsCount, probeHashColsArr,
-        probeHashColsCount, buildOutputDataTypes, buildOutputColsArr);
-
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateLookupJoinJitContext(probeDataTypes, probeOutputColsCount, probeHashColsArr, probeHashColsCount,
+        buildOutputDataTypes, buildOutputColsArr);
+    JNI_METHOD_END(0)
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesCharPtr);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesCharPtr);
     return (int64_t)jitContext;
@@ -696,8 +714,11 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 
     // parse the expressions
     auto sortExprsArr = GetExprsFromJson(sortKeysArr, sortKeysCount);
-    auto jitContext = CreateSortWithExprJitContext(sourceDataTypes, outputCols, outputColsCount, sortExprsArr,
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateSortWithExprJitContext(sourceDataTypes, outputCols, outputColsCount, sortExprsArr,
         ascendings, nullFirsts);
+    JNI_METHOD_END(0)
     DeleteExprs(sortExprsArr);
     return (int64_t)jitContext;
 }
@@ -753,8 +774,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
 
     // parse the expressions
     auto buildHashExprsArr = GetExprsFromJson(buildHashKeysArr, buildHashKeysCount);
-
-    auto jitContext = CreateHashBuilderWithExprJitContext(buildDataTypes, buildHashExprsArr);
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateHashBuilderWithExprJitContext(buildDataTypes, buildHashExprsArr);
+    JNI_METHOD_END(0)
     DeleteExprs(buildHashExprsArr);
     return (int64_t)jitContext;
 }
@@ -808,9 +831,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
 
     // parse the expressions
     auto probeHashExprsArr = GetExprsFromJson(probeHashKeysArr, probeHashKeysCount);
-
-    auto jitContext = CreateLookupJoinWithExprJitContext(probeDataTypes, probeOutputColsCount, probeHashExprsArr,
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateLookupJoinWithExprJitContext(probeDataTypes, probeOutputColsCount, probeHashExprsArr,
         buildOutputDataTypes, buildOutputCols);
+    JNI_METHOD_END(0)
     DeleteExprs(probeHashExprsArr);
     return (int64_t)jitContext;
 }
@@ -887,10 +912,12 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 
     // parse the expressions
     auto argumentExprsArr = GetExprsFromJson(argumentKeysArr, argumentKeysCount);
-
-    JitContext *jitContext =
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext =
         CreateWindowWithExprJitContext(inputDataTypes, outputChannels, outputColsCount, partitionChannels,
         partitionCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, outputDataTypes, argumentExprsArr);
+    JNI_METHOD_END(0)
 
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
@@ -968,9 +995,10 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
     // parse the expressions
     auto groupByExprsArr = GetExprsFromJson(groupByKeys, groupByNum);
-
-    JitContext *jitContext = CreateHashAggregationWithExprJitContext(groupByExprsArr, aggFuncsCount);
-
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateHashAggregationWithExprJitContext(groupByExprsArr, aggFuncsCount);
+    JNI_METHOD_END(0)
     env->ReleaseStringUTFChars(jSourceType, sourceTypesCharPtr);
     DeleteExprs(groupByExprsArr);
     return reinterpret_cast<uint64_t>(jitContext);
@@ -1035,8 +1063,10 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     // parse the expressions
     auto sortExprsArr = GetExprsFromJson(sortKeysArr, sortKeysCount);
-
-    auto jitContext = CreateTopNWithExprJitContext(sourceDataTypes, sortExprsArr);
+    JitContext *jitContext = nullptr;
+    JNI_METHOD_START
+    jitContext = CreateTopNWithExprJitContext(sourceDataTypes, sortExprsArr);
+    JNI_METHOD_END(0)
     DeleteExprs(sortExprsArr);
     return reinterpret_cast<uint64_t>(jitContext);
 }

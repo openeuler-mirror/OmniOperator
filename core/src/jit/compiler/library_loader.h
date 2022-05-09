@@ -74,9 +74,8 @@ class LibraryLoader {
 public:
     LibraryLoader() noexcept;
     ~LibraryLoader();
-    std::vector<std::string> LoadLibraries(std::string envStr) noexcept;
-    bool FinishedLoading();
-    static std::string ExtractFileName(std::string path);
+    bool LoadedLibraries(const std::string &envStr) noexcept;
+    static std::string ExtractFileName(const std::string &path);
 
 private:
     void SearchPath(std::string path, std::unordered_map<std::string, std::vector<std::string>> &candidates);

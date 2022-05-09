@@ -46,6 +46,7 @@ ErrorCode VectorBatchWriter::CreateTempFile(const std::string &path)
 
 ErrorCode VectorBatchWriter::WriteVecBatches(VectorBatchUnitIter &vecBatches)
 {
+    LogInfo("Spill data to disk starting.");
     int64_t totalRowCount = 0;
     bool writtenHeader = false;
     while (vecBatches.HasNext()) {
@@ -82,6 +83,7 @@ ErrorCode VectorBatchWriter::WriteVecBatches(VectorBatchUnitIter &vecBatches)
         close(fd);
         return ErrorCode::WRITE_FAILED;
     }
+    LogInfo("Spill data to disk finished.");
     return ErrorCode::SUCCESS;
 }
 

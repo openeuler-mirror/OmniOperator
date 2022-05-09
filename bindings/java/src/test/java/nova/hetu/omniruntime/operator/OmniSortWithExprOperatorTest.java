@@ -294,18 +294,6 @@ public class OmniSortWithExprOperatorTest {
                 new OperatorConfig(false, new SparkSpillConfig("/opt", 1)));
     }
 
-    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*DISK_SPACE_NOT_ENOUGH.*")
-    public void TestSortSpillWithInvalidSpillSize() {
-        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
-        int[] outputCols = {0, 1};
-        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
-        int[] ascendings = {1, 1};
-        int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig(true, generateSpillPath(), Long.MAX_VALUE, 1)));
-    }
-
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*DISK_STAT_FAILED.*")
     public void TestSortSpillWithInvalidPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
