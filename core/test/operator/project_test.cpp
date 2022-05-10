@@ -2529,25 +2529,28 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
     std::vector<DataType> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
-    omniruntime::op::Operator *op = factory->CreateOperator();
-    int64_t allData[numCols] = {};
-    VectorAllocator *vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64ArithOutputDecimal128");
-    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
-    op->AddInput(t);
-    vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_EQ(numReturned, numRows);
-    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
-    EXPECT_EQ(val0.HighBits(), 1L << 63);
-    EXPECT_EQ(val0.LowBits(), 999999999999999997L);
-    Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(0);
-    EXPECT_EQ(val1.HighBits(), 1L << 63);
-    EXPECT_EQ(val1.LowBits(), 1000000000000000001);
-
-    VectorHelper::FreeVecBatches(ret);
-    delete op;
+    // Not supporting promote decimal64 to decimal128 for now
+    EXPECT_FALSE(factory->IsSupported());
+//    omniruntime::op::Operator *op = factory->CreateOperator();
+//    int64_t allData[numCols] = {};
+//    VectorAllocator *vecAllocator =
+//        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64ArithOutputDecimal128");
+//    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+//
+//    op->AddInput(t);
+//    vector<VectorBatch *> ret;
+//    int32_t numReturned = op->GetOutput(ret);
+//    EXPECT_EQ(numReturned, numRows);
+//    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+//    EXPECT_EQ(val0.HighBits(), 1L << 63);
+//    EXPECT_EQ(val0.LowBits(), 999999999999999997L);
+//    Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(0);
+//    EXPECT_EQ(val1.HighBits(), 1L << 63);
+//    EXPECT_EQ(val1.LowBits(), 1000000000000000001);
+//
+//    VectorHelper::FreeVecBatches(ret);
+//    delete op;
     delete factory;
 }
 

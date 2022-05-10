@@ -434,6 +434,11 @@ Value *ExpressionCodeGen::HandleDivisionByZero(Value *divisorValue, DataTypeId t
     return phi;
 }
 
+CodeGenValuePtr CreateInvalidCodeGenValue()
+{
+    return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+}
+
 // Helper methods to parse binary expressions
 void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
     Value *rightIsNull)
@@ -482,8 +487,8 @@ void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value 
             break;
         }
         default:
-            LogWarn("Unsupported int/long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
-            return;
+            LogError("Unsupported int/long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            this->value = CreateInvalidCodeGenValue();
     }
 
     // Only add, minus, multiply promote decimal64 to decimal128, div doesn't.
@@ -1048,11 +1053,6 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     }
 }
 
-CodeGenValuePtr CreateInvalidCodeGenValue()
-{
-    return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
-}
-
 std::pair<Value *, Value *> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeGenValue &left, CodeGenValue &right,
     int scaleDiff, DataTypeId typeId)
 {
@@ -1088,6 +1088,14 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 
     if (AreInvalidDataTypes(bExpr->left->GetReturnTypeId(), bExpr->right->GetReturnTypeId())) {
         LogError("return type and args must have the same data types");
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+
+    if (bExpr->left->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL64 &&
+        bExpr->right->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL64 &&
+        bExpr->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL128) {
+        LogError("Not handling decimal type promotion for now");
         this->value = CreateInvalidCodeGenValue();
         return;
     }

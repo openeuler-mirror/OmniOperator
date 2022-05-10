@@ -112,7 +112,6 @@ protected:
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 
-
     std::pair<llvm::Value *, llvm::Value *> RescaleDecimals(omniruntime::expressions::Expr &expr, CodeGenValue &left,
         CodeGenValue &right, int scaleDiff, omniruntime::type::DataTypeId typeId);
 
