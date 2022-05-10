@@ -35,6 +35,8 @@ void Log(const std::string &logStr, LogType logLev);
 
 void FreeLog();
 
+int GetLogLevel();
+
 #ifdef __cplusplus
 }
 #endif

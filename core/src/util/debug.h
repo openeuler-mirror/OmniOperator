@@ -64,34 +64,42 @@ using fsec = std::chrono::duration<float>;
 
 #define LogDebug(format, ...)                                                                        \
     do {                                                                                             \
+    if (static_cast<int>(LogType::LOG_DEBUG) >= GetLogLevel()){                                      \
         char logBuf[GLOBAL_LOG_BUF_SIZE];                                                            \
         LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                            \
         std::string logString(logBuf);                                                               \
         Log(logString, LogType::LOG_DEBUG);                                                          \
+        }                                                                                            \
     } while (0)
 
 #define LogInfo(format, ...)                                                                        \
     do {                                                                                            \
+    if (static_cast<int>(LogType::LOG_INFO) >= GetLogLevel()){                                      \
         char logBuf[GLOBAL_LOG_BUF_SIZE];                                                           \
         LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                           \
         std::string logString(logBuf);                                                              \
         Log(logString, LogType::LOG_INFO);                                                          \
+        }                                                                                           \
     } while (0)
 
 #define LogWarn(format, ...)                                                                        \
     do {                                                                                            \
+    if (static_cast<int>(LogType::LOG_WARN) >= GetLogLevel()){                                      \
         char logBuf[GLOBAL_LOG_BUF_SIZE];                                                           \
         LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                           \
         std::string logString(logBuf);                                                              \
         Log(logString, LogType::LOG_WARN);                                                          \
+        }                                                                                           \
     } while (0)
 
 #define LogError(format, ...)                                                                       \
     do {                                                                                            \
+    if (static_cast<int>(LogType::LOG_ERROR) >= GetLogLevel()){                                     \
         char logBuf[GLOBAL_LOG_BUF_SIZE];                                                           \
         LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);                                           \
         std::string logString(logBuf);                                                              \
         Log(logString, LogType::LOG_ERROR);                                                         \
+        }                                                                                           \
     } while (0)
 
 #if defined(DEBUG) || defined(TRACE)
