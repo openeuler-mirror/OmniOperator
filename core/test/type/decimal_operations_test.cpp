@@ -22,12 +22,12 @@ TEST(DecimalOperations, sum_encode_and_decode_decimal)
     Decimal128 oldDec;
     int64_t oldOverflow = 1;
     oldDec.SetValue(1, 2);
-    DecimalOperations::EncodeSumDecimal(state.val, oldDec, oldOverflow);
+    DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), oldDec, oldOverflow);
     // decode phase
     Decimal128 newDec;
     newDec.SetValue(0, 0);
     int64_t newOverflow = 1;
-    DecimalOperations::DecodeSumDecimal(state.val, newDec, newOverflow);
+    DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), newDec, newOverflow);
 
     EXPECT_EQ(newOverflow, oldOverflow);
     EXPECT_EQ(newDec, oldDec);
@@ -48,13 +48,11 @@ TEST(DecimalOperations, add_with_overflow)
     Decimal128 result1 = 0;
     int64_t c = 1LL << 63;
     left1.SetValue(c, 3);
-    int64_t expectValue1 = 0x8000000000000000;
-    int64_t expectValue2 = 1;
+    Decimal128 expectValue1(0x8000000000000000LL, 1);
     long overflow1 = DecimalOperations::AddWithOverflow(left1, right1, result1);
-    EXPECT_EQ(result1.HighBits(), expectValue1);
-    EXPECT_EQ(result1.LowBits(), expectValue2);
+    EXPECT_EQ(result1.HighBits(), expectValue1.HighBits());
+    EXPECT_EQ(result1.LowBits(), expectValue1.LowBits());
     EXPECT_EQ(overflow1, 0);
-
 
     Decimal128 left2;
     Decimal128 right2 = 2;
@@ -65,7 +63,6 @@ TEST(DecimalOperations, add_with_overflow)
     long overflow2 = DecimalOperations::AddWithOverflow(left2, right2, result2);
     EXPECT_EQ(result2, expectValue3);
     EXPECT_EQ(overflow2, 0);
-
 
     Decimal128 left3;
     Decimal128 right3;
@@ -79,6 +76,17 @@ TEST(DecimalOperations, add_with_overflow)
     EXPECT_EQ(result3.HighBits(), expectValue5);
     EXPECT_EQ(result3.LowBits(), expectValue4);
     EXPECT_EQ(overflow3, 0);
+
+    Decimal128 one;
+    Decimal128 negativeOne;
+    one.SetValue(0, 1);
+    negativeOne.SetValue(1LL << 63, 1);
+    Decimal128 expected(0, 0);
+    Decimal128 result4;
+    int64_t overflow4 = DecimalOperations::AddWithOverflow(one, negativeOne, result4);
+    EXPECT_EQ(result4.HighBits(), expected.HighBits());
+    EXPECT_EQ(result4.LowBits(), expected.LowBits());
+    EXPECT_EQ(overflow4, 0);
 }
 
 TEST(DecimalOperations, exceeds_or_equal_ten_to_thirty_eight)
@@ -111,14 +119,14 @@ TEST(DecimalOperations, decode_avg_decimal)
     int64_t oldOther = 1;
     int64_t oldOverflow = 1;
     oldDec.SetValue(2, 3);
-    DecimalOperations::EncodeAvgDecimal(state.val, oldDec, oldOverflow, oldOther);
+    DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
 
     // decode phase
     Decimal128 newDec;
     newDec.SetValue(0, 0);
     int64_t newOverflow = 0;
     int64_t newOther = 0;
-    DecimalOperations::DecodeAvgDecimal(state.val, newDec, newOverflow, newOther);
+    DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
     EXPECT_EQ(newOverflow, oldOverflow);
     EXPECT_EQ(newOverflow, oldOverflow);
 }
@@ -132,18 +140,14 @@ TEST(DecimalOperations, unscaled_decimal)
     EXPECT_EQ(decimal128.LowBits(), decimal.LowBits());
 }
 
-TEST(DecimalOperations, roundUp)
+TEST(DecimalOperations, divide)
 {
-    Decimal128 newDec1 = 2;
-    Decimal128 newDec2 = 1;
-    Decimal128 newDec3 = 3;
-    Decimal128 newDec4 = 2;
-    Decimal128 expectValue = 4;
-    DecimalOperations::RoundUp(newDec1, newDec2, newDec3, newDec4);
-    EXPECT_EQ(newDec3, expectValue);
-
-    newDec4 = 0;
-    DecimalOperations::RoundUp(newDec1, newDec2, newDec3, newDec4);
-    EXPECT_EQ(newDec3, expectValue);
+    Decimal128 dividend(Decimal128::SIGN_LONG_MASK, 2000000000001635618);
+    Decimal128 divisor(0, 4);
+    auto result = DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0);
+    int64_t low = result.LowBits();
+    int64_t shortResult = DecimalOperations::IsNegative(result) ? -low : low;
+    int64_t expectedVal = -500000000000408905;
+    EXPECT_EQ(expectedVal, shortResult);
 }
 }

@@ -1,31 +1,32 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
- * Description: Sum aggregate for short decimal
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Aggregate factories
  */
-#ifndef OMNI_RUNTIME_SUM_SHORT_DECIMAL_AGGREGATOR_H
-#define OMNI_RUNTIME_SUM_SHORT_DECIMAL_AGGREGATOR_H
+
+#ifndef OMNI_RUNTIME_SUM_FINAL_DECIMAL_AGGREGATOR_H
+#define OMNI_RUNTIME_SUM_FINAL_DECIMAL_AGGREGATOR_H
 
 #include "aggregator.h"
 #include "type/decimal_operations.h"
+
 
 namespace omniruntime {
 namespace op {
 /**
  * For ProcessGroup the input vector type is LongVec and output vector type is VarcharVec
  */
-
-class SumShortDecimalAggregator : public Aggregator {
+class SumFinalDecimalAggregator : public Aggregator {
 public:
-    SumShortDecimalAggregator(const DataType &in, const DataType &out, int32_t channel)
+    SumFinalDecimalAggregator(const DataType &in, const DataType &out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumShortDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw,
+    SumFinalDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw,
         bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 
-    ~SumShortDecimalAggregator() override = default;
+    ~SumFinalDecimalAggregator() override = default;
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
@@ -38,13 +39,17 @@ public:
             InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
-        // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
-        // 1. get a new value
+
+        // 1. get a new intermediate value
+        uint8_t *otherState = nullptr;
         int64_t oldOverflow = 0;
-        Decimal128 curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
+        int64_t otherOverflow = 0;
+        static_cast<VarcharVector *>(vector)->GetValue(offset, &otherState);
+        // 2. decode current state and intermediate state
         Decimal128 leftVal;
-        // 2. decode current state
+        Decimal128 curVal;
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
+        DecimalOperations::DecodeSumDecimal(reinterpret_cast<DecimalSumState *>(otherState), curVal, otherOverflow);
         // 3. do calculation
         int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
         oldOverflow += newOverflow;
@@ -59,12 +64,17 @@ public:
         if (vector->IsValueNull(offset)) {
             return;
         }
-        // input vector is expected as LongVec
-        auto curVal = (static_cast<LongVector *>(vector))->GetValue(offset);
 
-        state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
-        Decimal128 initState = DecimalOperations::UnscaledDecimal(curVal);
-        DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), initState, 0);
+        // input vector is expected as VarcharVec
+        uint8_t *otherState = nullptr;
+        auto length = (static_cast<VarcharVector *>(vector))->GetValue(offset, &otherState);
+
+        state.val = executionContext->GetArena()->Allocate(length);
+        memcpy_s(state.val, length, otherState, length);
+
+        Decimal128 curVal;
+        int64_t oldOverflow = 0;
+        DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), curVal, oldOverflow);
     }
 
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
@@ -83,15 +93,10 @@ public:
         }
         DecimalOperations::ThrowIfOverflows(result);
 
-        if (outputPartial) {
-            static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
-                PARTIAL_SUM_OUTPUT_LENGTH);
-        } else {
-            // this branch is for window operator
-            static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, result);
-        }
+        static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, result);
     }
 };
 }
 }
-#endif // OMNI_RUNTIME_SUM_SHORT_DECIMAL_AGGREGATOR_H
+
+#endif // OMNI_RUNTIME_SUM_FINAL_DECIMAL_AGGREGATOR_H

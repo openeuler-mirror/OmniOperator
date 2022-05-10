@@ -122,7 +122,6 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     }
 
     result.push_back(outputVecBatch);
-
     SetStatus(OMNI_STATUS_FINISHED);
     return OMNI_STATUS_FINISHED;
 }

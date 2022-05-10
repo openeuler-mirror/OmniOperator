@@ -7,13 +7,12 @@
 
 #include <cstdint>
 #include <iostream>
+#include <array>
 
 #include "decimal_base.h"
 
 namespace omniruntime {
 namespace type {
-static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
-
 enum class OpStatus {
     SUCCESS = 0,
     OP_OVERFLOW = 1,
@@ -21,6 +20,7 @@ enum class OpStatus {
     FAIL = 3
 };
 
+// The highest bit of Decimal128 is sign flag.
 class Decimal128 : public BasicDecimal {
 public:
     Decimal128(int64_t highBits, uint64_t lowBits);
@@ -39,14 +39,6 @@ public:
     }
 
     ~Decimal128() {}
-
-    Decimal128 &operator += (const Decimal128 &right);
-
-    Decimal128 &operator -= (const Decimal128 &right);
-
-    Decimal128 &operator *= (const Decimal128 &right);
-
-    Decimal128 &operator /= (const Decimal128 &right);
 
     bool operator == (const Decimal128 &right) const;
 
@@ -81,56 +73,47 @@ public:
         return 1 | (highBits >> 63);
     }
 
-    int64_t IsNegative() const
+    static int64_t Absolute(int64_t bits)
     {
-        return highBits < 0;
+        return bits & ~SIGN_LONG_MASK;
     }
 
-    int32_t Compare(const Decimal128& right) const
+    // this function is for template
+    int32_t Compare(const Decimal128 &right) const
     {
-        int32_t comparison = highBits < right.highBits ? -1 : (highBits == right.highBits ? 0 : 1);
-        if (comparison == 0) {
-            if (highBits == SIGN_LONG_MASK) {
-                comparison = lowBits > right.lowBits ? -1 : (lowBits == right.lowBits ? 0 : 1);
+        bool isLeftNegative = highBits < 0;
+        bool isRightNegative = right.HighBits() < 0;
+        if (isLeftNegative != isRightNegative) {
+            return isLeftNegative ? -1 : 1;
+        } else {
+            int32_t absoluteComparison;
+            int64_t leftHigh = Absolute(highBits);
+            uint64_t leftLow = lowBits;
+            int64_t rightHigh = Absolute(right.HighBits());
+            uint64_t rightLow = right.LowBits();
+            if (leftHigh != rightHigh) {
+                absoluteComparison = leftHigh > rightHigh ? 1 : -1;
             } else {
-                comparison = lowBits < right.lowBits ? -1 : (lowBits == right.lowBits ? 0 : 1);
+                absoluteComparison = leftLow > rightLow ? 1 : leftLow == rightLow ? 0 : -1;
             }
+            return isLeftNegative ? -absoluteComparison : absoluteComparison;
         }
-        return comparison;
     }
 
-    Decimal128 &Negate();
-
-    Decimal128 &Abs();
-
-    static Decimal128 &Abs(const Decimal128 &decimal);
-
-    OpStatus Divide(const Decimal128 &divisor, Decimal128 &result, Decimal128 &remainder) const;
-
-    Decimal128 &Rescale(int32_t delta);
-
-    static constexpr int32_t BYTE_WIDTH = 16;
-    static constexpr int32_t BIT_WIDTH = 128;
-    static constexpr int32_t LOW_BITS_WIDTH = 64;
-    static constexpr int64_t DIVISION_ARRAY_LENGTH_FOUR = 4;
-    static constexpr int64_t DIVISION_ARRAY_LENGTH_THREE = 3;
-    static constexpr int64_t DIVISION_ARRAY_LENGTH_TWO = 2;
+    static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
+    static constexpr int64_t SIGN_INT_MASK = 1 << 31;
+    static constexpr uint32_t INT_TO_UNSIGNED_LONG_MASK = 0xFFFF'FFFF;
+    static constexpr int32_t MAX_PRECISION = 38;
+    static constexpr int32_t BYTES_OF_LONG = 8;
+    static constexpr uint64_t LOW_64_BITS = 0xFFFF'FFFF'FFFF'FFFF;
+    static constexpr uint32_t LOW_32_BITS = 0xFFFF'FFFF;
+    static constexpr int32_t MAX_POWER_OF_FIVE_INT = 13;
+    static constexpr int32_t MAX_POWER_OF_FIVE_LONG = 27;
 
 private:
     uint64_t lowBits;
     int64_t highBits;
-    static const Decimal128 SCALE_MULTIPLIERS[];
 };
-
-Decimal128 operator + (const Decimal128 &left, const Decimal128 &right);
-
-Decimal128 operator - (const Decimal128 &left, const Decimal128 &right);
-
-Decimal128 operator*(const Decimal128 &left, const Decimal128 &right);
-
-Decimal128 operator / (const Decimal128 &left, const Decimal128 &right);
-
-Decimal128 operator % (const Decimal128 &left, const Decimal128 &right);
 
 std::ostream &operator << (std::ostream &os, const Decimal128 &decimal128);
 }

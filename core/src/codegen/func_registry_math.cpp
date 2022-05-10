@@ -16,6 +16,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(Abs<int32_t>), absFnStr, {}, { OMNI_INT }, OMNI_INT),
         Function(reinterpret_cast<void *>(Abs<int64_t>), absFnStr, {}, { OMNI_LONG }, OMNI_LONG),
         Function(reinterpret_cast<void *>(Abs<double>), absFnStr, {}, { OMNI_DOUBLE }, OMNI_DOUBLE),
+        Function(reinterpret_cast<void *>(Abs<int64_t>), absFnStr, {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64),
 
         // insert native functions for each cast math function
         Function(reinterpret_cast<void *>(CastInt32ToDouble), castFnStr, {}, { OMNI_INT }, OMNI_DOUBLE),

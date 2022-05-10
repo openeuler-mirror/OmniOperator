@@ -5,8 +5,8 @@
 #define OMNI_RUNTIME_OPERATOR_UTIL_H
 
 #include <memory>
-#include "../../vector/vector_common.h"
-#include "../projection/projection.h"
+#include "vector/vector_common.h"
+#include "operator/projection/projection.h"
 
 namespace omniruntime {
 namespace op {
@@ -150,8 +150,9 @@ public:
     static ALWAYS_INLINE int32_t CompareTemplate(Vector *leftVector, int32_t leftPosition, Vector *rightVector,
         int32_t rightPosition)
     {
-        return static_cast<V *>(leftVector)->GetValue(leftPosition) -
-            static_cast<V *>(rightVector)->GetValue(rightPosition);
+        auto left = static_cast<V *>(leftVector)->GetValue(leftPosition);
+        auto right = static_cast<V *>(rightVector)->GetValue(rightPosition);
+        return left > right ? COMPARE_STATUS_GREATER_THAN : left < right ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_EQUAL;
     }
 
     static ALWAYS_INLINE int32_t CompareDouble(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,

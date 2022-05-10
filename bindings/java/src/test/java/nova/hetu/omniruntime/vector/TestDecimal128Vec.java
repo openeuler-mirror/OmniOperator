@@ -12,6 +12,7 @@ import nova.hetu.omniruntime.type.Decimal128DataType;
 
 import org.testng.annotations.Test;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
@@ -191,8 +192,8 @@ public class TestDecimal128Vec {
         BigInteger bigInteger = new BigInteger("11111111111111111111111111111111111111");
 
         long[] longs = Decimal128Vec.putDecimal(bigInteger);
-        assertEquals(longs[0], 602334540269724685L);
-        assertEquals(longs[1], -8122175193715281465L);
+        assertEquals(longs[1], 602334540269724685L);
+        assertEquals(longs[0], -8122175193715281465L);
 
         BigInteger newBigInteger = Decimal128Vec.getDecimal(longs);
         assertEquals(newBigInteger, bigInteger);
@@ -204,16 +205,29 @@ public class TestDecimal128Vec {
     @Test
     public void testSetGetBigInteger() {
         final int size = 1024;
-        BigInteger bigInteger = new BigInteger("11111111111111111111111111111111111111");
-        Decimal128Vec vec = new Decimal128Vec(size);
+        BigDecimal decimal128 = new BigDecimal("11111111111111111111111111111111111111");
+        Decimal128Vec vec1 = new Decimal128Vec(size);
+        BigDecimal decimal64 = new BigDecimal("111111");
+        Decimal128Vec vec2 = new Decimal128Vec(size);
 
         for (int i = 0; i < size; ++i) {
-            vec.setBigInteger(i, bigInteger);
+            vec1.setBigDecimal(i, decimal128);
         }
 
         for (int i = 0; i < size; ++i) {
-            BigInteger val = vec.getBigInteger(i);
-            assertEquals(val, bigInteger);
+            BigDecimal val = vec1.getBigDecimal(i);
+            assertEquals(val, decimal128);
         }
+
+        for (int i = 0; i < size; ++i) {
+            vec2.setBigDecimal(i, decimal64);
+        }
+
+        for (int i = 0; i < size; ++i) {
+            BigDecimal val = vec2.getBigDecimal(i);
+            assertEquals(val, decimal64);
+        }
+        vec1.close();
+        vec2.close();
     }
 }

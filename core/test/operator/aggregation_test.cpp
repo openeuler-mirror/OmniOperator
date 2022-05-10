@@ -1539,7 +1539,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
         { LongDataType::Instance(), LongDataType::Instance() },
         { 2, 3, 4, 5 },
         { LongDataType::Instance(), ContainerDataType::Instance(), SUM_IMMEDIATE_VARBINARY, AVG_IMMEDIATE_VARBINARY },
-        { LongDataType::Instance(), DoubleDataType::Instance(), LONG_DECIMAL_TYPE, LongDataType::Instance() },
+        { LongDataType::Instance(), DoubleDataType::Instance(), LONG_DECIMAL_TYPE, SHORT_DECIMAL_TYPE },
         { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG },
         { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) },
     };
@@ -1761,7 +1761,7 @@ TEST(AggregatorTest, sum_test)
     }
     Decimal128 actual;
     int64_t overflow;
-    DecimalOperations::DecodeSumDecimal(state.val, actual, overflow);
+    DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), actual, overflow);
     Decimal128 expected(200L);
     EXPECT_EQ(0, overflow);
     EXPECT_EQ(expected, actual);

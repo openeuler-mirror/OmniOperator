@@ -47,11 +47,6 @@ public:
             double avgVal = avgValVector->GetValue(offset);
             int64_t avgCnt = avgCountVector->GetValue(offset);
             auto currentVal = static_cast<double *>(state.avgVal);
-            auto currentCnt = static_cast<int64_t>(state.avgCnt);
-            if (avgCnt == 0) {
-                // Fixme use error code
-                LogError("Divisor should not be zero! Offset = %d", offset);
-            }
             state.avgCnt += avgCnt;
             *currentVal += avgVal;
         }
@@ -90,16 +85,13 @@ public:
         if (outputPartial == true) {
             ContainerVector *v = static_cast<ContainerVector *>(vector);
             if (state.val == nullptr) {
-                v->SetValueNull(rowIndex);
                 auto doubleVector = reinterpret_cast<DoubleVector *>(v->GetValue(0));
                 doubleVector->SetValue(rowIndex, 0);
                 auto longVector = reinterpret_cast<LongVector *>(v->GetValue(1));
                 longVector->SetValue(rowIndex, 0);
                 return;
             }
-            if (state.avgCnt == 0) {
-                LogError("Divisor is zero!");
-            }
+
             auto doubleVector = reinterpret_cast<DoubleVector *>(v->GetValue(0));
             doubleVector->SetValue(rowIndex, *static_cast<double *>(state.avgVal));
             auto longVector = reinterpret_cast<LongVector *>(v->GetValue(1));

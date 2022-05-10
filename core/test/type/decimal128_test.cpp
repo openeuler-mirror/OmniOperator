@@ -9,206 +9,157 @@
 using namespace omniruntime::type;
 
 namespace Decimal128Test {
-TEST(Decimal128, abs_negate)
+TEST(Decimal128, abs_test)
 {
-    auto value = new Decimal128(-12, 2);
-    auto result = value->Abs();
-    EXPECT_EQ(result.HighBits(), 11);
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE);
-    delete value;
-}
-
-TEST(Decimal128, abs_positive)
-{
-    auto value = new Decimal128(12, 2);
-    auto result = value->Negate();
-    EXPECT_EQ(result.HighBits(), 0xFFFFFFFFFFFFFFF3);
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE);
-    delete value;
+    Decimal128 zero = DecimalOperations::UnscaledDecimal(0);
+    Decimal128 one = DecimalOperations::UnscaledDecimal(1);
+    Decimal128 negativeOne = DecimalOperations::UnscaledDecimal(-1);
+    auto result1 = DecimalOperations::AbsExact(zero);
+    auto result2 = DecimalOperations::AbsExact(one);
+    auto result3 = DecimalOperations::AbsExact(negativeOne);
+    EXPECT_EQ(result1.HighBits(), zero.HighBits());
+    EXPECT_EQ(result1.LowBits(), zero.LowBits());
+    EXPECT_EQ(result2.HighBits(), one.HighBits());
+    EXPECT_EQ(result2.LowBits(), one.LowBits());
+    EXPECT_EQ(result3.HighBits(), one.HighBits());
+    EXPECT_EQ(result3.LowBits(), one.LowBits());
 }
 
 TEST(Decimal128, negate)
 {
-    auto value = new Decimal128(-12, 2);
-    auto result = value->Negate();
-    EXPECT_EQ(result.HighBits(), 11);
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE);
-    delete value;
+    Decimal128 value = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 result = DecimalOperations::NegateExact(value);
+    Decimal128 positive = DecimalOperations::UnscaledDecimal(2);
+    EXPECT_EQ(result.HighBits(), positive.HighBits());
+    EXPECT_EQ(result.LowBits(), positive.LowBits());
 }
 
 TEST(Decimal128, add_normal)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(12, 2);
-    auto result = *left + *right;
-    EXPECT_EQ(result.HighBits(), 24);
+    Decimal128 left = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 result;
+    DecimalOperations::AddWithOverflow(left, right, result);
+    EXPECT_EQ(result.HighBits(), 0);
     EXPECT_EQ(result.LowBits(), 4);
-    delete left;
-    delete right;
 }
 
 TEST(Decimal128, add_negate)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(-12, -2);
-    auto result = *left + *right;
-    EXPECT_EQ(result.HighBits(), 1);
-    EXPECT_EQ(result.LowBits(), 0);
-    delete left;
-    delete right;
+    Decimal128 left = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 result;
+    DecimalOperations::AddWithOverflow(left, right, result);
+    Decimal128 negativeOne = DecimalOperations::UnscaledDecimal(0);
+    EXPECT_EQ(result.HighBits(), negativeOne.HighBits());
+    EXPECT_EQ(result.LowBits(), negativeOne.LowBits());
 }
 
-TEST(Decimal128, sub_normal)
+TEST(Decimal128, subtract_normal)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(11, 1);
-    auto result = *left - *right;
-    EXPECT_EQ(result.HighBits(), 1);
-    EXPECT_EQ(result.LowBits(), 1);
-    delete left;
-    delete right;
-}
-
-TEST(Decimal128, sub_low_browing)
-{
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(11, 9);
-    auto result = *left - *right;
+    Decimal128 left = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(1);
+    Decimal128 result;
+    DecimalOperations::Subtract(left, right, result);
     EXPECT_EQ(result.HighBits(), 0);
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFF9); // -7
-    delete left;
-    delete right;
-}
-
-TEST(Decimal128, sub_low_browing_negate)
-{
-    auto left = new Decimal128(11, 2);
-    auto right = new Decimal128(11, 9);
-    auto result = *left - *right;
-    EXPECT_EQ(result.HighBits(), 0xFFFFFFFFFFFFFFFF); // -1
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFF9);  // -7
-    delete left;
-    delete right;
+    EXPECT_EQ(result.LowBits(), 1);
 }
 
 TEST(Decimal128, multiple_positive)
 {
-    auto left = new Decimal128(11, 2);
-    auto right = new Decimal128(0, 2);
-    auto result = *left * *right;
-    EXPECT_EQ(result.HighBits(), 22);
+    Decimal128 left = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 result;
+    DecimalOperations::Multiply(left, right, result);
+    EXPECT_EQ(result.HighBits(), 0);
     EXPECT_EQ(result.LowBits(), 4);
-    delete left;
-    delete right;
 }
 
 TEST(Decimal128, multiple_negate)
 {
-    auto left = new Decimal128(0, 2);
-    auto right = new Decimal128(0, -1);
-    auto result = *left * *right;
-    EXPECT_EQ(result.HighBits(), 1);                 // 1
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE); // -2
-}
-
-TEST(Decimal128, multiple_integer)
-{
-    auto left = new Decimal128(6, 2);
-    int32_t right = 2;
-    auto result = *left * right;
-    EXPECT_EQ(result.HighBits(), 12);
-    EXPECT_EQ(result.LowBits(), 4);
-    delete left;
+    Decimal128 left = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 result;
+    DecimalOperations::Multiply(left, right, result);
+    Decimal128 expected = DecimalOperations::UnscaledDecimal(-4);
+    EXPECT_EQ(result.HighBits(), expected.HighBits());
+    EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
 TEST(Decimal128, divide_positive1)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(12, 2);
-    auto result = *left / *right;
+    Decimal128 left = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(2);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
     EXPECT_EQ(result.HighBits(), 0);
     EXPECT_EQ(result.LowBits(), 1);
-    delete left;
-    delete right;
 }
 
 TEST(Decimal128, divide_positive2)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(0, 2);
-    auto result = *left / *right;
+    Decimal128 left(12, 2);
+    Decimal128 right(0, 2);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
     EXPECT_EQ(result.HighBits(), 6);
     EXPECT_EQ(result.LowBits(), 1);
-    delete left;
-    delete right;
 }
 
 TEST(Decimal128, divide_positive3)
 {
-    auto left = new Decimal128(12, 3);
-    auto right = new Decimal128(0, 2);
-    auto result = *left / *right;
+    Decimal128 left(12, 3);
+    Decimal128 right(0, 2);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
     EXPECT_EQ(result.HighBits(), 6);
-    EXPECT_EQ(result.LowBits(), 1);
-    delete left;
-    delete right;
-}
-
-TEST(Decimal128, divide_positive4)
-{
-    auto left = new Decimal128(24, 5);
-    auto right = new Decimal128(12, 2);
-    auto result = *left / *right;
-    EXPECT_EQ(result.HighBits(), 0);
     EXPECT_EQ(result.LowBits(), 2);
-    result = *left % *right;
-    EXPECT_EQ(result.HighBits(), 0);
+}
+
+TEST(Decimal128, divide_positive_round_up)
+{
+    Decimal128 left(12, 4);
+    Decimal128 right(0, 3);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    EXPECT_EQ(result.HighBits(), 4);
     EXPECT_EQ(result.LowBits(), 1);
-    delete left;
-    delete right;
 }
 
-TEST(Decimal128, divide_positive5)
+TEST(Decimal128, divide_negative)
 {
-    auto left = new Decimal128(240, 5);
-    auto right = new Decimal128(12, 2);
-    auto result = *left / *right;
-    EXPECT_EQ(result.HighBits(), 0);
-    EXPECT_EQ(result.LowBits(), 19);
-    delete left;
-    delete right;
+    Decimal128 left(Decimal128::SIGN_LONG_MASK, 4);
+    Decimal128 right(0, 2);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 expected(Decimal128::SIGN_LONG_MASK, 2);
+    EXPECT_EQ(result.HighBits(), expected.HighBits());
+    EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
-TEST(Decimal128, divide_integer)
+TEST(Decimal128, divide_negative1)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = 2;
-    auto result = *left / right;
-    EXPECT_EQ(result.HighBits(), 6);
-    EXPECT_EQ(result.LowBits(), 1);
-    delete left;
+    Decimal128 left(Decimal128::SIGN_LONG_MASK, 4);
+    Decimal128 right(Decimal128::SIGN_LONG_MASK, 2);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 expected(0, 2);
+    EXPECT_EQ(result.HighBits(), expected.HighBits());
+    EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
-TEST(Decimal128, reminder_no)
+TEST(Decimal128, divide_negative2)
 {
-    auto left = new Decimal128(12, 2);
-    auto right = new Decimal128(0, 2);
-    auto result = *left % *right;
-    EXPECT_EQ(result.HighBits(), 0);
-    EXPECT_EQ(result.LowBits(), 0);
-    delete left;
-    delete right;
+    Decimal128 left(0, 4);
+    Decimal128 right(Decimal128::SIGN_LONG_MASK, 2);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 expected(Decimal128::SIGN_LONG_MASK, 2);
+    EXPECT_EQ(result.HighBits(), expected.HighBits());
+    EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
-TEST(Decimal128, reminder)
+TEST(Decimal128, divide_negative_round_up)
 {
-    auto left = new Decimal128(12, 3);
-    auto right = new Decimal128(0, 2);
-    auto result = *left % *right;
-    EXPECT_EQ(result.HighBits(), 0);
-    EXPECT_EQ(result.LowBits(), 1);
-    delete left;
-    delete right;
+    Decimal128 left(0, 4);
+    Decimal128 right(Decimal128::SIGN_LONG_MASK, 3);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 expected(Decimal128::SIGN_LONG_MASK, 1);
+    EXPECT_EQ(result.HighBits(), expected.HighBits());
+    EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
 TEST(Decimal128, compare_eq)
@@ -293,8 +244,8 @@ TEST(Decimal128, compare_gt)
 
 TEST(Decimal128, compare_negative)
 {
-    Decimal128 left(-1);
-    Decimal128 right(-2);
+    Decimal128 left(0x8000'0000'0000'0000LL, 1);
+    Decimal128 right(0x8000'0000'0000'0000LL, 2);
     auto result = left < right;
     EXPECT_EQ(result, false);
 }
