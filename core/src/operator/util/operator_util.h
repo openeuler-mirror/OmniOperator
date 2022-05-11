@@ -104,23 +104,21 @@ public:
     {
         switch (colTypeId) {
             case OMNI_BOOLEAN:
-                return (static_cast<BooleanVector *>(leftColumn)->GetValue(leftColumnPosition) -
-                    static_cast<BooleanVector *>(rightColumn)->GetValue(rightColumnPosition));
+                return CompareTemplate<BooleanVector>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_INT:
             case OMNI_DATE32:
-                return (static_cast<IntVector *>(leftColumn)->GetValue(leftColumnPosition) -
-                    static_cast<IntVector *>(rightColumn)->GetValue(rightColumnPosition));
+                return CompareTemplate<IntVector>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                return (static_cast<LongVector *>(leftColumn)->GetValue(leftColumnPosition) -
-                    static_cast<LongVector *>(rightColumn)->GetValue(rightColumnPosition));
+                return CompareTemplate<LongVector>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_DOUBLE:
                 return CompareDouble(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 return CompareVarchar(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_DECIMAL128:
-                return CompareDecimal128(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
+                return CompareTemplate<Decimal128Vector>(leftColumn, leftColumnPosition, rightColumn,
+                    rightColumnPosition);
             default:
                 break;
         }
@@ -152,7 +150,8 @@ public:
     {
         auto left = static_cast<V *>(leftVector)->GetValue(leftPosition);
         auto right = static_cast<V *>(rightVector)->GetValue(rightPosition);
-        return left > right ? COMPARE_STATUS_GREATER_THAN : left < right ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_EQUAL;
+        return left > right ? COMPARE_STATUS_GREATER_THAN :
+                              left < right ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_EQUAL;
     }
 
     static ALWAYS_INLINE int32_t CompareDouble(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
