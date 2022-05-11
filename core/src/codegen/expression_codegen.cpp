@@ -502,6 +502,9 @@ void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value 
     } else if (binaryExpr->op == omniruntime::expressions::Operator::MUL &&
         binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
         Decimal64MultiplyHelper(binaryExpr, output, leftIsNull, rightIsNull);
+    } else if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
+        this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
+            builder->CreateOr(leftIsNull, rightIsNull));
     } else {
         this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
