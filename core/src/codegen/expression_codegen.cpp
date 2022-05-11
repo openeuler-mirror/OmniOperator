@@ -312,7 +312,7 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
                 llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
             funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             rightOne = decimalIRBuilder->CallDecimalFunction(funcId,
-                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals);
+                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals, codegenContext->executionContext);
             break;
         }
         default:
