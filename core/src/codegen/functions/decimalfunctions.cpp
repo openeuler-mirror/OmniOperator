@@ -161,7 +161,12 @@ extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y)
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
         return 0;
     }
-    return (int64_t)round(double(x) / y);
+    Decimal128 dividend = DecimalOperations::UnscaledDecimal(x);
+    Decimal128 divisor = DecimalOperations::UnscaledDecimal(y);
+    auto result = DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0);
+    int64_t low = result.LowBits();
+    int64_t shortResult = DecimalOperations::IsNegative(result) ? -low : low;
+    return shortResult;
 }
 
 extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y)
