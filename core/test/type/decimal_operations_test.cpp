@@ -151,6 +151,14 @@ TEST(DecimalOperations, divide)
     EXPECT_EQ(expectedVal, shortResult);
 }
 
+TEST(DecimalOperations, divide_unsigned)
+{
+    int64_t dividend = 78340625600;
+    int64_t divisor = -1565666771;
+    int64_t quotient = DecimalOperations::DivideUnsignedLong(dividend, divisor);
+    EXPECT_EQ(28, quotient);
+}
+
 TEST(DecimalOperations, rescale_decimal64)
 {
     int64_t val = 10LL;

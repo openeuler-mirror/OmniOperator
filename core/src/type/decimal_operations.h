@@ -507,7 +507,7 @@ public:
 
     static inline int64_t DivideUnsignedLong(uint64_t dividend, int32_t divisor)
     {
-        int64_t unsignedDivisor = (uint64_t)divisor;
+        int64_t unsignedDivisor = ToUnsignedLong(divisor);
 
         if (dividend > 0) {
             return dividend / unsignedDivisor;
