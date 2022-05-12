@@ -4,6 +4,8 @@
  */
 #include "context_helper.h"
 
+#include <utility>
+
 using namespace std;
 using namespace omniruntime::op;
 
@@ -27,6 +29,13 @@ extern "C" DLLEXPORT
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
         context->GetArena()->Reset();
+        return true;
+    }
+
+    bool SetError(int64_t contextPtr, char *errorMessage, int32_t messageLength)
+    {
+        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        context->SetError(std::string(errorMessage, messageLength));
         return true;
     }
 }

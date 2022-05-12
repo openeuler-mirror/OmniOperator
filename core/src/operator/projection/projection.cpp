@@ -28,6 +28,10 @@ RowProjFunc RowProjection::Create()
     }
     this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
+    if (fPtr == 0) {
+        return nullptr;
+    }
+
     void *refFunc = &fPtr;
     auto castedRef = static_cast<RowProjFunc *>(refFunc);
     return *castedRef;
@@ -255,6 +259,17 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     auto outBatch = new VectorBatch(nProj, resultRowCount);
     for (int32_t i = 0; i < nProj; i++) {
         Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap, offsets, context, dictionaries);
+        if (context->HasError()) {
+            // resource cleanup
+            vecData.clear();
+            for (auto &dictionaryVec : dictionaryVecs) {
+                delete dictionaryVec;
+            }
+            VectorHelper::FreeVecBatch(vecBatch);
+
+            string errorMessage = context->GetError();
+            throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
         outBatch->SetVector(i, outCol);
     }
     this->mutated = outBatch;

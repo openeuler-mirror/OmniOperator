@@ -27,7 +27,7 @@ extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
 extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr);
 
 extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
@@ -46,7 +46,7 @@ extern "C" DLLEXPORT void MakeDecimal128(int64_t xHigh, uint64_t xLow, int32_t p
 extern "C" DLLEXPORT void MakeDecimal64To128(int64_t x, int32_t precision, int32_t scale, int32_t newPrecision,
     int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT int64_t DivDec64(int64_t x, int64_t y);
+extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y);
 
 extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y);
 }

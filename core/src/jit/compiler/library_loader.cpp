@@ -187,7 +187,6 @@ bool LibraryLoader::LoadedLibraries(const string &allPaths) noexcept
             return false;
         } else {
             LLVM_DEBUG_LOG("Successfully loaded core library at path %s", filePath.c_str());
-            return true;
         }
     }
     return true;

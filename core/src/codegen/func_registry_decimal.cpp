@@ -20,7 +20,7 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
                  {}, { OMNI_DECIMAL64, OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT }, OMNI_DECIMAL128),
         Function(reinterpret_cast<void *>(AddDec128), "Add_decimal128", {}, paramTypes, retType),
         Function(reinterpret_cast<void *>(SubDec128), "Sub_decimal128", {}, paramTypes, retType),
-        Function(reinterpret_cast<void *>(DivDec128), "Div_decimal128", {}, paramTypes, retType),
+        Function(reinterpret_cast<void *>(DivDec128), "Div_decimal128", {}, paramTypes, retType, true),
         Function(reinterpret_cast<void *>(MulDec128), "Mul_decimal128", {}, paramTypes, retType),
         Function(reinterpret_cast<void *>(Decimal128Compare), "Decimal128Compare", {}, paramTypes, OMNI_INT),
         Function(reinterpret_cast<void *>(AbsDecimal128), "abs", {},
@@ -30,7 +30,7 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastInt64ToDecimal128), "CAST", {},
                  { OMNI_DECIMAL64 }, OMNI_DECIMAL128),
         Function(reinterpret_cast<void *>(DivDec64), "Div_decimal64", {},
-                 { OMNI_DECIMAL64, OMNI_DECIMAL64 }, OMNI_DECIMAL64),
+                 { OMNI_DECIMAL64, OMNI_DECIMAL64 }, OMNI_DECIMAL64, true),
         Function(reinterpret_cast<void *>(DownScaleDec64), "DownScale_decimal64", {},
                  { OMNI_DECIMAL64, OMNI_INT }, OMNI_DECIMAL64) };
 

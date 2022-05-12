@@ -193,6 +193,10 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type *> args = GetSingleFilterArguments(*context);
     llvm::Function *baseFunc = this->CreateFunction();
+    if (baseFunc == nullptr) {
+        return 0;
+    }
+
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
     llvm::Function *funcDecl =
         llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());

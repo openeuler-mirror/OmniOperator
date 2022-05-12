@@ -76,18 +76,12 @@ std::vector<Type *> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<Data
     return args;
 }
 
-/**
- * Usage example: std::vector<Value *> values;
- * values.push_back(value1);
- * values.push_back(value2);
- * PrintValues("LLVM DEBUG: %d, %d\n", values);
- */
-void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value *> &values)
+Constant *ExpressionCodeGen::CreateStringConstant(std::string s)
 {
     auto charType = Type::getInt8Ty(*context);
-    std::vector<llvm::Constant *> chars(format.size());
-    for (unsigned int i = 0; i < format.size(); i++) {
-        chars[i] = ConstantInt::get(charType, format[i]);
+    std::vector<llvm::Constant *> chars(s.size());
+    for (unsigned int i = 0; i < s.size(); i++) {
+        chars[i] = ConstantInt::get(charType, s[i]);
     }
     chars.push_back(llvm::ConstantInt::get(charType, 0));
     auto stringType = llvm::ArrayType::get(charType, chars.size());
@@ -102,7 +96,20 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     globalDeclaration->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
     // Return a cast to an i8*
-    auto formatPtr = llvm::ConstantExpr::getBitCast(globalDeclaration, charType->getPointerTo());
+    auto stringPtr = llvm::ConstantExpr::getBitCast(globalDeclaration, charType->getPointerTo());
+    return stringPtr;
+}
+
+/**
+ * Usage example: std::vector<Value *> values;
+ * values.push_back(value1);
+ * values.push_back(value2);
+ * PrintValues("LLVM DEBUG: %d, %d\n", values);
+ */
+void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value *> &values)
+{
+    // Return a cast to an i8*
+    auto formatPtr = CreateStringConstant(std::move(format));
     std::vector<Value *> args;
     args.push_back(formatPtr);
     for (auto v : values) {
@@ -305,7 +312,7 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
                 llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
             funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             rightOne = decimalIRBuilder->CallDecimalFunction(funcId,
-                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals);
+                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals, codegenContext->executionContext);
             break;
         }
         default:
@@ -358,6 +365,80 @@ void ExpressionCodeGen::Decimal64MultiplyHelper(const BinaryExpr *binaryExpr, Va
     this->value = make_shared<CodeGenValue>(phi, builder->CreateOr(leftIsNull, rightIsNull));
 }
 
+Value *ExpressionCodeGen::HandleDivisionByZero(Value *divisorValue, DataTypeId type)
+{
+    BasicBlock *incomingBlock, *zeroBlock, *nextInst;
+    Value *zeroCond;
+    PHINode *phi;
+
+    incomingBlock = builder->GetInsertBlock();
+    zeroBlock = BasicBlock::Create(*context, "zeroBlock", builder->GetInsertBlock()->getParent());
+    nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
+
+    Value *zero;
+    Value *defaultValue;
+    // Set the divisor values to 1 by default when they are 0
+    // to avoid segfaults and return error at the same time
+    switch (type) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            zero = llvmTypes->CreateConstantInt(0);
+            defaultValue = llvmTypes->CreateConstantInt(1);
+            break;
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+        case OMNI_DECIMAL128:
+            zero = llvmTypes->CreateConstantLong(0);
+            defaultValue = llvmTypes->CreateConstantLong(1);
+            break;
+        case OMNI_DOUBLE:
+            zero = llvmTypes->CreateConstantDouble(0);
+            defaultValue = llvmTypes->CreateConstantDouble(1);
+            break;
+        default:
+            zero = nullptr;
+            defaultValue = nullptr;
+    }
+
+    if (type == OMNI_DOUBLE) {
+        zeroCond = builder->CreateFCmpUEQ(zero, divisorValue);
+    } else {
+        zeroCond = builder->CreateICmpEQ(zero, divisorValue);
+    }
+
+    builder->CreateCondBr(zeroCond, zeroBlock, nextInst);
+    builder->SetInsertPoint(zeroBlock);
+
+    auto executionContext = this->codegenContext->executionContext;
+    string message = "Division by zero!";
+    auto msgLength = llvmTypes->CreateConstantInt(message.length());
+
+    // Return a cast to an i8*
+    auto msgPtr = CreateStringConstant(message);
+    std::vector<Value *> args;
+    args.push_back(executionContext);
+    args.push_back(msgPtr);
+    args.push_back(msgLength);
+
+    std::vector<DataTypeId> params { OMNI_LONG, OMNI_VARCHAR };
+    std::string funcId = FunctionSignature("ContextSetError", params, OMNI_BOOLEAN).ToString();
+    auto f = module->getFunction(funcId);
+    builder->CreateCall(f, args, "set_error_call");
+
+    builder->CreateBr(nextInst);
+    builder->SetInsertPoint(nextInst);
+    int numberOfPaths = 2;
+    phi = builder->CreatePHI(divisorValue->getType(), numberOfPaths, "iftmp");
+    phi->addIncoming(defaultValue, zeroBlock);
+    phi->addIncoming(divisorValue, incomingBlock);
+    return phi;
+}
+
+CodeGenValuePtr CreateInvalidCodeGenValue()
+{
+    return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+}
+
 // Helper methods to parse binary expressions
 void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
     Value *rightIsNull)
@@ -395,15 +476,19 @@ void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value 
         case omniruntime::expressions::Operator::MUL:
             output = builder->CreateMul(leftPhi, right, "arithmetic_mul");
             break;
-        case omniruntime::expressions::Operator::DIV:
-            output = builder->CreateSDiv(leftPhi, rightPhi, "arithmetic_div");
+        case omniruntime::expressions::Operator::DIV: {
+            auto divisor = HandleDivisionByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
+            output = builder->CreateSDiv(leftPhi, divisor, "arithmetic_div");
             break;
-        case omniruntime::expressions::Operator::MOD:
-            output = builder->CreateSRem(leftPhi, rightPhi, "arithmetic_mod");
+        }
+        case omniruntime::expressions::Operator::MOD: {
+            auto divisor = HandleDivisionByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
+            output = builder->CreateSRem(leftPhi, divisor, "arithmetic_mod");
             break;
+        }
         default:
-            LogWarn("Unsupported int/long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
-            return;
+            LogError("Unsupported int/long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            this->value = CreateInvalidCodeGenValue();
     }
 
     // Only add, minus, multiply promote decimal64 to decimal128, div doesn't.
@@ -417,6 +502,9 @@ void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value 
     } else if (binaryExpr->op == omniruntime::expressions::Operator::MUL &&
         binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
         Decimal64MultiplyHelper(binaryExpr, output, leftIsNull, rightIsNull);
+    } else if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
+        this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
+            builder->CreateOr(leftIsNull, rightIsNull));
     } else {
         this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
@@ -434,7 +522,7 @@ void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *lef
         std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), binaryExpr->right->GetReturnTypeId() };
         Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
         std::string funcId = FunctionSignature(divDec64Str, params, OMNI_DECIMAL64).ToString();
-        output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
+        output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
         this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     } else {
         this->BinaryExprIntHelper(binaryExpr, left, right, leftIsNull, rightIsNull);
@@ -467,8 +555,10 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return builder->CreateFSub(leftPhi, rightPhi, "farithmetic_sub");
         case omniruntime::expressions::Operator::MUL:
             return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
-        case omniruntime::expressions::Operator::DIV:
+        case omniruntime::expressions::Operator::DIV: {
+            auto divisor = HandleDivisionByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
             return builder->CreateFDiv(leftPhi, rightPhi, "farithmetic_div");
+        }
         default: {
             LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -568,7 +658,8 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
         }
         case omniruntime::expressions::Operator::DIV: {
             std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
-            output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals);
+            output =
+                decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
             break;
         }
         default: {
@@ -963,12 +1054,6 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     } else {
         this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
     }
-    return;
-}
-
-CodeGenValuePtr CreateInvalidCodeGenValue()
-{
-    return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
 }
 
 std::pair<Value *, Value *> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeGenValue &left, CodeGenValue &right,
@@ -981,12 +1066,13 @@ std::pair<Value *, Value *> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeG
     auto rightScaleValue = (Value *)static_cast<DecimalValue &>(right).GetScale();
     bool scaleBothValues = false;
     if (expr.GetType() == omniruntime::expressions::ExprType::BINARY_E) {
-        BinaryExpr &bExpr = static_cast<BinaryExpr &>(expr);
+        auto &bExpr = static_cast<BinaryExpr &>(expr);
         if (bExpr.op == omniruntime::expressions::Operator::DIV) {
             int32_t scale = bExpr.GetReturnType().GetScale() + scaleDiff;
             scaledLeft = decimalIRBuilder->ScaleValue(*left.data, *llvmTypes->CreateConstantInt(scale), typeId);
         } else if (bExpr.op == omniruntime::expressions::Operator::ADD ||
-            bExpr.op == omniruntime::expressions::Operator::SUB) {
+            bExpr.op == omniruntime::expressions::Operator::SUB ||
+            bExpr.op == omniruntime::expressions::Operator::MOD) {
             scaleBothValues = true;
         }
     }
@@ -1005,6 +1091,14 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 
     if (AreInvalidDataTypes(bExpr->left->GetReturnTypeId(), bExpr->right->GetReturnTypeId())) {
         LogError("return type and args must have the same data types");
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+
+    if (bExpr->left->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL64 &&
+        bExpr->right->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL64 &&
+        bExpr->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL128) {
+        LogError("Not handling decimal type promotion for now");
         this->value = CreateInvalidCodeGenValue();
         return;
     }
@@ -1400,8 +1494,8 @@ void ExpressionCodeGen::InExprDoubleHelper(CodeGenValuePtr &argiValue, CodeGenVa
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
 
-void ExpressionCodeGen::InExprDecimal64Helper(const InExpr &inExpr, size_t i,
-    CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData, Value *&tmpCmpNull)
+void ExpressionCodeGen::InExprDecimal64Helper(const InExpr &inExpr, size_t i, CodeGenValuePtr &valueToCompare,
+    CodeGenValuePtr &argiValue, Value *&tmpCmpData, Value *&tmpCmpNull)
 {
     auto iExpr = const_cast<InExpr *>(&inExpr);
     auto scaledValues = RescaleDecimals(*iExpr, *valueToCompare, *argiValue,

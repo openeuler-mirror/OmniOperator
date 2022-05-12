@@ -28,6 +28,9 @@ RowFilterFunc RowFilter::Create()
 {
     this->codegen = FilterCodeGen::Create("single_row_filter", *this->expression);
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
+    if (fAddr == 0) {
+        return nullptr;
+    }
     void *refFunc = &fAddr;
     auto castedRef = static_cast<RowFilterFunc *>(refFunc);
     return *castedRef;
@@ -67,6 +70,11 @@ bool SimpleFilter::Initialize()
     }
 
     int64_t fAddr = this->codegen->GetFunction();
+    if (fAddr == 0) {
+        LogWarn("Unable to generate function for simple filter");
+        return false;
+    }
+
     void *refFunc = &fAddr;
     this->func = *static_cast<SimpleRowExprEvalFunc *>(refFunc);
     this->initialized = true;
@@ -181,6 +189,14 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t numSelectedRows = this->filter->apply(data.data(), rowCount, selectedRows, bitmap, offsets,
         reinterpret_cast<int64_t>(context), dictionaries);
+    if (context->HasError()) {
+        // resource cleanup
+        context->GetArena()->Reset();
+        VectorHelper::FreeVecBatch(vecBatch);
+
+        string errorMessage = context->GetError();
+        throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+    }
     if (numSelectedRows <= 0) {
         for (auto &dictionaryVec : dictionaryVecs) {
             delete dictionaryVec;
@@ -195,6 +211,19 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         // vecData and bitmap won't be used for filter projection
         Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data,
             bitmap, offsets, context, dictionaries);
+        if (context->HasError()) {
+            // resource cleanup
+            for (auto &dictionaryVec : dictionaryVecs) {
+                delete dictionaryVec;
+            }
+            data.clear();
+            VectorHelper::FreeVecBatch(vecBatch);
+            delete[] selectedRows;
+            context->GetArena()->Reset();
+
+            string errorMessage = context->GetError();
+            throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
         projectedVecs->SetVector(i, col);
     }
 

@@ -258,7 +258,8 @@ public:
                 return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(values) + finalIndex);
             case OMNI_DECIMAL128:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * finalIndex);
-            case OMNI_VARCHAR: {
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
                 uint8_t *value = nullptr;
                 *length = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &value);
                 return reinterpret_cast<int64_t>(value);
@@ -292,8 +293,6 @@ public:
     static void PrintVectorValue(Vector *vector, int32_t rowIndex);
 
     static VectorBatch *ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches);
-
-private:
 };
 } // namespace vec
 } // namespace omniruntime
