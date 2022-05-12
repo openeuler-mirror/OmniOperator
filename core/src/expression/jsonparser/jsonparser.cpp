@@ -236,13 +236,17 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
         }
     }
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
-    if (funcName == "CAST" && args.size() == 1 && retTypeId == args[0]->GetReturnTypeId()) {
-        if (args[0]->GetType() == ExprType::LITERAL_E) {
-            return static_cast<LiteralExpr *>(args[0]);
-        } else if (args[0]->GetType() == ExprType::FIELD_E) {
-            return static_cast<FieldExpr *>(args[0]);
-        } else {
+    if (funcName == "CAST" && args.size() == 1) {
+        if (TypeUtil::IsDecimalType(args[0]->GetReturnTypeId()) || TypeUtil::IsDecimalType(retTypeId)) {
             return nullptr;
+        } else if (retTypeId == args[0]->GetReturnTypeId()) {
+            if (args[0]->GetType() == ExprType::LITERAL_E) {
+                return static_cast<LiteralExpr *>(args[0]);
+            } else if (args[0]->GetType() == ExprType::FIELD_E) {
+                return static_cast<FieldExpr *>(args[0]);
+            } else {
+                return nullptr;
+            }
         }
     }
     // Check that the signature matches
@@ -319,7 +323,7 @@ std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::js
     for (int32_t i = 0; i < numberOfExpressions; i++) {
         Expr *expr = ParseJSON(expressions[i]);
         if (expr == nullptr) {
-            std::cout<<"The "<<i<<"th expression is not supported: "<<std::endl<<expressions[i].dump(1)<<std::endl;
+            LogWarn("The %d-th expression is not supported: %s", i, expressions[i].dump(1).c_str());
             return { nullptr };
         }
         result.push_back(expr);

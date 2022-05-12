@@ -458,7 +458,11 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
             jsonProjectExprs[i] = nlohmann::json::parse(projectExpressions[i]);
         }
         projectExprs = JSONParser::ParseJSON(jsonProjectExprs, projectLength);
-        filterExpr = JSONParser::ParseJSON(nlohmann::json::parse(filterExpression));
+        auto filterJsonExpr = nlohmann::json::parse(filterExpression);
+        filterExpr = JSONParser::ParseJSON(filterJsonExpr);
+        if (filterExpr == nullptr) {
+            LogWarn("The filter expression is not supported: %s", filterJsonExpr.dump(1).c_str());
+        }
         delete[] jsonProjectExprs;
     } else {
         Parser parser;
