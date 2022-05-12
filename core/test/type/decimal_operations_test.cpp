@@ -150,4 +150,29 @@ TEST(DecimalOperations, divide)
     int64_t expectedVal = -500000000000408905;
     EXPECT_EQ(expectedVal, shortResult);
 }
+
+TEST(DecimalOperations, rescale_decimal64)
+{
+    int64_t val = 10LL;
+    int64_t rescaled = DecimalOperations::Rescale64(val, 2);
+    EXPECT_EQ(1000LL, rescaled);
+}
+
+TEST(DecimalOperations, rescale_decimal128)
+{
+    Decimal128 val = 10LL;
+    Decimal128 result;
+    DecimalOperations::Rescale128(val, 2, result);
+    Decimal128 expected(0, 1000LL);
+    EXPECT_EQ(expected, result);
+}
+
+TEST(DecimalOperations, rescale_decimal64_to_128)
+{
+    int64_t val = 10LL;
+    Decimal128 result;
+    DecimalOperations::Rescale64To128(val, 2, result);
+    Decimal128 expected(0, 1000LL);
+    EXPECT_EQ(expected, result);
+}
 }

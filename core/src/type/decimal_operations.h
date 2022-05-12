@@ -872,6 +872,46 @@ public:
         }
         return value;
     }
+
+    static inline void Rescale128(Decimal128 &decimal, int32_t rescaleFactor, Decimal128 &result)
+    {
+        if (rescaleFactor == 0) {
+            result = decimal;
+        }
+        Decimal128 scaleValue;
+        scaleValue.SetValue(0, int64_t(pow(10, abs(rescaleFactor))));
+        if (rescaleFactor >= 0) {
+            DecimalOperations::Multiply(decimal, scaleValue, result);
+        } else {
+            result = DecimalOperations::DivideRoundUp(decimal, scaleValue, 0, 0);
+        }
+    }
+
+    static inline int64_t Rescale64(int64_t value, int32_t rescaleFactor)
+    {
+        if (rescaleFactor == 0) {
+            return value;
+        }
+        return value * pow(10, rescaleFactor);
+    }
+
+    // TODO this function is not able to handle scale factor >= 18
+    static inline void Rescale64To128(int64_t value, int32_t rescaleFactor, Decimal128 &result)
+    {
+        Decimal128 decimal;
+        Decimal128 scaleValue;
+        scaleValue.SetValue(0, int64_t(pow(10, abs(rescaleFactor))));
+        if (value >= 0) {
+            decimal.SetValue(0, value);
+        } else {
+            decimal.SetValue(1L << 63, -value);
+        }
+        if (rescaleFactor >= 0) {
+            DecimalOperations::Multiply(decimal, scaleValue, result);
+        } else {
+            result = DecimalOperations::DivideRoundUp(decimal, scaleValue, 0, 0);
+        }
+    }
 };
 }
 }
