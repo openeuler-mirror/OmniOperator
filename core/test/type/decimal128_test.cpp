@@ -55,14 +55,44 @@ TEST(Decimal128, add_negate)
     EXPECT_EQ(result.LowBits(), negativeOne.LowBits());
 }
 
-TEST(Decimal128, subtract_normal)
+TEST(Decimal128, subtract_positive_positive)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(2);
     Decimal128 right = DecimalOperations::UnscaledDecimal(1);
     Decimal128 result;
     DecimalOperations::Subtract(left, right, result);
-    EXPECT_EQ(result.HighBits(), 0);
-    EXPECT_EQ(result.LowBits(), 1);
+    Decimal128 expected = DecimalOperations::UnscaledDecimal(1);
+    EXPECT_EQ(expected, result);
+}
+
+TEST(Decimal128, subtract_negative_negative)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(-1);
+    Decimal128 result;
+    DecimalOperations::Subtract(left, right, result);
+    Decimal128 expected = DecimalOperations::UnscaledDecimal(-1);
+    EXPECT_EQ(expected, result);
+}
+
+TEST(Decimal128, subtract_positive_negative)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(-1);
+    Decimal128 result;
+    DecimalOperations::Subtract(left, right, result);
+    Decimal128 expected = DecimalOperations::UnscaledDecimal(3);
+    EXPECT_EQ(expected, result);
+}
+
+TEST(Decimal128, subtract_negative_positive)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(-2);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(1);
+    Decimal128 result;
+    DecimalOperations::Subtract(left, right, result);
+    Decimal128 expected = DecimalOperations::UnscaledDecimal(-3);
+    EXPECT_EQ(expected, result);
 }
 
 TEST(Decimal128, multiple_positive)
@@ -111,6 +141,15 @@ TEST(Decimal128, divide_positive3)
     auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
     EXPECT_EQ(result.HighBits(), 6);
     EXPECT_EQ(result.LowBits(), 2);
+}
+
+TEST(Decimal128, divide_dividend_smaller_than_divisor)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(78340625600);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(2729300525);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    auto high = result.HighBits();
+    auto low = result.LowBits();
 }
 
 TEST(Decimal128, divide_positive_round_up)
