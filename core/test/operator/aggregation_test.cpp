@@ -1576,6 +1576,8 @@ TEST(HashAggregationOperatorTest, multi_stage)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
+    VectorHelper::PrintVecBatch(resultFromFinal[0]);
+    VectorHelper::PrintVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(resultFromFinal);
     VectorHelper::FreeVecBatch(expectVecBatch);
 }

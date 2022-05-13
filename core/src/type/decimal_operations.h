@@ -623,7 +623,7 @@ public:
     static inline bool MultiplyAndSubtractUnsignedMultiPrecision(std::vector<int32_t> &left, int32_t leftOffset,
         std::vector<int32_t> &right, int32_t length, int32_t multiplier)
     {
-        int64_t unsignedMultiplier = (uint64_t)multiplier;
+        int64_t unsignedMultiplier = ToUnsignedLong(multiplier);
         int32_t leftIndex = leftOffset - length;
         int64_t multiplyAccumulator = 0;
         int64_t subtractAccumulator = INT_BASE;
@@ -748,11 +748,11 @@ public:
     static inline Decimal128 DivideRoundUp(Decimal128 &dividend, Decimal128 &divisor, int32_t dividendScaleFactor,
         int32_t divisorScaleFactor)
     {
-        if (dividendScaleFactor >= Decimal128::MAX_PRECISION) {
+        if (dividendScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
             ThrowOverflow();
         }
 
-        if (divisorScaleFactor >= Decimal128::MAX_PRECISION) {
+        if (divisorScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
             ThrowOverflow();
         }
 
