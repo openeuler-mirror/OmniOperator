@@ -347,6 +347,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprJitContext(
     JNIEnv *, jclass, jstring, jobjectArray, jintArray);
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_verifyExpression(
+        JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
+        jint jProjectLength, jlong jitContext, jint jParseFormat);
 #ifdef __cplusplus
 }
 #endif

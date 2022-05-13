@@ -28,6 +28,7 @@
 #include "operator/config/operator_config.h"
 #include "config.h"
 #include "jni_common_def.h"
+#include "expression/expr_verifier.h"
 
 using namespace omniruntime::op;
 using namespace std;
@@ -1322,4 +1323,62 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     JNI_DEBUG_LOG("create buffered table operator with expression factory finished, elapsed time: %ld ms.", END(start));
 
     return reinterpret_cast<int64_t>(operatorFactory);
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_verifyExpression(
+    JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
+    jint jProjectLength, jlong jitContext, jint jParseFormat)
+{
+    auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
+    std::string filterExpression = std::string(expressionCharPtr);
+    auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
+    auto inputDataTypes = Deserialize(inputTypesCharPtr);
+    auto inputLength = (int32_t)jInputLength;
+
+    auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
+    auto projectExpressions = std::make_unique<std::string[]>(jProjectLength);
+    for (int32_t i = 0; i < jProjectLength; i++) {
+        auto st = (jstring)(env->GetObjectArrayElement(jProjections, i));
+        auto exprStringPtr = env->GetStringUTFChars(st, JNI_FALSE);
+        projectExpressions[i] = exprStringPtr;
+        env->ReleaseStringUTFChars(st, exprStringPtr);
+    }
+    auto projectLength = (int32_t)jProjectLength;
+    std::vector<omniruntime::expressions::Expr *> projectExprs;
+    omniruntime::expressions::Expr *filterExpr = nullptr;
+    if (parseFormat == JSON) {
+        auto *jsonProjectExprs = new nlohmann::json[jProjectLength];
+        for (int32_t i = 0; i < projectLength; i++) {
+            jsonProjectExprs[i] = nlohmann::json::parse(projectExpressions[i]);
+        }
+        projectExprs = JSONParser::ParseJSON(jsonProjectExprs, projectLength);
+        auto filterJsonExpr = nlohmann::json::parse(filterExpression);
+        filterExpr = JSONParser::ParseJSON(filterJsonExpr);
+        if (filterExpr == nullptr) {
+            LogWarn("The filter expression is not supported: %s", filterJsonExpr.dump(1).c_str());
+        }
+        delete[] jsonProjectExprs;
+    } else {
+        Parser parser;
+        filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
+        projectExprs = parser.ParseExpressions(projectExpressions.get(), projectLength, inputDataTypes);
+    }
+    if (filterExpr == nullptr || (projectLength > 0 && projectExprs[0] == nullptr)) {
+        return 0;
+    }
+
+    ExprVerifier verifier;
+    if (!verifier.VisitExpr(*filterExpr)) {
+        return 0;
+    }
+    for (int32_t i = 0; i < projectLength; i++) {
+        if(!verifier.VisitExpr(*projectExprs[i])) {
+            return 0;
+        }
+    }
+
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
+    env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
+    return 1;
 }
