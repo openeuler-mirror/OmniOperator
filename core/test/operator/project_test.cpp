@@ -2640,15 +2640,17 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
     DataTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
+
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Comprehensive");
-    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
-    op->AddInput(t);
+    VectorBatch *input = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(input);
     vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    op->GetOutput(ret);
+
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
-    EXPECT_TRUE(val0);
+    EXPECT_FALSE(val0);
     VectorHelper::FreeVecBatches(ret);
     delete op;
     delete factory;
