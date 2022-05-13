@@ -29,6 +29,17 @@ bool IsNullLiteral(const std::string &value)
     return true;
 }
 
+bool IsComparisonOperator(Operator op)
+{
+    return op == Operator::GT || op == Operator::GTE || op == Operator::LT ||
+        op == Operator::LTE || op == Operator::EQ || op == Operator::NEQ;
+}
+
+bool IsLogicalOperator(Operator op)
+{
+    return op == Operator::AND || op == Operator::OR || op == Operator::NOT;
+}
+
 Operator StringToOperator(std::string opStr)
 {
     auto opItr = OPERATOR_FROM_STRING.find(opStr);
