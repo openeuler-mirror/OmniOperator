@@ -220,11 +220,11 @@ public:
         if (l0 != 0) {
             __int128_t accumulator = r0 * l0;
             z0 = accumulator & Decimal128::LOW_64_BITS;
-            accumulator = (accumulator >> 64) + r1 * l0;
+            accumulator = ((__uint128_t)accumulator >> 64) + r1 * l0;
 
             z1 = accumulator & Decimal128::LOW_64_BITS;
 
-            if ((accumulator >> 64) != 0) {
+            if (((__uint128_t)accumulator >> 64) != 0) {
                 ThrowOverflow();
             }
         }
@@ -233,7 +233,7 @@ public:
             __int128_t accumulator = r0 * l1 + z1;
             z1 = accumulator & Decimal128::LOW_64_BITS;
 
-            if ((accumulator >> 64) != 0) {
+            if (((__uint128_t)accumulator >> 64) != 0) {
                 ThrowOverflow();
             }
         }
@@ -258,19 +258,19 @@ public:
 
         int64_t accumulator = r0 * l0;
         z0 = accumulator & Decimal128::LOW_32_BITS;
-        z1 = accumulator >> 32;
+        z1 = (uint64_t)accumulator >> 32;
 
         accumulator = r0 * l1 + z1;
         z1 = accumulator & Decimal128::LOW_32_BITS;
-        z2 = accumulator >> 32;
+        z2 = (uint64_t)accumulator >> 32;
 
         accumulator = r0 * l2 + z2;
         z2 = accumulator & Decimal128::LOW_32_BITS;
-        z3 = accumulator >> 32;
+        z3 = (uint64_t)accumulator >> 32;
 
         accumulator = r0 * l3 + z3;
         z3 = accumulator & Decimal128::LOW_32_BITS;
-        z4 = accumulator >> 32;
+        z4 = (uint64_t)accumulator >> 32;
 
         left[0] = (int32_t)z0;
         left[1] = (int32_t)z1;
@@ -417,7 +417,7 @@ public:
 
     static inline int64_t High(int64_t val)
     {
-        return val >> 32;
+        return (uint64_t)val >> 32;
     }
 
     static inline int32_t HighInt(int64_t val)
@@ -459,7 +459,7 @@ public:
                 throw OmniException("Decimal", "Leading bits should be zero");
             }
             for (int32_t position = length - 1; position > 0; position--) {
-                number[position] = (number[position] << bitShifts | (number[position - 1] >> (32 - bitShifts)));
+                number[position] = (number[position] << bitShifts | ((uint32_t)number[position - 1] >> (32 - bitShifts)));
             }
             number[0] = number[0] << bitShifts;
         }
@@ -485,7 +485,7 @@ public:
         }
         int32_t bitShifts = shifts & 0b11111;
         if (bitShifts > 0) {
-            if (number[0] << (32 - bitShifts) == 0) {
+            if (number[0] << (32 - bitShifts) != 0) {
                 ThrowIllegalState();
             }
             for (int32_t position = 0; position < length - 1; position++) {
@@ -612,8 +612,8 @@ public:
             rHat += ToUnsignedLong(v1);
         }
 
-        std::string err("qHat is greater than q by more than 2: " + std::to_string(iterations));
-        if (iterations > 0) {
+        if (iterations > 2) {
+            std::string err("qHat is greater than q by more than 2: " + std::to_string(iterations));
             throw OmniException("Decimal error", err);
         }
 
@@ -658,8 +658,8 @@ public:
     static inline void DivideKnuthNormalized(std::vector<int32_t> &remainder, int32_t dividendLength,
         std::vector<int32_t> &divisor, int32_t divisorLength, std::vector<int32_t> &quotient)
     {
-        int32_t var0 = divisor[divisorLength - 1];
-        int32_t var1 = divisor[divisorLength - 2];
+        int32_t var1 = divisor[divisorLength - 1];
+        int32_t var0 = divisor[divisorLength - 2];
         for (int32_t remainderIndex = dividendLength - 1; remainderIndex >= divisorLength; remainderIndex--) {
             int32_t qHat = EstimateQuotient(remainder[remainderIndex], remainder[remainderIndex - 1],
                 remainder[remainderIndex - 2], var1, var0);

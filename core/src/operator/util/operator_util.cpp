@@ -160,6 +160,9 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
                     valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_DECIMAL128:
+                newVecBatch->SetVector(projectCol,
+                    ProjectVector<Decimal128Vector, Decimal128>(projectFuncs[projectFuncsIndex], values, valueNulls,
+                    valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             default:
                 break;
