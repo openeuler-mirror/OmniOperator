@@ -523,7 +523,8 @@ void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *lef
         Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
         std::string funcId = FunctionSignature(divDec64Str, params, OMNI_DECIMAL64).ToString();
         output = decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
-        this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
+        this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
+                                                          builder->CreateOr(leftIsNull, rightIsNull));
     } else {
         this->BinaryExprIntHelper(binaryExpr, left, right, leftIsNull, rightIsNull);
     }
