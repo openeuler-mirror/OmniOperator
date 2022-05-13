@@ -171,7 +171,7 @@ public:
         int64_t z1 = intermediateResult & (~Decimal128::SIGN_LONG_MASK);
         Pack(result, z0, z1, resultNegative);
 
-        return intermediateResult >> 63;
+        return (uint64_t)intermediateResult >> 63;
     }
 
     static inline void SubtractUnsigned(Decimal128 &left, Decimal128 &right, Decimal128 &result, bool resultNegative)
@@ -443,7 +443,7 @@ public:
             return number;
         }
 
-        int32_t wordShifts = shifts >> 5;
+        int32_t wordShifts = (uint32_t)shifts >> 5;
         for (int32_t i = 0; i < wordShifts; ++i) {
             if (number[length - i - 1] != 0) {
                 throw OmniException("Decimal", "Leading bits should be zero");
@@ -455,7 +455,7 @@ public:
         }
         int32_t bitShifts = shifts & 0b11111;
         if (bitShifts > 0) {
-            if ((number[length - 1] >> (32 - bitShifts)) != 0) {
+            if (((uint32_t)number[length - 1] >> (32 - bitShifts)) != 0) {
                 throw OmniException("Decimal", "Leading bits should be zero");
             }
             for (int32_t position = length - 1; position > 0; position--) {
@@ -473,7 +473,7 @@ public:
             return number;
         }
 
-        int wordShifts = shifts >> 5;
+        int wordShifts = (uint32_t)shifts >> 5;
         for (int32_t i = 0; i < wordShifts; i++) {
             if (number[i] != 0) {
                 ThrowIllegalState();
@@ -489,9 +489,9 @@ public:
                 ThrowIllegalState();
             }
             for (int32_t position = 0; position < length - 1; position++) {
-                number[position] = (number[position] >> bitShifts) | (number[position + 1] << (32 - bitShifts));
+                number[position] = ((uint32_t)number[position] >> bitShifts) | (number[position + 1] << (32 - bitShifts));
             }
-            number[length - 1] = number[length - 1] >> bitShifts;
+            number[length - 1] = (uint32_t)number[length - 1] >> bitShifts;
         }
         return number;
     }
@@ -561,23 +561,23 @@ public:
             return 32;
         } else {
             int32_t count = 1;
-            if (var >> 16 == 0) {
+            if ((uint32_t)var >> 16 == 0) {
                 count += 16;
                 var <<= 16;
             }
-            if (var >> 25 == 0) {
+            if ((uint32_t)var >> 25 == 0) {
                 count += 8;
                 var <<= 8;
             }
-            if (var >> 28 == 0) {
+            if ((uint32_t)var >> 28 == 0) {
                 count += 4;
                 var <<= 4;
             }
-            if (var >> 30 == 0) {
+            if ((uint32_t)var >> 30 == 0) {
                 count += 2;
                 var <<= 2;
             }
-            count -= var >> 31;
+            count -= (uint32_t)var >> 31;
             return count;
         }
     }
@@ -837,7 +837,7 @@ public:
         }
 
         if (bitShiftsInWord > 0) {
-            high = (high << bitShiftsInWord) | (low >> shiftRestore);
+            high = (high << bitShiftsInWord) | ((uint64_t)low >> shiftRestore);
             low = low << bitShiftsInWord;
         }
         Pack(decimal, low, high, negative);
