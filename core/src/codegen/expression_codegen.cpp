@@ -1073,7 +1073,8 @@ std::pair<Value *, Value *> ExpressionCodeGen::RescaleDecimals(Expr &expr, CodeG
             scaledLeft = decimalIRBuilder->ScaleValue(*left.data, *llvmTypes->CreateConstantInt(scale), typeId);
         } else if (bExpr.op == omniruntime::expressions::Operator::ADD ||
             bExpr.op == omniruntime::expressions::Operator::SUB ||
-            bExpr.op == omniruntime::expressions::Operator::MOD) {
+            bExpr.op == omniruntime::expressions::Operator::MOD ||
+            IsComparisonOperator(bExpr.op)) {
             scaleBothValues = true;
         }
     }
@@ -1141,7 +1142,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
         auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
-            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), bExpr->GetReturnTypeId());
+            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), OMNI_DECIMAL64);
         auto scaledLeft = scaledValues.first;
         auto scaledRight = scaledValues.second;
         this->Decimal64Helper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
@@ -1158,7 +1159,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL128) {
         auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
-            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), bExpr->GetReturnTypeId());
+            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), OMNI_DECIMAL128);
         auto scaledLeft = scaledValues.first;
         auto scaledRight = scaledValues.second;
         this->BinaryExprDecimalHelper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
