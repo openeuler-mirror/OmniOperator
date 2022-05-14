@@ -565,7 +565,7 @@ public:
                 count += 16;
                 var <<= 16;
             }
-            if ((uint32_t)var >> 25 == 0) {
+            if ((uint32_t)var >> 24 == 0) {
                 count += 8;
                 var <<= 8;
             }
