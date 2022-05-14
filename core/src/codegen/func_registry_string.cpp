@@ -39,7 +39,7 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(ConcatStrChar), "concat", {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_CHAR, true),
 
         Function(reinterpret_cast<void *>(Like), "LIKE", {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN),
-        Function(reinterpret_cast<void *>(CastString), "CAST", {}, { OMNI_VARCHAR }, OMNI_INT),
+        Function(reinterpret_cast<void *>(CastString), "CAST", {}, { OMNI_VARCHAR }, OMNI_INT, true),
 
         Function(reinterpret_cast<void *>(ToUpper), "upper", {}, { OMNI_VARCHAR }, OMNI_VARCHAR, true),
         Function(reinterpret_cast<void *>(ToUpperChar), "upper", {}, { OMNI_CHAR }, OMNI_CHAR, true),

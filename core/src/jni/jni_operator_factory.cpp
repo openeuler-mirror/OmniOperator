@@ -31,6 +31,7 @@
 #include "expression/expr_verifier.h"
 
 using namespace omniruntime::op;
+using namespace omniruntime::expressions;
 using namespace std;
 
 void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t *columns, int32_t length)
@@ -431,8 +432,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
-    JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
-    jint jProjectLength, jlong jitContext, jint jParseFormat)
+    JNIEnv *env, jclass jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
+    jint jProjectLength, jlong jitContext, jint jParseFormat, jboolean jIsSkipVerify)
 {
     auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
     std::string filterExpression = std::string(expressionCharPtr);
@@ -473,6 +474,32 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     if (filterExpr == nullptr || (projectLength > 0 && projectExprs[0] == nullptr)) {
         return 0;
     }
+    if (!(bool)jIsSkipVerify) {
+        ExprVerifier verifier;
+        if (!verifier.VisitExpr(*filterExpr)) {
+#ifdef DEBUG
+            std::cout << "The filter expression is not supported: "<<std::endl;
+            ExprPrinter p;
+            filterExpr->Accept(p);
+            std::cout << std::endl;
+#endif
+            LogWarn("Verifier failed");
+            return 0;
+        }
+        for (int32_t i = 0; i < projectLength; i++) {
+            if (!verifier.VisitExpr(*projectExprs[i])) {
+#ifdef DEBUG
+                std::cout << "The "<<i<<"-th project expression is not supported: "<<std::endl;
+                ExprPrinter p;
+                projectExprs[i]->Accept(p);
+                std::cout << std::endl;
+#endif
+                LogWarn("Verifier failed");
+                return 0;
+            }
+        }
+    }
+
     auto factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputDataTypes, inputLength, projectExprs, projectLength);
     if (!factory->isSupportedExpr) {
@@ -485,8 +512,8 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *env,
-    jobject jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jlong jitContext,
-    jint jParseFormat)
+    jclass jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jlong jitContext,
+    jint jParseFormat, jboolean jIsSkipVerify)
 {
     auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
     auto exprs = std::make_unique<std::string[]>(jExprsLength);
@@ -517,6 +544,22 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
 
     if (exprLength > 0 && expressions[0] == nullptr) {
         return 0;
+    }
+
+    if (!(bool)jIsSkipVerify) {
+        ExprVerifier verifier;
+        for (int32_t i = 0; i < exprLength; i++) {
+            if (!verifier.VisitExpr(*expressions[i])) {
+#ifdef DEBUG
+                std::cout << "The "<<i<<"-th project expression is not supported: "<<std::endl;
+                ExprPrinter p;
+                expressions[i]->Accept(p);
+                std::cout << std::endl;
+#endif
+                LogWarn("Verifier failed");
+                return 0;
+            }
+        }
     }
 
     auto factory = new ProjectionOperatorFactory(expressions, exprLength, inputDataTypes, inputLength);
@@ -1326,14 +1369,15 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
 }
 
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_verifyExpression(
-    JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
-    jint jProjectLength, jlong jitContext, jint jParseFormat)
+Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprVerify(JNIEnv *env, jclass jObj, jstring jInputTypes,
+    jint jInputLength, jstring jExpression, jobjectArray jProjections, jint jProjectLength, jint jParseFormat)
 {
     auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
     std::string filterExpression = std::string(expressionCharPtr);
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputDataTypes = Deserialize(inputTypesCharPtr);
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
+    env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     auto inputLength = (int32_t)jInputLength;
 
     auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
@@ -1353,32 +1397,49 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_v
             jsonProjectExprs[i] = nlohmann::json::parse(projectExpressions[i]);
         }
         projectExprs = JSONParser::ParseJSON(jsonProjectExprs, projectLength);
-        auto filterJsonExpr = nlohmann::json::parse(filterExpression);
-        filterExpr = JSONParser::ParseJSON(filterJsonExpr);
-        if (filterExpr == nullptr) {
-            LogWarn("The filter expression is not supported: %s", filterJsonExpr.dump(1).c_str());
+        if (filterExpression != "") {
+            auto filterJsonExpr = nlohmann::json::parse(filterExpression);
+            filterExpr = JSONParser::ParseJSON(filterJsonExpr);
+            if (filterExpr == nullptr) {
+                LogWarn("The filter expression is not supported: %s", filterJsonExpr.dump(1).c_str());
+            }
         }
         delete[] jsonProjectExprs;
     } else {
         Parser parser;
-        filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
+        if (filterExpression != "") {
+            filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
+        }
         projectExprs = parser.ParseExpressions(projectExpressions.get(), projectLength, inputDataTypes);
     }
-    if (filterExpr == nullptr || (projectLength > 0 && projectExprs[0] == nullptr)) {
+
+    if ((filterExpression != "" && filterExpr == nullptr) || (projectLength > 0 && projectExprs[0] == nullptr)) {
         return 0;
     }
 
     ExprVerifier verifier;
-    if (!verifier.VisitExpr(*filterExpr)) {
+    if (filterExpr && !verifier.VisitExpr(*filterExpr)) {
+#ifdef DEBUG
+        std::cout << "The filter expression is not supported: "<<std::endl;
+        ExprPrinter p;
+        filterExpr->Accept(p);
+        std::cout << std::endl;
+#endif
+        LogWarn("Verifier failed");
         return 0;
     }
     for (int32_t i = 0; i < projectLength; i++) {
-        if(!verifier.VisitExpr(*projectExprs[i])) {
+        if (!verifier.VisitExpr(*projectExprs[i])) {
+#ifdef DEBUG
+            std::cout << "The "<<i<<"-th project expression is not supported: "<<std::endl;
+            ExprPrinter p;
+            projectExprs[i]->Accept(p);
+            std::cout << std::endl;
+#endif
+            LogWarn("Verifier failed");
             return 0;
         }
     }
 
-    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
-    env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     return 1;
 }

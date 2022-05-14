@@ -7,6 +7,8 @@
 
 #include "expression/expr_visitor.h"
 
+namespace omniruntime {
+namespace expressions {
 class ExprVerifier : public ExprVisitor{
 public:
     void Visit(const omniruntime::expressions::LiteralExpr &literalExpr) override;
@@ -23,9 +25,10 @@ public:
     bool VisitExpr(const omniruntime::expressions::Expr &e);
 
 private:
-    bool supportedFlag;
+    bool supportedFlag = false;
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 };
-
+}
+}
 
 #endif //OMNI_RUNTIME_EXPR_VERIFIER_H

@@ -82,7 +82,8 @@ public class OmniFilterAndProjectOperatorFactory
     }
 
     private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
-            String expression, Object[] projections, int projectLength, long jitContext, int parseFormat);
+            String expression, Object[] projections, int projectLength, long jitContext, int parseFormat,
+            boolean isSkipVerify);
 
     private static native long createFilterAndProjectJitContext(String inputTypes, int inputLength, String expression,
             int[] projectIndices, int projectLength);
@@ -93,7 +94,8 @@ public class OmniFilterAndProjectOperatorFactory
         JitContext context = factoryContext.getJitContext();
         long factoryAddr = createFilterAndProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
                 context.inputTypes.length, context.expression, context.projections.toArray(),
-                context.projections.size(), factoryContext.getNativeJitContext(), context.parseFormat);
+                context.projections.size(), factoryContext.getNativeJitContext(), context.parseFormat,
+                context.getOperatorConfig().isSkipExpressionVerify());
         if (factoryAddr != 0) {
             isSupported = true;
         }

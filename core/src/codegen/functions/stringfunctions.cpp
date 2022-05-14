@@ -162,11 +162,20 @@ extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, i
     return ret;
 }
 
-extern DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
+extern DLLEXPORT int32_t CastString(int64_t contextPtr, const char *str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
+    string regexToMatch = "\\d{4}-\\d{2}-\\d{2}$";
+    regex re = regex(regexToMatch);
+    string s = string(str, strLen);
+    if (!regex_match(s, re)) {
+        char message[] = "Only support cast date\'YYYY-MM-DD\' to integer";
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return -1;
+    }
+
     int32_t i1 = 5;
     int32_t i2 = 8;
     int base = static_cast<int32_t>('0');

@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -1430,6 +1431,23 @@ public class OmniFilterAndProjectOperatorTest {
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
                         + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
+                types, projectionsJSON, 1);
+
+        assertFalse(factory.isSupported());
+        factory.close();
+    }
+
+    @Test
+    public void exprVerifier() {
+        DataType[] types = {new Decimal128DataType(21, 5)};
+        List<String> projectionsJSON = ImmutableList
+                .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"precision\":21,\"scale\":5,\"colVal\":0}");
+
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\"," +
+                        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0," +
+                        "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":7," +
+                        "\"precision\":21,\"scale\":5,\"isNull\":false,\"value\":\"2000\"}}",
                 types, projectionsJSON, 1);
 
         assertFalse(factory.isSupported());

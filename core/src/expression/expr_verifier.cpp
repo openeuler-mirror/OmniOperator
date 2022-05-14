@@ -7,6 +7,8 @@
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
+namespace omniruntime {
+namespace expressions {
 bool ExprVerifier::VisitExpr(const Expr &e)
 {
     e.Accept(*this);
@@ -79,9 +81,7 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
     DataType rightType = binaryExpr.right->GetReturnType();
     DataType returnType = binaryExpr.GetReturnType();
 
-    // Fallback if arg types and return type are different
-    if (AreInvalidDataTypes(leftType.GetId(), rightType.GetId()) ||
-        AreInvalidDataTypes(leftType.GetId(), returnType.GetId())) {
+    if (AreInvalidDataTypes(leftType.GetId(), rightType.GetId())) {
         this->supportedFlag = false;
         return;
     }
@@ -95,9 +95,11 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
     }
 
     if (!VisitExpr(*(binaryExpr.left))) {
+        this->supportedFlag = false;
         return;
     }
     if (!VisitExpr(*(binaryExpr.right))) {
+        this->supportedFlag = false;
         return;
     }
 
@@ -128,7 +130,7 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         }
         return;
     } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        if (leftType.GetPrecision() == 7 && rightType.GetScale() == 2) {
+        if (leftType.GetPrecision() == 7 && leftType.GetScale() == 2) {
             this->supportedFlag = true;
             return;
         }
@@ -211,15 +213,15 @@ void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
         }
     }
 
-    if (!VisitExpr(betweenExpr)) {
+    if (!VisitExpr(*betweenExpr.value)) {
         this->supportedFlag = false;
         return;
     }
-    if (!VisitExpr(betweenExpr)) {
+    if (!VisitExpr(*betweenExpr.lowerBound)) {
         this->supportedFlag = false;
         return;
     }
-    if (!VisitExpr(betweenExpr)) {
+    if (!VisitExpr(*betweenExpr.upperBound)) {
         this->supportedFlag = false;
         return;
     }
@@ -327,4 +329,6 @@ void ExprVerifier::Visit(const SwitchExpr &switchExpr)
     }
 
     this->supportedFlag = true;
+}
+}
 }
