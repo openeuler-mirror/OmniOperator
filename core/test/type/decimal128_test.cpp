@@ -289,6 +289,26 @@ TEST(Decimal128, compare_negative)
     EXPECT_EQ(result, false);
 }
 
+TEST(Decimal128, div_roundup)
+{
+    Decimal128 lValue(0x1381e4, 0xfddf26f775600000);
+    Decimal128 rValue(0x0, 0x13ba38720);
+
+    Decimal128 expectValue(0x0, 4453370194541067);
+    Decimal128 result = DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0);
+    EXPECT_EQ(result, expectValue);
+}
+
+TEST(Decimal128, div_roundup_2)
+{
+    Decimal128 lValue(0x000000000c476a81, 0xd22a79fa4fc30000);
+    Decimal128 rValue(0x0000000000000000, 0x0000010473b0c563);
+
+    Decimal128 expectValue(0x0, 3397145127548828);
+    Decimal128 result = DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0);
+    EXPECT_EQ(result, expectValue);
+}
+
 TEST(DecimalTest, compare_after_sum)
 {
     Decimal128 d1 = DecimalOperations::UnscaledDecimal(-1);

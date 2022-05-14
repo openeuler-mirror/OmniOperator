@@ -103,7 +103,8 @@ public:
     static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
     static constexpr int64_t SIGN_INT_MASK = 1 << 31;
     static constexpr uint32_t INT_TO_UNSIGNED_LONG_MASK = 0xFFFF'FFFF;
-    static constexpr int32_t MAX_PRECISION = 38;
+    static constexpr int32_t MAX_LONG_PRECISION = 38;
+    static constexpr int32_t MAX_SHORT_PRECISION = 18;
     static constexpr int32_t BYTES_OF_LONG = 8;
     static constexpr uint64_t LOW_64_BITS = 0xFFFF'FFFF'FFFF'FFFF;
     static constexpr uint32_t LOW_32_BITS = 0xFFFF'FFFF;

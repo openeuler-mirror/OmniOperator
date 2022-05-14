@@ -132,25 +132,26 @@ public:
         } else {
             Decimal128 resultDec;
             Decimal128 countDec = count;
-            resultDec = DecimalOperations::DivideRoundUp(decodedDec, countDec, 0, 0);
-            if (outputType.GetId() == OMNI_DECIMAL64) {
-                int32_t rescaleFactor = 0;
-                if (inputType.GetId() == OMNI_DECIMAL64) {
-                    rescaleFactor = outputType.GetScale() - inputType.GetScale();
-                }
+            // only support output scale >= input scale
+            int32_t scaleDiff = 0;
+            // for spark, input type is always decimal. for olk, input type is varbinary and the precision
+            // and scale are zero.
+            auto outType = outputType.GetId();
+            auto inType = inputType.GetId();
+            if (inType == OMNI_DECIMAL64 || inType == OMNI_DECIMAL128) {
+                scaleDiff = outputType.GetScale() - inputType.GetScale();
+            }
+            Decimal128 rescaledDividend;
+            // rescale dividend and divisor to output scale
+            DecimalOperations::Rescale128(decodedDec, scaleDiff, rescaledDividend);
+            resultDec = DecimalOperations::DivideRoundUp(rescaledDividend, countDec, 0, 0);
+            if (outType == OMNI_DECIMAL64) {
                 // restore sign
                 int64_t low = resultDec.LowBits();
                 int64_t shortResult = DecimalOperations::IsNegative(resultDec) ? -low : low;
-                shortResult = DecimalOperations::Rescale64(shortResult, rescaleFactor);
                 static_cast<LongVector *>(vector)->SetValue(rowIndex, shortResult);
-            } else if (outputType.GetId() == OMNI_DECIMAL128) {
-                int32_t rescaleFactor = 0;
-                if (inputType.GetId() == OMNI_DECIMAL64 || inputType.GetId() == OMNI_DECIMAL128) {
-                    rescaleFactor = outputType.GetScale() - inputType.GetScale();
-                }
-                Decimal128 rescaledDecimal;
-                DecimalOperations::Rescale128(resultDec, rescaleFactor, rescaledDecimal);
-                static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, rescaledDecimal);
+            } else {
+                static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, resultDec);
             }
         }
     }
