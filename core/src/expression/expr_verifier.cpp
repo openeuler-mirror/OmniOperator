@@ -1,6 +1,7 @@
-//
-// Created by root on 5/13/22.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Expression Verifier
+ */
 #include "expr_verifier.h"
 
 using namespace omniruntime::expressions;
@@ -30,6 +31,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
             this->supportedFlag = true;
+            break;
         default:
             this->supportedFlag = false;
     }
@@ -73,18 +75,29 @@ void ExprVerifier::Visit(const UnaryExpr &unaryExpr)
 
 void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
 {
-    if (binaryExpr.left->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL64 &&
-        binaryExpr.right->GetReturnTypeId() == DataTypeId::OMNI_DECIMAL64 &&
-        binaryExpr.GetReturnTypeId() == DataTypeId::OMNI_DECIMAL128) {
+    DataType leftType = binaryExpr.left->GetReturnType();
+    DataType rightType = binaryExpr.right->GetReturnType();
+    DataType returnType = binaryExpr.GetReturnType();
+
+    // Fallback if arg types and return type are different
+    if (AreInvalidDataTypes(leftType.GetId(), rightType.GetId()) ||
+        AreInvalidDataTypes(leftType.GetId(), returnType.GetId())) {
         this->supportedFlag = false;
         return;
     }
+
+    if (TypeUtil::IsDecimalType(leftType.GetId())) {
+        // Only support decimals with same precision and scale
+        if (leftType != rightType) {
+            this->supportedFlag = false;
+            return;
+        }
+    }
+
     if (!VisitExpr(*(binaryExpr.left))) {
-        this->supportedFlag = false;
         return;
     }
     if (!VisitExpr(*(binaryExpr.right))) {
-        this->supportedFlag = false;
         return;
     }
 
@@ -115,9 +128,33 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         }
         return;
     } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        // hard code p, s
-    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        // hard code p, s
+        if (leftType.GetPrecision() == 7 && rightType.GetScale() == 2) {
+            this->supportedFlag = true;
+            return;
+        }
+    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL128) {
+        if (leftType.GetPrecision() == 38 && leftType.GetScale() == 2) {
+            this->supportedFlag = true;
+            return;
+        }
+        if (leftType.GetPrecision() == 21 && leftType.GetScale() == 6) {
+            this->supportedFlag = true;
+            return;
+        }
+        if (leftType.GetPrecision() == 38 && leftType.GetScale() == 16) {
+            this->supportedFlag = true;
+            return;
+        }
+        if ((leftType.GetPrecision() == 22 && leftType.GetScale() == 6) &&
+            (returnType.GetPrecision() == 22 && returnType.GetScale() == 6)) {
+            this->supportedFlag = true;
+            return;
+        }
+        if ((leftType.GetPrecision() == 22 && leftType.GetScale() == 6) &&
+            (returnType.GetPrecision() == 38 && returnType.GetScale() == 16)) {
+            this->supportedFlag = true;
+            return;
+        }
     }
     this->supportedFlag = false;
 }
@@ -165,6 +202,15 @@ void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
         this->supportedFlag = false;
         return;
     }
+
+    if (TypeUtil::IsDecimalType(betweenExpr.lowerBound->GetReturnTypeId())) {
+        // Only support decimals with same precision and scale
+        if (betweenExpr.lowerBound->GetReturnType() != betweenExpr.upperBound->GetReturnType()) {
+            this->supportedFlag = false;
+            return;
+        }
+    }
+
     if (!VisitExpr(betweenExpr)) {
         this->supportedFlag = false;
         return;
@@ -186,10 +232,13 @@ void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
         this->supportedFlag = true;
         return;
     } else if (betweenExpr.lowerBound->GetReturnTypeId() == OMNI_DECIMAL64) {
-        // hard code p, s
-    } else if (betweenExpr.lowerBound->GetReturnTypeId() == OMNI_DECIMAL64) {
-        // hard code p, s
+        if (betweenExpr.lowerBound->GetReturnType().GetPrecision() == 7 &&
+            betweenExpr.lowerBound->GetReturnType().GetScale() == 2) {
+            this->supportedFlag = true;
+            return;
+        }
     }
+    this->supportedFlag = false;
 }
 
 void ExprVerifier::Visit(const IfExpr &ifExpr)
@@ -210,11 +259,6 @@ void ExprVerifier::Visit(const IfExpr &ifExpr)
         this->supportedFlag = false;
         return;
     }
-
-    if (TypeUtil::IsDecimalType(ifExpr.GetReturnTypeId())) {
-        // hard code p, s
-    }
-
 }
 
 void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
@@ -231,7 +275,8 @@ void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
     }
 
     if (TypeUtil::IsDecimalType(coalesceExpr.GetReturnTypeId())) {
-        // hard code p, s
+        this->supportedFlag = false;
+        return;
     }
 }
 

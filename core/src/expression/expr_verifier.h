@@ -1,7 +1,7 @@
-//
-// Created by root on 5/13/22.
-//
-
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Expression Verifier
+ */
 #ifndef OMNI_RUNTIME_EXPR_VERIFIER_H
 #define OMNI_RUNTIME_EXPR_VERIFIER_H
 
@@ -24,7 +24,7 @@ public:
 
 private:
     bool supportedFlag;
-    bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
+    static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 };
 
 
