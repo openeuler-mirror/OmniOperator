@@ -117,10 +117,10 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInputNative(JNIEnv *env, jobject jObj,
     jlong jOperatorAddress, jlong jVecBatchAddress)
 {
-    int32_t errNo;
+    int32_t errNo = 0;
     JNI_METHOD_START
-    VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
-    Operator *nativeOperator = (Operator *)jOperatorAddress;
+    auto *vecBatch = (VectorBatch *)jVecBatchAddress;
+    auto *nativeOperator = (Operator *)jOperatorAddress;
     RecordInputVectorsStack(vecBatch, env);
     errNo = nativeOperator->AddInput(vecBatch);
     JNI_METHOD_END(errNo)
@@ -141,7 +141,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     std::vector<VectorBatch *> outputVecBatches;
     JNI_METHOD_START
     int32_t errNo = nativeOperator->GetOutput(outputVecBatches);
-    JNI_METHOD_END(nullptr);
+    JNI_METHOD_END(nullptr)
     RecordOutputVectorsStack(outputVecBatches, env);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
     jobjectArray result = transform(env, outputVecBatches);

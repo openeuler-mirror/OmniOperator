@@ -25,6 +25,7 @@ import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.util.TestUtils;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -162,8 +163,7 @@ public class OmniHashJoinWithExprOperatorsTest {
                 omniFunctionExpr("substr", 15,
                         getOmniJsonFieldReference(15, 1) + "," + getOmniJsonLiteral(1, false, 1) + ","
                                 + getOmniJsonLiteral(1, false, 5)),
-                omniFunctionExpr("substr", 15,
-                        getOmniJsonFieldReference(15, 3) + "," + getOmniJsonLiteral(1, false, 1)
+                omniFunctionExpr("substr", 15, getOmniJsonFieldReference(15, 3) + "," + getOmniJsonLiteral(1, false, 1)
                         + "," + getOmniJsonLiteral(1, false, 5)));
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashCols, Optional.of(filterExpression), operatorCount);
@@ -198,6 +198,63 @@ public class OmniHashJoinWithExprOperatorsTest {
         lookupJoinOperator.close();
         hashBuilderOperator.close();
         lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testHashBuilderWithInvalidKeys() {
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
+        int operatorCount = 1;
+
+        // invalid build hash key
+        String[] invalidBuildHashKeys = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1))};
+        OmniHashBuilderWithExprOperatorFactory operatorFactory = new OmniHashBuilderWithExprOperatorFactory(buildTypes,
+                invalidBuildHashKeys, Optional.empty(), operatorCount);
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testLookupJoinWithInvalidKeys() {
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
+        int operatorCount = 1;
+        String[] buildHashCols = {getOmniJsonFieldReference(2, 0)};
+        OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
+                buildTypes, buildHashCols, Optional.empty(), operatorCount);
+
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] probeOutputCols = {0, 1};
+        String[] invalidProbeHashKeys = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1))};
+        int[] buildOutputCols = {0, 1};
+        DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
+                probeTypes, probeOutputCols, invalidProbeHashKeys, buildOutputCols, buildOutputTypes,
+                OMNI_JOIN_TYPE_INNER, hashBuilderOperatorFactory);
+
+        hashBuilderOperatorFactory.close();
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testInnerEqualityJoinWithInvalidExprs() {
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
+        int operatorCount = 1;
+        String[] buildHashCols = {getOmniJsonFieldReference(2, 0)};
+        String filterExpression = omniJsonNotEqualExpr(
+                omniFunctionExpr("substring", 15,
+                        getOmniJsonFieldReference(2, 1) + "," + getOmniJsonLiteral(1, false, 1) + ","
+                                + getOmniJsonLiteral(1, false, 5)),
+                omniFunctionExpr("substring", 15, getOmniJsonFieldReference(2, 0) + ","
+                        + getOmniJsonLiteral(1, false, 1) + "," + getOmniJsonLiteral(1, false, 5)));
+        OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
+                buildTypes, buildHashCols, Optional.of(filterExpression), operatorCount);
+
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] probeOutputCols = {0, 1};
+        String[] probeHashCols = {getOmniJsonFieldReference(2, 1)};
+        int[] buildOutputCols = {0, 1};
+        DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
+                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                hashBuilderOperatorFactory);
+
         hashBuilderOperatorFactory.close();
     }
 

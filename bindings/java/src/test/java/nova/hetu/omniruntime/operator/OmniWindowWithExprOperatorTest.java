@@ -11,6 +11,7 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -24,6 +25,7 @@ import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -82,6 +84,30 @@ public class OmniWindowWithExprOperatorTest {
 
         omniOperator.close();
         omniWindowOperatorFactory.close();
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testWindowWithInvalidKeys() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
+        int[] outputChannels = {0, 1, 2};
+        FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1};
+        int[] partitionChannels = {0};
+        int[] preGroupedChannels = {};
+        int[] sortChannels = {1};
+        int[] sortOrder = {0};
+        int[] sortNullFirsts = {0};
+        int preSortedChannelPrefix = 0;
+        String[] argumentKeys = {omniFunctionExpr("abc", 3, getOmniJsonFieldReference(3, 2))};
+        DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
+        OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType, windowFrameTypes,
+                windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
     }
 
     @Test

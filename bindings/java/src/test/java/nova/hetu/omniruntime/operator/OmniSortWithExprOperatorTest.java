@@ -9,6 +9,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -192,7 +193,7 @@ public class OmniSortWithExprOperatorTest {
      * Test Sort spill with multi records
      */
     @Test
-    public void TestSortSpillWithMultiRecords() {
+    public void testSortSpillWithMultiRecords() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
@@ -232,7 +233,7 @@ public class OmniSortWithExprOperatorTest {
      * Test Sort spill with one record
      */
     @Test
-    public void TestSortSpillWithOneRecord() {
+    public void testSortSpillWithOneRecord() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
@@ -269,7 +270,7 @@ public class OmniSortWithExprOperatorTest {
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "Enable spill but do not config spill path.")
-    public void TestSortSpillWithEmptyPath() {
+    public void testSortSpillWithEmptyPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
@@ -283,7 +284,7 @@ public class OmniSortWithExprOperatorTest {
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*PATH_EXIST.*")
-    public void TestSortSpillWithExistedPath() {
+    public void testSortSpillWithExistedPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
@@ -295,7 +296,7 @@ public class OmniSortWithExprOperatorTest {
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*DISK_STAT_FAILED.*")
-    public void TestSortSpillWithInvalidPath() {
+    public void testSortSpillWithInvalidPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
@@ -304,5 +305,16 @@ public class OmniSortWithExprOperatorTest {
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
                 new OperatorConfig(false, new SparkSpillConfig("+-ab23", 1)));
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testSortWithInvalidKeys() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
+        int[] outputCols = {0, 1};
+        String[] sortKeys = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1))};
+        int[] ascendings = {1};
+        int[] nullFirsts = {0};
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts);
     }
 }
