@@ -6,6 +6,9 @@ package nova.hetu.omniruntime.operator;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -42,6 +45,8 @@ public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
                 this.nativeJitContext = JIT_CONTEXT_CACHE.get(jitContext, () -> createNativeJitContext(jitContext));
             } catch (ExecutionException e) {
                 throw new RuntimeException("Get instance failed.");
+            } catch (UncheckedExecutionException e) {
+                throw new OmniRuntimeException(e.getCause().getMessage());
             }
         }
         this.jitContext = jitContext;

@@ -35,6 +35,7 @@ import nova.hetu.omniruntime.type.Decimal64DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -729,6 +730,32 @@ public class OmniHashJoinOperatorsTest {
         lookupJoinOperator.close();
         hashBuilderOperator.close();
         lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testInnerEqualityJoinWithInvalidFilter() {
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] buildHashCols = {0};
+        int operatorCount = 1;
+        String filterExpression = omniJsonNotEqualExpr(
+                omniFunctionExpr("substring", 15,
+                        getOmniJsonFieldReference(2, 1) + "," + getOmniJsonLiteral(1, false, 1) + ","
+                                + getOmniJsonLiteral(1, false, 5)),
+                omniFunctionExpr("substring", 15, getOmniJsonFieldReference(2, 0) + ","
+                        + getOmniJsonLiteral(1, false, 1) + "," + getOmniJsonLiteral(1, false, 5)));
+        OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
+                buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
+
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
+        int[] probeOutputCols = {0, 1};
+        int[] probeHashCols = {0};
+        int[] buildOutputCols = {0, 1};
+        DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
+                probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                hashBuilderOperatorFactory);
+
         hashBuilderOperatorFactory.close();
     }
 

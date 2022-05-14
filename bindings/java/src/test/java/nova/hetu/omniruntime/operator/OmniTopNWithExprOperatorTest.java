@@ -9,6 +9,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -19,6 +20,7 @@ import nova.hetu.omniruntime.operator.topn.OmniTopNWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
@@ -137,6 +139,18 @@ public class OmniTopNWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         operator.close();
         omniTopNOperatorFactory.close();
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testTopNWithInvalidKeys() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
+        String[] sortKeys = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1))};
+        int[] sortAsc = {0};
+        int[] nullFirst = {0};
+        int expectedRowSize = 5;
+
+        OmniTopNWithExprOperatorFactory omniTopNOperatorFactory = new OmniTopNWithExprOperatorFactory(sourceTypes,
+                expectedRowSize, sortKeys, sortAsc, nullFirst);
     }
 
     @Test

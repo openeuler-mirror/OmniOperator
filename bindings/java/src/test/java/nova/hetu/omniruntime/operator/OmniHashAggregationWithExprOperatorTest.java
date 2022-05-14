@@ -13,6 +13,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
+import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -28,6 +29,7 @@ import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -223,6 +225,30 @@ public class OmniHashAggregationWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         omniOperator.close();
         factory.close();
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testHashAggWithInvalidGroupByKeys() {
+        String[] groupByChanel = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 0)),
+                getOmniJsonFieldReference(1, 2)};
+        String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
+        OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    public void testHashAggWithInvalidAggKeys() {
+        String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
+        String[] aggChannels = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1)),
+                getOmniJsonFieldReference(1, 3)};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
+        OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
     }
 
     @Test

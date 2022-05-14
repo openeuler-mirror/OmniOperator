@@ -47,7 +47,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
     vector = VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorEncodingId, jVectorTypeId,
         jCapacityInBytes, jValueCount);
     RecordVectorStack(vector, VecOpType::JNI_NEW, env);
-    JNI_METHOD_END(0);
+    JNI_METHOD_END(0)
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
 
@@ -59,7 +59,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(
     Vector *sliceVector;
     JNI_METHOD_START
     sliceVector = nativeVector->Slice(jStartIndex, jLength);
-    JNI_METHOD_END(0);
+    JNI_METHOD_END(0)
     RecordVectorStack(sliceVector, VecOpType::JNI_SLICE, env);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(sliceVector));
 }
@@ -320,7 +320,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictio
     Vector *nativeDictionary = TransformVector(jNativeDictionary);
     JNI_METHOD_START
     nativeVector->SetDictionary(nativeDictionary->Slice(0, nativeDictionary->GetSize()));
-    JNI_METHOD_END();
+    JNI_METHOD_END()
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *env, jclass jcls,
