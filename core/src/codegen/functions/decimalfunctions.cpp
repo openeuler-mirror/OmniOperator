@@ -160,19 +160,19 @@ extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y)
 
 extern "C" DLLEXPORT int64_t MakeDecimalLongTo64(int64_t x, int32_t precision, int32_t scale)
 {
-    return long(x);
+    return (int64_t)(x);
 }
 
-extern "C" DLLEXPORT long UnscaledValue64(int64_t x, int32_t precision, int32_t scale)
+extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale)
 {
-    return long(x);
+    return (int64_t)(x);
 }
 
-extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int checkPrecision,
-    int checkScala)
+extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int32_t checkPrecision,
+    int32_t checkScale)
 {
     int wholeNumerSize = precision - scale;
-    int checkWholeNumerSize = checkPrecision - checkScala;
+    int checkWholeNumerSize = checkPrecision - checkScale;
     if (checkWholeNumerSize >= wholeNumerSize) {
         return false;
     }
@@ -186,7 +186,7 @@ extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int3
 }
 
 extern "C" DLLEXPORT bool IsOverflowDecimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
-    int checkPrecision, int checkScala)
+    int32_t checkPrecision, int32_t checkScale)
 {
     return false;
 }

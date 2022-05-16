@@ -44,4 +44,4 @@ target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 target_include_directories(${OM_TEST_TARGET} PRIVATE {GTEST_INCLUDE_DIRS})
 
 # discover tests
-gtest_discover_tests(${OM_TEST_TARGET})
+gtest_discover_tests(${OM_TEST_TARGET} DISCOVERY_TIMEOUT 600)

@@ -3655,8 +3655,8 @@ TEST(CodeGenTest, Mm3HashDecimal64)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3Decimal64(v1[0], false, 42);
-    EXPECT_EQ(res, expected_res);
+    int32_t expectedRes = Mm3Decimal64(v1[0], false, 42);
+    EXPECT_EQ(res, expectedRes);
     context->GetArena()->Reset();
 
     delete[] bitmap[0];
@@ -3704,8 +3704,8 @@ TEST(CodeGenTest, Mm3HashDecimal128)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3Decimal128(v1[1], v1[0], false, 42);
-    EXPECT_EQ(res, expected_res);
+    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42);
+    EXPECT_EQ(res, expectedRes);
     context->GetArena()->Reset();
 
     delete[] bitmap[0];

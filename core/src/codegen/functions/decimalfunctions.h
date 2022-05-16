@@ -54,13 +54,13 @@ extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y);
 
 extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y);
 
-extern "C" DLLEXPORT long UnscaledValue64(int64_t x, int32_t precision, int32_t scale);
+extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale);
 
-extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int checkPrecision,
-    int checkScala);
+extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int32_t checkPrecision,
+    int32_t checkScale);
 
 extern "C" DLLEXPORT bool IsOverflowDecimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
-    int checkPrecision, int checkScala);
+    int32_t checkPrecision, int32_t checkScale);
 }
 }
 #endif // OMNI_RUNTIME_DECIMALFUNCTIONS_H

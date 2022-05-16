@@ -14,16 +14,16 @@ import com.google.common.collect.ImmutableList;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
-import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
-import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -159,16 +159,16 @@ public class OmniProjectOperatorTest {
         assertEquals(((IntVec) res.getVector(0)).get(0), 20);
         assertEquals(((IntVec) res.getVector(1)).get(0), -508695674);
         assertEquals(((IntVec) res.getVector(2)).get(0), 613818021);
-        assertEquals(((IntVec) res.getVector(3)).get(0), 144);
+        assertEquals(((IntVec) res.getVector(3)).get(0), 265773344);
         assertEquals(((IntVec) res.getVector(0)).get(1), 25);
         assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
         assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
-        assertEquals(((IntVec) res.getVector(3)).get(1), 128);
+        assertEquals(((IntVec) res.getVector(3)).get(1), -127557072);
         // null value check
         assertEquals(((IntVec) res.getVector(0)).get(2), 15);
         assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
         assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
-        assertEquals(((IntVec) res.getVector(3)).get(2), 101);
+        assertEquals(((IntVec) res.getVector(3)).get(2), -300363099);
 
         freeVecBatch(res);
         op.close();
