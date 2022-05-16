@@ -11,7 +11,6 @@ import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
@@ -172,17 +171,17 @@ public class Decimal128Vec extends DecimalVec {
      * @param index row index
      * @param decimal input value
      */
-    public void setBigDecimal(int index, BigDecimal decimal) {
-        super.set(index, putDecimal(decimal.unscaledValue()));
+    public void setBigInteger(int index, BigInteger decimal) {
+        super.set(index, putDecimal(decimal));
     }
 
     /**
      * please use this method to get jdk BigInteger from Decimal128Vec
      *
      * @param index row index
-     * @return new BigDecimal
+     * @return new BigInteger
      */
-    public BigDecimal getBigDecimal(int index) {
-        return new BigDecimal(getDecimal(super.get(index)));
+    public BigInteger getBigInteger(int index) {
+        return getDecimal(super.get(index));
     }
 }

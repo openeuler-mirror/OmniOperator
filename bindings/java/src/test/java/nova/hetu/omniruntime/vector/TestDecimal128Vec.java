@@ -12,7 +12,6 @@ import nova.hetu.omniruntime.type.Decimal128DataType;
 
 import org.testng.annotations.Test;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
@@ -205,26 +204,26 @@ public class TestDecimal128Vec {
     @Test
     public void testSetGetBigInteger() {
         final int size = 1024;
-        BigDecimal decimal128 = new BigDecimal("11111111111111111111111111111111111111");
+        BigInteger decimal128 = new BigInteger("11111111111111111111111111111111111111");
         Decimal128Vec vec1 = new Decimal128Vec(size);
-        BigDecimal decimal64 = new BigDecimal("111111");
+        BigInteger decimal64 = new BigInteger("111111");
         Decimal128Vec vec2 = new Decimal128Vec(size);
 
         for (int i = 0; i < size; ++i) {
-            vec1.setBigDecimal(i, decimal128);
+            vec1.setBigInteger(i, decimal128);
         }
 
         for (int i = 0; i < size; ++i) {
-            BigDecimal val = vec1.getBigDecimal(i);
+            BigInteger val = vec1.getBigInteger(i);
             assertEquals(val, decimal128);
         }
 
         for (int i = 0; i < size; ++i) {
-            vec2.setBigDecimal(i, decimal64);
+            vec2.setBigInteger(i, decimal64);
         }
 
         for (int i = 0; i < size; ++i) {
-            BigDecimal val = vec2.getBigDecimal(i);
+            BigInteger val = vec2.getBigInteger(i);
             assertEquals(val, decimal64);
         }
         vec1.close();
