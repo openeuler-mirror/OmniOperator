@@ -189,12 +189,11 @@ extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool is
     union {
         char bytesArray[16];
         int64_t int64Array[2];
-    } uVal = {0};
+    } uVal = { 0 };
     uVal.int64Array[0] = xHigh * !isNull;
     uVal.int64Array[1] = xLow * !isNull;
     string strVal(uVal.bytesArray, 16);
     return static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed));
 }
-
 }
 }

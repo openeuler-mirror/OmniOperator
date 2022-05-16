@@ -107,6 +107,10 @@ extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, 
     }
 }
 
+extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(double x, int32_t precision, int32_t scale)
+{
+    return (int64_t)(x * pow(10, scale));
+}
 extern "C" DLLEXPORT int64_t MakeDecimal64(int64_t x, int32_t precision, int32_t scale, int32_t newPrecision,
     int32_t newScale)
 {
@@ -156,7 +160,7 @@ extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y)
 
 extern "C" DLLEXPORT int64_t MakeDecimalLongTo64(int64_t x, int32_t precision, int32_t scale)
 {
-   return long(x);
+    return long(x);
 }
 
 extern "C" DLLEXPORT long UnscaledValue64(int64_t x, int32_t precision, int32_t scale)
@@ -164,25 +168,27 @@ extern "C" DLLEXPORT long UnscaledValue64(int64_t x, int32_t precision, int32_t 
     return long(x);
 }
 
-extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int checkPrecision, int checkScala)
+extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int checkPrecision,
+    int checkScala)
 {
-      int wholeNumerSize = precision - scale;
-      int checkWholeNumerSize = checkPrecision - checkScala;
-      if (checkWholeNumerSize >= wholeNumerSize) {
+    int wholeNumerSize = precision - scale;
+    int checkWholeNumerSize = checkPrecision - checkScala;
+    if (checkWholeNumerSize >= wholeNumerSize) {
         return false;
-      }
-      int left = scale + checkWholeNumerSize;
-      int64_t numverValue = abs(x);
-      while (left > 0) {
-         numverValue = numverValue / 10;
-         left--;
-      }
-      return numverValue > 0;
+    }
+    int left = scale + checkWholeNumerSize;
+    int64_t numverValue = abs(x);
+    while (left > 0) {
+        numverValue = numverValue / 10;
+        left--;
+    }
+    return numverValue > 0;
 }
 
-extern "C" DLLEXPORT bool IsOverflowDecimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale, int checkPrecision, int checkScala)
+extern "C" DLLEXPORT bool IsOverflowDecimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
+    int checkPrecision, int checkScala)
 {
-      return false;
+    return false;
 }
 }
 }

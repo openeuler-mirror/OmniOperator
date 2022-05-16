@@ -3402,7 +3402,7 @@ TEST(CodeGenTest, Mm3HashDate32)
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
-                       dictionaries);
+        dictionaries);
     EXPECT_EQ(result, true);
     context->GetArena()->Reset();
 
@@ -3654,7 +3654,7 @@ TEST(CodeGenTest, Mm3HashDecimal64)
     auto context = new ExecutionContext();
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
-                                    reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expected_res = Mm3Decimal64(v1[0], false, 42);
     EXPECT_EQ(res, expected_res);
     context->GetArena()->Reset();
@@ -3703,7 +3703,7 @@ TEST(CodeGenTest, Mm3HashDecimal128)
     auto context = new ExecutionContext();
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
-                                    reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expected_res = Mm3Decimal128(v1[1], v1[0], false, 42);
     EXPECT_EQ(res, expected_res);
     context->GetArena()->Reset();
