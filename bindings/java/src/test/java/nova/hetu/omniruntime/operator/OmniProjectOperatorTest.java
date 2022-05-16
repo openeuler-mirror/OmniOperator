@@ -14,10 +14,12 @@ import com.google.common.collect.ImmutableList;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -120,25 +122,32 @@ public class OmniProjectOperatorTest {
         IntVec col1 = new IntVec(numRows);
         DoubleVec col2 = new DoubleVec(numRows);
         VarcharVec col3 = new VarcharVec(byteVal1.length + byteVal2.length, numRows);
+        Decimal128Vec col4 = new Decimal128Vec(numRows);
 
         col1.set(0, Integer.MIN_VALUE);
         col2.set(0, Double.MAX_VALUE);
         col3.set(0, byteVal1);
+        col4.set(0, new long[]{Long.MIN_VALUE, Long.MAX_VALUE});
         col1.set(1, Integer.MAX_VALUE);
         col2.set(1, Double.MIN_VALUE);
         col3.set(1, byteVal2);
+        col4.set(1, new long[]{Long.MAX_VALUE, Long.MIN_VALUE});
         // null value
         col1.set(2, Integer.MIN_VALUE);
         col1.setNull(2);
         col2.set(2, Double.MAX_VALUE);
         col2.setNull(2);
         col3.setNull(2);
+        col4.set(2, new long[]{Long.MAX_VALUE, Long.MAX_VALUE});
+        col4.setNull(2);
 
-        String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
-        DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
+        String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)",
+                "mm3hash:1(#3, 42:1)"};
+        DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR,
+                Decimal128DataType.DECIMAL128};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         OmniOperator op = factory.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4);
         for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
@@ -150,13 +159,16 @@ public class OmniProjectOperatorTest {
         assertEquals(((IntVec) res.getVector(0)).get(0), 20);
         assertEquals(((IntVec) res.getVector(1)).get(0), -508695674);
         assertEquals(((IntVec) res.getVector(2)).get(0), 613818021);
+        assertEquals(((IntVec) res.getVector(3)).get(0), 265773344);
         assertEquals(((IntVec) res.getVector(0)).get(1), 25);
         assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
         assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
+        assertEquals(((IntVec) res.getVector(3)).get(1), -127557072);
         // null value check
         assertEquals(((IntVec) res.getVector(0)).get(2), 15);
         assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
         assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
+        assertEquals(((IntVec) res.getVector(3)).get(2), -300363099);
 
         freeVecBatch(res);
         op.close();
