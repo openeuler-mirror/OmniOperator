@@ -76,20 +76,20 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 /*
  * Class:     nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory
  * Method:    createFilterAndProjectOperatorFactory
- * Signature: ([IILjava/lang/String;[II)J
+ * Signature: (Ljava/lang/String;ILjava/lang/String;[Ljava/lang/Object;IJIZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
-    JNIEnv *, jobject, jstring, jint, jstring, jobjectArray, jint, jlong, jint);
+    JNIEnv *, jclass, jstring, jint, jstring, jobjectArray, jint, jlong, jint, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory
  * Method:    createProjectOperatorFactory
- * Signature: ([II[Ljava/lang/Object;I)J
+ * Signature: (Ljava/lang/String;I[Ljava/lang/Object;IJIZ)J
  */
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *, jobject,
-    jstring, jint, jobjectArray, jint, jlong, jint);
+Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *, jclass,
+    jstring, jint, jobjectArray, jint, jlong, jint, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory
@@ -347,6 +347,16 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprJitContext(
     JNIEnv *, jclass, jstring, jobjectArray, jintArray);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniExprVerify
+ * Method:    exprVerify
+ * Signature: (Ljava/lang/String;ILjava/lang/String;[Ljava/lang/Object;II)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprVerify(JNIEnv *, jclass, jstring, jint, jstring, jobjectArray,
+    jint, jint);
+
 #ifdef __cplusplus
 }
 #endif

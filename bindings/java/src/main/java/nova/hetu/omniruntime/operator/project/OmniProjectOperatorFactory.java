@@ -73,7 +73,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
-            int expressionsLength, long jitContext, int parseFormat);
+            int expressionsLength, long jitContext, int parseFormat, boolean isSkipVerify);
 
     private static native long createProjectJitContext(String inputTypes, int inputLength, Object[] expressions,
             int expressionsLength);
@@ -83,7 +83,8 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
         JitContext context = factoryContext.getJitContext();
         long factoryAddr = createProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
                 context.inputTypes.length, context.expressions, context.expressions.length,
-                factoryContext.getNativeJitContext(), context.parseFormat);
+                factoryContext.getNativeJitContext(), context.parseFormat,
+                context.getOperatorConfig().isSkipExpressionVerify());
         if (factoryAddr != 0) {
             isSupported = true;
         }
