@@ -91,47 +91,48 @@ public class DataTypeSerializer {
         @Override
         public JavaType typeFromId(DatabindContext context, String id) throws IOException {
             Class<?> subType = null;
-            switch (id) {
-                case "OMNI_INT":
+            DataType.DataTypeId dataTypeId = DataType.DataTypeId.values()[Integer.parseInt(id)];
+            switch (dataTypeId) {
+                case OMNI_INT:
                     subType = IntDataType.class;
                     break;
-                case "OMNI_LONG":
+                case OMNI_LONG:
                     subType = LongDataType.class;
                     break;
-                case "OMNI_DOUBLE":
+                case OMNI_DOUBLE:
                     subType = DoubleDataType.class;
                     break;
-                case "OMNI_BOOLEAN":
+                case OMNI_BOOLEAN:
                     subType = BooleanDataType.class;
                     break;
-                case "OMNI_SHORT":
+                case OMNI_SHORT:
                     subType = ShortDataType.class;
                     break;
-                case "OMNI_CONTAINER":
+                case OMNI_CONTAINER:
                     subType = ContainerDataType.class;
                     break;
-                case "OMNI_NONE":
+                case OMNI_NONE:
                     subType = NoneDataType.class;
                     break;
-                case "OMNI_INVALID":
+                case OMNI_INVALID:
                     subType = InvalidDataType.class;
                     break;
-                case "OMNI_VARCHAR":
+                case OMNI_VARCHAR:
                     subType = VarcharDataType.class;
                     break;
-                case "OMNI_CHAR":
+                case OMNI_CHAR:
                     subType = CharDataType.class;
                     break;
-                case "OMNI_DECIMAL64":
+                case OMNI_DECIMAL64:
                     subType = Decimal64DataType.class;
                     break;
-                case "OMNI_DECIMAL128":
+                case OMNI_DECIMAL128:
                     subType = Decimal128DataType.class;
                     break;
-                case "OMNI_DATE32":
+                case OMNI_DATE32:
                     subType = Date32DataType.class;
                     break;
-                case "OMNI_DATE64":
+                case OMNI_DATE64:
                     subType = Date64DataType.class;
                     break;
                 default:

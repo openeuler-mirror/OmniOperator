@@ -100,7 +100,7 @@ public abstract class Vec implements Closeable {
      */
     public Vec(VecAllocator allocator, int capacityInBytes, int size, VecEncoding encoding, DataType datatype) {
         this(allocator, newVectorNative(allocator.getNativeAllocator(), capacityInBytes, size, encoding.ordinal(),
-                datatype.getId().ordinal()), capacityInBytes, size, 0, datatype, true);
+                datatype.getId().toValue()), capacityInBytes, size, 0, datatype, true);
     }
 
     /**

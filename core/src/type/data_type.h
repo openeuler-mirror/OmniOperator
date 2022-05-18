@@ -98,34 +98,17 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(DataTypeId, { { OMNI_NONE, nullptr },
-    { OMNI_INT, "OMNI_INT" },
-    { OMNI_LONG, "OMNI_LONG" },
-    { OMNI_DOUBLE, "OMNI_DOUBLE" },
-    { OMNI_BOOLEAN, "OMNI_BOOLEAN" },
-    { OMNI_SHORT, "OMNI_SHORT" },
-    { OMNI_DECIMAL64, "OMNI_DECIMAL64" },
-    { OMNI_DECIMAL128, "OMNI_DECIMAL128" },
-    { OMNI_DATE32, "OMNI_DATE32" },
-    { OMNI_DATE64, "OMNI_DATE64" },
-    { OMNI_TIME32, "OMNI_TIME32" },
-    { OMNI_TIME64, "OMNI_TIME64" },
-    { OMNI_TIMESTAMP, "OMNI_TIMESTAMP" },
-    { OMNI_INTERVAL_MONTHS, "OMNI_INTERVAL_MONTHS" },
-    { OMNI_INTERVAL_DAY_TIME, "OMNI_INTERVAL_DAY_TIME" },
-    { OMNI_VARCHAR, "OMNI_VARCHAR" },
-    { OMNI_CHAR, "OMNI_CHAR" },
-    { OMNI_CONTAINER, "OMNI_CONTAINER" },
-    { OMNI_INVALID, "OMNI_INVALID" } })
+enum DateUnit {
+    DAY = 0,
+    MILLI = 1
+};
 
-enum DateUnit { DAY, MILLI };
-
-NLOHMANN_JSON_SERIALIZE_ENUM(DateUnit, { { DAY, "DAY" }, { MILLI, "MILLI" } })
-
-enum TimeUnit { SEC, MILLISEC, MICROSEC, NANOSEC };
-
-NLOHMANN_JSON_SERIALIZE_ENUM(TimeUnit,
-    { { SEC, "SEC" }, { MILLISEC, "MILLISEC" }, { MICROSEC, "MICROSEC" }, { NANOSEC, "NANOSEC" } })
+enum TimeUnit {
+    SEC = 0,
+    MILLISEC = 1,
+    MICROSEC = 2,
+    NANOSEC = 3
+};
 
 class DataType {
 public:
@@ -152,6 +135,10 @@ public:
             case OMNI_DATE32:
             case OMNI_DATE64:
                 this->dateUnit = type.dateUnit;
+                break;
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+                this->timeUnit = type.timeUnit;
                 break;
             case OMNI_CONTAINER:
                 this->fieldTypes = type.fieldTypes;
@@ -206,8 +193,6 @@ public:
             case OMNI_INT:
             case OMNI_LONG:
             case OMNI_DOUBLE:
-            case OMNI_TIME32:
-            case OMNI_TIME64:
             case OMNI_NONE:
             case OMNI_INVALID:
                 nlohmannJson = nlohmann::json { { ID, dataType.id } };
@@ -226,6 +211,10 @@ public:
             case OMNI_DATE64:
                 nlohmannJson = nlohmann::json { { ID, dataType.id }, { DATE_UNIT, dataType.dateUnit } };
                 break;
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+                nlohmannJson = nlohmann::json { { ID, dataType.id }, { TIME_UNIT, dataType.timeUnit } };
+                break;
             case OMNI_CONTAINER: {
                 nlohmannJson = nlohmann::json { { ID, dataType.id } };
                 for (auto &fieldType : dataType.fieldTypes) {
@@ -233,7 +222,8 @@ public:
                     to_json(fieldTypeJson, fieldType);
                     nlohmannJson[FIELD_TYPES].push_back(fieldTypeJson);
                 }
-            } break;
+                break;
+            }
             default:
                 LogError("Not Supported Data Type Serialize : %d", dataType.id);
         }
@@ -248,8 +238,6 @@ public:
             case OMNI_INT:
             case OMNI_LONG:
             case OMNI_DOUBLE:
-            case OMNI_TIME32:
-            case OMNI_TIME64:
             case OMNI_NONE:
             case OMNI_INVALID:
                 break;
@@ -266,13 +254,18 @@ public:
                 nlohmannJson.at(PRECISION).get_to(dataType.precision);
                 nlohmannJson.at(SCALE).get_to(dataType.scale);
                 break;
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+                nlohmannJson.at(TIME_UNIT).get_to(dataType.timeUnit);
+                break;
             case OMNI_CONTAINER: {
                 for (auto &fieldTypeJson : nlohmannJson[FIELD_TYPES]) {
                     DataType fieldType;
                     from_json(fieldTypeJson, fieldType);
                     dataType.fieldTypes.push_back(fieldType);
                 }
-            } break;
+                break;
+            }
             default:
                 LogError("Not Supported Data Type Deserialize: %d", dataType.id);
         }
