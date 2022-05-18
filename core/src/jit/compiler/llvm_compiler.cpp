@@ -51,6 +51,10 @@ LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
 
 LLVMCompiler::~LLVMCompiler()
 {
+    if (this->rt != nullptr) {
+        llvm::ExitOnError ExitOnErr;
+        ExitOnErr(rt->remove());
+    }
     this->context.reset();
     this->layout.reset();
     this->builder.reset();
@@ -227,8 +231,10 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
 #ifdef DEBUG_LLVM
         outs() << "addIRModule: " << moduleName << "\n";
 #endif
+        auto resTracker = JITTER->getMainJITDylib().createResourceTracker();
         auto err =
-            JITTER->addIRModule(ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
+            JITTER->addIRModule(resTracker, ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
+        this->rt = resTracker;
         if (err) {
             errs() << "Error: failed adding IR Module " << moduleName << "\n";
             return nullptr;

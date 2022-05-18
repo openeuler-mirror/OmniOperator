@@ -3,7 +3,6 @@
  * Description: Jit Context Source File
  */
 #include "jit_context.h"
-#include "jit/jit.h"
 #include "operator/optimization.h"
 #include "../../libconfig.h"
 
@@ -652,14 +651,15 @@ JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t
 
     omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"),
         hashGroupbySps);
-    Jit jit(vector<omniruntime::jit::Context> { groupAggregationContext });
-    jit.Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+    auto jit = new Jit(vector<omniruntime::jit::Context> { groupAggregationContext });
+    jit->Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
         Optimization::SROA, Optimization::AGGRESIVE_DCE },
         vector<ModuleOptimization> { ModuleOptimization::PRUNE_EH });
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    jitContext->jit = jit;
 
     LogInfo("HashAggregation operator with jit has taken effect.");
     return jitContext;

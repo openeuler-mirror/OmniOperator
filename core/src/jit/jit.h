@@ -21,7 +21,7 @@ class Jit {
 public:
     explicit Jit(std::vector<Context> contexts, CompilerType compilerType = CompilerType::LLVM);
 
-    ~Jit() {}
+    ~Jit();
 
     // / Specialize templates with values/stats in Context
     // / return true if specialization succeed

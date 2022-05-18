@@ -13,6 +13,8 @@ namespace omniruntime {
 namespace jit {
 class Compiler {
 public:
+    virtual ~Compiler() {};
+
     virtual bool LoadModule(std::string templatePath) = 0;
 
     virtual bool SpecializeAndCompile(const std::vector<Optimization> &optimizations,

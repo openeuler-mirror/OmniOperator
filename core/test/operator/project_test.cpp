@@ -2596,7 +2596,7 @@ TEST(ProjectionTest, testSubDecimal64)
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    op->GetOutput(ret);
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 43092162);
     VectorHelper::FreeVecBatches(ret);
@@ -2626,7 +2626,7 @@ TEST(ProjectionTest, testMulDecimal64)
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    op->GetOutput(ret);
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 100L);
     VectorHelper::FreeVecBatches(ret);
@@ -2656,7 +2656,7 @@ TEST(ProjectionTest, testDivDecimal64)
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    op->GetOutput(ret);
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 98L);
     VectorHelper::FreeVecBatches(ret);
@@ -2732,7 +2732,7 @@ TEST(ProjectionTest, testDecimal64In)
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    op->GetOutput(ret);
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
     VectorHelper::FreeVecBatches(ret);
@@ -2761,7 +2761,7 @@ TEST(ProjectionTest, testDecimal64Between)
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    op->GetOutput(ret);
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
     VectorHelper::FreeVecBatches(ret);

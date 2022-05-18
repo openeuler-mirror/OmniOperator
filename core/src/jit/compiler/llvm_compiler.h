@@ -22,7 +22,7 @@ class LLVMCompiler : public Compiler {
 public:
     LLVMCompiler();
 
-    ~LLVMCompiler();
+    ~LLVMCompiler() override;
 
     bool LoadModule(std::string templatePath) override;
 
@@ -41,6 +41,7 @@ private:
     std::vector<std::unique_ptr<llvm::Module>> modules;
     std::vector<std::string> functionSymbols;
 
+    llvm::orc::ResourceTrackerSP rt;
     std::unique_ptr<llvm::orc::LLJIT> jitter;
 
     static LibraryLoader ll;

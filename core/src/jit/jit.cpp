@@ -12,6 +12,11 @@ void Jit::InitCompile()
     this->compiler = new LLVMCompiler();
 }
 
+Jit::~Jit()
+{
+    delete this->compiler;
+}
+
 Jit::Jit(std::vector<Context> contexts, CompilerType compilerType)
 {
     this->contexts = std::move(contexts);
