@@ -102,7 +102,7 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
     EXPECT_TRUE(allocator != nullptr);
 
     auto *vector = new Decimal128Vector(allocator, 256);
-    auto *value = new uint64_t [256 * 2];
+    auto *value = new uint64_t[256 * 2];
     for (int i = 0; i < 256; i++) {
         value[i * 2] = 12;
         value[i * 2 + 1] = i * 2;
@@ -191,6 +191,7 @@ TEST(Decimal128Vector, CopyPositions)
         EXPECT_TRUE(copyPostionVector->GetValue(i) == originalVector->GetValue(possions[i]));
     }
 
+    delete[] possions;
     delete originalVector;
     delete copyPostionVector;
     delete allocator;
@@ -222,6 +223,11 @@ TEST(Decimal128Vector, CopyRegion)
 class Decimal128VectorTest {
 public:
     Decimal128VectorTest() : values(new long[100000000]) {}
+
+    ~Decimal128VectorTest()
+    {
+        delete[](long *) values;
+    }
 
     void SetValue(int index, int64_t value)
     {
@@ -277,10 +283,10 @@ TEST(Decimal128Vector, PerformanceCompare)
     timer.End();
 
     // vector set value
-    Decimal128Vector decimal128Vector(allocator, rowCount);
+    auto *decimal128Vector = new Decimal128Vector(allocator, rowCount);
     timer.Start("vector set value");
     for (int i = 0; i < rowCount; ++i) {
-        decimal128Vector.SetValue(i, i);
+        decimal128Vector->SetValue(i, i);
     }
     timer.End();
 
@@ -295,7 +301,7 @@ TEST(Decimal128Vector, PerformanceCompare)
     // vector get value
     timer.Start("vector get value");
     for (int i = 0; i < rowCount; ++i) {
-        Decimal128 value = decimal128Vector.GetValue(i);
+        Decimal128 value = decimal128Vector->GetValue(i);
     }
     timer.End();
 
@@ -308,6 +314,7 @@ TEST(Decimal128Vector, PerformanceCompare)
     timer.End();
     value = value + 1;
 
+    delete decimal128Vector;
     delete[](long *) decimal128Vector2;
     delete vectorTest2;
     delete allocator;

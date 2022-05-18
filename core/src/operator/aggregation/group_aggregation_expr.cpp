@@ -102,6 +102,7 @@ int32_t HashAggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &o
 
 OmniStatus HashAggregationWithExprOperator::Close()
 {
+    hashAggOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 }

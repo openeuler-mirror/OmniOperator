@@ -104,6 +104,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs2[0], expectVecorBatch));
 
+    delete perfUtil;
     delete[] data0;
     Operator::DeleteOperator(topNOperator);
     Operator::DeleteOperator(topNOperator2);

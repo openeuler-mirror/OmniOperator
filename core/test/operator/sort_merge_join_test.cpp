@@ -1047,9 +1047,9 @@ TEST(NativeSortMergeJoinTest, TestReturnCode)
     streamedPageIndex->AddVecBatches(streamed);
 
     int64_t streamData2[] = {4, 6, 7};
-    VectorBatch *streamedVecBatch2 = new VectorBatch(2, dataSize);
-    streamedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(streamData2, dataSize));
-    streamedVecBatch2->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
+    VectorBatch *streamedVecBatch2 = new VectorBatch(2, dataSize - 1);
+    streamedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(streamData2, dataSize - 1));
+    streamedVecBatch2->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize - 1));
 
     int64_t bufferData1[] = {11, 22, 33, 44};
     VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
@@ -1118,9 +1118,9 @@ TEST(NativeSortMergeJoinTest, TestReturnCode2)
     int64_t streamData0[] = {1, 2, 3};
     int64_t bufferData0[] = {1, 2, 3, 4};
     int64_t streamedData1[] = {111, 11, 1};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, 3);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
+    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize - 1);
+    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize - 1));
+    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize - 1));
     auto streamed = std::vector<VectorBatch *>();
     streamed.push_back(streamedVecBatch);
     streamedPageIndex->AddVecBatches(streamed);
@@ -1436,8 +1436,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\",\"left\":{\"exprType\":"
-                    "\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":"
-                    "1,\"isNull\":false,\"value\":1}}";
+        "\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":"
+        "1,\"isNull\":false,\"value\":1}}";
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("TestSortMergeJoinResultBuilderWithFilter");
 

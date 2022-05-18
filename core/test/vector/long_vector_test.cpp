@@ -177,6 +177,7 @@ TEST(LongVector, copyPositions)
         EXPECT_EQ(copyPostionVector->GetValue(i), originalVector->GetValue(possions[i]));
     }
 
+    delete[] possions;
     delete originalVector;
     delete copyPostionVector;
     delete allocator;
@@ -229,6 +230,11 @@ public:
         return ((int64_t *)values)[index];
     }
 
+    ~LongVectorTest()
+    {
+        delete[](long *) values;
+    }
+
 private:
     void *values;
 };
@@ -273,10 +279,10 @@ TEST(LongVector, performanceCompare)
     timer.End();
 
     // vector set value
-    LongVector longVector(allocator, rowCount);
+    auto longVector = new LongVector(allocator, rowCount);
     timer.Start("vector set value");
     for (int i = 0; i < rowCount; ++i) {
-        longVector.SetValue(i, i);
+        longVector->SetValue(i, i);
     }
     timer.End();
 
@@ -292,7 +298,7 @@ TEST(LongVector, performanceCompare)
     long value = 0;
     timer.Start("vector get value");
     for (int i = 0; i < rowCount; ++i) {
-        value = longVector.GetValue(i);
+        value = longVector->GetValue(i);
     }
     timer.End();
     value = value + 1;
@@ -303,6 +309,7 @@ TEST(LongVector, performanceCompare)
     }
     timer.End();
 
+    delete longVector;
     delete[](long *) longVector2;
     delete vectorTest2;
     delete allocator;

@@ -1962,6 +1962,9 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     for (uint32_t i = 0; i < resultWithJit.size(); ++i) {
         EXPECT_TRUE(VecBatchMatch(resultWithJit[i], resultWithoutJit[i]));
     }
+
+    delete [] input1;
+    delete [] input2;
     VectorHelper::FreeVecBatches(resultWithJit);
     VectorHelper::FreeVecBatches(resultWithoutJit);
 }

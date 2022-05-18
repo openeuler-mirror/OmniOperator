@@ -92,5 +92,5 @@ else
   cmake ../ -DCMAKE_BUILD_TYPE=Release
 fi
 make clean
-make -j6
+make -j8
 make install

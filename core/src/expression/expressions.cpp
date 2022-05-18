@@ -69,7 +69,7 @@ LiteralExpr::LiteralExpr() {}
 
 LiteralExpr::~LiteralExpr()
 {
-    if (dataType->GetId() == DataTypeId::OMNI_VARCHAR) {
+    if (TypeUtil::IsStringType(dataType->GetId()) || dataType->GetId() == DataTypeId::OMNI_DECIMAL128) {
         delete stringVal;
     }
 }

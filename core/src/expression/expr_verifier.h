@@ -9,7 +9,7 @@
 
 namespace omniruntime {
 namespace expressions {
-class ExprVerifier : public ExprVisitor{
+class ExprVerifier : public ExprVisitor {
 public:
     void Visit(const omniruntime::expressions::LiteralExpr &literalExpr) override;
     void Visit(const omniruntime::expressions::FieldExpr &fieldExpr) override;
@@ -31,4 +31,4 @@ private:
 }
 }
 
-#endif //OMNI_RUNTIME_EXPR_VERIFIER_H
+#endif // OMNI_RUNTIME_EXPR_VERIFIER_H

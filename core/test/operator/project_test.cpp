@@ -2511,7 +2511,7 @@ TEST(ProjectionTest, testDivDecimal64)
     delete factory;
 }
 
-TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
+TEST(ProjectionTest, DISABLED_testDecimal64ArithOutputDecimal128)
 {
     const int32_t numRows = 1;
     auto addLeft = new LiteralExpr(-999999999999999999L, Decimal64Type(18, 0));
@@ -2532,25 +2532,25 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
 
     // Not supporting promote decimal64 to decimal128 for now
     EXPECT_FALSE(factory->IsSupported());
-//    omniruntime::op::Operator *op = factory->CreateOperator();
-//    int64_t allData[numCols] = {};
-//    VectorAllocator *vecAllocator =
-//        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64ArithOutputDecimal128");
-//    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
-//
-//    op->AddInput(t);
-//    vector<VectorBatch *> ret;
-//    int32_t numReturned = op->GetOutput(ret);
-//    EXPECT_EQ(numReturned, numRows);
-//    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
-//    EXPECT_EQ(val0.HighBits(), 1L << 63);
-//    EXPECT_EQ(val0.LowBits(), 999999999999999997L);
-//    Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(0);
-//    EXPECT_EQ(val1.HighBits(), 1L << 63);
-//    EXPECT_EQ(val1.LowBits(), 1000000000000000001);
-//
-//    VectorHelper::FreeVecBatches(ret);
-//    delete op;
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64ArithOutputDecimal128");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
+    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0.HighBits(), 1L << 63);
+    EXPECT_EQ(val0.LowBits(), 999999999999999997L);
+    Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(0);
+    EXPECT_EQ(val1.HighBits(), 1L << 63);
+    EXPECT_EQ(val1.LowBits(), 1000000000000000001);
+
+    VectorHelper::FreeVecBatches(ret);
+    delete op;
     delete factory;
 }
 
