@@ -83,7 +83,7 @@ const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
 bool IsNullLiteral(const std::string &value);
 bool IsComparisonOperator(Operator op);
 bool IsLogicalOperator(Operator op);
-Operator StringToOperator(std::string opStr);
+Operator StringToOperator(const std::string& opStr);
 
 using DataTypePtr = std::unique_ptr<omniruntime::type::DataType>;
 
@@ -95,6 +95,7 @@ public:
     virtual ExprType GetType() const;
     virtual ~Expr() = default;
     virtual void Accept(ExprVisitor &visitor) const = 0;
+    static void DeleteExprs(const std::vector<Expr *> &exprs);
 };
 
 class LiteralExpr : public Expr {
@@ -113,7 +114,6 @@ public:
     explicit LiteralExpr(int64_t val, DataTypePtr colType);
     explicit LiteralExpr(double val, DataTypePtr colType);
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
-    explicit LiteralExpr(int64_t *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
@@ -190,7 +190,7 @@ public:
     Expr *falseExpr = nullptr;
     SwitchExpr();
     ~SwitchExpr() override;
-    SwitchExpr(std::vector<std::pair<Expr *, Expr *>> whens, Expr *fexp);
+    SwitchExpr(const std::vector<std::pair<Expr *, Expr *>> &whens, Expr *fexp);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
@@ -242,8 +242,8 @@ public:
 
     FuncExpr();
     ~FuncExpr() override;
-    FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr returnType);
-    FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr returnType,
+    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType);
+    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
         const omniruntime::Function *function);
 
     void Accept(ExprVisitor &visitor) const override;

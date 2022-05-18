@@ -31,8 +31,8 @@ bool IsNullLiteral(const std::string &value)
 
 bool IsComparisonOperator(Operator op)
 {
-    return op == Operator::GT || op == Operator::GTE || op == Operator::LT ||
-        op == Operator::LTE || op == Operator::EQ || op == Operator::NEQ;
+    return op == Operator::GT || op == Operator::GTE || op == Operator::LT || op == Operator::LTE ||
+        op == Operator::EQ || op == Operator::NEQ;
 }
 
 bool IsLogicalOperator(Operator op)
@@ -40,7 +40,7 @@ bool IsLogicalOperator(Operator op)
     return op == Operator::AND || op == Operator::OR || op == Operator::NOT;
 }
 
-Operator StringToOperator(std::string opStr)
+Operator StringToOperator(const std::string &opStr)
 {
     auto opItr = OPERATOR_FROM_STRING.find(opStr);
     if (opItr != OPERATOR_FROM_STRING.end()) {
@@ -64,41 +64,51 @@ DataTypeId Expr::GetReturnTypeId() const
     return dataType->GetId();
 }
 
+void Expr::DeleteExprs(const std::vector<Expr *> &exprs)
+{
+    for (Expr *exp : exprs) {
+        delete exp;
+    }
+}
+
 // Literal Expression methods
-LiteralExpr::LiteralExpr() {}
+LiteralExpr::LiteralExpr() = default;
 
 LiteralExpr::~LiteralExpr()
 {
-    if (TypeUtil::IsStringType(dataType->GetId()) || dataType->GetId() == DataTypeId::OMNI_DECIMAL128) {
-        delete stringVal;
-    }
+    delete stringVal;
 }
 
 ExprType LiteralExpr::GetType() const
 {
     return ExprType::LITERAL_E;
 }
+
 // Helper constructors for different data types
 LiteralExpr::LiteralExpr(bool val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     boolVal = val;
 }
+
 LiteralExpr::LiteralExpr(int32_t val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     intVal = val;
 }
+
 LiteralExpr::LiteralExpr(int64_t val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     longVal = val;
 }
+
 LiteralExpr::LiteralExpr(double val, DataTypePtr dt)
 {
     dataType = std::move(dt);
     doubleVal = val;
 }
+
 LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
 {
     dataType = std::move(dt);
@@ -106,9 +116,9 @@ LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
 }
 
 // FieldExpr
-FieldExpr::FieldExpr() {}
+FieldExpr::FieldExpr() = default;
 
-FieldExpr::~FieldExpr() {}
+FieldExpr::~FieldExpr() = default;
 
 ExprType FieldExpr::GetType() const
 {
@@ -175,9 +185,7 @@ InExpr::InExpr()
 
 InExpr::~InExpr()
 {
-    for (Expr *exp : arguments) {
-        delete exp;
-    }
+    DeleteExprs(arguments);
 }
 
 InExpr::InExpr(std::vector<Expr *> args)
@@ -217,20 +225,23 @@ ExprType BetweenExpr::GetType() const
 }
 
 SwitchExpr::SwitchExpr() : whenClause(), falseExpr() {}
+
 SwitchExpr::~SwitchExpr()
 {
-    for (std::pair<Expr *, Expr *> vec : whenClause) {
+    for (std::pair<Expr *, Expr *> &vec : whenClause) {
         delete vec.first;
         delete vec.second;
     }
     delete falseExpr;
 }
-SwitchExpr::SwitchExpr(std::vector<std::pair<Expr *, Expr *>> whens, Expr *fexp)
+
+SwitchExpr::SwitchExpr(const std::vector<std::pair<Expr *, Expr *>> &whens, Expr *fexp)
 {
     dataType = std::make_unique<DataType>(fexp->GetReturnType());
     whenClause = whens;
     falseExpr = fexp;
 }
+
 ExprType SwitchExpr::GetType() const
 {
     return ExprType::SWITCH_E;
@@ -296,19 +307,16 @@ ExprType IsNullExpr::GetType() const
     return ExprType::IS_NULL_E;
 }
 
-FuncExpr::FuncExpr() = default;
+FuncExpr::FuncExpr() : function(nullptr) {}
 
 FuncExpr::~FuncExpr()
 {
-    for (Expr *exp : arguments) {
-        delete exp;
-    }
+    DeleteExprs(arguments);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr returnType)
+FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType)
+    : funcName(fnName), arguments(args)
 {
-    funcName = fnName;
-    arguments = std::move(args);
     dataType = std::move(returnType);
 
     std::vector<DataTypeId> argTypes(arguments.size());
@@ -318,12 +326,11 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr ret
     this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr *> args, DataTypePtr returnType, const Function *function)
+FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+    const Function *function)
+    : funcName(fnName), arguments(args), function(function)
 {
-    funcName = fnName;
-    arguments = std::move(args);
     dataType = std::move(returnType);
-    this->function = function;
 }
 
 ExprType FuncExpr::GetType() const

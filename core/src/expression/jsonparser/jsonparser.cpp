@@ -12,9 +12,9 @@ using namespace omniruntime::type;
 
 using Json = nlohmann::json;
 
-Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
+Expr *JSONParser::ParseJSONFieldRef(const Json &jsonExpr)
 {
-    DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
+    auto typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
     DataTypePtr retType;
     auto colVal = jsonExpr["colVal"].get<int32_t>();
     if (TypeUtil::IsStringType(typeId)) {
@@ -38,67 +38,93 @@ Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
     return new FieldExpr(colVal, std::move(retType));
 }
 
-Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
+Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
 {
-    DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
+    auto typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
     // Null check on Literals
     if (jsonExpr["isNull"].get<bool>()) {
         auto expr = ParserHelper::GetDefaultValueForType(typeId);
+        if (expr == nullptr) {
+            return nullptr;
+        }
         expr->isNull = true;
         return expr;
     }
     // proceed with non-null value
-    if (typeId == OMNI_BOOLEAN) {
-        bool boolVal = jsonExpr["value"].get<bool>();
-        return new LiteralExpr(boolVal, make_unique<BooleanDataType>());
-    } else if (typeId == OMNI_INT) {
-        auto intVal = jsonExpr["value"].get<int32_t>();
-        return new LiteralExpr(intVal, make_unique<IntDataType>());
-    } else if (typeId == OMNI_DATE32) {
-        auto intVal = jsonExpr["value"].get<int32_t>();
-        return new LiteralExpr(intVal, make_unique<DataType>(OMNI_DATE32));
-    } else if (typeId == OMNI_LONG) {
-        auto longVal = jsonExpr["value"].get<int64_t>();
-        return new LiteralExpr(longVal, make_unique<LongDataType>());
-    } else if (typeId == OMNI_DOUBLE) {
-        auto doubleVal = jsonExpr["value"].get<double>();
-        return new LiteralExpr(doubleVal, make_unique<DoubleDataType>());
-    } else if (typeId == OMNI_DECIMAL64) {
-        auto decimalVal = jsonExpr["value"].get<int64_t>();
-        return new LiteralExpr(decimalVal,
-            make_unique<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
-    } else if (typeId == OMNI_DECIMAL128) {
-        string *dec128String = new string(jsonExpr["value"].get<string>());
-        return new LiteralExpr(dec128String,
-            make_unique<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
-    } else if (typeId == OMNI_NONE) {
-        return new LiteralExpr(0, make_unique<DataType>());
-    } else {
-        string *stringVal = new string(jsonExpr["value"].get<string>());
-        int32_t width = jsonExpr["width"].get<int32_t>();
-        return new LiteralExpr(stringVal, make_unique<VarcharDataType>(width));
+    switch (typeId) {
+        case OMNI_BOOLEAN: {
+            bool boolVal = jsonExpr["value"].get<bool>();
+            return new LiteralExpr(boolVal, make_unique<BooleanDataType>());
+        }
+        case OMNI_INT: {
+            auto intVal = jsonExpr["value"].get<int32_t>();
+            return new LiteralExpr(intVal, make_unique<IntDataType>());
+        }
+        case OMNI_DATE32: {
+            auto intVal = jsonExpr["value"].get<int32_t>();
+            return new LiteralExpr(intVal, make_unique<DataType>(OMNI_DATE32));
+        }
+        case OMNI_LONG: {
+            auto longVal = jsonExpr["value"].get<int64_t>();
+            return new LiteralExpr(longVal, make_unique<LongDataType>());
+        }
+        case OMNI_DOUBLE: {
+            auto doubleVal = jsonExpr["value"].get<double>();
+            return new LiteralExpr(doubleVal, make_unique<DoubleDataType>());
+        }
+        case OMNI_DECIMAL64: {
+            auto decimalVal = jsonExpr["value"].get<int64_t>();
+            return new LiteralExpr(decimalVal,
+                make_unique<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
+        }
+        case OMNI_DECIMAL128: {
+            auto *dec128String = new string(jsonExpr["value"].get<string>());
+            return new LiteralExpr(dec128String, make_unique<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(),
+                jsonExpr["scale"].get<int32_t>()));
+        }
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
+            auto *stringVal = new string(jsonExpr["value"].get<string>());
+            auto width = jsonExpr["width"].get<int32_t>();
+            return new LiteralExpr(stringVal, make_unique<VarcharDataType>(width));
+        }
+        default:
+            return new LiteralExpr(0, make_unique<DataType>());
     }
 }
 
-Expr *JSONParser::ParseJSONBinary(Json jsonExpr)
+Expr *JSONParser::ParseJSONBinary(const Json &jsonExpr)
 {
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
+    if (op == Operator::INVALIDOP) {
+        return nullptr;
+    }
+
+    DataTypePtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
+    if (dataType == nullptr) {
+        return nullptr;
+    }
+
     Expr *leftExpr = ParseJSON(jsonExpr["left"]);
     if (leftExpr == nullptr) {
         return nullptr;
     }
     Expr *rightExpr = ParseJSON(jsonExpr["right"]);
     if (rightExpr == nullptr) {
+        delete leftExpr;
         return nullptr;
     }
 
-    DataTypePtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
     return new BinaryExpr(op, leftExpr, rightExpr, std::move(dataType));
 }
 
-Expr *JSONParser::ParseJSONUnary(Json jsonExpr)
+Expr *JSONParser::ParseJSONUnary(const Json &jsonExpr)
 {
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
+    if (op == Operator::INVALIDOP) {
+        return nullptr;
+    }
+
     Expr *expr = ParseJSON(jsonExpr["expr"]);
     if (expr == nullptr) {
         return nullptr;
@@ -106,21 +132,22 @@ Expr *JSONParser::ParseJSONUnary(Json jsonExpr)
     return new UnaryExpr(op, expr, make_unique<BooleanDataType>());
 }
 
-Expr *JSONParser::ParseJSONIn(Json jsonExpr)
+Expr *JSONParser::ParseJSONIn(const Json &jsonExpr)
 {
     std::vector<Expr *> args;
     for (const auto &item : jsonExpr["arguments"].items()) {
         Expr *arg = ParseJSON(item.value());
-        if (arg) {
+        if (arg != nullptr) {
             args.push_back(arg);
         } else {
+            Expr::DeleteExprs(args);
             return nullptr;
         }
     }
     return new InExpr(args);
 }
 
-Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
+Expr *JSONParser::ParseJSONBetween(const Json &jsonExpr)
 {
     Expr *val = ParseJSON(jsonExpr["value"]);
     if (val == nullptr) {
@@ -128,51 +155,71 @@ Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
     }
     Expr *lowBoundExpr = ParseJSON(jsonExpr["lower_bound"]);
     if (lowBoundExpr == nullptr) {
+        delete val;
         return nullptr;
     }
     Expr *upBoundExpr = ParseJSON(jsonExpr["upper_bound"]);
     if (upBoundExpr == nullptr) {
+        delete val;
+        delete lowBoundExpr;
         return nullptr;
     }
 
     return new BetweenExpr(val, lowBoundExpr, upBoundExpr);
 }
 
-Expr *JSONParser::ParseJSONSwitch(Json jsonExpr)
+static void DeleteWhenClause(const std::vector<std::pair<Expr *, Expr *>> &whenClause)
 {
-    Expr *elseExpr = ParseJSON(jsonExpr["else"]);
-    if (elseExpr == nullptr) {
-        return nullptr;
+    for (auto iter = whenClause.begin(); iter != whenClause.end(); iter++) {
+        delete iter->first;
+        delete iter->second;
     }
-    Expr *left = ParseJSON(jsonExpr["input"]);
-    if (left == nullptr) {
-        return nullptr;
-    }
-    int numOfCases = jsonExpr["numOfCases"].get<int>();
-    std::vector<std::pair<Expr *, Expr *>> whenClause;
+}
 
-    for (int i = 0; i < numOfCases; i++) {
-        std::pair<Expr *, Expr *> when;
+Expr *JSONParser::ParseJSONSwitch(const Json &jsonExpr)
+{
+    auto numOfCases = jsonExpr["numOfCases"].get<int32_t>();
+    std::vector<std::pair<Expr *, Expr *>> whenClause;
+    for (int32_t i = 0; i < numOfCases; i++) {
+        Expr *left = ParseJSON(jsonExpr["input"]);
+        if (left == nullptr) {
+            return nullptr;
+        }
         Expr *right = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["when"]);
         if (right == nullptr) {
+            delete left;
             return nullptr;
         }
         Expr *result = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["result"]);
         if (result == nullptr) {
+            delete left;
+            delete right;
             return nullptr;
         }
-        BinaryExpr *condition = new BinaryExpr(Operator::EQ, left, right, BooleanType());
-        when = make_pair(condition, result);
+        auto *condition = new BinaryExpr(Operator::EQ, left, right, BooleanType());
+        std::pair<Expr *, Expr *> when = make_pair(condition, result);
         whenClause.push_back(when);
+    }
+
+    Expr *elseExpr = ParseJSON(jsonExpr["else"]);
+    if (elseExpr == nullptr) {
+        DeleteWhenClause(whenClause);
+        return nullptr;
     }
     if (TypeUtil::IsStringType(elseExpr->GetReturnTypeId()) && elseExpr->GetType() == ExprType::LITERAL_E &&
         static_cast<LiteralExpr *>(elseExpr)->stringVal->compare("null") == 0) {
-        return new SwitchExpr(whenClause, ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId()));
+        delete elseExpr;
+        auto literalExpr = ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId());
+        if (literalExpr == nullptr) {
+            DeleteWhenClause(whenClause);
+            return nullptr;
+        }
+        return new SwitchExpr(whenClause, literalExpr);
     }
     return new SwitchExpr(whenClause, elseExpr);
 }
 
-Expr *JSONParser::ParseJSONIf(Json jsonExpr)
+Expr *JSONParser::ParseJSONIf(const Json &jsonExpr)
 {
     Expr *cond = ParseJSON(jsonExpr["condition"]);
     if (cond == nullptr) {
@@ -180,21 +227,31 @@ Expr *JSONParser::ParseJSONIf(Json jsonExpr)
     }
     Expr *trueExpr = ParseJSON(jsonExpr["if_true"]);
     if (trueExpr == nullptr) {
+        delete cond;
         return nullptr;
     }
     Expr *falseExpr = ParseJSON(jsonExpr["if_false"]);
     if (falseExpr == nullptr) {
+        delete cond;
+        delete trueExpr;
         return nullptr;
     }
     if (TypeUtil::IsStringType(falseExpr->GetReturnTypeId()) && falseExpr->GetType() == ExprType::LITERAL_E &&
         static_cast<LiteralExpr *>(falseExpr)->stringVal->compare("null") == 0) {
-        return new IfExpr(cond, trueExpr, ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId()));
+        delete falseExpr;
+        auto literalExpr = ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId());
+        if (literalExpr == nullptr) {
+            delete cond;
+            delete trueExpr;
+            return nullptr;
+        }
+        return new IfExpr(cond, trueExpr, literalExpr);
     }
 
     return new IfExpr(cond, trueExpr, falseExpr);
 }
 
-Expr *JSONParser::ParseJSONCoalesce(Json jsonExpr)
+Expr *JSONParser::ParseJSONCoalesce(const Json &jsonExpr)
 {
     Expr *val1 = ParseJSON(jsonExpr["value1"]);
     if (val1 == nullptr) {
@@ -202,14 +259,15 @@ Expr *JSONParser::ParseJSONCoalesce(Json jsonExpr)
     }
     Expr *val2 = ParseJSON(jsonExpr["value2"]);
     if (val2 == nullptr) {
+        delete val1;
         return nullptr;
     }
 
     return new CoalesceExpr(val1, val2);
 }
 
-Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
-{ // Is_Null support
+Expr *JSONParser::ParseJsonIsNull(const Json &jsonExpr)
+{
     Expr *val = ParseJSON(jsonExpr["arguments"].at(0));
     if (val == nullptr) {
         return nullptr;
@@ -217,10 +275,10 @@ Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
     return new IsNullExpr(val);
 }
 
-Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
+Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
 {
     string funcName = jsonExpr["function_name"];
-    DataTypeId retTypeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
+    auto retTypeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
     std::vector<Expr *> args;
     DataTypePtr retType;
     int32_t width = INT32_MAX;
@@ -229,17 +287,21 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
 
     for (const auto &item : jsonExpr["arguments"].items()) {
         Expr *arg = ParseJSON(item.value());
-        if (arg) {
+        if (arg != nullptr) {
             args.push_back(arg);
         } else {
+            Expr::DeleteExprs(args);
             return nullptr;
         }
     }
+
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
     if (funcName == "CAST" && args.size() == 1) {
         if (TypeUtil::IsDecimalType(args[0]->GetReturnTypeId()) || TypeUtil::IsDecimalType(retTypeId)) {
+            Expr::DeleteExprs(args);
             return nullptr;
         } else if (TypeUtil::IsStringType(args[0]->GetReturnTypeId()) || TypeUtil::IsStringType(retTypeId)) {
+            Expr::DeleteExprs(args);
             return nullptr;
         } else if (retTypeId == args[0]->GetReturnTypeId()) {
             if (args[0]->GetType() == ExprType::LITERAL_E) {
@@ -247,6 +309,7 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
             } else if (args[0]->GetType() == ExprType::FIELD_E) {
                 return static_cast<FieldExpr *>(args[0]);
             } else {
+                Expr::DeleteExprs(args);
                 return nullptr;
             }
         }
@@ -260,8 +323,6 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
             argTypes[i] = omniruntime::type::OMNI_INT;
         }
     }
-    auto signature = FunctionSignature(funcName, argTypes, retTypeId);
-    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (TypeUtil::IsStringType(retTypeId)) {
         width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
         if (retTypeId == OMNI_CHAR) {
@@ -280,15 +341,18 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     } else {
         retType = make_unique<DataType>(retTypeId);
     }
+    auto signature = FunctionSignature(funcName, argTypes, retTypeId);
+    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
         return new FuncExpr(funcName, args, std::move(retType), function);
     }
 
+    Expr::DeleteExprs(args);
     // if operator is not supported, return nullptr
     return nullptr;
 }
 
-Expr *JSONParser::ParseJSON(Json jsonExpr)
+Expr *JSONParser::ParseJSON(const Json &jsonExpr)
 {
     string exprTypeStr = jsonExpr["exprType"].get<string>();
     if (exprTypeStr == "FIELD_REFERENCE") {
@@ -313,9 +377,10 @@ Expr *JSONParser::ParseJSON(Json jsonExpr)
         return ParseJSONFunc(jsonExpr);
     } else if (exprTypeStr == "SWITCH") {
         return ParseJSONSwitch(jsonExpr);
+    } else {
+        // return nullptr if ExprType not supported
+        return nullptr;
     }
-    // return nullptr if ExprType not supported
-    return nullptr;
 }
 
 std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::json *expressions,
@@ -323,12 +388,14 @@ std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::js
 {
     std::vector<Expr *> result;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
-        Expr *expr = ParseJSON(expressions[i]);
-        if (expr == nullptr) {
-            LogWarn("The %d -th expression is not supported: %s", i, expressions[i].dump(1).c_str());
-            return { nullptr };
+        Expr *expression = ParseJSON(expressions[i]);
+        if (expression == nullptr) {
+            LogWarn("The %d-th expression is not supported: %s", i, expressions[i].dump(1).c_str());
+            Expr::DeleteExprs(result);
+            result.clear();
+            break;
         }
-        result.push_back(expr);
+        result.push_back(expression);
     }
     return result;
 }

@@ -42,11 +42,16 @@ void VectorBatchSpiller::MergeFromDiskAndMemory(SpillUnitIter &memoryIter)
     }
     this->remainingRowCount = totalRowCount;
 
-    auto vecBatchUnitIter = new VectorBatchUnitIter(vecBatches);
-    auto memoryIterator = new SpillIterator(vecBatchUnitIter);
+    if (vecBatches.size() > 0) {
+        auto vecBatchUnitIter = new VectorBatchUnitIter(vecBatches);
+        auto memoryIterator = new SpillIterator(vecBatchUnitIter);
 
-    merger = new VectorBatchMerger(comparator);
-    merger->MergeFromDiskAndMemory(diskIterators, memoryIterator);
+        merger = new VectorBatchMerger(comparator);
+        merger->MergeFromDiskAndMemory(diskIterators, memoryIterator);
+    } else {
+        merger = new VectorBatchMerger(comparator);
+        merger->MergeFromDiskAndMemory(diskIterators, nullptr);
+    }
 }
 
 bool VectorBatchSpiller::HasNext()

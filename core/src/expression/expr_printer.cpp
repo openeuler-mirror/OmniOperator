@@ -77,7 +77,7 @@ void ExprPrinter::Visit(const BinaryExpr &e)
     string indent = GenerateIndentation();
     string message = BinaryExprPrinterHelper(e.op);
     if (message == "Invalid") {
-        printf("invalid BinaryOperator %d(", e.op);
+        printf("invalid BinaryOperator %d(", static_cast<int32_t>(e.op));
     } else {
         printf((indent + (message.append("\n"))).c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     }
@@ -108,7 +108,7 @@ void ExprPrinter::Visit(const UnaryExpr &e)
             printf((indent + "Unary:%s(NOT,\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
             break;
         default:
-            printf("invalid UnaryOperator %d(", e.op);
+            printf("invalid UnaryOperator %d(", static_cast<int32_t>(e.op));
             break;
     }
     this->indentationDepth++;
@@ -199,8 +199,6 @@ void ExprPrinter::Visit(const LiteralExpr &e)
             PrintDoubleVal(e, PRINT_WITH_TYPES, indent);
             break;
         case OMNI_CHAR:
-            PrintCharVal(e, PRINT_WITH_TYPES, indent);
-            break;
         case OMNI_VARCHAR:
             PrintCharVal(e, PRINT_WITH_TYPES, indent);
             break;

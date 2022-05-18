@@ -1590,26 +1590,21 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         return;
     }
 
-    auto valData = val->data;
-    auto valLen = val->length;
     auto valNull = val->isNull;
     auto lowerVal = VisitExpr(*(bExpr->lowerBound));
     if (!lowerVal->IsValidValue()) {
         this->value = CreateInvalidCodeGenValue();
         return;
     }
-    auto lowerValData = lowerVal->data;
-    auto lowerValLen = lowerVal->length;
+
     auto lowerValNull = lowerVal->isNull;
     auto upperVal = VisitExpr(*(bExpr->upperBound));
     if (!upperVal->IsValidValue()) {
         this->value = CreateInvalidCodeGenValue();
         return;
     }
-    auto upperValData = upperVal->data;
-    auto upperValLen = upperVal->length;
-    auto upperValNull = upperVal->isNull;
 
+    auto upperValNull = upperVal->isNull;
     auto isAnyNull = builder->CreateOr(builder->CreateOr(valNull, lowerValNull), upperValNull);
     auto isNeitherNull = builder->CreateNot(isAnyNull);
     Value *cmpLeft, *cmpRight;

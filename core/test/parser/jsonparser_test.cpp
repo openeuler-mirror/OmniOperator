@@ -856,7 +856,6 @@ TEST(JSONParserTest, UnsupportedFunctionExpr)
 
     Expr *castExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedCastJson));
     EXPECT_EQ(castExpr, nullptr);
-    delete castExpr;
 }
 
 TEST(JSONParserTest, UnsupportedFunctionExprs)
@@ -867,8 +866,7 @@ TEST(JSONParserTest, UnsupportedFunctionExprs)
     nlohmann::json exprs[] = {expr, expr};
 
     vector<Expr *> res = JSONParser::ParseJSON(exprs, 2);
-    EXPECT_EQ(res[0], nullptr);
-    delete res[0];
+    EXPECT_EQ(res.size(), 0);
 }
 
 TEST(JSONParserTest, UnsupportedDecimal128FunctionExprs)
@@ -878,6 +876,5 @@ TEST(JSONParserTest, UnsupportedDecimal128FunctionExprs)
 
     auto parsedExpr = JSONParser::ParseJSON(nlohmann::json::parse(castJson));
     EXPECT_EQ(parsedExpr, nullptr);
-    delete parsedExpr;
 }
 }

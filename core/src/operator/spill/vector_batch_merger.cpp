@@ -113,7 +113,7 @@ void VectorBatchMerger::MergeFromDiskAndMemory(std::vector<VecBatchWithPositionI
         }
     }
 
-    if (memory->HasNext()) {
+    if (memory != nullptr && memory->HasNext()) {
         VecBatchWithPosition *vecBatchWithPosition = memory->Next();
         auto elementAndIterator = new ElementAndIterator(memory);
         elementAndIterator->SetElement(vecBatchWithPosition);

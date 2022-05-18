@@ -15,7 +15,7 @@ namespace omniruntime {
 namespace op {
 class VectorBatchSpiller : public Spiller {
 public:
-    VectorBatchSpiller(std::string &path, omniruntime::type::DataTypes &sourceTypes,
+    VectorBatchSpiller(const std::string &path, const omniruntime::type::DataTypes &sourceTypes,
         VecBatchWithPositionComparator *comparator)
         : path(path),
           sourceTypes(sourceTypes),
@@ -63,6 +63,10 @@ public:
         }
         if (merger != nullptr) {
             delete merger;
+        }
+
+        if (tracker != nullptr) {
+            delete tracker;
         }
     }
 

@@ -520,6 +520,9 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
 
 std::string GenerateSpillPath()
 {
-    return get_current_dir_name() + std::string("/") + std::to_string(time(0));
+    char *dirName = get_current_dir_name();
+    std::string result =  dirName + std::string("/") + std::to_string(time(0));
+    free(dirName);
+    return result;
 }
 }
