@@ -15,24 +15,23 @@
 
 class JSONParser {
 public:
-    static omniruntime::expressions::Expr *ParseJSON(nlohmann::json jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSON(const nlohmann::json &jsonExpr);
     static std::vector<omniruntime::expressions::Expr *> ParseJSON(nlohmann::json expressions[],
         int32_t numberOfExpressions);
 
 private:
-    static omniruntime::expressions::Expr *ParseJSONFieldRef(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONLiteral(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONBinary(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONUnary(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONIn(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONBetween(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONIf(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONCoalesce(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJsonIsNull(nlohmann::json jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONFieldRef(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONLiteral(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONBinary(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONUnary(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONIn(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONBetween(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONIf(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONCoalesce(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJsonIsNull(const nlohmann::json &jsonExpr);
 
-    static omniruntime::expressions::Expr *ParseJSONFunc(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJSONSwitch(nlohmann::json jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONFunc(const nlohmann::json &jsonExpr);
+    static omniruntime::expressions::Expr *ParseJSONSwitch(const nlohmann::json &jsonExpr);
 };
-
 
 #endif

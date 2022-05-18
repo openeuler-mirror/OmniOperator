@@ -62,14 +62,14 @@ TEST(SpillTest, TestSpiller)
     std::vector<int32_t> sortNullFirsts = { 0, 0 };
     VecBatchWithPositionComparator comparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts);
 
-    ChildSpillTracker spillTracker(&(GetRootSpillTracker()));
+    auto spillTracker = dynamic_cast<ChildSpillTracker *>(GetRootSpillTracker().CreateSpillTracker());
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
     VectorBatchSpiller spiller(path, sourceTypes, &comparator);
-    spiller.SetSpillTracker(&spillTracker);
+    spiller.SetSpillTracker(spillTracker);
     VectorBatchUnitIter diskVectorBatch(vecBatch);
     spiller.Spill(diskVectorBatch);
-    ASSERT_TRUE(spillTracker.GetSpilledBytes() != 0);
+    ASSERT_TRUE(spillTracker->GetSpilledBytes() != 0);
 
     int32_t data3[dataSize] = {-9, -5, -1, 3, 7};
     int64_t data4[dataSize] = {-2, 0, -4, -8, -6};
@@ -82,6 +82,7 @@ TEST(SpillTest, TestSpiller)
         int64_t expectedData2[] = {-2, 6, 0, 8, -4, 4, -8, 0, -6, 2};
         auto result = spiller.Next();
         auto resultVecBatch = result->GetVectorBatch();
+        delete result;
         TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), expectedDataSize, expectedData1,
             expectedData2);
         VectorHelper::PrintVecBatch(resultVecBatch);
@@ -108,14 +109,14 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
     InitRootSpillTracker(path, 50);
-    ChildSpillTracker spillTracker(&(GetRootSpillTracker()));
+    auto *spillTracker = dynamic_cast<ChildSpillTracker *>(GetRootSpillTracker().CreateSpillTracker());
     VectorBatchSpiller spiller(path, sourceTypes, &comparator);
-    spiller.SetSpillTracker(&spillTracker);
+    spiller.SetSpillTracker(spillTracker);
     VectorBatchUnitIter diskVectorBatch(vecBatch);
     auto status = spiller.Spill(diskVectorBatch);
     VectorHelper::FreeVecBatch(vecBatch);
     ASSERT_EQ(status, ErrorCode::EXCEED_SPILL_THRESHOLD);
-    ASSERT_EQ(spillTracker.GetSpilledBytes(), 0);
+    ASSERT_EQ(spillTracker->GetSpilledBytes(), 0);
     rmdir(path.c_str());
 }
 }

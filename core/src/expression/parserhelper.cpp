@@ -74,7 +74,6 @@ DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
         case OMNI_NONE:
             return make_unique<DataType>();
         default:
-            LLVM_DEBUG_LOG("Unsupported data type  %d", typeId);
             LogError("Unsupported data type %d ", typeId);
             return nullptr;
     }
