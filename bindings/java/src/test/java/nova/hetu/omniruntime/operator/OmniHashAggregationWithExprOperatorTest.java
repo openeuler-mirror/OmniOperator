@@ -138,6 +138,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         assertEquals(results.hasNext(), true);
         VecBatch resultVecBatch = results.next();
         assertEquals(results.hasNext(), false);
+
+        // should return false when multiple invoke hasNext()
+        assertEquals(results.hasNext(), false);
         assertEquals(resultVecBatch.getRowCount(), 1);
         assertEquals(resultVecBatch.getVectorCount(), 4);
 
