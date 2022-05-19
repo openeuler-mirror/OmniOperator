@@ -208,11 +208,11 @@ public:
 
     static inline void Multiply(Decimal128 &left, Decimal128 &right, Decimal128 &result)
     {
-        int64_t l0 = left.LowBits();
-        int64_t l1 = UnpackUnsignedLong(left.HighBits());
+        __int128_t l0 = left.LowBits();
+        __int128_t l1 = UnpackUnsignedLong(left.HighBits());
 
-        int64_t r0 = right.LowBits();
-        int64_t r1 = UnpackUnsignedLong(right.HighBits());
+        __int128_t r0 = right.LowBits();
+        __int128_t r1 = UnpackUnsignedLong(right.HighBits());
 
         int64_t z0 = 0;
         int64_t z1 = 0;

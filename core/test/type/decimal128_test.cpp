@@ -116,6 +116,17 @@ TEST(Decimal128, multiple_negate)
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
+TEST(Decimal128, multiple_mix)
+{
+    Decimal128 left = Decimal128(1L<<63, 234527000012345L);
+    Decimal128 right = Decimal128(0L, 1000000);
+    Decimal128 result;
+    DecimalOperations::Multiply(left, right, result);
+    Decimal128 expected = Decimal128(-9223372036854775796L, 13166071127830380608);
+    EXPECT_EQ(result.HighBits(), expected.HighBits());
+    EXPECT_EQ(result.LowBits(), expected.LowBits());
+}
+
 TEST(Decimal128, divide_positive1)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(2);

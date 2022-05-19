@@ -127,14 +127,13 @@ public class Decimal128Vec extends DecimalVec {
      * @return new long array
      */
     public static long[] putDecimal(BigInteger bigInteger) {
-        byte[] bytes = bigInteger.toByteArray();
+        byte[] bytes = bigInteger.abs().toByteArray();
         int byteArrayLength = bytes.length;
 
         if (byteArrayLength > 2 * Long.BYTES) {
             throw new OmniRuntimeException(OMNI_INNER_ERROR, "Decimal overflow.");
         }
         // the array is big endian
-        long[] longs = new long[2];
         byte[] highBytes = new byte[Long.BYTES];
         byte[] lowBytes = new byte[Long.BYTES];
         if (byteArrayLength <= Long.BYTES) {
@@ -144,7 +143,13 @@ public class Decimal128Vec extends DecimalVec {
                     Math.min(byteArrayLength - Long.BYTES, Long.BYTES));
             System.arraycopy(bytes, 8, lowBytes, 0, Long.BYTES);
         }
+        boolean isNegative = bigInteger.compareTo(new BigInteger("0")) == -1;
+        if (isNegative) {
+            long signBit = bytesToLong(highBytes) | (1L << 63);
+            highBytes = longToBytes(signBit);
+        }
 
+        long[] longs = new long[2];
         longs[1] = bytesToLong(highBytes);
         longs[0] = bytesToLong(lowBytes);
         return longs;
@@ -157,12 +162,16 @@ public class Decimal128Vec extends DecimalVec {
      * @return new BigInteger
      */
     public static BigInteger getDecimal(long[] longs) {
+        boolean isNegative = longs[1] < 0;
+        if (isNegative) {
+            longs[1] = longs[1] & 0x7FFFFFFFFFFFFFFFL;
+        }
         byte[] bytes = new byte[Long.BYTES * 2];
-        byte[] highBytes = longToBytes(longs[0]);
-        byte[] lowBytes = longToBytes(longs[1]);
-        System.arraycopy(lowBytes, 0, bytes, 0, Long.BYTES);
-        System.arraycopy(highBytes, 0, bytes, 8, Long.BYTES);
-        return new BigInteger(bytes);
+        byte[] highBytes = longToBytes(longs[1]);
+        byte[] lowBytes = longToBytes(longs[0]);
+        System.arraycopy(highBytes, 0, bytes, 0, Long.BYTES);
+        System.arraycopy(lowBytes, 0, bytes, 8, Long.BYTES);
+        return isNegative ? new BigInteger(bytes).multiply(new BigInteger("-1")) : new BigInteger(bytes);
     }
 
     /**
