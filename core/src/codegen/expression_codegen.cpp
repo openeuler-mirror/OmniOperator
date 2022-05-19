@@ -293,17 +293,17 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
     switch (binaryExpr->left->GetReturnTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:
-            leftZero = builder->CreateSub(left, left);
-            rightOne = builder->CreateSub(builder->CreateAdd(right, llvmTypes->CreateConstantInt(1)), right);
+            leftZero = llvmTypes->CreateConstantInt(0);
+            rightOne = llvmTypes->CreateConstantInt(1);
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
-            leftZero = builder->CreateSub(left, left);
-            rightOne = builder->CreateSub(builder->CreateAdd(right, llvmTypes->CreateConstantLong(1)), right);
+            leftZero = llvmTypes->CreateConstantLong(0);
+            rightOne = llvmTypes->CreateConstantLong(1);
             break;
         case OMNI_DOUBLE:
-            leftZero = builder->CreateFSub(left, left);
-            rightOne = builder->CreateFSub(builder->CreateFAdd(right, llvmTypes->CreateConstantDouble(1.0)), right);
+            leftZero = llvmTypes->CreateConstantDouble(0.0);
+            rightOne = llvmTypes->CreateConstantDouble(1.0);
             break;
         case OMNI_DECIMAL128: {
             std::vector<DataTypeId> params { OMNI_DECIMAL128, OMNI_DECIMAL128 };
@@ -392,8 +392,8 @@ Value *ExpressionCodeGen::HandleDivisionByZero(Value *divisorValue, DataTypeId t
             defaultValue = llvmTypes->CreateConstantLong(1);
             break;
         case OMNI_DOUBLE:
-            zero = llvmTypes->CreateConstantDouble(0);
-            defaultValue = llvmTypes->CreateConstantDouble(1);
+            zero = llvmTypes->CreateConstantDouble(0.0);
+            defaultValue = llvmTypes->CreateConstantDouble(1.0);
             break;
         default:
             zero = nullptr;

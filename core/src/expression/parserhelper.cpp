@@ -14,29 +14,41 @@ constexpr bool BOOL_DEFAULT_VALUE = true;
 constexpr char CHAR_DEFAULT_VALUE[] = "NULL";
 constexpr char DECIMAL128_DEFAULT_VALUE[] = "0";
 
-omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId)
+omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId, int32_t precision,
+    int32_t scale)
 {
-    DataTypePtr destType = make_unique<DataType>(destTypeId);
-    switch (destTypeId) {
-        case OMNI_INT:
-        case OMNI_DATE32:
-            return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
-        case OMNI_LONG:
-        case OMNI_DECIMAL64:
-            return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
-        case OMNI_DOUBLE:
-            return new LiteralExpr(DOUBLE_DEFAULT_VALUE, std::move(destType));
-        case OMNI_BOOLEAN:
-            return new LiteralExpr(BOOL_DEFAULT_VALUE, std::move(destType));
-        case OMNI_CHAR:
-        case OMNI_VARCHAR:
-            return new LiteralExpr(new string(CHAR_DEFAULT_VALUE), std::move(destType));
-        case OMNI_DECIMAL128:
-            return new LiteralExpr(new string(DECIMAL128_DEFAULT_VALUE), std::move(destType));
-        case OMNI_NONE:
-            return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
-        default:
-            return nullptr;
+    if (TypeUtil::IsDecimalType(destTypeId)) {
+        switch (destTypeId) {
+            case OMNI_DECIMAL64: {
+                DataTypePtr destType = make_unique<DataType>(Decimal64DataType(precision, scale));
+                return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
+            }
+            case OMNI_DECIMAL128:
+            default: {
+                DataTypePtr destType = make_unique<DataType>(Decimal128DataType(precision, scale));
+                return new LiteralExpr(new string(DECIMAL128_DEFAULT_VALUE), std::move(destType));
+            }
+        }
+    } else {
+        DataTypePtr destType = make_unique<DataType>(destTypeId);
+        switch (destTypeId) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+            case OMNI_LONG:
+                return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
+            case OMNI_DOUBLE:
+                return new LiteralExpr(DOUBLE_DEFAULT_VALUE, std::move(destType));
+            case OMNI_BOOLEAN:
+                return new LiteralExpr(BOOL_DEFAULT_VALUE, std::move(destType));
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
+                return new LiteralExpr(new string(CHAR_DEFAULT_VALUE), std::move(destType));
+            case OMNI_NONE:
+                return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
+            default:
+                return nullptr;
+        }
     }
 }
 
