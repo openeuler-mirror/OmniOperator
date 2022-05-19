@@ -56,6 +56,11 @@ extern "C" DLLEXPORT double DivideDouble(double divident, double divisor)
     return divident / divisor;
 }
 
+extern "C" DLLEXPORT double ModulusDouble(double divident, double divisor)
+{
+    return std::fmod(divident, divisor);
+}
+
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
 {
     if (y == 0) {

@@ -13,6 +13,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
     std::string castFnStr = "CAST";
     std::string roundFnStr = "round";
     std::string divideFnStr = "divide";
+    std::string modulusFnStr = "modulus";
     std::vector<Function> mathFnRegistry = { // insert native functions for each absolute math function
         Function(reinterpret_cast<void *>(Abs<int32_t>), absFnStr, {}, { OMNI_INT }, OMNI_INT),
         Function(reinterpret_cast<void *>(Abs<int64_t>), absFnStr, {}, { OMNI_LONG }, OMNI_LONG),
@@ -32,6 +33,8 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
 
         // insert native function for each divide operations
         Function(reinterpret_cast<void *>(DivideDouble), divideFnStr, {}, { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE),
+
+        Function(reinterpret_cast<void *>(ModulusDouble), modulusFnStr, {}, { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE),
 
         // insert pmod function for project operator support
         Function(reinterpret_cast<void *>(Pmod), "pmod", {}, { OMNI_INT, OMNI_INT }, OMNI_INT),

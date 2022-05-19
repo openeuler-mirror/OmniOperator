@@ -35,6 +35,8 @@ extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x);
 
 extern "C" DLLEXPORT double DivideDouble(double divident, double divisor);
 
+extern "C" DLLEXPORT double ModulusDouble(double divident, double divisor);
+
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
