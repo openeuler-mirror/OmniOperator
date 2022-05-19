@@ -450,7 +450,7 @@ static bool CheckExpressionsSupported(bool skipVerify, const std::vector<Expr *>
 #ifdef DEBUG
                 std::cout << "The " << i << "-th project expression is not supported: " << std::endl;
                 ExprPrinter p;
-                expressions[i]->Accept(p);
+                projectExprs[i]->Accept(p);
                 std::cout << std::endl;
 #endif
                 LogWarn("Verifier failed");
