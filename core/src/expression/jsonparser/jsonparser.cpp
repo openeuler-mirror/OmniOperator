@@ -43,7 +43,15 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
     auto typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
     // Null check on Literals
     if (jsonExpr["isNull"].get<bool>()) {
-        auto expr = ParserHelper::GetDefaultValueForType(typeId);
+        LiteralExpr *expr = nullptr;
+        if (TypeUtil::IsDecimalType(typeId)) {
+            int32_t precision = jsonExpr["precision"].get<int32_t>();
+            int32_t scale = jsonExpr["scale"].get<int32_t>();
+            expr = ParserHelper::GetDefaultValueForType(typeId, precision, scale);
+        } else {
+            expr = ParserHelper::GetDefaultValueForType(typeId);
+        }
+
         if (expr == nullptr) {
             return nullptr;
         }

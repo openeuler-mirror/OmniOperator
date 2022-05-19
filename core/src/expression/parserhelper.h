@@ -14,7 +14,8 @@
 
 class ParserHelper {
 public:
-    static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(omniruntime::type::DataTypeId destTypeId);
+    static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(omniruntime::type::DataTypeId destTypeId,
+        int32_t precision = 0, int32_t scale = 0);
     static omniruntime::expressions::DataTypePtr GetReturnDataType(nlohmann::json jsonExpr);
 };
 
