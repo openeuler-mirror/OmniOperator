@@ -23,7 +23,7 @@ public:
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
 
 private:
-    std::string BinaryExprPrinterHelper(const omniruntime::expressions::Operator &op) const;
+    std::string BinaryExprPrinterHelper(const omniruntime::expressions::Operator &op, std::string type) const;
     std::string GenerateIndentation() const;
     int indentationDepth = 0;
 };
