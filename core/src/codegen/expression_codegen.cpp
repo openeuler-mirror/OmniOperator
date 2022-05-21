@@ -310,9 +310,21 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
             std::string funcId = FunctionSignature(subDec128Str, params, OMNI_DECIMAL128).ToString();
             leftZero = decimalIRBuilder->CallDecimalFunction(funcId,
                 llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argLeftVals);
-            funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
+
+            std::vector<DataTypeId> divParams {
+                OMNI_DECIMAL128, OMNI_INT, OMNI_INT, OMNI_DECIMAL128, OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT };
+            auto leftType = binaryExpr->left->GetReturnType();
+            auto rightType = binaryExpr->right->GetReturnType();
+            auto returnType = binaryExpr->GetReturnType();
+            std::vector<Value *> divArgs { right, llvmTypes->CreateConstantInt(leftType.GetPrecision()),
+                                           llvmTypes->CreateConstantInt(leftType.GetScale()),
+                                           right, llvmTypes->CreateConstantInt(rightType.GetPrecision()),
+                                           llvmTypes->CreateConstantInt(rightType.GetScale()),
+                                           llvmTypes->CreateConstantInt(returnType.GetPrecision()),
+                                           llvmTypes->CreateConstantInt(returnType.GetScale())};
+            funcId = FunctionSignature(divDec128Str, divParams, OMNI_DECIMAL128).ToString();
             rightOne = decimalIRBuilder->CallDecimalFunction(funcId,
-                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), argRightVals, codegenContext->executionContext);
+                llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId()), divArgs, codegenContext->executionContext);
             break;
         }
         default:
@@ -658,6 +670,17 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
             break;
         }
         case omniruntime::expressions::Operator::DIV: {
+            auto leftType = binaryExpr->left->GetReturnType();
+            auto rightType = binaryExpr->right->GetReturnType();
+            auto binaryReturnType = binaryExpr->GetReturnType();
+            std::vector<Value *> divArgs { leftPhi, llvmTypes->CreateConstantInt(leftType.GetPrecision()),
+                llvmTypes->CreateConstantInt(leftType.GetScale()),
+                rightPhi, llvmTypes->CreateConstantInt(rightType.GetPrecision()),
+                llvmTypes->CreateConstantInt(rightType.GetScale()),
+                llvmTypes->CreateConstantInt(binaryReturnType.GetPrecision()),
+                llvmTypes->CreateConstantInt(binaryReturnType.GetScale())};
+            std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), OMNI_INT, OMNI_INT,
+                binaryExpr->right->GetReturnTypeId(), OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT };
             std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             output =
                 decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
@@ -1158,10 +1181,15 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             builder->CreateOr(leftNull, rightNull));
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL128) {
-        auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
-            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), OMNI_DECIMAL128);
-        auto scaledLeft = scaledValues.first;
-        auto scaledRight = scaledValues.second;
+        auto scaledLeft = left->data;
+        auto scaledRight = right->data;
+        if (bExpr->op != omniruntime::expressions::Operator::DIV) {
+            // defer div rescaling to functions to handle overflow
+            auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
+                bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), OMNI_DECIMAL128);
+            scaledLeft = scaledValues.first;
+            scaledRight = scaledValues.second;
+        }
         this->BinaryExprDecimalHelper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
         return;
     }
