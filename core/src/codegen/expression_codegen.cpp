@@ -683,7 +683,7 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
                 binaryExpr->right->GetReturnTypeId(), OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT };
             std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             output =
-                decimalIRBuilder->CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext);
+                decimalIRBuilder->CallDecimalFunction(funcId, returnType, divArgs, codegenContext->executionContext);
             break;
         }
         default: {
