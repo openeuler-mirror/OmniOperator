@@ -376,7 +376,7 @@ public:
     static inline int64_t NegateHigh(int64_t high, int64_t low)
     {
         return high < 0 ? (high & ~Decimal128::SIGN_LONG_MASK) :
-                          high == 0 ? Decimal128::SIGN_LONG_MASK : high & Decimal128::SIGN_LONG_MASK;
+                          high == 0 ? Decimal128::SIGN_LONG_MASK : high | Decimal128::SIGN_LONG_MASK;
     }
 
     static inline int64_t NegateLow(int64_t high, int64_t low)
@@ -459,7 +459,8 @@ public:
                 throw OmniException("Decimal", "Leading bits should be zero");
             }
             for (int32_t position = length - 1; position > 0; position--) {
-                number[position] = (number[position] << bitShifts | ((uint32_t)number[position - 1] >> (32 - bitShifts)));
+                number[position] =
+                    (number[position] << bitShifts | ((uint32_t)number[position - 1] >> (32 - bitShifts)));
             }
             number[0] = number[0] << bitShifts;
         }
@@ -489,7 +490,8 @@ public:
                 ThrowIllegalState();
             }
             for (int32_t position = 0; position < length - 1; position++) {
-                number[position] = ((uint32_t)number[position] >> bitShifts) | (number[position + 1] << (32 - bitShifts));
+                number[position] =
+                    ((uint32_t)number[position] >> bitShifts) | (number[position + 1] << (32 - bitShifts));
             }
             number[length - 1] = (uint32_t)number[length - 1] >> bitShifts;
         }
@@ -734,8 +736,8 @@ public:
         divisor[3] = HighInt(divisorHigh);
 
         if (divisorScaleFactor > 0) {
-            ShiftLeftBy5Destructive(divisor, dividendScaleFactor);
-            ShiftLeftMultiPrecision(divisor, 8, dividendScaleFactor);
+            ShiftLeftBy5Destructive(divisor, divisorScaleFactor);
+            ShiftLeftMultiPrecision(divisor, 8, divisorScaleFactor);
         }
 
         std::vector<int32_t> multiPrecisionQuotient(8);
