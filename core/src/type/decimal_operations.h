@@ -71,6 +71,7 @@ static std::array<int64_t, 28> POWERS_OF_FIVE_LONG = { 1,
 class DecimalOperations {
 public:
     DecimalOperations() = delete;
+
     ~DecimalOperations() = delete;
 
     // decimal and overflow is encoded and decoded in continuous memory
@@ -279,6 +280,80 @@ public:
         left[4] = (int32_t)z4;
     }
 
+    static inline void Multiply256(Decimal128 &left, Decimal128 &right)
+    {
+        int64_t leftLow = left.LowBits();
+        int64_t leftRight = left.HighBits();
+        int64_t l0 = ToUnsignedLong(leftLow & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
+        int64_t l1 = ToUnsignedLong((leftLow >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
+        int64_t l2 = ToUnsignedLong(leftRight & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
+        int64_t l3 =
+            ToUnsignedLong(((leftRight >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK) & ~Decimal128::SIGN_INT_MASK);
+
+        int64_t rightLow = right.LowBits();
+        int64_t rightHigh = right.HighBits();
+        int64_t r0 = ToUnsignedLong(rightLow & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
+        int64_t r1 = ToUnsignedLong((rightLow >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
+        int64_t r2 = ToUnsignedLong(rightHigh & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
+        int64_t r3 =
+            ToUnsignedLong(((rightHigh >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK) & ~Decimal128::SIGN_INT_MASK);
+
+        int64_t z0 = 0, z1 = 0, z2 = 0, z3 = 0, z4 = 0, z5 = 0, z6 = 0, z7 = 0;
+
+        if (l0 != 0) {
+            int64_t accumulator = r0 * l0;
+            z0 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r1 * l0;
+            z1 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r2 * l0;
+            z2 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r3 * l0;
+
+            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            z4 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+        }
+
+        if (l1 != 0) {
+            int64_t accumulator = r0 * l1 + z1;
+            z1 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r1 * l1 + z2;
+            z2 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r2 * l1 + z3;
+            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r3 * l1 + z4;
+            z4 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            z5 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+        }
+
+        if (l2 != 0) {
+            int64_t accumulator = r0 * l2 + z2;
+            z2 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r1 * l2 + z3;
+            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r2 * l2 + z4;
+            z4 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r3 * l3 + z5;
+            z5 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            z6 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+        }
+
+        if (l3 != 0) {
+            int64_t accumulator = r0 * l3 + z3;
+            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r1 * l3 + z4;
+            z4 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r2 * l3 + z5;
+            z5 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            accumulator = ((uint64_t)accumulator >> 32) + r3 * l3 + z6;
+            z6 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+            z7 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
+        }
+
+        std::vector<int32_t> resultInts = { (int32_t)z0, (int32_t)z1, (int32_t)z2, (int32_t)z3,
+            (int32_t)z4, (int32_t)z5, (int32_t)z6, (int32_t)z7 };
+        Pack(resultInts, right);
+    }
+
     static inline void SetToZero(Decimal128 &decimal128)
     {
         decimal128.SetValue(0, 0);
@@ -308,6 +383,16 @@ public:
         int64_t leftLow = left.LowBits();
         int64_t rightLow = right.LowBits();
         return CompareUnsigned(leftLow, rightLow);
+    }
+
+    static inline void ToIntArray(Decimal128 &decimal, std::vector<int32_t> &array)
+    {
+        int64_t lowBits = decimal.LowBits();
+        int64_t highBits = decimal.HighBits();
+        array[0] = LowInt(lowBits);
+        array[1] = HighInt(lowBits);
+        array[2] = LowInt(highBits);
+        array[3] = HighInt(highBits);
     }
 
     static inline void Pack(Decimal128 &decimal128, int64_t low, int64_t high, bool negative)
@@ -725,7 +810,11 @@ public:
         dividend[3] = HighInt(dividendHigh);
 
         if (dividendScaleFactor > 0) {
-            ShiftLeftBy5Destructive(dividend, dividendScaleFactor);
+            Decimal128 left = UnscaledDecimal(POWERS_OF_FIVE_LONG[dividendScaleFactor]);
+            Decimal128 right;
+            Pack(dividend, right);
+            Multiply256(left, right);
+            ToIntArray(right, dividend);
             ShiftLeftMultiPrecision(dividend, 8, dividendScaleFactor);
         }
 
@@ -736,7 +825,11 @@ public:
         divisor[3] = HighInt(divisorHigh);
 
         if (divisorScaleFactor > 0) {
-            ShiftLeftBy5Destructive(divisor, divisorScaleFactor);
+            Decimal128 left = UnscaledDecimal(POWERS_OF_FIVE_LONG[divisorScaleFactor]);
+            Decimal128 right;
+            Pack(divisor, right);
+            Multiply256(left, right);
+            ToIntArray(right, divisor);
             ShiftLeftMultiPrecision(divisor, 8, divisorScaleFactor);
         }
 
