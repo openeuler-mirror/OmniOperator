@@ -159,8 +159,8 @@ TEST(Decimal128, divide_dividend_smaller_than_divisor)
     Decimal128 left = DecimalOperations::UnscaledDecimal(78340625600);
     Decimal128 right = DecimalOperations::UnscaledDecimal(2729300525);
     auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
-    auto high = result.HighBits();
-    auto low = result.LowBits();
+    Decimal128 expected(0, 29);
+    EXPECT_EQ(result, expected);
 }
 
 TEST(Decimal128, divide_positive_round_up)
@@ -210,6 +210,33 @@ TEST(Decimal128, divide_negative_round_up)
     Decimal128 expected(Decimal128::SIGN_LONG_MASK, 1);
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
+}
+
+TEST(Decimal128, positive_dividend_positive_divisor_and_with_scale_factor)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(124861912500);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(1652201977500);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
+    Decimal128 expected(0, 755730317481720);
+    EXPECT_EQ(result, expected);
+}
+
+TEST(Decimal128, negative_dividend_positive_divisor_and_with_scale_factor)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(-124861912500);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(1652201977500);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
+    Decimal128 expected(-9223372036854775808, 755730317481720);
+    EXPECT_EQ(result, expected);
+}
+
+TEST(Decimal128, negative_dividend_negative_divisor_and_with_scale_factor)
+{
+    Decimal128 left = DecimalOperations::UnscaledDecimal(-124861912500);
+    Decimal128 right = DecimalOperations::UnscaledDecimal(-1652201977500);
+    auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
+    Decimal128 expected(0, 755730317481720);
+    EXPECT_EQ(result, expected);
 }
 
 TEST(Decimal128, compare_eq)
