@@ -191,8 +191,8 @@ TEST(FilterTest, LessThan)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -234,8 +234,8 @@ TEST(FilterTest, LessThanWihtoutParsing)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -281,8 +281,8 @@ TEST(FilterTest, GreaterThan)
 
     delete[] col1;
     delete[] col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -332,8 +332,8 @@ TEST(FilterTest, EqualTo)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -380,8 +380,8 @@ TEST(FilterTest, GreaterThanOrEqualTo)
 
     delete[] col1;
     delete[] col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -424,8 +424,8 @@ TEST(FilterTest, NotEqualTo)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -462,8 +462,8 @@ TEST(FilterTest, AllPass)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -513,8 +513,8 @@ TEST(FilterTest, MultipleInputs)
 
     delete[] data1;
     delete[] data2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -572,8 +572,8 @@ TEST(FilterTest, NegativeValues)
 
     delete[] data1;
     delete[] data2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -633,8 +633,8 @@ TEST(FilterTest, AllTypes)
     delete[] data1;
     delete[] data2;
     delete[] data3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -701,8 +701,8 @@ TEST(FilterTest, Compile)
     delete[] data2;
     delete[] data3;
     delete[] data4;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -782,8 +782,8 @@ TEST(FilterTest, LogicalOperators1)
     delete[] col4;
     delete[] col5;
     delete[] col6;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -847,8 +847,8 @@ TEST(FilterTest, LogicalOperators2)
     delete[] col2;
     delete[] col3;
     delete[] col4;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -933,8 +933,8 @@ TEST(FilterTest, LogicalOperators3)
 
     delete[] col1;
     delete[] col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -974,8 +974,8 @@ TEST(FilterTest, ArithmeticAdd)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1019,8 +1019,8 @@ TEST(FilterTest, ArithmeticSubtract)
 
     delete[] col1;
     delete[] col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1073,8 +1073,8 @@ TEST(FilterTest, ArithmeticMultiply)
 
     delete[] col1;
     delete[] col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1125,8 +1125,8 @@ TEST(FilterTest, Conditional)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1180,8 +1180,8 @@ TEST(FilterTest, Conditional2)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1232,8 +1232,8 @@ TEST(FilterTest, In)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1280,8 +1280,8 @@ TEST(FilterTest, Between)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1321,8 +1321,8 @@ TEST(FilterTest, NotEqualToAbs)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1395,8 +1395,8 @@ TEST(FilterTest, MathFunctionFilter1)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1453,8 +1453,8 @@ TEST(FilterTest, MathFunctionFilter2)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1513,8 +1513,8 @@ TEST(FilterTest, FilterString1)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1566,8 +1566,8 @@ TEST(FilterTest, Coalesce1)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1618,8 +1618,8 @@ TEST(FilterTest, Coalesce2)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1663,8 +1663,8 @@ TEST(FilterTest, ExternalMathFunc)
 
     delete[] col1;
     delete[] col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1727,8 +1727,8 @@ TEST(FilterTest, ExternalStringFunc)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -1831,9 +1831,9 @@ TEST(FilterTest, Multithreading)
     delete[] col1;
     delete[] col2;
     delete[] col3;
-    delete op;
+    omniruntime::op::Operator::DeleteOperator(op);
     delete op2;
-    delete factory;
+    DeleteOperatorFactory(factory);
     delete factory2;
     delete numReturned;
     delete numReturned2;
@@ -1889,8 +1889,8 @@ TEST(FilterTest, TestFilterDictionaryVec)
     VectorHelper::FreeVecBatches(ret);
 
     delete col3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vecAllocator;
 }
 
@@ -1943,8 +1943,8 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     VectorHelper::FreeVecBatches(ret);
 
     delete col2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vecAllocator;
 }
 
@@ -2001,8 +2001,8 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
 
     delete col3;
     delete dictionaryVector;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vecAllocator;
 }
 
@@ -2053,8 +2053,8 @@ TEST(FilterTest, DecimalFilterBinaryTest)
 
     delete[] data1;
     delete[] data2;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -2128,8 +2128,8 @@ TEST(FilterTest, DecimalFilterAbsTest)
     delete[] data1;
     delete[] data2;
     delete[] data3;
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vectorAllocator;
 }
 
@@ -2171,8 +2171,8 @@ TEST(FilterTest, FilterStringWithNull)
 
     VectorHelper::FreeVecBatches(ret);
 
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vecAllocator;
 }
 
@@ -2232,8 +2232,8 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
     VectorHelper::FreeVecBatch(intput);
     VectorHelper::FreeVecBatches(ret);
 
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vecAllocator;
 }
 
@@ -2297,8 +2297,8 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
     VectorHelper::FreeVecBatch(intput);
     VectorHelper::FreeVecBatches(ret);
 
-    delete op;
-    delete factory;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
     delete vecAllocator;
 }
 

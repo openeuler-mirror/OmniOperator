@@ -16,57 +16,22 @@
 #include <algorithm>
 #include "llvm/Support/FileSystem.h"
 
-class StringOrNull {
-public:
-    StringOrNull(std::string mssg = "", bool present = false) : mssg(mssg), present(present) {}
-    StringOrNull(char *ca)
-    {
-        if (ca != nullptr) {
-            this->mssg = ca;
-            this->present = true;
-        } else {
-            this->present = false;
-        }
-    }
-    ~StringOrNull() {}
-    StringOrNull operator = (char *ca)
-    {
-        StringOrNull son;
-        if (ca != nullptr) {
-            son.mssg = ca;
-            son.present = true;
-        }
-        return son;
-    }
-    std::string msg()
-    {
-        return mssg;
-    }
-    bool isPresent()
-    {
-        return present;
-    }
-
-private:
-    std::string mssg;
-    bool present;
-};
-
 class CoreLibrary {
 public:
-    CoreLibrary(std::string fileName, std::string libName, std::string preferredPath, int32_t priority);
-    CoreLibrary(std::string fileName, std::string libName, int32_t priority = 0);
+    CoreLibrary(const std::string &fileName, const std::string &libName, const std::string &preferredPath,
+        int32_t priority);
+    CoreLibrary(const std::string &fileName, const std::string &libName, int32_t priority = 0);
     ~CoreLibrary();
     std::string Name() const;
     std::string File() const;
     std::string PreferredPath() const;
     int32_t Priority() const;
-    void SetPreferredPath(std::string path);
+    void SetPreferredPath(const std::string &path);
 
 private:
-    std::string fileName {};
-    std::string libName {};
-    std::string preferredPath {};
+    std::string fileName;
+    std::string libName;
+    std::string preferredPath;
     int32_t priority = 0;
 };
 
@@ -75,16 +40,9 @@ public:
     LibraryLoader() noexcept;
     ~LibraryLoader();
     bool LoadedLibraries(const std::string &envStr) noexcept;
-    static std::string ExtractFileName(const std::string &path);
 
 private:
-    void SearchPath(std::string path, std::unordered_map<std::string, std::vector<std::string>> &candidates);
-    std::string ValidateLibrary(const std::string &path,
-        std::unordered_map<std::string, std::vector<std::string>> &candidates);
-
-    std::vector<CoreLibrary> neededLibs {};
-
-    static std::string ResolveSymlink(const std::string &path);
+    std::vector<CoreLibrary> neededLibs;
 };
 
 #endif

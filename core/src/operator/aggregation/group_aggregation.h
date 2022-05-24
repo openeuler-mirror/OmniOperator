@@ -75,7 +75,7 @@ void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &te
 
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
-    HashAggregationOperator(std::vector<ColumnIndex> groupByCols, std::vector<int32_t> &aggInputCols,
+    HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<int32_t> &aggInputCols,
         omniruntime::type::DataTypes &aggInputTypes, omniruntime::type::DataTypes &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
         : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),

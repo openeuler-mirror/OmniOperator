@@ -24,9 +24,9 @@ namespace jit {
 using namespace llvm;
 using namespace llvm::orc;
 
-void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
+void HardenOptimizer::PopulatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
 {
-    conf->populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
+    conf->Populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
 }
 
 Expected<ThreadSafeModule> HardenOptimizer::operator () (ThreadSafeModule TSM, const MaterializationResponsibility &)
@@ -42,7 +42,7 @@ Expected<ThreadSafeModule> HardenOptimizer::operator () (ThreadSafeModule TSM, c
     legacy::FunctionPassManager FPM(&M);
     legacy::PassManager MPM;
 
-    populatePass(FPM, MPM);
+    PopulatePass(FPM, MPM);
 
     pmb.populateFunctionPassManager(FPM);
     pmb.populateModulePassManager(MPM);

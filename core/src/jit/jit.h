@@ -29,9 +29,7 @@ public:
     bool Specialize(const std::vector<Optimization> &optimizations = std::vector<Optimization>(),
         const std::vector<ModuleOptimization> &moduleOptimizations = std::vector<ModuleOptimization>());
 
-    std::vector<std::string> GetAppliedOptimizations();
-
-    uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false);
+    uint64_t GetJitedFunction(const std::string &functionName, bool isNameMangled = false);
 
 private:
     Compiler *compiler;

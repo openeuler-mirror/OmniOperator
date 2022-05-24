@@ -17,17 +17,14 @@ Jit::~Jit()
     delete this->compiler;
 }
 
-Jit::Jit(std::vector<Context> contexts, CompilerType compilerType)
+Jit::Jit(std::vector<Context> contexts, CompilerType compilerType) : compiler(nullptr), contexts(std::move(contexts))
 {
-    this->contexts = std::move(contexts);
-
     switch (compilerType) {
         case CompilerType::LLVM:
-            this->compiler = nullptr;
             InitCompile();
             break;
         default:
-            std::cerr << "Error: Compiler type not supported: " << static_cast<int>(compilerType) << std::endl;
+            LogError("Compiler type not supported: %d", static_cast<int32_t>(compilerType));
             break;
     }
 }
@@ -36,9 +33,10 @@ bool Jit::Specialize(const std::vector<Optimization> &optimizations,
     const std::vector<ModuleOptimization> &moduleOptimizations)
 {
     for (auto &context : this->contexts) {
-        bool loaded = this->compiler->LoadModule(context.GetJitTemplate());
+        auto jitTemplate = context.GetJitTemplate();
+        bool loaded = this->compiler->LoadModule(jitTemplate);
         if (!loaded) {
-            std::cerr << "Error: Failed to load template: " + context.GetJitTemplate() << std::endl;
+            LogError("Failed to load template: %s", jitTemplate.c_str());
             return false;
         }
         LLVM_DEBUG_LOG("Loaded template: %s", context.GetJitTemplate().c_str());
@@ -51,13 +49,7 @@ bool Jit::Specialize(const std::vector<Optimization> &optimizations,
     return this->compiler->SpecializeAndCompile(optimizations, moduleOptimizations);
 }
 
-std::vector<std::string> Jit::GetAppliedOptimizations()
-{
-    std::vector<std::string> temp;
-    return temp;
-}
-
-uint64_t Jit::GetJitedFunction(std::string functionName, bool isNameMangled)
+uint64_t Jit::GetJitedFunction(const std::string &functionName, bool isNameMangled)
 {
     return this->compiler->GetJitedFunction(functionName, isNameMangled);
 }

@@ -24,63 +24,59 @@ public:
 
     ~LLVMCompiler() override;
 
-    bool LoadModule(std::string templatePath) override;
+    bool LoadModule(const std::string &templatePath) override;
 
     bool SpecializeAndCompile(const std::vector<Optimization> &optimizations,
         const std::vector<ModuleOptimization> &moduleOptimizations) override;
 
-    void AddSpecialization(std::string id, Specialization specialization) override;
+    void AddSpecialization(const std::string &id, const Specialization &specialization) override;
 
-    uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false) override;
+    uint64_t GetJitedFunction(const std::string &functionName, bool isNameMangled) override;
 
 private:
     Config *config;
-    std::unique_ptr<llvm::StringRef> layout;
-    std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::LLVMContext> context;
     std::vector<std::unique_ptr<llvm::Module>> modules;
     std::vector<std::string> functionSymbols;
 
-    llvm::orc::ResourceTrackerSP rt;
-    std::unique_ptr<llvm::orc::LLJIT> jitter;
+    llvm::orc::LLJIT *jitter = nullptr;
 
     static LibraryLoader ll;
 
     static void LoadExtraLibraries();
 
-    std::unique_ptr<llvm::orc::LLJIT> compileModules(std::map<std::string, std::set<std::string>> &specializedModules,
+    std::unique_ptr<llvm::orc::LLJIT> CompileModules(std::map<std::string, std::set<std::string>> &specializedModules,
         const std::vector<Optimization> &optimizations, const std::vector<ModuleOptimization> &moduleOptimizations);
 
-    std::set<std::string> specializeModule(const std::unique_ptr<llvm::Module> &module);
+    std::set<std::string> SpecializeModule(const std::unique_ptr<llvm::Module> &module);
 
-    bool harden_function(const std::string &specializationId, llvm::Function *function,
+    bool HardenFunction(const std::string &specializationId, llvm::Function *function,
         const std::unique_ptr<llvm::Module> &module);
 
-    llvm::Constant *to_llvm_value(const std::string &name, ParamValue value,
+    llvm::Constant *ToLLVMValue(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
+
+    llvm::Constant *ToScalarLLVMValue(const ParamValue &value);
+
+    llvm::Constant *ToArrayLLVMValue(const std::string &name, const ParamValue &value,
         const std::unique_ptr<llvm::Module> &module);
 
-    llvm::Constant *to_scalar_llvm_value(ParamValue value);
-
-    llvm::Constant *to_array_llvm_value(const std::string &name, ParamValue value,
-        const std::unique_ptr<llvm::Module> &module);
-
-    llvm::Constant *to_int32_vector_llvm_value(ParamValue value, std::vector<llvm::Constant *> &vecValues);
+    llvm::Constant *ToInt32VectorLLVMValue(ParamValue value, std::vector<llvm::Constant *> &vecValues);
 
     llvm::Constant *ToInt32ArrayLlvmValue(const std::string &name, ParamValue value,
         const std::unique_ptr<llvm::Module> &module, std::vector<llvm::Constant *> &vecValues);
 
-    llvm::Constant *to_vector_llvm_value(const std::string &name, ParamValue value,
+    llvm::Constant *ToVectorLLVMValue(const std::string &name, const ParamValue &value,
         const std::unique_ptr<llvm::Module> &module);
 
-    llvm::Constant *to_2darray_llvm_value(const std::string &name, ParamValue value,
+    llvm::Constant *To2dArrayLLVMValue(const std::string &name, ParamValue value,
         const std::unique_ptr<llvm::Module> &module);
 };
 
-bool optimizeAttributes(llvm::Function *function);
+bool OptimizeAttributes(llvm::Function *function);
 
-std::map<std::string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
+std::map<std::string, llvm::Function *> GetAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
 
-std::string build_param_key(llvm::Function &func, int argPos);
+std::string BuildParamKey(llvm::Function &func, int argPos);
 }
 }
 

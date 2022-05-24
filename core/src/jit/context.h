@@ -6,6 +6,7 @@
 
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 #include "specialization.h"
 
@@ -14,10 +15,10 @@ namespace jit {
 class Context {
 public:
     Context(std::string jitTemplate, std::map<std::string, Specialization> specializations)
-        : jitTemplate(jitTemplate), specializations(specializations)
+        : jitTemplate(std::move(jitTemplate)), specializations(std::move(specializations))
     {}
 
-    ~Context() {}
+    ~Context() = default;
 
     std::string GetJitTemplate()
     {

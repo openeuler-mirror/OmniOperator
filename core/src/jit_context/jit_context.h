@@ -12,8 +12,8 @@
 namespace omniruntime {
 namespace op {
 using JitContext = struct JitContext {
-    uintptr_t func;
-    omniruntime::jit::Jit *jit;
+    uintptr_t func = 0;
+    omniruntime::jit::Jit *jit = nullptr;
 };
 
 JitContext *CreateSortJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,

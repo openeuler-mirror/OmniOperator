@@ -80,7 +80,7 @@ public:
 
     ~Config() {}
 
-    void populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM,
+    void Populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM,
         const std::vector<Optimization> &optimizations, const std::vector<ModuleOptimization> &moduleOptimizations);
 
     static Config *GetConf()

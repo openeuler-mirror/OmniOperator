@@ -1483,7 +1483,6 @@ TEST(HashAggregationOperatorTest, compare_perf)
     }
     VectorHelper::FreeVecBatches(jittedResult);
     VectorHelper::FreeVecBatches(result);
-    delete jitContext->jit;
 }
 
 TEST(HashAggregationOperatorTest, multi_stage)

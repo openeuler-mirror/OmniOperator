@@ -7,7 +7,6 @@ namespace omniruntime {
 namespace LibConfig {
 static const std::string DEFAULT_LIB_PATH =
     "/opt/lib/"; // ideally should be changed to something similar to ~/omni_home/lib
-static const std::string DEFAULT_FILE_PATH = "/etc/";
 static const std::string IR_FOLDER = "ir/";
 static const std::string IR_SUFFIX = ".ll";
 
