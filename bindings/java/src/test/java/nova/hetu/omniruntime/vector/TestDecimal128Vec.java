@@ -229,4 +229,23 @@ public class TestDecimal128Vec {
         vec1.close();
         vec2.close();
     }
+
+    /**
+     * test Decimal128Vec set/get BigInteger
+     */
+    @Test
+    public void testBigIntegerByteLengthBetweenEightAndSixteen() {
+        BigInteger decimal1 = new BigInteger("111311100000000000000000000");
+        BigInteger decimal2 = new BigInteger("-99999999999999999999999999");
+        Decimal128Vec vec = new Decimal128Vec(2);
+
+        vec.setBigInteger(0, decimal1);
+        vec.setBigInteger(1, decimal2);
+
+        BigInteger val1 = vec.getBigInteger(0);
+        BigInteger val2 = vec.getBigInteger(1);
+        assertEquals(val1, decimal1);
+        assertEquals(val2, decimal2);
+        vec.close();
+    }
 }
