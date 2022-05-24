@@ -882,13 +882,13 @@ public:
         int64_t remainderHigh = remainder.HighBits();
         if (CompareUnsigned(remainderLow, remainderHigh, divisorLow, divisorHigh) >= 0) {
             IncrementUnsafe(quotient, 0);
+            ThrowIfOverflows(quotient);
         }
 
         if (quotientIsNegative) {
             Negate(quotient, 0);
         }
 
-        ThrowIfOverflows(quotient);
         return quotient;
     }
 
