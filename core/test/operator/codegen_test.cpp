@@ -1932,28 +1932,27 @@ TEST(CodeGenTest, ConcatChars)
     outerArgs.push_back(col2);
     auto outerConcat = GetFuncExpr(funcStr, outerArgs, CharType(52));
 
-    auto helloExpr = new LiteralExpr(new std::string("hello                         , world"), CharType(52));
+    auto helloExpr =
+        new LiteralExpr(new std::string("hello                         , world               "), CharType(52));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, outerConcat, helloExpr, BooleanType());
 
-    auto charTypeA = new CharDataType(30);
-    auto charTypeB = new CharDataType(20);
-    std::vector<DataType> vecOfTypes = { IntDataType(), DataType(*charTypeA), DataType(*charTypeB) };
+    CharDataType charTypeA(30);
+    CharDataType charTypeB(20);
+    std::vector<DataType> vecOfTypes = { IntDataType(), DataType(charTypeA), DataType(charTypeB) };
     DataTypes types(vecOfTypes);
     Parser parser {};
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
 
-    string s1[1];
-    string s2[1];
     int32_t v1[1] = {8766};
-    s1[0] = "hello";
-    s2[0] = "world";
-    int64_t *vals = new int64_t[3];
+    string s1[1] = {"hello"};
+    string s2[1] = {"world"};
+    auto *vals = new int64_t[3];
     vals[0] = reinterpret_cast<int64_t>(v1);
-    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
-    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
-    int32_t *selected = new int32_t[1];
+    vals[1] = reinterpret_cast<int64_t>(s1[0].c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2[0].c_str());
+    auto *selected = new int32_t[1];
     bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
@@ -1985,23 +1984,23 @@ TEST(CodeGenTest, ConcatChars)
     s1[0] = "hello";
     s2[0] = "world ";
     vals[0] = reinterpret_cast<int64_t>(v1);
-    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
-    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
+    vals[1] = reinterpret_cast<int64_t>(s1[0].c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2[0].c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
-    EXPECT_EQ(result, 0);
+    EXPECT_EQ(result, 1);
     context->GetArena()->Reset();
 
     v1[0] = {8766};
     s1[0] = "hello ";
     s2[0] = "world";
     vals[0] = reinterpret_cast<int64_t>(v1);
-    vals[1] = reinterpret_cast<int64_t>(s1->c_str());
-    vals[2] = reinterpret_cast<int64_t>(s2->c_str());
+    vals[1] = reinterpret_cast<int64_t>(s1[0].c_str());
+    vals[2] = reinterpret_cast<int64_t>(s2[0].c_str());
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
@@ -2019,8 +2018,6 @@ TEST(CodeGenTest, ConcatChars)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete charTypeA;
-    delete charTypeB;
     delete expr;
     codegen.reset();
     delete context;
