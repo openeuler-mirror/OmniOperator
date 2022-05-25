@@ -215,8 +215,8 @@ public:
         __int128_t r0 = right.LowBits();
         __int128_t r1 = UnpackUnsignedLong(right.HighBits());
 
-        int64_t z0 = 0;
-        int64_t z1 = 0;
+        __int128_t z0 = 0;
+        __int128_t z1 = 0;
 
         if (l0 != 0) {
             __int128_t accumulator = r0 * l0;
@@ -238,7 +238,7 @@ public:
                 ThrowOverflow();
             }
         }
-        Pack(result, z0, z1, IsNegative(left) != IsNegative(right));
+        Pack(result, (int64_t) z0, (int64_t) z1, IsNegative(left) != IsNegative(right));
     }
 
     /* *
@@ -398,6 +398,7 @@ public:
     static inline void Pack(Decimal128 &decimal128, int64_t low, int64_t high, bool negative)
     {
         decimal128.SetValue(high | (negative ? Decimal128::SIGN_LONG_MASK : 0), low);
+        ThrowIfOverflows(decimal128);
     }
 
     static inline void Pack(std::vector<int32_t> &parts, Decimal128 &result)
