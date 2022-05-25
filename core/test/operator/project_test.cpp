@@ -354,7 +354,7 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val1.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i * 100);
-        EXPECT_EQ(val1.LowBits(), round((double) i / 100));
+        EXPECT_EQ(val1.LowBits(), round((double)i / 100));
     }
 
     VectorHelper::FreeVecBatches(ret);
@@ -421,7 +421,7 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
         EXPECT_EQ(val2.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i);
         EXPECT_EQ(val1.LowBits(), i * 100);
-        EXPECT_EQ(val2.LowBits(), round((double) i / 100));
+        EXPECT_EQ(val2.LowBits(), round((double)i / 100));
     }
 
     VectorHelper::FreeVecBatches(ret);
@@ -2686,6 +2686,202 @@ TEST(ProjectionTest, Decimal64ColDivide)
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+Expr *GetConcatFuncExpr(DataTypePtr dataType0, DataTypePtr dataType1, DataTypePtr returnType)
+{
+    std::string concatStr = "concat";
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(1, std::move(dataType1)));
+    args.push_back(new FieldExpr(0, std::move(dataType0)));
+    auto concatExpr = GetFuncExpr(concatStr, args, std::move(returnType));
+    return concatExpr;
+}
+
+VectorBatch *CreateInputVecBatchForConcat(const std::vector<DataType> &inputTypes, VectorAllocator *vecAllocator)
+{
+    const int32_t rowCount = 8;
+    const std::string firstName = "John";
+    const std::string lastName = "Rebecca";
+    const std::string fullFirstName = "-John-John-John-John";
+    const std::string fullLastName = "Rebecca-Rebecca-Rebecca-Rebeca";
+    const std::string empty = "";
+
+    auto vec0 = new VarcharVector(vecAllocator, rowCount * inputTypes[0].GetWidth(), rowCount);
+    vec0->SetValueNull(0);
+    vec0->SetValue(1, reinterpret_cast<const unsigned char *>(firstName.c_str()), firstName.length());
+    vec0->SetValueNull(2);
+    vec0->SetValue(3, reinterpret_cast<const unsigned char *>(empty.c_str()), empty.length());
+    vec0->SetValue(4, reinterpret_cast<const unsigned char *>(firstName.c_str()), firstName.length());
+    vec0->SetValue(5, reinterpret_cast<const unsigned char *>(empty.c_str()), empty.length());
+    vec0->SetValue(6, reinterpret_cast<const unsigned char *>(firstName.c_str()), firstName.length());
+    vec0->SetValue(7, reinterpret_cast<const unsigned char *>(fullFirstName.c_str()), fullFirstName.length());
+
+    auto vec1 = new VarcharVector(vecAllocator, rowCount * inputTypes[1].GetWidth(), rowCount);
+    vec1->SetValueNull(0);
+    vec1->SetValueNull(1);
+    vec1->SetValue(2, reinterpret_cast<const unsigned char *>(lastName.c_str()), lastName.length());
+    vec1->SetValue(3, reinterpret_cast<const unsigned char *>(empty.c_str()), empty.length());
+    vec1->SetValue(4, reinterpret_cast<const unsigned char *>(empty.c_str()), empty.length());
+    vec1->SetValue(5, reinterpret_cast<const unsigned char *>(lastName.c_str()), lastName.length());
+    vec1->SetValue(6, reinterpret_cast<const unsigned char *>(lastName.c_str()), lastName.length());
+    vec1->SetValue(7, reinterpret_cast<const unsigned char *>(fullLastName.c_str()), fullLastName.length());
+
+    auto input = new VectorBatch(inputTypes.size(), rowCount);
+    input->SetVector(0, vec0);
+    input->SetVector(1, vec1);
+    return input;
+}
+
+VectorBatch *CreateExpectVecBatchForConcat(const DataType &expectDataType, VectorAllocator *vecAllocator,
+    const std::vector<std::string> &expectDatas)
+{
+    int32_t rowCount = expectDatas.size();
+    auto expectVec = new VarcharVector(vecAllocator, rowCount * expectDataType.GetWidth(), rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (expectDatas[i] == "NULL") {
+            expectVec->SetValueNull(i);
+        } else {
+            expectVec->SetValue(i, reinterpret_cast<const unsigned char *>(expectDatas[i].c_str()),
+                expectDatas[i].length());
+        }
+    }
+
+    auto expectVecBatch = new VectorBatch(1, rowCount);
+    expectVecBatch->SetVector(0, expectVec);
+    return expectVecBatch;
+}
+
+TEST(ProjectionTest, ConcatStrCharTest)
+{
+    auto concatExpr = GetConcatFuncExpr(CharType(20), VarcharType(30), CharType(100));
+    std::vector<Expr *> exprs = { concatExpr };
+    std::vector<DataType> vecOfTypes = { CharDataType(20), VarcharDataType(30) };
+    DataTypes inputTypes(vecOfTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrCharTest");
+    auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    std::vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    std::vector<std::string> expectedDatas = { "NULL",
+        "NULL",
+        "NULL",
+        "                    ",
+        "John                ",
+        "Rebecca                    ",
+        "RebeccaJohn                ",
+        "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
+    auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, ConcatCharStrTest)
+{
+    auto concatExpr = GetConcatFuncExpr(VarcharType(20), CharType(30), CharType(100));
+    std::vector<Expr *> exprs = { concatExpr };
+    std::vector<DataType> vecOfTypes = { VarcharDataType(20), CharDataType(30) };
+    DataTypes inputTypes(vecOfTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatCharStrTest");
+    auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    std::vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    std::vector<std::string> expectedDatas = { "NULL",
+        "NULL",
+        "NULL",
+        "                              ",
+        "                              John",
+        "Rebecca                       ",
+        "Rebecca                       John",
+        "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
+    auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, ConcatStrStrTest)
+{
+    auto concatExpr = GetConcatFuncExpr(VarcharType(20), VarcharType(30), VarcharType(100));
+    std::vector<Expr *> exprs = { concatExpr };
+    std::vector<DataType> vecOfTypes = { VarcharDataType(20), VarcharDataType(30) };
+    DataTypes inputTypes(vecOfTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrStrTest");
+    auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    std::vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    std::vector<std::string> expectedDatas = { "NULL",        "NULL",
+        "NULL",        "",
+        "John",        "Rebecca",
+        "RebeccaJohn", "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
+    auto expect = CreateExpectVecBatchForConcat(VarcharDataType(100), vecAllocator, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, ConcatCharCharTest)
+{
+    auto concatExpr = GetConcatFuncExpr(CharType(20), CharType(30), CharType(51));
+    std::vector<Expr *> exprs = { concatExpr };
+    std::vector<DataType> vecOfTypes = { CharDataType(20), CharDataType(30) };
+    DataTypes inputTypes(vecOfTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatCharCharTest");
+    auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    std::vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    std::vector<std::string> expectedDatas = { "NULL",
+        "NULL",
+        "NULL",
+        "                                                  ",
+        "                              John                ",
+        "Rebecca                                           ",
+        "Rebecca                       John                ",
+        "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
+    auto expect = CreateExpectVecBatchForConcat(CharDataType(51), vecAllocator, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
     delete op;
     delete factory;
     delete vecAllocator;
