@@ -134,6 +134,10 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
             this->supportedFlag = true;
             return;
         }
+        if (leftType.GetPrecision() == 17 && leftType.GetScale() == 2) {
+            this->supportedFlag = true;
+            return;
+        }
     } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL128) {
         if (leftType.GetPrecision() == 38 && leftType.GetScale() == 2) {
             this->supportedFlag = true;
@@ -147,12 +151,8 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
             this->supportedFlag = true;
             return;
         }
-        if (leftType.GetPrecision() == 17 && leftType.GetScale() == 2) {
-            this->supportedFlag = true;
-            return;
-        }
         if ((leftType.GetPrecision() == 22 && leftType.GetScale() == 6) &&
-            (returnType.GetPrecision() == 22 && returnType.GetScale() == 6)) {
+            (rightType.GetPrecision() == 22 && rightType.GetScale() == 6)) {
             if (returnType.GetId() == OMNI_BOOLEAN) {
                 this->supportedFlag = true;
                 return;
