@@ -13,11 +13,21 @@
 
 #define JNI_METHOD_END(fallBackExpr)                        \
     }                                                       \
-    catch (omniruntime::exception::OmniException & e)       \
+    catch (const std::exception &e)                         \
     {                                                       \
         env->ThrowNew(omniRuntimeExceptionClass, e.what()); \
         return fallBackExpr;                                \
     }                                                       \
+    // macro end
+
+#define JNI_METHOD_END_WITH_EXPRS_RELEASE(fallBackExpr, toDeleteExprs) \
+    }                                                              \
+    catch (const std::exception &e)                                \
+    {                                                              \
+        Expr::DeleteExprs(toDeleteExprs);                          \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());        \
+        return fallBackExpr;                                       \
+    }                                                              \
     // macro end
 
 #ifdef __cplusplus

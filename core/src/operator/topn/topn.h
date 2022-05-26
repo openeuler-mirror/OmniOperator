@@ -33,8 +33,6 @@ public:
 
     omniruntime::vec::VectorBatch *GetVecBatch() const;
 
-    void Update(int32_t i);
-
 private:
     const int32_t *sourceTypes;
     int32_t *sortCols = nullptr;
@@ -86,7 +84,6 @@ private:
     std::priority_queue<RowComparator, std::vector<RowComparator>, std::less<std::vector<RowComparator>::value_type>>
         pq;
     std::vector<omniruntime::vec::VectorBatch *> singleRowVectorBatchList;
-    std::vector<RowComparator *> rowComparatorList;
 
     vec::VectorBatch *CreateSingleRowVecBatch(omniruntime::vec::VectorBatch *vectorBatch, int32_t position) const;
 

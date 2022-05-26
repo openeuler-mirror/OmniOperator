@@ -1023,10 +1023,9 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongDataType::Instance(), 3, true, true));
     aggs.push_back(std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 4, true, true));
-    std::vector<int32_t> aggInputCols = { 0, 1, 2, 3, 4 };
     DataTypes aggPartialOutputTypes(
         std::vector<DataType> { LongDataType(), ContainerDataType(), LongDataType(), LongDataType(), LongDataType() });
-    auto aggregate1 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
+    auto aggregate1 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         aggregate1->AddInput(input1[i]);
@@ -1049,7 +1048,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongDataType::Instance(), 3, true, true));
     aggs.push_back(std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 4, true, true));
-    auto aggregate2 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
+    auto aggregate2 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         aggregate2->AddInput(input2[i]);
@@ -1071,7 +1070,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongDataType::Instance(), 4, false, false));
     DataTypes aggFinalOutputTypes(
         std::vector<DataType> { LongDataType(), DoubleDataType(), LongDataType(), LongDataType(), LongDataType() });
-    auto aggregate3 = new AggregationOperator(std::move(aggs1), aggInputCols, aggFinalOutputTypes, false, false);
+    auto aggregate3 = new AggregationOperator(std::move(aggs1), aggFinalOutputTypes, false, false);
 
     for (uint32_t i = 0; i < result.size(); ++i) {
         aggregate3->AddInput(result[i]);
@@ -1116,8 +1115,6 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
     VectorBatch *vecBatch1 =
         CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
-    std::vector<int32_t> aggInputCols = { 0, 1, 2, 3, 4 };
-
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs;
     std::unique_ptr<Aggregator> aggregator =
@@ -1138,7 +1135,7 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     DataTypes aggPartialOutputTypes(
         std::vector<DataType> { LongDataType(), LongDataType(), ContainerDataType(), LongDataType(), LongDataType() });
-    auto aggregate1 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
+    auto aggregate1 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
 
     aggregate1->AddInput(vecBatch1);
 
@@ -1159,7 +1156,7 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
         LongDataType::Instance(), 4, false, false));
     DataTypes aggFinalOutputTypes(
         std::vector<DataType> { LongDataType(), LongDataType(), DoubleDataType(), LongDataType(), LongDataType() });
-    auto aggregate2 = new AggregationOperator(std::move(aggs1), aggInputCols, aggFinalOutputTypes, false, false);
+    auto aggregate2 = new AggregationOperator(std::move(aggs1), aggFinalOutputTypes, false, false);
 
     for (uint32_t i = 0; i < result.size(); ++i) {
         aggregate2->AddInput(result[i]);
@@ -1206,9 +1203,8 @@ TEST(AggregationOperatorTest, avg_correctness_test)
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(
         std::make_unique<AverageAggregator<LongVector>>(LongDataType::Instance(), DoubleDataType::Instance(), 0));
-    std::vector<int32_t> aggInputCols = { 0 };
     DataTypes aggOutputTypes(std::vector<DataType> { DoubleDataType() });
-    auto aggregate = new AggregationOperator(std::move(aggs), aggInputCols, aggOutputTypes, true, false);
+    auto aggregate = new AggregationOperator(std::move(aggs), aggOutputTypes, true, false);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         aggregate->AddInput(input[i]);
@@ -1237,10 +1233,9 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     aggs.push_back(std::make_unique<MinVarcharAggregator>(VarcharDataType(10), VarcharDataType(10), 0));
     aggs.push_back(std::make_unique<MaxVarcharAggregator>(VarcharDataType(10), VarcharDataType(10), 1));
 
-    std::vector<int32_t> aggInputCols = { 0, 1 };
     DataTypes aggPartialOutputTypes(std::vector<DataType> { VarcharDataType(10), VarcharDataType(10) });
 
-    auto aggOperator = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
+    auto aggOperator = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
     aggOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = aggOperator->GetOutput(result);
