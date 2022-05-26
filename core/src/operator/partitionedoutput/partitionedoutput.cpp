@@ -33,34 +33,16 @@ PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const DataTyp
 
     this->sourceTypes = std::make_unique<DataTypes>(sourceTypes);
 
-    this->partitionChannels = new int[partitionChannelsCount];
-    for (int i = 0; i < partitionChannelsCount; ++i) {
-        this->partitionChannels[i] = partitionChannels[i];
-    }
-
-    this->bucketToPartition = new int[bucketToPartitionCount];
-    for (int i = 0; i < bucketToPartitionCount; ++i) {
-        this->bucketToPartition[i] = bucketToPartition[i];
-    }
-
-    this->hashChannelTypes = new int[hashChannelTypesCount];
-    for (int i = 0; i < hashChannelTypesCount; ++i) {
-        this->hashChannelTypes[i] = hashChannelTypes[i];
-    }
-
-    this->hashChannels = new int[hashChannelsCount];
-    for (int i = 0; i < hashChannelsCount; ++i) {
-        this->hashChannels[i] = hashChannels[i];
-    }
+    this->partitionChannels.insert(this->partitionChannels.end(), partitionChannels,
+        partitionChannels + partitionChannelsCount);
+    this->bucketToPartition.insert(this->bucketToPartition.end(), bucketToPartition,
+        bucketToPartition + bucketToPartitionCount);
+    this->hashChannelTypes.insert(this->hashChannelTypes.end(), hashChannelTypes,
+        hashChannelTypes + hashChannelTypesCount);
+    this->hashChannels.insert(this->hashChannels.end(), hashChannels, hashChannels + hashChannelsCount);
 }
 
-PartitionedOutputOperatorFactory::~PartitionedOutputOperatorFactory()
-{
-    delete[] partitionChannels;
-    delete[] bucketToPartition;
-    delete[] hashChannelTypes;
-    delete[] hashChannels;
-}
+PartitionedOutputOperatorFactory::~PartitionedOutputOperatorFactory() = default;
 
 PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
     const DataTypes &sourceTypesField, int32_t sourceTypeCountField, bool replicatesAnyRowField,
@@ -86,9 +68,10 @@ Operator *PartitionedOutputOperatorFactory::CreateOperator()
 }
 
 PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount,
-    bool replicatesAnyRow, int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount,
-    int32_t partitionCount, int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed,
-    int32_t *hashChannelTypes, int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount)
+    bool replicatesAnyRow, int nullChannel, std::vector<int32_t> &partitionChannels, int32_t partitionChannelsCount,
+    int32_t partitionCount, std::vector<int32_t> &bucketToPartition, int32_t bucketToPartitionCount,
+    bool isHashPrecomputed, std::vector<int32_t> &hashChannelTypes, int32_t hashChannelTypesCount,
+    std::vector<int32_t> &hashChannels, int32_t hashChannelsCount)
     : sourceTypes(sourceTypes),
       sourceTypeCount(sourceTypeCount),
       replicatesAnyRow(replicatesAnyRow),
@@ -105,7 +88,7 @@ PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceType
       hashChannelsCount(hashChannelsCount)
 {}
 
-PartitionedOutputOperator::~PartitionedOutputOperator() {}
+PartitionedOutputOperator::~PartitionedOutputOperator() =  default;
 
 static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex)
 {

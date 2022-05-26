@@ -56,94 +56,29 @@ public:
 
     Operator *CreateOperator() override;
 
-    int32_t GetSourceTypeCount()
-    {
-        return sourceTypeCount;
-    }
-
-    bool IsAeplicatesAnyRow() const
-    {
-        return replicatesAnyRow;
-    }
-
-    int32_t GetNullChannel()
-    {
-        return nullChannel;
-    }
-
-    const int32_t *GetPartitionChannels()
-    {
-        return partitionChannels;
-    }
-
-    int32_t GetPartitionChannelsCount()
-    {
-        return partitionChannelsCount;
-    }
-
-    int32_t GetPartitionCount()
-    {
-        return partitionCount;
-    }
-
-    const int32_t *GetBucketToPartition()
-    {
-        return bucketToPartition;
-    }
-
-    int32_t GetBucketToPartitionCount()
-    {
-        return bucketToPartitionCount;
-    }
-
-    bool IsHashPrecomputed()
-    {
-        return hashPrecomputed;
-    }
-
-    int32_t *GetHashChannelTypes()
-    {
-        return hashChannelTypes;
-    }
-
-    int32_t GetHashChannelTypesCount()
-    {
-        return hashChannelTypesCount;
-    }
-
-    int32_t *GetHashChannels()
-    {
-        return hashChannels;
-    }
-
-    int32_t GetHashChannelsCount()
-    {
-        return hashChannelsCount;
-    }
-
 private:
     std::unique_ptr<DataTypes> sourceTypes;
     int32_t sourceTypeCount;
     bool replicatesAnyRow;
     int nullChannel;
-    int32_t *partitionChannels;
+    std::vector<int32_t> partitionChannels;
     int32_t partitionChannelsCount;
     int32_t partitionCount;
-    int32_t *bucketToPartition;
+    std::vector<int32_t> bucketToPartition;
     int32_t bucketToPartitionCount;
     bool hashPrecomputed = true;
-    int32_t *hashChannelTypes;
+    std::vector<int32_t> hashChannelTypes;
     int32_t hashChannelTypesCount;
-    int32_t *hashChannels;
+    std::vector<int32_t> hashChannels;
     int32_t hashChannelsCount;
 };
 
 class PartitionedOutputOperator : public Operator {
 public:
     PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
-        int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
-        int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
-        int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
+        int nullChannel, std::vector<int32_t> &partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
+        std::vector<int32_t> &bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, std::vector<int32_t> &hashChannelTypes,
+        int32_t hashChannelTypesCount, std::vector<int32_t> &hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperator() override;
 
@@ -151,91 +86,21 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
-    int32_t GetSourceTypeCount()
-    {
-        return sourceTypeCount;
-    }
-
-    bool IsAeplicatesAnyRow() const
-    {
-        return replicatesAnyRow;
-    }
-
-    int32_t GetNullChannel()
-    {
-        return nullChannel;
-    }
-
-    const int32_t *GetPartitionChannels()
-    {
-        return partitionChannels;
-    }
-
-    int32_t GetPartitionChannelsCount()
-    {
-        return partitionChannelsCount;
-    }
-
-    int32_t GetPartitionCount()
-    {
-        return partitionCount;
-    }
-
-    const int32_t *GetBucketToPartition()
-    {
-        return bucketToPartition;
-    }
-
-    int32_t GetBucketToPartitionCount()
-    {
-        return bucketToPartitionCount;
-    }
-
-    bool IsHashPrecomputed()
-    {
-        return hashPrecomputed;
-    }
-
-    vector<VectorBatch *> &getVectorBatches()
-    {
-        return vectorBatches;
-    }
-
-    int32_t *GetHashChannelTypes()
-    {
-        return hashChannelTypes;
-    }
-
-    int32_t GetHashChannelTypesCount()
-    {
-        return hashChannelTypesCount;
-    }
-
-    int32_t *GetHashChannels()
-    {
-        return hashChannels;
-    }
-
-    int32_t GetHashChannelsCount()
-    {
-        return hashChannelsCount;
-    }
-
 private:
     const DataTypes &sourceTypes;
     int32_t sourceTypeCount;
     bool replicatesAnyRow;
     int nullChannel;
-    int32_t *partitionChannels;
+    std::vector<int32_t> partitionChannels;
     int32_t partitionChannelsCount;
     int32_t partitionCount;
-    int32_t *bucketToPartition;
+    std::vector<int32_t> bucketToPartition;
     int32_t bucketToPartitionCount;
     bool hasAnyRowBeenReplicated = false;
     bool hashPrecomputed = true;
-    int32_t *hashChannelTypes;
+    std::vector<int32_t> hashChannelTypes;
     int32_t hashChannelTypesCount;
-    int32_t *hashChannels;
+    std::vector<int32_t> hashChannels;
     int32_t hashChannelsCount;
     vector<VectorBatch *> vectorBatches = {};
     map<int, vector<int>> partitionedMap = {};
