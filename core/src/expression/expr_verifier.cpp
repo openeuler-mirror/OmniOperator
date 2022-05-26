@@ -147,15 +147,23 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
             this->supportedFlag = true;
             return;
         }
-        if ((leftType.GetPrecision() == 22 && leftType.GetScale() == 6) &&
-            (returnType.GetPrecision() == 22 && returnType.GetScale() == 6)) {
+        if (leftType.GetPrecision() == 17 && leftType.GetScale() == 2) {
             this->supportedFlag = true;
             return;
         }
         if ((leftType.GetPrecision() == 22 && leftType.GetScale() == 6) &&
-            (returnType.GetPrecision() == 38 && returnType.GetScale() == 16)) {
-            this->supportedFlag = true;
-            return;
+            (returnType.GetPrecision() == 22 && returnType.GetScale() == 6)) {
+            if (returnType.GetId() == OMNI_BOOLEAN) {
+                this->supportedFlag = true;
+                return;
+            }
+            if (returnType.GetId() == OMNI_DECIMAL128) {
+                if ((returnType.GetPrecision() == 22 && returnType.GetScale() == 6) ||
+                    (returnType.GetPrecision() == 38 && returnType.GetScale() == 16)) {
+                    this->supportedFlag = true;
+                    return;
+                }
+            }
         }
     }
     this->supportedFlag = false;
