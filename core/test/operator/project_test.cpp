@@ -660,6 +660,41 @@ TEST(ProjectionTest, Doubles)
     delete vecAllocator;
 }
 
+TEST(ProjectionTest, Doubles_DivideByZero) {
+    int32_t numRows = 5;
+    double *col1 = MakeDoubles(numRows, -4.0);
+    double *col2 = MakeDoubles(numRows, -3.0);
+    const int32_t numCols = 2;
+
+    FieldExpr *divLeft = new FieldExpr(0, DoubleType());
+    FieldExpr *divRight = new FieldExpr(1, DoubleType());
+    BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, divLeft, divRight, DoubleType());
+    std::vector<Expr *> exprs = {divExpr};
+    std::vector<DataType> vecOfTypes = {DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE)};
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
+    EXPECT_TRUE(isinf(((DoubleVector *) ret[0]->GetVector(0))->GetValue(3)));
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
+    delete[] col2;
+
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
 TEST(ProjectionTest, MultipleColumns)
 {
     const int32_t numRows = 1000;

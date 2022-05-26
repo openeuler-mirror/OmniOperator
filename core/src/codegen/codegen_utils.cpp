@@ -5,6 +5,7 @@
 
 #include "codegen_utils.h"
 #include "llvm/Transforms/IPO.h"
+#include "func_signature.h"
 
 using namespace std;
 using namespace llvm;
@@ -12,6 +13,16 @@ using namespace llvm;
 CallInst *CodeGenUtils::CreateCall(llvm::Function *func, std::vector<llvm::Value *> argsVals, string name)
 {
     return builder.CreateCall(func, argsVals, name);
+}
+
+Value *CodeGenUtils::CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
+                                        const omniruntime::type::DataTypeId &returnType,
+                                        std::vector<llvm::Value *> args, std::string msg)
+{
+    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString();
+    auto f = module.getFunction(funcId);
+    auto ret = CreateCall(f, args, msg);
+    return ret;
 }
 
 void CodeGenUtils::RecordMainFunction(llvm::Function *func)

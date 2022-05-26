@@ -51,6 +51,11 @@ extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)
     return COMBINE_HASH_VALUE * prevHashVal + val;
 }
 
+extern "C" DLLEXPORT double DivideDouble(double divident, double divisor)
+{
+    return divident / divisor;
+}
+
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
 {
     if (y == 0) {
