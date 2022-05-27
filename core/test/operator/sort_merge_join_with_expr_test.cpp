@@ -77,7 +77,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     std::vector<omniruntime::vec::VectorBatch *> result;
     streamedTblWithExprOperator->GetOutput(result);
 
-    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof1);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
 
     // check the join result
@@ -166,7 +167,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     std::vector<omniruntime::vec::VectorBatch *> result;
     streamedTblWithExprOperator->GetOutput(result);
 
-    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof1);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
 
     // check the join result

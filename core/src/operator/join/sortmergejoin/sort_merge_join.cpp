@@ -128,17 +128,25 @@ int32_t SortMergeJoinOperator::GetJoinResult()
 
 int32_t SortMergeJoinOperator::AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch)
 {
-    std::vector<VectorBatch *> vecBatchVector;
-    vecBatchVector.push_back(vecBatch);
-    streamedTblPagesIndex->AddVecBatches(vecBatchVector);
+    if (streamedTblPagesIndex->IsDataFinish()) {
+        VectorHelper::FreeVecBatch(vecBatch);
+    } else {
+        std::vector<VectorBatch *> vecBatchVector;
+        vecBatchVector.push_back(vecBatch);
+        streamedTblPagesIndex->AddVecBatches(vecBatchVector);
+    }
     return GetJoinResult();
 }
 
 int32_t SortMergeJoinOperator::AddBufferedTableInput(omniruntime::vec::VectorBatch *vecBatch)
 {
-    std::vector<VectorBatch *> vecBatchVector;
-    vecBatchVector.push_back(vecBatch);
-    bufferedTblPagesIndex->AddVecBatches(vecBatchVector);
+    if (bufferedTblPagesIndex->IsDataFinish()) {
+        VectorHelper::FreeVecBatch(vecBatch);
+    } else {
+        std::vector<VectorBatch *> vecBatchVector;
+        vecBatchVector.push_back(vecBatch);
+        bufferedTblPagesIndex->AddVecBatches(vecBatchVector);
+    }
     return GetJoinResult();
 }
 
