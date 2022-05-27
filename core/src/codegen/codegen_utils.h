@@ -13,6 +13,7 @@
 #include <llvm/IR/Value.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <type/data_type.h>
 
 class CodeGenUtils {
 public:
@@ -22,6 +23,9 @@ public:
     virtual ~CodeGenUtils() = default;
 
     llvm::CallInst *CreateCall(llvm::Function *func, std::vector<llvm::Value *> argsVals, std::string name);
+    llvm::Value *CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
+                                    const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args,
+                                    std::string msg = "");
     void RecordMainFunction(llvm::Function *func);
     void RemoveUnusedFunctions();
     friend class ExpressionCodeGen;

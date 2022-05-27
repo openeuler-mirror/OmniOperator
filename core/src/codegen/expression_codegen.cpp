@@ -568,10 +568,10 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return builder->CreateFSub(leftPhi, rightPhi, "farithmetic_sub");
         case omniruntime::expressions::Operator::MUL:
             return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
-        case omniruntime::expressions::Operator::DIV: {
-            auto divisor = HandleDivisionByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
-            return builder->CreateFDiv(leftPhi, rightPhi, "farithmetic_div");
-        }
+        case omniruntime::expressions::Operator::DIV:
+            return codeGenUtils->CallExternFunction("divide", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi},
+                                                    "farithmetic_divide");
         default: {
             LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
