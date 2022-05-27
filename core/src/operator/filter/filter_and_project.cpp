@@ -191,9 +191,12 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         reinterpret_cast<int64_t>(context), dictionaries);
     if (context->HasError()) {
         // resource cleanup
+        for (auto &dictionaryVec : dictionaryVecs) {
+            delete dictionaryVec;
+        }
+        delete[] selectedRows;
         context->GetArena()->Reset();
         VectorHelper::FreeVecBatch(vecBatch);
-
         string errorMessage = context->GetError();
         throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
     }
@@ -201,6 +204,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         for (auto &dictionaryVec : dictionaryVecs) {
             delete dictionaryVec;
         }
+        delete[] selectedRows;
         context->GetArena()->Reset();
         VectorHelper::FreeVecBatch(vecBatch);
         return 0;

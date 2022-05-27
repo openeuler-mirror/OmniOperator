@@ -23,7 +23,7 @@ using namespace TestUtil;
 namespace SortTest {
 const int32_t VEC_BATCH_COUNT = 10;
 const int32_t DISTINCT_VALUE_COUNT = 4;
-const int32_t REPEAT_COUNT = 250000;
+const int32_t REPEAT_COUNT = 25000;
 const int32_t COLUMN_COUNT_2 = 2;
 const int32_t COLUMN_COUNT_4 = 4;
 const uint64_t MAX_SPILL_BYTES = (1L << 20);
@@ -56,7 +56,7 @@ void BuildSortTestData(VectorBatch **vecBatches, VectorAllocator *vecAllocator, 
 TEST(NativeOmniSortTest, TestSortPerformance)
 {
     // construct input data
-    const int32_t dataSize = 10000000;
+    const int32_t dataSize = 1000000;
     const int32_t vecSize = 4;
     int32_t *data1 = new int32_t[dataSize];
     int64_t *data2 = new int64_t[dataSize];
@@ -81,8 +81,6 @@ TEST(NativeOmniSortTest, TestSortPerformance)
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, vecSize, sortCols,
         ascendings, nullFirsts, vecSize);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, vecSize, sortCols, ascendings, nullFirsts, vecSize);
-    operatorFactory->SetJitContext(jitContext);
 
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
@@ -119,8 +117,6 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -158,8 +154,6 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -195,8 +189,6 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -234,8 +226,6 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -271,8 +261,6 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -511,8 +499,6 @@ TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -551,8 +537,6 @@ TEST(NativeOmniSortTest, TestSortTwoCharColumn)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -591,8 +575,6 @@ TEST(NativeOmniSortTest, TestSortTwoDate32Column)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -631,8 +613,6 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal64Column)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -672,8 +652,6 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal128Column)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -718,8 +696,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -848,9 +825,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
-        sourceTypesSize);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(sourceVecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -980,9 +955,7 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemory)
     }
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
-        sourceTypesSize);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
 
     auto sourceVecBatch = CreateEmptyVectorBatch(sourceTypes.Get());
@@ -1060,9 +1033,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithDictionaryAndNulls)
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
-        sourceTypesSize);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
 
     sortOperator->AddInput(sourceVecBatch1);
@@ -1117,9 +1088,7 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemoryWithSpill)
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
-        sourceTypesSize);
-    operatorFactory->SetJitContext(jitContext);
+
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
 
     sortOperator->AddInput(sourceVecBatch1);

@@ -58,9 +58,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     WindowWithExprOperator *windowOperator =
         dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -125,9 +122,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -188,9 +182,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
         sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 0, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 2, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 0, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
+
     auto test = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
     WindowWithExprOperator *windowOperator = test;
     windowOperator->AddInput(vecBatch);
@@ -249,9 +241,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
         sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -312,9 +301,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
         sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 0, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -379,9 +365,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -691,14 +674,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
+TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
 {
     using namespace omniruntime::op;
     using namespace omniruntime::expressions;
 
     // construct the input data
     DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::vec::DAY),
-        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(5, 0), DoubleDataType(),
         BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
@@ -740,8 +723,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
     int32_t expectedPositions = 10000;
 
     DataTypes outputTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::vec::DAY),
-        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal128DataType(1, 1), DoubleDataType(),
-        Decimal128DataType(2, 2) }));
+        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal128DataType(10, 0), DoubleDataType(),
+        Decimal128DataType(4, 2) }));
     string argumentChannels[7] = {"ADD:1(2:1, #0)", "#1", "#2", "#3", "#4", "#5", "#8"};
 
     // create expression objects
@@ -754,9 +737,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -765,10 +745,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::vec::DAY),
-        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(5, 0), DoubleDataType(),
         BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), IntDataType(), IntDataType(),
         Date32DataType(omniruntime::vec::DAY), Date32DataType(omniruntime::vec::MILLI), LongDataType(),
-        Decimal128DataType(1, 1), DoubleDataType(), Decimal128DataType(2, 2) }));
+        Decimal128DataType(10, 0), DoubleDataType(), Decimal128DataType(4, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -802,14 +782,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
+TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
 {
     using namespace omniruntime::op;
     using namespace omniruntime::expressions;
 
     // construct the input data
     DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::vec::DAY),
-        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
+        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(5, 2), DoubleDataType(),
         BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -851,8 +831,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
     int32_t expectedPositions = 10000;
 
     DataTypes outputTypes(std::vector<DataType>({ DoubleDataType(), DoubleDataType(), DoubleDataType(),
-        DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType() }));
-    string argumentChannels[7] = {"#0", "ADD:1(2:1, #1)", "#2", "#3", "#4", "#5", "#8"};
+        DoubleDataType(), Decimal64DataType(10, 4), DoubleDataType(), Decimal128DataType(4, 4) }));
+    string argumentChannels[7] = {"#0", "ADD:1(2:8, #1)", "#2", "#3", "#4", "#5", "#8"};
 
     // create expression objects
     Parser parser;
@@ -863,9 +843,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
         sourceTypes, outputCols, 9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -874,9 +851,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataType>({ IntDataType(), Date32DataType(omniruntime::vec::DAY),
-        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(1, 1), DoubleDataType(),
-        BooleanDataType(), VarcharDataType(3), Decimal128DataType(2, 2), IntDataType(), DoubleDataType(),
-        DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType(), DoubleDataType() }));
+        Date32DataType(omniruntime::vec::MILLI), LongDataType(), Decimal64DataType(5, 2), DoubleDataType(),
+        BooleanDataType(), VarcharDataType(3), Decimal128DataType(10, 4), IntDataType(), DoubleDataType(),
+        DoubleDataType(), DoubleDataType(), DoubleDataType(), Decimal64DataType(10, 4), DoubleDataType(),
+        Decimal128DataType(4, 4) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -892,9 +870,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
     double expectData11[DATA_SIZE] = {24, 24, 46, 46, 68, 68};
     double expectData12[DATA_SIZE] = {222, 222, 444, 444, 666, 666};
     double expectData13[DATA_SIZE] = {2222, 2222, 4444, 4444, 6666, 6666};
-    double expectData14[DATA_SIZE] = {22222, 22222, 44444, 44444, 66666, 66666};
+    int64_t expectData14[DATA_SIZE] = {2222200, 2222200, 4444400, 4444400, 6666600, 6666600};
     double expectData15[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
-    double expectData16[DATA_SIZE] = {0, 0, 0, 0, 0, 0};
+    Decimal128 expectData16[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
+                                          Decimal128(0, 0), Decimal128(0, 0)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
@@ -969,9 +948,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
         sourceTypes, outputCols, 9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1078,9 +1054,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
         sourceTypes, outputCols, 9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1185,9 +1158,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
         sourceTypes, outputCols, 9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1297,9 +1267,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
         sourceTypes, outputCols, 9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1383,9 +1350,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
         sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1457,9 +1421,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
         sourceTypes, outputCols, 5, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 5, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1530,9 +1491,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
         sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);

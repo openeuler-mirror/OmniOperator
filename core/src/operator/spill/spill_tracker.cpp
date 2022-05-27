@@ -10,8 +10,8 @@ namespace omniruntime {
 namespace op {
 RootSpillTracker::~RootSpillTracker()
 {
-    for (auto iter = spillPaths.begin(); iter != spillPaths.end(); iter++) {
-        rmdir((*iter).c_str());
+    for (const auto &spillPath : spillPaths) {
+        rmdir(spillPath.c_str());
     }
 }
 
@@ -26,16 +26,15 @@ bool RootSpillTracker::CheckIfExceedAndReserve(uint64_t bytes)
     return false;
 }
 
-RootSpillTracker rootSpillTracker;
-
 void InitRootSpillTracker(std::string &spillPath, uint64_t maxSize)
 {
-    rootSpillTracker.AddSpillPath(spillPath);
-    rootSpillTracker.SetMaxBytes(maxSize);
+    GetRootSpillTracker().AddSpillPath(spillPath);
+    GetRootSpillTracker().SetMaxBytes(maxSize);
 }
 
 RootSpillTracker &GetRootSpillTracker()
 {
+    static RootSpillTracker rootSpillTracker;
     return rootSpillTracker;
 }
 }

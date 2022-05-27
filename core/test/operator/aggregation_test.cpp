@@ -21,7 +21,7 @@
 namespace omniruntime {
 using namespace omniruntime::vec;
 const int32_t VEC_BATCH_NUM = 10;
-const int32_t ROW_PER_VEC_BATCH = 2000000;
+const int32_t ROW_PER_VEC_BATCH = 200000;
 const int32_t CARDINALITY = 4;
 const int32_t COLUMN_NUM = 4;
 const bool INPUT_MODE = true;
@@ -1581,9 +1581,9 @@ TEST(HashAggregationOperatorTest, multi_stage)
         { LongDataType(), LongDataType(), LongDataType(), DoubleDataType(), LONG_DECIMAL_TYPE, LongDataType() }));
     int64_t expectData1[CARDINALITY] = {0, 1, 2, 3};
     int64_t expectData2[CARDINALITY] = {0, 1, 2, 3};
-    int64_t expectData3[CARDINALITY] = {10000000, 10000000, 10000000, 10000000};
+    int64_t expectData3[CARDINALITY] = {1000000, 1000000, 1000000, 1000000};
     double expectData4[CARDINALITY] = {1.0, 1.0, 1.0, 1.0};
-    Decimal128 expectedDecimal(10000000L);
+    Decimal128 expectedDecimal(1000000L);
     Decimal128 expectData5[CARDINALITY] = {expectedDecimal, expectedDecimal, expectedDecimal, expectedDecimal};
     int64_t expectData6[CARDINALITY] = {1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
