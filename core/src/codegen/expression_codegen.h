@@ -115,8 +115,8 @@ protected:
     std::pair<llvm::Value *, llvm::Value *> RescaleDecimals(omniruntime::expressions::Expr &expr, CodeGenValue &left,
         CodeGenValue &right, int scaleDiff, omniruntime::type::DataTypeId typeId);
 
-    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, std::shared_ptr<CodeGenValue> val,
-        std::shared_ptr<CodeGenValue> lowerVal, std::shared_ptr<CodeGenValue> upperVal,
+    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue>& val,
+        const std::shared_ptr<CodeGenValue>& lowerVal, const std::shared_ptr<CodeGenValue>& upperVal,
         std::pair<llvm::Value **, llvm::Value **> cmpPair);
 
     void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,
@@ -149,7 +149,7 @@ private:
     static void InitializeCodegenTargets();
     void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(omniruntime::type::DataType dataType, llvm::Value *rowIdx,
+    llvm::Value *GetDictionaryVectorValue(const omniruntime::type::DataType &dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
     void Decimal64MultiplyHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *output,
         llvm::Value *leftIsNull, llvm::Value *rightIsNull);

@@ -14,7 +14,6 @@
 #include "expression/expressions.h"
 #include "operator/execution_context.h"
 
-using vec64 = std::vector<int64_t>;
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *,
     bool *, int32_t *, int64_t, int64_t *);
 
@@ -25,7 +24,8 @@ using namespace vec;
  * vector value addresses
  * vector null value addresses
  * vector offsets addresses
- * row index * int pointer to return length of varchar result
+ * row index
+ * int pointer to return length of varchar result
  * address of ExecutionContext
  * dictionary vector addresses
  * boolean pointer to return if results is null
@@ -48,7 +48,7 @@ private:
 
 class Projection {
 public:
-    Projection(DataTypes &inputTypes, int32_t nCols, const expressions::Expr &expr, bool filter);
+    Projection(const expressions::Expr &expr, bool filter);
     ~Projection()
     {
         delete this->expr;
@@ -56,20 +56,20 @@ public:
     }
     bool IsSupported();
 
-    omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
+    omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch, int64_t *valueAddrs,
+        int64_t *nullAddrs, int64_t *offsetAddrs, omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
+        int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
+    omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch, int64_t *valueAddrs,
+        int64_t *nullAddrs, int64_t *offsetAddrs, omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
+        int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-        int32_t numSelectedRows, std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offset,
+        int32_t numSelectedRows, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
         ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, std::vector<int64_t> const & vecData,
-        int64_t *bitmap, int64_t *offsets, ExecutionContext *context, int64_t *dictionaryVectors) const;
+    Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
+        int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
     omniruntime::type::DataType GetOutputType() const
     {
@@ -77,9 +77,6 @@ public:
     }
 
 private:
-    int32_t *inputTypeIds;
-    DataTypes inputTypes;
-    int32_t nCols;
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
     bool isSupported = true;
@@ -100,12 +97,9 @@ private:
 
 class ProjectionOperator : public Operator {
 public:
-    explicit ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t inputTypes[],
-        int32_t nCols, int32_t nProj, ExecutionContext *context)
-        : proj(proj), nCols(nCols), nProj(nProj)
+    explicit ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, ExecutionContext *context)
+        : proj(proj), mutated(nullptr)
     {
-        this->sourceTypes = inputTypes;
-        this->mutated = nullptr;
         this->context = context;
         this->context->GetArena()->SetAllocator(vecAllocator);
     }
@@ -117,12 +111,9 @@ public:
 
     int32_t AddInput(VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<VectorBatch *> &ret) override;
-    ;
 
 private:
     const std::vector<std::unique_ptr<Projection>> &proj;
-    int32_t nCols = 0;
-    int32_t nProj = 0;
     VectorBatch *mutated = nullptr;
 };
 
@@ -136,13 +127,11 @@ public:
     bool IsSupported();
 
 private:
-    int32_t *inputTypeIds;
     DataTypes inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
     int32_t nProj;
     bool isSupported = true;
-    int8_t parseFormat;
 };
 }
 }

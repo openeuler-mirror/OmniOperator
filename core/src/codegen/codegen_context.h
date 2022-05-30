@@ -7,10 +7,18 @@
 
 class CodegenContext {
 public:
-    explicit CodegenContext() : data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr), print(nullptr) {}
+    explicit CodegenContext()
+        : data(nullptr),
+          nullBitmap(nullptr),
+          offsets(nullptr),
+          rowIdx(nullptr),
+          executionContext(nullptr),
+          dictionaryVectors(nullptr),
+          print(nullptr)
+    {}
 
     explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
-        llvm::Value *isResultNull, llvm::Value *executionContext, llvm::Value *dictionaryVectors)
+        llvm::Value *executionContext, llvm::Value *dictionaryVectors)
         : data(data),
           nullBitmap(nullBitmap),
           offsets(offsets),
@@ -20,7 +28,7 @@ public:
           print(nullptr)
     {}
 
-    ~CodegenContext() {}
+    ~CodegenContext() = default;
 
     friend class ExpressionCodeGen;
     friend class RowExpressionCodeGen;
