@@ -21,41 +21,8 @@ OmniStatus AggregationOperatorFactory::Init()
         aggInputTypes.push_back(types[aggInputColsPtr[i]]);
     }
 
-    std::vector<int32_t> &maskCols = GetMaskColumns();
+    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesContext, GetMaskColumns());
 
-    uint32_t *aggFuncTypesPtr = aggFuncTypesContext.context;
-    for (uint32_t i = 0; i < aggFuncTypesContext.len; i++) {
-        switch (aggFuncTypesPtr[i]) {
-            case OMNI_AGGREGATION_TYPE_SUM: {
-                CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_COUNT_COLUMN: {
-                CreateAggregatorFactory<CountColumnAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_COUNT_ALL: {
-                CreateAggregatorFactory<CountAllAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_MAX: {
-                CreateAggregatorFactory<MaxAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_MIN: {
-                CreateAggregatorFactory<MinAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_AVG: {
-                CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                break;
-            }
-            default: {
-                LogError("No such agg func type %d", aggFuncTypesPtr[i]);
-                ret = OMNI_STATUS_ERROR;
-            }
-        }
-    }
     return ret;
 }
 
