@@ -350,7 +350,10 @@ public class TestUtils {
                     break;
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
-                    assertEquals(new String(((VarcharVec) vec).get(i)), ((VarcharVec) expectedVec).get(i));
+                    assertEquals(new String(((VarcharVec) vec).get(i)), new String(((VarcharVec) expectedVec).get(i)));
+                    break;
+                case OMNI_DECIMAL128:
+                    assertEquals(((Decimal128Vec) vec).get(i), ((Decimal128Vec) expectedVec).get(i));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported type : " + vec.getType().getId());
