@@ -30,14 +30,19 @@ public class Decimal128Vec extends DecimalVec {
         super(allocator, size, BYTES, Decimal128DataType.DECIMAL128);
     }
 
+    @Deprecated
     public Decimal128Vec(long nativeVector, DataType type) {
         super(nativeVector, BYTES, type);
     }
 
+    public Decimal128Vec(long nativeVector) {
+        super(nativeVector, BYTES, Decimal128DataType.DECIMAL128);
+    }
+
     public Decimal128Vec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType type) {
+            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, BYTES, type);
+                size, offset, BYTES, Decimal128DataType.DECIMAL128);
     }
 
     private Decimal128Vec(Decimal128Vec vector, int offset, int length, boolean isSlice) {

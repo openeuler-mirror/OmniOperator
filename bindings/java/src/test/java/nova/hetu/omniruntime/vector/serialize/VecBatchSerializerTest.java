@@ -207,8 +207,7 @@ public class VecBatchSerializerTest {
         LongVec checkLongVec = new LongVec(checkContainerVec.getVector(0));
         IntVec checkIntVec = new IntVec(checkContainerVec.getVector(1));
         VarcharVec checkVarCharVec = new VarcharVec(checkContainerVec.getVector(2));
-        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3),
-                checkContainerVec.getDataTypes()[3]);
+        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3));
         for (int i = 0; i < ROW_COUNT; i++) {
             assertEquals(i, checkLongVec.get(i));
             assertEquals(i, checkIntVec.get(i));
@@ -255,8 +254,7 @@ public class VecBatchSerializerTest {
         LongVec checkLongVec = new LongVec(checkContainerVec.getVector(0));
         IntVec checkIntVec = new IntVec(checkContainerVec.getVector(1));
         VarcharVec checkVarCharVec = new VarcharVec(checkContainerVec.getVector(2));
-        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3),
-                checkContainerVec.getDataTypes()[3]);
+        Decimal128Vec checkDecimal128Vec = new Decimal128Vec(checkContainerVec.getVector(3));
         for (int i = 0; i < ROW_COUNT; i++) {
             assertEquals(i, checkLongVec.get(i));
             assertEquals(i, checkIntVec.get(i));
@@ -461,5 +459,54 @@ public class VecBatchSerializerTest {
 
         freeVecBatch(vecBatch);
         freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeDecimal128Vec() {
+        int row = 8;
+        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR
+                .newChildAllocator("VecBatchSerializerTest_testSerializeDecimal128Vec", VecAllocator.UNLIMIT, 0);
+        IntVec intVec = new IntVec(vecAllocator, row);
+        VarcharVec varcharVec = new VarcharVec(vecAllocator, row * 20, row);
+        Decimal128Vec decimal128Vec = new Decimal128Vec(vecAllocator, row);
+        for (int i = 0; i < row; i++) {
+            intVec.set(i, i);
+            varcharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
+            decimal128Vec.set(i, new long[]{i, i + 1});
+        }
+        Vec[] vecArray = new Vec[]{intVec, varcharVec, decimal128Vec};
+
+        long[] nativeVectors = new long[vecArray.length];
+        long[] nativeVectorValueBufAddresses = new long[vecArray.length];
+        long[] nativeVectorNullBufAddresses = new long[vecArray.length];
+        long[] nativeVectorAllocators = new long[vecArray.length];
+        int[] capacityInBytes = new int[vecArray.length];
+        int[] offsets = new int[vecArray.length];
+        int[] encodings = new int[vecArray.length];
+        int[] dataTypeIds = new int[vecArray.length];
+        for (int i = 0; i < vecArray.length; i++) {
+            nativeVectors[i] = vecArray[i].getNativeVector();
+            nativeVectorValueBufAddresses[i] = vecArray[i].getValuesBuf().getAddress();
+            nativeVectorNullBufAddresses[i] = vecArray[i].getValueNullsBuf().getAddress();
+            nativeVectorAllocators[i] = vecArray[i].getAllocator().getNativeAllocator();
+            capacityInBytes[i] = vecArray[i].getCapacityInBytes();
+            offsets[i] = vecArray[i].getOffset();
+            encodings[i] = vecArray[i].getEncoding().ordinal();
+            dataTypeIds[i] = vecArray[i].getType().getId().ordinal();
+        }
+        long[] nativeVectorOffsetBufAddresses = new long[]{0, varcharVec.getOffsetsBuf().getAddress(), 0};
+        VecBatch vecBatch = new VecBatch(vecArray, row);
+        VecBatch vecBatchFromNative = new VecBatch(vecBatch.getNativeVectorBatch(), nativeVectors,
+                nativeVectorValueBufAddresses, nativeVectorNullBufAddresses, nativeVectorOffsetBufAddresses,
+                nativeVectorAllocators, capacityInBytes, offsets, encodings, dataTypeIds, row);
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] vecBatchSerialized = serializer.serialize(vecBatchFromNative);
+        VecBatch vecBatchDeserialized = serializer.deserialize(vecBatchSerialized);
+        assertVecBatchEquals(vecBatchDeserialized, vecBatchFromNative);
+        assertVecBatchEquals(vecBatch, vecBatchFromNative);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(vecBatchDeserialized);
+        vecAllocator.close();
     }
 }

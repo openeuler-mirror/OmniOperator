@@ -57,7 +57,7 @@ public class VecFactory {
             case OMNI_CHAR:
                 return new VarcharVec(nativeVector);
             case OMNI_DECIMAL128:
-                return new Decimal128Vec(nativeVector, dataType);
+                return new Decimal128Vec(nativeVector);
             default:
                 throw new IllegalArgumentException("Not Support Data Type " + dataType.getId());
         }
@@ -91,7 +91,7 @@ public class VecFactory {
                         nativeVectorOffsetBufAddress, nativeVectorAllocator, capacityInBytes, size, offset);
             case OMNI_DECIMAL128:
                 return new Decimal128Vec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset, dataType);
+                        nativeVectorAllocator, capacityInBytes, size, offset);
             default:
                 throw new IllegalArgumentException("Not Support Data Type " + dataType.getId());
         }
