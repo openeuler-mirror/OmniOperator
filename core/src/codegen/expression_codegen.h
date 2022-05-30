@@ -76,6 +76,8 @@ public:
     void ExtractVectorIndexes();
     std::set<int32_t> vectorIndexes;
 
+    std::vector<llvm::Value*> GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
@@ -162,6 +164,14 @@ private:
     void InExprDecimal128Helper(const omniruntime::expressions::InExpr &inExpr, llvm::Type *retType, size_t i,
         CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
         llvm::Value *&tmpCmpNull);
+    std::vector<llvm::Value*> GetNullResultIfNullArgFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value*> GetValidNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value*> GetNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value*> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
 };
 
 #endif

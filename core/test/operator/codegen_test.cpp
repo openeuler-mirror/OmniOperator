@@ -3222,7 +3222,7 @@ TEST(CodeGenTest, Mm3HashLong)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Int64(v1[0], false, 42);
+    int32_t expectedRes = Mm3Int64(v1[0], false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3272,7 +3272,7 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Double(v1[0], false, 42);
+    int32_t expectedRes = Mm3Double(v1[0], false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3323,7 +3323,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42);
+    int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3372,7 +3372,7 @@ TEST(CodeGenTest, Mm3HashDecimal64)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Decimal64(v1[0], false, 42);
+    int32_t expectedRes = Mm3Decimal64(v1[0], false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3422,7 +3422,7 @@ TEST(CodeGenTest, Mm3HashDecimal128)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42);
+    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });

@@ -13,12 +13,22 @@ std::vector<Function> HashFunctionRegistry::GetFunctions()
 {
     DataTypeId retType = OMNI_INT;
     std::string mm3fnStr = "mm3hash";
-    std::vector<Function> hashRegistry = { Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {},
-        { OMNI_INT, OMNI_INT }, retType),
-        Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, { OMNI_LONG, OMNI_INT }, retType),
-        Function(reinterpret_cast<void *>(Mm3Double), mm3fnStr, {}, { OMNI_DOUBLE, OMNI_INT }, retType),
-        Function(reinterpret_cast<void *>(Mm3String), mm3fnStr, {}, { OMNI_VARCHAR, OMNI_INT }, retType),
-        Function(reinterpret_cast<void *>(Mm3Decimal64), mm3fnStr, {}, { OMNI_DECIMAL64, OMNI_INT }, retType),
-        Function(reinterpret_cast<void *>(Mm3Decimal128), mm3fnStr, {}, { OMNI_DECIMAL128, OMNI_INT }, retType) };
+    std::vector<Function> hashRegistry = {
+        Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {}, { OMNI_INT, OMNI_INT },
+            retType, VALID_NOT_NULL_RESULT),
+        Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, { OMNI_LONG, OMNI_INT },
+            retType, VALID_NOT_NULL_RESULT),
+        Function(reinterpret_cast<void *>(Mm3Double), mm3fnStr, {}, { OMNI_DOUBLE, OMNI_INT },
+            retType, VALID_NOT_NULL_RESULT),
+        Function(reinterpret_cast<void *>(Mm3String), mm3fnStr, {}, { OMNI_VARCHAR, OMNI_INT },
+            retType, VALID_NOT_NULL_RESULT),
+        Function(reinterpret_cast<void *>(Mm3Decimal64), mm3fnStr, {}, { OMNI_DECIMAL64, OMNI_INT },
+            retType, VALID_NOT_NULL_RESULT),
+        Function(reinterpret_cast<void *>(Mm3Decimal128), mm3fnStr, {}, { OMNI_DECIMAL128, OMNI_INT },
+            retType, VALID_NOT_NULL_RESULT),
+            // insert native function for combine hash math function
+        Function(reinterpret_cast<void *>(CombineHash), "combine_hash", {},
+                 { OMNI_LONG, OMNI_LONG }, OMNI_LONG, VALID_NOT_NULL_RESULT)};
+
     return hashRegistry;
 }

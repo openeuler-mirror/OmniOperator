@@ -13,9 +13,6 @@
 #else
 #define DLLEXPORT
 #endif
-namespace {
-const int COMBINE_HASH_VALUE = 31;
-}
 
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 {
@@ -57,10 +54,6 @@ extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x)
     }
 }
 
-extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)
-{
-    return COMBINE_HASH_VALUE * prevHashVal + val;
-}
 
 extern "C" DLLEXPORT double DivideDouble(double divident, double divisor)
 {

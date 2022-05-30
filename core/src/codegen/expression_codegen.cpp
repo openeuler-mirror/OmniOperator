@@ -1708,18 +1708,12 @@ void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
     this->value = make_shared<CodeGenValue>(result, llvmTypes->CreateConstantBool(false));
 }
 
-// Handles all functions
-void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
+std::vector<llvm::Value *> ExpressionCodeGen::GetDefaultFunctionArgValues(
+    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
 {
     std::vector<Value *> argVals;
     CodeGenValuePtr resultPtr;
-
     int numArgs = fExpr.arguments.size();
-    Value *isAnyNull = llvmTypes->CreateConstantBool(false);
-    bool isDecimalFunction = false;
-    DataTypeId funcRetType = fExpr.GetReturnTypeId();
-
-    // set execution context
     if (fExpr.function->IsExecutionContextSet()) {
         argVals.push_back(this->codegenContext->executionContext);
     }
@@ -1727,23 +1721,94 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         Expr *argN = fExpr.arguments[i];
         resultPtr = VisitExpr(*argN);
         if (!resultPtr->IsValidValue()) {
-            this->value = CreateInvalidCodeGenValue();
-            return;
+            isInvalidExpr = true;
+            return argVals;
         }
         argVals.push_back(resultPtr->data);
-        isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
+        *isAnyNull = builder->CreateOr(*isAnyNull, resultPtr->isNull);
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
             if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
                 argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType().GetWidth()));
             }
             argVals.push_back(this->value->length);
         }
-        if (argN->GetReturnTypeId() == OMNI_DECIMAL128) {
-            isDecimalFunction = true;
+    }
+    return argVals;
+}
+
+std::vector<llvm::Value *> ExpressionCodeGen::GetNullResultIfNullArgFunctionArgValues(
+    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
+{
+    return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+}
+
+std::vector<llvm::Value *> ExpressionCodeGen::GetValidNotNullResultFunctionArgValues(
+    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
+{
+    std::vector<Value *> argVals;
+    CodeGenValuePtr resultPtr;
+    int numArgs = fExpr.arguments.size();
+    if (fExpr.function->IsExecutionContextSet()) {
+        argVals.push_back(this->codegenContext->executionContext);
+    }
+    for (int i = 0; i < numArgs; i++) {
+        Expr *argN = fExpr.arguments[i];
+        resultPtr = VisitExpr(*argN);
+        if (!resultPtr->IsValidValue()) {
+            isInvalidExpr = true;
+            return argVals;
         }
-        if (fExpr.funcName == mm3hashStr) {
-            argVals.push_back(this->value->isNull);
+        argVals.push_back(resultPtr->data);
+        *isAnyNull = builder->CreateOr(*isAnyNull, resultPtr->isNull);
+        if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
+            if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
+                argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType().GetWidth()));
+            }
+            argVals.push_back(this->value->length);
         }
+        argVals.push_back(this->value->isNull);
+    }
+    return argVals;
+}
+
+std::vector<llvm::Value *> ExpressionCodeGen::GetNotNullResultFunctionArgValues(
+    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
+{
+    auto argVals = GetValidNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+    auto *isValidResult = llvmTypes->CreateConstantBool(true);
+    argVals.push_back(isValidResult);
+    return argVals;
+}
+
+std::vector<llvm::Value *> ExpressionCodeGen::GetFunctionArgValues(
+    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
+{
+    switch (fExpr.function->GetNullableResultType()) {
+        case NULL_RESULT_IF_ANY_NULL_ARG:
+            return GetNullResultIfNullArgFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+        case VALID_NOT_NULL_RESULT:
+            return GetValidNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+        case NOT_NULL_RESULT:
+            return GetNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+        default:
+            return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+    }
+}
+// Handles all functions
+
+void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
+{
+    Value *isAnyNull = llvmTypes->CreateConstantBool(false);
+    auto res = std::find_if(fExpr.arguments.begin(), fExpr.arguments.end(),
+                            [](Expr *exp) { return exp->GetReturnTypeId() == OMNI_DECIMAL128;});
+    bool isDecimalFunction = res != fExpr.arguments.end();
+    DataTypeId funcRetType = fExpr.GetReturnTypeId();
+    bool isInvalidExpr = false;
+
+    auto argVals = GetFunctionArgValues(fExpr, &isAnyNull, isInvalidExpr);
+    if (isInvalidExpr) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
     }
     Value *ret = nullptr;
     Value *outputLen = nullptr;

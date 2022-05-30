@@ -9,12 +9,20 @@
 #include "util/type_util.h"
 
 namespace omniruntime {
+
+enum NullableResultType {
+    NULL_RESULT_IF_ANY_NULL_ARG,
+    VALID_NOT_NULL_RESULT,
+    NOT_NULL_RESULT,
+    DEFAULT
+};
+
 class Function {
 public:
     Function() = default;
 
     /* *
-     * Constructs a omni-runtime Function object that contains the functionality and attributes of an omni-runtime
+     * Constructs an omni-runtime Function object that contains the functionality and attributes of an omni-runtime
      * function
      *
      * @param name function name
@@ -28,7 +36,7 @@ public:
      */
     Function(void *address, const std::string &name, const std::vector<std::string> &aliases,
         const std::vector<omniruntime::type::DataTypeId> &paramTypes, const omniruntime::type::DataTypeId &retType,
-        bool setExecutionContext = false);
+        NullableResultType = DEFAULT, bool setExecutionContext = false);
 
     Function(const std::string &fnID, const FunctionSignature &signature);
 
@@ -45,12 +53,14 @@ public:
     const std::vector<omniruntime::type::DataTypeId> &GetParamTypes() const;
     std::string GetId() const;
     const void *GetAddress() const;
+    const NullableResultType GetNullableResultType() const;
     bool IsExecutionContextSet() const;
 
 private:
     void *address;
     // signatures corresponding to that function
     std::vector<FunctionSignature> signatures = {};
+    NullableResultType nullableResultType;
     bool isExecContextSet = false;
 };
 }

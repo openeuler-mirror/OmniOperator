@@ -43,6 +43,8 @@ static const uint32_t REVERSE_AND_B = 0xff0000;
 static const uint32_t REVERSE_AND_C = 0xff00;
 static const uint32_t REVERSE_AND_D = 0xff000000;
 
+const int COMBINE_HASH_VALUE = 31;
+
 static const uint32_t MM3_HALFWORD_INIT = 0;
 
 uint32_t RotateLeft(uint32_t i, uint32_t distance)
@@ -153,47 +155,76 @@ uint32_t HashUnsafeBytes(const string base, uint32_t lengthInBytes, uint32_t see
     return Fmix(h1, lengthInBytes);
 }
 
-extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isNull, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isValNull, int32_t seed, bool isSeedNull)
 {
-    return static_cast<int32_t>(HashInt(static_cast<uint32_t>(val * !isNull), static_cast<uint32_t>(seed)));
+    if (isSeedNull) {
+        seed = 0;
+    }
+    return static_cast<int32_t>(HashInt(static_cast<uint32_t>(val * !isValNull), static_cast<uint32_t>(seed)));
 }
 
-extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isNull, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isValNull, int32_t seed, bool isSeedNull)
 {
-    return static_cast<int32_t>(HashLong(static_cast<uint64_t>(val * !isNull), static_cast<uint32_t>(seed)));
+    if (isSeedNull) {
+        seed = 0;
+    }
+    return static_cast<int32_t>(HashLong(static_cast<uint64_t>(val * !isValNull), static_cast<uint32_t>(seed)));
 }
 
-extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isNull, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isValNull, int32_t seed, bool isSeedNull)
 {
-    string as = string(val, valLen * !isNull);
+    if (isSeedNull) {
+        seed = 0;
+    }
+    string as = string(val, valLen * !isValNull);
     return static_cast<int32_t>(HashUnsafeBytes(as, static_cast<uint32_t>(valLen), static_cast<uint32_t>(seed)));
 }
 
-extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isNull, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed, bool isSeedNull)
 {
     union {
         uint64_t lVal;
         double dVal;
     } uVal = { 0 };
-    uVal.dVal = val * !isNull;
+    uVal.dVal = val * !isValNull;
+    if (isSeedNull) {
+        seed = 0;
+    }
     return static_cast<int32_t>(HashLong(uVal.lVal, static_cast<uint32_t>(seed)));
 }
 
-extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, bool isNull, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, bool isValNull, int32_t seed, bool isSeedNull)
 {
-    return static_cast<int32_t>(HashLong(val * !isNull, seed));
+    if (isSeedNull) {
+        seed = 0;
+    }
+    return static_cast<int32_t>(HashLong(val * !isValNull, seed));
 }
 
-extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool isNull, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool isValNull, int32_t seed, bool isSeedNull)
 {
     union {
         char bytesArray[16];
         int64_t int64Array[2];
     } uVal = { 0 };
-    uVal.int64Array[0] = xHigh * !isNull;
-    uVal.int64Array[1] = xLow * !isNull;
+    uVal.int64Array[0] = xHigh * !isValNull;
+    uVal.int64Array[1] = xLow * !isValNull;
     string strVal(uVal.bytesArray, 16);
+    if (isSeedNull) {
+        seed = 0;
+    }
     return static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed));
+}
+
+extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull)
+{
+    if (isPrevHashValNull) {
+        prevHashVal = 0;
+    }
+    if (isValNull) {
+        val = 0;
+    }
+    return COMBINE_HASH_VALUE * prevHashVal + val;
 }
 }
 }
