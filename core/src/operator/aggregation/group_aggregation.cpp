@@ -152,7 +152,6 @@ OmniStatus HashAggregationOperator::Init()
     }
     executionContext = std::make_unique<ExecutionContext>();
     executionContext->GetArena()->SetAllocator(vecAllocator);
-    executionContext->GetArena()->Allocate(DEFAULT_TEMP_MEM_SIZE);
     return OMNI_STATUS_NORMAL;
 }
 
