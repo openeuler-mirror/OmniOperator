@@ -48,9 +48,6 @@ TopNOperator::~TopNOperator()
         item->ReleaseAllVectors();
         delete item;
     }
-    for (const auto &item : rowComparatorList) {
-        delete item;
-    }
 }
 
 SPECIALIZE(OMNIJIT_TOPN_COMPARE)

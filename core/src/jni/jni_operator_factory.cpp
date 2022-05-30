@@ -162,8 +162,11 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
     PrepareContext maskColumnContext = { (uint32_t *)maskColumns, aggNum };
 
-    auto nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByDataTypes, aggColContext,
+    HashAggregationOperatorFactory *nativeOperatorFactory = nullptr;
+    JNI_METHOD_START
+    nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByDataTypes, aggColContext,
         aggDataTypes, outDataTypes, aggFuncTypeContext, maskColumnContext, inputRaw, outputPartial);
+    JNI_METHOD_END(0L)
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
@@ -212,8 +215,11 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     PrepareContext maskColsContext = { (uint32_t *)maskCols, aggCount };
     PrepareContext aggFuncTypesContext = { (uint32_t *)aggFuncTypes, aggCount };
 
-    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
+    AggregationOperatorFactory *nativeOperatorFactory = nullptr;
+    JNI_METHOD_START
+    nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
         maskColsContext, aggOutputTypes, inputRaw, outputPartial);
+    JNI_METHOD_END(0L)
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();
 
@@ -371,11 +377,14 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
 
     DataTypes allTypes(allTypesVec);
 
-    auto windowOperatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(inputDataTypes, outputChannels,
+    WindowOperatorFactory *windowOperatorFactory = nullptr;
+    JNI_METHOD_START
+    windowOperatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(inputDataTypes, outputChannels,
         outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels,
         preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix,
         expectedPositions, allTypes, argumentChannels, argumentChannelsCount, windowFrameTypes, windowFrameStartTypes,
         windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    JNI_METHOD_END(0L)
     windowOperatorFactory->Init();
     windowOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 
@@ -415,8 +424,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
     auto sourceTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
-    auto topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, jN, sortColsArr, sortAsc, sortNullFirsts, sortColCount);
+    TopNOperatorFactory *topNOperatorFactory = nullptr;
+    JNI_METHOD_START
+    topNOperatorFactory = new TopNOperatorFactory(sourceTypes, jN, sortColsArr, sortAsc, sortNullFirsts, sortColCount);
+    JNI_METHOD_END(0L)
     topNOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 
     return reinterpret_cast<int64_t>(topNOperatorFactory);
@@ -510,8 +521,17 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         return 0;
     }
 
-    auto factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputDataTypes, inputLength, projectExprs, jProjectLength);
+    FilterAndProjectOperatorFactory *factory = nullptr;
+    try {
+        factory =
+            new FilterAndProjectOperatorFactory(filterExpr, inputDataTypes, inputLength, projectExprs, jProjectLength);
+    } catch (const std::exception &e) {
+        delete filterExpr;
+        Expr::DeleteExprs(projectExprs);
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());
+        return 0L;
+    }
+
     if (!factory->isSupportedExpr) {
         delete factory;
         return 0;
@@ -555,7 +575,11 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
         return 0;
     }
 
-    auto factory = new ProjectionOperatorFactory(expressions, jExprsLength, inputDataTypes, inputLength);
+    ProjectionOperatorFactory *factory = nullptr;
+    JNI_METHOD_START
+    factory = new ProjectionOperatorFactory(expressions, jExprsLength, inputDataTypes, inputLength);
+    JNI_METHOD_END(0L)
+
     if (!factory->IsSupported()) {
         delete factory;
         return 0;
@@ -601,8 +625,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
     env->ReleaseStringUTFChars(jFilterExpr, filterChars);
 
     JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
-    auto hashBuilderOperatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildDataTypes,
+    HashBuilderOperatorFactory *hashBuilderOperatorFactory = nullptr;
+    JNI_METHOD_START
+    hashBuilderOperatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildDataTypes,
         buildHashColsArr, buildHashColsCount, filterExpression, jOperatorCount);
+    JNI_METHOD_END(0L)
     hashBuilderOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hash builder operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -676,9 +703,12 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     JNI_METHOD_END(0L)
 
     JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
-    auto lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeDataTypes,
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory = nullptr;
+    JNI_METHOD_START
+    lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeDataTypes,
         probeOutputColsArr, probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr,
         buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory);
+    JNI_METHOD_END(0L)
     lookupJoinOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create lookup join operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -713,10 +743,13 @@ Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOpera
     auto hashChannelTypesArr = const_cast<int32_t *>(hashChannelDataTypes.GetIds());
 
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
-    auto partitionedOutputOperatorFactory = PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory = nullptr;
+    JNI_METHOD_START
+    partitionedOutputOperatorFactory = PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
         sourceDataTypes, sourceTypesCount, jReplicatesAnyRow, jNullChannel, partitionChannelsArr,
         partitionChannelsCount, jPartitionCount, bucketToPartitionArr, bucketToPartitionCount, isHashPrecomputed,
         hashChannelTypesArr, hashChannelTypesCount, hashChannels, hashChannelCount);
+    JNI_METHOD_END(0L)
     partitionedOutputOperatorFactory->SetJitContext(nullptr);
     JNI_DEBUG_LOG("create partitionedoutput operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -734,7 +767,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_union_OmniUnionOpera
     int32_t sourceTypesCount = sourcesTypes.GetSize();
 
     JNI_DEBUG_LOG("before create union operator factory elapsed time: %ld ms.", END(start));
-    auto unionOperatorFactory = new UnionOperatorFactory(sourcesTypes, sourceTypesCount, jDistinct);
+    UnionOperatorFactory *unionOperatorFactory = nullptr;
+    JNI_METHOD_START
+    unionOperatorFactory = new UnionOperatorFactory(sourcesTypes, sourceTypesCount, jDistinct);
+    JNI_METHOD_END(0L)
     unionOperatorFactory->SetJitContext(nullptr);
     JNI_DEBUG_LOG("create union operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -765,14 +801,10 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
     JNI_METHOD_END(0L)
 
     JitContext *jitContext = nullptr;
-    try {
-        jitContext = CreateSortWithExprJitContext(sourceDataTypes, outputCols, outputColsCount, sortExprsArr,
-            ascendings, nullFirsts);
-    } catch (omniruntime::exception::OmniException &e) {
-        Expr::DeleteExprs(sortExprsArr);
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return 0L;
-    }
+    JNI_METHOD_START
+    jitContext = CreateSortWithExprJitContext(sourceDataTypes, outputCols, outputColsCount, sortExprsArr, ascendings,
+        nullFirsts);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, sortExprsArr)
 
     Expr::DeleteExprs(sortExprsArr);
     return reinterpret_cast<int64_t>(jitContext);
@@ -837,13 +869,9 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     JNI_METHOD_END(0L)
 
     JitContext *jitContext = nullptr;
-    try {
-        jitContext = CreateHashBuilderWithExprJitContext(buildDataTypes, buildHashExprsArr);
-    } catch (omniruntime::exception::OmniException &e) {
-        Expr::DeleteExprs(buildHashExprsArr);
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return 0L;
-    }
+    JNI_METHOD_START
+    jitContext = CreateHashBuilderWithExprJitContext(buildDataTypes, buildHashExprsArr);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, buildHashExprsArr)
 
     Expr::DeleteExprs(buildHashExprsArr);
     return reinterpret_cast<int64_t>(jitContext);
@@ -874,8 +902,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     JNI_METHOD_END(0L)
 
     JNI_DEBUG_LOG("before create hash builder with expression operator factory elapsed time: %ld ms.", END(start));
-    auto operatorFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildDataTypes,
+    HashBuilderWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildDataTypes,
         buildHashKeysArrExprs, buildHashKeysCount, filterExpression, jHashTableCount);
+    JNI_METHOD_END(0L)
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hash builder with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -907,14 +938,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_END(0L)
 
     JitContext *jitContext = nullptr;
-    try {
-        jitContext = CreateLookupJoinWithExprJitContext(probeDataTypes, probeOutputColsCount, probeHashExprsArr,
-            buildOutputDataTypes, buildOutputCols);
-    } catch (omniruntime::exception::OmniException &e) {
-        Expr::DeleteExprs(probeHashExprsArr);
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return 0L;
-    }
+    JNI_METHOD_START
+    jitContext = CreateLookupJoinWithExprJitContext(probeDataTypes, probeOutputColsCount, probeHashExprsArr,
+        buildOutputDataTypes, buildOutputCols);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, probeHashExprsArr)
 
     Expr::DeleteExprs(probeHashExprsArr);
     return reinterpret_cast<int64_t>(jitContext);
@@ -959,9 +986,13 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_END(0L)
 
     JNI_DEBUG_LOG("before create lookup join with expression operator factory elapsed time: %ld ms.", END(start));
-    auto operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
+    LookupJoinWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
         probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
         buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory);
+    JNI_METHOD_END(0L)
+
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create lookup join with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1003,14 +1034,10 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     JNI_METHOD_END(0L)
 
     JitContext *jitContext = nullptr;
-    try {
-        jitContext = CreateWindowWithExprJitContext(inputDataTypes, outputChannels, outputColsCount, partitionChannels,
-            partitionCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, outputDataTypes, argumentExprsArr);
-    } catch (omniruntime::exception::OmniException &e) {
-        Expr::DeleteExprs(argumentExprsArr);
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return 0L;
-    }
+    JNI_METHOD_START
+    jitContext = CreateWindowWithExprJitContext(inputDataTypes, outputChannels, outputColsCount, partitionChannels,
+        partitionCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, outputDataTypes, argumentExprsArr);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, argumentExprsArr)
 
     Expr::DeleteExprs(argumentExprsArr);
     return reinterpret_cast<int64_t>(jitContext);
@@ -1062,11 +1089,14 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     GetExprsFromJson(argumentKeysArr, argumentKeysCount, argumentKeysArrExprs);
     JNI_METHOD_END(0L)
 
-    auto windowWithExprOperatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
-        inputDataTypes, outputChannels, outputColsCount, windowFunction, windowFunctionCount, partitionChannels,
-        partitionCount, preGroupedChannels, preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount,
+    WindowWithExprOperatorFactory *windowWithExprOperatorFactory = nullptr;
+    JNI_METHOD_START
+    windowWithExprOperatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputDataTypes,
+        outputChannels, outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount,
+        preGroupedChannels, preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount,
         preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeysArrExprs, argumentKeysCount,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    JNI_METHOD_END(0L)
     windowWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 
     return reinterpret_cast<int64_t>(windowWithExprOperatorFactory);
@@ -1093,13 +1123,9 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     JNI_METHOD_END(0L)
 
     JitContext *jitContext = nullptr;
-    try {
-        jitContext = CreateHashAggregationWithExprJitContext(groupByExprsArr, aggFuncsCount);
-    } catch (omniruntime::exception::OmniException &e) {
-        Expr::DeleteExprs(groupByExprsArr);
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return 0L;
-    }
+    JNI_METHOD_START
+    jitContext = CreateHashAggregationWithExprJitContext(groupByExprsArr, aggFuncsCount);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, groupByExprsArr)
 
     Expr::DeleteExprs(groupByExprsArr);
     return reinterpret_cast<int64_t>(jitContext);
@@ -1139,18 +1165,22 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     JNI_METHOD_END(0L)
 
     vector<omniruntime::expressions::Expr *> aggKeysExprs;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(aggKeys, aggNum, aggKeysExprs);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, groupByKeysExprs)
+
+    HashAggregationWithExprOperatorFactory *nativeOperatorFactory = nullptr;
     try {
-        // parse the expressions
-        GetExprsFromJson(aggKeys, aggNum, aggKeysExprs);
-    } catch (omniruntime::exception::OmniException &e) {
+        nativeOperatorFactory =
+            new HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprs, aggNum,
+            sourceDataTypes, outDataTypes, (uint32_t *)aggFuncTypes, (uint32_t *)maskColumns, inputRaw, outputPartial);
+    } catch (const std::exception &e) {
         Expr::DeleteExprs(groupByKeysExprs);
+        Expr::DeleteExprs(aggKeysExprs);
         env->ThrowNew(omniRuntimeExceptionClass, e.what());
         return 0L;
     }
-
-    auto nativeOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprs, aggNum, sourceDataTypes,
-        outDataTypes, (uint32_t *)aggFuncTypes, (uint32_t *)maskColumns, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1177,13 +1207,9 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     JNI_METHOD_END(0L)
 
     JitContext *jitContext = nullptr;
-    try {
-        jitContext = CreateTopNWithExprJitContext(sourceDataTypes, sortExprsArr);
-    } catch (omniruntime::exception::OmniException &e) {
-        Expr::DeleteExprs(sortExprsArr);
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return 0L;
-    }
+    JNI_METHOD_START
+    jitContext = CreateTopNWithExprJitContext(sourceDataTypes, sortExprsArr);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, sortExprsArr)
 
     Expr::DeleteExprs(sortExprsArr);
     return reinterpret_cast<int64_t>(jitContext);
@@ -1211,8 +1237,11 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     GetExprsFromJson(sortKeysArr, sortKeyCount, sortKeyExprArr);
     JNI_METHOD_END(0L)
 
-    auto topNWithExprOperatorFactory =
+    TopNWithExprOperatorFactory *topNWithExprOperatorFactory = nullptr;
+    JNI_METHOD_START
+    topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceDataTypes, n, sortKeyExprArr, sortAsc, sortNullFirsts, sortKeyCount);
+    JNI_METHOD_END(0L)
     topNWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 
     return reinterpret_cast<int64_t>(topNWithExprOperatorFactory);
@@ -1233,7 +1262,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOpera
     JNI_DEBUG_LOG("create limit operator factory starting.");
     auto start = START();
     JNI_DEBUG_LOG("before create limit operator factory elapsed time: %ld ms.", END(start));
-    auto *limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
+    LimitOperatorFactory *limitOperatorFactory = nullptr;
+    JNI_METHOD_START
+    limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
+    JNI_METHOD_END(0L)
     limitOperatorFactory->SetJitContext(nullptr);
     JNI_DEBUG_LOG("create limit operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1255,8 +1287,11 @@ Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_creat
     env->ReleaseStringUTFChars(jSoureTypes, sourceTypesCharPtr);
 
     JNI_DEBUG_LOG("before create distinct limit operator factory elapsed time: %ld ms.", END(start));
-    auto distinctLimitOperatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes,
+    DistinctLimitOperatorFactory *distinctLimitOperatorFactory = nullptr;
+    JNI_METHOD_START
+    distinctLimitOperatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes,
         distinctCols, distinctColCount, jHashChannel, jLimit);
+    JNI_METHOD_END(0L)
     distinctLimitOperatorFactory->SetJitContext(nullptr);
     JNI_DEBUG_LOG("create distinct limit operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1310,9 +1345,12 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
     JNI_METHOD_END(0L)
 
     JNI_DEBUG_LOG("before create streamed table with expression operator factory elapsed time: %ld ms.", END(start));
-    auto operatorFactory = StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
+    StreamedTableWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
         streamedDataTypes, streamedKeysArrExprs, streamedKeyExpsCount, streamedOutputCols, streamedOutputColsCnt,
         (JoinType)jJoinType, filterExpression);
+    JNI_METHOD_END(0L)
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create streamed table with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1352,9 +1390,12 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     JNI_METHOD_END(0L)
 
     JNI_DEBUG_LOG("before create buffered table with expression operator factory elapsed time: %ld ms.", END(start));
-    auto operatorFactory = BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
+    BufferedTableWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
         bufferedDataTypes, bufferedKeysArrExprs, bufferedKeyExpsCnt, bufferedOutputCols, bufferedOutputColsCnt,
         jSmjStreamedTableWithExprOperatorFactory);
+    JNI_METHOD_END(0L)
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create buffered table operator with expression factory finished, elapsed time: %ld ms.", END(start));
 

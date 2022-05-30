@@ -79,7 +79,6 @@ public:
         : type(aggregateType),
           inputType(inputType),
           outputType(outputType),
-          initiated(false),
           inputRaw(inputRaw),
           outputPartial(outputPartial),
           channel(channel),
@@ -141,7 +140,6 @@ protected:
     FunctionType type;
     DataType inputType;
     DataType outputType;
-    bool initiated;
     bool inputRaw;
     bool outputPartial;
     int32_t channel;

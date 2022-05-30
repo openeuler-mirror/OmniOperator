@@ -13,11 +13,9 @@ namespace omniruntime {
 namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
-    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<int32_t> &aggInputCols,
-        omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
-        : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
-          aggInputCols(aggInputCols),
-          aggOutputTypes(aggOutputTypes)
+    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, omniruntime::type::DataTypes &aggOutputTypes,
+        bool inputRaw, bool outputPartial)
+        : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial), aggOutputTypes(aggOutputTypes)
     {
         for (uint32_t i = 0; i < aggregators.size(); i++) {
             aggStates.push_back(AggregateState());
@@ -29,8 +27,6 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
 private:
-    std::vector<int32_t> aggInputCols;
-    std::vector<int32_t> maskCols;
     omniruntime::type::DataTypes aggOutputTypes;
     std::vector<AggregateState> aggStates;
 };

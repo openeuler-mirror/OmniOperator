@@ -138,8 +138,8 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
-std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
-    std::vector<Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
+std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[], int32_t vectorCount,
+    int64_t dictionaries[])
 {
     std::vector<int64_t> data;
     int64_t valuesAddress;
@@ -181,19 +181,12 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     int64_t offsets[vectorCount];
     int64_t dictionaries[vectorCount];
 
-    // when the dictionary vector is processed it will be restored to an original vector
-    // needs to be released
-    vector<Vector *> dictionaryVecs; // not used
-
-    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
+    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, vectorCount, dictionaries);
 
     int32_t numSelectedRows = this->filter->apply(data.data(), rowCount, selectedRows, bitmap, offsets,
         reinterpret_cast<int64_t>(context), dictionaries);
     if (context->HasError()) {
         // resource cleanup
-        for (auto &dictionaryVec : dictionaryVecs) {
-            delete dictionaryVec;
-        }
         delete[] selectedRows;
         context->GetArena()->Reset();
         VectorHelper::FreeVecBatch(vecBatch);
@@ -201,9 +194,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
     }
     if (numSelectedRows <= 0) {
-        for (auto &dictionaryVec : dictionaryVecs) {
-            delete dictionaryVec;
-        }
         delete[] selectedRows;
         context->GetArena()->Reset();
         VectorHelper::FreeVecBatch(vecBatch);
@@ -217,9 +207,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
             bitmap, offsets, context, dictionaries);
         if (context->HasError()) {
             // resource cleanup
-            for (auto &dictionaryVec : dictionaryVecs) {
-                delete dictionaryVec;
-            }
             data.clear();
             VectorHelper::FreeVecBatch(vecBatch);
             delete[] selectedRows;
@@ -231,9 +218,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         projectedVecs->SetVector(i, col);
     }
 
-    for (auto &dictionaryVec : dictionaryVecs) {
-        delete dictionaryVec;
-    }
     data.clear();
     VectorHelper::FreeVecBatch(vecBatch);
     delete[] selectedRows;
