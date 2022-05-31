@@ -572,6 +572,11 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return codeGenUtils->CallExternFunction("divide", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE,
                                                     {leftPhi, rightPhi},
                                                     "farithmetic_divide");
+        case omniruntime::expressions::Operator::MOD: {
+            return codeGenUtils->CallExternFunction("modulus", {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi},
+                                                    "farithmetic_mod");
+        }
         default: {
             LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;

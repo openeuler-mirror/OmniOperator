@@ -677,18 +677,136 @@ TEST(ProjectionTest, Doubles_DivideByZero) {
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
     VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
-    auto copy = DuplicateVectorBatch(t);
-    op->AddInput(copy);
+    op->AddInput(t);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, numRows);
     EXPECT_TRUE(isinf(((DoubleVector *) ret[0]->GetVector(0))->GetValue(3)));
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
     delete[] col2;
+
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, testModDoubles)
+{
+    const int32_t numRows = 10000;
+    double *col1 = MakeDoubles(numRows, -5000.5);
+    double *col2 = MakeDoubles(numRows, -124.45);
+    const int32_t numCols = 2;
+
+    FieldExpr *modLeft = new FieldExpr(0, DoubleType());
+    FieldExpr *modRight = new FieldExpr(1, DoubleType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, DoubleType());
+    std::vector<Expr *> exprs = { modExpr };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE) };
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testModDoubles");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    t->GetVector(0)->SetValueNull(5);
+    t->GetVector(0)->SetValueNull(8000);
+    t->GetVector(1)->SetValueNull(2456);
+    t->GetVector(1)->SetValueNull(8000);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i == 5 || i == 2456 || i == 8000) {
+            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
+        } else {
+            double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double expected = std::fmod((i - 5000.5), (i - 124.45));
+            EXPECT_DOUBLE_EQ(val0, expected);
+        }
+    }
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
+    delete[] col2;
+
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, testModDoubles2)
+{
+    const int32_t numRows = 10000;
+    double *col = MakeDoubles(numRows, -1273.37);
+    const int32_t numCols = 1;
+
+    FieldExpr *modLeft = new FieldExpr(0, DoubleType());
+    LiteralExpr *modRight = new LiteralExpr(-45.8, DoubleType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, DoubleType());
+    std::vector<Expr *> exprs = { modExpr };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE) };
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testModDoubles2");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    t->GetVector(0)->SetValueNull(0);
+    t->GetVector(0)->SetValueNull(9999);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i == 0  || i == 9999) {
+            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
+        } else {
+            double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double expected = std::fmod((i - 1273.37), -45.8);
+            EXPECT_DOUBLE_EQ(val0, expected);
+        }
+    }
+
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col;
+
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, DoublesModulusByZero) {
+    int32_t numRows = 10;
+    double *col1 = MakeDoubles(numRows, -4.0);
+    const int32_t numCols = 1;
+
+    FieldExpr *divLeft = new FieldExpr(0, DoubleType());
+    LiteralExpr *divRight = new LiteralExpr(0, DoubleType());
+    BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, divLeft, divRight, DoubleType());
+    std::vector<Expr *> exprs = {divExpr};
+    std::vector<DataType> vecOfTypes = {DataType(OMNI_DOUBLE)};
+    DataTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, numRows);
+    for (int32_t i = 0; i < numRows; i++) {
+        EXPECT_TRUE(-isnan(((DoubleVector *) ret[0]->GetVector(0))->GetValue(i)));
+    }
+
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
 
     delete op;
     delete factory;
