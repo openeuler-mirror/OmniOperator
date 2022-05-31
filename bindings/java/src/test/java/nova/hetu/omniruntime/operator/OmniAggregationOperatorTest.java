@@ -49,12 +49,13 @@ public class OmniAggregationOperatorTest {
      * test aggregation performance whether with jit or not.
      */
     @Test
-    public void testAggregationComparePref() {
-        DataType[] sourceTypes = {LongDataType.LONG};
-        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
-        int[] aggInputChannels = {1};
-        int[] maskChannels = {-1, -1};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+    public void testAggregationComparePerf() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        int[] aggInputChannels = {0, 1};
+        int[] maskChannels = {-1, -1, -1};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factoryWithJit = new OmniAggregationOperatorFactory(sourceTypes,
                 aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false,
                 new OperatorConfig(true));
@@ -114,11 +115,12 @@ public class OmniAggregationOperatorTest {
      */
     @Test
     public void testExecuteCountMultiplePage() {
-        DataType[] sourceTypes = {LongDataType.LONG};
-        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
-        int[] aggInputChannels = {1};
-        int[] maskChannels = {-1, -1};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
+        int[] aggInputChannels = {0, 1};
+        int[] maskChannels = {-1, -1, -1};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
                 aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
@@ -144,10 +146,11 @@ public class OmniAggregationOperatorTest {
             }
 
             assertNotNull(vecBatch);
-            assertEquals(vecBatch.getVectors().length, 2);
+            assertEquals(vecBatch.getVectors().length, 3);
             Vec[] vectors = vecBatch.getVectors();
             assertEquals(((LongVec) vectors[0]).get(0), 1000L);
-            assertEquals(((LongVec) vectors[1]).get(0), 500L);
+            assertEquals(((LongVec) vectors[1]).get(0), 1000L);
+            assertEquals(((LongVec) vectors[2]).get(0), 500L);
 
             freeVecBatch(vecBatch);
         }
