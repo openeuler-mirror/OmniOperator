@@ -38,6 +38,7 @@ public class ContainerVec extends FixedWidthVec {
         super(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
         this.positionCount = positionCount;
         this.dataTypes = dataTypes;
+        setDataTypesNative(getNativeVector(), DataTypeSerializer.serialize(dataTypes));
         put(vectorAddresses, 0, 0, vectorAddresses.length);
     }
 
@@ -53,6 +54,7 @@ public class ContainerVec extends FixedWidthVec {
         super(vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
         this.positionCount = positionCount;
         this.dataTypes = dataTypes;
+        setDataTypesNative(getNativeVector(), DataTypeSerializer.serialize(dataTypes));
         put(vectorAddresses, 0, 0, vectorAddresses.length);
     }
 
@@ -119,6 +121,8 @@ public class ContainerVec extends FixedWidthVec {
     private static native int getPositionNative(long nativeVector);
 
     private static native String getDataTypesNative(long nativeVector);
+
+    private static native void setDataTypesNative(long nativeVector, String dataTypes);
 
     /**
      * get the specified long at the specified absolute.

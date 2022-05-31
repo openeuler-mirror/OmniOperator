@@ -172,6 +172,15 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositio
     return containerVec->GetPositionCount();
 }
 
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_setDataTypesNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector, jstring dataTypes)
+{
+    ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
+    auto dataTypeString = env->GetStringUTFChars(dataTypes, JNI_FALSE);
+    containerVec->SetDataTypes(Deserialize(dataTypeString).Get());
+    env->ReleaseStringUTFChars(dataTypes, dataTypeString);
+}
+
 JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getDataTypesNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector)
 {

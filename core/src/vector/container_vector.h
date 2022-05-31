@@ -69,6 +69,12 @@ public:
         return OMNI_VEC_ENCODING_CONTAINER;
     }
 
+    void SetDataTypes(const std::vector<DataType> &dataTypes)
+    {
+        this->dataTypes = dataTypes;
+    }
+
+
 private:
     static const int BYTES = sizeof(T);
     std::vector<DataType> dataTypes;
