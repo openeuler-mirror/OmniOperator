@@ -8,7 +8,14 @@ import static nova.hetu.omniruntime.type.DoubleDataType.DOUBLE;
 import static nova.hetu.omniruntime.type.LongDataType.LONG;
 import static org.testng.Assert.assertEquals;
 
+import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Date32DataType;
+import nova.hetu.omniruntime.type.Date64DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 
 import org.testng.annotations.Test;
 
@@ -134,5 +141,38 @@ public class TestContainerVec {
         originalVec.close();
         originalVec1.close();
         appended.close();
+    }
+
+    @Test
+    public void TestContainerVecSerialize() {
+        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("TestContainerVecSerialize",
+                VecAllocator.UNLIMIT, 0);
+
+        int rows = 3;
+        IntVec intVec = new IntVec(vecAllocator, rows);
+        LongVec longVec = new LongVec(vecAllocator, rows);
+        Decimal128Vec decimal128Vec = new Decimal128Vec(vecAllocator, rows);
+        VarcharVec varcharVec = new VarcharVec(vecAllocator, 20, 10);
+
+        long[] subAddr = new long[]{intVec.getNativeVector(), longVec.getNativeVector()};
+        DataType[] subTypes = new DataType[]{Date32DataType.DATE32, Date64DataType.DATE64};
+        ContainerVec subContainerVec = new ContainerVec(vecAllocator, 2, rows, subAddr, subTypes);
+
+        long[] addr = new long[]{decimal128Vec.getNativeVector(), varcharVec.getNativeVector(),
+                subContainerVec.getNativeVector()};
+        DataType[] dataTypes = new DataType[]{IntDataType.INTEGER, LongDataType.LONG, Decimal128DataType.DECIMAL128,
+                VarcharDataType.VARCHAR,
+                new ContainerDataType(new DataType[]{Date32DataType.DATE32, Date64DataType.DATE64})};
+
+        ContainerVec vec = new ContainerVec(vecAllocator, dataTypes.length, rows, addr, dataTypes);
+        ContainerVec vecFromNative = new ContainerVec(vec.getNativeVector());
+        DataType[] dataTypesFromNative = vecFromNative.getDataTypes();
+
+        for (int i = 0; i < dataTypes.length; i++) {
+            assertEquals(dataTypes[i], dataTypesFromNative[i]);
+        }
+
+        vec.close();
+        vecAllocator.close();
     }
 }

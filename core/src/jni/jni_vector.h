@@ -120,6 +120,14 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositio
 
 /*
  * Class:     nova_hetu_omniruntime_vector_ContainerVec
+ * Method:    setDataTypesNative
+ * Signature: (JLjava/lang/Sting;)V;
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_setDataTypesNative(JNIEnv *, jclass, jlong,
+    jstring);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ContainerVec
  * Method:    getDataTypesNative
  * Signature: (J)[I;
  */
