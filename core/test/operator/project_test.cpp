@@ -660,7 +660,8 @@ TEST(ProjectionTest, Doubles)
     delete vecAllocator;
 }
 
-TEST(ProjectionTest, Doubles_DivideByZero) {
+TEST(ProjectionTest, Doubles_DivideByZero)
+{
     int32_t numRows = 5;
     double *col1 = MakeDoubles(numRows, -4.0);
     double *col2 = MakeDoubles(numRows, -3.0);
@@ -669,8 +670,8 @@ TEST(ProjectionTest, Doubles_DivideByZero) {
     FieldExpr *divLeft = new FieldExpr(0, DoubleType());
     FieldExpr *divRight = new FieldExpr(1, DoubleType());
     BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, divLeft, divRight, DoubleType());
-    std::vector<Expr *> exprs = {divExpr};
-    std::vector<DataType> vecOfTypes = {DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE)};
+    std::vector<Expr *> exprs = { divExpr };
+    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE) };
     DataTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -681,7 +682,7 @@ TEST(ProjectionTest, Doubles_DivideByZero) {
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, numRows);
-    EXPECT_TRUE(isinf(((DoubleVector *) ret[0]->GetVector(0))->GetValue(3)));
+    EXPECT_TRUE(isinf(((DoubleVector *)ret[0]->GetVector(0))->GetValue(3)));
 
     VectorHelper::FreeVecBatches(ret);
 
@@ -3035,6 +3036,40 @@ TEST(ProjectionTest, ConcatCharCharTest)
 
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+    delete vecAllocator;
+}
+
+TEST(ProjectionTest, testDecimal128NegativeLiteral)
+{
+    const int32_t numRows = 1;
+    const int32_t numProject = 1;
+    auto literalLeft = new LiteralExpr(new std::string("0"), Decimal128Type(38, 16));
+    auto literalRight =
+        new LiteralExpr(new std::string("-99999999999999999999999999999999999999"), Decimal128Type(38, 16));
+
+    BinaryExpr *subExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::SUB, literalLeft, literalRight, Decimal128Type(38, 16));
+
+    std::vector<Expr *> exprs = { subExpr };
+    const int32_t numCols = 0;
+    std::vector<DataType> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {};
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0.LowBits(), 687399551400673279);
+    EXPECT_EQ(val0.HighBits(), 5421010862427522170);
+
+    VectorHelper::FreeVecBatches(ret);
     delete op;
     delete factory;
     delete vecAllocator;

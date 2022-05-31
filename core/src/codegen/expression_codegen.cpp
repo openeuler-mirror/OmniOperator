@@ -18,6 +18,7 @@
 #include "vector"
 #include "expr_info_extractor.h"
 #include "codegen_context.h"
+#include "type/decimal128_utils.h"
 
 using namespace llvm;
 using namespace orc;
@@ -896,6 +897,8 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
         }
         case OMNI_DECIMAL128: {
             std::string dec128String = isNullLiteral ? "0" : *lExpr.stringVal;
+            __uint128_t dec128 = Decimal128Utils::StrToUint128_t(dec128String.c_str());
+            dec128String = Decimal128Utils::Uint128_tToStr(dec128);
             Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
             Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
             auto const128Val = llvm::ConstantInt::get(llvm::Type::getInt128Ty(*context), dec128String, 10);
