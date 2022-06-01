@@ -405,8 +405,10 @@ omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *
 
 void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
 {
-    if (operatorFactory->GetJitContext() != nullptr) {
-        delete operatorFactory->GetJitContext();
+    auto jitContext = operatorFactory->GetJitContext();
+    if (jitContext != nullptr) {
+        delete jitContext->jit;
+        delete jitContext;
     }
     delete operatorFactory;
 }

@@ -3,7 +3,6 @@
  * Description: Jit Context Source File
  */
 #include "jit_context.h"
-#include "jit/jit.h"
 #include "operator/optimization.h"
 #include "../../libconfig.h"
 
@@ -101,7 +100,7 @@ JitContext *CreateSortJitContext(DataTypes &sourceDataTypes, int32_t *outputCols
 
     const int32_t *sourceTypes = sourceDataTypes.GetIds();
     auto typesCount = sourceDataTypes.GetSize();
-    int sortColTypes[sortColsCount];
+    int32_t sortColTypes[sortColsCount];
     for (int32_t i = 0; i < sortColsCount; ++i) {
         sortColTypes[i] = sourceTypes[sortCols[i]];
     }
@@ -133,15 +132,14 @@ JitContext *CreateSortJitContext(DataTypes &sourceDataTypes, int32_t *outputCols
 
     omniruntime::jit::Context sortContext(GenerateOperatorTemplatePath("sort"), map<string, Specialization>());
     omniruntime::jit::Context pagesIndexContext(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
-    Jit jit(vector<omniruntime::jit::Context> { sortContext, pagesIndexContext });
-    jit.Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+    auto jit = new Jit(vector<omniruntime::jit::Context> { sortContext, pagesIndexContext });
+    jit->Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
         Optimization::SROA, Optimization::AGGRESIVE_DCE },
         vector<ModuleOptimization> { ModuleOptimization::FUNCTION_INLINING, ModuleOptimization::PRUNE_EH,
         ModuleOptimization::CONSTANT_MERGE });
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
     JNI_DEBUG_LOG("create sort JIT context finished, elapsed time: %ld ms.", END(start));
 
     LogInfo("Sort operator with jit has taken effect.");
@@ -195,15 +193,14 @@ JitContext *CreateSortWithExprJitContext(DataTypes &sourceDataTypes, int32_t *ou
         map<string, Specialization>());
     omniruntime::jit::Context sortContext(GenerateOperatorTemplatePath("sort"), map<string, Specialization>());
     omniruntime::jit::Context pagesIndexContext(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
-    Jit jit(vector<omniruntime::jit::Context> { sortWithExprContext, sortContext, pagesIndexContext });
-    jit.Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+    auto jit = new Jit(vector<omniruntime::jit::Context> { sortWithExprContext, sortContext, pagesIndexContext });
+    jit->Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
         Optimization::SROA, Optimization::AGGRESIVE_DCE },
         vector<ModuleOptimization> { ModuleOptimization::FUNCTION_INLINING, ModuleOptimization::PRUNE_EH,
         ModuleOptimization::CONSTANT_MERGE });
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("SortWithExpr operator with jit has taken effect.");
     return jitContext;
@@ -244,11 +241,11 @@ JitContext *CreateHashBuilderJitContext(DataTypes &buildDataTypes, int32_t *buil
     omniruntime::jit::Context pagesHashStrategyContext(GenerateOperatorTemplatePath("pages_hash_strategy"),
         hashStrategySps);
 
-    Jit jit(vector<omniruntime::jit::Context> { hashBuilderContext, joinHashTableContext, pagesHashStrategyContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jit = new Jit(
+        vector<omniruntime::jit::Context> { hashBuilderContext, joinHashTableContext, pagesHashStrategyContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
     JNI_DEBUG_LOG("create hash builder JIT context finished, elapsed time: %ld ms.", END(start));
 
     LogInfo("HashBuilder operator with jit has taken effect.");
@@ -302,11 +299,10 @@ JitContext *CreateLookupJoinJitContext(DataTypes &probeDataTypes, int32_t probeO
     omniruntime::jit::Context pagesHashStrategyContext(GenerateOperatorTemplatePath("pages_hash_strategy"),
         hashStrategySps);
 
-    Jit jit(vector<omniruntime::jit::Context> { lookupJoinContext, pagesHashStrategyContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jit = new Jit(vector<omniruntime::jit::Context> { lookupJoinContext, pagesHashStrategyContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
     JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
 
     LogInfo("LookupJoin operator with jit has taken effect.");
@@ -352,12 +348,11 @@ JitContext *CreateHashBuilderWithExprJitContext(DataTypes &buildDataTypes,
     omniruntime::jit::Context pagesHashStrategyContext(GenerateOperatorTemplatePath("pages_hash_strategy"),
         hashStrategySps);
 
-    Jit jit(vector<omniruntime::jit::Context> { hashBuilderWithExprContext, hashBuilderContext, joinHashTableContext,
-        pagesHashStrategyContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jit = new Jit(vector<omniruntime::jit::Context> { hashBuilderWithExprContext, hashBuilderContext,
+        joinHashTableContext, pagesHashStrategyContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("HashBuilderWithExpr operator with jit has taken effect.");
     return jitContext;
@@ -415,12 +410,11 @@ JitContext *CreateLookupJoinWithExprJitContext(DataTypes &probeDataTypes, int32_
     omniruntime::jit::Context pagesHashStrategyContext(GenerateOperatorTemplatePath("pages_hash_strategy"),
         hashStrategySps);
 
-    Jit jit(
+    auto jit = new Jit(
         vector<omniruntime::jit::Context> { lookupJoinWithExprContext, lookupJoinContext, pagesHashStrategyContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("LookupJoinWithExpr operator with jit has taken effect.");
     return jitContext;
@@ -447,11 +441,10 @@ JitContext *CreateTopNJitContext(omniruntime::type::DataTypes &sourceDataTypes, 
 
     omniruntime::jit::Context topNContext(GenerateOperatorTemplatePath("topn"), topNCompareSps);
 
-    Jit jit(vector<omniruntime::jit::Context> { topNContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = createOperatorFunc;
+    auto jit = new Jit(vector<omniruntime::jit::Context> { topNContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("TopN operator with jit has taken effect.");
     return jitContext;
@@ -483,12 +476,10 @@ JitContext *CreateTopNWithExprJitContext(omniruntime::type::DataTypes &sourceDat
         map<string, Specialization>());
     omniruntime::jit::Context topNContext(GenerateOperatorTemplatePath("topn"), topNCompareSps);
 
-    Jit jit(vector<omniruntime::jit::Context> { topNWithExprContext, topNContext });
-
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jit = new Jit(vector<omniruntime::jit::Context> { topNWithExprContext, topNContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("TopNWithExpr operator with jit has taken effect.");
     return jitContext;
@@ -549,11 +540,10 @@ JitContext *CreateWindowJitContext(omniruntime::type::DataTypes &sourceDataTypes
 
     omniruntime::jit::Context windowContext(GenerateOperatorTemplatePath("window"), map<string, Specialization>());
     omniruntime::jit::Context pagesIndexContext(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
-    Jit jit(vector<omniruntime::jit::Context> { windowContext, pagesIndexContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jit = new Jit(vector<omniruntime::jit::Context> { windowContext, pagesIndexContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("Window operator with jit has taken effect.");
     return jitContext;
@@ -621,11 +611,10 @@ JitContext *CreateWindowWithExprJitContext(DataTypes &sourceDataTypes, int32_t *
         map<string, Specialization>());
     omniruntime::jit::Context windowContext(GenerateOperatorTemplatePath("window"), map<string, Specialization>());
     omniruntime::jit::Context pagesIndexContext(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
-    Jit jit(vector<omniruntime::jit::Context> { windowWithExprContext, windowContext, pagesIndexContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jit = new Jit(vector<omniruntime::jit::Context> { windowWithExprContext, windowContext, pagesIndexContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("WindowWithExpr operator with jit has taken effect.");
     return jitContext;
@@ -652,14 +641,13 @@ JitContext *CreateHashAggregationJitContext(DataTypes &groupByDataTypes, int32_t
 
     omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"),
         hashGroupbySps);
-    Jit jit(vector<omniruntime::jit::Context> { groupAggregationContext });
-    jit.Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+    auto jit = new Jit(vector<omniruntime::jit::Context> { groupAggregationContext });
+    jit->Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
         Optimization::SROA, Optimization::AGGRESIVE_DCE },
         vector<ModuleOptimization> { ModuleOptimization::PRUNE_EH });
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("HashAggregation operator with jit has taken effect.");
     return jitContext;
@@ -689,14 +677,13 @@ JitContext *CreateHashAggregationWithExprJitContext(const vector<omniruntime::ex
         map<string, Specialization>());
     omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"),
         hashGroupbySps);
-    Jit jit(vector<omniruntime::jit::Context> { groupAggWithExprContext, groupAggregationContext });
-    jit.Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+    auto jit = new Jit(vector<omniruntime::jit::Context> { groupAggWithExprContext, groupAggregationContext });
+    jit->Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
         Optimization::SROA, Optimization::AGGRESIVE_DCE },
         vector<ModuleOptimization> { ModuleOptimization::PRUNE_EH });
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("HashAggregationWithExpr operator with jit has taken effect.");
     return jitContext;
@@ -710,12 +697,11 @@ JitContext *CreateAggregationJitContext()
 #else
     omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("non_group_aggregation"),
         map<string, Specialization>());
-    Jit jit(vector<omniruntime::jit::Context> { groupAggregationContext });
-    jit.Specialize();
-    auto createOperatorFunc = jit.GetJitedFunction("CreateOperator");
+    auto jit = new Jit(vector<omniruntime::jit::Context> { groupAggregationContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
-    auto jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    auto jitContext = new JitContext { reinterpret_cast<uintptr_t>(createOperatorFunc), jit };
 
     LogInfo("Aggregation operator with jit has taken effect.");
     return jitContext;

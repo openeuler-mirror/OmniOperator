@@ -43,8 +43,6 @@ LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
     llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
     this->context = std::make_unique<llvm::LLVMContext>();
-    this->layout = std::make_unique<llvm::StringRef>();
-    this->builder = std::make_unique<llvm::IRBuilder<>>(*context);
 
     std::call_once(loadLibrariesInitFlag, LoadExtraLibraries);
 }
@@ -52,12 +50,10 @@ LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
 LLVMCompiler::~LLVMCompiler()
 {
     this->context.reset();
-    this->layout.reset();
-    this->builder.reset();
     delete this->config;
 }
 
-bool LLVMCompiler::LoadModule(std::string templatePath)
+bool LLVMCompiler::LoadModule(const std::string &templatePath)
 {
     llvm::SMDiagnostic error;
     auto module = llvm::parseIRFile(templatePath, error, *context);
@@ -88,30 +84,30 @@ bool LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimiz
 {
     map<string, set<string>> specializedModules;
     for (auto const & module : this->modules) {
-        auto specializedFuncs = specializeModule(module);
+        auto specializedFuncs = SpecializeModule(module);
         if (!specializedFuncs.empty()) {
             specializedModules.insert(make_pair(module->getName().str(), specializedFuncs));
         }
     }
-    auto jit = compileModules(specializedModules, optimizations, moduleOptimizations);
+    auto jit = CompileModules(specializedModules, optimizations, moduleOptimizations);
     specializedModules.clear();
 
     if (jit) {
-        jitter = std::move(jit);
+        jitter = jit.release();
         return true;
     } else {
         llvm::errs() << "Error: Unable to compile the modules\n";
+        return false;
     }
-    return false;
 }
 
-set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &module)
+set<string> LLVMCompiler::SpecializeModule(const std::unique_ptr<llvm::Module> &module)
 {
     using namespace llvm;
 
     set<string> specializedFuncs;
 
-    map<string, Function *> annotatedFuncs = getAnnotatedFuncs(module);
+    map<string, Function *> annotatedFuncs = GetAnnotatedFuncs(module);
     if (annotatedFuncs.empty()) {
         return specializedFuncs;
     }
@@ -119,8 +115,8 @@ set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &
     for (auto &funcPair : annotatedFuncs) {
         string id = funcPair.first;
         Function *func = funcPair.second;
-        optimizeAttributes(func);
-        if (harden_function(id, func, module)) {
+        OptimizeAttributes(func);
+        if (HardenFunction(id, func, module)) {
             specializedFuncs.insert(func->getName().str());
         }
     }
@@ -130,12 +126,12 @@ set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &
     return specializedFuncs;
 }
 
-void LLVMCompiler::AddSpecialization(std::string id, Specialization specialization)
+void LLVMCompiler::AddSpecialization(const std::string &id, const Specialization &specialization)
 {
     this->specializations.insert(std::make_pair(id, specialization));
 }
 
-uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMangled)
+uint64_t LLVMCompiler::GetJitedFunction(const std::string &functionName, bool isNameMangled)
 {
     using namespace llvm;
 
@@ -168,7 +164,7 @@ uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMan
 // this is done without modifying the signature
 // replacing the value directly inside of the function also make it
 // easier for optimizers to perform constant folding and propagation
-bool LLVMCompiler::harden_function(const string &specializationId, llvm::Function *function,
+bool LLVMCompiler::HardenFunction(const string &specializationId, llvm::Function *function,
     const unique_ptr<Module> &module)
 {
     if (this->specializations.count(specializationId) == 0) {
@@ -185,7 +181,7 @@ bool LLVMCompiler::harden_function(const string &specializationId, llvm::Functio
         // use function_name and arg name as the key
         if (specialization.HasSpecializedParam(count)) {
             ParamValue *newValue = specialization.GetSpecializedParam(count);
-            auto newArg = this->to_llvm_value(build_param_key(*function, count), *newValue, module);
+            auto newArg = this->ToLLVMValue(BuildParamKey(*function, count), *newValue, module);
             arg.replaceAllUsesWith(newArg);
         }
         count++;
@@ -197,7 +193,7 @@ bool LLVMCompiler::harden_function(const string &specializationId, llvm::Functio
 // values for the parameters that is not harden
 // conflicting params, e.g. param value provided during hardening cannot be provided here again
 // this should be used for testing purpose only, we should expose a new function with new function type
-std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<string>> &specializedModules,
+std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::CompileModules(map<string, set<string>> &specializedModules,
     const std::vector<Optimization> &optimizations, const std::vector<ModuleOptimization> &moduleOptimizations)
 {
     using namespace llvm;
@@ -227,8 +223,7 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
 #ifdef DEBUG_LLVM
         outs() << "addIRModule: " << moduleName << "\n";
 #endif
-        auto err =
-            JITTER->addIRModule(ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
+        auto err = JITTER->addIRModule(ThreadSafeModule(std::move(module), std::make_unique<llvm::LLVMContext>()));
         if (err) {
             errs() << "Error: failed adding IR Module " << moduleName << "\n";
             return nullptr;
@@ -238,23 +233,22 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
     return JITTER;
 }
 
-llvm::Constant *LLVMCompiler::to_llvm_value(const std::string &name, ParamValue value,
-    const std::unique_ptr<Module> &module)
+llvm::Constant *LLVMCompiler::ToLLVMValue(const std::string &name, ParamValue value, const unique_ptr<Module> &module)
 {
     if (value.type == ParamType::ARRAY2D) {
-        return to_2darray_llvm_value(name, value, module);
+        return To2dArrayLLVMValue(name, value, module);
     } else if (value.IsScalar()) {
-        return to_scalar_llvm_value(value);
+        return ToScalarLLVMValue(value);
     } else { // array type
         if (value.vector) {
-            return to_vector_llvm_value(name, value, module);
+            return ToVectorLLVMValue(name, value, module);
         } else {
-            return to_array_llvm_value(name, value, module);
+            return ToArrayLLVMValue(name, value, module);
         }
     }
 }
 
-llvm::Constant *LLVMCompiler::to_scalar_llvm_value(ParamValue value)
+llvm::Constant *LLVMCompiler::ToScalarLLVMValue(const ParamValue &value)
 {
     using namespace llvm;
     Constant *llvmValue = nullptr;
@@ -274,8 +268,8 @@ llvm::Constant *LLVMCompiler::to_scalar_llvm_value(ParamValue value)
     return llvmValue;
 }
 
-llvm::Constant *LLVMCompiler::to_2darray_llvm_value(const std::string &name, ParamValue value,
-    const std::unique_ptr<Module> &module)
+llvm::Constant *LLVMCompiler::To2dArrayLLVMValue(const std::string &name, ParamValue value,
+    const unique_ptr<Module> &module)
 {
     using namespace llvm;
     auto params = value.ToParamList();
@@ -284,8 +278,8 @@ llvm::Constant *LLVMCompiler::to_2darray_llvm_value(const std::string &name, Par
     auto arrayType = ArrayType::get(i64, params->size());
 
     int count = 0;
-    for (ParamValue param : *params) {
-        Constant *element = to_array_llvm_value(name + "_" + to_string(count), param, module);
+    for (const ParamValue &param : *params) {
+        Constant *element = ToArrayLLVMValue(name + "_" + to_string(count), param, module);
         element->print(errs());
         vec2dValues.push_back(element);
         count++;
@@ -303,7 +297,7 @@ llvm::Constant *LLVMCompiler::to_2darray_llvm_value(const std::string &name, Par
     return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
 }
 
-llvm::Constant *LLVMCompiler::to_int32_vector_llvm_value(ParamValue value, std::vector<llvm::Constant *> &vecValues)
+llvm::Constant *LLVMCompiler::ToInt32VectorLLVMValue(ParamValue value, std::vector<llvm::Constant *> &vecValues)
 {
     using namespace llvm;
     auto values = *value.ToInt32Vec();
@@ -316,23 +310,18 @@ llvm::Constant *LLVMCompiler::to_int32_vector_llvm_value(ParamValue value, std::
     return vec;
 }
 
-llvm::Constant *LLVMCompiler::to_vector_llvm_value(const std::string &name, ParamValue value,
-    const std::unique_ptr<Module> &module)
+llvm::Constant *LLVMCompiler::ToVectorLLVMValue(const std::string &name, const ParamValue &value,
+    const unique_ptr<Module> &module)
 {
     using namespace llvm;
     std::vector<Constant *> vecValues;
     switch (value.type) {
         case ParamType::INT32: {
-            return to_int32_vector_llvm_value(value, vecValues);
+            return ToInt32VectorLLVMValue(value, vecValues);
         }
         case ParamType::INT64: {
-            auto values = value.ToInt32Array();
             auto i64 = IntegerType::get(*context, 64); // 64
             auto arrayType = ArrayType::get(i64, value.size);
-            for (int i = 0; i < value.size; ++i) {
-                Constant *c = ConstantInt::get(i64, values[i]);
-            }
-
             auto vector = ConstantVector::get(vecValues);
             module->getOrInsertGlobal(name, vector->getType());
             auto array = module->getNamedGlobal(name);
@@ -345,7 +334,6 @@ llvm::Constant *LLVMCompiler::to_vector_llvm_value(const std::string &name, Para
             return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
         case ParamType::FP64: {
-            auto values = value.ToInt32Array();
             auto fp64 = Type::getFloatTy(*context);
             auto arrayType = ArrayType::get(fp64, value.size);
             for (int i = 0; i < value.size; ++i) {
@@ -392,8 +380,8 @@ llvm::Constant *LLVMCompiler::ToInt32ArrayLlvmValue(const std::string &name, Par
     return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
 }
 
-llvm::Constant *LLVMCompiler::to_array_llvm_value(const std::string &name, ParamValue value,
-    const std::unique_ptr<Module> &module)
+llvm::Constant *LLVMCompiler::ToArrayLLVMValue(const std::string &name, const ParamValue &value,
+    const unique_ptr<Module> &module)
 {
     using namespace llvm;
     std::vector<Constant *> vecValues;
@@ -402,12 +390,8 @@ llvm::Constant *LLVMCompiler::to_array_llvm_value(const std::string &name, Param
             return ToInt32ArrayLlvmValue(name, value, module, vecValues);
         }
         case ParamType::INT64: {
-            auto values = value.ToInt32Array();
             auto i64 = IntegerType::get(*context, 64); // 64
             auto arrayType = ArrayType::get(i64, value.size);
-            for (int i = 0; i < value.size; ++i) {
-                Constant *c = ConstantInt::get(i64, values[i]);
-            }
             module->getOrInsertGlobal(name, arrayType);
             auto array = module->getNamedGlobal(name);
             array->setInitializer(ConstantArray::get(arrayType, vecValues));
@@ -420,12 +404,8 @@ llvm::Constant *LLVMCompiler::to_array_llvm_value(const std::string &name, Param
             return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
         case ParamType::FP64: {
-            auto values = value.ToInt32Array();
             auto fp64 = Type::getFloatTy(*context);
             auto arrayType = ArrayType::get(fp64, value.size);
-            for (int i = 0; i < value.size; ++i) {
-                Constant *c = ConstantFP::get(*context, APFloat(value.ToFp64()));
-            }
             module->getOrInsertGlobal(name, arrayType);
             auto array = module->getNamedGlobal(name);
             array->setInitializer(ConstantArray::get(arrayType, vecValues));
@@ -442,7 +422,7 @@ llvm::Constant *LLVMCompiler::to_array_llvm_value(const std::string &name, Param
     }
 }
 
-bool optimizeAttributes(llvm::Function *function)
+bool OptimizeAttributes(llvm::Function *function)
 {
     using llvm::Attribute;
     function->removeFnAttr(Attribute::AttrKind::NoInline);
@@ -453,7 +433,7 @@ bool optimizeAttributes(llvm::Function *function)
     return true;
 }
 
-void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &annotFuncs)
+void AnnotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &annotateFuncs)
 {
     using namespace llvm;
     if (I->getName() == "llvm.global.annotations") {
@@ -466,7 +446,7 @@ void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &an
             size_t index = annotation.find(SUFFIX);
             if (index != llvm::StringRef::npos) {
                 StringRef specializationId = annotation.substr(0, index);
-                annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
+                annotateFuncs.insert(std::make_pair(specializationId.str(), FUNC));
 #ifdef DEBUG_LLVM
                 outs() << "Found annotated function " << specializationId << ", " << FUNC->getName() << "\n";
 #endif
@@ -474,18 +454,18 @@ void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &an
         }
     }
 }
-map<string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<Module> &module)
+map<string, llvm::Function *> GetAnnotatedFuncs(const std::unique_ptr<Module> &module)
 {
     using namespace llvm;
     map<string, Function *> annotFuncs;
     for (Module::global_iterator I = module->global_begin(), E = module->global_end(); I != E; ++I) {
-        annotatedFuncs(I, annotFuncs);
+        AnnotatedFuncs(I, annotFuncs);
     }
 
     return annotFuncs;
 }
 
-string build_param_key(llvm::Function &func, int argPos)
+string BuildParamKey(llvm::Function &func, int32_t argPos)
 {
     return func.getName().str() + "@" + std::to_string(argPos);
 }

@@ -98,8 +98,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
         VectorHelper::FreeVecBatch(result[i]);
     }
 
-    delete bufferedTblWithExprOperator;
-    delete streamedTblWithExprOperator;
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
     DeleteOperatorFactory(streamedWithExprOperatorFactory);
 }
@@ -188,8 +188,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
         VectorHelper::FreeVecBatch(result[i]);
     }
 
-    delete bufferedTblWithExprOperator;
-    delete streamedTblWithExprOperator;
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
     DeleteOperatorFactory(streamedWithExprOperatorFactory);
 }

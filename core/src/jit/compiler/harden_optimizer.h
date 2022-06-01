@@ -52,7 +52,7 @@ public:
         }
     }
 
-    ~HardenOptimizer() {}
+    ~HardenOptimizer() = default;
 
     llvm::Expected<llvm::orc::ThreadSafeModule> operator () (llvm::orc::ThreadSafeModule TSM,
         const llvm::orc::MaterializationResponsibility &);
@@ -88,7 +88,7 @@ private:
     std::vector<ModuleOptimization> defaultModuleOptimizations = { ModuleOptimization::PRUNE_EH,
                                                                    ModuleOptimization::FUNCTION_INLINING };
 
-    void populatePass(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM);
+    void PopulatePass(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM);
 };
 }
 }

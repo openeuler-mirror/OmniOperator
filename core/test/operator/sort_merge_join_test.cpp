@@ -207,7 +207,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
         VectorHelper::FreeVecBatch(result[i]);
     }
 
-    delete smjOp;
+    omniruntime::op::Operator::DeleteOperator(smjOp);
 }
 
 void ExpectVectorEqual(std::vector<int64_t> expected, std::vector<int64_t> actual)

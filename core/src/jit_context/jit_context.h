@@ -5,13 +5,15 @@
 #ifndef OMNI_RUNTIME_JIT_CONTEXT_H
 #define OMNI_RUNTIME_JIT_CONTEXT_H
 
+#include <jit/jit.h>
 #include "type/data_types.h"
 #include "expression/expressions.h"
 
 namespace omniruntime {
 namespace op {
 using JitContext = struct JitContext {
-    uintptr_t func;
+    uintptr_t func = 0;
+    omniruntime::jit::Jit *jit = nullptr;
 };
 
 JitContext *CreateSortJitContext(omniruntime::type::DataTypes &sourceDataTypes, int32_t *outputCols,

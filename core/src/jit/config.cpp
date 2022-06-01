@@ -101,7 +101,7 @@ void Config::InitModulePass()
     module_pass[static_cast<int>(ModuleOptimization::AGGRESIVE_DCE)] = (Pass * (*)()) & llvm::createAggressiveDCEPass;
 }
 
-void Config::populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM,
+void Config::Populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM,
     const std::vector<Optimization> &optimizations, const std::vector<ModuleOptimization> &moduleOptimizations)
 {
     using namespace llvm;

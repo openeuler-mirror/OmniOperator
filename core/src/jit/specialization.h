@@ -29,7 +29,7 @@ public:
 
 private:
     std::string id;
-    std::map<int, ParamValue *> specializedParams;
+    std::map<int32_t, ParamValue *> specializedParams;
 };
 }
 }
