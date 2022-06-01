@@ -24,11 +24,6 @@ using ColumnIndex = struct ColumnIndex {
     DataType output;
 };
 
-using PrepareContext = struct PrepareContext {
-    uint32_t *context;
-    size_t len;
-};
-
 using AggregateState = union AggregateState {
     // For sum() and basic type min()/max()
     void *val;

@@ -19,13 +19,13 @@ void AggregationCommonOperatorFactory::CreateAggregatorFactory(
 }
 
 OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
-    std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories, const PrepareContext &funcTypesContext,
+    std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories, const std::vector<uint32_t> &funcTypesContext,
     const std::vector<int32_t> &maskCols)
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
 
-    for (uint32_t i = 0; i < funcTypesContext.len; ++i) {
-        switch (funcTypesContext.context[i]) {
+    for (uint32_t i = 0; i < funcTypesContext.size(); ++i) {
+        switch (funcTypesContext[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
                 CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;

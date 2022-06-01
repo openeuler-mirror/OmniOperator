@@ -14,14 +14,13 @@ using namespace omniruntime::vec;
 OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    uint32_t *aggInputColsPtr = aggInputColsContext.context;
     std::vector<DataType> types = sourceTypes.Get();
-    for (uint32_t i = 0; i < aggInputColsContext.len; i++) {
-        aggInputCols.push_back(aggInputColsPtr[i]);
-        aggInputTypes.push_back(types[aggInputColsPtr[i]]);
+    for (uint32_t i = 0; i < aggInputColsVector.size(); i++) {
+        aggInputCols.push_back(aggInputColsVector[i]);
+        aggInputTypes.push_back(types[aggInputColsVector[i]]);
     }
 
-    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesContext, GetMaskColumns());
+    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
 
     return ret;
 }
@@ -37,7 +36,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
 
     uint32_t aggInputChannelIndex = 0;
     for (int32_t i = 0; i < this->aggOutputTypes.GetSize(); i++) {
-        uint32_t aggregateType = aggFuncTypesContext.context[i];
+        uint32_t aggregateType = aggFuncTypesVector[i];
         DataType inputType;
         int32_t aggInputCol;
         if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {

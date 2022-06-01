@@ -52,10 +52,12 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     }
     this->aggTypes = std::make_unique<DataTypes>(aggTypeVec);
 
-    PrepareContext groupByCol = { static_cast<uint32_t *>(groupByCols), groupByNum };
-    PrepareContext aggCol = { static_cast<uint32_t *>(aggCols), aggNum };
-    PrepareContext aggFunc = { aggFuncTypes, aggNum };
-    PrepareContext maskColumnContext = { maskColumns, aggNum };
+    std::vector<uint32_t> groupByCol =
+        std::vector<uint32_t>(static_cast<uint32_t *>(groupByCols), static_cast<uint32_t *>(groupByCols) + groupByNum);
+    std::vector<uint32_t> aggCol =
+        std::vector<uint32_t>(static_cast<uint32_t *>(aggCols), static_cast<uint32_t *>(aggCols) + aggNum);
+    std::vector<uint32_t> aggFunc = std::vector<uint32_t>(aggFuncTypes, aggFuncTypes + aggNum);
+    std::vector<uint32_t> maskColumnContext = std::vector<uint32_t>(maskColumns, maskColumns + aggNum);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *(this->groupByTypes.get()), aggCol,
