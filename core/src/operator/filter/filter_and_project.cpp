@@ -25,7 +25,6 @@ SimpleFilter::SimpleFilter(const Expr &expression)
 
 SimpleFilter::~SimpleFilter()
 {
-    delete this->expression;
     delete this->isResultNull;
     delete this->resultLength;
     this->codegen.reset();

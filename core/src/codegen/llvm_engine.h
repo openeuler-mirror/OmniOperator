@@ -35,21 +35,26 @@
 #include "expression/expressions.h"
 #include "llvm_types.h"
 
-class LLVMEngine{
+class LLVMEngine {
 public:
-    LLVMEngine(std::unique_ptr<llvm::LLVMContext> context, std::unique_ptr<llvm::orc::LLJIT> jit, std::unique_ptr<llvm::IRBuilder<>> builder,
-               std::unique_ptr<llvm::Module> module, std::unique_ptr<LLVMTypes> llvmTypes, std::unique_ptr<llvm::legacy::FunctionPassManager> fpm)
-               : context(std::move(context)), jit(std::move(jit)), builder(std::move(builder)), module(std::move(module)), llvmTypes(std::move(llvmTypes)),
-               fpm(std::move(fpm)) {}
+    LLVMEngine(std::unique_ptr<llvm::LLVMContext> context, std::unique_ptr<llvm::orc::LLJIT> jit,
+        std::unique_ptr<llvm::IRBuilder<>> builder, std::unique_ptr<llvm::Module> module,
+        std::unique_ptr<LLVMTypes> llvmTypes, std::unique_ptr<llvm::legacy::FunctionPassManager> fpm)
+        : context(std::move(context)),
+          jit(std::move(jit)),
+          builder(std::move(builder)),
+          module(std::move(module)),
+          llvmTypes(std::move(llvmTypes)),
+          fpm(std::move(fpm))
+    {}
     virtual ~LLVMEngine() = default;
-    static void Create(std::unique_ptr<LLVMEngine>* out);
+    static void Create(std::unique_ptr<LLVMEngine> *out);
     void Initialize();
     void OptimizeFunctionsAndModule();
     void OptimizeModule();
     llvm::CallInst *CreateCall(llvm::Function *func, std::vector<llvm::Value *> argsVals, std::string name);
     llvm::Value *CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
-                                    const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args,
-                                    std::string msg = "");
+        const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args, std::string msg = "");
     static void InitializeCodegenTargets();
     void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
@@ -63,9 +68,10 @@ public:
     llvm::orc::LLJIT *GetJit();
     llvm::ExitOnError GetEoe();
     LLVMTypes *GetTypes();
+
 private:
     std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<omniruntime::type::DataTypeId> &params,
-                                                       omniruntime::type::DataTypeId &retTypeId, bool needsContext);
+        omniruntime::type::DataTypeId &retTypeId, bool needsContext);
     llvm::Function *function;
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::IRBuilder<>> builder;
@@ -77,4 +83,4 @@ private:
     std::unique_ptr<llvm::legacy::FunctionPassManager> fpm = nullptr;
 };
 
-#endif //OMNI_RUNTIME_LLVM_ENGINE_H
+#endif // OMNI_RUNTIME_LLVM_ENGINE_H

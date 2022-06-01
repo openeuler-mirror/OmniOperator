@@ -88,8 +88,8 @@ std::string GetCharValOutput(const LiteralExpr &e)
     string output = "Literal:";
     if (e.GetReturnTypeId() == OMNI_CHAR) {
         // meant to look like "%s[%d]:'%s'"
-        output += TypeUtil::TypeToString(e.GetReturnTypeId()) +
-                + "[" + to_string(e.dataType->GetWidth()) + "]" + ":'" + *(e.stringVal) + "'";
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" + to_string(e.dataType->GetWidth()) + "]" + ":'" +
+            *(e.stringVal) + "'";
     } else {
         // meant to look like "%s:'%s'"
         output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + *(e.stringVal) + "'";
@@ -156,7 +156,7 @@ void ExprPrinter::Visit(const BinaryExpr &e)
     (e.left)->Accept(*this);
 
     (e.right)->Accept(*this);
-    string lastParentheses =  indent + ")";
+    string lastParentheses = indent + ")";
     LogDebug("%s", lastParentheses.c_str());
     this->indentationDepth--;
 }
@@ -186,7 +186,7 @@ void ExprPrinter::Visit(const UnaryExpr &e)
     LogDebug("%s", output.c_str());
     this->indentationDepth++;
     (e.exp)->Accept(*this);
-    string lastParentheses =  indent + ")";
+    string lastParentheses = indent + ")";
     LogDebug("%s", lastParentheses.c_str());
     this->indentationDepth--;
 }
@@ -413,7 +413,7 @@ void ExprPrinter::Visit(const IsNullExpr &e)
 void ExprPrinter::Visit(const FuncExpr &e)
 {
     string indent = GenerateIndentation();
-    string output = indent + "Function:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + e.funcName  + "(";
+    string output = indent + "Function:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + e.funcName + "(";
     LogDebug("%s", output.c_str());
     this->indentationDepth++;
     for (int i = 0; i < e.arguments.size(); i++) {

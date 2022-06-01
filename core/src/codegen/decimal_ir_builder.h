@@ -5,9 +5,9 @@
 #ifndef OMNI_RUNTIME_DECIMAL_IR_BUILDER_H
 #define OMNI_RUNTIME_DECIMAL_IR_BUILDER_H
 
-
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Value.h>
+#include <expression/expressions.h>
 #include "llvm/IR/IRBuilder.h"
 #include "codegen_value.h"
 #include "type/data_type.h"
@@ -39,6 +39,9 @@ public:
     llvm::Value *GetScaleMultiplier(llvm::Value &delta, const std::string &multipliersName);
     llvm::Value *BuildIfElse(llvm::Value &condition, llvm::Type &return_type, std::function<llvm::Value *()> then_func,
         std::function<llvm::Value *()> else_func);
+    std::vector<llvm::Value *> BuildDecimalArgs(llvm::Value *left, omniruntime::type::DataType &leftType,
+        llvm::Value *right, omniruntime::type::DataType &rightType, omniruntime::type::DataType &returnType,
+        bool withOutputParam = true);
     void AddGlobalVariables();
 
     friend class ExpressionCodeGen;
@@ -51,9 +54,9 @@ private:
     std::string GetMultipliersName(omniruntime::type::DataTypeId typeId);
 
     LLVMEngine &engine;
-    llvm::LLVMContext* context;
-    llvm::IRBuilder<>* builder;
-    llvm::Module* module;
+    llvm::LLVMContext *context;
+    llvm::IRBuilder<> *builder;
+    llvm::Module *module;
     const std::string scale128MultipliersName = "SCALE_MULTIPLIERS128";
     const std::string scale64MultipliersName = "SCALE_MULTIPLIERS64";
 };

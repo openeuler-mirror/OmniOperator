@@ -268,21 +268,11 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(Decimal64DataType(7, 2)) };
     auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
-    LiteralExpr *precision1 = new LiteralExpr(7, IntType());
-    LiteralExpr *scale1 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision1 = new LiteralExpr(7, IntType());
-    LiteralExpr *new_scale1 = new LiteralExpr(4, IntType());
     auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
-    LiteralExpr *precision2 = new LiteralExpr(7, IntType());
-    LiteralExpr *scale2 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision2 = new LiteralExpr(7, IntType());
-    LiteralExpr *new_scale2 = new LiteralExpr(0, IntType());
 
     std::string MakeStr = "MakeDecimal";
-    std::vector<Expr *> args1 { data1, precision1, scale1, new_precision1, new_scale1 };
-    std::vector<Expr *> args2 { data2, precision2, scale2, new_precision2, new_scale2 };
-    auto makeExpr1 = GetFuncExpr(MakeStr, args1, Decimal64Type(7, 4));
-    auto makeExpr2 = GetFuncExpr(MakeStr, args2, Decimal64Type(7, 0));
+    auto makeExpr1 = GetFuncExpr(MakeStr, { data1 }, Decimal64Type(7, 4));
+    auto makeExpr2 = GetFuncExpr(MakeStr, { data2 }, Decimal64Type(7, 0));
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
@@ -321,21 +311,11 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(Decimal128DataType(38, 2)) };
     auto data1 = new FieldExpr(0, Decimal128Type(38, 2));
-    LiteralExpr *precision1 = new LiteralExpr(38, IntType());
-    LiteralExpr *scale1 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision1 = new LiteralExpr(38, IntType());
-    LiteralExpr *new_scale1 = new LiteralExpr(4, IntType());
     auto data2 = new FieldExpr(0, Decimal128Type(7, 2));
-    LiteralExpr *precision2 = new LiteralExpr(38, IntType());
-    LiteralExpr *scale2 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision2 = new LiteralExpr(38, IntType());
-    LiteralExpr *new_scale2 = new LiteralExpr(0, IntType());
 
     std::string MakeStr = "MakeDecimal";
-    std::vector<Expr *> args1 { data1, precision1, scale1, new_precision1, new_scale1 };
-    std::vector<Expr *> args2 { data2, precision2, scale2, new_precision2, new_scale2 };
-    auto makeExpr1 = GetFuncExpr(MakeStr, args1, Decimal128Type(38, 4));
-    auto makeExpr2 = GetFuncExpr(MakeStr, args2, Decimal128Type(38, 0));
+    auto makeExpr1 = GetFuncExpr(MakeStr, { data1 }, Decimal128Type(38, 4));
+    auto makeExpr2 = GetFuncExpr(MakeStr, { data2 }, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
@@ -376,31 +356,12 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
     const int32_t numCols = 1;
     std::vector<DataType> vecOfTypes = { DataType(Decimal64DataType(7, 2)) };
     auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
-    LiteralExpr *precision1 = new LiteralExpr(7, IntType());
-    LiteralExpr *scale1 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision1 = new LiteralExpr(38, IntType());
-    LiteralExpr *new_scale1 = new LiteralExpr(2, IntType());
-
-
     auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
-    LiteralExpr *precision2 = new LiteralExpr(7, IntType());
-    LiteralExpr *scale2 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision2 = new LiteralExpr(38, IntType());
-    LiteralExpr *new_scale2 = new LiteralExpr(4, IntType());
-
     auto data3 = new FieldExpr(0, Decimal64Type(7, 2));
-    LiteralExpr *precision3 = new LiteralExpr(7, IntType());
-    LiteralExpr *scale3 = new LiteralExpr(2, IntType());
-    LiteralExpr *new_precision3 = new LiteralExpr(38, IntType());
-    LiteralExpr *new_scale3 = new LiteralExpr(0, IntType());
-
     std::string MakeStr = "MakeDecimal";
-    std::vector<Expr *> args1 { data1, precision1, scale1, new_precision1, new_scale1 };
-    std::vector<Expr *> args2 { data2, precision2, scale2, new_precision2, new_scale2 };
-    std::vector<Expr *> args3 { data3, precision3, scale3, new_precision3, new_scale3 };
-    auto makeExpr1 = GetFuncExpr(MakeStr, args1, Decimal128Type(38, 2));
-    auto makeExpr2 = GetFuncExpr(MakeStr, args2, Decimal128Type(38, 4));
-    auto makeExpr3 = GetFuncExpr(MakeStr, args3, Decimal128Type(38, 0));
+    auto makeExpr1 = GetFuncExpr(MakeStr, { data1 }, Decimal128Type(38, 2));
+    auto makeExpr2 = GetFuncExpr(MakeStr, { data2 }, Decimal128Type(38, 4));
+    auto makeExpr3 = GetFuncExpr(MakeStr, { data3 }, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2, makeExpr3 };
 
     DataTypes inputTypes(vecOfTypes);

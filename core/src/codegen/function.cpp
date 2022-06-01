@@ -9,8 +9,8 @@ using namespace omniruntime::type;
 
 namespace omniruntime {
 Function::Function(void *address, const std::string &name, const std::vector<std::string> &aliases,
-    const std::vector<DataTypeId> &paramTypes, const DataTypeId &retType,
-    NullableResultType nullableResultType, bool setExecutionContext)
+    const std::vector<DataTypeId> &paramTypes, const DataTypeId &retType, NullableResultType nullableResultType,
+    bool setExecutionContext)
 {
     this->address = address;
     // update function name used for lookup in codegen

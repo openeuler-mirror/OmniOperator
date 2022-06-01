@@ -3372,7 +3372,7 @@ TEST(CodeGenTest, Mm3HashDecimal64)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Decimal64(v1[0], false, 42, false);
+    int32_t expectedRes = Mm3Decimal64(v1[0], 8, 2, false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3422,7 +3422,7 @@ TEST(CodeGenTest, Mm3HashDecimal128)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42, false);
+    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], 38, 20, false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });

@@ -103,7 +103,6 @@ extern "C" DLLEXPORT bool EqualInt32(int32_t left, int32_t right);
 extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right);
 
 
-
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);

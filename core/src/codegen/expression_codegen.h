@@ -76,8 +76,8 @@ public:
     void ExtractVectorIndexes();
     std::set<int32_t> vectorIndexes;
 
-    std::vector<llvm::Value*> GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
@@ -100,8 +100,8 @@ protected:
     llvm::Value *BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
         llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen, llvm::Value *leftIsNull,
         llvm::Value *rightIsNull);
-    void BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    void BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
+        DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     void BinaryExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi, llvm::Value **isNeitherNull);
@@ -121,25 +121,49 @@ protected:
         const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
         std::pair<llvm::Value **, llvm::Value **> cmpPair);
 
-    void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,
-        llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, CodeGenValue &left,
+        CodeGenValue &right);
 
     virtual llvm::Function *CreateFunction();
-    llvm::LLVMContext* GetContext() {return llvmEngine->GetContext();}
-    llvm::IRBuilder<>* GetIRBuilder() {return llvmEngine->GetIRBuilder();}
-    llvm::Module* GetModule() {return llvmEngine->GetModule();}
-    llvm::orc::LLJIT* GetJit() {return llvmEngine->GetJit();}
-    LLVMTypes* GetTypes() {return llvmEngine->GetTypes();}
-    std::unique_ptr<DecimalIRBuilder> GetDecimalIRBuilder() {return std::make_unique<DecimalIRBuilder>(*llvmEngine);}
+
+    llvm::LLVMContext *GetContext()
+    {
+        return llvmEngine->GetContext();
+    }
+
+    llvm::IRBuilder<> *GetIRBuilder()
+    {
+        return llvmEngine->GetIRBuilder();
+    }
+
+    llvm::Module *GetModule()
+    {
+        return llvmEngine->GetModule();
+    }
+
+    llvm::orc::LLJIT *GetJit()
+    {
+        return llvmEngine->GetJit();
+    }
+
+    LLVMTypes *GetTypes()
+    {
+        return llvmEngine->GetTypes();
+    }
+
+    std::unique_ptr<DecimalIRBuilder> GetDecimalIRBuilder()
+    {
+        return std::make_unique<DecimalIRBuilder>(*llvmEngine);
+    }
 
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<LLVMEngine> llvmEngine;
-    llvm::LLVMContext* context;
-    llvm::IRBuilder<>* builder;
-    llvm::Module* module;
-    llvm::orc::LLJIT* jit;
+    llvm::LLVMContext *context;
+    llvm::IRBuilder<> *builder;
+    llvm::Module *module;
+    llvm::orc::LLJIT *jit;
     llvm::ExitOnError eoe;
-    LLVMTypes* llvmTypes;
+    LLVMTypes *llvmTypes;
     std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
     llvm::orc::ResourceTrackerSP rt;
     llvm::Function *func = nullptr;
@@ -166,14 +190,14 @@ private:
     void InExprDecimal128Helper(const omniruntime::expressions::InExpr &inExpr, llvm::Type *retType, size_t i,
         CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
         llvm::Value *&tmpCmpNull);
-    std::vector<llvm::Value*> GetNullResultIfNullArgFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value*> GetValidNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value*> GetNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value*> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-                                                                   llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetNullResultIfNullArgFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetValidNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
 };
 
 #endif

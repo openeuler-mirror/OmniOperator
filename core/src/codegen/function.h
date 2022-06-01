@@ -9,7 +9,6 @@
 #include "util/type_util.h"
 
 namespace omniruntime {
-
 enum NullableResultType {
     NULL_RESULT_IF_ANY_NULL_ARG,
     VALID_NOT_NULL_RESULT,

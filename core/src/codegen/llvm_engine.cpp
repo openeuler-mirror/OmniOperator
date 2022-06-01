@@ -15,7 +15,7 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
 namespace {
-    std::once_flag codegen_target_init_flag;
+std::once_flag codegen_target_init_flag;
 }
 
 llvm::IRBuilder<> *LLVMEngine::GetIRBuilder()
@@ -48,13 +48,13 @@ ExitOnError LLVMEngine::GetEoe()
     return eoe;
 }
 
-void LLVMEngine::MakeThreadSafe(ResourceTrackerSP* resTracker)
+void LLVMEngine::MakeThreadSafe(ResourceTrackerSP *resTracker)
 {
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(*resTracker, std::move(threadSafeModule)));
 }
 
-void LLVMEngine::Create(std::unique_ptr<LLVMEngine>* out)
+void LLVMEngine::Create(std::unique_ptr<LLVMEngine> *out)
 {
     std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
     llvm::ExitOnError eoe;
@@ -68,9 +68,8 @@ void LLVMEngine::Create(std::unique_ptr<LLVMEngine>* out)
     // Create IR builder to create IR instructions
     auto builder = std::make_unique<IRBuilder<>>(*context);
     auto fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
-    std::unique_ptr<LLVMEngine> engine {
-            new LLVMEngine(std::move(context), std::move(jit), std::move(builder), std::move(module),
-                           std::move(llvmTypes), std::move(fpm))};
+    std::unique_ptr<LLVMEngine> engine { new LLVMEngine(std::move(context), std::move(jit), std::move(builder),
+        std::move(module), std::move(llvmTypes), std::move(fpm)) };
     engine->RegisterFunctions(FunctionRegistry::GetFunctions());
     *out = std::move(engine);
 }
@@ -95,8 +94,7 @@ void LLVMEngine::RegisterFunctions(const std::vector<omniruntime::Function> &fun
         DataTypeId retType = func.GetReturnType();
         std::vector<Type *> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
         auto s = llvm::orc::absoluteSymbols({ { mangle(func.GetId()),
-                                                      JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()),
-                                                                         JITSymbolFlags::Exported) } });
+            JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()), JITSymbolFlags::Exported) } });
         auto ign = jd.define(s);
         if (ign) {
             LogError("Error while defining absolute symbol in jd");
@@ -109,7 +107,8 @@ void LLVMEngine::RegisterFunctions(const std::vector<omniruntime::Function> &fun
     }
 }
 
-std::vector<Type *> LLVMEngine::GetFunctionArgTypeVector(std::vector<DataTypeId> &params, DataTypeId &retTypeId, bool needsContext)
+std::vector<Type *> LLVMEngine::GetFunctionArgTypeVector(std::vector<DataTypeId> &params, DataTypeId &retTypeId,
+    bool needsContext)
 {
     std::vector<Type *> args;
     if (needsContext) {
@@ -188,8 +187,7 @@ CallInst *LLVMEngine::CreateCall(llvm::Function *func, std::vector<llvm::Value *
 }
 
 Value *LLVMEngine::CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
-                                      const omniruntime::type::DataTypeId &returnType,
-                                      std::vector<llvm::Value *> args, std::string msg)
+    const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args, std::string msg)
 {
     std::string funcId = FunctionSignature(fn_name, params, returnType).ToString();
     auto f = module->getFunction(funcId);
@@ -205,7 +203,7 @@ void LLVMEngine::RecordMainFunction(llvm::Function *func)
 void LLVMEngine::RemoveUnusedFunctions()
 {
     llvm::Function *preserved = function;
-    mpm.add(llvm::createInternalizePass([preserved](const llvm::GlobalValue &func) {
-        return (func.getName().str() == preserved->getName().str()); }));
+    mpm.add(llvm::createInternalizePass(
+        [preserved](const llvm::GlobalValue &func) { return (func.getName().str() == preserved->getName().str()); }));
     mpm.add(llvm::createGlobalDCEPass());
 }

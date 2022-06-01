@@ -25,9 +25,11 @@ extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isV
 
 extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed, bool isSeedNull);
 
-extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, bool isValNull, int32_t seed, bool isSeedNull);
+extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, int32_t precision, int32_t scale, bool isNull, int32_t seed,
+    bool isSeedNull);
 
-extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool isValNull, int32_t seed, bool isSeedNull);
+extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale, bool isNull,
+    int32_t seed, bool isSeedNull);
 }
 }
 // OMNI_RUNTIME_MURMUR3_HASH_H

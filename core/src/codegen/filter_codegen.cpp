@@ -57,18 +57,18 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     std::vector<Type *> args;
     Type *ptrArg = llvmTypes->I64PtrType(); // table
     args.push_back(ptrArg);
-    args.push_back(llvmTypes->I32Type()); // no of rows
+    args.push_back(llvmTypes->I32Type());    // no of rows
     args.push_back(llvmTypes->I32PtrType()); // output array
     // bitmap is a 2d array of booleans
     Type *bitmapArg = llvmTypes->I64PtrType(); // record nullk values
     args.push_back(bitmapArg);
     args.push_back(llvmTypes->I64PtrType()); // offsets
-    args.push_back(llvmTypes->I64Type()); // execution_context address
+    args.push_back(llvmTypes->I64Type());    // execution_context address
     args.push_back(llvmTypes->I64PtrType()); // dictionary vectors
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
-    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
-        "FILTER_WRAPPER", module);
+    llvm::Function *funcDecl =
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FILTER_WRAPPER", module);
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);

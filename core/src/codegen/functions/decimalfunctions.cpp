@@ -18,49 +18,83 @@ namespace codegen {
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow)
+extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
+    int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale)
 {
-    Decimal128 left(xHigh, xLow);
-    Decimal128 right(yHigh, yLow);
-
-    if (left < right) {
+    int32_t xRescaleFactor = DecimalOperations::RescaleFactor(xScale, yScale);
+    int32_t yRescaleFactor = DecimalOperations::RescaleFactor(yScale, xScale);
+    Decimal128 x(xHigh, xLow);
+    Decimal128 y(yHigh, yLow);
+    Decimal128 xRescaled = DecimalOperations::UnscaledDecimal(0);
+    Decimal128 yRescaled = DecimalOperations::UnscaledDecimal(0);
+    if (xRescaleFactor > 0) {
+        DecimalOperations::Rescale128(x, xRescaleFactor, xRescaled);
+        yRescaled = y;
+    } else {
+        DecimalOperations::Rescale128(y, yRescaleFactor, yRescaled);
+        xRescaled = x;
+    }
+    if (xRescaled < yRescaled) {
         return -1;
     }
-    if (left > right) {
+    if (xRescaled > yRescaled) {
         return 1;
     }
     return 0;
 }
 
-extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, int64_t yHigh,
+    uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
-    Decimal128 lValue(xHigh, xLow);
-    Decimal128 rValue(yHigh, yLow);
-    Decimal128 result(0, 0);
-    DecimalOperations::AddWithOverflow(lValue, rValue, result);
+    Decimal128 x(xHigh, xLow);
+    Decimal128 y(yHigh, yLow);
+    int32_t xRescaleFactor = DecimalOperations::RescaleFactor(xScale, yScale);
+    int32_t yRescaleFactor = DecimalOperations::RescaleFactor(yScale, xScale);
 
-    *outHighPtr = result.HighBits();
-    *outLowPtr = result.LowBits();
+    Decimal128 left = DecimalOperations::UnscaledDecimal(0);
+    Decimal128 right;
+    if (xRescaleFactor > 0) {
+        DecimalOperations::Rescale128(x, xRescaleFactor, left);
+        right = y;
+    } else {
+        DecimalOperations::Rescale128(y, yRescaleFactor, left);
+        right = x;
+    }
+
+    DecimalOperations::AddWithOverflow(left, right, left);
+
+    *outHighPtr = left.HighBits();
+    *outLowPtr = left.LowBits();
 }
 
-extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, int64_t yHigh,
+    uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
-    Decimal128 lValue(xHigh, xLow);
-    Decimal128 rValue(yHigh, yLow);
-    Decimal128 result(0, 0);
-    DecimalOperations::Subtract(lValue, rValue, result);
+    Decimal128 x(xHigh, xLow);
+    Decimal128 y(yHigh, yLow);
+    Decimal128 tmp = DecimalOperations::UnscaledDecimal(0);
 
-    *outHighPtr = result.HighBits();
-    *outLowPtr = result.LowBits();
+    int32_t xRescaleFactor = DecimalOperations::RescaleFactor(xScale, yScale);
+    int32_t yRescaleFactor = DecimalOperations::RescaleFactor(yScale, xScale);
+
+    if (xRescaleFactor > 0) {
+        DecimalOperations::Rescale128(x, xRescaleFactor, tmp);
+        DecimalOperations::Subtract(tmp, y, tmp);
+    } else {
+        DecimalOperations::Rescale128(y, yRescaleFactor, tmp);
+        DecimalOperations::Subtract(x, tmp, tmp);
+    }
+    *outHighPtr = tmp.HighBits();
+    *outLowPtr = tmp.LowBits();
 }
 
 extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    int32_t scaleFactor = outScale - xScale + yScale;
+    int32_t scaleFactor = DecimalOperations::DivideRescaleFactor(xScale, yScale, outScale);
     Decimal128 lValue(xHigh, xLow);
     Decimal128 rValue(yHigh, yLow);
     if (yHigh == 0 && yLow == 0) {
@@ -76,7 +110,8 @@ extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t 
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, int64_t yHigh,
+    uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
     Decimal128 lValue(xHigh, xLow);
@@ -88,7 +123,8 @@ extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr)
+extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
+    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128 value(xHigh, xLow);
 
@@ -98,7 +134,8 @@ extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *o
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr)
+extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr)
 {
     if (x >= 0) {
         *outHighPtr = 0;
@@ -113,6 +150,7 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(double x, int32_t precision, 
 {
     return (int64_t)(x * pow(10, scale));
 }
+
 extern "C" DLLEXPORT int64_t MakeDecimal64(int64_t x, int32_t precision, int32_t scale, int32_t newPrecision,
     int32_t newScale)
 {
@@ -140,8 +178,10 @@ extern "C" DLLEXPORT void MakeDecimal64To128(int64_t x, int32_t precision, int32
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y)
+extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
+    int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    int32_t scaleFactor = DecimalOperations::DivideRescaleFactor(xScale, yScale, outScale);
     if (y == 0) {
         char message[] = "Divided by zero error!";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
@@ -149,15 +189,20 @@ extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y)
     }
     Decimal128 dividend = DecimalOperations::UnscaledDecimal(x);
     Decimal128 divisor = DecimalOperations::UnscaledDecimal(y);
-    auto result = DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0);
+    auto result = DecimalOperations::DivideRoundUp(dividend, divisor, scaleFactor, 0);
     int64_t low = result.LowBits();
     int64_t shortResult = DecimalOperations::IsNegative(result) ? -low : low;
     return shortResult;
 }
 
-extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y)
+extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t xPrecision, int32_t xScale, int32_t outPrecision,
+    int32_t outScale)
 {
-    return (int64_t)round(x / pow(10, y));
+    int32_t deltaScale = xScale - outScale;
+    if (deltaScale != 0) {
+        return (int64_t)round(x / pow(10, deltaScale));
+    }
+    return x;
 }
 
 extern "C" DLLEXPORT int64_t MakeDecimalLongTo64(int64_t x, int32_t precision, int32_t scale)

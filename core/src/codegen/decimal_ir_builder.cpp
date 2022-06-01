@@ -207,3 +207,22 @@ std::string DecimalIRBuilder::GetMultipliersName(DataTypeId typeId)
             return this->scale64MultipliersName;
     }
 }
+
+std::vector<llvm::Value *> DecimalIRBuilder::BuildDecimalArgs(llvm::Value *left, omniruntime::type::DataType &leftType,
+    llvm::Value *right, omniruntime::type::DataType &rightType, omniruntime::type::DataType &returnType,
+    bool withOutputParam)
+{
+    LLVMTypes llvmTypes(*context);
+    llvm::Value *leftPrecision = llvmTypes.CreateConstantInt(leftType.GetPrecision());
+    llvm::Value *leftScale = llvmTypes.CreateConstantInt(leftType.GetScale());
+    llvm::Value *rightPrecision = llvmTypes.CreateConstantInt(rightType.GetPrecision());
+    llvm::Value *rightScale = llvmTypes.CreateConstantInt(rightType.GetScale());
+    std::vector<llvm::Value *> argVals { left, leftPrecision, leftScale, right, rightPrecision, rightScale };
+    if (withOutputParam) {
+        llvm::Value *returnPrecision = llvmTypes.CreateConstantInt(returnType.GetPrecision());
+        llvm::Value *returnScale = llvmTypes.CreateConstantInt(returnType.GetScale());
+        argVals.push_back(returnPrecision);
+        argVals.push_back(returnScale);
+    }
+    return argVals;
+}

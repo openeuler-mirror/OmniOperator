@@ -46,8 +46,8 @@ extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVecto
     return result;
 }
 
-extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int64_t *outHighPtr,
-    uint64_t *outLowPtr)
+extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t outPrecision,
+    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
     Decimal128 value = dictionaryVectorPtr->GetDecimal128(index);

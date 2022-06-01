@@ -971,10 +971,21 @@ public:
         return value;
     }
 
+    static inline int32_t RescaleFactor(int32_t fromScale, int32_t toScale)
+    {
+        return std::max(0, toScale - fromScale);
+    }
+
+    static inline int32_t DivideRescaleFactor(int32_t dividendScale, int32_t divisorScale, int32_t resultScale)
+    {
+        return resultScale - dividendScale + divisorScale;
+    }
+
     static inline void Rescale128(Decimal128 &decimal, int32_t rescaleFactor, Decimal128 &result)
     {
         if (rescaleFactor == 0) {
             result = decimal;
+            return;
         }
         Decimal128 scaleValue;
         scaleValue.SetValue(0, int64_t(pow(10, abs(rescaleFactor))));

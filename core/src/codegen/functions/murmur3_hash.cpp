@@ -191,7 +191,8 @@ extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed,
     return static_cast<int32_t>(HashLong(uVal.lVal, static_cast<uint32_t>(seed)));
 }
 
-extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, bool isValNull, int32_t seed, bool isSeedNull)
+extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, int32_t precision, int32_t scale, bool isValNull, int32_t seed,
+    bool isSeedNull)
 {
     if (isSeedNull) {
         seed = 0;
@@ -199,7 +200,8 @@ extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, bool isValNull, int32_t s
     return static_cast<int32_t>(HashLong(val * !isValNull, seed));
 }
 
-extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool isValNull, int32_t seed, bool isSeedNull)
+extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
+    bool isValNull, int32_t seed, bool isSeedNull)
 {
     union {
         char bytesArray[16];

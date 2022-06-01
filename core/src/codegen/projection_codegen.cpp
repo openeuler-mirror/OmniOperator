@@ -289,7 +289,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     llvmEngine->OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(
-            eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;

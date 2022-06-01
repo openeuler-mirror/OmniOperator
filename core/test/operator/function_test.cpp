@@ -1,4 +1,4 @@
-///*
+// /*
 // * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
 // * Description: ...
 // */
@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
-
+namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
@@ -32,15 +32,15 @@ TEST(FunctionTest, GetIntFromDictionaryVector)
 {
     int size = 5;
     auto vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_GetIntFromDictionaryVector");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_GetIntFromDictionaryVector");
     auto intVector = new IntVector(vecAllocator, size * 2);
-    for (int i = 0; i < intVector->GetSize(); i++){
+    for (int i = 0; i < intVector->GetSize(); i++) {
         intVector->SetValue(i, i * 10);
     }
     int32_t ids[] = {0, 2, 4, 6, 8};
     auto dict = new DictionaryVector(intVector, ids, size);
     int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++){
+    for (int i = 0; i < size; i++) {
         EXPECT_EQ(GetIntFromDictionaryVector(dictptr, i), intVector->GetValue(ids[i]));
     }
     delete intVector;
@@ -52,15 +52,15 @@ TEST(FunctionTest, GetLongFromDictionaryVector)
 {
     int size = 5;
     auto vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_GetLongFromDictionaryVector");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_GetLongFromDictionaryVector");
     auto longVector = new LongVector(vecAllocator, size * 2);
-    for (int i = 0; i < longVector->GetSize(); i++){
+    for (int i = 0; i < longVector->GetSize(); i++) {
         longVector->SetValue(i, static_cast<int64_t>(i * 10));
     }
     int32_t ids[] = {0, 2, 4, 6, 8};
     auto dict = new DictionaryVector(longVector, ids, size);
     int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++){
+    for (int i = 0; i < size; i++) {
         EXPECT_EQ(GetLongFromDictionaryVector(dictptr, i), longVector->GetValue(ids[i]));
     }
     delete longVector;
@@ -72,15 +72,15 @@ TEST(FunctionTest, GetDoubleFromDictionaryVector)
 {
     int size = 5;
     auto vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_GetDoubleFromDictionaryVector");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_GetDoubleFromDictionaryVector");
     auto doubleVector = new DoubleVector(vecAllocator, size * 2);
-    for (int i = 0; i < doubleVector->GetSize(); i++){
+    for (int i = 0; i < doubleVector->GetSize(); i++) {
         doubleVector->SetValue(i, 3.14159 * i);
     }
     int32_t ids[] = {0, 2, 4, 6, 8};
     auto dict = new DictionaryVector(doubleVector, ids, size);
     int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++){
+    for (int i = 0; i < size; i++) {
         EXPECT_EQ(GetDoubleFromDictionaryVector(dictptr, i), doubleVector->GetValue(ids[i]));
     }
     delete doubleVector;
@@ -92,15 +92,15 @@ TEST(FunctionTest, GetBooleanFromDictionaryVector)
 {
     int size = 5;
     auto vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("BooleanVector_GetBooleanFromDictionaryVector");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("BooleanVector_GetBooleanFromDictionaryVector");
     auto booleanVector = new BooleanVector(vecAllocator, size * 2);
-    for (int i = 0; i < booleanVector->GetSize(); i++){
+    for (int i = 0; i < booleanVector->GetSize(); i++) {
         booleanVector->SetValue(i, i % 2 == 0);
     }
     int32_t ids[] = {0, 2, 4, 6, 8};
     auto dict = new DictionaryVector(booleanVector, ids, size);
     int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++){
+    for (int i = 0; i < size; i++) {
         EXPECT_EQ(GetBooleanFromDictionaryVector(dictptr, i), booleanVector->GetValue(ids[i]));
     }
     delete booleanVector;
@@ -112,18 +112,18 @@ TEST(FunctionTest, GetVarcharFromDictionaryVector)
 {
     int size = 5;
     auto vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_GetVarcharFromDictionaryVector");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_GetVarcharFromDictionaryVector");
     auto varcharVector = new VarcharVector(vecAllocator, size * 2);
-    for (int i = 0; i < varcharVector->GetSize(); i++){
+    for (int i = 0; i < varcharVector->GetSize(); i++) {
         varcharVector->SetValue(i, reinterpret_cast<const unsigned char *>(string(i, 'a').c_str()), i);
     }
     int32_t ids[] = {0, 2, 4, 6, 8};
     auto dict = new DictionaryVector(varcharVector, ids, size);
     int32_t length = 0;
     int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    unsigned char* actual = nullptr;
-    unsigned char* expected = nullptr;
-    for (int i = 0; i < size; i++){
+    unsigned char *actual = nullptr;
+    unsigned char *expected = nullptr;
+    for (int i = 0; i < size; i++) {
         varcharVector->GetValue(ids[i], &actual);
         expected = GetVarcharFromDictionaryVector(dictptr, i, &length);
         EXPECT_EQ(expected, actual);
@@ -137,9 +137,9 @@ TEST(FunctionTest, GetDecimalFromDictionaryVector)
 {
     int size = 5;
     auto vecAllocator =
-            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DecimalVector_GetDecimalFromDictionaryVector");
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DecimalVector_GetDecimalFromDictionaryVector");
     auto decimalVector = new Decimal128Vector(vecAllocator, size * 2);
-    for (int i = 0; i < decimalVector->GetSize(); i++){
+    for (int i = 0; i < decimalVector->GetSize(); i++) {
         Decimal128 x(i * 11, i * 13);
         decimalVector->SetValue(i, x);
     }
@@ -148,8 +148,8 @@ TEST(FunctionTest, GetDecimalFromDictionaryVector)
     int64_t outHigh = 0;
     uint64_t outLow = 0;
     int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++){
-        GetDecimalFromDictionaryVector(dictptr, i, &outHigh, &outLow);
+    for (int i = 0; i < size; i++) {
+        GetDecimalFromDictionaryVector(dictptr, i, 38, 0, &outHigh, &outLow);
         Decimal128 expected = decimalVector->GetValue(ids[i]);
         EXPECT_EQ(expected.HighBits(), outHigh);
         EXPECT_EQ(expected.LowBits(), outLow);
@@ -164,12 +164,13 @@ TEST(FunctionTest, GetDecimalFromDictionaryVector)
  */
 TEST(FunctionTest, WrapVarcharVector)
 {
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator();
-    auto varcharVector =  new VarcharVector(vecAllocator, 1024, 5);
+    auto vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("WrapVarcharVector_GetWrapVarcharVector");
+    auto varcharVector = new VarcharVector(vecAllocator, 1024, 5);
     int64_t vecptr = reinterpret_cast<int64_t>(varcharVector);
-    WrapVarcharVector(vecptr, 0, (uint8_t *) "hello", 5);
-    WrapVarcharVector(vecptr, 3, (uint8_t *) "world", 5);
-    uint8_t* temp = nullptr;
+    WrapVarcharVector(vecptr, 0, (uint8_t *)"hello", 5);
+    WrapVarcharVector(vecptr, 3, (uint8_t *)"world", 5);
+    uint8_t *temp = nullptr;
     int len = varcharVector->GetValue(0, &temp);
     string result(reinterpret_cast<char *>(temp), 0, len);
     EXPECT_EQ(result, "hello");
@@ -188,7 +189,7 @@ TEST(FunctionTest, ArenaAllocatorMalloc)
     auto execContext = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(execContext);
     char *ptr;
-    for (int i = 1; i <= execContext->GetArena()->TotalBytes() / 256; ++i){
+    for (int i = 1; i <= execContext->GetArena()->TotalBytes() / 256; ++i) {
         ptr = ArenaAllocatorMalloc(contextptr, 256);
         EXPECT_NE(ptr, nullptr);
         // check 256 is allocated each call;
@@ -458,11 +459,11 @@ TEST(FunctionTest, Pmod)
 {
     EXPECT_EQ(0, Pmod(4589732, 0));
     int n = 100;
-    for (int i = 1; i <= n; ++i){
+    for (int i = 1; i <= n; ++i) {
         EXPECT_EQ(n % i, Pmod(n, i));
     }
     n = -100;
-    for (int i = -1; i >= n; --i){
+    for (int i = -1; i >= n; --i) {
         EXPECT_EQ(n - (n / i) * i, Pmod(n, i));
     }
 }
@@ -502,15 +503,15 @@ TEST(FunctionTest, Decimal128Compare)
 
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
-    EXPECT_EQ(0, Decimal128Compare(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits()));
+    EXPECT_EQ(0, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0));
 
     op1 = DecimalOperations::UnscaledDecimal(1);
     op2 = DecimalOperations::UnscaledDecimal(5);
-    EXPECT_EQ(-1, Decimal128Compare(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits()));
+    EXPECT_EQ(-1, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0));
 
     op1 = DecimalOperations::UnscaledDecimal(6);
     op2 = DecimalOperations::UnscaledDecimal(-8);
-    EXPECT_EQ(1, Decimal128Compare(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits()));
+    EXPECT_EQ(1, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0));
 }
 
 TEST(FunctionTest, AddDec128)
@@ -518,33 +519,34 @@ TEST(FunctionTest, AddDec128)
     Decimal128 op1;
     Decimal128 op2;
     Decimal128 expected;
-    int64_t zHigh = 0; uint64_t zLow = 0;
+    int64_t zHigh = 0;
+    uint64_t zLow = 0;
 
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AddDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(5);
     op2 = DecimalOperations::UnscaledDecimal(10);
     expected = DecimalOperations::UnscaledDecimal(15);
-    AddDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-1);
     op2 = DecimalOperations::UnscaledDecimal(1);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AddDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(-7);
-    AddDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 }
@@ -554,33 +556,34 @@ TEST(FunctionTest, SubDec128)
     Decimal128 op1;
     Decimal128 op2;
     Decimal128 expected;
-    int64_t zHigh = 0; uint64_t zLow = 0;
+    int64_t zHigh = 0;
+    uint64_t zLow = 0;
 
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    SubDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(10);
     op2 = DecimalOperations::UnscaledDecimal(5);
     expected = DecimalOperations::UnscaledDecimal(5);
-    SubDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(5);
     op2 = DecimalOperations::UnscaledDecimal(10);
     expected = DecimalOperations::UnscaledDecimal(-5);
-    SubDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(1);
-    SubDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 }
@@ -590,40 +593,41 @@ TEST(FunctionTest, MulDec128)
     Decimal128 op1;
     Decimal128 op2;
     Decimal128 expected;
-    int64_t zHigh = 0; uint64_t zLow = 0;
+    int64_t zHigh = 0;
+    uint64_t zLow = 0;
 
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(500);
     expected = DecimalOperations::UnscaledDecimal(0);
-    MulDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(1);
     op2 = DecimalOperations::UnscaledDecimal(500);
     expected = DecimalOperations::UnscaledDecimal(500);
-    MulDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(3);
     op2 = DecimalOperations::UnscaledDecimal(5);
     expected = DecimalOperations::UnscaledDecimal(15);
-    MulDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(12);
-    MulDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(4);
     expected = DecimalOperations::UnscaledDecimal(-12);
-    MulDec128(op1.HighBits(), op1.LowBits(), op2.HighBits(), op2.LowBits(), &zHigh, &zLow);
+    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 }
@@ -645,45 +649,40 @@ TEST(FunctionTest, DivDec128)
     op1 = DecimalOperations::UnscaledDecimal(10);
     op2 = DecimalOperations::UnscaledDecimal(2);
     expected = DecimalOperations::UnscaledDecimal(5);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale,
-              op2.HighBits(), op2.LowBits(), precision, scale,
-              precision, scale, &zHigh, &zLow);
+    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
+        scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-10);
     op2 = DecimalOperations::UnscaledDecimal(2);
     expected = DecimalOperations::UnscaledDecimal(-5);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale,
-              op2.HighBits(), op2.LowBits(), precision, scale,
-              precision, scale, &zHigh, &zLow);
+    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
+        scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-10);
     op2 = DecimalOperations::UnscaledDecimal(-2);
     expected = DecimalOperations::UnscaledDecimal(5);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale,
-              op2.HighBits(), op2.LowBits(), precision, scale,
-              precision, scale, &zHigh, &zLow);
+    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
+        scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(7);
     op2 = DecimalOperations::UnscaledDecimal(3);
     expected = DecimalOperations::UnscaledDecimal(2);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale,
-              op2.HighBits(), op2.LowBits(), precision, scale,
-              precision, scale, &zHigh, &zLow);
+    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
+        scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(8);
     op2 = DecimalOperations::UnscaledDecimal(3);
     expected = DecimalOperations::UnscaledDecimal(3);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale,
-              op2.HighBits(), op2.LowBits(), precision, scale,
-              precision, scale, &zHigh, &zLow);
+    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
+        scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -696,9 +695,9 @@ TEST(FunctionTest, CastInt64ToDecimal128)
     uint64_t outLow = 0;
     Decimal128 expected;
 
-    for (int64_t x = -500; x <= 550; ++x){
-        expected =  DecimalOperations::UnscaledDecimal(x);
-        CastInt64ToDecimal128(x, &outHigh, &outLow);
+    for (int64_t x = -500; x <= 550; ++x) {
+        expected = DecimalOperations::UnscaledDecimal(x);
+        CastInt64ToDecimal128(x, 38, 0, &outHigh, &outLow);
         EXPECT_EQ(outHigh, expected.HighBits());
         EXPECT_EQ(outLow, expected.LowBits());
     }
@@ -712,19 +711,19 @@ TEST(FunctionTest, AbsDecimal128)
     Decimal128 expected;
 
     test = DecimalOperations::UnscaledDecimal(3);
-    AbsDecimal128(test.HighBits(), test.LowBits(), &outHigh, &outLow);
+    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, 38, 0, &outHigh, &outLow);
     EXPECT_EQ(outHigh, test.HighBits());
     EXPECT_EQ(outLow, test.LowBits());
 
     test = DecimalOperations::UnscaledDecimal(-1);
     expected = DecimalOperations::UnscaledDecimal(1);
-    AbsDecimal128(test.HighBits(), test.LowBits(), &outHigh, &outLow);
+    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, 38, 0, &outHigh, &outLow);
     EXPECT_EQ(outHigh, expected.HighBits());
     EXPECT_EQ(outLow, expected.LowBits());
 
     test = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AbsDecimal128(test.HighBits(), test.LowBits(), &outHigh, &outLow);
+    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, 38, 0, &outHigh, &outLow);
     EXPECT_EQ(outHigh, expected.HighBits());
     EXPECT_EQ(outLow, expected.LowBits());
 }
@@ -737,10 +736,10 @@ TEST(FunctionTest, ConcatCharChar)
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
     int outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
-    result = ConcatCharChar(contextptr, "hello", 5, 5,  "world", 5, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 5, 5, "world", 5, 5, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
@@ -755,7 +754,7 @@ TEST(FunctionTest, ConcatCharChar)
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatCharChar(contextptr, "hello", 10, 5,  "world", 5, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 5, 5, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
@@ -773,10 +772,10 @@ TEST(FunctionTest, ConcatStrChar)
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
     int outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
-    result = ConcatStrChar(contextptr, "hello", 5,  "world", 5, 5, &outlen);
+    result = ConcatStrChar(contextptr, "hello", 5, "world", 5, 5, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
@@ -808,7 +807,7 @@ TEST(FunctionTest, ConcatCharStr)
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
     int outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
     result = ConcatCharStr(contextptr, "hello", 5, 5, "world", 5, &outlen);
@@ -845,7 +844,7 @@ TEST(FunctionTest, Substr)
     string str = "Magic Johnson 123@#$";
     int32_t strlen = static_cast<int32_t>(str.length());
     int32_t outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
     result = Substr(contextptr, str.c_str(), strlen, 1, strlen, &outlen);
@@ -888,7 +887,7 @@ TEST(FunctionTest, SubstrChar)
     int32_t width = static_cast<int32_t>(str.length());
     int32_t strlen = width - 7;
     int32_t outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
     result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, strlen, &outlen);
@@ -931,7 +930,7 @@ TEST(FunctionTest, SubstrWithStart)
     string str = "ABC efg 123 $%^";
     int32_t strlen = static_cast<int32_t>(str.length());
     int32_t outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
     result = SubstrWithStart(contextptr, str.c_str(), strlen, 1, &outlen);
@@ -965,7 +964,7 @@ TEST(FunctionTest, SubstrCharWithStart)
     int32_t width = static_cast<int32_t>(str.length());
     int32_t outlen = 0;
     int32_t strlen = width - 8;
-    const char* result;
+    const char *result;
     string actual;
 
     result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 1, &outlen);
@@ -997,7 +996,7 @@ TEST(FunctionTest, ToUpper)
     string test = "[\\]^_abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     string expected = "[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     int32_t outLen = 0;
-    const char* result = ToUpper(contextptr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToUpper(contextptr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1012,7 +1011,7 @@ TEST(FunctionTest, ToUpperChar)
     string expected = "[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     int32_t width = 100;
     int32_t outLen = 0;
-    const char* result = ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1054,7 +1053,7 @@ TEST(FunctionTest, ConcatStrStr)
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
     int outlen = 0;
-    const char* result;
+    const char *result;
     string actual;
 
     result = ConcatStrStr(contextptr, "abc", 3, "defghi", 6, &outlen);
@@ -1074,7 +1073,8 @@ TEST(FunctionTest, ConcatStrStr)
     delete context;
 }
 
-TEST(FunctionTest, CastString){
+TEST(FunctionTest, CastString)
+{
     // year-month-day
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
@@ -1087,4 +1087,5 @@ TEST(FunctionTest, CastString){
     result = CastString(contextptr, "1453-05-29", 10);
     EXPECT_EQ(result, -188682);
     delete context;
+}
 }
