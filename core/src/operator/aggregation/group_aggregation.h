@@ -139,16 +139,16 @@ class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    HashAggregationOperatorFactory(PrepareContext groupByCol, DataTypes groupInputTypes, PrepareContext aggCol,
-        DataTypes aggInputTypes, DataTypes aggOutputTypes, PrepareContext aggFuncTypes, PrepareContext maskColsContext,
-        bool inputRaw, bool outputPartial)
-        : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsContext),
-          groupByColsContext(groupByCol),
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, DataTypes groupInputTypes,
+        std::vector<uint32_t> &aggCol, DataTypes aggInputTypes, DataTypes aggOutputTypes,
+        std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColsVector, bool inputRaw, bool outputPartial)
+        : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsVector),
+          groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
-          aggInputColsContext(aggCol),
+          aggInputColsVector(aggCol),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
-          aggFuncTypesContext(aggFuncTypes)
+          aggFuncTypesVector(aggFuncTypes)
     {}
 
     ~HashAggregationOperatorFactory() override {}
@@ -156,14 +156,14 @@ public:
     OmniStatus Close() override;
 
 private:
-    PrepareContext groupByColsContext;
+    std::vector<uint32_t> groupByColsVector;
     std::vector<int32_t> groupByColIdx;
     DataTypes groupByTypes;
-    PrepareContext aggInputColsContext;
+    std::vector<uint32_t> aggInputColsVector;
     std::vector<int32_t> aggInputCols;
     DataTypes aggInputTypes;
     DataTypes aggOutputTypes;
-    PrepareContext aggFuncTypesContext;
+    std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };
 } // end of namespace op

@@ -36,13 +36,13 @@ public:
     Operator *CreateOperator() override;
 
 public:
-    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, PrepareContext aggFuncTypesContext,
-        PrepareContext aggInputColsContext, PrepareContext maskColsContext,
+    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
+        std::vector<uint32_t> &aggInputColsVector, std::vector<uint32_t> &maskColsVector,
         omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
-        : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsContext),
+        : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsVector),
           sourceTypes(sourceTypes),
-          aggFuncTypesContext(aggFuncTypesContext),
-          aggInputColsContext(aggInputColsContext),
+          aggFuncTypesVector(aggFuncTypesVector),
+          aggInputColsVector(aggInputColsVector),
           aggOutputTypes(aggOutputTypes)
     {}
 
@@ -52,8 +52,8 @@ public:
 
 private:
     omniruntime::type::DataTypes sourceTypes;
-    PrepareContext aggFuncTypesContext;
-    PrepareContext aggInputColsContext;
+    std::vector<uint32_t> aggFuncTypesVector;
+    std::vector<uint32_t> aggInputColsVector;
     omniruntime::type::DataTypes aggOutputTypes;
     std::vector<omniruntime::type::DataType> aggInputTypes;
     std::vector<int32_t> aggInputCols;

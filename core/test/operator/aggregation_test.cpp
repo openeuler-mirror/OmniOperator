@@ -235,17 +235,16 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
     DataTypes aggOutputTypes(aggOutputTypeVec);
     uint32_t aggFunType[2] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
     uint32_t maskCols[2] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
-    PrepareContext groupByColContext = { groupCols, 2 };
-
-    PrepareContext aggColContext = { aggCols, 2 };
-    PrepareContext aggFuncTypeContext = { aggFunType, 2 };
-    PrepareContext maskColsContext = { maskCols, 2 };
+    std::vector<uint32_t> groupByColVector = std::vector<uint32_t>(groupCols, groupCols + 2);
+    std::vector<uint32_t> aggColVector = std::vector<uint32_t>(aggCols, aggCols + 2);
+    std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(aggFunType, aggFunType + 2);
+    std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + 2);
 
     auto jitContext = CreateHashAggregationJitContext(groupByTypes, 2);
     std::cout << "after jit" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypes, aggColContext,
-        aggInputTypes, aggOutputTypes, aggFuncTypeContext, maskColsContext, inputRaw, outputPartial);
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVector, aggInputTypes,
+        aggOutputTypes, aggFuncTypeVector, maskColsVector, inputRaw, outputPartial);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->SetJitContext(jitContext);
     nativeOperatorFactory->Init();
@@ -258,18 +257,18 @@ uintptr_t CreateAggFactoryWithJit()
     DataTypes sourceTypes(
         { LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance(), LongDataType::Instance() });
     uint32_t aggFuncTypes[CONST_VALUE_4] = {0, 0, 0, 0};
-    omniruntime::op::PrepareContext aggFuncTypeContext = { aggFuncTypes, CONST_VALUE_4 };
+    std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(aggFuncTypes, aggFuncTypes + CONST_VALUE_4);
     uint32_t aggInputCols[CONST_VALUE_4] = {0, 1, 2, 3};
-    omniruntime::op::PrepareContext aggInputColsContext = { aggInputCols, CONST_VALUE_4 };
+    std::vector<uint32_t> aggInputColsVector = std::vector<uint32_t>(aggInputCols, aggInputCols + CONST_VALUE_4);
     uint32_t maskCols[CONST_VALUE_4] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
                                         static_cast<uint32_t>(-1),
                                         static_cast<uint32_t>(-1)};
-    omniruntime::op::PrepareContext maskColsContext = { maskCols, CONST_VALUE_4 };
+    std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + CONST_VALUE_4);
 
     auto jitContext = CreateAggregationJitContext();
     std::cout << "after jit" << std::endl;
-    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeContext, aggInputColsContext,
-        maskColsContext, sourceTypes, true, false);
+    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeVector, aggInputColsVector,
+        maskColsVector, sourceTypes, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->SetJitContext(jitContext);
@@ -295,15 +294,18 @@ uintptr_t CreateHashFactoryWithoutJit(HAFactoryParameters &parameters)
     DataTypes aggInputTypes(parameters.aggInputTypes);
     DataTypes aggOutputTypes(parameters.aggOutputTypes);
 
-    PrepareContext groupByColContext = { parameters.groupCols.data(), parameters.groupCols.size() };
-    PrepareContext aggColContext = { parameters.aggCols.data(), parameters.aggCols.size() };
-    PrepareContext aggFuncTypeContext = { parameters.aggFuncTypes.data(), parameters.aggFuncTypes.size() };
-    PrepareContext maskColsContext = { parameters.maskCols.data(), parameters.maskCols.size() };
+    std::vector<uint32_t> groupByColVector =
+        std::vector<uint32_t>(parameters.groupCols.data(), parameters.groupCols.data() + parameters.groupCols.size());
+    std::vector<uint32_t> aggColVector =
+        std::vector<uint32_t>(parameters.aggCols.data(), parameters.aggCols.data() + parameters.aggCols.size());
+    std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(parameters.aggFuncTypes.data(),
+        parameters.aggFuncTypes.data() + parameters.aggFuncTypes.size());
+    std::vector<uint32_t> maskColsVector =
+        std::vector<uint32_t>(parameters.maskCols.data(), parameters.maskCols.data() + parameters.maskCols.size());
 
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypes, aggColContext,
-        aggInputTypes, aggOutputTypes, aggFuncTypeContext, maskColsContext, parameters.inputRaw,
-        parameters.outputPartial);
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVector, aggInputTypes,
+        aggOutputTypes, aggFuncTypeVector, maskColsVector, parameters.inputRaw, parameters.outputPartial);
     nativeOperatorFactory->Init();
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
 }
@@ -909,12 +911,14 @@ TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
 
     uint32_t groupCols[2] = {0, 1};
     uint32_t aggCols[2] = {2, 3};
-    PrepareContext groupByColContext = { groupCols, 2 };
-    PrepareContext aggColContext = { aggCols, 2 };
-    PrepareContext aggFuncTypeContext = { reinterpret_cast<uint32_t *>(aggFunType), 2 };
-    PrepareContext maskColsContext = { reinterpret_cast<uint32_t *>(maskCols), 2 };
-    HashAggregationOperatorFactory *nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext,
-        groupTypes, aggColContext, aggInputTypes, aggOutputTypes, aggFuncTypeContext, maskColsContext, true, false);
+    std::vector<uint32_t> groupByColVector = std::vector<uint32_t>(groupCols, groupCols + 2);
+    std::vector<uint32_t> aggColVector = std::vector<uint32_t>(aggCols, aggCols + 2);
+    std::vector<uint32_t> aggFuncTypeVector =
+        std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFunType), reinterpret_cast<uint32_t *>(aggFunType) + 2);
+    std::vector<uint32_t> maskColsVector =
+        std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskCols), reinterpret_cast<uint32_t *>(maskCols) + 2);
+    HashAggregationOperatorFactory *nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColVector,
+        groupTypes, aggColVector, aggInputTypes, aggOutputTypes, aggFuncTypeVector, maskColsVector, true, false);
     nativeOperatorFactory->Init();
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
 
@@ -1269,14 +1273,15 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
     FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
         OMNI_AGGREGATION_TYPE_SUM};
     uint32_t aggInputCols[] = {0, 1, 2, 3};
-    PrepareContext aggFuncTypesContext = { reinterpret_cast<uint32_t *>(aggFunType), 4 };
-    PrepareContext aggInputColsContext = { aggInputCols, 4 };
-    uint32_t maskCols[4] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
-        static_cast<uint32_t>(-1)};
-    omniruntime::op::PrepareContext maskColsContext = { maskCols, 4 };
+    std::vector<uint32_t> aggFuncTypesVector =
+        std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFunType), reinterpret_cast<uint32_t *>(aggFunType) + 4);
+    std::vector<uint32_t> aggInputColsVector = std::vector<uint32_t>(aggInputCols, aggInputCols + 4);
+    uint32_t maskCols[4] = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
+                            static_cast<uint32_t>(-1) };
+    std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + 4);
 
-    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
-        maskColsContext, aggOutputTypes, true, false);
+    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesVector, aggInputColsVector,
+        maskColsVector, aggOutputTypes, true, false);
     nativeOperatorFactory->Init();
     int64_t factoryAddr = reinterpret_cast<int64_t>(nativeOperatorFactory);
     const auto processorCount = std::thread::hardware_concurrency();
@@ -1385,17 +1390,19 @@ TEST(HashAggregationOperatorTest, compare_perf)
     DataTypes aggOutput({ LongDataType::Instance(), LongDataType::Instance() });
     FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
-    PrepareContext groupByColContext = { groupCols, 2 };
-    PrepareContext aggColContext = { aggCols, 2 };
-    PrepareContext aggFuncTypeContext = { reinterpret_cast<uint32_t *>(aggFunType), 2 };
-    PrepareContext maskColsContext = { reinterpret_cast<uint32_t *>(maskCols), 2 };
+    std::vector<uint32_t> groupByColVector = std::vector<uint32_t>(groupCols, groupCols + 2);
+    std::vector<uint32_t> aggColVector = std::vector<uint32_t>(aggCols, aggCols + 2);
+    std::vector<uint32_t> aggFuncTypeVector =
+        std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFunType), reinterpret_cast<uint32_t *>(aggFunType) + 2);
+    std::vector<uint32_t> maskColsVector =
+        std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskCols), reinterpret_cast<uint32_t *>(maskCols) + 2);
 
     // ------------------------------------------Create operator--------------------------------------------
     auto jitContext = CreateHashAggregationJitContext(groupInputTypes, 2);
     std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupInputTypes, aggColContext, aggInput,
-        aggOutput, aggFuncTypeContext, maskColsContext, true, false);
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVector, aggInput,
+        aggOutput, aggFuncTypeVector, maskColsVector, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->SetJitContext(jitContext);
@@ -1435,8 +1442,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     double cpuElapsed = timer.GetCpuElapse();
     std::cout << "HashAgg with OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    HashAggregationOperatorFactory *nativeOperatorFactory2 = new HashAggregationOperatorFactory(groupByColContext,
-        groupInputTypes, aggColContext, aggInput, aggOutput, aggFuncTypeContext, maskColsContext, true, false);
+    HashAggregationOperatorFactory *nativeOperatorFactory2 = new HashAggregationOperatorFactory(groupByColVector,
+        groupInputTypes, aggColVector, aggInput, aggOutput, aggFuncTypeVector, maskColsVector, true, false);
     nativeOperatorFactory2->Init();
     std::cout << "after create factory" << std::endl;
     auto groupBy = nativeOperatorFactory2->CreateOperator();

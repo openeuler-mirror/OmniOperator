@@ -31,11 +31,11 @@ protected:
 
 class AggregationCommonOperatorFactory : public OperatorFactory {
 public:
-    AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial, PrepareContext maskColsContext)
+    AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial, std::vector<uint32_t> &maskColsContext)
         : inputRaw(inputRaw), outputPartial(outputPartial)
     {
-        for (size_t i = 0; i < maskColsContext.len; ++i) {
-            maskCols.push_back(maskColsContext.context[i]);
+        for (size_t i = 0; i < maskColsContext.size(); ++i) {
+            maskCols.push_back(maskColsContext[i]);
         }
     }
 
@@ -53,7 +53,7 @@ public:
     void CreateAggregatorFactory(std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories, int32_t maskCol);
 
     OmniStatus CreateAggregatorFactories(std::vector<std::unique_ptr<AggregatorFactory>> &aggregatorFactories,
-        const PrepareContext &funcTypesContext, const std::vector<int32_t> &maskCols);
+        const std::vector<uint32_t> &funcTypesContext, const std::vector<int32_t> &maskCols);
 
 protected:
     int inputRaw;

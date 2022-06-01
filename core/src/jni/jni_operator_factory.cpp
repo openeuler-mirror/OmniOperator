@@ -157,15 +157,15 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
     auto aggNum = static_cast<size_t>(env->GetArrayLength(jAggFuncType));
 
-    PrepareContext groupByColContext = { (uint32_t *)groupByCols, groupByNum };
-    PrepareContext aggColContext = { (uint32_t *)aggCols, aggInputChannelNum };
-    PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
-    PrepareContext maskColumnContext = { (uint32_t *)maskColumns, aggNum };
+    vector<uint32_t> groupByColVector = vector<uint32_t>((uint32_t *)groupByCols, (uint32_t *)groupByCols + groupByNum);
+    vector<uint32_t> aggColVector = vector<uint32_t>((uint32_t *)aggCols, (uint32_t *)aggCols + aggInputChannelNum);
+    vector<uint32_t> aggFuncTypeVector = vector<uint32_t>((uint32_t *)aggFuncTypes, (uint32_t *)aggFuncTypes + aggNum);
+    vector<uint32_t> maskColumnVector = vector<uint32_t>((uint32_t *)maskColumns, (uint32_t *)maskColumns + aggNum);
 
     HashAggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
-    nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByDataTypes, aggColContext,
-        aggDataTypes, outDataTypes, aggFuncTypeContext, maskColumnContext, inputRaw, outputPartial);
+    nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColVector, groupByDataTypes, aggColVector,
+        aggDataTypes, outDataTypes, aggFuncTypeVector, maskColumnVector, inputRaw, outputPartial);
     JNI_METHOD_END(0L)
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();
@@ -211,14 +211,16 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggInputColsCount = static_cast<size_t>(env->GetArrayLength(jAggInputCols));
     auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
-    PrepareContext aggInputColsContext = { (uint32_t *)aggInputCols, aggInputColsCount };
-    PrepareContext maskColsContext = { (uint32_t *)maskCols, aggCount };
-    PrepareContext aggFuncTypesContext = { (uint32_t *)aggFuncTypes, aggCount };
+    std::vector<uint32_t> aggInputColsVector =
+        vector<uint32_t>((uint32_t *)aggInputCols, (uint32_t *)aggInputCols + aggInputColsCount);
+    std::vector<uint32_t> maskColsVector = vector<uint32_t>((uint32_t *)maskCols, (uint32_t *)maskCols + aggCount);
+    std::vector<uint32_t> aggFuncTypesVector =
+        vector<uint32_t>((uint32_t *)aggFuncTypes, (uint32_t *)aggFuncTypes + aggCount);
 
     AggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
-    nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
-        maskColsContext, aggOutputTypes, inputRaw, outputPartial);
+    nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesVector, aggInputColsVector,
+        maskColsVector, aggOutputTypes, inputRaw, outputPartial);
     JNI_METHOD_END(0L)
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();

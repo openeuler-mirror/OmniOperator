@@ -84,14 +84,14 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
 OmniStatus HashAggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    for (uint32_t i = 0; i < groupByColsContext.len; ++i) {
-        groupByColIdx.push_back(groupByColsContext.context[i]);
+    for (uint32_t i = 0; i < groupByColsVector.size(); ++i) {
+        groupByColIdx.push_back(groupByColsVector[i]);
     }
-    for (uint32_t i = 0; i < aggInputColsContext.len; ++i) {
-        aggInputCols.push_back(aggInputColsContext.context[i]);
+    for (uint32_t i = 0; i < aggInputColsVector.size(); ++i) {
+        aggInputCols.push_back(aggInputColsVector[i]);
     }
 
-    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesContext, GetMaskColumns());
+    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
 
     return ret;
 }
@@ -114,7 +114,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
 
     uint32_t aggInputChannelIndex = 0;
     for (uint32_t i = 0; i < this->aggregatorFactories.size(); ++i) {
-        uint32_t aggregateType = aggFuncTypesContext.context[i];
+        uint32_t aggregateType = aggFuncTypesVector[i];
         DataType inputType;
         int32_t aggInputCol;
         if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
