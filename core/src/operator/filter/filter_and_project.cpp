@@ -252,5 +252,14 @@ Filter::Filter(const expressions::Expr &expression)
         this->apply = *static_cast<FilterFunc *>(function);
     }
 }
+
+OmniStatus FilterAndProjectOperator::Close()
+{
+    if (projectedVecs != nullptr) {
+        VectorHelper::FreeVecBatch(projectedVecs);
+        projectedVecs = nullptr;
+    }
+    return OMNI_STATUS_NORMAL;
+}
 } // end of op
 } // end of omniruntime

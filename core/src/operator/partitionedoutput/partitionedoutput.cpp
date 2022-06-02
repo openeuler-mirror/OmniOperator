@@ -273,5 +273,14 @@ int32_t PartitionedOutputOperator::GetOutput(std::vector<omniruntime::vec::Vecto
     SetStatus(OMNI_STATUS_FINISHED);
     return OMNI_STATUS_FINISHED;
 }
+
+OmniStatus PartitionedOutputOperator::Close()
+{
+    if (!vectorBatches.empty()) {
+        VectorHelper::FreeVecBatches(vectorBatches);
+        vectorBatches.clear();
+    }
+    return OMNI_STATUS_NORMAL;
+}
 } // end of namespace op
 } // end of namespace omniruntime

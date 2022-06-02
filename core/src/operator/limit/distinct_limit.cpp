@@ -219,7 +219,8 @@ DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::
       hashCol(hashCol),
       outColsCount(distinctColsCount + ((hashCol == INVALID_DISTINCT_COL_ID) ? 0 : 1)),
       remainingLimit(limit),
-      limit(limit)
+      limit(limit),
+      resultBatch(nullptr)
 {
     auto &sourceDataType = sourceTypes.Get();
     for (int i = 0; i < distinctColsCount; ++i) {
@@ -372,7 +373,7 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
 int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
     if (distinctRowInfo.size() > 0) {
-        auto resultBatch = new VectorBatch(outColsCount, distinctRowInfo.size());
+        resultBatch = new VectorBatch(outColsCount, distinctRowInfo.size());
 
         resultBatch->NewVectors(vecAllocator, outTypes);
 
@@ -383,6 +384,7 @@ int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages
         }
 
         outputPages.push_back(resultBatch);
+        resultBatch = nullptr;
         ReleaseRowInfo(distinctRowInfo);
     }
 
@@ -403,6 +405,11 @@ void DistinctLimitOperator::ReleaseRowInfo(std::vector<DistinctRowInfo *> &rowIn
 
 OmniStatus DistinctLimitOperator::Close()
 {
+    if (resultBatch != nullptr) {
+        VectorHelper::FreeVecBatch(resultBatch);
+        resultBatch = nullptr;
+    }
+
     // releaseMemory: memory managed/free by ExecutionContext
     distinctedTable.clear();
 

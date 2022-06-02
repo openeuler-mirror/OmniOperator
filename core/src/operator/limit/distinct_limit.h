@@ -97,6 +97,7 @@ private:
     int32_t outColsCount;
     int64_t remainingLimit;
     int64_t limit;
+    omniruntime::vec::VectorBatch *resultBatch;
 };
 }
 }

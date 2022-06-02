@@ -281,6 +281,15 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
+OmniStatus ProjectionOperator::Close()
+{
+    if (mutated != nullptr) {
+        VectorHelper::FreeVecBatch(mutated);
+        mutated = nullptr;
+    }
+    return OMNI_STATUS_NORMAL;
+}
+
 ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
     DataTypes &inputTypes, int32_t nCols)
     : inputTypes(inputTypes), nCols(nCols), nProj(nProj)

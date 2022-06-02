@@ -53,8 +53,18 @@ int32_t UnionOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
     for (auto item : inputVecBatches) {
         outputPages.push_back(item);
     }
+    inputVecBatches.clear();
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
+}
+
+OmniStatus UnionOperator::Close()
+{
+    if (!inputVecBatches.empty()) {
+        VectorHelper::FreeVecBatches(inputVecBatches);
+        inputVecBatches.clear();
+    }
+    return OMNI_STATUS_NORMAL;
 }
 }
 }
