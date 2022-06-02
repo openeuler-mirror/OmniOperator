@@ -1408,6 +1408,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
     jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections, jint jProjectLength,
     jint jParseFormat)
 {
+    omniruntime::expressions::Expr *filterExpr = nullptr;
+    std::vector<omniruntime::expressions::Expr *> projectExprs;
+    JNI_METHOD_START
     auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
     std::string filterExpression = std::string(expressionCharPtr);
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
@@ -1420,10 +1423,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
     std::string projectExpressions[jProjectLength];
     GetExpressions(env, jProjections, projectExpressions, jProjectLength);
 
-    omniruntime::expressions::Expr *filterExpr = nullptr;
-    std::vector<omniruntime::expressions::Expr *> projectExprs;
     if (parseFormat == JSON) {
-        if (filterExpression != "") {
+        if (!filterExpression.empty()) {
             auto filterJsonExpr = nlohmann::json::parse(filterExpression);
             filterExpr = JSONParser::ParseJSON(filterJsonExpr);
             if (filterExpr == nullptr) {
@@ -1438,13 +1439,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
         projectExprs = JSONParser::ParseJSON(jsonProjectExprs, jProjectLength);
     } else {
         Parser parser;
-        if (filterExpression != "") {
+        if (!filterExpression.empty()) {
             filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
         }
         projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, inputDataTypes);
     }
 
-    if ((filterExpression != "" && filterExpr == nullptr) ||
+    if ((!filterExpression.empty() && filterExpr == nullptr) ||
         (static_cast<size_t>(jProjectLength) != projectExprs.size())) {
         delete filterExpr;
         Expr::DeleteExprs(projectExprs);
@@ -1465,4 +1466,5 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
     delete filterExpr;
     Expr::DeleteExprs(projectExprs);
     return 1;
+    JNI_METHOD_END_WITH_MULTI_EXPRS(0, std::vector<omniruntime::expressions::Expr *> { filterExpr }, projectExprs)
 }

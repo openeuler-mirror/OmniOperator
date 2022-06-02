@@ -18,7 +18,6 @@
 #include "codegen/row_expression_codegen.h"
 #include "operator/execution_context.h"
 
-using vec64 = std::vector<int64_t>;
 using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 
 namespace omniruntime {
@@ -103,7 +102,6 @@ private:
 
 class Filter {
 public:
-    Filter(const expressions::Expr &expression, int32_t const * inputTypeIds, int32_t inputVecCount);
     explicit Filter(const expressions::Expr &expression);
     ~Filter()
     {

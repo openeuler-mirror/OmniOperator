@@ -250,7 +250,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
         auto call = codeGenUtils->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
         InlineFunctionInfo inlineFunctionInfo;
-        auto inlineFunction = InlineFunction(*call, inlineFunctionInfo);
+        InlineFunction(*call, inlineFunctionInfo);
     } else {
         // x* gep = gep x* outColPtr, i32 counter
         gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");

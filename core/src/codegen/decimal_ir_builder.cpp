@@ -163,7 +163,7 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
             result = codeGenUtils.CreateCall(f, disassembledArgs, fnName);
         }
         llvm::InlineFunctionInfo inlineFunctionInfo;
-        auto inlinedFunction = llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);
+        llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);
     } else {
         LogWarn("Unable to generate function : %s", fnName.c_str());
     }

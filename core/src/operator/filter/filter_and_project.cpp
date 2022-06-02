@@ -13,8 +13,6 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace std;
 
-using Uint8vec = std::vector<uint8_t>;
-
 RowFilter::RowFilter(const Expr &expr) : codegen(nullptr), expression(&expr) {}
 
 RowFilter::~RowFilter()
@@ -112,7 +110,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     }
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto projection = make_unique<Projection>(inputDataTypes, inputVecCount, *(projectExprs.at(i)), true);
+        auto projection = make_unique<Projection>(*(projectExprs[i]), true);
         if (!projection->IsSupported()) {
             this->isSupportedExpr = false;
             break;
@@ -138,15 +136,14 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
-std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[], int32_t vectorCount,
+void GetData(VectorBatch &vecBatch, int64_t valueAddrs[], int64_t nullAddrs[], int64_t offsetAddrs[],
     int64_t dictionaries[])
 {
-    std::vector<int64_t> data;
     int64_t valuesAddress;
     int64_t dictVecAddress;
-
+    int32_t vectorCount = vecBatch.GetVectorCount();
     for (int32_t i = 0; i < vectorCount; i++) {
-        Vector *colVec = vecBatch->GetVector(i);
+        Vector *colVec = vecBatch.GetVector(i);
         if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
             colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
@@ -160,30 +157,31 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
 
         // data handling
         dictionaries[i] = dictVecAddress;
-        data.push_back(valuesAddress);
+        valueAddrs[i] = valuesAddress;
 
-        // bitmap handling
-        bitmap[i] = VectorHelper::GetNullsAddr(colVec);
+        // nulls handling
+        nullAddrs[i] = VectorHelper::GetNullsAddr(colVec);
 
         // offsets handling
-        offsetsAddrs[i] = VectorHelper::GetOffsetsAddr(colVec);
+        offsetAddrs[i] = VectorHelper::GetOffsetsAddr(colVec);
     }
-
-    return data;
 }
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
-    const int rowCount = vecBatch->GetRowCount();
     const int vectorCount = vecBatch->GetVectorCount();
-    int32_t *selectedRows = new int32_t[rowCount];
-    int64_t bitmap[vectorCount];
-    int64_t offsets[vectorCount];
+    int64_t valueAddrs[vectorCount];
+    int64_t nullAddrs[vectorCount];
+    int64_t offsetAddrs[vectorCount];
     int64_t dictionaries[vectorCount];
 
-    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, vectorCount, dictionaries);
+    // when the dictionary vector is processed it will be restored to an original vector
+    // needs to be released
+    GetData(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries);
 
-    int32_t numSelectedRows = this->filter->apply(data.data(), rowCount, selectedRows, bitmap, offsets,
+    const int rowCount = vecBatch->GetRowCount();
+    auto *selectedRows = new int32_t[rowCount];
+    int32_t numSelectedRows = this->filter->apply(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
         reinterpret_cast<int64_t>(context), dictionaries);
     if (context->HasError()) {
         // resource cleanup
@@ -203,11 +201,15 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     projectedVecs = new VectorBatch(this->projectVecCount, numSelectedRows);
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection
-        Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data,
-            bitmap, offsets, context, dictionaries);
+        Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows,
+            valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         if (context->HasError()) {
             // resource cleanup
-            data.clear();
+            for (int32_t j = 0; j < i; j++) {
+                delete projectedVecs->GetVector(j);
+            }
+            delete projectedVecs;
+            projectedVecs = nullptr;
             VectorHelper::FreeVecBatch(vecBatch);
             delete[] selectedRows;
             context->GetArena()->Reset();
@@ -218,7 +220,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         projectedVecs->SetVector(i, col);
     }
 
-    data.clear();
     VectorHelper::FreeVecBatch(vecBatch);
     delete[] selectedRows;
     context->GetArena()->Reset();
