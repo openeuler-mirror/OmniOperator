@@ -34,14 +34,14 @@ VectorBatch::~VectorBatch()
 
 Vector *VectorBatch::NewContainerVec(VectorAllocator *vecAllocator)
 {
-    DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
-    LongVector *longVector = new LongVector(vecAllocator, rowCount);
-    const int vectorbatchLength = 2;
-    std::vector<uintptr_t> vectorAddresses(vectorbatchLength);
+    auto *doubleVector = new DoubleVector(vecAllocator, rowCount);
+    auto *longVector = new LongVector(vecAllocator, rowCount);
+    const int vectorBatchLen = 2;
+    std::vector<uintptr_t> vectorAddresses(vectorBatchLen);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
     std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
-    return new ContainerVector(vecAllocator, rowCount, vectorAddresses, vectorbatchLength, dataTypes);
+    return new ContainerVector(vecAllocator, rowCount, vectorAddresses, vectorBatchLen, dataTypes);
 }
 
 void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<DataType> &types)

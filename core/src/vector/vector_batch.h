@@ -5,7 +5,6 @@
 #ifndef OMNI_RUNTIME_VECTOR_BATCH_H
 #define OMNI_RUNTIME_VECTOR_BATCH_H
 
-
 #include "vector.h"
 
 namespace omniruntime {

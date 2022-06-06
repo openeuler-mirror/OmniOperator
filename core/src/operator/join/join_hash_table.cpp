@@ -90,6 +90,8 @@ void JoinHashTables::JoinFilterCodeGen()
     simpleFilter = new SimpleFilter(*this->filterExpr);
     auto result = simpleFilter->Initialize();
     if (!result) {
+        delete simpleFilter;
+        simpleFilter = nullptr;
         throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "The expression is not supported yet.");
     }
     usedVectors = simpleFilter->GetVectorIndexes();

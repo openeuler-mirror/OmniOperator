@@ -22,7 +22,7 @@ using DataTypeId = omniruntime::type::DataTypeId;
 class Vector;
 class VectorAllocator final : public BaseAllocator {
 public:
-    ~VectorAllocator();
+    ~VectorAllocator() override;
 
     void NewVector(Vector *vector, int capacityInBytes, int size, DataTypeId dataTypeId);
 

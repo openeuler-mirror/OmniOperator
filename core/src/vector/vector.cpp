@@ -51,7 +51,7 @@ void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
         ret = memcpy_s(((bool *)valueNullsAddress) + startIndex, size, nulls, length);
     }
     if (ret != EOK) {
-        std::cerr << "set value nulls failed." << ret << std::endl;
+        LogError("Set value nulls failed, ret:%d.", ret);
     }
 }
 

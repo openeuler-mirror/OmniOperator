@@ -17,7 +17,6 @@ const int INT64_VALUE = 64;
 const int INT128_VALUE = 128;
 }
 
-
 LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
 {
     VectorToLLVMTypeMap = { { OMNI_INT, I32Type() },

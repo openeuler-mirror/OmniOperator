@@ -58,7 +58,7 @@ public:
 
     ~VectorTracer();
 
-    void Record(std::string stack, VecOpType vecOpType);
+    void Record(const std::string &stack, VecOpType vecOpType);
 
     void Print(const char *message);
 

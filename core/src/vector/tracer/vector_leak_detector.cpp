@@ -4,11 +4,12 @@
 
 #include "vector_leak_detector.h"
 #include <map>
+#include <utility>
 #include "vector/vector.h"
 
 namespace omniruntime {
 namespace vec {
-VectorLeakDetector::VectorLeakDetector(const std::string scope) : scope(scope), deletedCount(0), recycling(false)
+VectorLeakDetector::VectorLeakDetector(std::string scope) : scope(std::move(scope)), deletedCount(0), recycling(false)
 {
     buckets = std::make_unique<std::atomic<VectorTracer *>[]>(bucketNum);
 }
