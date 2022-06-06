@@ -86,6 +86,8 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
+    OmniStatus Close() override;
+
 private:
     const DataTypes &sourceTypes;
     int32_t sourceTypeCount;

@@ -149,6 +149,8 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
+    OmniStatus Close() override;
+
 private:
     const std::unique_ptr<Filter> &filter;
     const std::vector<std::unique_ptr<Projection>> &projections;

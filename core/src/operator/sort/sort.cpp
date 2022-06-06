@@ -105,6 +105,8 @@ OmniStatus SortOperator::Close()
     if (spiller) {
         delete spiller;
     }
+    // ensure free pagesIndex if exception occurs
+    pagesIndex->Clear();
     return OMNI_STATUS_NORMAL;
 }
 

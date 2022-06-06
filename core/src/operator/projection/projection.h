@@ -111,6 +111,7 @@ public:
 
     int32_t AddInput(VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<VectorBatch *> &ret) override;
+    OmniStatus Close() override;
 
 private:
     const std::vector<std::unique_ptr<Projection>> &proj;
