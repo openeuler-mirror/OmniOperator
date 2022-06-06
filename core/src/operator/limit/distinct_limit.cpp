@@ -114,7 +114,7 @@ DistinctLimitOperatorFactory::DistinctLimitOperatorFactory(const type::DataTypes
       limit(limitVal)
 {}
 
-DistinctLimitOperatorFactory::~DistinctLimitOperatorFactory() {}
+DistinctLimitOperatorFactory::~DistinctLimitOperatorFactory() = default;
 
 DistinctLimitOperatorFactory *DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
     const type::DataTypes &inSourceTypes, const int32_t *inDistinctCols, int32_t inDistinctColsCount,
@@ -277,7 +277,7 @@ bool IsExistSameRow(type::DataTypes &inputTypes, Vector **inputVectors, std::vec
     return false;
 }
 
-void DistinctLimitOperator::fillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple)
+void DistinctLimitOperator::FillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple)
 {
     const int32_t *vectorTypes = sourceTypes.GetIds();
     Vector *inputVector = nullptr;
@@ -312,7 +312,7 @@ void DistinctLimitOperator::InLoop(VectorBatch *vecBatch, uint64_t *combineHashV
         existed = IsExistSameRow(sourceTypes, inputVectors, distinctCols, distinctColsCount, bucket, rowIndex);
         if (!existed) {
             std::vector<AggregateState> distinctedTuple(outColsCount);
-            fillDistinctedTuple(inputVectors, rowIndex, distinctedTuple);
+            FillDistinctedTuple(inputVectors, rowIndex, distinctedTuple);
             bucket.push_back(distinctedTuple);
 
             auto rowInfo = new DistinctRowInfo();
@@ -383,7 +383,7 @@ int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages
         }
 
         outputPages.push_back(resultBatch);
-        releaseRowInfo(distinctRowInfo);
+        ReleaseRowInfo(distinctRowInfo);
     }
 
     if (remainingLimit <= 0) {
@@ -393,7 +393,7 @@ int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages
     return 0;
 }
 
-void DistinctLimitOperator::releaseRowInfo(std::vector<DistinctRowInfo *> &rowInfo)
+void DistinctLimitOperator::ReleaseRowInfo(std::vector<DistinctRowInfo *> &rowInfo)
 {
     for (auto item : rowInfo) {
         delete item;
@@ -406,7 +406,7 @@ OmniStatus DistinctLimitOperator::Close()
     // releaseMemory: memory managed/free by ExecutionContext
     distinctedTable.clear();
 
-    releaseRowInfo(distinctRowInfo);
+    ReleaseRowInfo(distinctRowInfo);
 
     return OMNI_STATUS_NORMAL;
 }

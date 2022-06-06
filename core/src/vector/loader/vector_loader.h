@@ -5,15 +5,15 @@
 #ifndef OMNI_RUNTIME_VECTOR_LOADER_H
 #define OMNI_RUNTIME_VECTOR_LOADER_H
 
-#include "../vector.h"
+#include "vector/vector.h"
 
 namespace omniruntime {
 namespace vec {
 class VectorLoader {
 public:
-    VectorLoader() {}
+    VectorLoader() = default;
 
-    virtual ~VectorLoader() {}
+    virtual ~VectorLoader() = default;
 
     virtual Vector *Load() = 0;
 };

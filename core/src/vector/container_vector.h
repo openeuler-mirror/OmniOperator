@@ -89,14 +89,6 @@ private:
         }
         return fieldVecOffsets;
     }
-
-    ContainerVector(ContainerVector *vector, int32_t vectorCount, int32_t positionOffset, DataType types[])
-        : Vector(vector, vectorCount, positionOffset)
-    {
-        for (int32_t i = 0; i < vectorCount; ++i) {
-            this->dataTypes.push_back(types[i]);
-        }
-    }
 };
 } // namespace vec
 } // namepsace omniruntime

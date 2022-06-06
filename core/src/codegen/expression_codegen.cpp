@@ -679,14 +679,22 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
             auto leftType = binaryExpr->left->GetReturnType();
             auto rightType = binaryExpr->right->GetReturnType();
             auto binaryReturnType = binaryExpr->GetReturnType();
-            std::vector<Value *> divArgs { leftPhi, llvmTypes->CreateConstantInt(leftType.GetPrecision()),
+            std::vector<Value *> divArgs { leftPhi,
+                llvmTypes->CreateConstantInt(leftType.GetPrecision()),
                 llvmTypes->CreateConstantInt(leftType.GetScale()),
-                rightPhi, llvmTypes->CreateConstantInt(rightType.GetPrecision()),
+                rightPhi,
+                llvmTypes->CreateConstantInt(rightType.GetPrecision()),
                 llvmTypes->CreateConstantInt(rightType.GetScale()),
                 llvmTypes->CreateConstantInt(binaryReturnType.GetPrecision()),
-                llvmTypes->CreateConstantInt(binaryReturnType.GetScale())};
-            std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(), OMNI_INT, OMNI_INT,
-                binaryExpr->right->GetReturnTypeId(), OMNI_INT, OMNI_INT, OMNI_INT, OMNI_INT };
+                llvmTypes->CreateConstantInt(binaryReturnType.GetScale()) };
+            std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(),
+                OMNI_INT,
+                OMNI_INT,
+                binaryExpr->right->GetReturnTypeId(),
+                OMNI_INT,
+                OMNI_INT,
+                OMNI_INT,
+                OMNI_INT };
             std::string funcId = FunctionSignature(divDec128Str, params, OMNI_DECIMAL128).ToString();
             output =
                 decimalIRBuilder->CallDecimalFunction(funcId, returnType, divArgs, codegenContext->executionContext);

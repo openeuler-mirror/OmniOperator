@@ -16,7 +16,7 @@ namespace vec {
 class Vector;
 class VectorLeakDetector {
 public:
-    explicit VectorLeakDetector(const std::string scope = "");
+    explicit VectorLeakDetector(std::string scope = "");
 
     ~VectorLeakDetector();
 
@@ -31,7 +31,6 @@ public:
     void SetScope(const std::string &newScope);
 
 private:
-
     std::string scope;
     const static int32_t bucketNum = 1024;
     const static int32_t recycleThreshold = 1024;
@@ -41,8 +40,6 @@ private:
     mutable std::shared_timed_mutex mutex;
 
     int32_t HashBucket(const Vector *vec);
-
-    VectorTracer *InsertTracer(const Vector *vec);
 
     void RecycleDeletedTracer();
 };

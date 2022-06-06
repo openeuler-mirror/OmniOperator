@@ -24,9 +24,9 @@ public:
 
     FixedWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {}
 
-    ~FixedWidthVector() override {}
+    ~FixedWidthVector() override = default;
 
-    const T ALWAYS_INLINE GetValue(int index) const
+    T ALWAYS_INLINE GetValue(int index) const
     {
         return reinterpret_cast<T *>(valuesAddress)[index + positionOffset];
     }
@@ -61,7 +61,7 @@ public:
 
     FixedWidthVectorImpl *CopyPositions(const int *positions, int offset, int length) override
     {
-        FixedWidthVectorImpl *vector = new FixedWidthVectorImpl(GetAllocator(), length);
+        auto *vector = new FixedWidthVectorImpl(GetAllocator(), length);
         for (int i = 0; i < length; ++i) {
             int position = positions[offset + i];
             vector->SetValue(i, GetValue(position));
@@ -76,7 +76,7 @@ public:
             LogError("copy region out of range(needed size:%d, real size:%d).", startIndex + length, size);
             return nullptr;
         }
-        FixedWidthVectorImpl *vector = new FixedWidthVectorImpl(GetAllocator(), length);
+        auto *vector = new FixedWidthVectorImpl(GetAllocator(), length);
         vector->SetValues(0, static_cast<T *>(valuesAddress) + startIndex + this->positionOffset, length);
         vector->SetValueNulls(0, static_cast<bool *>(valueNullsAddress) + startIndex + this->positionOffset, length);
         return vector;
@@ -96,9 +96,9 @@ public:
             SetValues(startIndex, otherValues, length);
             SetValueNulls(startIndex, otherValueNulls, length);
         } else {
-            DictionaryVector *src = static_cast<DictionaryVector *>(other);
+            auto *src = static_cast<DictionaryVector *>(other);
             int32_t originalIds[length];
-            FixedWidthVectorImpl *dictionary =
+            auto *dictionary =
                 static_cast<FixedWidthVectorImpl *>(src->ExtractDictionaryAndIds(0, length, originalIds));
             for (int32_t i = 0; i < length; i++) {
                 if (dictionary->IsValueNull(originalIds[i])) {

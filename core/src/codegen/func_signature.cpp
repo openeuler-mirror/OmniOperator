@@ -2,28 +2,25 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description:
  */
+#include <utility>
 #include "util/type_util.h"
-#include "./func_signature.h"
+#include "func_signature.h"
 
 using namespace omniruntime::type;
 
-FunctionSignature::FunctionSignature() {}
+FunctionSignature::FunctionSignature() = default;
 
-FunctionSignature::FunctionSignature(const std::string name, std::vector<DataTypeId> params,
+FunctionSignature::FunctionSignature(const std::string &name, std::vector<DataTypeId> params,
     const omniruntime::type::DataTypeId &returnType, void *address)
-{
-    this->funcName = name;
-    this->paramTypes = params;
-    this->retType = returnType;
-    this->funcAddress = address;
-}
+    : funcName(name), paramTypes(std::move(params)), retType(returnType), funcAddress(address)
+{}
 
 // Copy constructor
 FunctionSignature::FunctionSignature(const FunctionSignature &fs)
     : funcName(fs.funcName), paramTypes(fs.paramTypes), retType(fs.retType), funcAddress(fs.funcAddress)
 {}
 
-FunctionSignature::~FunctionSignature() {}
+FunctionSignature::~FunctionSignature() = default;
 
 std::string FunctionSignature::GetName() const
 {

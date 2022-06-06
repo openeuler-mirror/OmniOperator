@@ -24,13 +24,6 @@ public:
 
     Vector *Load() override;
 
-    // Each thread has its own JNIEnv, construct thread may not the same as addInput,
-    // so here need SetJNIEnv interface.
-    void SetJNIEnv(JNIEnv *jniEnv)
-    {
-        this->jniEnv = jniEnv;
-    }
-
 private:
     JNIEnv *jniEnv;
     jobject jLoader;

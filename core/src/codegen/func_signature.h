@@ -13,7 +13,7 @@
 class FunctionSignature {
 public:
     FunctionSignature();
-    FunctionSignature(const std::string name, std::vector<omniruntime::type::DataTypeId> params,
+    FunctionSignature(const std::string &name, std::vector<omniruntime::type::DataTypeId> params,
         const omniruntime::type::DataTypeId &returnType, void *address = nullptr);
     FunctionSignature(const FunctionSignature &fs);
     FunctionSignature &operator = (FunctionSignature other);

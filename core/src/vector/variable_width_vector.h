@@ -23,8 +23,7 @@ public:
         : Vector(pAllocator, capacityInBytes, size, TYPE_ID)
     {}
 
-    VariableWidthVector(VectorAllocator *pAllocator, int size)
-        : Vector(pAllocator, initCapacityInBytes, size, TYPE_ID)
+    VariableWidthVector(VectorAllocator *pAllocator, int size) : Vector(pAllocator, initCapacityInBytes, size, TYPE_ID)
     {}
 
     int ALWAYS_INLINE GetValue(int index, T **dst)
@@ -147,7 +146,7 @@ public:
         T *value = nullptr;
         int32_t valueLen = 0;
         if (other->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
-            VariableWidthVectorImpl *src = static_cast<VariableWidthVectorImpl *>(other);
+            auto *src = static_cast<VariableWidthVectorImpl *>(other);
             for (int32_t i = 0; i < length; i++) {
                 if (other->IsValueNull(i)) {
                     SetValueNull(startIndex + i);
@@ -157,9 +156,9 @@ public:
                 }
             }
         } else {
-            DictionaryVector *src = static_cast<DictionaryVector *>(other);
+            auto *src = static_cast<DictionaryVector *>(other);
             int32_t originalIds[length];
-            VariableWidthVectorImpl *dictionary =
+            auto *dictionary =
                 static_cast<VariableWidthVectorImpl *>(src->ExtractDictionaryAndIds(0, length, originalIds));
             for (int32_t i = 0; i < length; i++) {
                 if (dictionary->IsValueNull(originalIds[i])) {
@@ -177,7 +176,7 @@ public:
         allocator->ResizeVectorData(this, toCapacityInBytes);
         valuesAddress = reference->GetValuesAddress();
         capacityInBytes = toCapacityInBytes;
-        int64_t newAddress = static_cast<int64_t>(reinterpret_cast<uintptr_t>(valuesAddress));
+        auto newAddress = static_cast<int64_t>(reinterpret_cast<uintptr_t>(valuesAddress));
         return newAddress;
     }
 

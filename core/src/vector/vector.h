@@ -112,18 +112,6 @@ public:
         (static_cast<int32_t *>(valueOffsetsAddress))[index] = valueOffset;
     }
 
-    template <class T> T ALWAYS_INLINE *As()
-    {
-        static_assert(std::is_base_of<Vector, T>::value, "Unsupported type cast.");
-        return static_cast<T *>(this);
-    }
-
-    template <class T> const T ALWAYS_INLINE *As()
-    {
-        static_assert(std::is_base_of<Vector, T>::value, "Unsupported type cast.");
-        return static_cast<const T *>(this);
-    }
-
     virtual Vector *Slice(int positionOffset, int length) = 0;
 
     virtual Vector *CopyPositions(const int *positions, int offset, int length) = 0;
@@ -152,9 +140,6 @@ public:
 protected:
     // this method is mainly used for vector slice
     Vector(Vector *vector, int size, int positionOffset);
-
-    // this method does not apply for memory for chunk,it is mainly used for dictionary vector or other vector
-    Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataType type, int32_t positionOffset);
 
     void SetValueNulls(int startIndex, bool *nulls, int length);
 

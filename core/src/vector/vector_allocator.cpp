@@ -17,7 +17,7 @@ VectorAllocator::VectorAllocator(BaseAllocator *parent, const std::string &scope
 #endif
 }
 
-VectorAllocator::~VectorAllocator() {}
+VectorAllocator::~VectorAllocator() = default;
 
 void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, DataTypeId dataTypeId)
 {

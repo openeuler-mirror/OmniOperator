@@ -9,11 +9,13 @@
 
 namespace omniruntime {
 namespace vec {
-VectorTracer::VectorTracer(const std::string &scope, const Vector *vec) : scope(scope), vec(vec), closed(false) {}
+VectorTracer::VectorTracer(const std::string &scope, const Vector *vec)
+    : next(nullptr), scope(scope), vec(vec), closed(false)
+{}
 
-VectorTracer::~VectorTracer() {}
+VectorTracer::~VectorTracer() = default;
 
-void VectorTracer::Record(std::string stack, VecOpType vecOpType)
+void VectorTracer::Record(const std::string &stack, VecOpType vecOpType)
 {
     if (closed) {
         std::string opStack = stack + "(" + VecOpTypeName::GetName(vecOpType) + ")";

@@ -38,7 +38,7 @@ VectorReference::VectorReference(VectorAllocator *allocator, int capacityInBytes
         Chunk::NewChunk(reinterpret_cast<mem::BaseAllocator *>(allocator), nullsAndOffsetsCapacityInBytes);
     char *baseAddress = static_cast<char *>(nullAndOffsetChunk->GetAddress());
     if (memset_s(baseAddress, nullsAndOffsetsCapacityInBytes, 0, nullsAndOffsetsCapacityInBytes) != EOK) {
-        std::cerr << "init nulls and offsets failed." << std::endl;
+        LogError("Init nulls and offsets failed.");
         delete nullAndOffsetChunk;
         return;
     }

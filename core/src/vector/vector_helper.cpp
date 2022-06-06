@@ -73,9 +73,9 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         case OMNI_CONTAINER: {
-            ContainerVector *containerVector = static_cast<ContainerVector *>(vector);
-            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
-            LongVector *longVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
+            auto *containerVector = static_cast<ContainerVector *>(vector);
+            auto *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
+            auto *longVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
             std::cout << "temp average: " << doubleVector->GetValue(originalRowIndex) << " temp count: " <<
                 longVector->GetValue(originalRowIndex) << "\t";
             break;
@@ -111,35 +111,35 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
         rowCount += pV->GetRowCount();
     }
 
-    VectorBatch *result = new VectorBatch(vectorCount, rowCount);
+    auto *result = new VectorBatch(vectorCount, rowCount);
 
     for (int32_t i = 0; i < vectorCount; ++i) {
         switch (types[i]) {
             case OMNI_INT:
             case OMNI_DATE32: {
-                IntVector *vector = new IntVector(allocator, rowCount);
+                auto *vector = new IntVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                LongVector *vector = new LongVector(allocator, rowCount);
+                auto *vector = new LongVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
             case OMNI_DOUBLE: {
-                DoubleVector *vector = new DoubleVector(allocator, rowCount);
+                auto *vector = new DoubleVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
             case OMNI_BOOLEAN: {
-                BooleanVector *vector = new BooleanVector(allocator, rowCount);
+                auto *vector = new BooleanVector(allocator, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                VarcharVector *vector = new VarcharVector(allocator, 50 * rowCount, rowCount);
+                auto *vector = new VarcharVector(allocator, 50 * rowCount, rowCount);
                 result->SetVector(i, vector);
                 break;
             }
