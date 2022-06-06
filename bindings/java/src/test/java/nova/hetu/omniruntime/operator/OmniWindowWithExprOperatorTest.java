@@ -5,8 +5,10 @@
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_CURRENT_ROW;
+import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING;
 import static nova.hetu.omniruntime.constants.OmniWindowFrameBoundType.OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING;
 import static nova.hetu.omniruntime.constants.OmniWindowFrameType.OMNI_FRAME_TYPE_RANGE;
+import static nova.hetu.omniruntime.constants.OmniWindowFrameType.OMNI_FRAME_TYPE_ROWS;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
@@ -143,6 +145,47 @@ public class OmniWindowWithExprOperatorTest {
         assertTrue(factory1.equals(factory2));
         assertTrue(factory1.equals(factory1));
         assertFalse(factory1.equals(factory3));
+    }
+
+    @Test
+    public void testWindowFunctionMix() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
+        int[] outputChannels = {0, 1, 2};
+        FunctionType[] windowFunction = {FunctionType.OMNI_WINDOW_TYPE_RANK, FunctionType.OMNI_AGGREGATION_TYPE_AVG};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_ROWS, OMNI_FRAME_TYPE_ROWS};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1, -1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING,
+                OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING};
+        int[] winddowFrameEndChannels = {-1, -1};
+        int[] partitionChannels = {0};
+        int[] preGroupedChannels = {};
+        int[] sortChannels = {2};
+        int[] sortOrder = {1};
+        int[] sortNullFirsts = {0};
+        int preSortedChannelPrefix = 0;
+        String[] argumentKeys = {omniFunctionExpr("abs", 2, getOmniJsonFieldReference(2, 1))};
+        DataType[] windowFunctionReturnType = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
+        OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType, windowFrameTypes,
+                windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
+        OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
+
+        VecBatch vecBatch = buildData();
+
+        omniOperator.addInput(vecBatch);
+        Iterator<VecBatch> output = omniOperator.getOutput();
+        VecBatch outputVecBatch = output.next();
+
+        Object[][] expectedDatas = {{0, 0, 1, 1, 2, 2}, {8L, 8L, 4L, 1L, 5L, 2L}, {3.3D, 6.6D, 2.2D, 5.5D, 1.1D, 4.4D},
+                {8L, 8L, 4L, 1L, 5L, 2L}, {1, 2, 1, 2, 1, 2}, {8.0D, 8.0D, 2.5D, 2.5D, 3.5D, 3.5D}};
+        assertVecBatchEquals(outputVecBatch, expectedDatas);
+        freeVecBatch(outputVecBatch);
+
+        omniOperator.close();
+        omniWindowOperatorFactory.close();
     }
 
     private VecBatch buildData() {
