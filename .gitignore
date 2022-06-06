@@ -53,3 +53,11 @@ test_detail.xml
 *.tar.gz
 *.zip
 boostkit-omniop-operator-*
+
+installtree
+registration
+dist
+dtframe_
+log
+test_report.json
+coverage_lcov*

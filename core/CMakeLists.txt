@@ -30,7 +30,7 @@ else()
     set(DEBUG_COMPILE_LEVEL "-O0")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fstack-check -ftest-coverage -fprofile-arcs")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs -fsanitize=address -fsanitize-recover=address,all -static-libasan")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
@@ -93,8 +93,11 @@ message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")
 option(DISABLE_JIT "Disable OmniJit to optimize operator" OFF)
 message(STATUS "Option DISABLE_JIT: ${DISABLE_JIT}")
 
-option(COVERAGE "Disable OmniJit to optimize operator" OFF)
-message(STATUS "Option COVERAGE: ${COVERAGE}")
+option(COVERAGE "Enable coverage to optimize operator" OFF)
+message(STATUS "Option Enable COVERAGE: ${COVERAGE}")
 
 option(COVERAGE "Disable CPU checker to optimize operator" OFF)
-message(STATUS "Option COVERAGE: ${DISABLE_CHECKER}")
+message(STATUS "Option Disable CPU checker: ${DISABLE_CPU_CHECKER}")
+
+option(COVERAGE "Enable DT" OFF)
+message(STATUS "Option Enable DT: ${ENABLE_DT}")

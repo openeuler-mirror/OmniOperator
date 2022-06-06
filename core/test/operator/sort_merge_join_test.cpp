@@ -1073,6 +1073,9 @@ TEST(NativeSortMergeJoinTest, TestReturnCode)
 
     auto eofBufferedVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *> { eofBufferedVecBatch });
+    // add will skip since the process is finished
+    VectorHelper::FreeVecBatch(eofBufferedVecBatch);
+
     ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 1);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 2);
@@ -1250,6 +1253,9 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner7)
     // add buffer eof
     auto eofBufferedVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *> { eofBufferedVecBatch });
+    // add will skip since the process is finished
+    VectorHelper::FreeVecBatch(eofBufferedVecBatch);
+
     ret = scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr);
 
@@ -1307,6 +1313,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     Vector *dataVector1 = CreateVector<DoubleVector, double>(leftData1_2, dataSize);
     int32_t ids1[dataSize] = {0, 1, 2, 3, 4, 5};
     auto dicVector1 = new DictionaryVector(dataVector1, ids1, dataSize);
+    delete dataVector1;
+
     auto *leftVecBatch1 = new VectorBatch(2, dataSize);
     leftVecBatch1->SetVector(0, leftVector1);
     leftVecBatch1->SetVector(1, dicVector1);
@@ -1317,6 +1325,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     Vector *dataVector2 = CreateVector<DoubleVector, double>(leftData22, dataSize);
     int32_t ids2[dataSize] = {0, 1, 2, 3, 4, 5};
     auto dicVector2 = new DictionaryVector(dataVector2, ids2, dataSize);
+    delete dataVector2;
+
     auto *leftVecBatch2 = new VectorBatch(2, dataSize);
     leftVecBatch2->SetVector(0, leftVector2);
     leftVecBatch2->SetVector(1, dicVector2);
