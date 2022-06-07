@@ -353,9 +353,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
  * Method:    exprVerify
  * Signature: (Ljava/lang/String;ILjava/lang/String;[Ljava/lang/Object;II)J
  */
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprVerify(JNIEnv *, jclass, jstring, jint, jstring, jobjectArray,
-    jint, jint);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprVerify(JNIEnv *, jclass, jstring, jint,
+    jstring, jobjectArray, jint, jint);
 
 #ifdef __cplusplus
 }

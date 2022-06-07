@@ -133,8 +133,8 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
 
 TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()
-            ->NewChildAllocator("IsSameNodeFuncVarcharImplPerf");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IsSameNodeFuncVarcharImplPerf");
     VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
     VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
 

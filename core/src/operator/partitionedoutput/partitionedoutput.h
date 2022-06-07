@@ -76,9 +76,10 @@ private:
 class PartitionedOutputOperator : public Operator {
 public:
     PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
-        int nullChannel, std::vector<int32_t> &partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
-        std::vector<int32_t> &bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, std::vector<int32_t> &hashChannelTypes,
-        int32_t hashChannelTypesCount, std::vector<int32_t> &hashChannels, int32_t hashChannelsCount);
+        int nullChannel, std::vector<int32_t> &partitionChannels, int32_t partitionChannelsCount,
+        int32_t partitionCount, std::vector<int32_t> &bucketToPartition, int32_t bucketToPartitionCount,
+        bool isHashPrecomputed, std::vector<int32_t> &hashChannelTypes, int32_t hashChannelTypesCount,
+        std::vector<int32_t> &hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperator() override;
 

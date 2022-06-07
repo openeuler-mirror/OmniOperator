@@ -16,8 +16,7 @@ CallInst *CodeGenUtils::CreateCall(llvm::Function *func, std::vector<llvm::Value
 }
 
 Value *CodeGenUtils::CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
-                                        const omniruntime::type::DataTypeId &returnType,
-                                        std::vector<llvm::Value *> args, std::string msg)
+    const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args, std::string msg)
 {
     std::string funcId = FunctionSignature(fn_name, params, returnType).ToString();
     auto f = module.getFunction(funcId);

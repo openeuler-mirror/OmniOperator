@@ -87,12 +87,12 @@ void TestGroupbyPrimitiveArg(int func, int mod)
     std::map<std::string, omni::Specialization> hashGroupbySp;
 
     omni::Specialization *specialization = new omni::Specialization();
-    specialization->AddSpecializedParam(3, pColType);      // 3
-    specialization->AddSpecializedParam(4, pColCount);     // 4
+    specialization->AddSpecializedParam(3, pColType);       // 3
+    specialization->AddSpecializedParam(4, pColCount);      // 4
     specialization->AddSpecializedParam(5, pGroupByColNum); // 5
-    specialization->AddSpecializedParam(6, pGroupNum);     // 6
+    specialization->AddSpecializedParam(6, pGroupNum);      // 6
     specialization->AddSpecializedParam(7, pAggColIdx);     // 7
-    specialization->AddSpecializedParam(8, pAggNum);       // 8
+    specialization->AddSpecializedParam(8, pAggNum);        // 8
     hashGroupbySp.insert(std::make_pair(OMNIJIT_HASH_GROUPBY_INLOOP, *specialization));
 
     omni::JitContext *hashGroupbyContext =

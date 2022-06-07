@@ -77,15 +77,15 @@ bool AssertDivideAllSign(Decimal128 &dividend, Decimal128 &divisor, int32_t divi
     EXPECT_EQ(allSignResult1, true);
 
     bool allSignResult2 = AssertDivide(dividend, negateDivisor, dividendScaleFactor, divisorScaleFactor,
-                                       negateExQuotient, expectRemainder);
+        negateExQuotient, expectRemainder);
     EXPECT_EQ(allSignResult2, true);
 
     bool allSignResult3 = AssertDivide(negateDividend, divisor, dividendScaleFactor, divisorScaleFactor,
-                                       negateExQuotient, expectRemainder);
+        negateExQuotient, expectRemainder);
     EXPECT_EQ(allSignResult3, true);
 
     bool allSignResult4 = AssertDivide(negateDividend, negateDivisor, dividendScaleFactor, divisorScaleFactor,
-                                       expectQuotient, expectRemainder);
+        expectQuotient, expectRemainder);
     EXPECT_EQ(allSignResult4, true);
 
     return allSignResult1 && allSignResult2 && allSignResult3 && allSignResult4;
@@ -201,7 +201,7 @@ TEST(Decimal128, multiple_negate)
 
 TEST(Decimal128, multiple_mix)
 {
-    Decimal128 left = Decimal128(1L<<63, 234527000012345L);
+    Decimal128 left = Decimal128(1L << 63, 234527000012345L);
     Decimal128 right = Decimal128(0L, 1000000);
     Decimal128 result;
     DecimalOperations::Multiply(left, right, result);
@@ -683,7 +683,7 @@ TEST(Decimal128, div_roundup_3)
     bool result30 = AssertDivideAllSign(lValue30, rValue30, 0, 0, expectQuotient30, expectRemainder30);
     EXPECT_EQ(result30, true);
 
-     // test throw,omniruntme dont support decimal256,but olk is support this case
+    // test throw,omniruntme dont support decimal256,but olk is support this case
     // 99999999999999999999999999999999999999/99999999999999999999999999999999999999
     Decimal128 lValue31(0x4b3b4ca85a86c47a, 0x098a223fffffffff);
     Decimal128 rValue31(0x4b3b4ca85a86c47a, 0x098a223fffffffff);
