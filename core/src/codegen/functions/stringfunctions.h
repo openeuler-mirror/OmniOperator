@@ -29,7 +29,7 @@ extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, i
     const char *bp, int32_t bpLen, int32_t *outLen);
 extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bWidth, int32_t bpLen, int32_t *outLen);
-extern DLLEXPORT const char *CastString(int64_t contextPtr, const char *str, int32_t strLen);
+extern DLLEXPORT int32_t CastString(int64_t contextPtr, const char *str, int32_t strLen);
 
 template <typename T>
 extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, T startIdx, T length,
