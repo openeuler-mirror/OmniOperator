@@ -13,6 +13,7 @@ if [ "$1" = 'release' ]; then
   cp -r ../huawei_secure_c ${open_source_dir}
   cp -r ../jemalloc ${open_source_dir}
   cp -r ../json ${open_source_dir}
+  cp -r ../llvm-project ${open_source_dir}
 
   cd ${open_source_dir}
 
