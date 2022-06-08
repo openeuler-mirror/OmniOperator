@@ -43,8 +43,6 @@ static const uint32_t REVERSE_AND_B = 0xff0000;
 static const uint32_t REVERSE_AND_C = 0xff00;
 static const uint32_t REVERSE_AND_D = 0xff000000;
 
-const int COMBINE_HASH_VALUE = 31;
-
 static const uint32_t MM3_HALFWORD_INIT = 0;
 
 uint32_t RotateLeft(uint32_t i, uint32_t distance)
@@ -214,17 +212,6 @@ extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool is
         seed = 0;
     }
     return static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed));
-}
-
-extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull)
-{
-    if (isPrevHashValNull) {
-        prevHashVal = 0;
-    }
-    if (isValNull) {
-        val = 0;
-    }
-    return COMBINE_HASH_VALUE * prevHashVal + val;
 }
 }
 }

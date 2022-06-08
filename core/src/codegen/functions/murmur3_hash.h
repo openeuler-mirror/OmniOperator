@@ -28,8 +28,6 @@ extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed,
 extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, bool isValNull, int32_t seed, bool isSeedNull);
 
 extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, bool isValNull, int32_t seed, bool isSeedNull);
-
-extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull);
 }
 }
 // OMNI_RUNTIME_MURMUR3_HASH_H

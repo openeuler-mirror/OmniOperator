@@ -17,13 +17,17 @@ SimpleFilter::SimpleFilter(const Expr &expression)
     : codegen(nullptr),
       expression(&expression),
       func(nullptr),
-      isResultNull(nullptr),
-      resultLength(nullptr),
       initialized(false)
-{}
+{
+    resultLength = new int(0);
+    isResultNull = new bool(false);
+}
 
 SimpleFilter::~SimpleFilter()
 {
+    delete this->expression;
+    delete this->isResultNull;
+    delete this->resultLength;
     this->codegen.reset();
 }
 
@@ -68,7 +72,8 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
 
 bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
 {
-    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
+    auto result =  this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
+    return *this->isResultNull? false : result;
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,

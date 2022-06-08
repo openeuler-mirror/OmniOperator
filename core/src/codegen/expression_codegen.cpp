@@ -388,73 +388,100 @@ CodeGenValuePtr CreateInvalidCodeGenValue()
 }
 
 // Helper methods to parse binary expressions
-void ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
     Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
+    std::vector<omniruntime::type::DataTypeId> intParams = {OMNI_INT, OMNI_INT};
     Value *output = nullptr;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(left, right, "relational_lt"));
-            break;
+            return llvmEngine->CallExternFunction("lessThan", intParams, OMNI_BOOLEAN,
+                                                    {left, right}, "relational_lt");
         case omniruntime::expressions::Operator::GT:
-            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(left, right, "relational_gt"));
-            break;
+            return llvmEngine->CallExternFunction("greaterThan", intParams, OMNI_BOOLEAN,
+                                                    {left, right}, "relational_gt");
         case omniruntime::expressions::Operator::LTE:
-            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(left, right, "relational_le"));
-            break;
+            return llvmEngine->CallExternFunction("lessThanEqual", intParams, OMNI_BOOLEAN,
+                                                    {left, right}, "relational_le");
         case omniruntime::expressions::Operator::GTE:
-            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(left, right, "relational_ge"));
-            break;
+            return llvmEngine->CallExternFunction("greaterThanEqual", intParams, OMNI_BOOLEAN,
+                                                    {left, right}, "relational_ge");
         case omniruntime::expressions::Operator::EQ:
-            output = builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(left, right, "relational_eq"));
-            break;
+            return llvmEngine->CallExternFunction("equal", intParams, OMNI_BOOLEAN,
+                                                    {left, right}, "relational_eq");
         case omniruntime::expressions::Operator::NEQ:
-            output = builder->CreateAnd(isNeitherNull,
-                builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq"));
-            break;
+            return llvmEngine->CallExternFunction("notEqual", intParams, OMNI_BOOLEAN,
+                                                    {left, right}, "relational_neq");
         case omniruntime::expressions::Operator::ADD:
-            output = builder->CreateAdd(leftPhi, rightPhi, "arithmetic_add");
-            break;
+            return llvmEngine->CallExternFunction("add", intParams, OMNI_INT,
+                                                    {leftPhi, rightPhi}, "arithmetic_add");
         case omniruntime::expressions::Operator::SUB:
-            output = builder->CreateSub(leftPhi, rightPhi, "arithmetic_sub");
-            break;
+            return llvmEngine->CallExternFunction("subtract", intParams, OMNI_INT,
+                                                    {leftPhi, rightPhi}, "arithmetic_sub");
         case omniruntime::expressions::Operator::MUL:
-            output = builder->CreateMul(leftPhi, right, "arithmetic_mul");
-            break;
-        case omniruntime::expressions::Operator::DIV: {
-            auto divisor = HandleDivisionByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
-            output = builder->CreateSDiv(leftPhi, divisor, "arithmetic_div");
-            break;
+            return llvmEngine->CallExternFunction("multiply", intParams, OMNI_INT,
+                                                    {leftPhi, rightPhi}, "arithmetic_mul");
+        case omniruntime::expressions::Operator::DIV:
+            return llvmEngine->CallExternFunction("division", intParams, OMNI_INT,
+                                                    {leftPhi, rightPhi}, "arithmetic_div");
+        case omniruntime::expressions::Operator::MOD:
+            return llvmEngine->CallExternFunction("modulus", intParams, OMNI_INT,
+                                                    {leftPhi, rightPhi}, "arithmetic_mod");
+        default: {
+            LogError("Unsupported int binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            return nullptr;
         }
-        case omniruntime::expressions::Operator::MOD: {
-            auto divisor = HandleDivisionByZero(rightPhi, binaryExpr->right->GetReturnTypeId());
-            output = builder->CreateSRem(leftPhi, divisor, "arithmetic_mod");
-            break;
-        }
-        default:
-            LogError("Unsupported int/long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
-            this->value = CreateInvalidCodeGenValue();
     }
+}
 
-    // Only add, minus, multiply promote decimal64 to decimal128, div doesn't.
-    if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL128) {
-        std::vector<DataTypeId> params { OMNI_DECIMAL64 };
-        Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
-        std::string funcId = FunctionSignature("CAST", params, OMNI_DECIMAL128).ToString();
-        auto ret = decimalIRBuilder->CallDecimalFunction(funcId, returnType, { output });
-        this->value = decimalIRBuilder->BuildDecimalValue(ret, binaryExpr->GetReturnType(),
-            builder->CreateOr(leftIsNull, rightIsNull));
-    } else if (binaryExpr->op == omniruntime::expressions::Operator::MUL &&
-        binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
-        Decimal64MultiplyHelper(binaryExpr, output, leftIsNull, rightIsNull);
-    } else if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
-        this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
-            builder->CreateOr(leftIsNull, rightIsNull));
-    } else {
-        this->value = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
+Value *ExpressionCodeGen::BinaryExprLongHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+    Value *leftIsNull, Value *rightIsNull)
+{
+    PHINode *leftPhi, *rightPhi;
+    Value *isNeitherNull;
+    std::vector<omniruntime::type::DataTypeId> longParams = {OMNI_LONG, OMNI_LONG};
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
+    switch (binaryExpr->op) {
+        case omniruntime::expressions::Operator::LT:
+            return llvmEngine->CallExternFunction("lessThan", longParams, OMNI_BOOLEAN,
+                                                    {left, right}, "lrelational_lt");
+        case omniruntime::expressions::Operator::LTE:
+            return llvmEngine->CallExternFunction("lessThanEqual", longParams, OMNI_BOOLEAN,
+                                                    {left, right}, "lrelational_le");
+        case omniruntime::expressions::Operator::GT:
+            return llvmEngine->CallExternFunction("greaterThan", longParams, OMNI_BOOLEAN,
+                                                    {left, right}, "lrelational_gt");
+        case omniruntime::expressions::Operator::GTE:
+            return llvmEngine->CallExternFunction("greaterThanEqual", longParams, OMNI_BOOLEAN,
+                                                    {left, right}, "lrelational_ge");
+        case omniruntime::expressions::Operator::EQ:
+            return llvmEngine->CallExternFunction("equal", longParams, OMNI_BOOLEAN,
+                                                    {left, right}, "larithmetic_eq");
+        case omniruntime::expressions::Operator::NEQ:
+            return llvmEngine->CallExternFunction("notEqual", longParams, OMNI_BOOLEAN,
+                                                    {left, right}, "larithmetic_neq");
+        case omniruntime::expressions::Operator::ADD:
+            return llvmEngine->CallExternFunction("add", longParams, OMNI_LONG,
+                                                    {leftPhi, rightPhi}, "larithmetic_add");
+        case omniruntime::expressions::Operator::SUB:
+            return llvmEngine->CallExternFunction("subtract", longParams, OMNI_LONG,
+                                                    {leftPhi, rightPhi}, "larithmetic_sub");
+        case omniruntime::expressions::Operator::MUL:
+            return llvmEngine->CallExternFunction("multiply", longParams, OMNI_LONG,
+                                                    {leftPhi, rightPhi}, "larithmetic_mul");
+        case omniruntime::expressions::Operator::DIV:
+            return llvmEngine->CallExternFunction("divide", longParams, OMNI_LONG,
+                                                    {leftPhi, rightPhi}, "larithmetic_divide");
+        case omniruntime::expressions::Operator::MOD:
+            return llvmEngine->CallExternFunction("modulus", longParams, OMNI_LONG,
+                                                    {leftPhi, rightPhi}, "larithmetic_mod");
+        default: {
+            LogWarn("Unsupported long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            return nullptr;
+        }
     }
 }
 
@@ -474,7 +501,21 @@ void ExpressionCodeGen::Decimal64Helper(const BinaryExpr *binaryExpr, Value *lef
         this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
             builder->CreateOr(leftIsNull, rightIsNull));
     } else {
-        this->BinaryExprIntHelper(binaryExpr, left, right, leftIsNull, rightIsNull);
+        Value *output = this->BinaryExprLongHelper(binaryExpr, left, right, leftIsNull, rightIsNull);
+        if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL128) {
+            std::vector<DataTypeId> params { OMNI_DECIMAL64 };
+            Type *returnType = llvmTypes->ToLLVMType(binaryExpr->GetReturnTypeId());
+            std::string funcId = FunctionSignature("CAST", params, OMNI_DECIMAL128).ToString();
+            auto ret = decimalIRBuilder->CallDecimalFunction(funcId, returnType, { output });
+            this->value = decimalIRBuilder->BuildDecimalValue(ret, binaryExpr->GetReturnType(),
+                builder->CreateOr(leftIsNull, rightIsNull));
+        } else if (binaryExpr->op == omniruntime::expressions::Operator::MUL &&
+        binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
+            Decimal64MultiplyHelper(binaryExpr, output, leftIsNull, rightIsNull);
+        } else if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL64) {
+            this->value = decimalIRBuilder->BuildDecimalValue(output, binaryExpr->GetReturnType(),
+                                                              builder->CreateOr(leftIsNull, rightIsNull));
+        }
     }
 }
 
@@ -483,34 +524,42 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
+    std::vector<omniruntime::type::DataTypeId> doubleParams = {OMNI_DOUBLE, OMNI_DOUBLE};
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpULT(left, right, "frelational_lt"));
-        case omniruntime::expressions::Operator::GT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpUGT(left, right, "frelational_gt"));
+            return llvmEngine->CallExternFunction("lessThan", doubleParams, OMNI_BOOLEAN,
+                                                    {left, right}, "frelational_lt");
         case omniruntime::expressions::Operator::LTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpULE(left, right, "frelational_le"));
+            return llvmEngine->CallExternFunction("lessThanEqual", doubleParams, OMNI_BOOLEAN,
+                                                    {left, right}, "frelational_le");
+        case omniruntime::expressions::Operator::GT:
+            return llvmEngine->CallExternFunction("greaterThan", doubleParams, OMNI_BOOLEAN,
+                                                    {left, right}, "frelational_gt");
         case omniruntime::expressions::Operator::GTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpUGE(left, right, "frelational_ge"));
+            return llvmEngine->CallExternFunction("greaterThanEqual", doubleParams, OMNI_BOOLEAN,
+                                                    {left, right}, "frelational_ge");
         case omniruntime::expressions::Operator::EQ:
-            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpUEQ(left, right, "farithmetic_eq"));
+            return llvmEngine->CallExternFunction("equal", doubleParams, OMNI_BOOLEAN,
+                                                    {left, right}, "farithmetic_eq");
         case omniruntime::expressions::Operator::NEQ:
-            return builder->CreateAnd(isNeitherNull,
-                builder->CreateNot(builder->CreateFCmpUEQ(left, right, "farithmetic_neq")));
+            return llvmEngine->CallExternFunction("notEqual", doubleParams, OMNI_BOOLEAN,
+                                                    {left, right}, "farithmetic_neq");
         case omniruntime::expressions::Operator::ADD:
-            return builder->CreateFAdd(leftPhi, rightPhi, "farithmetic_add");
+            return llvmEngine->CallExternFunction("add", doubleParams, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi}, "farithmetic_add");
         case omniruntime::expressions::Operator::SUB:
-            return builder->CreateFSub(leftPhi, rightPhi, "farithmetic_sub");
+            return llvmEngine->CallExternFunction("subtract", doubleParams, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi}, "farithmetic_sub");
         case omniruntime::expressions::Operator::MUL:
-            return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
+            return llvmEngine->CallExternFunction("multiply", doubleParams, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi}, "farithmetic_mul");
         case omniruntime::expressions::Operator::DIV:
-            return llvmEngine->CallExternFunction("divide", { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE,
-                { leftPhi, rightPhi }, "farithmetic_divide");
-        case omniruntime::expressions::Operator::MOD: {
-            return llvmEngine->CallExternFunction("modulus", { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE,
-                { leftPhi, rightPhi }, "farithmetic_mod");
-        }
+            return llvmEngine->CallExternFunction("divide", doubleParams, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi}, "farithmetic_divide");
+        case omniruntime::expressions::Operator::MOD:
+            return llvmEngine->CallExternFunction("modulus", doubleParams, OMNI_DOUBLE,
+                                                    {leftPhi, rightPhi}, "farithmetic_mod");
         default: {
             LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -526,23 +575,23 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
     BinaryExprNullHelper(binaryExpr, leftVal, rightVal, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+            return builder->CreateICmpSLT(this->StringCmp(leftVal, leftLen, rightVal, rightLen),
+                                          llvmTypes->CreateConstantInt(0));
         case omniruntime::expressions::Operator::GT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+            return builder->CreateICmpSGT(this->StringCmp(leftVal, leftLen, rightVal, rightLen),
+                                          llvmTypes->CreateConstantInt(0));
         case omniruntime::expressions::Operator::LTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+            return builder->CreateICmpSLE(this->StringCmp(leftVal, leftLen, rightVal, rightLen),
+                                          llvmTypes->CreateConstantInt(0));
         case omniruntime::expressions::Operator::GTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+            return builder->CreateICmpSGE(this->StringCmp(leftVal, leftLen, rightVal, rightLen),
+                                          llvmTypes->CreateConstantInt(0));
         case omniruntime::expressions::Operator::EQ:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+            return builder->CreateICmpEQ(this->StringCmp(leftVal, leftLen, rightVal, rightLen),
+                                         llvmTypes->CreateConstantInt(0));
         case omniruntime::expressions::Operator::NEQ:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpNE(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+            return builder->CreateICmpNE(this->StringCmp(leftVal, leftLen, rightVal, rightLen),
+                                         llvmTypes->CreateConstantInt(0));
         default: {
             LogWarn("Unsupported string binary operator %d", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -1106,17 +1155,21 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     }
 
-    if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_LONG ||
-        bExpr->left->GetReturnTypeId() == OMNI_DATE32) {
-        this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull, rightNull);
+    if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_DATE32) {
+        this->value = make_shared<CodeGenValue>(this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull,
+            rightNull), builder->CreateOr(leftNull, rightNull));
+        return;
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_LONG) {
+        this->value = make_shared<CodeGenValue>(this->BinaryExprLongHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
+            builder->CreateOr(leftNull, rightNull));
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
-            bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), OMNI_DECIMAL64);
-        auto scaledLeft = scaledValues.first;
-        auto scaledRight = scaledValues.second;
-        this->Decimal64Helper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
-        return;
+            auto scaledValues = RescaleDecimals(*bExpr, *left.get(), *right.get(),
+                                                bExpr->right->dataType->GetScale() - bExpr->left->dataType->GetScale(), OMNI_DECIMAL64);
+            auto scaledLeft = scaledValues.first;
+            auto scaledRight = scaledValues.second;
+            this->Decimal64Helper(bExpr, scaledLeft, scaledRight, leftNull, rightNull);
+            return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DOUBLE) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr, leftValue, rightValue, leftNull, rightNull),

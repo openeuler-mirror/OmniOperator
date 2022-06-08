@@ -143,6 +143,11 @@ Function *RowExpressionCodeGen::CreateFunction()
         builder->CreateStore(result->length, lengthGep);
     }
 
+    int32_t outputNullIndex = 3;
+    Argument *isResultNull = this->func->getArg(outputNullIndex);
+    Value *nullGep = builder->CreateGEP(isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
+    builder->CreateStore(result->isNull, nullGep);
+
     // Return value
     builder->CreateRet(result->data);
 
