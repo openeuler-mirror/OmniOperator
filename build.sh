@@ -7,8 +7,42 @@ set -e
 targz_name=boostkit-omniop-operator-1.0.0-aarch64
 zip_name=BoostKit-omniop_1.0.0
 
+if [ "$1" = 'release' ]; then
+  open_source_dir="open_source"
+  mkdir -p ./${open_source_dir}
+  cp -r ../huawei_secure_c ${open_source_dir}
+  cp -r ../jemalloc ${open_source_dir}
+  cp -r ../json ${open_source_dir}
+
+  cd ${open_source_dir}
+
+  echo "Start build huawei_secure_c"
+  cd huawei_secure_c/src
+  sudo make
+  cd ../../
+  sudo cp huawei_secure_c/lib/libsecurec.so $OMNI_HOME/lib
+  sudo cp -r huawei_secure_c/include/ $OMNI_HOME/lib
+
+  echo "Start jemalloc"
+  cd jemalloc
+  sudo ./autogen.sh --disable-initial-exec-tls
+  sudo make -j16
+  sudo make install
+
+  echo "Start build json"
+  cd ../json
+  mkdir build
+  cd build
+  sudo cmake ../
+  sudo make -j16
+  sudo make install
+
+  cd ../../../core/build
+else
+  cd core/build
+fi
+
 echo "Start build C++ modules using $1"
-cd core/build
 echo "-- Enter" $(dirname $(readlink -f $0))
 if [ "$1" = 'coverage-c++' ]; then
     echo "-- Enable coverage for c++"
@@ -42,7 +76,7 @@ else
     mvn clean install
 fi
 
-if [ "$1" != 'coverage' ]; then
+if [ "$1" = 'release' ]; then
     cd ../../
     # clean environment
     if [ -z "$OMNI_HOME" ]; then
