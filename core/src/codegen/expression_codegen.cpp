@@ -1515,7 +1515,7 @@ void ExpressionCodeGen::InExprDecimal128Helper(const InExpr &inExpr, Type *retTy
     auto scaledArgi = scaledValues.second;
 
     tmpCmpData =
-        builder->CreateICmpSLE(decimalIRBuilder->CallDecimalFunction(funcId, retType, { scaledCompareTo, scaledArgi }),
+        builder->CreateICmpEQ(decimalIRBuilder->CallDecimalFunction(funcId, retType, { scaledCompareTo, scaledArgi }),
         llvmTypes->CreateConstantInt(0));
 
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
@@ -1524,18 +1524,16 @@ void ExpressionCodeGen::InExprDecimal128Helper(const InExpr &inExpr, Type *retTy
 void ExpressionCodeGen::InExprStringHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare,
     Value *&tmpCmpData, Value *&tmpCmpNull)
 {
-    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+    tmpCmpData =
         builder->CreateICmpEQ(StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, value->length),
-        llvmTypes->CreateConstantInt(0))));
+        llvmTypes->CreateConstantInt(0));
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
 
 void ExpressionCodeGen::InExprDoubleHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare,
     Value *&tmpCmpData, Value *&tmpCmpNull)
 {
-    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
-        builder->CreateNot(argiValue->isNull), builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
+    tmpCmpData = builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data);
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
 
@@ -1548,16 +1546,14 @@ void ExpressionCodeGen::InExprDecimal64Helper(const InExpr &inExpr, size_t i, Co
     auto scaledCompareTo = scaledValues.first;
     auto scaledArgi = scaledValues.second;
 
-    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-        builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(scaledCompareTo, scaledArgi)));
+    tmpCmpData = builder->CreateICmpEQ(scaledCompareTo, scaledArgi);
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
 
 void ExpressionCodeGen::InExprIntegerHelper(CodeGenValuePtr &argiValue, CodeGenValuePtr &valueToCompare,
     Value *&tmpCmpData, Value *&tmpCmpNull)
 {
-    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
-        builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
+    tmpCmpData = builder->CreateICmpEQ(valueToCompare->data, argiValue->data);
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
 
