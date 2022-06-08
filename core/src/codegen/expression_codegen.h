@@ -115,8 +115,8 @@ protected:
     std::pair<llvm::Value *, llvm::Value *> RescaleDecimals(omniruntime::expressions::Expr &expr, CodeGenValue &left,
         CodeGenValue &right, int scaleDiff, omniruntime::type::DataTypeId typeId);
 
-    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue>& val,
-        const std::shared_ptr<CodeGenValue>& lowerVal, const std::shared_ptr<CodeGenValue>& upperVal,
+    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
+        const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
         std::pair<llvm::Value **, llvm::Value **> cmpPair);
 
     void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,

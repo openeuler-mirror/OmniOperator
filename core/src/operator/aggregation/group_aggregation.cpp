@@ -211,8 +211,9 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
             GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].isSameNode(originalVector, originalRowIndex,
                 sameBucket[it][i], isSame);
         }
-        if (isSame)
+        if (isSame) {
             return it;
+        }
     }
     return -1;
 }

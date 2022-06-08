@@ -105,7 +105,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                                 */
+ *                                                                                  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -126,7 +126,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                                 */
+ *                                                                                  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -176,7 +176,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                                 */
+ *                                                                                  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
     jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
@@ -191,7 +191,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
 /**
  * Return an AggregationFactory object address.
- *                                                                                  */
+ *                                                                                   */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,

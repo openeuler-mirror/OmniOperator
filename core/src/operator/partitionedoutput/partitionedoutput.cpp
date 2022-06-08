@@ -88,7 +88,7 @@ PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceType
       hashChannelsCount(hashChannelsCount)
 {}
 
-PartitionedOutputOperator::~PartitionedOutputOperator() =  default;
+PartitionedOutputOperator::~PartitionedOutputOperator() = default;
 
 static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex)
 {

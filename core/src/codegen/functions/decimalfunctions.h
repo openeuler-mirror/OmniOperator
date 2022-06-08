@@ -27,10 +27,9 @@ extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh,
 extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT void DivDec128(int64_t contextPtr,
-    int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
-    int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale,
-    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
     uint64_t *outLowPtr);

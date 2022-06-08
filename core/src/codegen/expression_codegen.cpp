@@ -1869,8 +1869,9 @@ void ExpressionCodeGen::OptimizeFunctionsAndModule()
     mpm.add(createPruneEHPass());
 
     fpm->doInitialization();
-    for (auto &F : *module)
+    for (auto &F : *module) {
         fpm->run(F);
+    }
     mpm.run(*module);
 }
 

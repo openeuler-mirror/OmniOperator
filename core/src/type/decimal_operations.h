@@ -238,7 +238,7 @@ public:
                 ThrowOverflow();
             }
         }
-        Pack(result, (int64_t) z0, (int64_t) z1, IsNegative(left) != IsNegative(right));
+        Pack(result, (int64_t)z0, (int64_t)z1, IsNegative(left) != IsNegative(right));
     }
 
     /* *

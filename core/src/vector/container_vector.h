@@ -4,7 +4,6 @@
 #ifndef OMNI_RUNTIME_CONTAINER_VECTOR_H
 #define OMNI_RUNTIME_CONTAINER_VECTOR_H
 
-#include <cstring>
 #include <vector>
 
 #include "fixed_width_vector.h"

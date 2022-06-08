@@ -11,6 +11,7 @@
 #include "operator/projection/projection.h"
 #include "operator/join/lookup_join.h"
 #include "type/data_types.h"
+#include "operator/status.h"
 
 namespace omniruntime {
 namespace op {

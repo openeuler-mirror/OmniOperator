@@ -83,7 +83,7 @@ const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
 bool IsNullLiteral(const std::string &value);
 bool IsComparisonOperator(Operator op);
 bool IsLogicalOperator(Operator op);
-Operator StringToOperator(const std::string& opStr);
+Operator StringToOperator(const std::string &opStr);
 
 using DataTypePtr = std::unique_ptr<omniruntime::type::DataType>;
 

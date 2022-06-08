@@ -114,7 +114,7 @@ TEST(ContainerVector, copyPositions)
 TEST(ContainerVector, copyRegion)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("ContainerVector_CopyRegion");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     int32_t rows = 10;
     auto *doubleVector = new DoubleVector(allocator, rows);

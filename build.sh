@@ -69,6 +69,6 @@ if [ "$1" != 'coverage' ]; then
 
     cp -r $package_files/ $targz_name
     cp bindings/java/target/*.jar $targz_name
-    tar -zcvf $targz_name.tar.gz $targz_name
+    tar --owner root --group root -zcvf $targz_name.tar.gz $targz_name
     zip $zip_name.zip $targz_name.tar.gz
 fi

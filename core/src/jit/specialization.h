@@ -10,10 +10,6 @@
 
 namespace omniruntime {
 namespace jit {
-class Stats {
-public:
-private:
-};
 
 class Specialization {
 public:
@@ -21,11 +17,11 @@ public:
 
     ~Specialization();
 
-    void AddSpecializedParam(int paramIndex, ParamValue *paramValue);
+    void AddSpecializedParam(int32_t paramIndex, ParamValue *paramValue);
 
-    bool HasSpecializedParam(int paramIndex) const;
+    bool HasSpecializedParam(int32_t paramIndex) const;
 
-    ParamValue *GetSpecializedParam(int paramIndex) const;
+    ParamValue *GetSpecializedParam(int32_t paramIndex) const;
 
 private:
     std::string id;

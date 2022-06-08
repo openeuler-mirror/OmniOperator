@@ -4,8 +4,6 @@
  */
 #include "context_helper.h"
 
-#include <utility>
-
 using namespace std;
 using namespace omniruntime::op;
 

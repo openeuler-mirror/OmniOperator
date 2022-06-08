@@ -468,13 +468,13 @@ int32_t GetTestExprReturnType(std::string &expression)
     std::string returnType(chars + start + 1, chars + end);
     if (returnType.find_first_not_of("0123456789") == std::string::npos && stoi(returnType) < INT32_MAX) {
         int typeOrdinal = stoi(returnType);
-        if (OMNI_DECIMAL64 == typeOrdinal) {
+        if (typeOrdinal == OMNI_DECIMAL64) {
             return OMNI_LONG;
         }
-        if (OMNI_DATE32 == typeOrdinal) {
+        if (typeOrdinal == OMNI_DATE32) {
             return OMNI_INT;
         }
-        if (OMNI_SHORT == typeOrdinal || (OMNI_DATE64 <= typeOrdinal && OMNI_INTERVAL_DAY_TIME >= typeOrdinal)) {
+        if (typeOrdinal == OMNI_SHORT || (typeOrdinal >= OMNI_DATE64 && typeOrdinal <= OMNI_INTERVAL_DAY_TIME)) {
             std::cout << "Unsupported return type: " << static_cast<DataTypeId>(typeOrdinal) << std::endl;
         }
         return static_cast<DataTypeId>(stoi(returnType));

@@ -5,7 +5,6 @@
 #define __PARSERHELPER_H__
 
 #include <string>
-#include <set>
 #include <iostream>
 #include <algorithm>
 #include <memory>

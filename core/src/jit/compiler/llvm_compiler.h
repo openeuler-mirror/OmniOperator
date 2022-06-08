@@ -11,6 +11,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "jit/param_value.h"
+#include "jit/specialization.h"
 
 #include <memory>
 #include <vector>

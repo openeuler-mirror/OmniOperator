@@ -58,8 +58,8 @@ TEST(DoubleVector, sliceVector)
 // Test set/get
 TEST(DoubleVector, setAndGetValue)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "DoubleVector_setAndGetValue");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_setAndGetValue");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -78,7 +78,7 @@ TEST(DoubleVector, setAndGetValue)
 TEST(DoubleVector, SetValues)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_setValues");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
     double values[size] = {1.1, 3.3, 4.5, 6.6, 7.7};
@@ -103,8 +103,8 @@ TEST(DoubleVector, SetValues)
 // Test SetValues/get
 TEST(DoubleVector, SetValuesWithoutOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "DoubleVector_SetValuesWithoutOffset");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_SetValuesWithoutOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -125,8 +125,8 @@ TEST(DoubleVector, SetValuesWithoutOffset)
 // Test SetValues/get with offset
 TEST(DoubleVector, SetValuesWithOffset)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "DoubleVector_SetValuesWithOffset");
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_SetValuesWithOffset");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -147,8 +147,7 @@ TEST(DoubleVector, SetValuesWithOffset)
 // Test is null
 TEST(DoubleVector, SetValueNull)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "DoubleVector_SetValueNull");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_SetValueNull");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *vector = new DoubleVector(allocator, 256);
@@ -173,8 +172,7 @@ TEST(DoubleVector, SetValueNull)
 // Test is copyPosition
 TEST(DoubleVector, copyPositions)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "DoubleVector_copyPositions");
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_copyPositions");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *originalVector = new DoubleVector(allocator, 4);
@@ -200,9 +198,8 @@ TEST(DoubleVector, copyPositions)
 // Test is copyRegion
 TEST(DoubleVector, copyRegion)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "DoubleVector_copyPosition");
-    EXPECT_TRUE(allocator != NULL);
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_copyPosition");
+    EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *originalVector = new DoubleVector(allocator, 4);
     for (int i = 0; i < 4; i++) {

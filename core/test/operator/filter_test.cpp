@@ -1012,7 +1012,7 @@ TEST(FilterTest, ArithmeticSubtract)
     EXPECT_EQ(numReturned, 4000);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        EXPECT_TRUE(0 < val0 - 5);
+        EXPECT_TRUE(val0 - 5 > 0);
     }
 
     VectorHelper::FreeVecBatches(ret);

@@ -22,7 +22,7 @@ set(IR_COMPILER "clang++-12")
 
 if (DEFINED COVERAGE)
     if(${COVERAGE} STREQUAL "ON")
-        set(DEBUG_COMPILE_LEVEL "-O2")
+        set(DEBUG_COMPILE_LEVEL "-O2 -fsanitize=address -fsanitize-recover=address,all -static-libasan")
     else()
         set(DEBUG_COMPILE_LEVEL "-O0")
     endif()
@@ -30,7 +30,7 @@ else()
     set(DEBUG_COMPILE_LEVEL "-O0")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs -fsanitize=address -fsanitize-recover=address,all -static-libasan")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)

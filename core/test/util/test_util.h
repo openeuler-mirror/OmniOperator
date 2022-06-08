@@ -138,5 +138,6 @@ omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
     std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
 
 std::string GenerateSpillPath();
-#endif
 }
+
+#endif

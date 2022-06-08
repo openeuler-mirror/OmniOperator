@@ -206,8 +206,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(nativeVector->GetValueOffsets()));
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newChildAllocatorNative
-        (JNIEnv *env, jclass jcls, jlong jNativeParent, jstring jScopeId, jlong jLimit, jlong jReservation)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newChildAllocatorNative(JNIEnv *env, jclass jcls,
+    jlong jNativeParent, jstring jScopeId, jlong jLimit, jlong jReservation)
 {
     auto scope = env->GetStringUTFChars(jScopeId, JNI_FALSE);
     auto *parent = TransformAllocator(jNativeParent);
@@ -227,46 +227,46 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_freeAlloc
     return 0;
 }
 
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setLimitNative
-        (JNIEnv *env, jclass jcls, jlong jNativeAllocator, jlong jLimit)
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setLimitNative(JNIEnv *env, jclass jcls,
+    jlong jNativeAllocator, jlong jLimit)
 {
     TransformAllocator(jNativeAllocator)->SetLimit(jLimit);
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getLimitNative
-        (JNIEnv *env, jclass jcls, jlong jNativeAllocator)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getLimitNative(JNIEnv *env, jclass jcls,
+    jlong jNativeAllocator)
 {
     return TransformAllocator(jNativeAllocator)->GetLimit();
 }
 
-JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getScopeNative
-        (JNIEnv *env, jclass jcls, jlong jNativeAllocator)
+JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getScopeNative(JNIEnv *env, jclass jcls,
+    jlong jNativeAllocator)
 {
     std::string nativeScope = TransformAllocator(jNativeAllocator)->GetScope();
     jstring scope = env->NewStringUTF(nativeScope.c_str());
     return scope;
 }
 
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setRootAllocatorLimitNative
-        (JNIEnv *env, jclass jcls, jlong jLimit)
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setRootAllocatorLimitNative(JNIEnv *env,
+    jclass jcls, jlong jLimit)
 {
     omniruntime::mem::SetRootAllocatorLimit(jLimit);
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getAllocatedMemoryNative
-        (JNIEnv *env, jclass jcls, jlong jNativeAllocator)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getAllocatedMemoryNative(JNIEnv *env,
+    jclass jcls, jlong jNativeAllocator)
 {
     return TransformAllocator(jNativeAllocator)->GetAllocatedMemory();
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getParentAllocator
-        (JNIEnv *env, jclass jcls, jlong jNativeAllocator)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getParentAllocator(JNIEnv *env, jclass jcls,
+    jlong jNativeAllocator)
 {
     return reinterpret_cast<uintptr_t>(TransformAllocator(jNativeAllocator)->GetParentAllocator());
 }
 
-JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getChildAllocatorsNative
-        (JNIEnv *env, jclass jcls, jlong jNativeParent)
+JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getChildAllocatorsNative(JNIEnv *env,
+    jclass jcls, jlong jNativeParent)
 {
     std::vector<BaseAllocator *> childAllocators = TransformAllocator(jNativeParent)->GetChildAllocators();
     auto length = static_cast<int32_t>(childAllocators.size());
@@ -279,8 +279,8 @@ JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getC
     return nativeChilds;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator
-        (JNIEnv *env, jclass jcls)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator(JNIEnv *env,
+    jclass jcls)
 {
     int64_t globalVectorAllocatorAddr = 0;
     JNI_METHOD_START
@@ -289,8 +289,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobal
     return globalVectorAllocatorAddr;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative
-        (JNIEnv *env, jclass jcls, jlong jNativeAllocator)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative(JNIEnv *env, jclass jcls,
+    jlong jNativeAllocator)
 {
     return TransformAllocator(jNativeAllocator)->GetPeakAllocated();
 }

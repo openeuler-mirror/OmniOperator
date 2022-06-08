@@ -68,7 +68,7 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *           */
+     *            */
     Aggregator(FunctionType aggregateType, const DataType &inputType, const DataType &outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
@@ -92,32 +92,32 @@ public:
     // set result to output vector
     virtual void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) = 0;
 
-    bool IsInputRaw() const
+    virtual bool IsInputRaw() const
     {
         return this->inputRaw;
     }
 
-    bool IsOutputPartial() const
+    virtual bool IsOutputPartial() const
     {
         return this->outputPartial;
     }
 
-    FunctionType GetType() const
+    virtual FunctionType GetType() const
     {
         return type;
     }
 
-    const DataType &GetInputType() const
+    virtual const DataType &GetInputType() const
     {
         return inputType;
     }
 
-    const DataType &GetOutputType() const
+    virtual const DataType &GetOutputType() const
     {
         return outputType;
     }
 
-    int32_t GetInputChannel() const
+    virtual int32_t GetInputChannel() const
     {
         return channel;
     }

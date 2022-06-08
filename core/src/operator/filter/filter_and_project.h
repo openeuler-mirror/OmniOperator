@@ -11,6 +11,7 @@
 #include "type/data_types.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
+#include "operator/status.h"
 #include "vector/vector_batch.h"
 #include "operator/projection/projection.h"
 #include "codegen/filter_codegen.h"
