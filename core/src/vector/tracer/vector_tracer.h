@@ -5,7 +5,6 @@
 #ifndef OMNI_RUNTIME_VECTOR_TRACER_H
 #define OMNI_RUNTIME_VECTOR_TRACER_H
 
-#include <vector>
 #include <string>
 
 namespace omniruntime {

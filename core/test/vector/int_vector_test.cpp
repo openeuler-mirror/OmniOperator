@@ -78,7 +78,7 @@ TEST(IntVector, setAndGetValue)
 TEST(IntVector, setValues)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_setValues");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
     int32_t values[size] = {1, 3, 4, 6, 7};
@@ -199,7 +199,7 @@ TEST(IntVector, copyPositions)
 TEST(IntVector, copyRegion)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_copyPosition");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     IntVector *originalVector = new IntVector(allocator, 4);
     for (int i = 0; i < 4; i++) {

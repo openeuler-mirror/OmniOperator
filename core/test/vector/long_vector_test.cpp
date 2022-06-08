@@ -66,7 +66,7 @@ TEST(LongVector, setAndGetValue)
 TEST(LongVector, SetValues)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_SetValues");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
     int64_t values[size] = {1, 3, 4, 6, 7};
@@ -187,7 +187,7 @@ TEST(LongVector, copyPositions)
 TEST(LongVector, copyRegion)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_copyPosition");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     LongVector *originalVector = new LongVector(allocator, 4);
     for (int i = 0; i < 4; i++) {

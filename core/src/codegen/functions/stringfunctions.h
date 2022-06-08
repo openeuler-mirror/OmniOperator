@@ -7,9 +7,7 @@
 
 #include <iostream>
 #include <string>
-#include <cstring>
 #include <memory>
-#include <vector>
 #include <algorithm>
 #include <huawei_secure_c/include/securec.h>
 #include "context_helper.h"

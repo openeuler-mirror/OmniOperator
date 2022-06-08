@@ -10,8 +10,6 @@
 #include "type/data_type.h"
 #include "type/data_types.h"
 #include "vector/vector_batch.h"
-#include "operator.h"
-#include "operator_factory.h"
 #include "vector/vector_helper.h"
 #include "util/operator_util.h"
 #include "operator/memory_builder.h"

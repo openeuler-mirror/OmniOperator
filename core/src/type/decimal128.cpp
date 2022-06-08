@@ -5,7 +5,6 @@
 
 #include "decimal128.h"
 
-#include <limits>
 #include <array>
 #include <iomanip>
 #include "util/debug.h"

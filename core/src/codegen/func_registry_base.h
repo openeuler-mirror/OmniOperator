@@ -5,6 +5,8 @@
 #ifndef OMNI_RUNTIME_FUNC_REGISTRY_BASE_H
 #define OMNI_RUNTIME_FUNC_REGISTRY_BASE_H
 
+#include <vector>
+
 namespace omniruntime {
 class BaseFunctionRegistry {
 public:

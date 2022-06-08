@@ -5,6 +5,9 @@
 #ifndef OMNI_RUNTIME_CODEGEN_CONTEXT_H
 #define OMNI_RUNTIME_CODEGEN_CONTEXT_H
 
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Value.h"
+
 class CodegenContext {
 public:
     explicit CodegenContext()

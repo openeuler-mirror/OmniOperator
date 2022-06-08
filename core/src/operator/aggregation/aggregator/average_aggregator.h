@@ -6,6 +6,7 @@
 #define OMNI_RUNTIME_AVERAGE_AGGREGATOR_H
 
 #include "aggregator.h"
+#include "type/decimal_operations.h"
 
 namespace omniruntime {
 namespace op {
@@ -28,7 +29,7 @@ public:
         if (vector->IsValueNull(offset)) {
             return;
         }
-        if (inputRaw == true) {
+        if (inputRaw) {
             if (state.val == nullptr) {
                 this->InitiateGroup(state, vectorBatch, rowIndex);
                 return;
@@ -60,7 +61,7 @@ public:
             return;
         }
         // for partial aggregation
-        if (inputRaw == true) {
+        if (inputRaw) {
             auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
             auto len = sizeof(ResultType);
             auto ptr = executionContext->GetArena()->Allocate(len);
@@ -82,8 +83,8 @@ public:
 
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
     {
-        if (outputPartial == true) {
-            ContainerVector *v = static_cast<ContainerVector *>(vector);
+        if (outputPartial) {
+            auto *v = static_cast<ContainerVector *>(vector);
             if (state.val == nullptr) {
                 auto doubleVector = reinterpret_cast<DoubleVector *>(v->GetValue(0));
                 doubleVector->SetValue(rowIndex, 0);

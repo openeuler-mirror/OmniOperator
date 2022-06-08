@@ -158,7 +158,8 @@ void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes,
     DataTypes aggInputTypes({ LongDataType::Instance(), DoubleDataType::Instance() });
     DataTypes aggOutputTypes({ LongDataType::Instance(), DoubleDataType::Instance() });
     uint32_t aggCols[2] = {1, 3};
-    std::vector<uint32_t> aggFuncTypeContext = std::vector<uint32_t>((uint32_t *)aggFunType, (uint32_t *)aggFunType + 2);
+    std::vector<uint32_t> aggFuncTypeContext =
+        std::vector<uint32_t>((uint32_t *)aggFunType, (uint32_t *)aggFunType + 2);
     uint32_t maskCols[2] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
     std::vector<uint32_t> maskColsContext = std::vector<uint32_t>((uint32_t *)maskCols, (uint32_t *)maskCols + 2);
     std::vector<uint32_t> aggInputColsContext = std::vector<uint32_t>((uint32_t *)aggCols, (uint32_t *)aggCols + 2);
@@ -188,7 +189,8 @@ void TestHashAggregation(void **testData, omniruntime::type::DataTypes &sourceTy
     uint32_t aggCols[2] = {1, 3};
     std::vector<uint32_t> groupByColContext = std::vector<uint32_t>((uint32_t *)groupCols, (uint32_t *)groupCols + 2);
     std::vector<uint32_t> aggColContext = std::vector<uint32_t>((uint32_t *)aggCols, (uint32_t *)aggCols + 2);
-    std::vector<uint32_t> aggFuncTypeContext = std::vector<uint32_t>((uint32_t *)aggFunType, (uint32_t *)aggFunType + 2);
+    std::vector<uint32_t> aggFuncTypeContext =
+        std::vector<uint32_t>((uint32_t *)aggFunType, (uint32_t *)aggFunType + 2);
     int32_t maskCols[] = {-1, -1};
     std::vector<uint32_t> maskColsContext = std::vector<uint32_t>((uint32_t *)maskCols, (uint32_t *)maskCols + 2);
     HashAggregationOperatorFactory *nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext,

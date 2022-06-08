@@ -9,6 +9,7 @@
 #include "codegen/projection_codegen.h"
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
+#include "operator/status.h"
 #include "vector/vector_common.h"
 #include "type/data_types.h"
 #include "expression/expressions.h"

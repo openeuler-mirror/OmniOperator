@@ -92,32 +92,32 @@ public:
     // set result to output vector
     virtual void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) = 0;
 
-    bool IsInputRaw() const
+    virtual bool IsInputRaw() const
     {
         return this->inputRaw;
     }
 
-    bool IsOutputPartial() const
+    virtual bool IsOutputPartial() const
     {
         return this->outputPartial;
     }
 
-    FunctionType GetType() const
+    virtual FunctionType GetType() const
     {
         return type;
     }
 
-    const DataType &GetInputType() const
+    virtual const DataType &GetInputType() const
     {
         return inputType;
     }
 
-    const DataType &GetOutputType() const
+    virtual const DataType &GetOutputType() const
     {
         return outputType;
     }
 
-    int32_t GetInputChannel() const
+    virtual int32_t GetInputChannel() const
     {
         return channel;
     }

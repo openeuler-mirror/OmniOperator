@@ -106,8 +106,9 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
     std::vector<Expr *> vExprs;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
         Expr *expr = ParseRowExpression(expressions[i], inputTypes, inputTypes.GetSize());
-        if (expr == nullptr)
+        if (expr == nullptr) {
             return { nullptr };
+        }
         vExprs.push_back(expr);
     }
     return vExprs;
@@ -203,12 +204,15 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // Special form
     // Special forms are IN, BETWEEN, IF, COALESCE
-    if (opStr == "BETWEEN")
+    if (opStr == "BETWEEN") {
         return new BetweenExpr(args[0], args[1], args[ARG2]);
-    if (opStr == "IN")
+    }
+    if (opStr == "IN") {
         return new InExpr(args);
-    if (opStr == "COALESCE")
+    }
+    if (opStr == "COALESCE") {
         return new CoalesceExpr(args[0], args[1]);
+    }
     if (opStr == "IF") {
         if (TypeUtil::IsStringType(args[ARG2]->GetReturnTypeId()) && args[ARG2]->GetType() == ExprType::LITERAL_E &&
             static_cast<LiteralExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
@@ -216,8 +220,9 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         }
         return new IfExpr(args[0], args[1], args[ARG2]);
     }
-    if (opStr == "IS_NULL")
+    if (opStr == "IS_NULL") {
         return new IsNullExpr(args[0]);
+    }
     if (opStr == "IS_NOT_NULL") {
         auto isNullExpr = new IsNullExpr(args[0]);
         return new UnaryExpr(Operator::NOT, isNullExpr, std::move(type));

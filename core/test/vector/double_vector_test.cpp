@@ -78,7 +78,7 @@ TEST(DoubleVector, setAndGetValue)
 TEST(DoubleVector, SetValues)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_setValues");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
     double values[size] = {1.1, 3.3, 4.5, 6.6, 7.7};
@@ -199,7 +199,7 @@ TEST(DoubleVector, copyPositions)
 TEST(DoubleVector, copyRegion)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_copyPosition");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *originalVector = new DoubleVector(allocator, 4);
     for (int i = 0; i < 4; i++) {

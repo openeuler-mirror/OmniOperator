@@ -9,13 +9,14 @@
 #include <sstream>
 #include <execinfo.h>
 
+#define ARRAY_LEN 16
+
 class TraceUtil {
 public:
     static std::string GetStack()
     {
-        static int size = 16;
-        void *array[size];
-        int stackNum = backtrace(array, size);
+        void *array[ARRAY_LEN];
+        int stackNum = backtrace(array, ARRAY_LEN);
         if (stackNum < 1) {
             return "";
         }

@@ -6,10 +6,11 @@
 
 #include <cstdint>
 #include <vector>
+
+#include "execution_context.h"
+#include "status.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_allocator.h"
-#include "status.h"
-#include "execution_context.h"
 
 namespace omniruntime {
 namespace op {

@@ -68,7 +68,7 @@ TEST(Decimal128Vector, SetAndGetValue)
 TEST(Decimal128Vector, SetValues)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_SetValues");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
     uint64_t values[size * 2] = {0, 1, 0, 3, 0, 4, 0, 6, 0, 7};
@@ -202,7 +202,7 @@ TEST(Decimal128Vector, CopyRegion)
 {
     VectorAllocator *allocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_CopyRegion");
-    EXPECT_TRUE(allocator != NULL);
+    EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
     for (int i = 0; i < 4; i++) {

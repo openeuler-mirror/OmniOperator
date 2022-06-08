@@ -18,7 +18,7 @@ public:
           realAggregator(std::move(realAggregator))
     {}
 
-    ~MaskColAggregator() override {}
+    ~MaskColAggregator() override = default;
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
@@ -51,32 +51,32 @@ public:
         realAggregator->ExtractValue(state, vector, rowIndex);
     }
 
-    bool IsInputRaw() const
+    bool IsInputRaw() const override
     {
         return realAggregator->IsInputRaw();
     }
 
-    bool IsOutputPartial() const
+    bool IsOutputPartial() const override
     {
         return realAggregator->IsOutputPartial();
     }
 
-    FunctionType GetType() const
+    FunctionType GetType() const override
     {
         return realAggregator->GetType();
     }
 
-    DataType GetInputType() const
+    DataType &GetInputType() const override
     {
-        return realAggregator->GetInputType();
+        return const_cast<DataType &>(realAggregator->GetInputType());
     }
 
-    DataType GetOutputType() const
+    DataType &GetOutputType() const override
     {
-        return realAggregator->GetOutputType();
+        return const_cast<DataType &>(realAggregator->GetOutputType());
     }
 
-    int32_t GetInputChannel() const
+    int32_t GetInputChannel() const override
     {
         return realAggregator->GetInputChannel();
     }
