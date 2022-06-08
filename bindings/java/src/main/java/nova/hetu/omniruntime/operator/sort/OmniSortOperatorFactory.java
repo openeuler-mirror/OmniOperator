@@ -103,8 +103,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns),
-                    Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts),
-                    operatorConfig);
+                    Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -119,7 +118,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
                     && Arrays.equals(sortColumns, that.sortColumns)
                     && Arrays.equals(sortAscendings, that.sortAscendings)
-                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts) && operatorConfig.equals(that.operatorConfig);
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
 

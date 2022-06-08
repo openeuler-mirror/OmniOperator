@@ -21,6 +21,7 @@ import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.Vec;
@@ -32,6 +33,12 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni sort with expression operator test.
@@ -316,5 +323,44 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts);
+    }
+
+    @Test
+    public void testSortWithExprOperatorFactoryMultiThreads() {
+        final int threadNum = 100;
+        final int corePoolSize = 50;
+        final int maximumPoolSize = 100;
+        CountDownLatch countDownLatch = new CountDownLatch(threadNum);
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(threadNum));
+        for (int i = 0; i < threadNum; i++) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    DataType[] sourceTypes = {VarcharDataType.VARCHAR, IntDataType.INTEGER};
+                    int[] outputCols = {0, 1};
+                    String[] sortKeys = {getOmniJsonFieldReference(1, 1)};
+                    int[] ascendings = {1};
+                    int[] nullFirsts = {0};
+                    String spillPath = Paths.get("").toAbsolutePath() + File.separator + UUID.randomUUID();
+                    SparkSpillConfig spillConfig = new SparkSpillConfig(false, spillPath, Long.MAX_VALUE,
+                            Integer.MAX_VALUE);
+                    OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(
+                            sourceTypes, outputCols, sortKeys, ascendings, nullFirsts,
+                            new OperatorConfig(true, spillConfig, true));
+                    sortWithExprOperatorFactory.close();
+                } finally {
+                    countDownLatch.countDown();
+                }
+            }, threadPool);
+        }
+
+        // This will wait until all future ready.
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            assertTrue(false);
+        }
+
+        threadPool.shutdown();
     }
 }
