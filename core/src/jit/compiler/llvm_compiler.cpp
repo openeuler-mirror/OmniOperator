@@ -39,12 +39,9 @@ LibraryLoader LLVMCompiler::ll;
 
 LLVMCompiler::LLVMCompiler() : config(Config::GetConf())
 {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmParser();
-    llvm::InitializeNativeTargetAsmPrinter();
     this->context = std::make_unique<llvm::LLVMContext>();
 
-    std::call_once(loadLibrariesInitFlag, LoadExtraLibraries);
+    std::call_once(loadLibrariesInitFlag, Initialize);
 }
 
 LLVMCompiler::~LLVMCompiler()
@@ -70,8 +67,12 @@ bool LLVMCompiler::LoadModule(const std::string &templatePath)
     return true;
 }
 
-void LLVMCompiler::LoadExtraLibraries()
+void LLVMCompiler::Initialize()
 {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+    llvm::InitializeNativeTargetDisassembler();
     auto ret = ll.LoadedLibraries(omniruntime::LibConfig::GetLibPath());
     if (!ret) {
         throw exception::OmniException("LOAD_LIBRARY_FAILED", "Load extra libraries failed.");

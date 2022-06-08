@@ -106,7 +106,7 @@ public class OmniSortWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns), Arrays.hashCode(sortKeys),
-                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts), operatorConfig);
+                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -120,7 +120,7 @@ public class OmniSortWithExprOperatorFactory
             JitContext that = (JitContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
                     && Arrays.equals(sortKeys, that.sortKeys) && Arrays.equals(sortAscendings, that.sortAscendings)
-                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts) && operatorConfig.equals(that.operatorConfig);
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
 

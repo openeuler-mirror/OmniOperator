@@ -45,7 +45,7 @@ private:
 
     static LibraryLoader ll;
 
-    static void LoadExtraLibraries();
+    static void Initialize();
 
     std::unique_ptr<llvm::orc::LLJIT> CompileModules(std::map<std::string, std::set<std::string>> &specializedModules,
         const std::vector<Optimization> &optimizations, const std::vector<ModuleOptimization> &moduleOptimizations);
