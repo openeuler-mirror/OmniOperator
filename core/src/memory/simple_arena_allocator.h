@@ -27,6 +27,11 @@ public:
 
     uint8_t *Allocate(int64_t sizeInBytes)
     {
+        if (sizeInBytes == 0) {
+            static Chunk *ZERO_CHUNK = Chunk::NewChunk(allocator, 0);
+            return static_cast<uint8_t *>(ZERO_CHUNK->GetAddress());
+        }
+
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(sizeInBytes, minChunkSize));
         }

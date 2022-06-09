@@ -82,4 +82,16 @@ TEST(SimpleArenaAllocator, testResetFromBigToSmall)
     EXPECT_EQ(arena.TotalBytes(), largeSize);
     EXPECT_EQ(arena.AvailBytes(), largeSize - smallSize);
 }
+
+TEST(SimpleArenaAllocator, testAllocateZeroSize)
+{
+    auto *arena = new SimpleArenaAllocator();
+    int64_t allocatedSize = 1024;
+    uint8_t *noZeroAddr = arena->Allocate(allocatedSize);
+    uint8_t *zeroAddr1 = arena->Allocate(0);
+    EXPECT_FALSE(noZeroAddr == zeroAddr1);
+    uint8_t *zeroAddr2 = arena->Allocate(0);
+    EXPECT_TRUE(zeroAddr1 == zeroAddr2);
+    delete arena;
+}
 }
