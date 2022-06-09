@@ -9,6 +9,7 @@ import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -22,6 +23,7 @@ import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFact
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -233,6 +235,37 @@ public class OmniHashAggregationOperatorTest {
         assertTrue(factory1.equals(factory1));
         assertFalse(factory1.equals(factory3));
     }
+
+    @Test
+    public void testExecuteHashAggEmptyString() {
+        String[] groupByChanel = {"#0"};
+        int varcharWidth = 10;
+        DataType[] groupByTypes = {new VarcharDataType(varcharWidth)};
+        String[] aggChannels = {"#1"};
+        DataType[] aggTypes = {LongDataType.LONG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM};
+        DataType[] aggOutputTypes = {LongDataType.LONG};
+
+        OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel, groupByTypes,
+                aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+
+        Object[][] datas = {{"", null, "", null}, {1L, 2L, 3L, 4L}};
+        DataType[] sourceTypes = {new VarcharDataType(varcharWidth), LongDataType.LONG};
+        VecBatch vecBatch = createVecBatch(sourceTypes, datas);
+
+        OmniOperator omniOperator = factory.createOperator();
+        omniOperator.addInput(vecBatch);
+
+        Iterator<VecBatch> output = omniOperator.getOutput();
+        VecBatch result = output.next();
+        Object[][] expectedDatas = {{null, ""}, {6L, 4L}};
+        assertVecBatchEquals(result, expectedDatas);
+
+        freeVecBatch(result);
+        omniOperator.close();
+        factory.close();
+    }
+
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
         String[] groupByChanel = {"#0", "#1"};
