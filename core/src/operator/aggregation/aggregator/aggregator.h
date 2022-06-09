@@ -45,14 +45,14 @@ using AggregateState = union AggregateState {
 using DecimalAverageState = struct DecimalAverageState {
     int64_t count;
     int64_t overflow;
-    int64_t highBits;
     uint64_t lowBits;
+    int64_t highBits;
 };
 
 using DecimalSumState = struct DecimalSumState {
     int64_t overflow;
-    int64_t highBits;
     uint64_t lowBits;
+    int64_t highBits;
 };
 
 static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = sizeof(DecimalSumState);
