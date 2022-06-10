@@ -110,7 +110,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     }
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto projection = make_unique<Projection>(*(projectExprs[i]), true);
+        auto projection = make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnTypeId());
         if (!projection->IsSupported()) {
             this->isSupportedExpr = false;
             break;

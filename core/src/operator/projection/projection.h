@@ -49,10 +49,9 @@ private:
 
 class Projection {
 public:
-    Projection(const expressions::Expr &expr, bool filter);
+    Projection(const expressions::Expr &expr, bool filter, vec::DataTypeId outTypeId);
     ~Projection()
     {
-        delete this->expr;
         this->codegen.reset();
     }
     bool IsSupported();
@@ -72,9 +71,9 @@ public:
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
         int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    omniruntime::type::DataType GetOutputType() const
+    omniruntime::type::DataTypeId GetOutputTypeId() const
     {
-        return this->expr->GetReturnType();
+        return this->outTypeId;
     }
 
 private:
@@ -83,6 +82,7 @@ private:
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
+    DataTypeId outTypeId;
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)
@@ -127,11 +127,16 @@ public:
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
     bool IsSupported();
+    std::vector<DataTypeId> GetReturnTypeIds()
+    {
+        return this->outTypeIds;
+    }
 
 private:
     DataTypes inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
+    std::vector<DataTypeId> outTypeIds;
     int32_t nProj;
     bool isSupported = true;
 };

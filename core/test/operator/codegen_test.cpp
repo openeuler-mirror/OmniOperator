@@ -90,6 +90,8 @@ TEST(CodeGenTest, SimpleFilter)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_FALSE(res);
     }
+
+    Expr::DeleteExprs({lessThanExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -148,6 +150,8 @@ TEST(CodeGenTest, SimpleProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 50);
     }
+
+    Expr::DeleteExprs({addExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -220,7 +224,6 @@ TEST(CodeGenTest, SingleCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -234,6 +237,8 @@ TEST(CodeGenTest, SingleCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
+
+    Expr::DeleteExprs({switchExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -283,8 +288,6 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     when2.second = addExpr1;
     whenClause.push_back(when1);
     whenClause.push_back(when2);
-
-
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
 
     const int32_t numCols = 2;
@@ -319,7 +322,6 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -333,6 +335,8 @@ TEST(CodeGenTest, DoubleCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 10);
     }
+
+    Expr::DeleteExprs({switchExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -431,7 +435,6 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -445,6 +448,8 @@ TEST(CodeGenTest, ThreeCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, (i % 2 != 0) ? i + 10 : -i);
     }
+
+    Expr::DeleteExprs({switchExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -479,8 +484,6 @@ TEST(CodeGenTest, SwitchElseNull)
     when.first = gtExpr;
     when.second = addExpr;
     whenClause.push_back(when);
-
-
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, nullExpr);
 
     const int32_t numCols = 2;
@@ -515,7 +518,6 @@ TEST(CodeGenTest, SwitchElseNull)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -529,6 +531,8 @@ TEST(CodeGenTest, SwitchElseNull)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : 0);
     }
+
+    Expr::DeleteExprs({switchExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -604,6 +608,8 @@ TEST(CodeGenTest, SingleProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
+
+    Expr::DeleteExprs({ifExpr});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -670,6 +676,8 @@ TEST(CodeGenTest, ShortCircuitProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 10);
     }
+
+    Expr::DeleteExprs({colExpr1});
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -3103,8 +3111,9 @@ TEST(CodeGenTest, TestRowProjectLong)
         int64_t inputValue = slicedVector->GetValue(i);
         EXPECT_EQ(value, inputValue + 100);
     }
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete slicedVector;
     delete vector;
     delete context;
@@ -3158,8 +3167,9 @@ TEST(CodeGenTest, TestRowProjectVarchar)
         std::string expectResult(expectValue, expectValue + expectLen);
         EXPECT_EQ(result, expectResult.substr(0, 5));
     }
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete slicedVector;
     delete vector;
     delete context;
@@ -3507,8 +3517,9 @@ TEST(CodeGenTest, Mm3HashLong)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Int64(v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3556,8 +3567,9 @@ TEST(CodeGenTest, Mm3HashDouble)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Double(v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3606,8 +3618,9 @@ TEST(CodeGenTest, Mm3HashString)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3654,8 +3667,9 @@ TEST(CodeGenTest, Mm3HashDecimal64)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Decimal64(v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3703,8 +3717,9 @@ TEST(CodeGenTest, Mm3HashDecimal128)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({expr});
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];

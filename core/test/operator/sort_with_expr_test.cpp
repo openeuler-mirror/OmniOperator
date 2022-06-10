@@ -45,7 +45,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    // free memory
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -82,7 +82,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    // free memory
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -121,7 +121,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    // free memory
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -171,6 +171,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -217,6 +218,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     expectVecBatch->SetVector(0, expectVector);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -289,6 +291,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     expectVecBatch->GetVector(1)->SetValueNull(1);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -334,7 +337,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    // free memory
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
@@ -378,7 +381,7 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    // free memory
+    Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);

@@ -54,7 +54,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
-
     const int32_t bufferedTblSize = 6;
     double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int32_t bufferedTblDataCol2[bufferedTblSize] =  {  0,   1,   2,   3,   4,   5};
@@ -98,6 +97,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
         VectorHelper::FreeVecBatch(result[i]);
     }
 
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
     omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
@@ -188,6 +189,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
         VectorHelper::FreeVecBatch(result[i]);
     }
 
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
     omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);

@@ -107,7 +107,6 @@ public:
     ~Filter()
     {
         this->codeGen.reset();
-        delete this->expr;
     }
     bool isSupported;
 

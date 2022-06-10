@@ -64,9 +64,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
+    Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
     DeleteOperatorFactory(topNWithExprOperatorFactory);
-
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -117,9 +117,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
+    Expr::DeleteExprs(sortKeys);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
     DeleteOperatorFactory(topNWithExprOperatorFactory);
-
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -166,9 +166,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
+    Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
     DeleteOperatorFactory(topNWithExprOperatorFactory);
-
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
