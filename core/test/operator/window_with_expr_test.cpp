@@ -1257,15 +1257,15 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     DataTypes outputTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType(),
         DoubleDataType(), VarcharDataType(3), Decimal128DataType(2, 2) }));
-    string argumentChannels[7] = {"#0", "#1", "ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
+    string argumentChannels[5] = {"ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     Parser parser;
-    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes);
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 5, sourceTypes);
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
         sourceTypes, outputCols, 9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
-        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 5,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 

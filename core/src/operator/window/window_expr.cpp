@@ -9,6 +9,20 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 
+static bool HasArgument(int32_t functionType)
+{
+    switch (functionType) {
+        case OMNI_AGGREGATION_TYPE_SUM:
+        case OMNI_AGGREGATION_TYPE_COUNT_COLUMN:
+        case OMNI_AGGREGATION_TYPE_AVG:
+        case OMNI_AGGREGATION_TYPE_MAX:
+        case OMNI_AGGREGATION_TYPE_MIN:
+            return true;
+        default:
+            return false;
+    }
+}
+
 WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
     int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
@@ -19,9 +33,19 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
     std::vector<DataType> newTypes;
+    std::vector<int32_t> fullArgumentChannels;
     OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
         this->argumentChannels, this->projectFuncs);
     this->sourceTypes = std::make_unique<DataTypes>(newTypes);
+
+    int position = 0;
+    for (int i = 0; i < windowFunctionCount; ++i) {
+        if (HasArgument(windowFunctionTypes[i])) {
+            fullArgumentChannels.push_back(this->argumentChannels[position++]);
+        } else {
+            fullArgumentChannels.push_back(-1);
+        }
+    }
 
     // refact alltypes since sourcetypes changed
     std::vector<DataType> allTypesVec;
@@ -42,7 +66,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     this->operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes.get()),
         newOutputCols, newOutputColsCount, windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount,
         preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix,
-        expectedPositions, allTypes, this->argumentChannels.data(), argumentChannelsCount, windowFrameTypesField,
+        expectedPositions, allTypes, fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField,
         windowFrameStartTypesField, windowFrameStartChannelsField, windowFrameEndTypesField,
         windowFrameEndChannelsField);
 }
