@@ -30,7 +30,14 @@ const int ROW_FILTER_IS_NULL_INDEX = 6;
 std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
 {
     std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression) };
-    codegen->Initialize();
+    LLVMEngine::Create(&(codegen->llvmEngine));
+    codegen->context = codegen->GetContext();
+    codegen->builder = codegen->GetIRBuilder();
+    codegen->module = codegen->GetModule();
+    codegen->jit = codegen->GetJit();
+    codegen->llvmTypes = codegen->GetTypes();
+    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
+    codegen->ExtractVectorIndexes();
     return codegen;
 }
 
@@ -50,18 +57,18 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     std::vector<Type *> args;
     Type *ptrArg = llvmTypes->I64PtrType(); // table
     args.push_back(ptrArg);
-    args.push_back(llvmTypes->I32Type());    // no of rows
+    args.push_back(llvmTypes->I32Type()); // no of rows
     args.push_back(llvmTypes->I32PtrType()); // output array
     // bitmap is a 2d array of booleans
     Type *bitmapArg = llvmTypes->I64PtrType(); // record nullk values
     args.push_back(bitmapArg);
     args.push_back(llvmTypes->I64PtrType()); // offsets
-    args.push_back(llvmTypes->I64Type());    // execution_context address
+    args.push_back(llvmTypes->I64Type()); // execution_context address
     args.push_back(llvmTypes->I64PtrType()); // dictionary vectors
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
-    llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
+    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
+        "FILTER_WRAPPER", module);
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);
@@ -83,7 +90,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
     offsets->setName("DICTIONARY_VECTORS");
 
-    codeGenUtils->RecordMainFunction(funcDecl);
+    llvmEngine->RecordMainFunction(funcDecl);
 
     Value *zero = llvmTypes->CreateConstantInt(0);
     Value *one = llvmTypes->CreateConstantInt(1);
@@ -167,13 +174,12 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
-    OptimizeFunctionsAndModule();
+    llvmEngine->OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
-    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
+    llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
 
     auto sym = eoe(jit->lookup("FILTER_WRAPPER"));
@@ -199,10 +205,9 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module);
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
-    codeGenUtils->RecordMainFunction(funcDecl);
-
+    llvmEngine->RecordMainFunction(funcDecl);
     builder->SetInsertPoint(wrapperBody);
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_FILTER_INPUT_INDEX);
@@ -235,13 +240,12 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(isNullPtr);
 
     builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
-    OptimizeModule();
+    llvmEngine->OptimizeModule();
 #ifdef DEBUG
     module->print(errs(), nullptr);
 #endif
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
-    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
+    llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
     return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
 }

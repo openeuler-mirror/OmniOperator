@@ -11,15 +11,15 @@
 #include "llvm/IR/IRBuilder.h"
 #include "codegen_value.h"
 #include "type/data_type.h"
-#include "codegen_utils.h"
-
+#include "llvm_engine.h"
 
 class DecimalIRBuilder {
 public:
-    explicit DecimalIRBuilder(llvm::LLVMContext &context, llvm::Module &module, llvm::IRBuilder<> &builder,
-        CodeGenUtils &codeGenUtils)
-        : context(context), module(module), builder(builder), codeGenUtils(codeGenUtils)
+    explicit DecimalIRBuilder(LLVMEngine &engine) : engine(engine)
     {
+        context = engine.GetContext();
+        builder = engine.GetIRBuilder();
+        module = engine.GetModule();
         AddGlobalVariables();
     }
     virtual ~DecimalIRBuilder() = default;
@@ -50,10 +50,10 @@ private:
     llvm::Type *GetLLVMType(omniruntime::type::DataTypeId typeId);
     std::string GetMultipliersName(omniruntime::type::DataTypeId typeId);
 
-    llvm::LLVMContext &context;
-    llvm::Module &module;
-    llvm::IRBuilder<> &builder;
-    CodeGenUtils &codeGenUtils;
+    LLVMEngine &engine;
+    llvm::LLVMContext* context;
+    llvm::IRBuilder<>* builder;
+    llvm::Module* module;
     const std::string scale128MultipliersName = "SCALE_MULTIPLIERS128";
     const std::string scale64MultipliersName = "SCALE_MULTIPLIERS64";
 };

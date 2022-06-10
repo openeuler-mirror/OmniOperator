@@ -32,8 +32,6 @@ const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
 const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
-
-std::once_flag codegen_target_init_flag;
 }
 
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Expr &e)
@@ -101,6 +99,13 @@ Constant *ExpressionCodeGen::CreateStringConstant(std::string s)
     return stringPtr;
 }
 
+void ExpressionCodeGen::ExtractVectorIndexes()
+{
+    ExprInfoExtractor exprInfoExtractor;
+    this->expr->Accept(exprInfoExtractor);
+    this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
+}
+
 /**
  * Usage example: std::vector<Value *> values;
  * values.push_back(value1);
@@ -129,78 +134,6 @@ ExpressionCodeGen::~ExpressionCodeGen()
     }
 }
 
-llvm::IRBuilder<> &ExpressionCodeGen::GetIRBuilder()
-{
-    return *builder;
-}
-
-Module &ExpressionCodeGen::GetModule()
-{
-    return *module;
-}
-
-LLVMContext &ExpressionCodeGen::GetContext()
-{
-    return *context;
-}
-
-void ExpressionCodeGen::InitializeCodegenTargets()
-{
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-    llvm::InitializeNativeTargetDisassembler();
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-}
-
-void ExpressionCodeGen::Initialize()
-{
-    std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
-    jit = eoe(LLJITBuilder().create());
-
-    context = std::make_unique<LLVMContext>();
-    llvmTypes = std::make_unique<LLVMTypes>(*context);
-    // Create module called the_module
-    module = std::make_unique<Module>("the_module", *context);
-    module->setDataLayout(jit->getDataLayout());
-    // Create IR builder to create IR instructions
-    builder = std::make_unique<IRBuilder<>>(*context);
-    codeGenUtils = std::make_unique<CodeGenUtils>(*context, *module, *builder);
-    decimalIRBuilder = std::make_unique<DecimalIRBuilder>(*context, *module, *builder, *codeGenUtils);
-    fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
-
-    ExprInfoExtractor exprInfoExtractor;
-    this->expr->Accept(exprInfoExtractor);
-    this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
-    // get functions used in funcExpr  RegisterFunctions(exprInfoExtractor.GetFunctions());
-    RegisterFunctions(FunctionRegistry::GetFunctions());
-}
-
-// Register function in JIT
-void ExpressionCodeGen::RegisterFunctions(const std::vector<omniruntime::Function> &functions)
-{
-    std::set<std::string> jitRegisteredFuncs;
-    for (auto &func : functions) {
-        auto &jd = jit->getMainJITDylib();
-        auto &dl = jit->getDataLayout();
-        llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
-        std::vector<DataTypeId> params = func.GetParamTypes();
-        DataTypeId retType = func.GetReturnType();
-        std::vector<Type *> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
-        auto s = llvm::orc::absoluteSymbols({ { mangle(func.GetId()),
-            JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()), JITSymbolFlags::Exported) } });
-        auto ign = jd.define(s);
-        if (ign) {
-            LogError("Error while defining absolute symbol in jd");
-        }
-        llvm::Type *ret = (retType == OMNI_DECIMAL128) ? llvmTypes->VoidType() : llvmTypes->ToLLVMType(retType);
-        llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
-        auto linkage = llvm::Function::ExternalLinkage;
-        llvm::Function::Create(ft, linkage, func.GetId(), *module);
-        module->getOrInsertFunction(func.GetId(), ft);
-    }
-}
-
 // Other operations which require externed functions
 Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
 {
@@ -208,7 +141,7 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
     auto signature = FunctionSignature(strCompareStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT);
     auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
-    auto ret = codeGenUtils->CreateCall(f, argVals, "call_str_cmp");
+    auto ret = llvmEngine->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
     llvm::InlineFunction(*ret, inlineFunctionInfo);
     return ret;
@@ -572,10 +505,10 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
         case omniruntime::expressions::Operator::MUL:
             return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
         case omniruntime::expressions::Operator::DIV:
-            return codeGenUtils->CallExternFunction("divide", { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE,
+            return llvmEngine->CallExternFunction("divide", { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE,
                 { leftPhi, rightPhi }, "farithmetic_divide");
         case omniruntime::expressions::Operator::MOD: {
-            return codeGenUtils->CallExternFunction("modulus", { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE,
+            return llvmEngine->CallExternFunction("modulus", { OMNI_DOUBLE, OMNI_DOUBLE }, OMNI_DOUBLE,
                 { leftPhi, rightPhi }, "farithmetic_mod");
         }
         default: {
@@ -680,13 +613,13 @@ void ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Va
             auto rightType = binaryExpr->right->GetReturnType();
             auto binaryReturnType = binaryExpr->GetReturnType();
             std::vector<Value *> divArgs { leftPhi,
-                llvmTypes->CreateConstantInt(leftType.GetPrecision()),
-                llvmTypes->CreateConstantInt(leftType.GetScale()),
-                rightPhi,
-                llvmTypes->CreateConstantInt(rightType.GetPrecision()),
-                llvmTypes->CreateConstantInt(rightType.GetScale()),
-                llvmTypes->CreateConstantInt(binaryReturnType.GetPrecision()),
-                llvmTypes->CreateConstantInt(binaryReturnType.GetScale()) };
+                                           llvmTypes->CreateConstantInt(leftType.GetPrecision()),
+                                           llvmTypes->CreateConstantInt(leftType.GetScale()),
+                                           rightPhi,
+                                           llvmTypes->CreateConstantInt(rightType.GetPrecision()),
+                                           llvmTypes->CreateConstantInt(rightType.GetScale()),
+                                           llvmTypes->CreateConstantInt(binaryReturnType.GetPrecision()),
+                                           llvmTypes->CreateConstantInt(binaryReturnType.GetScale()) };
             std::vector<DataTypeId> params { binaryExpr->left->GetReturnTypeId(),
                 OMNI_INT,
                 OMNI_INT,
@@ -782,7 +715,7 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     std::cout << std::endl;
 #endif
     FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
-    func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, funcName, module.get());
+    func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, funcName, module);
 
     std::string argNames[] = {
         "data", "nullBitmap", "offsets", "rowIdx",
@@ -974,7 +907,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const DataType &dataType, Val
             decimalIRBuilder->CallDecimalFunction(FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId(),
             llvmTypes->ToLLVMType(typeId), funcArgs);
     } else {
-        result = codeGenUtils->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+        result = llvmEngine->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
         InlineFunctionInfo inlineFunctionInfo;
         llvm::InlineFunction(*((CallInst *)result), inlineFunctionInfo);
     }
@@ -1161,7 +1094,8 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
         this->value = make_shared<CodeGenValue>(builder->CreateAnd(leftValue, rightValue, "logical_and"),
             builder->CreateOr(builder->CreateAnd(leftNull, rightNull),
-            builder->CreateOr(builder->CreateAnd(leftNull, rightValue), builder->CreateAnd(rightNull, leftValue))));
+            builder->CreateOr(builder->CreateAnd(leftNull, rightValue),
+                                builder->CreateAnd(rightNull, leftValue))));
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
@@ -1251,17 +1185,22 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
     int32_t numReservedValues = 2;
 
-    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, numReservedValues, nullptr, "temp_result_value");
+    AllocaInst *resultValuePtr = builder->CreateAlloca(switchDataType, numReservedValues, nullptr,
+                                                         "temp_result_value");
     AllocaInst *resultNullPtr =
-        builder->CreateAlloca(Type::getInt1Ty(*context), numReservedValues, nullptr, "temp_result_null");
+        builder->CreateAlloca(Type::getInt1Ty(*context), numReservedValues, nullptr,
+                                "temp_result_null");
     AllocaInst *resultLengthPtr =
-        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_length");
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr,
+                                "temp_result_length");
 
     AllocaInst *resultPrecisionPtr =
-        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_precision");
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr,
+                                "temp_result_precision");
 
     AllocaInst *resultScalePtr =
-        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr, "temp_result_scale");
+        builder->CreateAlloca(Type::getInt32Ty(*context), numReservedValues, nullptr,
+                                "temp_result_scale");
 
     condBlockList.push_back(BasicBlock::Create(*context, "Condition" + std::to_string(0), func));
     trueBlockList.push_back(BasicBlock::Create(*context, "TRUE_BLOCK" + std::to_string(0), func));
@@ -1294,8 +1233,8 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
             this->value = CreateInvalidCodeGenValue();
             return;
         }
-        builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data), trueBlockList[i],
-            elseBranch);
+        builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data),
+                                trueBlockList[i], elseBranch);
 
         builder->SetInsertPoint(trueBlockList[i]);
         auto evTrue = VisitExpr(*resExpr);
@@ -1335,11 +1274,14 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
     if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
-        this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
+        this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr),
+                                                builder->CreateLoad(resultNullPtr),
             builder->CreateLoad(resultLengthPtr));
     } else if (TypeUtil::IsDecimalType(switchExpr.GetReturnTypeId())) {
-        this->value = make_shared<DecimalValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
-            builder->CreateLoad(resultPrecisionPtr), builder->CreateLoad(resultScalePtr));
+        this->value = make_shared<DecimalValue>(builder->CreateLoad(resultValuePtr),
+                                                builder->CreateLoad(resultNullPtr),
+                                                builder->CreateLoad(resultPrecisionPtr),
+                                                builder->CreateLoad(resultScalePtr));
     } else {
         this->value =
             make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
@@ -1513,7 +1455,8 @@ void ExpressionCodeGen::InExprDecimal128Helper(const InExpr &inExpr, Type *retTy
     auto scaledArgi = scaledValues.second;
 
     tmpCmpData =
-        builder->CreateICmpEQ(decimalIRBuilder->CallDecimalFunction(funcId, retType, { scaledCompareTo, scaledArgi }),
+        builder->CreateICmpSLE(decimalIRBuilder->CallDecimalFunction(funcId, retType,
+                                                                         { scaledCompareTo, scaledArgi }),
         llvmTypes->CreateConstantInt(0));
 
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
@@ -1544,6 +1487,9 @@ void ExpressionCodeGen::InExprDecimal64Helper(const InExpr &inExpr, size_t i, Co
     auto scaledCompareTo = scaledValues.first;
     auto scaledArgi = scaledValues.second;
 
+    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+                             builder->CreateICmpEQ(scaledCompareTo, scaledArgi)));
     tmpCmpData = builder->CreateICmpEQ(scaledCompareTo, scaledArgi);
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
 }
@@ -1822,7 +1768,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         if (f) {
             ret = isDecimalFunction ? decimalIRBuilder->CallDecimalFunction(fExpr.function->GetId(),
                 llvmTypes->ToLLVMType(funcRetType), argVals) :
-                                      codeGenUtils->CreateCall(f, argVals, fExpr.function->GetId());
+                                      llvmEngine->CreateCall(f, argVals, fExpr.function->GetId());
             InlineFunctionInfo inlineFunctionInfo;
             llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
@@ -1833,48 +1779,4 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         }
     }
     this->value = make_shared<CodeGenValue>(ret, isAnyNull, outputLen);
-}
-
-void ExpressionCodeGen::OptimizeFunctionsAndModule()
-{
-    fpm->add(createSCCPPass());
-    fpm->add(createNewGVNPass());
-    fpm->add(createInductiveRangeCheckEliminationPass());
-    fpm->add(createIndVarSimplifyPass());
-
-    fpm->add(createLICMPass());
-    fpm->add(createLoopUnrollPass());
-    fpm->add(createLoopUnswitchPass());
-
-    fpm->add(createLoopLoadEliminationPass());
-    fpm->add(createInductiveRangeCheckEliminationPass());
-    fpm->add(createIndVarSimplifyPass());
-    fpm->add(createLoopInstSimplifyPass());
-    fpm->add(createLoopSimplifyCFGPass());
-    fpm->add(createMergedLoadStoreMotionPass());
-    fpm->add(createMergeICmpsLegacyPass());
-    fpm->add(createAggressiveDCEPass());
-    fpm->add(createDeadStoreEliminationPass());
-    fpm->add(createPromoteMemoryToRegisterPass());
-
-    codeGenUtils->RemoveUnusedFunctions();
-
-    mpm.add(createFunctionInliningPass());
-    mpm.add(createPruneEHPass());
-
-    fpm->doInitialization();
-    for (auto &F : *module) {
-        fpm->run(F);
-    }
-    mpm.run(*module);
-}
-
-void ExpressionCodeGen::OptimizeModule()
-{
-    codeGenUtils->RemoveUnusedFunctions();
-
-    mpm.add(createFunctionInliningPass());
-    mpm.add(createPruneEHPass());
-
-    mpm.run(*module);
 }

@@ -44,7 +44,7 @@
 #include "util/debug.h"
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
-#include "codegen_utils.h"
+#include "llvm_engine.h"
 
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
@@ -58,9 +58,6 @@ public:
     void Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
-    llvm::IRBuilder<> &GetIRBuilder();
-    llvm::Module &GetModule();
-    llvm::LLVMContext &GetContext();
     // visitor methods
     void Visit(const omniruntime::expressions::LiteralExpr &e) override;
     void Visit(const omniruntime::expressions::FieldExpr &e) override;
@@ -76,6 +73,7 @@ public:
 
     // returns llvm value ptr of codegen functions
     CodeGenValuePtr VisitExpr(const omniruntime::expressions::Expr &e);
+    void ExtractVectorIndexes();
     std::set<int32_t> vectorIndexes;
 
     // TODO: Figure out which of these can be private
@@ -122,32 +120,31 @@ protected:
     void Decimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,
         llvm::Value *leftIsNull, llvm::Value *rightIsNull);
 
-
     virtual llvm::Function *CreateFunction();
-    void OptimizeFunctionsAndModule();
-    void OptimizeModule();
+    llvm::LLVMContext* GetContext() {return llvmEngine->GetContext();}
+    llvm::IRBuilder<>* GetIRBuilder() {return llvmEngine->GetIRBuilder();}
+    llvm::Module* GetModule() {return llvmEngine->GetModule();}
+    llvm::orc::LLJIT* GetJit() {return llvmEngine->GetJit();}
+    LLVMTypes* GetTypes() {return llvmEngine->GetTypes();}
+    std::unique_ptr<DecimalIRBuilder> GetDecimalIRBuilder() {return std::make_unique<DecimalIRBuilder>(*llvmEngine);}
 
     const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<llvm::LLVMContext> context;
-    std::unique_ptr<llvm::IRBuilder<>> builder;
-    std::unique_ptr<llvm::Module> module;
+    std::unique_ptr<LLVMEngine> llvmEngine;
+    llvm::LLVMContext* context;
+    llvm::IRBuilder<>* builder;
+    llvm::Module* module;
+    llvm::orc::LLJIT* jit;
     llvm::ExitOnError eoe;
-    std::unique_ptr<llvm::legacy::FunctionPassManager> fpm = nullptr;
-    llvm::legacy::PassManager mpm;
-    std::unique_ptr<llvm::orc::LLJIT> jit;
+    LLVMTypes* llvmTypes;
+    std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
     llvm::orc::ResourceTrackerSP rt;
     llvm::Function *func = nullptr;
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
     int numGlobalValues = 0;
-    std::unique_ptr<LLVMTypes> llvmTypes;
-    std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
-    std::unique_ptr<CodeGenUtils> codeGenUtils;
 
 private:
     std::string funcName;
-    static void InitializeCodegenTargets();
-    void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(const omniruntime::type::DataType &dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
