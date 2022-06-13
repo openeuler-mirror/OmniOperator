@@ -13,27 +13,6 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace std;
 
-RowFilter::RowFilter(const Expr &expr) : codegen(nullptr), expression(&expr) {}
-
-RowFilter::~RowFilter()
-{
-    delete this->expression;
-    this->codegen.reset();
-}
-
-// Return nullptr if expression is unsupported
-RowFilterFunc RowFilter::Create()
-{
-    this->codegen = FilterCodeGen::Create("single_row_filter", *this->expression);
-    int64_t fAddr = this->codegen->GetExpressionEvaluator();
-    if (fAddr == 0) {
-        return nullptr;
-    }
-    void *refFunc = &fAddr;
-    auto castedRef = static_cast<RowFilterFunc *>(refFunc);
-    return *castedRef;
-}
-
 SimpleFilter::SimpleFilter(const Expr &expression)
     : codegen(nullptr),
       expression(&expression),
@@ -45,7 +24,6 @@ SimpleFilter::SimpleFilter(const Expr &expression)
 
 SimpleFilter::~SimpleFilter()
 {
-    delete this->expression;
     this->codegen.reset();
 }
 

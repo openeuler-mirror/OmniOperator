@@ -268,6 +268,7 @@ void JoinResultBuilder::Finish()
 JoinResultBuilder::~JoinResultBuilder()
 {
     if (simpleFilter != nullptr) {
+        delete simpleFilter->GetExpression();
         delete simpleFilter;
         simpleFilter = nullptr;
     }

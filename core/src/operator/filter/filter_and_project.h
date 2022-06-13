@@ -23,25 +23,7 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t
 
 namespace omniruntime {
 namespace op {
-/**
- * vector value addresses
- * vector null value addresses
- * vector offsets addresses
- * row index
- */
-using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t, int64_t, int64_t *);
 using SimpleRowExprEvalFunc = bool (*)(int64_t *, bool *, int32_t *, bool *, int32_t *, int64_t);
-
-class RowFilter {
-public:
-    explicit RowFilter(const omniruntime::expressions::Expr &expr);
-    ~RowFilter();
-    RowFilterFunc Create();
-
-private:
-    std::unique_ptr<FilterCodeGen> codegen = nullptr;
-    const expressions::Expr *expression;
-};
 
 /**
  * Simple Filter that can be evaluated given expression,
@@ -91,6 +73,10 @@ public:
      * @return true if the data matches the expression, false if it doesn't match
      */
     bool Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext);
+    const expressions::Expr *GetExpression()
+    {
+        return this->expression;
+    }
 
 private:
     std::unique_ptr<ExpressionCodeGen> codegen;

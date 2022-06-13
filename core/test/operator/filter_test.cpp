@@ -188,7 +188,7 @@ TEST(FilterTest, LessThan)
         int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -232,7 +232,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
         int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
-    Expr::DeleteExprs({LTExpr});
+    Expr::DeleteExprs({ LTExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -279,7 +279,7 @@ TEST(FilterTest, GreaterThan)
         EXPECT_TRUE(val0 > 20);
         EXPECT_EQ(val1, 3e9L);
     }
-    Expr::DeleteExprs({gtExpr});
+    Expr::DeleteExprs({ gtExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -330,7 +330,7 @@ TEST(FilterTest, EqualTo)
         EXPECT_EQ(val0, 50);
         EXPECT_EQ(val0, val1);
     }
-    Expr::DeleteExprs({eqExpr});
+    Expr::DeleteExprs({ eqExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -380,7 +380,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
         int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 >= 30);
     }
-    Expr::DeleteExprs({gteExpr});
+    Expr::DeleteExprs({ gteExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -426,7 +426,7 @@ TEST(FilterTest, NotEqualTo)
         double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, cnt++);
     }
-    Expr::DeleteExprs({neqExpr});
+    Expr::DeleteExprs({ neqExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -465,7 +465,7 @@ TEST(FilterTest, AllPass)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 20000);
 
-    Expr::DeleteExprs({eqExpr});
+    Expr::DeleteExprs({ eqExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -516,7 +516,7 @@ TEST(FilterTest, MultipleInputs)
     EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter1));
     EXPECT_EQ(numReturned, 668);
 
-    Expr::DeleteExprs({lteExpr});
+    Expr::DeleteExprs({ lteExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] data1;
@@ -576,7 +576,7 @@ TEST(FilterTest, NegativeValues)
     // Both values are negative for every multiple of 35.
     EXPECT_EQ(numReturned, 286);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] data1;
@@ -637,7 +637,7 @@ TEST(FilterTest, AllTypes)
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter3));
     EXPECT_EQ(numReturned, 100);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] data1;
@@ -705,7 +705,7 @@ TEST(FilterTest, Compile)
     int32_t numSelectedRows = op->GetOutput(ret);
     EXPECT_EQ(numSelectedRows, 100);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] data1;
@@ -785,7 +785,7 @@ TEST(FilterTest, LogicalOperators1)
     EXPECT_EQ(numReturned, 543);
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter4));
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -854,7 +854,7 @@ TEST(FilterTest, LogicalOperators2)
     EXPECT_EQ(numReturned, 3498);
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter6));
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -944,7 +944,7 @@ TEST(FilterTest, LogicalOperators3)
         EXPECT_TRUE(val1 == col1[i + 2]);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -988,7 +988,7 @@ TEST(FilterTest, ArithmeticAdd)
         EXPECT_TRUE(val0 + 1 > 4);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1033,7 +1033,7 @@ TEST(FilterTest, ArithmeticSubtract)
         EXPECT_TRUE(val0 - 5 > 0);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1089,7 +1089,7 @@ TEST(FilterTest, ArithmeticMultiply)
         EXPECT_TRUE(val1 * 2 < 7);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1141,7 +1141,7 @@ TEST(FilterTest, Conditional)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 5000);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1197,7 +1197,7 @@ TEST(FilterTest, Conditional2)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1250,7 +1250,7 @@ TEST(FilterTest, In)
         EXPECT_TRUE(val0 == 1 || val0 == 3 || val0 == 5);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1299,7 +1299,7 @@ TEST(FilterTest, Between)
         EXPECT_TRUE((val0 <= val1) && (val1 <= val2));
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1343,7 +1343,7 @@ TEST(FilterTest, NotEqualToAbs)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 99998);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1416,7 +1416,7 @@ TEST(FilterTest, MathFunctionFilter1)
         EXPECT_TRUE((std::abs(val0) == std::abs(val1)) && (std::abs(val1) == std::abs(val2)));
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1474,7 +1474,7 @@ TEST(FilterTest, MathFunctionFilter2)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1533,7 +1533,7 @@ TEST(FilterTest, FilterString1)
         string actualStr(*charArrCasted, 0, len);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     for (auto &s : strings) {
         delete s;
@@ -1587,7 +1587,7 @@ TEST(FilterTest, Coalesce1)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 500);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1637,7 +1637,7 @@ TEST(FilterTest, Coalesce2)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 500);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     for (auto &s : strings) {
         delete s;
@@ -1685,7 +1685,7 @@ TEST(FilterTest, ExternalMathFunc)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, numRows);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
@@ -1746,7 +1746,7 @@ TEST(FilterTest, ExternalStringFunc)
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 500);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     for (auto &s : strings) {
         delete s;
@@ -1851,9 +1851,9 @@ TEST(FilterTest, Multithreading)
     std::cout << "Total time for multithreading test: ";
     std::cout << std::chrono::duration<double, std::milli>(end - start).count() << std::endl;
 
-    Expr::DeleteExprs({filterExpr1});
+    Expr::DeleteExprs({ filterExpr1 });
     Expr::DeleteExprs(projections1);
-    Expr::DeleteExprs({filterExpr2});
+    Expr::DeleteExprs({ filterExpr2 });
     Expr::DeleteExprs(projections2);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatches(ret2);
@@ -1914,7 +1914,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
         EXPECT_EQ(val2, dictionaryVector->GetInt(i));
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
@@ -1969,7 +1969,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
         EXPECT_EQ(result, expected);
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
@@ -2027,7 +2027,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
         EXPECT_EQ(val2, dictionaryNested->GetInt(i));
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
@@ -2081,7 +2081,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter7));
     EXPECT_EQ(numReturned, 1000);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] data1;
@@ -2156,7 +2156,7 @@ TEST(FilterTest, DecimalFilterAbsTest)
     std::cout << "BenchmarkDecimalColumn round - elapsed: " << elapsed.count() << " ms\n";
     EXPECT_EQ(numReturned, 1000);
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     delete[] data1;
@@ -2203,7 +2203,7 @@ TEST(FilterTest, FilterStringWithNull)
         EXPECT_EQ(actualStr, "hello");
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
@@ -2264,7 +2264,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
         EXPECT_EQ(val2, slicedCol3->GetInt(i));
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatch(intput);
     VectorHelper::FreeVecBatches(ret);
@@ -2330,7 +2330,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
         EXPECT_EQ(val2, slicedCol3->GetInt(i + 2));
     }
 
-    Expr::DeleteExprs({filterExpr});
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatch(intput);
     VectorHelper::FreeVecBatches(ret);
@@ -2372,6 +2372,7 @@ TEST(FilterTest, SimpleFilter)
             EXPECT_FALSE(result);
         }
     }
+    Expr::DeleteExprs({ filterExpr });
     VectorHelper::FreeVecBatch(in1);
     delete filter;
     delete[] col1;
@@ -2418,6 +2419,7 @@ TEST(FilterTest, SimpleFilterWithNulls)
             EXPECT_FALSE(result);
         }
     }
+    Expr::DeleteExprs({ filterExpr });
     VectorHelper::FreeVecBatch(in1);
     delete filter;
     delete[] col1;
@@ -2459,6 +2461,7 @@ TEST(FilterTest, SimpleFilterIntWithNulls)
         bool result = filter->Evaluate(values, isNulls, nullptr, (int64_t)(&context));
         EXPECT_FALSE(result);
     }
+    Expr::DeleteExprs({ filterExpr });
     VectorHelper::FreeVecBatch(vecBatch);
     delete filter;
 }
@@ -2522,6 +2525,7 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
             EXPECT_FALSE(result);
         }
     }
+    Expr::DeleteExprs({ filterExpr });
     delete filter;
     VectorHelper::FreeVecBatch(vecBatch);
     delete vecAllocator;

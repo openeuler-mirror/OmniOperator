@@ -86,7 +86,8 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(const Expr &expr, bool filter, vec::DataTypeId outTypeId) : expr(&expr), projector(nullptr), outTypeId(outTypeId)
+Projection::Projection(const Expr &expr, bool filter, vec::DataTypeId outTypeId)
+    : expr(&expr), projector(nullptr), outTypeId(outTypeId)
 {
     bool initialized = this->Initialize(filter);
     if (!initialized) {
