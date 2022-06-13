@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -1287,30 +1288,37 @@ public class OmniFilterAndProjectOperatorTest {
         final int threadCount = 1000;
         final int corePoolSize = 10;
         final int maximumPoolSize = 50;
+        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
         ThreadPoolExecutor threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(threadCount));
         final int numRows = 1000;
 
         for (int i = 0; i < threadCount; i++) {
             CompletableFuture.runAsync(() -> {
-                OmniOperator op = factory.createOperator();
-                VecBatch vecBatch = new VecBatch(createTable(numRows));
-                op.addInput(vecBatch);
-                assertTrue(op.getOutput().hasNext());
-                VecBatch res = op.getOutput().next();
-                assertEquals(res.getRowCount(), 501);
+                try {
+                    OmniOperator op = factory.createOperator();
+                    VecBatch vecBatch = new VecBatch(createTable(numRows));
+                    op.addInput(vecBatch);
+                    assertTrue(op.getOutput().hasNext());
+                    VecBatch res = op.getOutput().next();
+                    assertEquals(res.getRowCount(), 501);
 
-                freeVecBatch(res);
-                op.close();
+                    freeVecBatch(res);
+                    op.close();
+                } finally {
+                    countDownLatch.countDown();
+                }
             }, threadPool);
         }
+
+        // This will wait until all future ready.
         try {
-            // Wait for all to finish
-            Thread.sleep(10000);
+            countDownLatch.await();
         } catch (InterruptedException e) {
-            throw new InterruptedException("current thread is interrupted");
+            assertTrue(false);
         }
 
+        CountDownLatch countDownLatchJSON = new CountDownLatch(threadCount);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN_OR_EQUAL\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
@@ -1319,23 +1327,27 @@ public class OmniFilterAndProjectOperatorTest {
         // test in JSON format
         for (int i = 0; i < threadCount; i++) {
             CompletableFuture.runAsync(() -> {
-                OmniOperator opJSON = factoryJSON.createOperator();
-                VecBatch vecBatch = new VecBatch(createTable(numRows));
-                opJSON.addInput(vecBatch);
-                assertTrue(opJSON.getOutput().hasNext());
-                VecBatch resJSON = opJSON.getOutput().next();
-                assertEquals(resJSON.getRowCount(), 501);
+                try {
+                    OmniOperator opJSON = factoryJSON.createOperator();
+                    VecBatch vecBatch = new VecBatch(createTable(numRows));
+                    opJSON.addInput(vecBatch);
+                    assertTrue(opJSON.getOutput().hasNext());
+                    VecBatch resJSON = opJSON.getOutput().next();
+                    assertEquals(resJSON.getRowCount(), 501);
 
-                freeVecBatch(resJSON);
-                opJSON.close();
+                    freeVecBatch(resJSON);
+                    opJSON.close();
+                } finally {
+                    countDownLatchJSON.countDown();
+                }
             }, threadPool);
         }
 
+        // This will wait until all future ready.
         try {
-            // Wait for all to finish
-            Thread.sleep(10000);
+            countDownLatchJSON.await();
         } catch (InterruptedException e) {
-            throw new InterruptedException("current thread is interrupted");
+            assertTrue(false);
         }
 
         threadPool.shutdown();
@@ -1444,10 +1456,10 @@ public class OmniFilterAndProjectOperatorTest {
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"precision\":21,\"scale\":5,\"colVal\":0}");
 
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\"," +
-                        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0," +
-                        "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":7," +
-                        "\"precision\":21,\"scale\":5,\"isNull\":false,\"value\":\"2000\"}}",
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
+                        + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0,"
+                        + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":7,"
+                        + "\"precision\":21,\"scale\":5,\"isNull\":false,\"value\":\"2000\"}}",
                 types, projectionsJSON, 1);
 
         assertFalse(factory.isSupported());

@@ -883,12 +883,10 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
-            Constant *strValConst =
-                ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(lExpr.stringVal->c_str())));
-            Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, llvmTypes->I8PtrType());
+            Constant *strValConst = CreateStringConstant(*(lExpr.stringVal));
             Constant *strLenConst =
                 ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(lExpr.stringVal->length())));
-            codeGenValue = new CodeGenValue(strValPtr, llvmTypes->CreateConstantBool(isNullLiteral), strLenConst);
+            codeGenValue = new CodeGenValue(strValConst, llvmTypes->CreateConstantBool(isNullLiteral), strLenConst);
             break;
         }
         case OMNI_BOOLEAN: {

@@ -494,17 +494,25 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     std::vector<omniruntime::expressions::Expr *> projectExprs;
     omniruntime::expressions::Expr *filterExpr = nullptr;
     if (parseFormat == JSON) {
+        JNI_METHOD_START
         auto filterJsonExpr = nlohmann::json::parse(filterExpression);
         filterExpr = JSONParser::ParseJSON(filterJsonExpr);
+        JNI_METHOD_END(0L)
+        JNI_METHOD_START
         nlohmann::json jsonProjectExprs[jProjectLength];
         for (int32_t i = 0; i < jProjectLength; i++) {
             jsonProjectExprs[i] = nlohmann::json::parse(projectExpressions[i]);
         }
         projectExprs = JSONParser::ParseJSON(jsonProjectExprs, jProjectLength);
+        JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
     } else {
         Parser parser;
+        JNI_METHOD_START
         filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
+        JNI_METHOD_END(0L)
+        JNI_METHOD_START
         projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, inputDataTypes);
+        JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
     }
     if (filterExpr == nullptr || (projectExprs.size() != static_cast<size_t>(jProjectLength))) {
         delete filterExpr;
@@ -554,6 +562,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     auto inputLength = static_cast<int32_t>(jInputLength);
 
     std::vector<omniruntime::expressions::Expr *> expressions;
+    JNI_METHOD_START
     if (parseFormat == JSON) {
         nlohmann::json jsonExprs[jExprsLength];
         for (int32_t i = 0; i < jExprsLength; i++) {
@@ -564,6 +573,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
         Parser parser;
         expressions = parser.ParseExpressions(exprs, jExprsLength, inputDataTypes);
     }
+    JNI_METHOD_END(0L)
     if (expressions.size() != static_cast<size_t>(jExprsLength)) {
         Expr::DeleteExprs(expressions);
         return 0;
@@ -978,8 +988,9 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
                           ->GetHashBuilderOperatorFactory()
                           ->GetHashTables();
     std::string filterExpression = hashTables->GetFilterExpression();
+    Expr *filterExpr = nullptr;
     JNI_METHOD_START
-    auto filterExpr = CreateJoinFilterExpr(filterExpression);
+    filterExpr = CreateJoinFilterExpr(filterExpression);
     hashTables->SetFilterExpr(filterExpr);
     JNI_METHOD_END(0L)
 
@@ -987,7 +998,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(probeHashKeysArr, probeHashKeysCount, probeHashKeysArrExprs);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
 
     JNI_DEBUG_LOG("before create lookup join with expression operator factory elapsed time: %ld ms.", END(start));
     LookupJoinWithExprOperatorFactory *operatorFactory = nullptr;
@@ -995,7 +1006,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
         probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
         buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, probeHashKeysArrExprs)
+    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, probeHashKeysArrExprs)
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(probeHashKeysArrExprs);
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create lookup join with expression operator factory finished, elapsed time: %ld ms.", END(start));
@@ -1465,9 +1477,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
         Expr::DeleteExprs(projectExprs);
         return 0;
     }
-
-    delete filterExpr;
+    JNI_METHOD_END_WITH_MULTI_EXPRS(0, { filterExpr }, projectExprs)
+    Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projectExprs);
     return 1;
-    JNI_METHOD_END_WITH_MULTI_EXPRS(0, std::vector<omniruntime::expressions::Expr *> { filterExpr }, projectExprs)
 }
