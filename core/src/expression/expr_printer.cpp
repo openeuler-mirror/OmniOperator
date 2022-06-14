@@ -14,35 +14,44 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 using namespace std;
 
-string ExprPrinter::BinaryExprPrinterHelper(const Operator &op, string type) const
+string ExprPrinter::BinaryExprPrinterHelper(const Operator &op, const DataType &type) const
 {
+    string typeStr = TypeUtil::TypeToString(type.GetId());
+    if (TypeUtil::IsDecimalType(type.GetId())) {
+        typeStr += "(";
+        typeStr += to_string(type.GetPrecision());
+        typeStr += ", ";
+        typeStr += to_string(type.GetScale());
+        typeStr += ")";
+    }
+
     switch (op) {
         case Operator::EQ:
-            return "Cmp:" + type + "(EQ ";
+            return "Cmp:" + typeStr + "(EQ ";
         case Operator::NEQ:
-            return "Cmp:" + type + "(NEQ ";
+            return "Cmp:" + typeStr + "(NEQ ";
         case Operator::LT:
-            return "Cmp:" + type + "(LT ";
+            return "Cmp:" + typeStr + "(LT ";
         case Operator::LTE:
-            return "Cmp:" + type + "(LTE ";
+            return "Cmp:" + typeStr + "(LTE ";
         case Operator::GT:
-            return "Cmp:" + type + "(GT ";
+            return "Cmp:" + typeStr + "(GT ";
         case Operator::GTE:
-            return "Cmp:" + type + "(GTE ";
+            return "Cmp:" + typeStr + "(GTE ";
         case Operator::AND:
-            return "Bin:" + type + "(AND ";
+            return "Bin:" + typeStr + "(AND ";
         case Operator::OR:
-            return "Bin:" + type + "(OR ";
+            return "Bin:" + typeStr + "(OR ";
         case Operator::ADD:
-            return "Arith:" + type + "(ADD ";
+            return "Arith:" + typeStr + "(ADD ";
         case Operator::SUB:
-            return "Arith:" + type + "(SUB ";
+            return "Arith:" + typeStr + "(SUB ";
         case Operator::MUL:
-            return "Arith:" + type + "(MUL ";
+            return "Arith:" + typeStr + "(MUL ";
         case Operator::DIV:
-            return "Arith:" + type + "(DIV ";
+            return "Arith:" + typeStr + "(DIV ";
         case Operator::MOD:
-            return "Arith:" + type + "(MOD ";
+            return "Arith:" + typeStr + "(MOD ";
         default:
             return "Invalid";
     }
@@ -145,19 +154,19 @@ std::string GetDecimal128ValOutput(const LiteralExpr &e)
 void ExprPrinter::Visit(const BinaryExpr &e)
 {
     string indent = GenerateIndentation();
-    string message = BinaryExprPrinterHelper(e.op, TypeUtil::TypeToString(e.GetReturnTypeId()));
+    string message = BinaryExprPrinterHelper(e.op, e.GetReturnType());
     if (message == "Invalid") {
         message = "InvalidBinaryOperator:" + to_string(static_cast<int32_t>(e.op)) + "(";
     }
     message = indent + message;
-    LogDebug("%s", message.c_str());
+    printf("%s\n", message.c_str());
 
     this->indentationDepth++;
     (e.left)->Accept(*this);
 
     (e.right)->Accept(*this);
     string lastParentheses = indent + ")";
-    LogDebug("%s", lastParentheses.c_str());
+    printf("%s\n", lastParentheses.c_str());
     this->indentationDepth--;
 }
 
@@ -183,11 +192,11 @@ void ExprPrinter::Visit(const UnaryExpr &e)
             output += "InvalidUnaryOperator:" + to_string(static_cast<int32_t>(e.op)) + "(";
             break;
     }
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     (e.exp)->Accept(*this);
     string lastParentheses = indent + ")";
-    LogDebug("%s", lastParentheses.c_str());
+    printf("%s\n", lastParentheses.c_str());
     this->indentationDepth--;
 }
 
@@ -223,7 +232,7 @@ void ExprPrinter::Visit(const LiteralExpr &e)
         default:
             output += "Literal:invalid DataType " + to_string(e.GetReturnTypeId());
     }
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
 }
 
 void ExprPrinter::Visit(const FieldExpr &e)
@@ -240,7 +249,7 @@ void ExprPrinter::Visit(const FieldExpr &e)
         output += ")";
     }
     output += ":#" + to_string(e.colVal);
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
 }
 
 /*
@@ -258,12 +267,12 @@ void ExprPrinter::Visit(const InExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "In:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     for (int i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
-            LogDebug("%s", (indent + ")").c_str());
+            printf("%s\n", (indent + ")").c_str());
         }
     }
     this->indentationDepth--;
@@ -287,14 +296,14 @@ void ExprPrinter::Visit(const SwitchExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "Switch:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     for (int i = 0; i < e.whenClause.size(); i++) {
         (e.whenClause[i].first)->Accept(*this);
         (e.whenClause[i].second)->Accept(*this);
     }
     e.falseExpr->Accept(*this);
-    LogDebug("%s", (indent + ")").c_str());
+    printf("%s\n", (indent + ")").c_str());
     this->indentationDepth--;
 }
 /*
@@ -311,14 +320,14 @@ void ExprPrinter::Visit(const BetweenExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "Between:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     (e.value)->Accept(*this);
 
     (e.lowerBound)->Accept(*this);
 
     (e.upperBound)->Accept(*this);
-    LogDebug("%s", (indent + ")").c_str());
+    printf("%s\n", (indent + ")").c_str());
     this->indentationDepth--;
 }
 
@@ -345,14 +354,14 @@ void ExprPrinter::Visit(const IfExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "If:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     e.condition->Accept(*this);
 
     e.trueExpr->Accept(*this);
 
     e.falseExpr->Accept(*this);
-    LogDebug("%s", (indent + ")").c_str());
+    printf("%s\n", (indent + ")").c_str());
     this->indentationDepth--;
 }
 
@@ -372,12 +381,12 @@ void ExprPrinter::Visit(const CoalesceExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "Coalesce:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     e.value1->Accept(*this);
 
     e.value2->Accept(*this);
-    LogDebug("%s", (indent + ")").c_str());
+    printf("%s\n", (indent + ")").c_str());
     this->indentationDepth--;
 }
 
@@ -395,10 +404,10 @@ void ExprPrinter::Visit(const IsNullExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "IsNull:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    LogDebug("%s", output.c_str());
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     e.value->Accept(*this);
-    LogDebug("%s", (indent + ")").c_str());
+    printf("%s\n", (indent + ")").c_str());
     this->indentationDepth--;
 }
 
@@ -413,13 +422,26 @@ void ExprPrinter::Visit(const IsNullExpr &e)
 void ExprPrinter::Visit(const FuncExpr &e)
 {
     string indent = GenerateIndentation();
-    string output = indent + "Function:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + e.funcName + "(";
-    LogDebug("%s", output.c_str());
+    string typeStr = TypeUtil::TypeToString(e.GetReturnTypeId());
+    if (TypeUtil::IsDecimalType(e.GetReturnTypeId())) {
+        typeStr += "(";
+        typeStr += to_string(e.GetReturnType().GetPrecision());
+        typeStr += ", ";
+        typeStr += to_string(e.GetReturnType().GetScale());
+        typeStr += ")";
+    } else if (TypeUtil::IsStringType(e.GetReturnTypeId())) {
+        typeStr += "[";
+        typeStr += to_string(e.GetReturnType().GetWidth());
+        typeStr += "]";
+    }
+
+    string output = indent + "Function:" + ":" + e.funcName + ":" + typeStr + "(";
+    printf("%s\n", output.c_str());
     this->indentationDepth++;
     for (int i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
-            LogDebug("%s", (indent + ")").c_str());
+            printf("%s\n", (indent + ")").c_str());
         }
     }
     this->indentationDepth--;

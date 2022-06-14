@@ -2,22 +2,18 @@
 // * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
 // * Description: ...
 // */
+#include <string>
+#include <vector>
+#include <chrono>
 #include "gtest/gtest.h"
-#include "../util/test_util.h"
-#include "../../src/operator/projection/projection.h"
-#include "../../src/vector/vector_helper.h"
+#include "../../src/expression/expressions.h"
 #include "../../src/codegen/functions/stringfunctions.h"
 #include "../../src/codegen/functions/decimalfunctions.h"
 #include "../../src/codegen/functions/mathfunctions.h"
 #include "../../src/codegen/functions/murmur3_hash.h"
 #include "../../src/codegen/functions/dictionaryfunctions.h"
-#include "../../src/codegen/functions/context_helper.h"
 #include "../../src/codegen/functions/varcharVectorfunctions.h"
-#include "../../src/type/decimal_operations.h"
-#include "../../src/type/decimal128.h"
-#include <string>
-#include <vector>
-#include <chrono>
+
 namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -1036,15 +1032,15 @@ TEST(FunctionTest, StrCompare)
     EXPECT_EQ(result, string("racecar").compare(string("race")));
 }
 
-TEST(FunctionTest, Like)
+TEST(FunctionTest, LikeStr)
 {
-    bool result = Like("hello", 5, "hello", 5);
+    bool result = LikeStr("hello", 5, "hello", 5);
     EXPECT_TRUE(result);
 
-    result = Like("regex", 5, "rege(x(es)?|xps?)", 17);
+    result = LikeStr("regex", 5, "rege(x(es)?|xps?)", 17);
     EXPECT_TRUE(result);
 
-    result = Like("20500", 5, "\\d{5}(-\\d{4})?", 14);
+    result = LikeStr("20500", 5, "\\d{5}(-\\d{4})?", 14);
     EXPECT_TRUE(result);
 }
 

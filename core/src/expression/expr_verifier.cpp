@@ -86,14 +86,6 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         return;
     }
 
-    if (TypeUtil::IsDecimalType(leftType.GetId())) {
-        // Only support decimals with same precision and scale
-        if (leftType != rightType) {
-            this->supportedFlag = false;
-            return;
-        }
-    }
-
     if (!VisitExpr(*(binaryExpr.left))) {
         this->supportedFlag = false;
         return;
@@ -129,42 +121,9 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
                 break;
         }
         return;
-    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        if (leftType.GetPrecision() == 7 && leftType.GetScale() == 2) {
-            this->supportedFlag = true;
-            return;
-        }
-        if (leftType.GetPrecision() == 17 && leftType.GetScale() == 2) {
-            this->supportedFlag = true;
-            return;
-        }
-    } else if (binaryExpr.left->GetReturnTypeId() == OMNI_DECIMAL128) {
-        if (leftType.GetPrecision() == 38 && leftType.GetScale() == 2) {
-            this->supportedFlag = true;
-            return;
-        }
-        if (leftType.GetPrecision() == 21 && leftType.GetScale() == 6) {
-            this->supportedFlag = true;
-            return;
-        }
-        if (leftType.GetPrecision() == 38 && leftType.GetScale() == 16) {
-            this->supportedFlag = true;
-            return;
-        }
-        if ((leftType.GetPrecision() == 22 && leftType.GetScale() == 6) &&
-            (rightType.GetPrecision() == 22 && rightType.GetScale() == 6)) {
-            if (returnType.GetId() == OMNI_BOOLEAN) {
-                this->supportedFlag = true;
-                return;
-            }
-            if (returnType.GetId() == OMNI_DECIMAL128) {
-                if ((returnType.GetPrecision() == 22 && returnType.GetScale() == 6) ||
-                    (returnType.GetPrecision() == 38 && returnType.GetScale() == 16)) {
-                    this->supportedFlag = true;
-                    return;
-                }
-            }
-        }
+    } else if (TypeUtil::IsDecimalType(binaryExpr.left->GetReturnTypeId())) {
+        this->supportedFlag = true;
+        return;
     }
     this->supportedFlag = false;
 }
@@ -213,14 +172,6 @@ void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
         return;
     }
 
-    if (TypeUtil::IsDecimalType(betweenExpr.lowerBound->GetReturnTypeId())) {
-        // Only support decimals with same precision and scale
-        if (betweenExpr.lowerBound->GetReturnType() != betweenExpr.upperBound->GetReturnType()) {
-            this->supportedFlag = false;
-            return;
-        }
-    }
-
     if (!VisitExpr(*betweenExpr.value)) {
         this->supportedFlag = false;
         return;
@@ -234,21 +185,7 @@ void ExprVerifier::Visit(const BetweenExpr &betweenExpr)
         return;
     }
 
-    if (betweenExpr.lowerBound->GetReturnTypeId() == OMNI_INT ||
-        betweenExpr.lowerBound->GetReturnTypeId() == OMNI_LONG ||
-        betweenExpr.lowerBound->GetReturnTypeId() == OMNI_DATE32 ||
-        betweenExpr.lowerBound->GetReturnTypeId() == OMNI_DOUBLE ||
-        TypeUtil::IsStringType(betweenExpr.lowerBound->GetReturnTypeId())) {
-        this->supportedFlag = true;
-        return;
-    } else if (betweenExpr.lowerBound->GetReturnTypeId() == OMNI_DECIMAL64) {
-        if (betweenExpr.lowerBound->GetReturnType().GetPrecision() == 7 &&
-            betweenExpr.lowerBound->GetReturnType().GetScale() == 2) {
-            this->supportedFlag = true;
-            return;
-        }
-    }
-    this->supportedFlag = false;
+    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const IfExpr &ifExpr)
@@ -269,6 +206,7 @@ void ExprVerifier::Visit(const IfExpr &ifExpr)
         this->supportedFlag = false;
         return;
     }
+    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
@@ -284,10 +222,7 @@ void ExprVerifier::Visit(const CoalesceExpr &coalesceExpr)
         return;
     }
 
-    if (TypeUtil::IsDecimalType(coalesceExpr.GetReturnTypeId())) {
-        this->supportedFlag = false;
-        return;
-    }
+    this->supportedFlag = true;
 }
 
 void ExprVerifier::Visit(const IsNullExpr &isNullExpr)

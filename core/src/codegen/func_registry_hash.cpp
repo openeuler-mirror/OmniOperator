@@ -14,6 +14,9 @@ std::vector<Function> HashFunctionRegistry::GetFunctions()
     DataTypeId retType = OMNI_INT;
     std::string mm3fnStr = "mm3hash";
     std::vector<Function> hashRegistry = {
+        // insert native function for combine hash math function
+        Function(reinterpret_cast<void *>(CombineHash), "combine_hash", {},
+            { OMNI_LONG, OMNI_LONG }, OMNI_LONG, VALID_NOT_NULL_RESULT),
         Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {}, { OMNI_INT, OMNI_INT },
             retType, VALID_NOT_NULL_RESULT),
         Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, { OMNI_LONG, OMNI_INT },

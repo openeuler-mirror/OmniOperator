@@ -15,6 +15,21 @@
 #include "expression/expressions.h"
 #include "operator/execution_context.h"
 
+/*
+ * ProjFunc is retrieved from ProjectionCodeGen
+ * projector(data, rowCount, outVec, selectedRows, numSelectedRows, inputBitmap, inputOffset, outputBitmap,
+ *     outputOffset, context, dictionaryVectors)
+ * data: 2D array containing vector values
+ * rowCount: number of rows in data
+ * selectedRows: array of row numbers which pass the filter
+ * numSelectedRows: number of rows which pass the filter
+ * inputBitmap: 2D boolean array where bitmap[col][row] is true if data[row][col] is null
+ * inputOffset: used by char and varchar
+ * outputBitmap:
+ * outputOffset:
+ * context: stores some error message
+ * dictionaryVectors: contains dictionary vec, will be restored inside codegen
+ */
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *,
     bool *, int32_t *, int64_t, int64_t *);
 
@@ -49,7 +64,7 @@ private:
 
 class Projection {
 public:
-    Projection(const expressions::Expr &expr, bool filter, vec::DataTypeId outTypeId);
+    Projection(const expressions::Expr &expr, bool filter, DataType outType);
     ~Projection()
     {
         this->codegen.reset();
@@ -71,9 +86,9 @@ public:
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
         int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    omniruntime::type::DataTypeId GetOutputTypeId() const
+    omniruntime::type::DataType GetOutputType() const
     {
-        return this->outTypeId;
+        return this->outType;
     }
 
 private:
@@ -82,17 +97,8 @@ private:
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
-    DataTypeId outTypeId;
-
-    // projector function is retrieved from ProjectionCodeGen
-    // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)
-    // data: 2D array containing vector values
-    // rowCount: number of rows in data
-    // selectedRows: array of row numbers which pass the filter
-    // numSelectedRows: number of rows which pass the filter
-    // bitmap: 2D boolean array where bitmap[col][row] is true if data[row][col] is null
+    DataType outType;
     ProjFunc projector;
-
     bool Initialize(bool filter);
 };
 

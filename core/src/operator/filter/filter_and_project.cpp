@@ -72,7 +72,7 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
 bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
 {
     auto result =  this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
-    return *this->isResultNull? false : result;
+    return *this->isResultNull ? false : result;
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
@@ -87,12 +87,12 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     std::cout << std::endl;
 #endif
     this->filter = make_unique<Filter>(*parsedExpr);
-    if (!this->filter->isSupported) {
+    if (!this->filter->IsSupported()) {
         this->isSupportedExpr = false;
     }
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto projection = make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnTypeId());
+        auto projection = make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnType());
         if (!projection->IsSupported()) {
             this->isSupportedExpr = false;
             break;

@@ -370,7 +370,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     builder->CreateRet(retStore);
     llvmEngine->OptimizeModule();
     llvm::verifyFunction(*func);
-#ifdef DEBUG
+#ifdef DEBUG_LLVM
     GetModule()->print(errs(), nullptr);
 #endif
     auto resTracker = jit->getMainJITDylib().createResourceTracker();

@@ -186,9 +186,13 @@ CallInst *LLVMEngine::CreateCall(llvm::Function *func, std::vector<llvm::Value *
     return builder->CreateCall(func, argsVals, name);
 }
 
-Value *LLVMEngine::CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
-    const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args, std::string msg)
+llvm::Value *LLVMEngine::CallExternFunction(const std::string fn_name,
+    std::vector<omniruntime::type::DataTypeId> params, const omniruntime::type::DataTypeId &returnType,
+    std::vector<llvm::Value *> args, llvm::Value *executionContextPtr, std::string msg)
 {
+    if (executionContextPtr != nullptr) {
+        args.insert(args.begin(), executionContextPtr);
+    }
     std::string funcId = FunctionSignature(fn_name, params, returnType).ToString();
     auto f = module->getFunction(funcId);
     auto ret = CreateCall(f, args, msg);

@@ -35,8 +35,6 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
                  { OMNI_LONG }, OMNI_LONG, NULL_RESULT_IF_ANY_NULL_ARG),
         Function(reinterpret_cast<void *>(Abs<double>), absFnStr, {},
                  { OMNI_DOUBLE }, OMNI_DOUBLE, NULL_RESULT_IF_ANY_NULL_ARG),
-        Function(reinterpret_cast<void *>(Abs<int64_t>), absFnStr, {},
-                 { OMNI_DECIMAL64 }, OMNI_DECIMAL64, NULL_RESULT_IF_ANY_NULL_ARG),
 
         // insert native functions for each cast math function
         Function(reinterpret_cast<void *>(CastInt32ToDouble), castFnStr, {},
@@ -84,9 +82,9 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(MultiplyInt64), multiplyFnStr, {},
                  longParams, OMNI_LONG, NULL_RESULT_IF_ANY_NULL_ARG),
         Function(reinterpret_cast<void *>(DivideInt64), divideFnStr, {},
-                 longParams, OMNI_LONG, NULL_RESULT_IF_ANY_NULL_ARG),
+                 longParams, OMNI_LONG, NULL_RESULT_IF_ANY_NULL_ARG, true),
         Function(reinterpret_cast<void *>(ModulusInt64), modulusFnStr, {},
-                 longParams, OMNI_LONG, NULL_RESULT_IF_ANY_NULL_ARG),
+                 longParams, OMNI_LONG, NULL_RESULT_IF_ANY_NULL_ARG, true),
         Function(reinterpret_cast<void *>(LessThanInt64), lessThanFnStr, {},
                  longParams, OMNI_BOOLEAN, NOT_NULL_RESULT),
         Function(reinterpret_cast<void *>(LessThanEqualInt64), lessThanEqualFnStr, {},
@@ -108,9 +106,9 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(MultiplyInt32), multiplyFnStr, {},
                  intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG),
         Function(reinterpret_cast<void *>(DivideInt32), divideFnStr, {},
-                 intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG),
+                 intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG, true),
         Function(reinterpret_cast<void *>(ModulusInt32), modulusFnStr, {},
-                 intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG),
+                 intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG, true),
         Function(reinterpret_cast<void *>(LessThanInt32), lessThanFnStr, {},
                  intParams, OMNI_BOOLEAN, NOT_NULL_RESULT),
         Function(reinterpret_cast<void *>(LessThanEqualInt32), lessThanEqualFnStr, {},
@@ -127,9 +125,6 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         // insert pmod function for project operator support
         Function(reinterpret_cast<void *>(Pmod), "pmod", {},
                  intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG),
-                 // insert native function for combine hash math function
-        Function(reinterpret_cast<void *>(CombineHash), "combine_hash", {},
-                { OMNI_LONG, OMNI_LONG }, OMNI_LONG, VALID_NOT_NULL_RESULT),
         // insert native functions for each round math function
         Function(reinterpret_cast<void *>(Round<int32_t>), roundFnStr, {},
                  intParams, OMNI_INT, NULL_RESULT_IF_ANY_NULL_ARG),

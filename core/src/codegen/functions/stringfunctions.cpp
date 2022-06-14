@@ -45,9 +45,19 @@ extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *b
     }
 }
 
-extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
+extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
 {
     string s = string(str, strLen);
+    string r = string(regexToMatch, regexLen);
+
+    regex re = regex(r);
+    return regex_match(s, re);
+}
+
+extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
+    int32_t regexLen)
+{
+    string s = string(str, strWidth);
     string r = string(regexToMatch, regexLen);
 
     regex re = regex(r);
@@ -149,7 +159,7 @@ extern DLLEXPORT int32_t CastString(int64_t contextPtr, const char *str, int32_t
     int base = static_cast<int32_t>('0');
     int yr =
         THOUSANDS * (str[THOU] - base) + HUNDREDS * (str[HUN] - base) + TENS * (str[TEN] - base) + (str[ONE] - base);
-    int mnth = TENS * (str[i1] - base) + (str[i1 + 1] - base); // compute mnth
+    int mnth = TENS * (str[i1] - base) + (str[i1 + 1] - base); // compute month
     int day = TENS * (str[i2] - base) + (str[i2 + 1] - base);  // compute day
 
     struct std::tm epoch = { 0, 0, 0, 1, 1, 70 };

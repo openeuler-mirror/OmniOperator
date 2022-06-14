@@ -539,7 +539,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projectExprs);
 
-    if (!factory->isSupportedExpr) {
+    if (!factory->IsSupportedExpr()) {
         delete factory;
         return 0;
     }

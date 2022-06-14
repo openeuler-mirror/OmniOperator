@@ -11,6 +11,7 @@ using namespace std;
 
 namespace omniruntime {
 namespace codegen {
+static const int COMBINE_HASH_VALUE = 31;
 static const uint32_t MM3_C1 = 0xcc9e2d51;
 static const uint32_t MM3_C2 = 0x1b873593;
 
@@ -214,6 +215,17 @@ extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t
         seed = 0;
     }
     return static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed));
+}
+
+extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull)
+{
+    if (isPrevHashValNull) {
+        prevHashVal = 0;
+    }
+    if (isValNull) {
+        val = 0;
+    }
+    return COMBINE_HASH_VALUE * prevHashVal + val;
 }
 }
 }

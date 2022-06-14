@@ -64,9 +64,9 @@ extern "C" DLLEXPORT int64_t SubtractInt64(int64_t left, int64_t right);
 
 extern "C" DLLEXPORT int64_t MultiplyInt64(int64_t left, int64_t right);
 
-extern "C" DLLEXPORT int64_t DivideInt64(int64_t divident, int64_t divisor);
+extern "C" DLLEXPORT int64_t DivideInt64(int64_t contextPtr, int64_t divident, int64_t divisor);
 
-extern "C" DLLEXPORT int64_t ModulusInt64(int64_t divident, int64_t divisor);
+extern "C" DLLEXPORT int64_t ModulusInt64(int64_t contextPtr, int64_t divident, int64_t divisor);
 
 extern "C" DLLEXPORT bool LessThanInt64(int64_t left, int64_t right);
 
@@ -86,9 +86,9 @@ extern "C" DLLEXPORT int32_t SubtractInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT int32_t MultiplyInt32(int32_t left, int32_t right);
 
-extern "C" DLLEXPORT int32_t DivideInt32(int32_t divident, int32_t divisor);
+extern "C" DLLEXPORT int32_t DivideInt32(int64_t contextPtr, int32_t divident, int32_t divisor);
 
-extern "C" DLLEXPORT int32_t ModulusInt32(int32_t divident, int32_t divisor);
+extern "C" DLLEXPORT int32_t ModulusInt32(int64_t contextPtr, int32_t divident, int32_t divisor);
 
 extern "C" DLLEXPORT bool LessThanInt32(int32_t left, int32_t right);
 
@@ -101,9 +101,6 @@ extern "C" DLLEXPORT bool GreaterThanEqualInt32(int32_t left, int32_t right);
 extern "C" DLLEXPORT bool EqualInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right);
-
-
-extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
 

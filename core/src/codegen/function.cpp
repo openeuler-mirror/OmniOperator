@@ -13,7 +13,6 @@ Function::Function(void *address, const std::string &name, const std::vector<std
     bool setExecutionContext)
 {
     this->address = address;
-    // update function name used for lookup in codegen
     this->nullableResultType = nullableResultType;
     this->isExecContextSet = setExecutionContext;
     // create function sig to register for codegen

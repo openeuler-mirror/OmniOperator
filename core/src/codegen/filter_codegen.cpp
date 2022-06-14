@@ -18,13 +18,6 @@ const int ARGUMENT_THREE = 3;
 const int OFFSETS_INDEX = 4;
 const int EXECUTION_CONTEXT_IDX = 5;
 const int DICTIONARY_VECTORS_IDX = 6;
-
-const int ROW_FILTER_INPUT_INDEX = 0;
-const int ROW_FILTER_OFFSETS_INDEX = 2;
-const int ROW_FILTER_ROW_IDX_INDEX = 3;
-const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
-const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
-const int ROW_FILTER_IS_NULL_INDEX = 6;
 }
 
 std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
@@ -184,68 +177,4 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     auto sym = eoe(jit->lookup("FILTER_WRAPPER"));
     return sym.getAddress();
-}
-
-std::vector<Type *> GetSingleFilterArguments(LLVMContext &context)
-{
-    std::vector<Type *> args = { Type::getInt64PtrTy(context), Type::getInt64PtrTy(context),
-                                 Type::getInt64PtrTy(context), Type::getInt32Ty(context),
-                                 Type::getInt64Ty(context),    Type::getInt64PtrTy(context) };
-    return args;
-}
-
-int64_t FilterCodeGen::GetExpressionEvaluator()
-{
-    // Array of addresses, bitmap, row index
-    std::vector<Type *> args = GetSingleFilterArguments(*context);
-    llvm::Function *baseFunc = this->CreateFunction();
-    if (baseFunc == nullptr) {
-        return 0;
-    }
-
-    FunctionType *funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
-    llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module);
-    BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
-    llvmEngine->RecordMainFunction(funcDecl);
-    builder->SetInsertPoint(wrapperBody);
-    // Name the arguments
-    Argument *inputData = funcDecl->getArg(ROW_FILTER_INPUT_INDEX);
-    inputData->setName("INPUT_DATA");
-    Argument *nulls = funcDecl->getArg(ARGUMENT_ONE);
-    nulls->setName("NULLS");
-    Argument *offsets = funcDecl->getArg(ROW_FILTER_OFFSETS_INDEX);
-    offsets->setName("OFFSETS");
-    Argument *rowIndex = funcDecl->getArg(ROW_FILTER_ROW_IDX_INDEX);
-    rowIndex->setName("ROW_INDEX");
-    Argument *executionContext = funcDecl->getArg(ROW_FILTER_EXECUTION_CONTEXT_INDEX);
-    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
-    Argument *dictionaryVectors = funcDecl->getArg(ROW_FILTER_DICT_VECTORS_INDEX);
-    dictionaryVectors->setName("DICTIONARY_VECTOR_ADDRESSES");
-
-    std::vector<Value *> funcArgs;
-    funcArgs.push_back(inputData);
-    funcArgs.push_back(nulls);
-    funcArgs.push_back(offsets);
-    funcArgs.push_back(rowIndex);
-
-    // Create a boolean pointer to store result null value
-    AllocaInst *lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "LENGTH_PTR");
-    builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthAllocaInst);
-    auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), nullptr, "IS_NULL_PTR");
-    builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
-    funcArgs.push_back(lengthAllocaInst);
-    funcArgs.push_back(executionContext);
-    funcArgs.push_back(dictionaryVectors);
-    funcArgs.push_back(isNullPtr);
-
-    builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
-    llvmEngine->OptimizeModule();
-#ifdef DEBUG
-    module->print(errs(), nullptr);
-#endif
-    auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    llvmEngine->MakeThreadSafe(&resTracker);
-    rt = resTracker;
-    return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
 }

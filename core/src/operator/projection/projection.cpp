@@ -25,6 +25,12 @@ RowProjFunc RowProjection::Create()
     if (this->expression == nullptr) {
         return nullptr;
     }
+#ifdef DEBUG
+    std::cout << "RowProjection: " << std::endl;
+    ExprPrinter p;
+    this->expression->Accept(p);
+    std::cout << std::endl;
+#endif
     this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
     if (fPtr == 0) {
@@ -86,21 +92,19 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(const Expr &expr, bool filter, vec::DataTypeId outTypeId)
-    : expr(&expr), projector(nullptr), outTypeId(outTypeId)
+Projection::Projection(const Expr &expr, bool filter, DataType outType)
+    : expr(&expr), outType(outType), projector(nullptr)
 {
+#ifdef DEBUG
+    std::cout << "Expression in projection:" << std::endl;
+    ExprPrinter printExprTree;
+    expr.Accept(printExprTree);
+    std::cout << std::endl;
+#endif
     bool initialized = this->Initialize(filter);
     if (!initialized) {
         this->isSupported = false;
     }
-#ifdef DEBUG
-    if (initialized) {
-        std::cout << "Expression in projection:" << std::endl;
-        ExprPrinter printExprTree;
-        expr.Accept(printExprTree);
-        std::cout << std::endl;
-    }
-#endif
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
@@ -161,7 +165,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         }
     }
 
-    DataTypeId outTypeId = this->GetOutputTypeId();
+    DataTypeId outTypeId = this->GetOutputType().GetId();
     Vector *outVec = nullptr;
     int32_t avgStringLength = 200;
     switch (outTypeId) {
@@ -176,10 +180,11 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case type::OMNI_DOUBLE:
             outVec = new DoubleVector(vecAllocator, numSelectedRows);
             break;
-        case type::OMNI_VARCHAR:
         case type::OMNI_CHAR:
-            // Must set capacity appropriately (to do)
-            // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
+            outVec =
+                new VarcharVector(vecAllocator, numSelectedRows * this->GetOutputType().GetWidth(), numSelectedRows);
+            break;
+        case type::OMNI_VARCHAR:
             outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
         case type::OMNI_DECIMAL128:
@@ -296,7 +301,7 @@ ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &
 {
     this->SetJitContext(nullptr);
     for (auto expr : exprs) {
-        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnTypeId());
+        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnType());
         if (!projection->IsSupported()) {
             this->isSupported = false;
             break;

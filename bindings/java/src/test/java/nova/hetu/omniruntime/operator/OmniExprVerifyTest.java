@@ -32,8 +32,8 @@ public class OmniExprVerifyTest {
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"precision\":21,\"scale\":5,\"colVal\":0}");
         String filterJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
                 + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0,"
-                + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":7,"
-                + "\"precision\":21,\"scale\":5,\"isNull\":false,\"value\":\"2000\"}}";
+                + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":6,"
+                + "\"precision\":10,\"scale\":5,\"isNull\":false,\"value\":2000}}";
 
         long isSupported = new OmniExprVerify().exprVerifyNative(DataTypeSerializer.serialize(inputTypes), 0,
                 filterJSON, projectionsJSON.toArray(new Object[0]), projectionsJSON.size(), 1);

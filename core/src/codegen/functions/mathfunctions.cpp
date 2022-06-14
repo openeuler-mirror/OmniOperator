@@ -14,7 +14,7 @@
 #define DLLEXPORT
 #endif
 
-const int COMBINE_HASH_VALUE = 31;
+using namespace omniruntime::codegen;
 
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 {
@@ -55,7 +55,6 @@ extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x)
         return static_cast<int64_t>(Round(x, 0));
     }
 }
-
 
 // double functions
 
@@ -131,13 +130,23 @@ extern "C" DLLEXPORT int64_t MultiplyInt64(int64_t left, int64_t right)
     return left * right;
 }
 
-extern "C" DLLEXPORT int64_t DivideInt64(int64_t divident, int64_t divisor)
+extern "C" DLLEXPORT int64_t DivideInt64(int64_t contextPtr, int64_t divident, int64_t divisor)
 {
+    if (divisor == 0) {
+        char message[] = "Divided by zero error!";
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return 0;
+    }
     return divident / divisor;
 }
 
-extern "C" DLLEXPORT int64_t ModulusInt64(int64_t divident, int64_t divisor)
+extern "C" DLLEXPORT int64_t ModulusInt64(int64_t contextPtr, int64_t divident, int64_t divisor)
 {
+    if (divisor == 0) {
+        char message[] = "Divided by zero error!";
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return 0;
+    }
     return std::fmod(divident, divisor);
 }
 
@@ -171,8 +180,7 @@ extern "C" DLLEXPORT bool NotEqualInt64(int64_t left, int64_t right)
     return left != right;
 }
 
-
-// long functions
+// int functions
 
 extern "C" DLLEXPORT int32_t AddInt32(int32_t left, int32_t right)
 {
@@ -189,13 +197,23 @@ extern "C" DLLEXPORT int32_t MultiplyInt32(int32_t left, int32_t right)
     return left * right;
 }
 
-extern "C" DLLEXPORT int32_t DivideInt32(int32_t divident, int32_t divisor)
+extern "C" DLLEXPORT int32_t DivideInt32(int64_t contextPtr, int32_t divident, int32_t divisor)
 {
+    if (divisor == 0) {
+        char message[] = "Divided by zero error!";
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return 0;
+    }
     return divident / divisor;
 }
 
-extern "C" DLLEXPORT int32_t ModulusInt32(int32_t divident, int32_t divisor)
+extern "C" DLLEXPORT int32_t ModulusInt32(int64_t contextPtr, int32_t divident, int32_t divisor)
 {
+    if (divisor == 0) {
+        char message[] = "Divided by zero error!";
+        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return 0;
+    }
     return std::fmod(divident, divisor);
 }
 
@@ -229,7 +247,6 @@ extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right)
     return left != right;
 }
 
-
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
 {
     if (y == 0) {
@@ -241,16 +258,4 @@ extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
     } else {
         return r;
     }
-}
-
-
-extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull)
-{
-    if (isPrevHashValNull) {
-        prevHashVal = 0;
-    }
-    if (isValNull) {
-        val = 0;
-    }
-    return COMBINE_HASH_VALUE * prevHashVal + val;
 }
