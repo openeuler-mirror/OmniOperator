@@ -15,8 +15,6 @@
 #include "codegen/functions/murmur3_hash.h"
 #include "../util/test_util.h"
 
-using omniruntime::op::RowFilter;
-using omniruntime::op::RowFilterFunc;
 using omniruntime::op::RowProjection;
 using omniruntime::op::RowProjFunc;
 using namespace std;
@@ -33,13 +31,8 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t
 using ProjectFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *,
     int32_t *, int64_t, int64_t *);
 
-// Filter is basically just a projection that must return a boolean.
-// The logic for filtering out rows from final output is handled in C++ when
-// processing each row individually, so to LLVM it is exactly the same as a projection.
-// Check CodeGenTest.RowFilter for a dedicated test using the RowFilter class instead.
 TEST(CodeGenTest, SimpleFilter)
 {
-    // create expression objects
     FieldExpr *lessThanLeft = new FieldExpr(0, IntType());
     LiteralExpr *lessThanRight = new LiteralExpr(50, IntType());
     BinaryExpr *lessThanExpr =
@@ -90,6 +83,8 @@ TEST(CodeGenTest, SimpleFilter)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_FALSE(res);
     }
+
+    Expr::DeleteExprs({ lessThanExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -148,6 +143,8 @@ TEST(CodeGenTest, SimpleProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 50);
     }
+
+    Expr::DeleteExprs({ addExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -220,7 +217,6 @@ TEST(CodeGenTest, SingleCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -234,6 +230,8 @@ TEST(CodeGenTest, SingleCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
+
+    Expr::DeleteExprs({ switchExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -283,8 +281,6 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     when2.second = addExpr1;
     whenClause.push_back(when1);
     whenClause.push_back(when2);
-
-
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
 
     const int32_t numCols = 2;
@@ -319,7 +315,6 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -333,6 +328,8 @@ TEST(CodeGenTest, DoubleCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 10);
     }
+
+    Expr::DeleteExprs({ switchExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -431,7 +428,6 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -445,6 +441,8 @@ TEST(CodeGenTest, ThreeCaseSwitch)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, (i % 2 != 0) ? i + 10 : -i);
     }
+
+    Expr::DeleteExprs({ switchExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -479,8 +477,6 @@ TEST(CodeGenTest, SwitchElseNull)
     when.first = gtExpr;
     when.second = addExpr;
     whenClause.push_back(when);
-
-
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, nullExpr);
 
     const int32_t numCols = 2;
@@ -515,7 +511,6 @@ TEST(CodeGenTest, SwitchElseNull)
     }
 
     RowProjection rowProjection(*switchExpr);
-
     RowProjFunc func = rowProjection.Create();
     EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
 
@@ -529,6 +524,8 @@ TEST(CodeGenTest, SwitchElseNull)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : 0);
     }
+
+    Expr::DeleteExprs({ switchExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -604,6 +601,8 @@ TEST(CodeGenTest, SingleProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
+
+    Expr::DeleteExprs({ ifExpr });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -670,6 +669,8 @@ TEST(CodeGenTest, ShortCircuitProject)
             reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 10);
     }
+
+    Expr::DeleteExprs({ colExpr1 });
     context->GetArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
@@ -681,182 +682,6 @@ TEST(CodeGenTest, ShortCircuitProject)
     delete[] bitmap;
     delete[] offsets;
     delete[] dataLength;
-    delete context;
-}
-
-// Test the row filter
-TEST(CodeGenTest, RowFilter)
-{
-    FieldExpr *equalLeft = new FieldExpr(0, IntType());
-    LiteralExpr *equalRight = new LiteralExpr(0, IntType());
-    BinaryExpr *equalExpr =
-        new BinaryExpr(omniruntime::expressions::Operator::EQ, equalLeft, equalRight, BooleanType());
-
-    const int32_t numCols = 1;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
-    DataTypes DataTypes(vecOfTypes);
-
-    const int numRows = 1000;
-    int32_t *col1 = new int32_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i % 2;
-    }
-    int64_t *table = new int64_t[numCols];
-    table[0] = reinterpret_cast<int64_t>(col1);
-
-    bool **bitmap = new bool *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        bitmap[col] = new bool[numRows];
-        for (int i = 0; i < numRows; i++) {
-            bitmap[col][i] = false;
-        }
-    }
-
-    auto **offsets = new int32_t *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        offsets[col] = new int32_t[numRows];
-    }
-    int64_t dictionaryVectors[numCols] = {};
-    auto filter = new RowFilter(*equalExpr);
-    EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-    auto context = new ExecutionContext();
-    for (int32_t i = 0; i < numRows; i++) {
-        bool res = filterFunc(table, (int64_t *)bitmap, (int64_t *)offsets, i, reinterpret_cast<int64_t>(context),
-            dictionaryVectors);
-        EXPECT_EQ(res, i % 2 == 0);
-    }
-    context->GetArena()->Reset();
-    for (int i = 0; i < numCols; i++) {
-        delete[] bitmap[i];
-        delete[] offsets[i];
-    }
-    delete[] col1;
-    delete[] table;
-    delete[] bitmap;
-    delete[] offsets;
-    delete filter;
-    delete context;
-}
-
-TEST(CodeGenTest, RowFilterString)
-{
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes dataTypes(vecOfTypes);
-    const int32_t numCols = 2;
-    const int32_t numRows = 1;
-
-    string s1[1];
-    string s2[1];
-
-    s1[0] = "hello world";
-    s2[0] = "world hello";
-    int64_t *vals = new int64_t[2];
-    vals[0] = reinterpret_cast<int64_t>(s1->c_str());
-    vals[1] = reinterpret_cast<int64_t>(s2->c_str());
-    int32_t *selected = new int32_t[1];
-
-    bool **bitmap = new bool *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        bitmap[col] = new bool[numRows];
-        for (int i = 0; i < numRows; i++) {
-            bitmap[col][i] = false;
-        }
-    }
-    int64_t dictionaryVectors[numCols] = {};
-
-    auto context = new ExecutionContext();
-    auto **offsets = new int32_t *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        offsets[col] = new int32_t[numRows + 1];
-        offsets[col][0] = 0;
-        offsets[col][1] = 11;
-    }
-    auto substrCol = new FieldExpr(0, VarcharType());
-    auto substrIndex = new LiteralExpr(1, IntType());
-    auto substrLen = new LiteralExpr(5, IntType());
-    std::vector<Expr *> args;
-    args.push_back(substrCol);
-    args.push_back(substrIndex);
-    args.push_back(substrLen);
-    DataTypePtr retType = VarcharType();
-    std::string funcStr = "substr";
-
-    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
-    auto helloExpr = new LiteralExpr(new std::string("hello"), VarcharType(6));
-    auto eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExpr, helloExpr, BooleanType());
-
-    auto filter = new RowFilter(*eqExpr);
-    EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-
-    bool res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
-        dictionaryVectors);
-    EXPECT_EQ(res, true);
-    delete filter;
-
-    auto substrCol2 = new FieldExpr(1, VarcharType());
-    auto *substrIndex2 = new LiteralExpr(1, IntType());
-    auto substrLen2 = new LiteralExpr(5, IntType());
-    std::vector<Expr *> args2;
-    args2.push_back(substrCol2);
-    args2.push_back(substrIndex2);
-    args2.push_back(substrLen2);
-    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarcharType());
-
-    auto helloExpr2 = new LiteralExpr(new std::string("hello"), VarcharType(6));
-
-    auto eqExpr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExpr2, helloExpr2, BooleanType());
-    filter = new RowFilter(*eqExpr2);
-    EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-
-    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
-        dictionaryVectors);
-    EXPECT_EQ(res, false);
-
-    delete filter;
-
-    auto substrCol3 = new FieldExpr(0, VarcharType());
-    auto substrIndex3 = new LiteralExpr(1, IntType());
-    auto substrLen3 = new LiteralExpr(5, IntType());
-    std::vector<Expr *> args3;
-    args3.push_back(substrCol3);
-    args3.push_back(substrIndex3);
-    args3.push_back(substrLen3);
-    auto substrExpr3 = GetFuncExpr(funcStr, args3, VarcharType());
-
-    auto substrCol4 = new FieldExpr(1, VarcharType());
-    auto substrIndex4 = new LiteralExpr(7, IntType());
-    auto substrLen4 = new LiteralExpr(11, IntType());
-    std::vector<Expr *> args4;
-    args4.push_back(substrCol4);
-    args4.push_back(substrIndex4);
-    args4.push_back(substrLen4);
-    auto substrExpr4 = GetFuncExpr(funcStr, args4, VarcharType());
-
-    auto eqExpr3 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExpr3, substrExpr4, BooleanType());
-    filter = new RowFilter(*eqExpr3);
-    EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-
-    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context),
-        dictionaryVectors);
-    EXPECT_EQ(res, true);
-    context->GetArena()->Reset();
-    for (int i = 0; i < numCols; i++) {
-        delete[] bitmap[i];
-        delete[] offsets[i];
-    }
-    delete[] selected;
-    delete[] vals;
-    delete[] bitmap;
-    delete[] offsets;
-    delete filter;
     delete context;
 }
 
@@ -3103,8 +2928,9 @@ TEST(CodeGenTest, TestRowProjectLong)
         int64_t inputValue = slicedVector->GetValue(i);
         EXPECT_EQ(value, inputValue + 100);
     }
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete slicedVector;
     delete vector;
     delete context;
@@ -3158,8 +2984,9 @@ TEST(CodeGenTest, TestRowProjectVarchar)
         std::string expectResult(expectValue, expectValue + expectLen);
         EXPECT_EQ(result, expectResult.substr(0, 5));
     }
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete slicedVector;
     delete vector;
     delete context;
@@ -3245,116 +3072,6 @@ TEST(CodeGenTest, CastNumbers3)
     delete[] selected;
     codegen.reset();
     delete expr;
-    delete context;
-}
-
-TEST(CodeGenTest, Substr)
-{
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
-    const int32_t numCols = 2;
-    const int32_t numRows = 1;
-
-    string s1[1];
-    string s2[1];
-    s1[0] = "SUBSTR Function";
-    s2[0] = "Function SUBSTR";
-
-    int64_t *vals = new int64_t[2];
-    vals[0] = reinterpret_cast<int64_t>(s1->c_str());
-    vals[1] = reinterpret_cast<int64_t>(s2->c_str());
-
-    int32_t *selected = new int32_t[1];
-    bool **bitmap = new bool *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        bitmap[col] = new bool[numRows];
-        for (int i = 0; i < numRows; i++) {
-            bitmap[col][i] = false;
-        }
-    }
-
-    auto context = new ExecutionContext();
-    auto **offsets = new int32_t *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        offsets[col] = new int32_t[numRows + 1];
-        offsets[col][0] = 0;
-        offsets[col][1] = 15;
-    }
-
-    // create expression objects
-    auto substrData1 = new FieldExpr(0, VarcharType());
-    auto substrIndex1 = new LiteralExpr(-5, IntType());
-    auto substrLen1 = new LiteralExpr(5, IntType());
-    std::string funcStr = "substr";
-    DataTypePtr retType = VarcharType();
-    std::vector<Expr *> args1;
-    args1.push_back(substrData1);
-    args1.push_back(substrIndex1);
-    args1.push_back(substrLen1);
-    auto substrExp1 = GetFuncExpr(funcStr, args1, VarcharType());
-
-    auto ctionExpr = new LiteralExpr(new std::string("ction"), VarcharType(6));
-    auto expr1 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExp1, ctionExpr, BooleanType());
-
-    int64_t dictionaries[numCols] = {};
-
-    auto filter = new RowFilter(*expr1);
-    EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-    bool res =
-        filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
-    EXPECT_EQ(res, true);
-    delete filter;
-
-    // create expression objects
-    auto substrData2 = new FieldExpr(1, VarcharType());
-    auto substrIndex2 = new LiteralExpr(-5, IntType());
-    std::vector<Expr *> args2;
-    args2.push_back(substrData2);
-    args2.push_back(substrIndex2);
-    auto substrExp2 = GetFuncExpr(funcStr, args2, VarcharType());
-
-    auto ubsterExpr = new LiteralExpr(new std::string("UBSTR"), VarcharType(6));
-    auto expr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExp2, ubsterExpr, BooleanType());
-
-    filter = new RowFilter(*expr2);
-    EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
-    EXPECT_EQ(res, true);
-    delete filter;
-
-    // create expression objects
-    auto substrData3 = new FieldExpr(0, VarcharType());
-    auto substrIndex3 = new LiteralExpr(4, IntType());
-    std::vector<Expr *> args3;
-    args3.push_back(substrData3);
-    args3.push_back(substrIndex3);
-    auto substrExp3 = GetFuncExpr(funcStr, args3, VarcharType());
-
-    auto STRExpr = new LiteralExpr(new std::string("STR Function"), VarcharType(13));
-    auto expr3 = new BinaryExpr(omniruntime::expressions::Operator::EQ, substrExp3, STRExpr, BooleanType());
-
-    filter = new RowFilter(*expr3);
-    EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-    res = filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
-    EXPECT_EQ(res, true);
-    context->GetArena()->Reset();
-
-    for (int i = 0; i < numCols; i++) {
-        delete[] bitmap[i];
-        delete[] offsets[i];
-    }
-
-    delete[] selected;
-    delete[] vals;
-    delete[] bitmap;
-    delete[] offsets;
-    delete filter;
     delete context;
 }
 
@@ -3507,8 +3224,9 @@ TEST(CodeGenTest, Mm3HashLong)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Int64(v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3556,8 +3274,9 @@ TEST(CodeGenTest, Mm3HashDouble)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Double(v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3606,8 +3325,9 @@ TEST(CodeGenTest, Mm3HashString)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3654,8 +3374,9 @@ TEST(CodeGenTest, Mm3HashDecimal64)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Decimal64(v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3703,8 +3424,9 @@ TEST(CodeGenTest, Mm3HashDecimal128)
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42);
     EXPECT_EQ(res, expectedRes);
-    context->GetArena()->Reset();
 
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
     delete[] bitmap[0];
     delete[] bitmap;
     delete[] offsets[0];
@@ -3777,86 +3499,6 @@ TEST(CodeGenTest, Pmod)
     delete[] selected;
     delete context;
     delete expr;
-}
-
-TEST(CodeGenTest, SubstrWithChars)
-{
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_CHAR), DataType(OMNI_CHAR) };
-    DataTypes types(vecOfTypes);
-    const int32_t numCols = 2;
-    const int32_t numRows = 1;
-
-    string s1[1];
-    string s2[1];
-    s1[0] = "SUBSTR Function";
-    s2[0] = "Function SUBSTR";
-
-    int64_t *vals = new int64_t[2];
-    vals[0] = reinterpret_cast<int64_t>(s1->c_str());
-    vals[1] = reinterpret_cast<int64_t>(s2->c_str());
-
-    int32_t *selected = new int32_t[1];
-    bool **bitmap = new bool *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        bitmap[col] = new bool[numRows];
-        for (int i = 0; i < numRows; i++) {
-            bitmap[col][i] = false;
-        }
-    }
-
-    auto context = new ExecutionContext();
-    auto **offsets = new int32_t *[numCols];
-    for (int col = 0; col < numCols; col++) {
-        offsets[col] = new int32_t[numRows + 1];
-        offsets[col][0] = 0;
-        offsets[col][1] = 15;
-    }
-
-    // create expression objects
-    std::string funcStr = "substr";
-    DataTypePtr retType = CharType(10);
-    FieldExpr *substrData1 = new FieldExpr(0, CharType(10));
-    LiteralExpr *substrIndex1 = new LiteralExpr(1, IntType());
-    LiteralExpr *substrLen1 = new LiteralExpr(5, IntType());
-    std::vector<Expr *> args1;
-    args1.push_back(substrData1);
-    args1.push_back(substrIndex1);
-    args1.push_back(substrLen1);
-    auto substrExpr1 = GetFuncExpr(funcStr, args1, CharType(10));
-
-    FieldExpr *substrData2 = new FieldExpr(1, CharType(10));
-    LiteralExpr *substrIndex2 = new LiteralExpr(1, IntType());
-    LiteralExpr *substrLen2 = new LiteralExpr(5, IntType());
-    std::vector<Expr *> args2;
-    args2.push_back(substrData2);
-    args2.push_back(substrIndex2);
-    args2.push_back(substrLen2);
-    auto substrExpr2 = GetFuncExpr(funcStr, args2, CharType(10));
-
-    auto expr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, substrExpr1, substrExpr2, BooleanType());
-
-    int64_t dictionaries[numCols] = {};
-    auto filter = new RowFilter(*expr);
-    EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create();
-    EXPECT_FALSE(filter == nullptr);
-    bool res =
-        filterFunc(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
-    EXPECT_EQ(res, true);
-
-    context->GetArena()->Reset();
-
-    for (int i = 0; i < numCols; i++) {
-        delete[] bitmap[i];
-        delete[] offsets[i];
-    }
-
-    delete[] selected;
-    delete[] vals;
-    delete filter;
-    delete[] bitmap;
-    delete[] offsets;
-    delete context;
 }
 
 TEST(CodeGenTest, CombineHash)

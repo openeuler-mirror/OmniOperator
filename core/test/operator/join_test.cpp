@@ -1368,6 +1368,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     expectVecBatch->SetVector(3, CreateVector<IntVector>(expectData3, expectDataSize));
     EXPECT_TRUE(VecBatchMatch(output[0], expectVecBatch));
 
+    Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
+    Expr::DeleteExprs({ filterExpr });
     delete expectedProbeVec0;
     delete expectedProbeVec1;
     VectorHelper::FreeVecBatches(output);
@@ -1472,6 +1474,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     expectVecBatch->SetVector(3, CreateVarcharVector(VarcharDataType(5), expectData3, expectDataSize));
     EXPECT_TRUE(VecBatchMatch(output[0], expectVecBatch));
 
+    Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
+    Expr::DeleteExprs({ filterExpr });
     delete expectedProbeVec0;
     delete expectedProbeVec1;
     VectorHelper::FreeVecBatches(output);
@@ -1548,6 +1552,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     expectVecBatch->SetVector(3, CreateVarcharVector(VarcharDataType(5), expectData3, expectDataSize));
     EXPECT_TRUE(VecBatchMatch(output[0], expectVecBatch));
 
+    Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
+    Expr::DeleteExprs({ filterExpr });
     delete expectedProbeVec0;
     delete expectedProbeVec1;
     VectorHelper::FreeVecBatches(output);
@@ -1641,6 +1647,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     expectVecBatch->SetVector(3, expectVec3);
     EXPECT_TRUE(VecBatchMatch(output[0], expectVecBatch));
 
+    Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
+    Expr::DeleteExprs({ filterExpr });
     VectorHelper::FreeVecBatches(output);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);

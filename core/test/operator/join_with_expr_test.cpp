@@ -12,6 +12,7 @@
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 using namespace std;
 using namespace TestUtil;
 
@@ -113,6 +114,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
     VectorHelper::FreeVecBatches(lookupJoinOutput);
     omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
@@ -186,6 +189,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
     VectorHelper::FreeVecBatches(lookupJoinOutput);
     omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);

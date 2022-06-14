@@ -73,9 +73,10 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
-
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -142,9 +143,10 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
-
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -196,9 +198,10 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
-
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }

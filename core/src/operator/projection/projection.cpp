@@ -16,7 +16,6 @@ RowProjection::RowProjection(const Expr &expression) : codegen(nullptr), express
 
 RowProjection::~RowProjection()
 {
-    delete this->expression;
     this->codegen.reset();
 }
 
@@ -87,7 +86,8 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(const Expr &expr, bool filter) : expr(&expr), projector(nullptr)
+Projection::Projection(const Expr &expr, bool filter, vec::DataTypeId outTypeId)
+    : expr(&expr), projector(nullptr), outTypeId(outTypeId)
 {
     bool initialized = this->Initialize(filter);
     if (!initialized) {
@@ -161,7 +161,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         }
     }
 
-    DataTypeId outTypeId = expr->GetReturnTypeId();
+    DataTypeId outTypeId = this->GetOutputTypeId();
     Vector *outVec = nullptr;
     int32_t avgStringLength = 200;
     switch (outTypeId) {
@@ -296,7 +296,7 @@ ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &
 {
     this->SetJitContext(nullptr);
     for (auto expr : exprs) {
-        auto projection = std::make_unique<Projection>(*expr, false);
+        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnTypeId());
         if (!projection->IsSupported()) {
             this->isSupported = false;
             break;
