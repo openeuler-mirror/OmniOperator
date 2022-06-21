@@ -59,12 +59,6 @@ fi
 
 echo "Start build java modules using $1"
 cd ../../bindings/java
-wget http://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.jar --proxy=off
-wget http://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.pom --proxy=off
-
-mvn install:install-file -Dfile=devtestcov-maven-plugin-2.1.1.jar -DpomFile=devtestcov-maven-plugin-2.1.1.pom
-rm -r devtestcov-maven-plugin-2.1.1.jar
-rm -r devtestcov-maven-plugin-2.1.1.pom
 
 if [ "$1" = 'coverage-java' ]; then
     echo "-- Enable coverage for java"
