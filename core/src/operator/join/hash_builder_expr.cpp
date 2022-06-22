@@ -24,7 +24,7 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const Dat
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
     int32_t hashTableCount)
 {
-    std::vector<DataType> newBuildTypes;
+    std::vector<DataTypeRawPtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
         this->buildHashCols, this->projectFuncs);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);

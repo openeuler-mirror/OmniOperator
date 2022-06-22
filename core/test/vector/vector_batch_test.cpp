@@ -8,13 +8,13 @@
 using namespace omniruntime::vec;
 
 namespace VectorBatchTest {
-void VectorBatchTestInitDataTypes(std::vector<DataType> &types)
+void VectorBatchTestInitDataTypes(std::vector<DataTypeRawPtr> &types)
 {
-    types.push_back(IntDataType::Instance());
-    types.push_back(DoubleDataType::Instance());
-    types.push_back(LongDataType::Instance());
-    types.push_back(DoubleDataType::Instance());
-    types.push_back(ContainerDataType::Instance());
+    types.push_back(new IntDataType);
+    types.push_back(new DoubleDataType);
+    types.push_back(new LongDataType);
+    types.push_back(new DoubleDataType);
+    types.push_back(new ContainerDataType());
 }
 
 TEST(VectorBatch, constructVectorBatchWithVectorCount)
@@ -41,7 +41,7 @@ TEST(VectorBatch, constructVectorBatchWithVectorCount)
 
 TEST(VectorBatch, constructVectorBatchWithTypes)
 {
-    std::vector<DataType> types;
+    std::vector<DataTypeRawPtr> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     VectorAllocator *allocator =
@@ -57,7 +57,7 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
 
 TEST(VectorBatch, getVectorCount)
 {
-    std::vector<DataType> types;
+    std::vector<DataTypeRawPtr> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorCount");
@@ -72,7 +72,7 @@ TEST(VectorBatch, getVectorCount)
 
 TEST(VectorBatch, getVectorTypes)
 {
-    std::vector<DataType> types;
+    std::vector<DataTypeRawPtr> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(5, 1024);
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorTypes");
@@ -80,7 +80,7 @@ TEST(VectorBatch, getVectorTypes)
 
     const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
     for (int i = 0; i < 5; ++i) {
-        EXPECT_EQ(types[i].GetId(), vectorTypeIds[i]);
+        EXPECT_EQ(types[i]->GetId(), vectorTypeIds[i]);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     delete allocator;

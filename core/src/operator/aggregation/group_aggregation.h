@@ -26,7 +26,7 @@ using HashFuncVect = void (*)(Vector *vector, const uint32_t s, const uint32_t r
 using DuplicateKeyValue = void (*)(AggregateState &state, Vector *vector, const uint32_t offset,
     ExecutionContext *context);
 using IsSameNodeFunc = void (*)(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame);
-using SetVector = void (*)(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+using SetVector = void (*)(VectorBatch *vecBatch, DataTypeRawPtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 using FillValue = void (*)(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
 
@@ -61,11 +61,11 @@ void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t
 void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset, ExecutionContext *context);
 
 template <typename V>
-void SetVectorImpl(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetVectorImpl(VectorBatch *vecBatch, DataTypeRawPtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
-void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetVarcharVector(VectorBatch *vecBatch, DataTypeRawPtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
-void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetContainerVector(VectorBatch *vecBatch, DataTypeRawPtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 
 template <typename V, typename D>
@@ -114,7 +114,7 @@ public:
 
 private:
     std::vector<BucketIterator> FindBuckets(uint64_t *hash, int32_t blockSize);
-    int32_t GetRowSizeAndOutputTypes(std::vector<DataType> &types, int32_t columnCount);
+    int32_t GetRowSizeAndOutputTypes(std::vector<DataTypeRawPtr> &types, int32_t columnCount);
 
     void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
         int32_t rowIndex);

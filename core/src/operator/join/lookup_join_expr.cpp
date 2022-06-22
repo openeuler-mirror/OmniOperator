@@ -29,7 +29,7 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const type:
     int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
     int64_t hashBuilderFactoryAddr)
 {
-    std::vector<DataType> newProbeTypes;
+    std::vector<DataTypeRawPtr> newProbeTypes;
     OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->rowProjections,
         this->probeHashCols, this->projectFuncs);
     this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);

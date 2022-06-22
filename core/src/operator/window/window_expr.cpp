@@ -32,7 +32,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
     int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
-    std::vector<DataType> newTypes;
+    std::vector<DataTypeRawPtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
     OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
         this->argumentChannels, this->projectFuncs);
@@ -48,7 +48,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     }
 
     // refact alltypes since sourcetypes changed
-    std::vector<DataType> allTypesVec;
+    std::vector<DataTypeRawPtr> allTypesVec;
     allTypesVec.insert(allTypesVec.end(), sourceTypes.Get().begin(), sourceTypes.Get().end());
     allTypesVec.insert(allTypesVec.end(), std::begin((*(this->sourceTypes.get())).Get()) + sourceTypes.GetSize(),
         std::end((*(this->sourceTypes.get())).Get()));

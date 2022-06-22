@@ -15,25 +15,25 @@ using Json = nlohmann::json;
 Expr *JSONParser::ParseJSONFieldRef(const Json &jsonExpr)
 {
     auto typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
-    DataTypePtr retType;
+    DataTypeRawPtr retType;
     auto colVal = jsonExpr["colVal"].get<int32_t>();
     if (TypeUtil::IsStringType(typeId)) {
         int width = jsonExpr["width"].get<int32_t>();
         if (typeId == OMNI_CHAR) {
-            retType = make_unique<CharDataType>(width);
+            retType = new CharDataType(width);
         } else {
-            retType = make_unique<VarcharDataType>(width);
+            retType = new VarcharDataType(width);
         }
     } else if (TypeUtil::IsDecimalType(typeId)) {
         int precision = jsonExpr["precision"].get<int32_t>();
         int scale = jsonExpr["scale"].get<int32_t>();
         if (typeId == OMNI_DECIMAL64) {
-            retType = make_unique<Decimal64DataType>(precision, scale);
+            retType = new Decimal64DataType(precision, scale);
         } else {
-            retType = make_unique<Decimal128DataType>(precision, scale);
+            retType = new Decimal128DataType(precision, scale);
         }
     } else {
-        retType = make_unique<DataType>(typeId);
+        retType =new DataType(typeId);
     }
     return new FieldExpr(colVal, std::move(retType));
 }
@@ -62,42 +62,42 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
     switch (typeId) {
         case OMNI_BOOLEAN: {
             bool boolVal = jsonExpr["value"].get<bool>();
-            return new LiteralExpr(boolVal, make_unique<BooleanDataType>());
+            return new LiteralExpr(boolVal, new BooleanDataType());
         }
         case OMNI_INT: {
             auto intVal = jsonExpr["value"].get<int32_t>();
-            return new LiteralExpr(intVal, make_unique<IntDataType>());
+            return new LiteralExpr(intVal, new IntDataType());
         }
         case OMNI_DATE32: {
             auto intVal = jsonExpr["value"].get<int32_t>();
-            return new LiteralExpr(intVal, make_unique<DataType>(OMNI_DATE32));
+            return new LiteralExpr(intVal, new DataType(OMNI_DATE32));
         }
         case OMNI_LONG: {
             auto longVal = jsonExpr["value"].get<int64_t>();
-            return new LiteralExpr(longVal, make_unique<LongDataType>());
+            return new LiteralExpr(longVal, new LongDataType());
         }
         case OMNI_DOUBLE: {
             auto doubleVal = jsonExpr["value"].get<double>();
-            return new LiteralExpr(doubleVal, make_unique<DoubleDataType>());
+            return new LiteralExpr(doubleVal, new DoubleDataType());
         }
         case OMNI_DECIMAL64: {
             auto decimalVal = jsonExpr["value"].get<int64_t>();
             return new LiteralExpr(decimalVal,
-                make_unique<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
+                new Decimal64DataType(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
         }
         case OMNI_DECIMAL128: {
             auto *dec128String = new string(jsonExpr["value"].get<string>());
-            return new LiteralExpr(dec128String, make_unique<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(),
+            return new LiteralExpr(dec128String, new Decimal128DataType(jsonExpr["precision"].get<int32_t>(),
                 jsonExpr["scale"].get<int32_t>()));
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
             auto *stringVal = new string(jsonExpr["value"].get<string>());
             auto width = jsonExpr["width"].get<int32_t>();
-            return new LiteralExpr(stringVal, make_unique<VarcharDataType>(width));
+            return new LiteralExpr(stringVal, new VarcharDataType(width));
         }
         default:
-            return new LiteralExpr(0, make_unique<DataType>());
+            return new LiteralExpr(0, new DataType());
     }
 }
 
@@ -108,7 +108,7 @@ Expr *JSONParser::ParseJSONBinary(const Json &jsonExpr)
         return nullptr;
     }
 
-    DataTypePtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
+    DataTypeRawPtr dataType = ParserHelper::GetReturnDataType(jsonExpr);
     if (dataType == nullptr) {
         return nullptr;
     }
@@ -137,7 +137,7 @@ Expr *JSONParser::ParseJSONUnary(const Json &jsonExpr)
     if (expr == nullptr) {
         return nullptr;
     }
-    return new UnaryExpr(op, expr, make_unique<BooleanDataType>());
+    return new UnaryExpr(op, expr, new BooleanDataType());
 }
 
 Expr *JSONParser::ParseJSONIn(const Json &jsonExpr)
@@ -204,7 +204,7 @@ Expr *JSONParser::ParseJSONSwitch(const Json &jsonExpr)
             delete right;
             return nullptr;
         }
-        auto *condition = new BinaryExpr(Operator::EQ, left, right, BooleanType());
+        auto *condition = new BinaryExpr(Operator::EQ, left, right, new BooleanDataType());
         std::pair<Expr *, Expr *> when = make_pair(condition, result);
         whenClause.push_back(when);
     }
@@ -288,7 +288,7 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
     string funcName = jsonExpr["function_name"];
     auto retTypeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
     std::vector<Expr *> args;
-    DataTypePtr retType;
+    DataTypeRawPtr retType;
     int32_t width = INT32_MAX;
     int32_t precision;
     int32_t scale;
@@ -334,20 +334,20 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
     if (TypeUtil::IsStringType(retTypeId)) {
         width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
         if (retTypeId == OMNI_CHAR) {
-            retType = make_unique<CharDataType>(width);
+            retType = new CharDataType(width);
         } else {
-            retType = make_unique<VarcharDataType>(width);
+            retType = new VarcharDataType(width);
         }
     } else if (TypeUtil::IsDecimalType(retTypeId)) {
         precision = jsonExpr["precision"].get<int32_t>();
         scale = jsonExpr["scale"].get<int32_t>();
         if (retTypeId == OMNI_DECIMAL64) {
-            retType = make_unique<Decimal64DataType>(precision, scale);
+            retType = new Decimal64DataType(precision, scale);
         } else {
-            retType = make_unique<Decimal128DataType>(precision, scale);
+            retType = new Decimal128DataType(precision, scale);
         }
     } else {
-        retType = make_unique<DataType>(retTypeId);
+        retType = new DataType(retTypeId);
     }
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);

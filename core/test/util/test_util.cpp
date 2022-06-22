@@ -139,10 +139,10 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
     return true;
 }
 
-VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, int32_t length)
+VarcharVector *CreateVarcharVector(DataTypeRawPtr type, std::string *values, int32_t length)
 {
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
-    uint32_t width = type.GetWidth();
+    uint32_t width = type->GetWidth();
     VarcharVector *vector = new VarcharVector(vecAllocator, length * width, length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
@@ -176,7 +176,7 @@ ContainerVector *CreateContainerVector(std::vector<DataType> fieldTypes, int32_t
 
 Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
-    switch (dataType.GetId()) {
+    switch (dataType->GetId()) {
         case OMNI_INT:
         case OMNI_DATE32:
             return CreateVector<IntVector>(va_arg(args, int32_t *), rowCount);
@@ -189,18 +189,18 @@ Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
             return CreateVector<BooleanVector>(va_arg(args, bool *), rowCount);
         case OMNI_VARCHAR:
         case OMNI_CHAR:
-            return CreateVarcharVector(static_cast<VarcharDataType &>(dataType), va_arg(args, std::string *), rowCount);
+            return CreateVarcharVector(dataType, va_arg(args, std::string *), rowCount);
         case OMNI_DECIMAL128:
             return CreateDecimal128Vector(va_arg(args, Decimal128 *), rowCount);
         case OMNI_CONTAINER:
             return static_cast<Vector *>(CreateContainerVector(dataType.GetFieldTypes(), rowCount, args));
         default:
-            std::cerr << "Unsupported type : " << dataType.GetId() << std::endl;
+            std::cerr << "Unsupported type : " << dataType->GetId() << std::endl;
             return nullptr;
     }
 }
 
-DictionaryVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...)
+DictionaryVector *CreateDictionaryVector(DataTypeRawPtr dataType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...)
 {
     va_list args;
     va_start(args, idsCount);
@@ -218,14 +218,14 @@ VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
     va_list args;
     va_start(args, rowCount);
     for (int32_t i = 0; i < typesCount; i++) {
-        DataType type = types.Get()[i];
+        DataTypeRawPtr type = types.Get()[i];
         vectorBatch->SetVector(i, CreateVector(type, rowCount, args));
     }
     va_end(args);
     return vectorBatch;
 }
 
-VectorBatch *CreateEmptyVectorBatch(const std::vector<DataType> &dataTypes)
+VectorBatch *CreateEmptyVectorBatch(const std::vector<DataTypeRawPtr> &dataTypes)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator();
     VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
@@ -435,18 +435,18 @@ VectorBatch *DuplicateVectorBatch(VectorBatch *input)
     return duplication;
 }
 
-void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataType> &dataTypes)
+void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataTypeRawPtr> &dataTypes)
 {
     uint32_t defaultVarcharLength = 50;
     for (int i = 0; i < dataTypeCount; ++i) {
         if (dataTypeIds[i] == OMNI_VARCHAR) {
-            dataTypes.push_back(VarcharDataType(defaultVarcharLength));
+            dataTypes.push_back(new VarcharDataType(defaultVarcharLength));
             continue;
         } else if (dataTypeIds[i] == OMNI_CHAR) {
-            dataTypes.push_back(CharDataType(defaultVarcharLength));
+            dataTypes.push_back(new CharDataType(defaultVarcharLength));
             continue;
         }
-        dataTypes.push_back(DataType(dataTypeIds[i]));
+        dataTypes.push_back(new DataType(dataTypeIds[i]));
     }
 }
 
@@ -513,7 +513,7 @@ void GetTestTypeIds(DataTypes &inputTypes, std::string *projectKeys, int32_t pro
     }
 }
 
-FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, DataTypePtr returnType)
+FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, DataTypeRawPtr returnType)
 {
     std::vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
@@ -526,7 +526,7 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
     auto signature = FunctionSignature(funcName, argTypes, returnType->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
-        return new FuncExpr(funcName, args, std::move(returnType), function);
+        return new FuncExpr(funcName, args, returnType, function);
     }
     return nullptr;
 }

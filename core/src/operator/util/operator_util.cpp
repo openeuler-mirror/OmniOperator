@@ -13,7 +13,7 @@ namespace omniruntime {
 namespace op {
 void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputTypes,
     std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-    std::vector<omniruntime::type::DataType> &newInputTypes,
+    std::vector<omniruntime::type::DataTypeRawPtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
     std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
 {
@@ -28,7 +28,7 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputT
             projectCols.push_back(inputTypesCount + projectFuncs.size());
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
-            DataType returnType = rowProjection->GetReturnType();
+            DataTypeRawPtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
@@ -36,11 +36,11 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputT
 }
 
 void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
-    omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataType> &newInputTypes,
+    omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypeRawPtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
     std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs)
 {
-    std::vector<DataType> inputTypeVec = inputTypes.Get();
+    std::vector<DataTypeRawPtr> inputTypeVec = inputTypes.Get();
     int32_t newProjectCol = 0;
     std::map<int32_t, int32_t> colIdMap;
     for (int32_t i = 0; i < projectKeysCount; i++) {
@@ -62,7 +62,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
             allCols.push_back(newProjectCol++);
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
-            DataType returnType = rowProjection->GetReturnType();
+            DataTypeRawPtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
@@ -94,11 +94,10 @@ static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *val
     return result;
 }
 
-static VarcharVector *ProjectVarcharVector(DataType &type, const RowProjFunc func, int64_t *valuesAddresses,
+static VarcharVector *ProjectVarcharVector(DataTypeRawPtr type, const RowProjFunc func, int64_t *valuesAddresses,
     int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
 {
-    VarcharDataType vecType = static_cast<VarcharDataType &>(type);
-    VarcharVector *result = new VarcharVector(allocator, vecType.GetWidth() * rowCount, rowCount);
+    VarcharVector *result = new VarcharVector(allocator, type->GetWidth() * rowCount, rowCount);
 
     bool isNull = false;
     int32_t length = 0;
@@ -127,7 +126,7 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
     const int32_t *typeIds = newInputTypes.GetIds();
-    std::vector<DataType> dataTypes = newInputTypes.Get();
+    std::vector<DataTypeRawPtr> dataTypes = newInputTypes.Get();
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
         // skip the project key which is not expression
@@ -165,6 +164,7 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
                     valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             default:
+                LogError("Not Supported Data Type : %d", typeIds[projectCol]);
                 break;
         }
         projectFuncsIndex++;
@@ -178,7 +178,7 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
     const int32_t *typeIds = newInputTypes.GetIds();
-    std::vector<DataType> dataTypes = newInputTypes.Get();
+    std::vector<DataTypeRawPtr> dataTypes = newInputTypes.Get();
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
         // skip the project key which is not expression

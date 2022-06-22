@@ -22,6 +22,11 @@ const std::string SCALE = "scale";
 const std::string DATE_UNIT = "dateUnit";
 const std::string TIME_UNIT = "timeUnit";
 const std::string FIELD_TYPES = "fieldTypes";
+const static uint32_t MAX_WIDTH = 65536;
+const static int32_t DECIMAL128_DEFAULT_PRECISION= 38;
+const static int32_t DECIMAL64_DEFAULT_PRECISION= 19;
+const static int32_t DECIMAL128_DEFAULT_SCALE= 0;
+const static int32_t DECIMAL64_DEFAULT_SCALE= 0;
 
 enum DataTypeId {
     OMNI_NONE = 0,
@@ -112,45 +117,10 @@ enum TimeUnit {
 
 class DataType {
 public:
-    DataType(const DataType &type) : DataType(type.id)
-    {
-        switch (type.id) {
-            case OMNI_BOOLEAN:
-            case OMNI_SHORT:
-            case OMNI_INT:
-            case OMNI_LONG:
-            case OMNI_DOUBLE:
-            case OMNI_NONE:
-            case OMNI_INVALID:
-                break;
-            case OMNI_DECIMAL64:
-            case OMNI_DECIMAL128:
-                this->precision = type.precision;
-                this->scale = type.scale;
-                break;
-            case OMNI_CHAR:
-            case OMNI_VARCHAR:
-                this->width = type.width;
-                break;
-            case OMNI_DATE32:
-            case OMNI_DATE64:
-                this->dateUnit = type.dateUnit;
-                break;
-            case OMNI_TIME32:
-            case OMNI_TIME64:
-                this->timeUnit = type.timeUnit;
-                break;
-            case OMNI_CONTAINER:
-                this->fieldTypes = type.fieldTypes;
-                break;
-            default:
-                LogError("Not Supported Data Type : %d", type.id);
-        }
-    }
-
+    DataType(const DataType &type) : DataType(type.id) {}
     DataType() : DataType(OMNI_INVALID) {}
 
-    explicit DataType(DataTypeId id) : id(id), width(0), precision(0), scale(0), dateUnit(DAY), timeUnit(SEC) {}
+    explicit DataType(DataTypeId id) : id(id) {}
 
     template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type>
     explicit constexpr DataType(T value) noexcept : DataType(static_cast<DataTypeId>(value))
@@ -164,123 +134,45 @@ public:
         return id;
     }
 
-    uint32_t GetWidth() const
+    virtual uint32_t GetWidth() const
     {
-        return width;
+        return 0;
     }
 
-    uint32_t GetPrecision() const
+    virtual uint32_t GetPrecision() const
     {
-        return precision;
+        return 0;
     }
 
-    uint32_t GetScale() const
+    virtual uint32_t GetScale() const
     {
-        return scale;
+        return 0;
     }
 
-    std::vector<DataType> GetFieldTypes() const
+    virtual DateUnit GetDateUnit() const
     {
-        return fieldTypes;
+        return DAY;
     }
 
-
-    friend void to_json(nlohmann::json &nlohmannJson, const DataType &dataType)
+    virtual TimeUnit GetTimeUnit() const
     {
-        switch (dataType.id) {
-            case OMNI_BOOLEAN:
-            case OMNI_SHORT:
-            case OMNI_INT:
-            case OMNI_LONG:
-            case OMNI_DOUBLE:
-            case OMNI_NONE:
-            case OMNI_INVALID:
-                nlohmannJson = nlohmann::json { { ID, dataType.id } };
-                break;
-            case OMNI_CHAR:
-            case OMNI_VARCHAR:
-                nlohmannJson = nlohmann::json { { ID, dataType.id }, { WIDTH, dataType.width } };
-                break;
-            case OMNI_DECIMAL64:
-            case OMNI_DECIMAL128:
-                nlohmannJson = nlohmann::json { { ID, dataType.id },
-                    { PRECISION, dataType.precision },
-                    { SCALE, dataType.scale } };
-                break;
-            case OMNI_DATE32:
-            case OMNI_DATE64:
-                nlohmannJson = nlohmann::json { { ID, dataType.id }, { DATE_UNIT, dataType.dateUnit } };
-                break;
-            case OMNI_TIME32:
-            case OMNI_TIME64:
-                nlohmannJson = nlohmann::json { { ID, dataType.id }, { TIME_UNIT, dataType.timeUnit } };
-                break;
-            case OMNI_CONTAINER: {
-                nlohmannJson = nlohmann::json { { ID, dataType.id } };
-                for (auto &fieldType : dataType.fieldTypes) {
-                    nlohmann::json fieldTypeJson;
-                    to_json(fieldTypeJson, fieldType);
-                    nlohmannJson[FIELD_TYPES].push_back(fieldTypeJson);
-                }
-                break;
-            }
-            default:
-                LogError("Not Supported Data Type Serialize : %d", dataType.id);
-        }
+        return SEC;
     }
 
-    friend void from_json(const nlohmann::json &nlohmannJson, DataType &dataType)
+    virtual std::vector<DataType *> GetFieldTypes() const
     {
-        nlohmannJson.at(ID).get_to(dataType.id);
-        switch (dataType.id) {
-            case OMNI_BOOLEAN:
-            case OMNI_SHORT:
-            case OMNI_INT:
-            case OMNI_LONG:
-            case OMNI_DOUBLE:
-            case OMNI_NONE:
-            case OMNI_INVALID:
-                break;
-            case OMNI_CHAR:
-            case OMNI_VARCHAR:
-                nlohmannJson.at(WIDTH).get_to(dataType.width);
-                break;
-            case OMNI_DATE32:
-            case OMNI_DATE64:
-                nlohmannJson.at(DATE_UNIT).get_to(dataType.dateUnit);
-                break;
-            case OMNI_DECIMAL64:
-            case OMNI_DECIMAL128:
-                nlohmannJson.at(PRECISION).get_to(dataType.precision);
-                nlohmannJson.at(SCALE).get_to(dataType.scale);
-                break;
-            case OMNI_TIME32:
-            case OMNI_TIME64:
-                nlohmannJson.at(TIME_UNIT).get_to(dataType.timeUnit);
-                break;
-            case OMNI_CONTAINER: {
-                for (auto &fieldTypeJson : nlohmannJson[FIELD_TYPES]) {
-                    DataType fieldType;
-                    from_json(fieldTypeJson, fieldType);
-                    dataType.fieldTypes.push_back(fieldType);
-                }
-                break;
-            }
-            default:
-                LogError("Not Supported Data Type Deserialize: %d", dataType.id);
-        }
+        std::vector<DataType *> emptyFieldTypes = std::vector<DataType *> {};
+        return emptyFieldTypes;
     }
 
-    DataType &operator = (const DataType &right)
+    virtual void Serialize(nlohmann::json &nlohmannJson) const
     {
-        id = right.id;
-        width = right.width;
-        precision = right.precision;
-        scale = right.scale;
-        dateUnit = right.dateUnit;
-        timeUnit = right.timeUnit;
-        fieldTypes = right.fieldTypes;
-        return *this;
+        nlohmannJson = nlohmannJson = nlohmann::json { { ID, id } };
+    }
+
+    friend void to_json(nlohmann::json &nlohmannJson, const DataType *dataType)
+    {
+        dataType->Serialize(nlohmannJson);
     }
 
     bool operator != (const DataType &right) const
@@ -288,222 +180,299 @@ public:
         return !operator == (right);
     }
 
-    bool operator == (const DataType &right) const
+    virtual bool operator == (const DataType &right) const
     {
-        return id == right.id && width == right.width && precision == right.precision && scale == right.scale &&
-            dateUnit == right.dateUnit && timeUnit == right.timeUnit && fieldTypes == right.fieldTypes;
+        return id == right.id;
+    }
+
+    virtual DataType &operator = (const DataType &right)
+    {
+        id = right.id;
+        return *this;
     }
 
 protected:
     DataTypeId id;
-    uint32_t width;
-    int32_t precision;
-    int32_t scale;
-    DateUnit dateUnit;
-    TimeUnit timeUnit;
-    std::vector<DataType> fieldTypes;
 };
 
-class NoneDataType : public DataType {
+using DataTypeRawPtr = DataType *;
+
+template<DataTypeId typeId>
+class ScalarDataType : public DataType {
 public:
-    NoneDataType() : DataType(DataTypeId::OMNI_NONE) {}
-
-    ~NoneDataType() override {}
-
-    const static NoneDataType &Instance()
-    {
-        static NoneDataType type;
-        return type;
+    ScalarDataType() : DataType(typeId) {}
+    ~ScalarDataType() override = default;
+    static DataTypeRawPtr Instance() {
+        static std::shared_ptr<ScalarDataType<typeId>> type = std::make_shared<ScalarDataType<typeId>>();
+        return type.get();
     }
 };
 
-class IntDataType : public DataType {
+using InvalidDataType = ScalarDataType<OMNI_INVALID>;
+using NoneDataType = ScalarDataType<OMNI_NONE>;
+using IntDataType = ScalarDataType<OMNI_INT>;
+using ShortDataType = ScalarDataType<OMNI_SHORT>;
+using DoubleDataType = ScalarDataType<OMNI_DOUBLE>;
+using LongDataType = ScalarDataType<OMNI_LONG>;
+using BooleanDataType = ScalarDataType<OMNI_BOOLEAN>;
+
+class DecimalDataType : public DataType {
 public:
-    IntDataType() : DataType(DataTypeId::OMNI_INT) {}
-
-    ~IntDataType() override {}
-
-    const static IntDataType &Instance()
-    {
-        static IntDataType type;
-        return type;
-    }
-};
-
-class LongDataType : public DataType {
-public:
-    LongDataType() : DataType(DataTypeId::OMNI_LONG) {}
-
-    ~LongDataType() override {}
-
-    const static LongDataType &Instance()
-    {
-        static LongDataType type;
-        return type;
-    }
-};
-
-class DoubleDataType : public DataType {
-public:
-    DoubleDataType() : DataType(DataTypeId::OMNI_DOUBLE) {}
-
-    ~DoubleDataType() override {}
-
-    const static DoubleDataType &Instance()
-    {
-        static DoubleDataType type;
-        return type;
-    }
-};
-
-class BooleanDataType : public DataType {
-public:
-    BooleanDataType() : DataType(DataTypeId::OMNI_BOOLEAN) {}
-
-    ~BooleanDataType() override {}
-
-    const static BooleanDataType &Instance()
-    {
-        static BooleanDataType type;
-        return type;
-    }
-};
-
-class ShortDataType : public DataType {
-public:
-    ShortDataType() : DataType(DataTypeId::OMNI_SHORT) {}
-
-    ~ShortDataType() override {}
-
-    const static ShortDataType &Instance()
-    {
-        static ShortDataType type;
-        return type;
-    }
-};
-
-class Decimal64DataType : public DataType {
-public:
-    Decimal64DataType(int32_t precision, int32_t scale) : DataType(DataTypeId::OMNI_DECIMAL64)
+    DecimalDataType(int32_t precision, int32_t scale, DataTypeId id) : DataType(id)
     {
         this->precision = precision;
         this->scale = scale;
     }
+
+    uint32_t GetPrecision() const override
+    {
+        return precision;
+    }
+
+    uint32_t GetScale() const override
+    {
+        return scale;
+    }
+
+    DataType &operator = (const DataType &right) override
+    {
+        id = right.GetId();
+        precision = right.GetPrecision();
+        scale = right.GetScale();
+        return *this;
+    }
+
+    bool operator == (const DataType &right) const override
+    {
+        return id == right.GetId() && precision == right.GetPrecision() && scale == right.GetScale();
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json { { ID, id }, { SCALE, scale }, { PRECISION, precision } };
+    }
+
+private:
+    int32_t precision;
+    int32_t scale;
+};
+
+class Decimal64DataType : public DecimalDataType {
+public:
+    Decimal64DataType() : Decimal64DataType(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE) {}
+    Decimal64DataType(int32_t precision, int32_t scale) : DecimalDataType(precision, scale, DataTypeId::OMNI_DECIMAL64)
+    {}
 
     ~Decimal64DataType() override {}
 
-    const static Decimal64DataType &Instance()
+    static DataTypeRawPtr Instance()
     {
-        static Decimal64DataType type(19, 0);
-        return type;
+        static std::shared_ptr<Decimal64DataType> type = std::make_shared<Decimal64DataType>(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE);
+        return type.get();
     }
+
+//private:
+//    const static int32_t DEFAULT_PRECISION = 19;
+//    const static int32_t DEFAULT_SCALE = 0;
 };
 
-class Decimal128DataType : public DataType {
+class Decimal128DataType : public DecimalDataType {
 public:
-    Decimal128DataType(int32_t precision, int32_t scale) : DataType(DataTypeId::OMNI_DECIMAL128)
-    {
-        this->precision = precision;
-        this->scale = scale;
-    }
+    Decimal128DataType() : Decimal128DataType(DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE) {}
+    Decimal128DataType(int32_t precision, int32_t scale)
+        : DecimalDataType(precision, scale, DataTypeId::OMNI_DECIMAL128)
+    {}
 
     ~Decimal128DataType() override {}
 
-    const static Decimal128DataType &Instance()
+    static DataTypeRawPtr Instance()
     {
-        static Decimal128DataType type(38, 0);
-        return type;
+        static std::shared_ptr<Decimal128DataType> type = std::make_shared<Decimal128DataType>(DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE);
+        return type.get();
     }
+
+//private:
+//    const static int32_t DEFAULT_PRECISION = 38;
+//    const static int32_t DEFAULT_SCALE = 0;
 };
 
-class Date32DataType : public DataType {
+class DateDataType : public DataType {
 public:
-    explicit Date32DataType(DateUnit dateUnit) : DataType(DataTypeId::OMNI_DATE32)
+
+    ~DateDataType() override {}
+
+    DateUnit GetDateUnit() const override
+    {
+        return dateUnit;
+    }
+
+    bool operator == (const DataType &right) const override
+    {
+        return id == right.GetId() && dateUnit == right.GetDateUnit();
+    }
+
+    DataType &operator = (const DataType &right) override
+    {
+        id = right.GetId();
+        dateUnit = right.GetDateUnit();
+        return *this;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json { { ID, id }, { DATE_UNIT, dateUnit } };
+    }
+
+protected:
+    DateDataType(DateUnit dateUnit, DataTypeId id) : DataType(id)
     {
         this->dateUnit = dateUnit;
     }
+
+private:
+    DateUnit dateUnit;
+};
+
+class Date32DataType : public DateDataType {
+public:
+    explicit Date32DataType() : Date32DataType(DAY) {}
+    explicit Date32DataType(DateUnit dateUnit) : DateDataType(dateUnit, DataTypeId::OMNI_DATE32) {}
 
     ~Date32DataType() override {}
 
-    DateUnit GetDateUnit() const
+    static DataTypeRawPtr Instance()
     {
-        return dateUnit;
-    }
-
-    const static Date32DataType &Instance()
-    {
-        static Date32DataType type(DAY);
-        return type;
+        static std::shared_ptr<Date32DataType> type = std::make_shared<Date32DataType>(DAY);
+        return type.get();
     }
 };
 
-class Date64DataType : public DataType {
+class Date64DataType : public DateDataType {
 public:
-    explicit Date64DataType(DateUnit dateUnit) : DataType(DataTypeId::OMNI_DATE64)
-    {
-        this->dateUnit = dateUnit;
-    }
+    explicit Date64DataType() : Date64DataType(DAY) {}
+    explicit Date64DataType(DateUnit dateUnit) : DateDataType(dateUnit, DataTypeId::OMNI_DATE64) {}
 
     ~Date64DataType() override {}
 
-    DateUnit GetDateUnit() const
+    static DataTypeRawPtr Instance()
     {
-        return dateUnit;
-    }
-
-    const static Date64DataType &Instance()
-    {
-        static Date64DataType type(DAY);
-        return type;
+        static std::shared_ptr<Date64DataType> type = std::make_shared<Date64DataType>(DAY);
+        return type.get();
     }
 };
 
-class Time32DataType : public DataType {
+
+class TimeDataType : public DataType {
 public:
-    explicit Time32DataType() : DataType(DataTypeId::OMNI_TIME32) {}
+    ~TimeDataType() override {}
+
+    TimeUnit GetTimeUnit() const override
+    {
+        return timeUnit;
+    }
+
+    bool operator == (const DataType &right) const override
+    {
+        return id == right.GetId() && timeUnit == right.GetTimeUnit();
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json { { ID, id }, { TIME_UNIT, timeUnit } };
+    }
+
+protected:
+    TimeDataType(TimeUnit timeUnit, DataTypeId id) : DataType(id)
+    {
+        this->timeUnit = timeUnit;
+    }
+
+private:
+    TimeUnit timeUnit;
+};
+class Time32DataType : public TimeDataType {
+public:
+    explicit Time32DataType(TimeUnit timeUnit) : TimeDataType(timeUnit, DataTypeId::OMNI_TIME32) {}
 
     ~Time32DataType() override {}
 
-    const static Time32DataType &Instance()
+    static DataTypeRawPtr Instance()
     {
-        static Time32DataType type;
-        return type;
+        static std::shared_ptr<Time32DataType> type = std::make_shared<Time32DataType>(SEC);
+        return type.get();
     }
 };
 
-class Time64DataType : public DataType {
+class Time64DataType : public TimeDataType {
 public:
-    explicit Time64DataType() : DataType(DataTypeId::OMNI_TIME64) {}
+    explicit Time64DataType(TimeUnit timeUnit) : TimeDataType(timeUnit, DataTypeId::OMNI_TIME64) {}
 
     ~Time64DataType() override {}
 
-    const static Time64DataType &Instance()
+    static DataTypeRawPtr Instance()
     {
-        static Time64DataType type;
-        return type;
+        static std::shared_ptr<Time64DataType> type = std::make_shared<Time64DataType>(SEC);
+        return type.get();
     }
 };
 
 class ContainerDataType : public DataType {
 public:
+    ContainerDataType(const ContainerDataType &type) : ContainerDataType(type.GetFieldTypes()) {}
     explicit ContainerDataType() : DataType(DataTypeId::OMNI_CONTAINER) {}
-
-    explicit ContainerDataType(std::vector<DataType> fieldTypes) : DataType(DataTypeId::OMNI_CONTAINER)
+    explicit ContainerDataType(std::vector<DataTypeRawPtr> fieldTypes) : DataType(DataTypeId::OMNI_CONTAINER)
     {
         this->fieldTypes = fieldTypes;
     }
 
-    ~ContainerDataType() override {}
-
-    const static ContainerDataType &Instance()
-    {
-        static ContainerDataType type;
-        return type;
+    ~ContainerDataType() override {
+        for (auto fieldType : fieldTypes)
+        {
+            delete fieldType;
+        }
     }
+
+    static DataTypeRawPtr Instance()
+    {
+        static std::shared_ptr<ContainerDataType> type = std::make_shared<ContainerDataType>();
+        return type.get();
+    }
+
+    std::vector<DataTypeRawPtr> GetFieldTypes() const override
+    {
+        return fieldTypes;
+    }
+
+    DataType &operator = (const DataType &right) override
+    {
+        id = right.GetId();
+        fieldTypes = right.GetFieldTypes();
+        return *this;
+    }
+
+    bool operator == (const DataType &right) const override
+    {
+        return id == right.GetId() && fieldTypes == right.GetFieldTypes();
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json { { ID, id } };
+        for (auto fieldType : this->GetFieldTypes()) {
+            nlohmann::json fieldTypeJson;
+            fieldType->Serialize(fieldTypeJson);
+            nlohmannJson[FIELD_TYPES].push_back(fieldTypeJson);
+        }
+    }
+
+private:
+    std::vector<DataTypeRawPtr> fieldTypes;
 };
 
 class VarcharDataType : public DataType {
 public:
+    VarcharDataType(const VarcharDataType &type) : VarcharDataType(type.GetWidth()) {}
+    explicit VarcharDataType() : VarcharDataType(INT_MAX) {}
     explicit VarcharDataType(uint32_t width) : DataType(DataTypeId::OMNI_VARCHAR)
     {
         this->width = width;
@@ -511,13 +480,38 @@ public:
 
     virtual ~VarcharDataType() override {}
 
-    const static VarcharDataType &Instance()
+    static DataTypeRawPtr Instance()
     {
-        static VarcharDataType type(INT_MAX);
-        return type;
+        static std::shared_ptr<VarcharDataType> type = std::make_shared<VarcharDataType>(INT_MAX);
+        return type.get();
+    }
+
+
+    uint32_t GetWidth() const override
+    {
+        return width;
+    }
+
+    bool operator == (const DataType &right) const override
+    {
+        return id == right.GetId() && width == right.GetWidth();
+    }
+
+    DataType *operator = (const DataType *right)
+    {
+        id = right->GetId();
+        width = right->GetWidth();
+        return this;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json { { ID, id }, { WIDTH, width } };
     }
 
 protected:
+    uint32_t width;
+
     explicit VarcharDataType(uint32_t width, DataTypeId dataTypeId) : DataType(dataTypeId)
     {
         this->width = width;
@@ -526,19 +520,21 @@ protected:
 
 class CharDataType : public VarcharDataType {
 public:
+    CharDataType(CharDataType &type) : CharDataType(type.width) {}
+    explicit CharDataType() : CharDataType(MAX_WIDTH) {}
     explicit CharDataType(uint32_t width) : VarcharDataType(width, DataTypeId::OMNI_CHAR) {}
 
     ~CharDataType() override {}
 
-    const static CharDataType &Instance()
+    static DataTypeRawPtr Instance()
     {
-        static CharDataType type(MAX_WIDTH);
-        return type;
+        static std::shared_ptr<CharDataType> type = std::make_shared<CharDataType>(MAX_WIDTH);
+        return type.get();
     }
 
 private:
     const static int32_t MAX_WIDTH = 65536;
 };
-} // namespace vec
+} // namespace type
 } // namespace omniruntime
 #endif // OMNI_RUNTIME_DATA_TYPE_H

@@ -177,15 +177,15 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     auto typeIdx = opStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
-    unique_ptr<DataType> type;
+    omniruntime::type::DataTypeRawPtr type;
     DataTypeId typeId;
     if (typeIdx != string::npos) {
         typeId = ParseReturnType(opStr.substr(typeIdx + 1));
         if (typeId == OMNI_CHAR) {
             width = stoi(opStr.substr(typeIdx + stepSize, opStr.size() - typeIdx - stepSize));
-            type = make_unique<CharDataType>(width);
+            type = new CharDataType(width);
         } else {
-            type = make_unique<DataType>(typeId);
+            type = new DataType(typeId);
         }
         opStr = opStr.substr(0, typeIdx);
     }
@@ -275,7 +275,7 @@ string *FixString(const string &dataStr)
     return fixedStr;
 }
 
-LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTypePtr currType)
+LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTypeRawPtr currType)
 {
     switch (currType->GetId()) {
         // handle boolean as int32
@@ -318,8 +318,8 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
 FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const DataTypes &inputTypes)
 {
     int colIdx = stoi(fieldStr.substr(1));
-    DataType &colType = const_cast<DataType &>(inputTypes.Get().at(colIdx));
-    return new FieldExpr(colIdx, std::make_unique<DataType>(colType));
+    DataTypeRawPtr colType = inputTypes.Get().at(colIdx);
+    return new FieldExpr(colIdx, colType);
 }
 
 LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
@@ -327,7 +327,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
     auto typeIdx = literalStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
-    DataTypePtr currType;
+    DataTypeRawPtr currType;
     DataTypeId currTypeId;
     if (typeIdx != string::npos) {
         currTypeId = ParseReturnType(literalStr.substr(typeIdx + 1));
@@ -342,7 +342,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     // Case with boolean true/false
     if (literalStr == "true" || literalStr == "false") {
-        currType = make_unique<BooleanDataType>();
+        currType = new BooleanDataType();
         return new LiteralExpr(literalStr == "true", std::move(currType));
     }
 
@@ -360,12 +360,12 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     if (TypeUtil::IsStringType(currTypeId)) {
         if (currTypeId == OMNI_CHAR) {
-            currType = make_unique<CharDataType>(width);
+            currType = new CharDataType(width);
         } else {
-            currType = make_unique<VarcharDataType>(width);
+            currType = new VarcharDataType(width);
         }
     } else {
-        currType = make_unique<DataType>(currTypeId);
+        currType = new DataType(currTypeId);
     }
 
     // Case with regular data (int, long, double, string ...)

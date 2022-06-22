@@ -162,7 +162,7 @@ OmniStatus WindowOperator::Init()
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(
-                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, DataType(OMNI_NONE),
+                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, new NoneDataType(),
                     allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator, std::move(windowFrame))));
                 break;
             default:
@@ -211,7 +211,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
-    std::vector<DataType> finalOutputTypes;
+    std::vector<DataTypeRawPtr> finalOutputTypes;
     finalOutputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
         finalOutputTypes.push_back(allTypes.Get()[finalOutputCols[colIdx]]);
@@ -232,7 +232,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 }
 
 void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-    std::vector<type::DataType> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
+    std::vector<type::DataTypeRawPtr> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
@@ -260,12 +260,12 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     }
 }
 
-void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField,
+void WindowOperator::InitResultVectors(const std::vector<DataTypeRawPtr> &outputTypesField, VectorBatch *&vecBatchField,
     const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const
 {
     for (int colIndex = outputColsCountField; colIndex < finalOutputColsCountField; ++colIndex) {
         auto type = outputTypesField[colIndex];
-        switch (type.GetId()) {
+        switch (type->GetId()) {
             case OMNI_BOOLEAN:
                 vecBatchField->SetVector(colIndex, new BooleanVector(vecAllocator, rowCountField));
                 break;
@@ -289,7 +289,7 @@ void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypesF
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                uint32_t width = (static_cast<const VarcharDataType *>(&type))->GetWidth();
+                uint32_t width = type->GetWidth();
                 vecBatchField->SetVector(colIndex,
                     new VarcharVector(vecAllocator, rowCountField * static_cast<int32_t>(width), rowCountField));
                 break;

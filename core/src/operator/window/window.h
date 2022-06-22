@@ -257,10 +257,10 @@ private:
     void Initialization();
 
     void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-        std::vector<type::DataType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
+        std::vector<type::DataTypeRawPtr> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
         int32_t &rowCount);
 
-    void InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField,
+    void InitResultVectors(const std::vector<DataTypeRawPtr> &outputTypesField, VectorBatch *&vecBatchField,
         const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
 };
 

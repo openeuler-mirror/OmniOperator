@@ -47,22 +47,22 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
 
 std::unique_ptr<DataType> IntType()
 {
-    return std::make_unique<DataType>(OMNI_INT);
+    return std::make_unique<IntDataType>();
 }
 
 std::unique_ptr<DataType> Date32Type()
 {
-    return std::make_unique<DataType>(OMNI_DATE32);
+    return std::make_unique<Date32DataType>();
 }
 
 std::unique_ptr<DataType> LongType()
 {
-    return std::make_unique<DataType>(OMNI_LONG);
+    return std::make_unique<LongDataType>();
 }
 
 std::unique_ptr<DataType> DoubleType()
 {
-    return std::make_unique<DataType>(OMNI_DOUBLE);
+    return std::make_unique<DoubleDataType>();
 }
 
 std::unique_ptr<DataType> BooleanType()

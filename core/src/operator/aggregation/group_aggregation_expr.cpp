@@ -27,7 +27,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         projectKeys[j] = aggKeys.at(i);
     }
     std::vector<int32_t> hashAggCols;
-    std::vector<DataType> newSourceTypes;
+    std::vector<DataTypeRawPtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
         this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
 
@@ -40,13 +40,13 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         aggCols[i] = static_cast<uint32_t>(hashAggCols[j]);
     }
 
-    std::vector<DataType> groupByTypeVec;
+    std::vector<DataTypeRawPtr> groupByTypeVec;
     groupByTypeVec.reserve(groupByNum);
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByTypeVec.push_back(newSourceTypes[groupByCols[i]]);
     }
     this->groupByTypes = std::make_unique<DataTypes>(groupByTypeVec);
-    std::vector<DataType> aggTypeVec;
+    std::vector<DataTypeRawPtr> aggTypeVec;
     aggTypeVec.reserve(aggColNum);
     for (uint32_t i = 0; i < aggColNum; i++) {
         aggTypeVec.push_back(newSourceTypes[aggCols[i]]);

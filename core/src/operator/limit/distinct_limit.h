@@ -89,7 +89,7 @@ private:
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
     type::DataTypes sourceTypes;
-    std::vector<DataType> outTypes;
+    std::vector<DataTypeRawPtr> outTypes;
     std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;

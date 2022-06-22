@@ -32,7 +32,7 @@ public:
         const omniruntime::type::DataTypes &vecTypePtr);
     static omniruntime::expressions::LiteralExpr *GenerateLiteralExpr(std::string literalStr);
     static omniruntime::expressions::LiteralExpr *GenerateLiteralExprHelper(const std::string &literalStr,
-        omniruntime::expressions::DataTypePtr inputType);
+        omniruntime::expressions::DataTypeRawPtr inputType);
 
 private:
     ParserHelper ph;

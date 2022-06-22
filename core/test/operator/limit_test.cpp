@@ -32,9 +32,9 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     bool data8[dataSize] = {true, false, false, true};
     std::string data9[dataSize] = {"123", "456", "789", "012"};
 
-    std::vector<DataType> types = { IntDataType::Instance(),       DoubleDataType::Instance(),
-        VarcharDataType(10),           LongDataType::Instance(),
-        Decimal128DataType(10, 2),     Date32DataType::Instance(),
+    std::vector<DataTypeRawPtr> types = { IntDataType::Instance(),       DoubleDataType::Instance(),
+        new VarcharDataType(10),           LongDataType::Instance(),
+        new Decimal128DataType(10, 2),     Date32DataType::Instance(),
         Decimal64DataType::Instance(), BooleanDataType::Instance(),
         CharDataType::Instance() };
     DataTypes sourceTypes(types);
@@ -79,7 +79,7 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     int32_t data01[dataSize] = {0, 1, 2};
     double data02[dataSize] = {6.6, 5.5, 4.4};
 
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypeRawPtr> types = { IntDataType::Instance(), DoubleDataType::Instance() };
     DataTypes sourceTypes(types);
 
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data01, data02);
@@ -125,7 +125,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     int32_t data1[dataSize] = {0, 1, 2, 0, 1, 2};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypeRawPtr> types = { IntDataType::Instance(), DoubleDataType::Instance() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);

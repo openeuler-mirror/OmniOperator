@@ -557,7 +557,7 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
 }
 
 void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashTables,
-    const std::vector<DataType> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
+    const std::vector<DataTypeRawPtr> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<uint64_t> &buildIndex, int32_t position,
     int32_t rowCount, VectorAllocator *vecAllocator)
 {
@@ -566,7 +566,7 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
     int32_t outputColumnIndex = probeOutputColsCount;
     for (int32_t columnIdx = 0; columnIdx < buildOutputColsCount; columnIdx++) {
         buildOutputCol = buildOutputCols[columnIdx];
-        const DataType &dataType = buildOutputTypes[columnIdx];
+        DataTypeRawPtr dataType = buildOutputTypes[columnIdx];
         switch (buildOutputIds[columnIdx]) {
             case OMNI_INT:
             case OMNI_DATE32:
@@ -588,7 +588,7 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                uint32_t width = dataType.GetWidth();
+                uint32_t width = dataType->GetWidth();
                 buildColumn = ConstructBuildVarcharColumn(vecAllocator, hashTables, buildOutputCol, buildIndex.data(),
                     position, rowCount, width);
                 break;

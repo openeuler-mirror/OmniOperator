@@ -294,13 +294,13 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *
 void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
 {
     int vecIndex = 0;
-    for (const DataType &item : sourceTypes.Get()) {
-        if (item.GetId() != OMNI_VARCHAR && item.GetId() != OMNI_CHAR) {
+    for (const DataTypeRawPtr dataTypeRawPtr : sourceTypes.Get()) {
+        if (dataTypeRawPtr->GetId() != OMNI_VARCHAR && dataTypeRawPtr->GetId() != OMNI_CHAR) {
             vecIndex++;
             continue;
         }
-        auto dataType = (VarcharDataType &)item;
-        auto varcharVector = new VarcharVector(vecAllocator, positionCount * dataType.GetWidth(), positionCount);
+
+        auto varcharVector = new VarcharVector(vecAllocator, positionCount * dataTypeRawPtr->GetWidth(), positionCount);
         auto tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
         for (int32_t i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {

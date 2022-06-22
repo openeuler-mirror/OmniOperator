@@ -21,12 +21,12 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    auto col0 = new FieldExpr(0, IntType());
-    auto col1 = new FieldExpr(1, LongType());
+    auto col0 = new FieldExpr(0, new IntDataType());
+    auto col1 = new FieldExpr(1, new LongDataType());
     std::vector<Expr *> sortExprs { col0, col1 };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -56,14 +56,14 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    auto col0 = new FieldExpr(0, IntType());
-    auto addCol = new FieldExpr(0, IntType());
-    auto addLiteral = new LiteralExpr(50, IntType());
-    auto addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addCol, addLiteral, IntType());
+    auto col0 = new FieldExpr(0, new IntDataType());
+    auto addCol = new FieldExpr(0, new IntDataType());
+    auto addLiteral = new LiteralExpr(50, new IntDataType());
+    auto addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addCol, addLiteral, new IntDataType());
     std::vector<Expr *> sortExprs { col0, addExpr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -93,16 +93,16 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    auto add1Col = new FieldExpr(0, IntType());
-    auto add1Literal = new LiteralExpr(50, IntType());
-    auto add2Col = new FieldExpr(1, LongType());
-    auto add2Literal = new LiteralExpr(50, LongType());
-    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
+    auto add1Col = new FieldExpr(0, new IntDataType());
+    auto add1Literal = new LiteralExpr(50, new IntDataType());
+    auto add2Col = new FieldExpr(1, new LongDataType());
+    auto add2Literal = new LiteralExpr(50, new LongDataType());
+    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, new IntDataType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, new LongDataType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -136,21 +136,21 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
     void *datas[3] = {data0, data1, data2};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType() }));
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = new VectorBatch(3, dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        DataType dataType = sourceTypes.Get()[i];
+        DataTypeRawPtr dataType = sourceTypes.Get()[i];
         vecBatch->SetVector(i, CreateDictionaryVector(dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     int32_t outputCols[2] = {1, 2};
-    auto add1Col = new FieldExpr(0, IntType());
-    auto add1Literal = new LiteralExpr(50, IntType());
-    auto add2Col = new FieldExpr(2, LongType());
-    auto add2Literal = new LiteralExpr(50, LongType());
-    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
+    auto add1Col = new FieldExpr(0, new IntDataType());
+    auto add1Literal = new LiteralExpr(50, new IntDataType());
+    auto add2Col = new FieldExpr(2, new LongDataType());
+    auto add2Literal = new LiteralExpr(50, new LongDataType());
+    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, new IntDataType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, new LongDataType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
@@ -164,7 +164,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
+    DataTypes expectedTypes(std::vector<DataTypeRawPtr> { new LongDataType(), new LongDataType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -181,18 +181,18 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     const int32_t dataSize = 4;
     const int32_t vecCount = 1;
     std::string values[dataSize] = {"hello", "world", "omni", "runtime"};
-    VarcharVector *vector = CreateVarcharVector(type, values, dataSize);
+    VarcharVector *vector = CreateVarcharVector(&type, values, dataSize);
     VectorBatch *vecBatch = new VectorBatch(vecCount, dataSize);
     vecBatch->SetVector(0, vector);
 
-    DataTypes sourceTypes(std::vector<DataType>({ type }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ &type }));
     int32_t outputCols[vecCount] = {0};
 
-    auto substrCol = new FieldExpr(0, VarcharType(200));
-    auto substrIndex = new LiteralExpr(1, IntType());
-    auto substrLen = new LiteralExpr(4, IntType());
+    auto substrCol = new FieldExpr(0, new VarcharDataType(200));
+    auto substrIndex = new LiteralExpr(1, new IntDataType());
+    auto substrLen = new LiteralExpr(4, new IntDataType());
     std::vector<Expr *> args { substrCol, substrIndex, substrLen };
-    auto substrExpr = GetFuncExpr("substr", args, VarcharType(200));
+    auto substrExpr = GetFuncExpr("substr", args, new VarcharDataType(200));
     std::vector<Expr *> sortExprs { substrExpr };
 
     int32_t ascendings[vecCount] = {true};
@@ -207,7 +207,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     VectorHelper::PrintVecBatch(outputVecBatches[0]);
 
     std::string expectValues[dataSize] = {"hello", "omni", "runtime", "world"};
-    auto expectVector = CreateVarcharVector(type, expectValues, dataSize);
+    auto expectVector = CreateVarcharVector(&type, expectValues, dataSize);
     auto expectVecBatch = new VectorBatch(vecCount, dataSize);
     expectVecBatch->SetVector(0, expectVector);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -254,14 +254,14 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     vecBatch->SetVector(1, slicedVec1);
     vecBatch->SetVector(2, slicedVec2);
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType() }));
     int32_t outputCols[2] = {1, 2};
-    auto add1Col = new FieldExpr(0, IntType());
-    auto add1Literal = new LiteralExpr(50, IntType());
-    auto add2Col = new FieldExpr(2, LongType());
-    auto add2Literal = new LiteralExpr(50, LongType());
-    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
+    auto add1Col = new FieldExpr(0, new IntDataType());
+    auto add1Literal = new LiteralExpr(50, new IntDataType());
+    auto add2Col = new FieldExpr(2, new LongDataType());
+    auto add2Literal = new LiteralExpr(50, new LongDataType());
+    auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, new IntDataType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, new LongDataType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
 
     int32_t ascendings[2] = {false, true};
@@ -275,7 +275,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
     int64_t expectData1[5] = {0, 0, 5, 1, 3};
     int64_t expectData2[5] = {0, 0, 11, 55, 33};
-    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
+    DataTypes expectedTypes(std::vector<DataTypeRawPtr> { new LongDataType(), new LongDataType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
     expectVecBatch->GetVector(0)->SetValueNull(1);
@@ -292,7 +292,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
 TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 {
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType() }));
 
     const int32_t dataSize1 = 5;
     int32_t data1[dataSize1] = {4, 3, 2, 1, 0};
@@ -307,7 +307,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize3, data3);
 
     int outputCols[1] = {0};
-    auto col0 = new FieldExpr(0, IntType());
+    auto col0 = new FieldExpr(0, new IntDataType());
     std::vector<Expr *> sortExprs { col0 };
     int ascendings[1] = {true};
     int nullFirsts[1] = {true};
@@ -338,7 +338,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 
 TEST(SortWithExprTest, TestSortSpillWithOneRecord)
 {
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType() }));
 
     const int32_t dataSize = 1;
     int32_t data1[dataSize] = {3};
@@ -351,7 +351,7 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize, data3);
 
     int outputCols[1] = {0};
-    auto col0 = new FieldExpr(0, IntType());
+    auto col0 = new FieldExpr(0, new IntDataType());
     std::vector<Expr *> sortExprs { col0 };
     int ascendings[1] = {true};
     int nullFirsts[1] = {true};

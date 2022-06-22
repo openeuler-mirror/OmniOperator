@@ -35,7 +35,7 @@ int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, 
 
 // function implements for class PagesIndex
 PagesIndex::PagesIndex(const omniruntime::type::DataTypes &types)
-    : dataTypes(types.Get().data()),
+    : dataTypes(types.Get()),
       dataTypeIds(types.GetIds()),
       typesCount(types.GetSize()),
       columns(nullptr),
@@ -858,7 +858,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch,
-                    (dataTypes[outputCol]).GetWidth(), vecAllocator);
+                    (dataTypes[outputCol])->GetWidth(), vecAllocator);
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
@@ -952,7 +952,7 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
 void PagesIndex::GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vector<int32_t> &outputCols,
     std::vector<VectorBatch *> &sortedVecBatches)
 {
-    std::vector<DataType> types(dataTypes, dataTypes + typesCount);
+    std::vector<DataTypeRawPtr> types(dataTypes.begin(), dataTypes.end());
     int32_t outputColsCount = outputCols.size();
     int32_t maxRowCount = OperatorUtil::GetMaxRowCount(types, outputCols.data(), outputColsCount);
     int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);

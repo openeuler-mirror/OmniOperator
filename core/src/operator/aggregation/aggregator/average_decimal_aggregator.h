@@ -11,11 +11,11 @@ namespace omniruntime {
 namespace op {
 class AverageDecimalAggregator : public Aggregator {
 public:
-    AverageDecimalAggregator(const DataType &in, const DataType &out, int32_t channel)
+    AverageDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel)
     {}
 
-    AverageDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw,
+    AverageDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel, bool inputRaw,
         bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
     {}
@@ -40,9 +40,9 @@ public:
             int64_t oldOverflow = 0;
             int64_t oldCount = 0;
             Decimal128 curVal;
-            if (inputType.GetId() == OMNI_DECIMAL64) {
+            if (inputType->GetId() == OMNI_DECIMAL64) {
                 curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
-            } else if (inputType.GetId() == OMNI_DECIMAL128) {
+            } else if (inputType->GetId() == OMNI_DECIMAL128) {
                 curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
             }
             Decimal128 leftVal;
@@ -90,9 +90,9 @@ public:
         }
         if (inputRaw) {
             Decimal128 initState;
-            if (inputType.GetId() == OMNI_DECIMAL64) {
+            if (inputType->GetId() == OMNI_DECIMAL64) {
                 initState = DecimalOperations::UnscaledDecimal((static_cast<LongVector *>(vector))->GetValue(offset));
-            } else if (inputType.GetId() == OMNI_DECIMAL128) {
+            } else if (inputType->GetId() == OMNI_DECIMAL128) {
                 initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
             }
 
@@ -136,10 +136,10 @@ public:
             int32_t scaleDiff = 0;
             // for spark, input type is always decimal. for olk, input type is varbinary and the precision
             // and scale are zero.
-            auto outType = outputType.GetId();
-            auto inType = inputType.GetId();
+            auto outType = outputType->GetId();
+            auto inType = inputType->GetId();
             if (inType == OMNI_DECIMAL64 || inType == OMNI_DECIMAL128) {
-                scaleDiff = outputType.GetScale() - inputType.GetScale();
+                scaleDiff = outputType->GetScale() - inputType->GetScale();
             }
             Decimal128 rescaledDividend;
             // rescale dividend and divisor to output scale

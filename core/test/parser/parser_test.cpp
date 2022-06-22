@@ -98,7 +98,7 @@ TEST(ParseTest, parseNotOperation)
 {
     int vecTypeCount = 1;
     string expr = "$operator$NOT:4(#0)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new BooleanDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -118,8 +118,8 @@ TEST(ParseTest, parseAddOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$ADD:1(#0, 0:1)", "$operator$ADD:2(#1, 1:2)",
                                        "$operator$ADD:3(#2, 2:3)", "$operator$ADD:7(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -134,8 +134,8 @@ TEST(ParseTest, parseSubtractOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$SUBTRACT:1(#0, 0:1)", "$operator$SUBTRACT:2(#1, 1:2)",
                                        "$operator$SUBTRACT:3(#2, 2:3)", "$operator$SUBTRACT:7(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -150,8 +150,8 @@ TEST(ParseTest, parseMultiplyOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$MULTIPLY:1(#0, 0:1)", "$operator$MULTIPLY:2(#1, 1:2)",
                                        "$operator$MULTIPLY:3(#2, 2:3)", "$operator$MULTIPLY:7(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -166,8 +166,8 @@ TEST(ParseTest, parseDivideOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$DIVIDE:1(#0, 0:1)", "$operator$DIVIDE:2(#1, 1:2)",
                                        "$operator$DIVIDE:3(#2, 2:3)", "$operator$DIVIDE:7(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -182,8 +182,8 @@ TEST(ParseTest, parseModulusOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$MODULUS:1(#0, 0:1)", "$operator$MODULUS:2(#1, 1:2)",
                                        "$operator$MODULUS:3(#2, 2:3)", "$operator$MODULUS:7(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -199,8 +199,8 @@ TEST(ParseTest, parseLTOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$LESS_THAN:4(#0, 0:1)", "$operator$LESS_THAN:4(#1, 1:2)",
                                        "$operator$LESS_THAN:4(#2, 2:3)", "$operator$LESS_THAN:4(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -217,8 +217,8 @@ TEST(ParseTest, parseLTEOperation)
                                        "$operator$LESS_THAN_OR_EQUAL:4(#1, 1:2)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#2, 2:3)",
                                        "$operator$LESS_THAN_OR_EQUAL:4(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -233,8 +233,8 @@ TEST(ParseTest, parseGTOperation)
     const int projectCount = 4;
     string exprs[projectCount] = {"$operator$GREATER_THAN:4(#0, 0:1)", "$operator$GREATER_THAN:4(#1, 1:2)",
                                        "$operator$GREATER_THAN:4(#2, 2:3)", "$operator$GREATER_THAN:4(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -251,8 +251,8 @@ TEST(ParseTest, parseGTEOperation)
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#1, 1:2)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#2, 2:3)",
                                        "$operator$GREATER_THAN_OR_EQUAL:4(#3, 3:7)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType(), new DoubleDataType(),
+        new Decimal128DataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -268,8 +268,8 @@ TEST(ParseTest, parseEQOperation)
     string exprs[projectCount] = {"$operator$EQUAL:4(#0, 0:1)", "$operator$EQUAL:4(#1, 1:2)",
                                        "$operator$EQUAL:4(#2, 2:3)", "$operator$EQUAL:4(#3, 3:7)",
                                        "$operator$EQUAL:4(#4, 'hello':15)", "$operator$EQUAL:4(#5, 'hello':16[6])"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT),        DataType(OMNI_LONG),    DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128), DataType(OMNI_VARCHAR), DataType(OMNI_CHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(),        new LongDataType(),    new DoubleDataType(),
+        new Decimal128DataType(), new VarcharDataType(), new CharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -286,8 +286,8 @@ TEST(ParseTest, parseNEQOperation)
                                        "$operator$NOT_EQUAL:4(#2, 2:3)", "$operator$NOT_EQUAL:4(#3, 3:7)",
                                        "$operator$NOT_EQUAL:4(#4, 'hello':15)",
                                        "$operator$NOT_EQUAL:4(#5, 'hello':16[6])"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT),        DataType(OMNI_LONG),    DataType(OMNI_DOUBLE),
-        DataType(OMNI_DECIMAL128), DataType(OMNI_VARCHAR), DataType(OMNI_CHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(),        new LongDataType(),    new DoubleDataType(),
+        new Decimal128DataType(), new VarcharDataType(), new CharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -302,7 +302,7 @@ TEST(ParseTest, parseLogicOperations)
 {
     const int projectCount = 2;
     string exprs[projectCount] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_BOOLEAN), DataType(OMNI_BOOLEAN) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new BooleanDataType(), new BooleanDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, projectCount, inputTypes);
@@ -335,7 +335,7 @@ TEST(ParseTest, parseBetweenOperation)
 {
     int vecTypeCount = 3;
     string expr = "$operator$BETWEEN:4(#1, #0, #2)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_LONG) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new DoubleDataType(), new LongDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -365,7 +365,7 @@ TEST(ParseTest, parseInOperation)
 {
     int vecTypeCount = 3;
     string expr = "$operator$IN:4(#1, #0, #2)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_LONG) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new DoubleDataType(), new LongDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -396,7 +396,7 @@ TEST(ParseTest, parseCoalesceOperation)
 {
     int vecTypeCount = 3;
     string expr = "COALESCE:1(#1, #0)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new IntDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -421,7 +421,7 @@ TEST(ParseTest, parseIfOperation)
 {
     int vecTypeCount = 1;
     string expr = "IF:15(true:4, #0, 'hello':15)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new VarcharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -450,7 +450,7 @@ TEST(ParseTest, parseIsNullOperation)
 {
     int vecTypeCount = 1;
     string expr = "IS_NULL:4(#0)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_CHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new CharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -470,7 +470,7 @@ TEST(ParseTest, parseIsNotNullOperation)
 {
     int vecTypeCount = 1;
     string expr = "IS_NOT_NULL:4(#0)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_CHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new CharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -492,7 +492,7 @@ TEST(ParseTest, parseCastOperation)
 {
     int vecTypeCount = 1;
     string expr = "CAST:2(#0)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -514,7 +514,7 @@ TEST(ParseTest, parseAbsOperation)
 {
     int vecTypeCount = 1;
     string expr = "abs:3(#0)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new DoubleDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -536,7 +536,7 @@ TEST(ParseTest, parseSubstrOperation)
 {
     int vecTypeCount = 1;
     string expr = "substr:15(#0, 1:1, 6:1)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new VarcharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -568,7 +568,7 @@ TEST(ParseTest, parseConcatOperation)
 {
     int vecTypeCount = 1;
     string expr = "concat:15(#0, 'hello':15)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new VarcharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -595,7 +595,7 @@ TEST(ParseTest, parseLikeOperation)
 {
     int vecTypeCount = 1;
     string expr = "LIKE:4(#0, '%hello':15)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new VarcharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -622,7 +622,7 @@ TEST(ParseTest, parseMM3HashOperation)
 {
     int vecTypeCount = 1;
     string expr = "mm3hash:1(#0, 2:1)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new VarcharDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -649,7 +649,7 @@ TEST(ParseTest, parseCombineHashOperation)
 {
     int vecTypeCount = 1;
     string expr = "combine_hash:2(#0, 2:2)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new LongDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -676,7 +676,7 @@ TEST(ParseTest, parsePmodOperation)
 {
     int vecTypeCount = 1;
     string expr = "pmod:1(#0, 5:1)";
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -703,7 +703,7 @@ TEST(ParseTest, parseNullExprOperation)
 {
     int vecTypeCount = 0;
     string expr = "abs:1(2)";
-    std::vector<DataType> vecOfTypes = {};
+    std::vector<DataTypeRawPtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -717,7 +717,7 @@ TEST(ParseTest, parseNullStringOperation)
 {
     int vecTypeCount = 0;
     string expr = "null:0";
-    std::vector<DataType> vecOfTypes = {};
+    std::vector<DataTypeRawPtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
@@ -730,7 +730,7 @@ TEST(ParseTest, parseNullStringOperation)
 TEST(ParseTest, ParseExpressions)
 {
     string exprs[2] = {"$operator$SUBTRACT:1(#0, 10:1)", "$operator$ADD:2(#1, 1:2)"};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
+    std::vector<DataTypeRawPtr> vecOfTypes = { new IntDataType(), new LongDataType() };
     DataTypes inputTypes(vecOfTypes);
     Parser parser;
     std::vector<Expr *> result = parser.ParseExpressions(exprs, 2, inputTypes);

@@ -128,7 +128,7 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
         nullCond = builder->CreateOr(leftIsNull, rightIsNull);
         builder->CreateCondBr(nullCond, nullBlock, nextInst);
         builder->SetInsertPoint(nullBlock);
-        switch (binaryExpr->left->GetReturnType().GetId()) {
+        switch (binaryExpr->left->GetReturnType()->GetId()) {
             case OMNI_INT:
             case OMNI_DATE32:
                 leftZero = llvmTypes->CreateConstantInt(0);
@@ -711,8 +711,8 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             break;
         }
         case OMNI_DECIMAL64: {
-            Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
-            Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
+            Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType()->GetPrecision());
+            Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType()->GetScale());
             codeGenValue = new DecimalValue(llvmTypes->CreateConstantLong(lExpr.longVal),
                 llvmTypes->CreateConstantBool(isNullLiteral), precision, scale);
             break;
@@ -721,8 +721,8 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
             std::string dec128String = isNullLiteral ? "0" : *lExpr.stringVal;
             __uint128_t dec128 = Decimal128Utils::StrToUint128_t(dec128String.c_str());
             dec128String = Decimal128Utils::Uint128_tToStr(dec128);
-            Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetPrecision());
-            Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType().GetScale());
+            Value *precision = llvmTypes->CreateConstantInt(lExpr.GetReturnType()->GetPrecision());
+            Value *scale = llvmTypes->CreateConstantInt(lExpr.GetReturnType()->GetScale());
             auto const128Val = llvm::ConstantInt::get(llvm::Type::getInt128Ty(*context), dec128String, 10);
             codeGenValue =
                 new DecimalValue(const128Val, llvmTypes->CreateConstantBool(isNullLiteral), precision, scale);
@@ -743,11 +743,11 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
     return codeGenValue;
 }
 
-Value *ExpressionCodeGen::GetDictionaryVectorValue(const DataType &dataType, Value *rowIdx, Value *dictionaryVectorPtr,
+Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::DataTypeRawPtr dataType, Value *rowIdx, Value *dictionaryVectorPtr,
     AllocaInst *&lengthAllocaInst)
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT };
-    DataTypeId typeId = dataType.GetId();
+    DataTypeId typeId = dataType->GetId();
     FunctionSignature dictionaryFuncSignature;
     switch (typeId) {
         case OMNI_INT:
@@ -904,8 +904,8 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     bitmapValue = builder->CreateLoad(bitmapGEP);
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
-        Value *precision = llvmTypes->CreateConstantInt(fExpr.GetReturnType().GetPrecision());
-        Value *scale = llvmTypes->CreateConstantInt(fExpr.GetReturnType().GetScale());
+        Value *precision = llvmTypes->CreateConstantInt(fExpr.GetReturnType()->GetPrecision());
+        Value *scale = llvmTypes->CreateConstantInt(fExpr.GetReturnType()->GetScale());
         this->value.reset(new DecimalValue(phiValue, bitmapValue, precision, scale));
     } else {
         this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
@@ -1002,8 +1002,8 @@ void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
         default: {
             // ignore the unary operator if it is invalid
             if (TypeUtil::IsDecimalType(uExpr.GetReturnTypeId())) {
-                Value *precision = llvmTypes->CreateConstantInt(uExpr.GetReturnType().GetPrecision());
-                Value *scale = llvmTypes->CreateConstantInt(uExpr.GetReturnType().GetScale());
+                Value *precision = llvmTypes->CreateConstantInt(uExpr.GetReturnType()->GetPrecision());
+                Value *scale = llvmTypes->CreateConstantInt(uExpr.GetReturnType()->GetScale());
                 this->value = make_shared<DecimalValue>(val->data, val->isNull, precision, scale);
                 return;
             }
@@ -1609,7 +1609,7 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetValidNotNullResultFunctionArgVa
         *isAnyNull = builder->CreateOr(*isAnyNull, resultPtr->isNull);
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
             if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
-                argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType().GetWidth()));
+                argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType()->GetWidth()));
             }
             argVals.push_back(this->value->length);
         }

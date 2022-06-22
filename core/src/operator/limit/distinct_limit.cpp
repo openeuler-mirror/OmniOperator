@@ -222,7 +222,7 @@ DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::
       limit(limit),
       resultBatch(nullptr)
 {
-    auto &sourceDataType = sourceTypes.Get();
+    auto sourceDataType = sourceTypes.Get();
     for (int i = 0; i < distinctColsCount; ++i) {
         int colIndex = distinctCols[i];
         outTypes.push_back(sourceDataType[colIndex]);
@@ -356,7 +356,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
 }
 
 void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector,
-    std::vector<type::DataType> &outTypes, int32_t rowIndex)
+    std::vector<type::DataTypeRawPtr> &outTypes, int32_t rowIndex)
 {
     for (int i = 0; i < static_cast<int>(outTypes.size()); ++i) {
         // nullptr handle
@@ -366,7 +366,7 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
             continue;
         }
 
-        DISTINCT_LIMIT_FUNC_SET[outTypes[i].GetId()].fillOutputFunc(resultBatch, rowVector, rowIndex, i);
+        DISTINCT_LIMIT_FUNC_SET[outTypes[i]->GetId()].fillOutputFunc(resultBatch, rowVector, rowIndex, i);
     }
 }
 

@@ -54,9 +54,8 @@ ExprType Expr::GetType() const
     return ExprType::INVALID_E;
 }
 
-DataType &Expr::GetReturnType() const
-{
-    return *dataType;
+DataTypeRawPtr Expr::GetReturnType() const {
+    return dataType;
 }
 
 DataTypeId Expr::GetReturnTypeId() const
@@ -85,33 +84,33 @@ ExprType LiteralExpr::GetType() const
 }
 
 // Helper constructors for different data types
-LiteralExpr::LiteralExpr(bool val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(bool val, DataTypeRawPtr dt)
 {
-    dataType = std::move(dt);
+    dataType = dt;
     boolVal = val;
 }
 
-LiteralExpr::LiteralExpr(int32_t val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(int32_t val, DataTypeRawPtr dt)
 {
-    dataType = std::move(dt);
+    dataType = dt;
     intVal = val;
 }
 
-LiteralExpr::LiteralExpr(int64_t val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(int64_t val, DataTypeRawPtr dt)
 {
-    dataType = std::move(dt);
+    dataType = dt;
     longVal = val;
 }
 
-LiteralExpr::LiteralExpr(double val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(double val, DataTypeRawPtr dt)
 {
-    dataType = std::move(dt);
+    dataType = dt;
     doubleVal = val;
 }
 
-LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(std::string *val, DataTypeRawPtr dt)
 {
-    dataType = std::move(dt);
+    dataType = dt;
     stringVal = val;
 }
 
@@ -126,23 +125,23 @@ ExprType FieldExpr::GetType() const
 }
 
 // Helper constructors
-FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType)
+FieldExpr::FieldExpr(int32_t colIdx, DataTypeRawPtr colType)
 {
-    dataType = std::move(colType);
+    dataType = colType;
     colVal = colIdx;
 }
 
 BinaryExpr::BinaryExpr()
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
 }
 
-BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt)
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypeRawPtr dt)
 {
     op = bop;
     left = leftExpr;
     right = rightExpr;
-    dataType = std::move(dt);
+    dataType = dt;
 }
 
 BinaryExpr::~BinaryExpr()
@@ -158,14 +157,14 @@ ExprType BinaryExpr::GetType() const
 
 UnaryExpr::UnaryExpr()
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
 }
 
 UnaryExpr::UnaryExpr(Operator logOp, Expr *bodyexp) : op(logOp), exp(bodyexp) {}
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt) : op(uop), exp(expr)
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypeRawPtr dt) : op(uop), exp(expr)
 {
-    dataType = std::move(dt);
+    dataType = dt;
 }
 
 UnaryExpr::~UnaryExpr()
@@ -180,7 +179,7 @@ ExprType UnaryExpr::GetType() const
 
 InExpr::InExpr()
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
 }
 
 InExpr::~InExpr()
@@ -190,7 +189,7 @@ InExpr::~InExpr()
 
 InExpr::InExpr(std::vector<Expr *> args)
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
     arguments = std::move(args);
 }
 
@@ -201,7 +200,7 @@ ExprType InExpr::GetType() const
 
 BetweenExpr::BetweenExpr()
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
 }
 
 BetweenExpr::~BetweenExpr()
@@ -213,7 +212,7 @@ BetweenExpr::~BetweenExpr()
 
 BetweenExpr::BetweenExpr(Expr *val, Expr *lowBound, Expr *upBound)
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
     value = val;
     lowerBound = lowBound;
     upperBound = upBound;
@@ -237,7 +236,7 @@ SwitchExpr::~SwitchExpr()
 
 SwitchExpr::SwitchExpr(const std::vector<std::pair<Expr *, Expr *>> &whens, Expr *fexp)
 {
-    dataType = std::make_unique<DataType>(fexp->GetReturnType());
+    dataType = fexp->GetReturnType();
     whenClause = whens;
     falseExpr = fexp;
 }
@@ -258,7 +257,7 @@ IfExpr::~IfExpr()
 
 IfExpr::IfExpr(Expr *cond, Expr *texp, Expr *fexp)
 {
-    dataType = std::make_unique<DataType>(texp->GetReturnType());
+    dataType = texp->GetReturnType();
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
@@ -279,7 +278,7 @@ CoalesceExpr::~CoalesceExpr()
 
 CoalesceExpr::CoalesceExpr(Expr *val1, Expr *val2)
 {
-    dataType = std::make_unique<DataType>(val1->GetReturnType());
+    dataType = val1->GetReturnType();
     value1 = val1;
     value2 = val2;
 }
@@ -298,7 +297,8 @@ IsNullExpr::~IsNullExpr()
 
 IsNullExpr::IsNullExpr(Expr *value)
 {
-    dataType = BooleanType();
+    dataType = new BooleanDataType();
+
     this->value = value;
 }
 
@@ -314,10 +314,10 @@ FuncExpr::~FuncExpr()
     DeleteExprs(arguments);
 }
 
-FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType)
+FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypeRawPtr returnType)
     : funcName(fnName), arguments(args)
 {
-    dataType = std::move(returnType);
+    dataType = returnType;
 
     std::vector<DataTypeId> argTypes(arguments.size());
     std::transform(arguments.begin(), arguments.end(), argTypes.begin(),
@@ -326,11 +326,11 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }
 
-FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypeRawPtr returnType,
     const Function *function)
-    : funcName(fnName), arguments(args), function(function)
+    : funcName(std::move(fnName)), arguments(std::move(args)), function(function)
 {
-    dataType = std::move(returnType);
+    dataType = returnType;
 }
 
 ExprType FuncExpr::GetType() const

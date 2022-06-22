@@ -20,9 +20,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     // bufferedTbl t2: double c, int d;
     // streamedTbl t1:  int a, Long b;
     std::string blank = "";
-    std::vector<DataType> streamTypeVector = { IntDataType::Instance(), LongDataType::Instance() };
+    std::vector<DataTypeRawPtr> streamTypeVector = { IntDataType::Instance(), LongDataType::Instance() };
     DataTypes streamedTblTypes(streamTypeVector);
-    FieldExpr *col0 = new FieldExpr(0, IntType());
+    FieldExpr *col0 = new FieldExpr(0, new IntDataType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
     int streamedOutputCols[1] = {1};
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
@@ -30,9 +30,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
+    std::vector<DataTypeRawPtr> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
     DataTypes bufferedTblTypes(bufferTypesVector);
-    FieldExpr *col1 = new FieldExpr(1, IntType());
+    FieldExpr *col1 = new FieldExpr(1, new IntDataType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
     int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
@@ -110,9 +110,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     // bufferedTbl t2:  int c21, Long c22, varchar c23;
     // streamedTbl t1:  int c11, Long c12, varchar c13;
     std::string blank = "";
-    std::vector<DataType> streamTypeVector = { IntDataType(), LongDataType() };
+    std::vector<DataTypeRawPtr> streamTypeVector = { new IntDataType(), new LongDataType() };
     DataTypes streamedTblTypes(streamTypeVector);
-    FieldExpr *col0 = new FieldExpr(0, IntType());
+    FieldExpr *col0 = new FieldExpr(0, new IntDataType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
     int streamedOutputCols[1] = {1};
@@ -121,9 +121,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
+    std::vector<DataTypeRawPtr> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
     DataTypes bufferedTblTypes(bufferTypesVector);
-    FieldExpr *col1 = new FieldExpr(1, IntType());
+    FieldExpr *col1 = new FieldExpr(1, new IntDataType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
     int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);

@@ -14,7 +14,7 @@ class DataTypes {
 public:
     DataTypes(const DataTypes &types) : DataTypes(types.dataTypes) {}
 
-    explicit DataTypes(const std::vector<DataType> &dataTypes)
+    explicit DataTypes(const std::vector<DataTypeRawPtr> &dataTypes)
         : dataTypesSize(dataTypes.size()), dataTypes(dataTypes), dataTypeIds(nullptr)
     {
         InitDataTypeIds();
@@ -36,7 +36,7 @@ public:
         delete[] dataTypeIds;
     }
 
-    const std::vector<DataType> &Get() const
+    const std::vector<DataTypeRawPtr> &Get() const
     {
         return dataTypes;
     }
@@ -57,12 +57,12 @@ private:
         int32_t size = dataTypes.size();
         dataTypeIds = new int32_t[size];
         for (int i = 0; i < size; ++i) {
-            dataTypeIds[i] = dataTypes[i].GetId();
+            dataTypeIds[i] = dataTypes[i]->GetId();
         }
     }
 
     int32_t dataTypesSize;
-    std::vector<DataType> dataTypes;
+    std::vector<DataTypeRawPtr> dataTypes;
     int32_t *dataTypeIds;
 };
 }

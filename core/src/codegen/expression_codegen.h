@@ -142,7 +142,7 @@ protected:
 private:
     std::string funcName;
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(const omniruntime::type::DataType &dataType, llvm::Value *rowIdx,
+    llvm::Value *GetDictionaryVectorValue(const omniruntime::type::DataTypeRawPtr dataType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
     void InExprIntegerHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
         llvm::Value *&tmpCmpNull);

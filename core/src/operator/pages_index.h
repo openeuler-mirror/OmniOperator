@@ -66,7 +66,7 @@ public:
     }
 
 private:
-    const omniruntime::type::DataType *dataTypes;
+    const std::vector<DataTypeRawPtr> dataTypes;
     const int32_t *dataTypeIds;
     uint32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
