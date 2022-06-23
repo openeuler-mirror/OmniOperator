@@ -558,13 +558,13 @@ Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOpera
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesArrCharPtr);
     env->ReleaseStringUTFChars(jHashChannelTypes, bucketToPartitionArrPtr);
 
-    jint sourceTypesCount = sourceDataTypes.GetSize();
+    jint sourceTypesCount = sourceDataTypes->GetSize();
     jint partitionChannelsCount = env->GetArrayLength(jPartitionChannels);
     jint bucketToPartitionCount = env->GetArrayLength(jBucketToPartition);
-    jint hashChannelTypesCount = hashChannelDataTypes.GetSize();
+    jint hashChannelTypesCount = hashChannelDataTypes->GetSize();
     jint hashChannelCount = env->GetArrayLength(jHashChannels);
 
-    auto hashChannelTypesArr = const_cast<int32_t *>(hashChannelDataTypes.GetIds());
+    auto hashChannelTypesArr = hashChannelDataTypes->GetIds();
 
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory = nullptr;
@@ -572,7 +572,7 @@ Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOpera
     partitionedOutputOperatorFactory = PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
         sourceDataTypes, sourceTypesCount, jReplicatesAnyRow, jNullChannel, partitionChannelsArr,
         partitionChannelsCount, jPartitionCount, bucketToPartitionArr, bucketToPartitionCount, isHashPrecomputed,
-        hashChannelTypesArr, hashChannelTypesCount, hashChannels, hashChannelCount);
+        hashChannelDataTypes, hashChannels, hashChannelCount);
     JNI_METHOD_END(0L)
     JNI_DEBUG_LOG("create partitionedoutput operator factory finished, elapsed time: %ld ms.", END(start));
 

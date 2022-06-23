@@ -159,10 +159,10 @@ public:
         return SEC;
     }
 
-    virtual std::vector<DataType *> GetFieldTypes() const
+    virtual const std::vector<std::shared_ptr<DataType>> &GetFieldTypes() const
     {
-        std::vector<DataType *> emptyFieldTypes = std::vector<DataType *> {};
-        return emptyFieldTypes;
+        static std::vector<std::shared_ptr<DataType>> emptyFields;
+        return emptyFields;
     }
 
     virtual void Serialize(nlohmann::json &nlohmannJson) const
@@ -170,7 +170,7 @@ public:
         nlohmannJson = nlohmannJson = nlohmann::json { { ID, id } };
     }
 
-    friend void to_json(nlohmann::json &nlohmannJson, const DataType *dataType)
+    friend void to_json(nlohmann::json &nlohmannJson, const std::shared_ptr<DataType> &dataType)
     {
         dataType->Serialize(nlohmannJson);
     }
@@ -195,16 +195,16 @@ protected:
     DataTypeId id;
 };
 
-using DataTypeRawPtr = DataType *;
+using DataTypePtr = std::shared_ptr<DataType>;
 
 template<DataTypeId typeId>
 class ScalarDataType : public DataType {
 public:
     ScalarDataType() : DataType(typeId) {}
     ~ScalarDataType() override = default;
-    static DataTypeRawPtr Instance() {
+    static DataTypePtr Instance() {
         static std::shared_ptr<ScalarDataType<typeId>> type = std::make_shared<ScalarDataType<typeId>>();
-        return type.get();
+        return type;
     }
 };
 
@@ -263,12 +263,12 @@ public:
     Decimal64DataType(int32_t precision, int32_t scale) : DecimalDataType(precision, scale, DataTypeId::OMNI_DECIMAL64)
     {}
 
-    ~Decimal64DataType() override {}
+    ~Decimal64DataType() override = default;
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<Decimal64DataType> type = std::make_shared<Decimal64DataType>(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE);
-        return type.get();
+        return type;
     }
 
 //private:
@@ -285,10 +285,10 @@ public:
 
     ~Decimal128DataType() override {}
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<Decimal128DataType> type = std::make_shared<Decimal128DataType>(DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE);
-        return type.get();
+        return type;
     }
 
 //private:
@@ -340,10 +340,10 @@ public:
 
     ~Date32DataType() override {}
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<Date32DataType> type = std::make_shared<Date32DataType>(DAY);
-        return type.get();
+        return type;
     }
 };
 
@@ -354,10 +354,10 @@ public:
 
     ~Date64DataType() override {}
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<Date64DataType> type = std::make_shared<Date64DataType>(DAY);
-        return type.get();
+        return type;
     }
 };
 
@@ -396,10 +396,10 @@ public:
 
     ~Time32DataType() override {}
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<Time32DataType> type = std::make_shared<Time32DataType>(SEC);
-        return type.get();
+        return type;
     }
 };
 
@@ -409,41 +409,53 @@ public:
 
     ~Time64DataType() override {}
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<Time64DataType> type = std::make_shared<Time64DataType>(SEC);
-        return type.get();
+        return type;
     }
 };
 
 class ContainerDataType : public DataType {
 public:
-    ContainerDataType(const ContainerDataType &type) : ContainerDataType(type.GetFieldTypes()) {}
     explicit ContainerDataType() : DataType(DataTypeId::OMNI_CONTAINER) {}
-    explicit ContainerDataType(std::vector<DataTypeRawPtr> fieldTypes) : DataType(DataTypeId::OMNI_CONTAINER)
+    explicit ContainerDataType(std::vector<DataTypePtr> &fieldTypes) : DataType(DataTypeId::OMNI_CONTAINER), fieldTypes(std::move(fieldTypes))
     {
-        this->fieldTypes = fieldTypes;
     }
 
-    ~ContainerDataType() override {
-        for (auto fieldType : fieldTypes)
-        {
-            delete fieldType;
-        }
-    }
+    ~ContainerDataType() override = default;
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<ContainerDataType> type = std::make_shared<ContainerDataType>();
-        return type.get();
+        return type;
     }
 
-    std::vector<DataTypeRawPtr> GetFieldTypes() const override
+    const std::vector<DataTypePtr> &GetFieldTypes() const override
     {
         return fieldTypes;
     }
 
-    DataType &operator = (const DataType &right) override
+    const DataTypePtr &GetFieldType(int32_t index)
+    {
+        return fieldTypes[index];
+    }
+
+    int32_t GetSize() const
+    {
+        return fieldTypes.size();
+    }
+
+    std::vector<int32_t> GetIds() const
+    {
+        std::vector<int32_t> ids(fieldTypes.size());
+        for (const auto & fieldType : fieldTypes) {
+            ids.push_back(fieldType->GetId());
+        }
+        return ids;
+    }
+
+    ContainerDataType &operator = (const DataType &right) override
     {
         id = right.GetId();
         fieldTypes = right.GetFieldTypes();
@@ -458,7 +470,7 @@ public:
     void Serialize(nlohmann::json &nlohmannJson) const override
     {
         nlohmannJson = nlohmann::json { { ID, id } };
-        for (auto fieldType : this->GetFieldTypes()) {
+        for (const auto& fieldType : fieldTypes) {
             nlohmann::json fieldTypeJson;
             fieldType->Serialize(fieldTypeJson);
             nlohmannJson[FIELD_TYPES].push_back(fieldTypeJson);
@@ -466,8 +478,10 @@ public:
     }
 
 private:
-    std::vector<DataTypeRawPtr> fieldTypes;
+    std::vector<DataTypePtr> fieldTypes;
 };
+
+using ContainerDataTypePtr = std::shared_ptr<ContainerDataType>;
 
 class VarcharDataType : public DataType {
 public:
@@ -478,12 +492,12 @@ public:
         this->width = width;
     }
 
-    virtual ~VarcharDataType() override {}
+    ~VarcharDataType() override = default;
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<VarcharDataType> type = std::make_shared<VarcharDataType>(INT_MAX);
-        return type.get();
+        return type;
     }
 
 
@@ -524,12 +538,12 @@ public:
     explicit CharDataType() : CharDataType(MAX_WIDTH) {}
     explicit CharDataType(uint32_t width) : VarcharDataType(width, DataTypeId::OMNI_CHAR) {}
 
-    ~CharDataType() override {}
+    ~CharDataType() override = default;
 
-    static DataTypeRawPtr Instance()
+    static DataTypePtr Instance()
     {
         static std::shared_ptr<CharDataType> type = std::make_shared<CharDataType>(MAX_WIDTH);
-        return type.get();
+        return type;
     }
 
 private:
