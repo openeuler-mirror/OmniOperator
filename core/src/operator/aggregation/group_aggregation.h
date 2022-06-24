@@ -139,15 +139,15 @@ class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, ContainerDataTypePtr &groupInputTypes,
-        std::vector<uint32_t> &aggCol, ContainerDataTypePtr &aggInputTypes, ContainerDataTypePtr &aggOutputTypes,
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, ContainerDataTypePtr groupInputTypes,
+        std::vector<uint32_t> &aggCol, ContainerDataTypePtr aggInputTypes, ContainerDataTypePtr aggOutputTypes,
         std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColsVector, bool inputRaw, bool outputPartial)
         : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsVector),
           groupByColsVector(groupByCol),
-          groupByTypes(groupInputTypes),
+          groupByTypes(std::move(groupInputTypes)),
           aggInputColsVector(aggCol),
-          aggInputTypes(aggInputTypes),
-          aggOutputTypes(aggOutputTypes),
+          aggInputTypes(std::move(aggInputTypes)),
+          aggOutputTypes(std::move(aggOutputTypes)),
           aggFuncTypesVector(aggFuncTypes)
     {}
 

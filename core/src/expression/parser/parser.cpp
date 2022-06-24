@@ -101,7 +101,7 @@ DataTypeId ParseReturnType(const string &typeString)
 }
 
 std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const string expressions[],
-    int32_t numberOfExpressions, DataTypes inputTypes)
+    int32_t numberOfExpressions, ContainerDataType &inputTypes)
 {
     std::vector<Expr *> vExprs;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
@@ -114,7 +114,7 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
     return vExprs;
 }
 
-Expr *Parser::ParseRowExpression(const string &inputStr, ContainerDataType inputTypes, int32_t vecCount)
+Expr *Parser::ParseRowExpression(const string &inputStr, ContainerDataType &inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
     auto firstParenInd = input.find('(');
@@ -318,7 +318,7 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
 FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const ContainerDataType &inputTypes)
 {
     int colIdx = stoi(fieldStr.substr(1));
-    DataTypePtr colType = inputTypes.GetFieldType(colIdx);
+    const DataTypePtr& colType = inputTypes.GetFieldType(colIdx);
     return new FieldExpr(colIdx, colType);
 }
 
@@ -342,7 +342,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     // Case with boolean true/false
     if (literalStr == "true" || literalStr == "false") {
-        currType = IntType();
+        currType = BooleanType();
         return new LiteralExpr(literalStr == "true", std::move(currType));
     }
 
@@ -360,12 +360,12 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     if (TypeUtil::IsStringType(currTypeId)) {
         if (currTypeId == OMNI_CHAR) {
-            currType = new CharDataType(width);
+            currType = std::make_shared<CharDataType>(width);
         } else {
-            currType = new VarcharDataType(width);
+            currType = std::make_shared<VarcharDataType>(width);
         }
     } else {
-        currType = new DataType(currTypeId);
+        currType = std::make_shared<DataType>(currTypeId);
     }
 
     // Case with regular data (int, long, double, string ...)

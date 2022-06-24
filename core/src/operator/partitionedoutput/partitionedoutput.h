@@ -17,18 +17,18 @@ using namespace vec;
 
 class PartitionedOutputOperatorFactory : public OperatorFactory {
 public:
-    PartitionedOutputOperatorFactory(ContainerDataTypePtr &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
+    PartitionedOutputOperatorFactory(ContainerDataTypePtr sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
         int32_t nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
-        int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, ContainerDataTypePtr &hashChannelTypes,
+        int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, ContainerDataTypePtr hashChannelTypes,
         int32_t *hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperatorFactory() override;
 
-    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(ContainerDataTypePtr &sourceTypesField,
+    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(ContainerDataTypePtr sourceTypesField,
         int32_t sourceTypeCountField, bool replicatesAnyRowField, int32_t nullChannelField,
         int32_t *partitionChannelsField, int32_t partitionChannelsCountField, int32_t partitionCountField,
         int32_t *bucketToPartitionField, int32_t bucketToPartitionCountField, bool hashPrecomputed,
-        ContainerDataTypePtr &hashChannelTypesField, int32_t *hashChannelsField,
+        ContainerDataTypePtr hashChannelTypesField, int32_t *hashChannelsField,
         int32_t hashChannelsCountField);
 
     Operator *CreateOperator() override;

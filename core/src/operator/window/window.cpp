@@ -5,19 +5,21 @@
 
 #include "window.h"
 
+#include <utility>
+
 using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
 const int MID_SEARCH_FACTOR = 2;
-WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+WindowOperatorFactory::WindowOperatorFactory(ContainerDataTypePtr sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
     int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-    const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount, int32_t *windowFrameTypesField,
+    ContainerDataTypePtr allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount, int32_t *windowFrameTypesField,
     int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
     int32_t *windowFrameEndChannelsField)
-    : sourceTypes(std::make_unique<DataTypes>(sourceTypes)),
+    : sourceTypes(std::move(sourceTypes)),
       outputColsCount(outputColsCount),
       windowFunctionCount(windowFunctionCount),
       partitionCount(partitionCount),
@@ -25,7 +27,7 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
       sortColCount(sortColCount),
       preSortedChannelPrefix(preSortedChannelPrefix),
       expectedPositions(expectedPositions),
-      allTypes(std::make_unique<DataTypes>(allTypes)),
+      allTypes(std::move(allTypes)),
       argumentChannelsCount(argumentChannelsCount)
 {
     this->outputCols.insert(this->outputCols.begin(), outputCols, outputCols + outputColsCount);
@@ -57,19 +59,19 @@ OmniStatus WindowOperatorFactory::Init()
 
 WindowOperatorFactory::~WindowOperatorFactory() = default;
 
-WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const DataTypes &sourceTypesField,
+WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(ContainerDataTypePtr sourceTypesField,
     int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
     int32_t windowFunctionCountField, int32_t *partitionColsField, int32_t partitionCountField,
     int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField, int32_t *sortAscendingsField,
     int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
-    int32_t expectedPositionsField, const DataTypes &allTypesField, int32_t *argumentChannelsField,
+    int32_t expectedPositionsField, ContainerDataTypePtr allTypesField, int32_t *argumentChannelsField,
     int32_t argumentChannelsCountField, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
     int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
-    auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
+    auto operatorFactory = new WindowOperatorFactory(std::move(sourceTypesField), outputColsField, outputColsCountField,
         windowFunctionTypesField, windowFunctionCountField, partitionColsField, partitionCountField,
         preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
-        sortColCountField, preSortedChannelPrefixField, expectedPositionsField, allTypesField, argumentChannelsField,
+        sortColCountField, preSortedChannelPrefixField, expectedPositionsField, std::move(allTypesField), argumentChannelsField,
         argumentChannelsCountField, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
         windowFrameEndTypesField, windowFrameEndChannelsField);
     operatorFactory->Init();
@@ -79,25 +81,25 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
 Operator *WindowOperatorFactory::CreateOperator()
 {
     auto windowOperator =
-        new WindowOperator(*(sourceTypes), outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
+        new WindowOperator(sourceTypes, outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
         partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts,
-        sortColCount, preSortedChannelPrefix, expectedPositions, *(allTypes), argumentChannels, argumentChannelsCount,
+        sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, argumentChannelsCount,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     windowOperator->Init();
     return windowOperator;
 }
 
-WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols,
+WindowOperator::WindowOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &outputCols,
     int32_t outputColsCount, std::vector<int32_t> &windowFunctionTypes, int32_t windowFunctionCount,
     std::vector<int32_t> &partitionCols, int32_t partitionCount, std::vector<int32_t> &preGroupedCols,
     int32_t preGroupedCount, std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings,
     std::vector<int32_t> &sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-    int32_t expectedPositions, const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels,
+    int32_t expectedPositions, type::ContainerDataTypePtr allTypes, std::vector<int32_t> &argumentChannels,
     int32_t argumentChannelsCount, const std::vector<int32_t> &windowFrameTypes,
     const std::vector<int32_t> &windowFrameStartTypes, const std::vector<int32_t> &windowFrameStartChannels,
     const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels)
-    : sourceTypes(sourceTypes),
-      typesCount(sourceTypes.GetSize()),
+    : sourceTypes(std::move(sourceTypes)),
+      typesCount(this->sourceTypes->GetSize()),
       outputCols(outputCols),
       outputColsCount(outputColsCount),
       windowFunctionTypes(windowFunctionTypes),
@@ -111,7 +113,7 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
       sortColCount(sortColCount + partitionCount),
       preSortedChannelPrefix(preSortedChannelPrefix),
       expectedPositions(expectedPositions),
-      allTypes(allTypes),
+      allTypes(std::move(allTypes)),
       pendingInput(nullptr),
       partition(nullptr),
       argumentChannels(argumentChannels),
@@ -157,19 +159,20 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MAX:
             case OMNI_AGGREGATION_TYPE_MIN:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator,
+                    sourceTypes->GetFieldType(argumentChannels[i]), allTypes->GetFieldType(sourceTypes->GetSize() + i), vecAllocator,
                     std::move(windowFrame))));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(
-                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, new NoneDataType(),
-                    allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator, std::move(windowFrame))));
+                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, NoneDataType::Instance(),
+                    allTypes->GetFieldType(sourceTypes->GetSize() + i), vecAllocator, std::move(windowFrame))));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;
                 break;
         }
     }
+    sourceTypes->GetIds(sourceTypeIds);
     return ret;
 }
 
@@ -195,7 +198,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     FinishPagesIndex();
 
     // first, build the final output col number according to the outputCols and additional cols created by the window
-    int32_t allCount = allTypes.GetSize();
+    int32_t allCount = allTypes->GetSize();
     int finalOutputCols[allCount];
     for (int32_t i = 0; i < outputColsCount; i++) {
         finalOutputCols[finalOutputColsCount] = outputCols[i];
@@ -207,14 +210,14 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     }
 
     // next, get output
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(allTypes.Get(), finalOutputCols, finalOutputColsCount);
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(allTypes->GetFieldTypes(), finalOutputCols, finalOutputColsCount);
     int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
     std::vector<DataTypePtr> finalOutputTypes;
     finalOutputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
-        finalOutputTypes.push_back(allTypes.Get()[finalOutputCols[colIdx]]);
+        finalOutputTypes.push_back(allTypes->GetFieldType(finalOutputCols[colIdx]));
     }
 
     VectorBatch *vecBatch = nullptr;
@@ -243,7 +246,7 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
 
     // build the output data with original input vecBatch, input data are not changed in window operator
     // we add extra columns of window result to the output vecBatch in window partition
-    pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
+    pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypeIds.data(), position, rowCount,
         GetVecAllocator());
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
@@ -328,7 +331,7 @@ void WindowOperator::SortPagesIndexIfNecessary()
     if (pagesIndex->GetRowCount() > 1 && sortColCount != 0) {
         int32_t sortColTypes[sortColCount];
         for (int32_t i = 0; i < sortColCount; i++) {
-            sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
+            sortColTypes[i] = sourceTypes->GetFieldType(sortCols[i])->GetId();
         }
 
         int32_t startPosition = 0;

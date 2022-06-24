@@ -743,7 +743,7 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
     return codeGenValue;
 }
 
-Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::DataTypeRawPtr dataType, Value *rowIdx, Value *dictionaryVectorPtr,
+Value *ExpressionCodeGen::GetDictionaryVectorValue(omniruntime::type::DataTypePtr dataType, Value *rowIdx, Value *dictionaryVectorPtr,
     AllocaInst *&lengthAllocaInst)
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT };

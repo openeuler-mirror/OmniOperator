@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <gtest/gtest.h>
 #include <type/data_type_serializer.h>
+#include "util/type_util.h"
 
 using namespace omniruntime::type;
 using DataType = omniruntime::type::DataType;
@@ -16,31 +17,32 @@ using DataType = omniruntime::type::DataType;
 namespace TypeSerializationTest {
 TEST(DataTypeSerializer, serialization)
 {
-    std::vector<DataTypePtr> types = {new IntDataType,
-                                      new DoubleDataType(),
-                                      new BooleanDataType(),
-                                      new LongDataType(),
-                                      new Date32DataType(MILLI),
-                                      new Date64DataType(MILLI),
-                                      new Time32DataType(SEC),
-                                      new Time64DataType(MICROSEC),
-                                      new VarcharDataType(1024),
-                                      new CharDataType(512),
-                                      new Decimal128DataType(30, 20),
-                                      new Decimal64DataType(20, 10),
-                                      new ContainerDataType(std::vector<DataTypePtr> {new IntDataType(), new Decimal128DataType(20, 10),
-                                                                                      new VarcharDataType(256) }) };
+    std::vector<DataTypePtr> fieldTypes {IntType(), Decimal128Type(20, 10), VarcharType(256) };
+    std::vector<DataTypePtr> types = {IntType(),
+                                      DoubleType(),
+                                      BooleanType(),
+                                      LongType(),
+                                      Date32Type(MILLI),
+                                      Date64Type(MILLI),
+                                      Time32Type(SEC),
+                                      Time64Type(MICROSEC),
+                                      VarcharType(1024),
+                                      CharType(512),
+                                      Decimal128Type(30, 20),
+                                      Decimal64Type(20, 10),
+                                      ContainerType(fieldTypes) };
     std::string typesJson = omniruntime::type::Serialize(types);
-    DataTypes dataTypes = omniruntime::type::Deserialize(typesJson);
-    auto dataTypeRawPtrs = dataTypes.Get();
-    EXPECT_EQ(dataTypeRawPtrs.size(), types.size());
-    for (uint32_t i = 0; i < dataTypeRawPtrs.size(); i++) {
-        EXPECT_EQ(dataTypeRawPtrs[i]->GetId(), types[i]->GetId());
-        EXPECT_EQ(dataTypeRawPtrs[i]->GetWidth(), types[i]->GetWidth());
-        EXPECT_EQ(dataTypeRawPtrs[i]->GetPrecision(), types[i]->GetPrecision());
-        EXPECT_EQ(dataTypeRawPtrs[i]->GetScale(), types[i]->GetScale());
-        EXPECT_EQ(dataTypeRawPtrs[i]->GetDateUnit(), types[i]->GetDateUnit());
-        EXPECT_EQ(dataTypeRawPtrs[i]->GetTimeUnit(), types[i]->GetTimeUnit());
+    ContainerDataTypePtr dataTypes = omniruntime::type::Deserialize(typesJson);
+    auto dataTypePtrs = dataTypes->GetFieldTypes();
+    EXPECT_EQ(dataTypePtrs.size(), types.size());
+    for (uint32_t i = 0; i < dataTypePtrs.size(); i++) {
+
+        EXPECT_EQ(dataTypePtrs[i]->GetId(), types[i]->GetId());
+        EXPECT_EQ(dataTypePtrs[i]->GetWidth(), types[i]->GetWidth());
+        EXPECT_EQ(dataTypePtrs[i]->GetPrecision(), types[i]->GetPrecision());
+        EXPECT_EQ(dataTypePtrs[i]->GetScale(), types[i]->GetScale());
+        EXPECT_EQ(dataTypePtrs[i]->GetDateUnit(), types[i]->GetDateUnit());
+        EXPECT_EQ(dataTypePtrs[i]->GetTimeUnit(), types[i]->GetTimeUnit());
     }
 //    EXPECT_EQ(dataTypes[0]->GetId(), OMNI_INT);
 //    EXPECT_EQ(dataTypes[1]->GetId(), OMNI_DOUBLE);
@@ -84,38 +86,6 @@ TEST(DataTypeSerializer, serialization)
 //    EXPECT_EQ(dataType.GetId(), OMNI_INT);
 }
 
-TEST(DataTypeSerializer, ExtendSerialization)
-{
-    auto *charDataType = new CharDataType(512);
-    auto *varcharDataType = new VarcharDataType(1024);
-    auto *intDataType = new IntDataType();
-    auto *longDataType = new LongDataType();
-    auto *date32DataType = new Date32DataType(MILLI);
-    auto *date64DataType = new Date64DataType(MILLI);
-    auto *time32DataType = new Time32DataType(SEC);
-    auto *time64DataType = new Time64DataType(MICROSEC);
-    auto *decimal64DataType = new Decimal64DataType(30, 20);
-    auto *decimal128DataType = new Decimal128DataType(20, 10);
-    auto *varcharDataType2 = new VarcharDataType(512);
-    auto *containerDataType = new ContainerDataType(
-        std::vector<DataType *> { intDataType, decimal128DataType, time64DataType, date64DataType, varcharDataType2 });
-
-    std::vector<DataType *> types = { intDataType,       longDataType,       charDataType,     varcharDataType,
-        date32DataType,    date64DataType,     time32DataType,   time64DataType,
-        decimal64DataType, decimal128DataType, containerDataType };
-
-    std::string typesJson = omniruntime::type::Serialize(types);
-    std::string typesJson2 = omniruntime::type::SerializeSingle(varcharDataType);
-    std::string typesJson3 = omniruntime::type::SerializeSingle(containerDataType);
-    std::string typesJson4 = omniruntime::type::SerializeSingle(date32DataType);
-    std::cout << "typesJson :" << typesJson << std::endl;
-    std::cout << "varchar2 :" << typesJson2 << std::endl;
-    std::cout << "varchar3 :" << typesJson3 << std::endl;
-    std::cout << "varchar4 :" << typesJson4 << std::endl;
-    auto dataType1 = omniruntime::type::Deserialize(typesJson);
-    //        auto dataType2 = omniruntime::type::DeserializeSingle(typesJson2);
-    std::cout << "" << std::endl;
-}
 
 TEST(DataTypeSerializer, DataTypeBaseOperatorTest)
 {
@@ -128,7 +98,6 @@ TEST(DataTypeSerializer, DataTypeBaseOperatorTest)
     Date32DataType date32DataType3 = date32DataType2;
     EXPECT_EQ(date32DataType3.GetDateUnit(), MILLI);
 
-    DataTypePtr intd = new IntDataType() ;
     Time32DataType time32DataType = Time32DataType(MICROSEC);
     Time32DataType time32DataType2 = Time32DataType(SEC);
     ASSERT_TRUE(time32DataType != time32DataType2);
@@ -159,8 +128,10 @@ TEST(DataTypeSerializer, DataTypeBaseOperatorTest)
     EXPECT_EQ(varcharDataType3.GetWidth(), varcharDataType.GetWidth());
     EXPECT_EQ(varcharDataType3.GetWidth(), 1024);
 
-    std::vector<DataTypePtr> fieldTypes = std::vector<DataTypePtr> {new IntDataType, new VarcharDataType(1024) };
-    std::vector<DataTypePtr> fieldTypes2 = std::vector<DataTypePtr> {new IntDataType, new Date32DataType(MILLI) };
+    std::vector<DataTypePtr> fieldTypes {IntType(), VarcharType(1024) };
+    std::vector<DataTypePtr> fieldTypes2 {IntType(), Date32Type(MILLI) };
     ContainerDataType containerDataType = ContainerDataType(fieldTypes);
+    ContainerDataType containerDataType2 = ContainerDataType(fieldTypes2);
+//    ASSERT_FALSE()
 }
 }

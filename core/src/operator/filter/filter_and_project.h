@@ -152,7 +152,7 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, DataTypes &inputDataTypes,
+    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, ContainerDataTypePtr inputDataTypes,
         int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
         int32_t projectVecCount);
 
@@ -167,7 +167,7 @@ public:
 
 private:
     std::string expression;
-    DataTypes inputDataTypes;
+    ContainerDataTypePtr inputDataTypes;
     int32_t inputVecCount;
     int32_t projectVecCount;
     std::unique_ptr<Filter> filter;

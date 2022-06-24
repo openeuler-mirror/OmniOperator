@@ -25,10 +25,10 @@ TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
     int32_t data3[dataSize] = {10, 11, 12, 10, 11, 12};
     double data4[dataSize] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1};
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data3, data4);
+    std::vector<DataTypePtr> types = {IntType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
+    VectorBatch *vecBatch1 = CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
+    VectorBatch *vecBatch2 = CreateVectorBatch(*sourceTypes, dataSize, data3, data4);
 
     UnionOperatorFactory *operatorFactory =
         UnionOperatorFactory::CreateUnionOperatorFactory(sourceTypes, sourceTypes.GetSize(), false);
@@ -42,8 +42,8 @@ TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
     double expData2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int32_t expData3[dataSize] = {10, 11, 12, 10, 11, 12};
     double expData4[dataSize] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1};
-    VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, dataSize, expData1, expData2);
-    VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, dataSize, expData3, expData4);
+    VectorBatch *expVecBatch1 = CreateVectorBatch(*sourceTypes, dataSize, expData1, expData2);
+    VectorBatch *expVecBatch2 = CreateVectorBatch(*sourceTypes, dataSize, expData3, expData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));

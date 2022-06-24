@@ -86,13 +86,10 @@ bool IsComparisonOperator(Operator op);
 bool IsLogicalOperator(Operator op);
 Operator StringToOperator(const std::string &opStr);
 
-using DataTypePtr = std::unique_ptr<omniruntime::type::DataType>;
-using DataTypeRawPtr = type::DataTypeRawPtr;
-
 class Expr {
 public:
-    DataTypeRawPtr dataType; // dataType of returned value
-    DataTypeRawPtr GetReturnType() const;
+    DataTypePtr dataType; // dataType of returned value
+    const DataTypePtr &GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;
     virtual ~Expr() = default;
@@ -111,11 +108,11 @@ public:
 
     LiteralExpr();
     ~LiteralExpr() override;
-    explicit LiteralExpr(bool val, DataTypeRawPtr colType);
-    explicit LiteralExpr(int32_t val, DataTypeRawPtr colType);
-    explicit LiteralExpr(int64_t val, DataTypeRawPtr colType);
-    explicit LiteralExpr(double val, DataTypeRawPtr colType);
-    explicit LiteralExpr(std::string *val, DataTypeRawPtr colType);
+    explicit LiteralExpr(bool val, DataTypePtr colType);
+    explicit LiteralExpr(int32_t val, DataTypePtr colType);
+    explicit LiteralExpr(int64_t val, DataTypePtr colType);
+    explicit LiteralExpr(double val, DataTypePtr colType);
+    explicit LiteralExpr(std::string *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
@@ -127,7 +124,7 @@ public:
 
     FieldExpr();
     ~FieldExpr() override;
-    FieldExpr(int32_t colIdx, DataTypeRawPtr colType);
+    FieldExpr(int32_t colIdx, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
@@ -140,7 +137,7 @@ public:
     UnaryExpr();
     ~UnaryExpr() override;
     UnaryExpr(Operator logOp, Expr *bodyexp);
-    UnaryExpr(Operator uop, Expr *expr, DataTypeRawPtr dt);
+    UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
@@ -154,7 +151,7 @@ public:
 
     BinaryExpr();
     ~BinaryExpr() override;
-    BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypeRawPtr dt);
+    BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
@@ -244,8 +241,8 @@ public:
 
     FuncExpr();
     ~FuncExpr() override;
-    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypeRawPtr returnType);
-    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypeRawPtr returnType,
+    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType);
+    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
         const omniruntime::Function *function);
 
     void Accept(ExprVisitor &visitor) const override;

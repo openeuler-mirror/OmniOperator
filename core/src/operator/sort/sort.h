@@ -20,17 +20,17 @@ namespace omniruntime {
 namespace op {
 class SortOperatorFactory : public OperatorFactory {
 public:
-    SortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
+    SortOperatorFactory(type::ContainerDataTypePtr dataTypes, int32_t *outputCols, int32_t outputColCount,
         int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
         const OperatorConfig &operatorConfig);
 
     ~SortOperatorFactory() override;
 
-    static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols,
+    static SortOperatorFactory *CreateSortOperatorFactory(type::ContainerDataTypePtr dataTypes, int32_t *outputCols,
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount);
 
-    static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &vecTypes, int32_t *outputCols,
+    static SortOperatorFactory *CreateSortOperatorFactory(type::ContainerDataTypePtr dataTypes, int32_t *outputCols,
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount, const OperatorConfig &operatorConfig);
 
@@ -72,7 +72,7 @@ public:
     }
 
 private:
-    std::unique_ptr<type::DataTypes> sourceTypes;
+    ContainerDataTypePtr sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
@@ -82,7 +82,7 @@ private:
 
 class SortOperator : public Operator {
 public:
-    SortOperator(const type::DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
+    SortOperator(type::ContainerDataTypePtr dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
         std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts,
         const OperatorConfig &operatorConfig);
 
@@ -96,7 +96,7 @@ public:
 
     int32_t GetTypescount()
     {
-        return sourceTypes.GetSize();
+        return sourceTypes->GetSize();
     }
 
     int32_t *GetOutputCols()
@@ -141,7 +141,7 @@ private:
     void GetOutputFromMemory(std::vector<VectorBatch *> &outputPages);
     void MergeFromDiskAndMemory(std::vector<VectorBatch *> &outputPages);
 
-    type::DataTypes sourceTypes;
+    type::ContainerDataTypePtr sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;

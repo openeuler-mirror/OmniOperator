@@ -159,7 +159,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
 
     auto aggInputColsCount = static_cast<size_t>(env->GetArrayLength(jAggInputCols));
-    auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
+    auto aggCount = static_cast<size_t>(aggOutputTypes->GetSize());
 
     std::vector<uint32_t> aggInputColsVector =
         vector<uint32_t>((uint32_t *)aggInputCols, (uint32_t *)aggInputCols + aggInputColsCount);
@@ -252,11 +252,11 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
 
-    std::vector<DataTypeRawPtr> allTypesVec;
-    allTypesVec.insert(allTypesVec.end(), inputDataTypes.Get().begin(), inputDataTypes.Get().end());
-    allTypesVec.insert(allTypesVec.end(), outputDataTypes.Get().begin(), outputDataTypes.Get().end());
+    std::vector<DataTypePtr> allTypesVec;
+    allTypesVec.insert(allTypesVec.end(), inputDataTypes->GetFieldTypes().begin(), inputDataTypes->GetFieldTypes().end());
+    allTypesVec.insert(allTypesVec.end(), outputDataTypes->GetFieldTypes().begin(), outputDataTypes->GetFieldTypes().end());
 
-    DataTypes allTypes(allTypesVec);
+    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allTypesVec);
 
     WindowOperatorFactory *windowOperatorFactory = nullptr;
     JNI_METHOD_START
@@ -366,10 +366,10 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     } else {
         Parser parser;
         JNI_METHOD_START
-        filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
+        filterExpr = parser.ParseRowExpression(filterExpression, *inputDataTypes, inputLength);
         JNI_METHOD_END(0L)
         JNI_METHOD_START
-        projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, inputDataTypes);
+        projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, *inputDataTypes);
         JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
     }
     if (filterExpr == nullptr || (projectExprs.size() != static_cast<size_t>(jProjectLength))) {
@@ -429,7 +429,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
         expressions = JSONParser::ParseJSON(jsonExprs, jExprsLength);
     } else {
         Parser parser;
-        expressions = parser.ParseExpressions(exprs, jExprsLength, inputDataTypes);
+        expressions = parser.ParseExpressions(exprs, jExprsLength, *inputDataTypes);
     }
     JNI_METHOD_END(0L)
     if (expressions.size() != static_cast<size_t>(jExprsLength)) {
@@ -564,8 +564,6 @@ Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOpera
     jint hashChannelTypesCount = hashChannelDataTypes->GetSize();
     jint hashChannelCount = env->GetArrayLength(jHashChannels);
 
-    auto hashChannelTypesArr = hashChannelDataTypes->GetIds();
-
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory = nullptr;
     JNI_METHOD_START
@@ -587,7 +585,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_union_OmniUnionOpera
     const char *sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     auto sourcesTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
-    int32_t sourceTypesCount = sourcesTypes.GetSize();
+    int32_t sourceTypesCount = sourcesTypes->GetSize();
 
     JNI_DEBUG_LOG("before create union operator factory elapsed time: %ld ms.", END(start));
     UnionOperatorFactory *unionOperatorFactory = nullptr;
@@ -1042,9 +1040,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
     } else {
         Parser parser;
         if (!filterExpression.empty()) {
-            filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
+            filterExpr = parser.ParseRowExpression(filterExpression, *inputDataTypes, inputLength);
         }
-        projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, inputDataTypes);
+        projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, *inputDataTypes);
     }
 
     if ((!filterExpression.empty() && filterExpr == nullptr) ||

@@ -177,7 +177,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_setDataTyp
 {
     ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
     auto dataTypeString = env->GetStringUTFChars(dataTypes, JNI_FALSE);
-    containerVec->SetDataTypes(Deserialize(dataTypeString).Get());
+    containerVec->SetDataTypes(Deserialize(dataTypeString)->GetFieldTypes());
     env->ReleaseStringUTFChars(dataTypes, dataTypeString);
 }
 

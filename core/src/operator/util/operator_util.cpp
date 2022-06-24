@@ -11,14 +11,14 @@ using namespace omniruntime::expressions;
 
 namespace omniruntime {
 namespace op {
-void OperatorUtil::CreateProjectFuncs(const ContainerDataTypePtr &inputTypes,
+void OperatorUtil::CreateProjectFuncs(const ContainerDataType &inputTypes,
     std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
     std::vector<omniruntime::type::DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
     std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
 {
-    newInputTypes.insert(newInputTypes.end(), inputTypes->GetFieldTypes().begin(), inputTypes->GetFieldTypes().end());
-    int32_t inputTypesCount = inputTypes->GetSize();
+    newInputTypes.insert(newInputTypes.end(), inputTypes.GetFieldTypes().begin(), inputTypes.GetFieldTypes().end());
+    int32_t inputTypesCount = inputTypes.GetSize();
     for (int32_t i = 0; i < projectKeysCount; i++) {
         auto rowProjection = std::make_unique<RowProjection>(*(projectKeys[i]));
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
@@ -35,12 +35,12 @@ void OperatorUtil::CreateProjectFuncs(const ContainerDataTypePtr &inputTypes,
     }
 }
 
-void OperatorUtil::CreateRequiredProjectFuncs(ContainerDataTypePtr &inputTypes,
+void OperatorUtil::CreateRequiredProjectFuncs(const ContainerDataType &inputTypes,
     omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
     std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs)
 {
-    std::vector<DataTypePtr> inputTypeVec = inputTypes->GetFieldTypes();
+    std::vector<DataTypePtr> inputTypeVec = inputTypes.GetFieldTypes();
     int32_t newProjectCol = 0;
     std::map<int32_t, int32_t> colIdMap;
     for (int32_t i = 0; i < projectKeysCount; i++) {
@@ -118,15 +118,16 @@ static VarcharVector *ProjectVarcharVector(DataTypePtr type, const RowProjFunc f
     return result;
 }
 
-void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+void OperatorUtil::ProjectVectors(const ContainerDataType &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
     const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
     int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator)
 {
     int32_t originalVecCount = newInputTypes.GetSize() - projectFuncs.size();
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
-    const int32_t *typeIds = newInputTypes.GetIds();
-    std::vector<DataTypePtr> dataTypes = newInputTypes.Get();
+    std::vector<int32_t> typeIds;
+    newInputTypes.GetIds(typeIds);
+    std::vector<DataTypePtr> dataTypes = newInputTypes.GetFieldTypes();
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
         // skip the project key which is not expression
@@ -177,7 +178,8 @@ void OperatorUtil::ProjectRequiredVectors(const ContainerDataType &newInputTypes
 {
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
-    std::vector<int32_t> typeIds = newInputTypes.GetIds();
+    std::vector<int32_t> typeIds;
+    newInputTypes.GetIds(typeIds);
     std::vector<DataTypePtr> dataTypes = newInputTypes.GetFieldTypes();
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
@@ -218,7 +220,7 @@ void OperatorUtil::ProjectRequiredVectors(const ContainerDataType &newInputTypes
     }
 }
 
-VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataTypePtr &inputTypes,
+VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataType &inputTypes,
     const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator)
 {
     int32_t projectFuncsCount = projectFuncs.size();

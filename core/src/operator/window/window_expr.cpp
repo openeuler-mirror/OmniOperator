@@ -23,20 +23,20 @@ static bool HasArgument(int32_t functionType)
     }
 }
 
-WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
+WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::ContainerDataTypePtr &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
     int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-    int32_t expectedPositions, const type::DataTypes &outputDataTypes,
+    int32_t expectedPositions, const type::ContainerDataTypePtr &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
     int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
     std::vector<DataTypePtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
-    OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(*sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
         this->argumentChannels, this->projectFuncs);
-    this->sourceTypes = std::make_unique<DataTypes>(newTypes);
+    this->sourceTypes = std::make_shared<ContainerDataType>(newTypes);
 
     int position = 0;
     for (int i = 0; i < windowFunctionCount; ++i) {
@@ -49,11 +49,11 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
 
     // refact alltypes since sourcetypes changed
     std::vector<DataTypePtr> allTypesVec;
-    allTypesVec.insert(allTypesVec.end(), sourceTypes.Get().begin(), sourceTypes.Get().end());
-    allTypesVec.insert(allTypesVec.end(), std::begin((*(this->sourceTypes.get())).Get()) + sourceTypes.GetSize(),
-        std::end((*(this->sourceTypes.get())).Get()));
-    allTypesVec.insert(allTypesVec.end(), outputDataTypes.Get().begin(), outputDataTypes.Get().end());
-    DataTypes allTypes(allTypesVec);
+    allTypesVec.insert(allTypesVec.end(), sourceTypes->GetFieldTypes().begin(), sourceTypes->GetFieldTypes().end());
+    allTypesVec.insert(allTypesVec.end(), std::begin(this->sourceTypes->GetFieldTypes()) + sourceTypes->GetSize(),
+        std::end(this->sourceTypes->GetFieldTypes()));
+    allTypesVec.insert(allTypesVec.end(), outputDataTypes->GetFieldTypes().begin(), outputDataTypes->GetFieldTypes().end());
+    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allTypesVec);
     auto newOutputColsCount = outputColsCount + this->projectFuncs.size();
     int newOutputCols[newOutputColsCount];
     for (int32_t i = 0; i < outputColsCount; i++) {
@@ -61,12 +61,12 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     }
     for (uint32_t i = 0; i < this->projectFuncs.size(); i++) {
         auto index = outputColsCount + i;
-        newOutputCols[index] = sourceTypes.GetSize() + static_cast<int32_t>(i);
+        newOutputCols[index] = sourceTypes->GetSize() + static_cast<int32_t>(i);
     }
-    this->operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes.get()),
+    this->operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(this->sourceTypes,
         newOutputCols, newOutputColsCount, windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount,
         preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix,
-        expectedPositions, allTypes, fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField,
+        expectedPositions, std::move(allTypes), fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField,
         windowFrameStartTypesField, windowFrameStartChannelsField, windowFrameEndTypesField,
         windowFrameEndChannelsField);
 }
@@ -77,10 +77,10 @@ WindowWithExprOperatorFactory::~WindowWithExprOperatorFactory()
 }
 
 WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
-    const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes,
+    const type::ContainerDataTypePtr &sourceTypes, int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes,
     int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols,
     int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
-    int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
+    int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::ContainerDataTypePtr &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
     int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
@@ -97,13 +97,13 @@ Operator *WindowWithExprOperatorFactory::CreateOperator()
 {
     auto windowOperator = static_cast<WindowOperator *>(operatorFactory->CreateOperator());
     auto windowWithExprOperator =
-        new WindowWithExprOperator(*(sourceTypes.get()), argumentChannels, projectFuncs, windowOperator);
+        new WindowWithExprOperator(sourceTypes, argumentChannels, projectFuncs, windowOperator);
     return windowWithExprOperator;
 }
 
-WindowWithExprOperator::WindowWithExprOperator(const type::DataTypes &sourceTypes,
+WindowWithExprOperator::WindowWithExprOperator(type::ContainerDataTypePtr sourceTypes,
     std::vector<int32_t> &argumentChannels, std::vector<RowProjFunc> &projectFuncs, WindowOperator *windowOperator)
-    : sourceTypes(sourceTypes),
+    : sourceTypes(std::move(sourceTypes)),
       argumentChannels(argumentChannels),
       projectFuncs(projectFuncs),
       windowOperator(windowOperator)
@@ -117,7 +117,7 @@ WindowWithExprOperator::~WindowWithExprOperator()
 int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, sourceTypes, projectFuncs, argumentChannels, vecAllocator);
+        OperatorUtil::ProjectVectors(vecBatch, *sourceTypes, projectFuncs, argumentChannels, vecAllocator);
     if (newInputVecBatch != nullptr) {
         windowOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

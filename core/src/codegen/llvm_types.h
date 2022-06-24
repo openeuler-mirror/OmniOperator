@@ -59,7 +59,7 @@ public:
     // / For a given Vector type, find the corresponding ir type.
     llvm::Type *ToLLVMType(omniruntime::type::DataTypeId id);
 
-    llvm::Type *VectorToLLVMType(omniruntime::type::DataTypeRawPtr type);
+    llvm::Type *VectorToLLVMType(omniruntime::type::DataTypePtr type);
 
     llvm::Type *ToPointerType(omniruntime::type::DataTypeId typeId);
 

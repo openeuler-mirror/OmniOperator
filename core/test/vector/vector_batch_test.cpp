@@ -10,11 +10,11 @@ using namespace omniruntime::vec;
 namespace VectorBatchTest {
 void VectorBatchTestInitDataTypes(std::vector<DataTypePtr> &types)
 {
-    types.push_back(new IntDataType);
-    types.push_back(new DoubleDataType);
-    types.push_back(new LongDataType);
-    types.push_back(new DoubleDataType);
-    types.push_back(new ContainerDataType());
+    types.push_back(IntDataType::Instance());
+    types.push_back(DoubleDataType::Instance());
+    types.push_back(LongDataType::Instance());
+    types.push_back(DoubleDataType::Instance());
+    types.push_back(ContainerDataType::Instance());
 }
 
 TEST(VectorBatch, constructVectorBatchWithVectorCount)

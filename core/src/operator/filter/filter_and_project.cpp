@@ -75,9 +75,9 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
     return *this->isResultNull ? false : result;
 }
 
-FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, ContainerDataTypePtr inputDataTypes,
     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
-    : inputDataTypes(inputDataTypes), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
+    : inputDataTypes(std::move(inputDataTypes)), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
 {
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << expression << std::endl;
@@ -112,7 +112,9 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    return new FilterAndProjectOperator(filter, this->inputDataTypes.GetIds(), inputVecCount, projections,
+    std::vector<int32_t> inputIds;
+    inputDataTypes->GetIds(inputIds);
+    return new FilterAndProjectOperator(filter, inputIds.data(), inputVecCount, projections,
         projectVecCount, new ExecutionContext());
 }
 

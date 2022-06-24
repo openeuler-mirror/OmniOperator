@@ -3,6 +3,8 @@
  * @Description: sort implementations
  */
 #include "sort.h"
+
+#include <utility>
 #include "util/type_util.h"
 #include "util/debug.h"
 #include "vector/vector_common.h"
@@ -16,12 +18,12 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 
-SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
+SortOperatorFactory::SortOperatorFactory(ContainerDataTypePtr dataTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     const OperatorConfig &operatorConfig)
     : operatorConfig(operatorConfig)
 {
-    this->sourceTypes = std::make_unique<DataTypes>(dataTypes);
+    this->sourceTypes = std::move(dataTypes);
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
@@ -30,20 +32,20 @@ SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *ou
 
 SortOperatorFactory::~SortOperatorFactory() = default;
 
-SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
+SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(ContainerDataTypePtr dataTypes, int32_t *outputCols,
     int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
     OperatorConfig defaultConfig;
-    return CreateSortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts,
+    return CreateSortOperatorFactory(std::move(dataTypes), outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts,
         sortColCount, defaultConfig);
 }
 
-SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
+SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(ContainerDataTypePtr dataTypes, int32_t *outputCols,
     int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     const OperatorConfig &operatorConfig)
 {
     OperatorConfig::CheckOperatorConfig(operatorConfig);
-    auto pOperatorFactory = new SortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings,
+    auto pOperatorFactory = new SortOperatorFactory(std::move(dataTypes), outputCols, outputColCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, operatorConfig);
     return pOperatorFactory;
 }
@@ -51,20 +53,20 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
 Operator *SortOperatorFactory::CreateOperator()
 {
     auto pSortOperator =
-        new SortOperator(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts, operatorConfig);
+        new SortOperator(sourceTypes, outputCols, sortCols, sortAscendings, sortNullFirsts, operatorConfig);
     return pSortOperator;
 }
 
 // function implements for class Sort
-SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
+SortOperator::SortOperator(ContainerDataTypePtr dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, const OperatorConfig &operatorConfig)
-    : sourceTypes(dataTypes), operatorConfig(operatorConfig)
+    : sourceTypes(std::move(dataTypes)), operatorConfig(operatorConfig)
 {
     this->outputCols = outputCols;
     this->sortCols = sortCols;
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
-    this->pagesIndex = std::make_unique<PagesIndex>(dataTypes);
+    this->pagesIndex = std::make_unique<PagesIndex>(this->sourceTypes);
 }
 
 SortOperator::~SortOperator() = default;
@@ -141,7 +143,7 @@ void SortOperator::Sort()
     int32_t from = 0;
     int32_t sortColTypes[sortColCount];
     for (int32_t i = 0; i < sortColCount; i++) {
-        sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
+        sortColTypes[i] = sourceTypes->GetFieldType(sortCols[i])->GetId();
     }
     pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount, from,
         to);
@@ -149,7 +151,7 @@ void SortOperator::Sort()
 
 void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesForSpill)
 {
-    int32_t typesCount = sourceTypes.GetSize();
+    int32_t typesCount = sourceTypes->GetSize();
     std::vector<int32_t> outputCols(typesCount);
     for (int32_t i = 0; i < typesCount; i++) {
         outputCols[i] = i;

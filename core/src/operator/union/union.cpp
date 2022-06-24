@@ -8,14 +8,14 @@ using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-UnionOperatorFactory::UnionOperatorFactory(const type::DataTypes &sourceTypes, int32_t sourceTypesCount,
+UnionOperatorFactory::UnionOperatorFactory(type::ContainerDataTypePtr sourceTypes, int32_t sourceTypesCount,
     bool isDistinct)
-    : sourceTypes(sourceTypes), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
+    : sourceTypes(std::move(sourceTypes)), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
 {}
 
 UnionOperatorFactory::~UnionOperatorFactory() {}
 
-UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const type::DataTypes &sourceTypesField,
+UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(type::ContainerDataTypePtr sourceTypesField,
     int32_t sourceTypesCountField, bool distinct)
 {
     auto uOperatorFactory = new UnionOperatorFactory(sourceTypesField, sourceTypesCountField, distinct);
@@ -28,8 +28,8 @@ Operator *UnionOperatorFactory::CreateOperator()
     return unionOperator;
 }
 
-UnionOperator::UnionOperator(const type::DataTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct)
-    : sourceTypes(sourceTypes), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
+UnionOperator::UnionOperator(type::ContainerDataTypePtr sourceTypes, int32_t sourceTypesCount, bool isDistinct)
+    : sourceTypes(std::move(sourceTypes)), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
 {}
 
 UnionOperator::~UnionOperator() {}

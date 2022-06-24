@@ -105,9 +105,9 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
     {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, nullptr},
 };
 
-DistinctLimitOperatorFactory::DistinctLimitOperatorFactory(const type::DataTypes &sourceTypes,
+DistinctLimitOperatorFactory::DistinctLimitOperatorFactory(type::ContainerDataTypePtr sourceTypes,
     const int32_t *distinctCols, int32_t distinctColsCount, int32_t hashCol, int64_t limitVal)
-    : sourceTypes(sourceTypes),
+    : sourceTypes(std::move(sourceTypes)),
       distinctCols(distinctCols, distinctCols + distinctColsCount),
       distinctColsCount(distinctColsCount),
       hashCol(hashCol),
@@ -117,7 +117,7 @@ DistinctLimitOperatorFactory::DistinctLimitOperatorFactory(const type::DataTypes
 DistinctLimitOperatorFactory::~DistinctLimitOperatorFactory() = default;
 
 DistinctLimitOperatorFactory *DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
-    const type::DataTypes &inSourceTypes, const int32_t *inDistinctCols, int32_t inDistinctColsCount,
+    type::ContainerDataTypePtr inSourceTypes, const int32_t *inDistinctCols, int32_t inDistinctColsCount,
     int32_t inHashColumn, int64_t inLimit)
 {
     return new DistinctLimitOperatorFactory(inSourceTypes, inDistinctCols, inDistinctColsCount, inHashColumn, inLimit);
@@ -125,7 +125,8 @@ DistinctLimitOperatorFactory *DistinctLimitOperatorFactory::CreateDistinctLimitO
 
 Operator *DistinctLimitOperatorFactory::CreateOperator()
 {
-    const int32_t *vectorTypeIds = sourceTypes.GetIds();
+    std::vector<int32_t> vectorTypeIds;
+    sourceTypes->GetIds(vectorTypeIds);
     int32_t typeId;
     for (int i = 0; i < distinctColsCount; ++i) {
         typeId = vectorTypeIds[distinctCols[i]];
@@ -210,10 +211,10 @@ void GenerateCombinedHash(Vector **inputVectors, const int32_t start, int32_t ro
     }
 }
 
-DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols,
+DistinctLimitOperator::DistinctLimitOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, int32_t hashCol, int64_t limit)
     : executionContext(new ExecutionContext()),
-      sourceTypes(sourceTypes),
+      sourceTypes(std::move(sourceTypes)),
       distinctCols(distinctCols),
       distinctColsCount(distinctColsCount),
       hashCol(hashCol),
@@ -222,7 +223,7 @@ DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::
       limit(limit),
       resultBatch(nullptr)
 {
-    auto sourceDataType = sourceTypes.Get();
+    std::vector<DataTypePtr> sourceDataType = this->sourceTypes->GetFieldTypes();
     for (int i = 0; i < distinctColsCount; ++i) {
         int colIndex = distinctCols[i];
         outTypes.push_back(sourceDataType[colIndex]);
@@ -240,14 +241,15 @@ DistinctLimitOperator::~DistinctLimitOperator()
     delete executionContext;
 }
 
-bool IsExistSameRow(type::DataTypes &inputTypes, Vector **inputVectors, std::vector<int32_t> &distinctCols,
+bool IsExistSameRow(type::ContainerDataTypePtr &inputTypes, Vector **inputVectors, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, std::vector<std::vector<AggregateState>> &bucket, int rowIndex)
 {
     bool isSame = true;
     int32_t columnId;
     int32_t typeId;
     Vector *inputVector = nullptr;
-    const int32_t *dataTypeIds = inputTypes.GetIds();
+    std::vector<int32_t> dataTypeIds;
+    inputTypes->GetIds(dataTypeIds);
 
     for (uint32_t i = 0; i < bucket.size(); i++) {
         isSame = true;
@@ -280,7 +282,8 @@ bool IsExistSameRow(type::DataTypes &inputTypes, Vector **inputVectors, std::vec
 
 void DistinctLimitOperator::FillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple)
 {
-    const int32_t *vectorTypes = sourceTypes.GetIds();
+    std::vector<int32_t> vectorTypes;
+    sourceTypes->GetIds(vectorTypes);
     Vector *inputVector = nullptr;
     int32_t originalRowIndex;
     Vector *originalVector = nullptr;
@@ -344,10 +347,11 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
     int32_t rowCount = vecBatch->GetRowCount();
     Vector **inputVectors = vecBatch->GetVectors();
 
-    const int32_t *inputTypeIds = sourceTypes.GetIds();
+    std::vector<int32_t> inputTypeIds;
+    sourceTypes->GetIds(inputTypeIds);
     auto combineHashVal = std::make_unique<uint64_t[]>(rowCount);
 
-    GenerateCombinedHash(inputVectors, 0, rowCount, inputTypeIds, distinctCols, distinctColsCount, combineHashVal.get(),
+    GenerateCombinedHash(inputVectors, 0, rowCount, inputTypeIds.data(), distinctCols, distinctColsCount, combineHashVal.get(),
         this->hashCol);
 
     this->InLoop(vecBatch, combineHashVal.get());

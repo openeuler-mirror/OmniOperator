@@ -14,7 +14,7 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(ContainerDataTypePtr buil
     int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount)
     : hashTableCount(operatorCount), operatorIndex(0)
 {
-    this->buildTypes = std::move(buildTypes);
+    this->buildTypes = buildTypes;
     this->buildHashCols.insert(this->buildHashCols.end(), buildHashCols, buildHashCols + buildHashColsCount);
     this->hashTables = new JoinHashTables(operatorCount);
     this->hashTables->SetBuildTypes(this->buildTypes);
@@ -27,7 +27,7 @@ HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
-    ContainerDataTypePtr &dataTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr,
+    ContainerDataTypePtr dataTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr,
     int32_t operatorCount)
 {
     return new HashBuilderOperatorFactory(dataTypes, buildHashCols, buildHashColsCount, filterExpr, operatorCount);
@@ -35,14 +35,14 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
 {
-    std::shared_ptr<PagesIndex> pagesIndex = std::make_shared<PagesIndex>(buildTypes);
+    std::unique_ptr<PagesIndex> pagesIndex = std::make_unique<PagesIndex>(buildTypes);
     int32_t partitionIndex = operatorIndex++ % hashTables->GetHashTableCount();
 
     return new HashBuilderOperator(buildTypes, buildHashCols, hashTables, partitionIndex, pagesIndex);
 }
 
 HashBuilderOperator::HashBuilderOperator(ContainerDataTypePtr buildTypes, std::vector<int32_t> &buildHashCols,
-    JoinHashTables *hashTables, int32_t partitionIndex, std::shared_ptr<PagesIndex> &pagesIndex)
+    JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex)
     : buildTypes(buildTypes),
       buildHashCols(buildHashCols),
       hashTables(hashTables),

@@ -81,8 +81,8 @@ public:
 
 class AverageAggregatorFactory : public AggregatorFactory {
 public:
-    AverageAggregatorFactory() {}
-    ~AverageAggregatorFactory() override {}
+    AverageAggregatorFactory() = default;
+    ~AverageAggregatorFactory() override = default;
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
                                                  bool inputRaw = true, bool outputPartial = false) override
     {
@@ -121,8 +121,8 @@ public:
 
 class MinAggregatorFactory : public AggregatorFactory {
 public:
-    MinAggregatorFactory() {}
-    ~MinAggregatorFactory() override {}
+    MinAggregatorFactory() = default;
+    ~MinAggregatorFactory() override = default;
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
                                                  bool inputRaw = true, bool outputPartial = false) override
     {
@@ -182,8 +182,8 @@ public:
 
 class MaxAggregatorFactory : public AggregatorFactory {
 public:
-    MaxAggregatorFactory() {}
-    ~MaxAggregatorFactory() override {}
+    MaxAggregatorFactory() = default;
+    ~MaxAggregatorFactory() override = default;
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
                                                  bool inputRaw = true, bool outputPartial = false) override
     {
@@ -243,8 +243,8 @@ public:
 
 class CountColumnAggregatorFactory : public AggregatorFactory {
 public:
-    CountColumnAggregatorFactory() {}
-    ~CountColumnAggregatorFactory() override {}
+    CountColumnAggregatorFactory() = default;
+    ~CountColumnAggregatorFactory() override = default;
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
                                                  bool inputRaw = true, bool outputPartial = false) override
     {
@@ -254,8 +254,8 @@ public:
 
 class CountAllAggregatorFactory : public AggregatorFactory {
 public:
-    CountAllAggregatorFactory() {}
-    ~CountAllAggregatorFactory() override {}
+    CountAllAggregatorFactory() = default;
+    ~CountAllAggregatorFactory() override = default;
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
                                                  bool inputRaw = true, bool outputPartial = false) override
     {
@@ -265,8 +265,8 @@ public:
 
 template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
-    MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
-    ~MaskAggregatorFactory() override {}
+    explicit MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
+    ~MaskAggregatorFactory() override = default;
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType,
                                                  int32_t inputChannel, bool inputRaw = true, bool outputPartial = false) override
     {

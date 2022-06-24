@@ -24,10 +24,10 @@ public:
 
     ~SortMergeJoinOperator() override;
 
-    void ConfigStreamedTblInfo(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeysCols,
+    void ConfigStreamedTblInfo(ContainerDataTypePtr streamedTypes, const std::vector<int32_t> &streamedKeysCols,
         const std::vector<int32_t> &streamedOutputCols);
 
-    void ConfigBufferedTblInfo(const type::DataTypes &bufferedTypes, std::vector<int32_t> &bufferedKeysCols,
+    void ConfigBufferedTblInfo(ContainerDataTypePtr bufferedTypes, std::vector<int32_t> &bufferedKeysCols,
         std::vector<int32_t> &bufferedOutputCols);
     // see SortMergeJoinAddInputCode
     int32_t AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch);
@@ -46,12 +46,12 @@ public:
 private:
     int32_t GetJoinResult();
 
-    type::DataTypes *streamedTypes;
+    type::ContainerDataTypePtr streamedTypes;
     std::vector<int32_t> streamedKeysCols;
     std::vector<int32_t> streamedOutputCols;
     DynamicPagesIndex *streamedTblPagesIndex;
 
-    type::DataTypes *bufferedTypes;
+    type::ContainerDataTypePtr bufferedTypes;
     std::vector<int32_t> bufferedKeysCols;
     std::vector<int32_t> bufferedOutputCols;
     DynamicPagesIndex *bufferedTblPagesIndex;

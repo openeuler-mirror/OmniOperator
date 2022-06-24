@@ -17,25 +17,27 @@ namespace PartitionedOutputTest {
 TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
 {
     const int32_t dataSize = 6;
-    DataTypes buildTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType(), new IntDataType() }));
+    std::vector<DataTypePtr> buildFieldTypes {IntType(), IntType(), IntType() };
+    ContainerDataType buildTypes(buildFieldTypes);
     int buildData1[dataSize] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData1, buildData1);
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes {IntType(), IntType() };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
 
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = {0};
     int32_t partitionCount = 1;
     int32_t bucketToPartition[1] = {0};
-    int32_t hashChannelTypes[1] = {0};
-    int32_t hashChannelTypesCount = 1;
+    std::vector<DataTypePtr> hashChannelFieldTypes { NoneType()};
+    ContainerDataTypePtr hashChannelTypes = ContainerType(hashChannelFieldTypes);
     int32_t hashChannels[1] = {0};
     int32_t hashChannelsCount = 1;
 
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, true, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         static_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -47,7 +49,9 @@ TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
 
     int32_t expectData0[dataSize] = {0, 1, 2, 3, 4, 5};
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4, 5};
-    DataTypes expectedTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType() }));
+
+    std::vector<DataTypePtr> expectedFieldTypes {IntType(), IntType() };
+    ContainerDataType expectedTypes(expectedFieldTypes);
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData0, expectData1);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
 
@@ -63,7 +67,8 @@ TEST(PartitionedOutputOperatorTest, TestMultiPartitionedOutput)
     DataTypes buildTypes(std::vector<DataTypePtr>({ IntDataType(), IntDataType(), IntDataType() }));
     int buildData1[dataSize] = { 0, 1, 2, 3, 4, 5, 6 };
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData1, buildData1);
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes {IntType(), IntType() };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
 
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
@@ -77,7 +82,7 @@ TEST(PartitionedOutputOperatorTest, TestMultiPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 2, true, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -108,7 +113,8 @@ TEST(PartitionedOutputOperatorTest, TestHashIntPartitionedOutput)
     DataTypes buildTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     int buildData1[dataSize] = { 0, 1, 2, 3, 4, 5 };
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData1, buildData1);
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes {IntType() };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
 
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
@@ -124,7 +130,7 @@ TEST(PartitionedOutputOperatorTest, TestHashIntPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 2, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -154,7 +160,8 @@ TEST(PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(3) }));
+    std::vector<DataTypePtr> sourceFieldTypes {VarcharType(3) };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -167,7 +174,7 @@ TEST(PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -197,7 +204,8 @@ TEST(PartitionedOutputOperatorTest, TestHashCharPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new CharDataType(3) }));
+    std::vector<DataTypePtr> sourceFieldTypes {CharType(3) };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -210,7 +218,7 @@ TEST(PartitionedOutputOperatorTest, TestHashCharPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -244,7 +252,8 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
     VectorBatch *vecBatch = CreateVectorBatch(dataSize, cols);
 
     bool isHashPrecomputed = false;
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(3) }));
+    std::vector<DataTypePtr> sourceFieldTypes {VarcharType(3) };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -257,7 +266,7 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -289,7 +298,8 @@ TEST(PartitionedOutputOperatorTest, TestDecimalPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new Decimal64DataType(2, 0) }));
+    std::vector<DataTypePtr> sourceFieldTypes {Decimal64Type(2, 0) };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -302,7 +312,7 @@ TEST(PartitionedOutputOperatorTest, TestDecimalPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -332,7 +342,8 @@ TEST(PartitionedOutputOperatorTest, TestDoublePartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new DoubleDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes {DoubleType() };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -345,7 +356,7 @@ TEST(PartitionedOutputOperatorTest, TestDoublePartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -375,7 +386,8 @@ TEST(PartitionedOutputOperatorTest, TestBoolPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new BooleanDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes {BooleanType() };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -388,7 +400,7 @@ TEST(PartitionedOutputOperatorTest, TestBoolPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -418,7 +430,8 @@ TEST(PartitionedOutputOperatorTest, TestDecimal128PartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new Decimal128DataType(2, 0) }));
+    std::vector<DataTypePtr> sourceFieldTypes {Decimal128Type(2, 0) };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -431,7 +444,7 @@ TEST(PartitionedOutputOperatorTest, TestDecimal128PartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -464,12 +477,13 @@ TEST(PartitionedOutputOperatorTest, TestDictionaryPartitionedOutput)
     int32_t ids[] = { 0, 1, 2, 3, 4, 5 };
     VectorBatch *vecBatch = new VectorBatch(2, dataSize);
     for (int32_t i = 0; i < 2; i++) {
-        DataTypePtr dataType = buildTypes.Get()[i];
-        vecBatch->SetVector(i, CreateDictionaryVector(dataType, dataSize, ids, dataSize, datas[i]));
+        DataTypePtr dataType = buildTypes.GetFieldType(i);
+        vecBatch->SetVector(i, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     bool isHashPrecomputed = false;
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new LongDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes {LongType() };
+    ContainerDataTypePtr sourceTypes = ContainerType(sourceFieldTypes);
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -482,7 +496,7 @@ TEST(PartitionedOutputOperatorTest, TestDictionaryPartitionedOutput)
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
-        hashChannelTypesCount, hashChannels, hashChannelsCount);
+        hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);

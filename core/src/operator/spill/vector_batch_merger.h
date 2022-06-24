@@ -101,7 +101,7 @@ private:
 
 class VecBatchWithPositionComparator {
 public:
-    VecBatchWithPositionComparator(omniruntime::type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
+    VecBatchWithPositionComparator(omniruntime::type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &sortCols,
         std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts);
 
     ~VecBatchWithPositionComparator() = default;

@@ -85,8 +85,8 @@ AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32
       argumentChannels(argumentChannels),
       currentStart(0),
       currentEnd(0),
-      inputType(inputType),
-      outputType(outputType),
+      inputType(std::move(inputType)),
+      outputType(std::move(outputType)),
       allocator(allocator)
 {
     this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));

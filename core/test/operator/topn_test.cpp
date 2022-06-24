@@ -38,8 +38,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     inputVecBatch1->SetVector(0, column0);
     VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types {IntType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
@@ -132,8 +132,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     inputVecBatch1->SetVector(0, column0);
     VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types{IntType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
@@ -211,8 +211,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
     }
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {new VarcharDataType(3) };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {VarcharType(3) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
@@ -265,8 +265,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
@@ -313,8 +313,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     }
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {new VarcharDataType(3) };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {VarcharType(3) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
@@ -364,8 +364,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     }
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {new CharDataType(3) };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {CharType(3) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
@@ -412,8 +412,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types{IntType() };
+    ContainerDataTypePtr sourceTypes = make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
@@ -459,8 +459,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     }
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {new VarcharDataType(3) };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types{VarcharType(3) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
@@ -511,8 +511,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     }
     inputVecBatch->SetVector(0, column0);
 
-    std::vector<DataTypePtr> types = {new CharDataType(3) };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {CharType(3) };
+    ContainerDataTypePtr sourceTypes = make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
@@ -568,8 +568,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), LongDataType::Instance(), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(),LongType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = make_shared<ContainerDataType>(types);
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {false, false};
@@ -632,8 +632,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), new VarcharDataType(3), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(), VarcharType(3), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {false, false};
@@ -699,8 +699,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), new CharDataType(3), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(), CharType(3), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {false, false};
@@ -763,8 +763,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), LongDataType::Instance(), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(),LongType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, false};
     int32_t nullFirsts[2] = {false, false};
@@ -827,8 +827,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), new VarcharDataType(3), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(), VarcharType(3), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, false};
     int32_t nullFirsts[2] = {false, false};
@@ -893,8 +893,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), new CharDataType(3), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(), CharType(3), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, false};
     int32_t nullFirsts[2] = {false, false};
@@ -960,7 +960,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new VarcharDataType(3), new DoubleDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), VarcharType(3), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
@@ -970,9 +971,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     inputVecBatch->GetVector(1)->SetValueNull(dataSize - 1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
-    DataTypePtr dataType = sourceTypes.Get()[2];
+    DataTypePtr dataType = sourceTypes->GetFieldType(2);
     delete inputVecBatch->GetVector(2);
-    inputVecBatch->SetVector(2, CreateDictionaryVector(dataType, dataSize, ids, dataSize, data2));
+    inputVecBatch->SetVector(2, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
@@ -1035,7 +1036,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new CharDataType(3), new DoubleDataType() }));
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), CharType(3), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
@@ -1045,9 +1047,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     inputVecBatch->GetVector(1)->SetValueNull(dataSize - 1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
-    DataTypePtr dataType = sourceTypes.Get()[2];
+    DataTypePtr dataType = sourceTypes->GetFieldType(2);
     delete inputVecBatch->GetVector(2);
-    inputVecBatch->SetVector(2, CreateDictionaryVector(dataType, dataSize, ids, dataSize, data2));
+    inputVecBatch->SetVector(2, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
@@ -1106,8 +1108,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    std::vector<DataTypePtr> types = {IntDataType::Instance(), LongDataType::Instance(), DoubleDataType::Instance() };
-    DataTypes sourceTypes(types);
+    std::vector<DataTypePtr> types = {IntType(),LongType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(types);
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
@@ -1154,8 +1156,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
-    VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), LongType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *inputVecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
@@ -1165,9 +1168,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     static_cast<LongVector *>(inputVecBatch->GetVector(1))->SetValueNull(dataSize - 1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
-    DataTypePtr dataType = sourceTypes.Get()[2];
+    DataTypePtr dataType = sourceTypes->GetFieldType(2);
     delete inputVecBatch->GetVector(2);
-    inputVecBatch->SetVector(2, CreateDictionaryVector(dataType, dataSize, ids, dataSize, data2));
+    inputVecBatch->SetVector(2, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
@@ -1216,8 +1219,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
-    VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), LongType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *inputVecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
@@ -1274,8 +1278,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, -1};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
-    VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), LongType(), DoubleType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *inputVecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
@@ -1337,8 +1342,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new Date32DataType(DAY), new LongDataType(), new Decimal64DataType(2, 0) }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{Date32Type(DAY), LongType(), Decimal64Type(2, 0) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
@@ -1355,9 +1361,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     int32_t expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     int64_t expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
-    DataTypes expectedTypes(std::vector<DataTypePtr>({new Date32DataType(DAY), new LongDataType(), new Decimal64DataType(2, 1) }));
+    std::vector<DataTypePtr> expectedFieldTypes{Date32Type(DAY), LongType(), Decimal64Type(2, 1) };
+    ContainerDataTypePtr expectedTypes = std::make_shared<ContainerDataType>(expectedFieldTypes);
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
+        CreateVectorBatch(*sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -1379,9 +1386,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     Decimal128 data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     Decimal128 data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    DataTypes sourceTypes(
-        std::vector<DataTypePtr>({new Decimal128DataType(2, 1), new LongDataType(), new Decimal128DataType(2, 1) }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{Decimal128Type(2, 1), LongType(), Decimal128Type(2, 1) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
@@ -1398,10 +1405,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     Decimal128 expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     Decimal128 expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
-    DataTypes expectedTypes(
-        std::vector<DataTypePtr>({new Decimal64DataType(2, 1), new LongDataType(), new Decimal64DataType(2, 1) }));
+    std::vector<DataTypePtr> expectedFieldTypes{Decimal64Type(2, 1), LongType(), Decimal64Type(2, 1) };
+    ContainerDataTypePtr expectedTypes = std::make_shared<ContainerDataType>(expectedFieldTypes);
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
+        CreateVectorBatch(*sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -1422,8 +1429,9 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     std::string data2[dataSize] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"};
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(1), new LongDataType(), new VarcharDataType(3) }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{VarcharType(1), LongType(), VarcharType(3) };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
@@ -1441,9 +1449,10 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     std::string expectData0[expectedDataSize]={"2", "2", "1", "1", "0"};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     std::string expectData2[expectedDataSize] = {"1.1", "4.4", "2.2", "5.5", "3.3"};
-    DataTypes expectedTypes(std::vector<DataTypePtr>({new VarcharDataType(1), new LongDataType(), new VarcharDataType(3) }));
+    std::vector<DataTypePtr> expectedFieldTypes{VarcharType(1), LongType(), VarcharType(3) };
+    ContainerDataTypePtr expectedTypes = std::make_shared<ContainerDataType>(expectedFieldTypes);
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
+        CreateVectorBatch(*expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
@@ -1463,8 +1472,9 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     bool data2[dataSize] = {false, false, false, true, true, true};
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(1), new LongDataType(), new BooleanDataType() }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{VarcharType(1), LongType(), BooleanType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data0, data1, data2);
 
     const int32_t sortColCount = 2;
     int32_t sortCols[sortColCount] = {0, 2};
@@ -1483,9 +1493,10 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     std::string expectData0[expectedDataSize]={"2", "2", "1", "1", "0"};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     bool expectData2[expectedDataSize] = {true, false, true, false, true};
-    DataTypes expectedTypes(std::vector<DataTypePtr>({new VarcharDataType(1), new LongDataType(), new BooleanDataType() }));
+    std::vector<DataTypePtr> expectedFieldTypes{VarcharType(1), LongType(), BooleanType() };
+    ContainerDataTypePtr expectedTypes = std::make_shared<ContainerDataType>(expectedFieldTypes);
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
+        CreateVectorBatch(*expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);

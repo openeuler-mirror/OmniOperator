@@ -16,7 +16,7 @@ namespace omniruntime {
 namespace op {
 class DynamicPagesIndex {
 public:
-    explicit DynamicPagesIndex(const omniruntime::type::DataTypes &types);
+    explicit DynamicPagesIndex(const omniruntime::type::ContainerDataType &types);
     ~DynamicPagesIndex();
     int32_t AddVecBatches(const std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
 

@@ -203,17 +203,17 @@ public:
         }
     }
 
-    static void CreateProjectFuncs(const ContainerDataTypePtr &intputTypes,
+    static void CreateProjectFuncs(const ContainerDataType &intputTypes,
                                    std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
                                    std::vector<DataTypePtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
                                    std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
 
-    static void CreateRequiredProjectFuncs(ContainerDataTypePtr &intputTypes, omniruntime::expressions::Expr *projectKeys[],
+    static void CreateRequiredProjectFuncs(const ContainerDataType &intputTypes, omniruntime::expressions::Expr *projectKeys[],
         int32_t projectKeysCount, std::vector<DataTypePtr> &newIntputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
         std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 
-    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataTypePtr &inputTypes,
+    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataType &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
         VectorAllocator *allocator);
 
@@ -222,7 +222,7 @@ public:
         VectorAllocator *allocator);
 
 private:
-    static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    static void ProjectVectors(const ContainerDataType &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 

@@ -19,7 +19,7 @@ RowProjection::~RowProjection()
     this->codegen.reset();
 }
 
-// Return nullptr if expression is unsupported
+// Return nullptr if expression is unsupportedl
 RowProjFunc RowProjection::Create()
 {
     if (this->expression == nullptr) {
@@ -46,7 +46,7 @@ RowProjFunc RowProjection::Create()
 DataTypePtr RowProjection::GetReturnType()
 {
     if (this->expression == nullptr) {
-        return new InvalidDataType() ;
+        return std::make_shared<InvalidDataType>();
     }
     return this->expression->GetReturnType();
 }
@@ -299,8 +299,8 @@ OmniStatus ProjectionOperator::Close()
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
-    DataTypes &inputTypes, int32_t nCols)
-    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
+    ContainerDataTypePtr inputTypes, int32_t nCols)
+    : inputTypes(std::move(inputTypes)), nCols(nCols), nProj(nProj)
 {
     for (auto expr : exprs) {
         auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnType());

@@ -14,7 +14,7 @@ using namespace omniruntime::vec;
 OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    std::vector<DataTypePtr> types = sourceTypes.Get();
+    std::vector<DataTypePtr> types = sourceTypes->GetFieldTypes();
     for (uint32_t i = 0; i < aggInputColsVector.size(); i++) {
         aggInputCols.push_back(aggInputColsVector[i]);
         aggInputTypes.push_back(types[aggInputColsVector[i]]);
@@ -35,7 +35,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
     std::vector<std::unique_ptr<Aggregator>> aggs;
 
     uint32_t aggInputChannelIndex = 0;
-    for (int32_t i = 0; i < this->aggOutputTypes.GetSize(); i++) {
+    for (int32_t i = 0; i < this->aggOutputTypes->GetSize(); i++) {
         uint32_t aggregateType = aggFuncTypesVector[i];
         DataTypePtr inputType;
         int32_t aggInputCol;
@@ -48,7 +48,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
             aggInputChannelIndex++;
         }
 
-        auto outputType = aggOutputTypes.Get()[i];
+        auto outputType = aggOutputTypes->GetFieldType(i);
         auto aggregator =
             aggregatorFactories[i]->CreateAggregator(inputType, outputType, aggInputCol, inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
@@ -77,7 +77,7 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     // always output one row
     auto aggCount = aggregators.size();
     auto outputVecBatch = new VectorBatch(aggCount, 1);
-    outputVecBatch->NewVectors(this->vecAllocator, aggOutputTypes.Get());
+    outputVecBatch->NewVectors(this->vecAllocator, aggOutputTypes->GetFieldTypes());
 
     // set result value
     for (size_t aggIdx = 0; aggIdx < aggCount; ++aggIdx) {

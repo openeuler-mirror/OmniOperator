@@ -76,7 +76,7 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
 }
 
 std::shared_ptr<DecimalValue> DecimalIRBuilder::BuildDecimalValue(llvm::Value *data,
-    omniruntime::type::DataTypeRawPtr retType, llvm::Value *isNull)
+    omniruntime::type::DataTypePtr retType, llvm::Value *isNull)
 {
     LLVMTypes llvmTypes(*context);
     llvm::Value *precision = llvmTypes.CreateConstantInt(retType.GetPrecision());

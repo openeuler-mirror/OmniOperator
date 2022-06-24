@@ -77,9 +77,9 @@ void ExprVerifier::Visit(const UnaryExpr &unaryExpr)
 
 void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
 {
-    type::DataTypeRawPtr leftType = binaryExpr.left->GetReturnType();
-    type::DataTypeRawPtr rightType = binaryExpr.right->GetReturnType();
-    type::DataTypeRawPtr returnType = binaryExpr.GetReturnType();
+    type::DataTypePtr leftType = binaryExpr.left->GetReturnType();
+    type::DataTypePtr rightType = binaryExpr.right->GetReturnType();
+    type::DataTypePtr returnType = binaryExpr.GetReturnType();
 
     if (AreInvalidDataTypes(leftType->GetId(), rightType->GetId())) {
         this->supportedFlag = false;

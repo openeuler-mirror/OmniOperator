@@ -33,7 +33,7 @@ public:
     omniruntime::op::Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<type::DataTypes> probeTypes; // all types for probe
+    ContainerDataTypePtr probeTypes; // all types for probe
     std::vector<int32_t> probeHashCols;          // join columns for probe
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -42,7 +42,7 @@ private:
 
 class LookupJoinWithExprOperator : public Operator {
 public:
-    LookupJoinWithExprOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeHashCols,
+    LookupJoinWithExprOperator(type::ContainerDataTypePtr probeTypes, std::vector<int32_t> &probeHashCols,
         std::vector<RowProjFunc> &projectFuncs, LookupJoinOperator *lookupJoinOperator);
 
     ~LookupJoinWithExprOperator() override;
@@ -54,7 +54,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::type::DataTypes &probeTypes;
+    ContainerDataTypePtr probeTypes;
     std::vector<int32_t> probeHashCols;
     std::vector<RowProjFunc> projectFuncs;
     LookupJoinOperator *lookupJoinOperator;

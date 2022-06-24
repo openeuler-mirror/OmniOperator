@@ -12,10 +12,10 @@ using namespace std;
 
 namespace omniruntime {
 namespace op {
-WindowPartition::WindowPartition(const type::DataTypes &sourceTypes, PagesIndex *pagesIndex, int32_t partitionStart,
+WindowPartition::WindowPartition(type::ContainerDataTypePtr sourceTypes, PagesIndex *pagesIndex, int32_t partitionStart,
     int32_t partitionEnd, int32_t *outputChannels, int32_t outputChannelsCount,
     vector<unique_ptr<WindowFunction>> &windowFunctions, PagesHashStrategy *peerGroupHashStrategy)
-    : sourceTypes(sourceTypes),
+    : sourceTypes(std::move(sourceTypes)),
       pagesIndex(pagesIndex),
       partitionStart(partitionStart),
       partitionEnd(partitionEnd),
@@ -210,8 +210,7 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
     Vector *columnVector = columnVectors[channel][vecBatchIndex];
     int32_t originalRowIndex;
     Vector *originalVector = nullptr;
-    const int32_t *sourceTypeIds = sourceTypes.GetIds();
-    int32_t typeId = sourceTypeIds[channel];
+    int32_t typeId = sourceTypes->GetFieldType(channel)->GetId();
 
     originalVector = VectorHelper::ExpandVectorAndIndex(columnVector, rowIndex, originalRowIndex);
     if (originalVector->IsValueNull(originalRowIndex)) {

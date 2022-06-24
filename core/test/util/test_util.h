@@ -13,14 +13,14 @@
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "type/data_types.h"
-#include "type/data_type.h"
+#include "util/type_util.h"
 #include "codegen/func_signature.h"
 #include "codegen/func_registry.h"
 #include "expression/expressions.h"
 
 namespace TestUtil {
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
-omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::type::DataTypes &types, int32_t rowCount, ...);
+omniruntime::vec::VectorBatch *CreateVectorBatch(const omniruntime::type::ContainerDataType &types, int32_t rowCount, ...);
 omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
 omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataTypePtr type, std::string *values,
     int32_t length);
@@ -146,7 +146,7 @@ void GetTestTypeIds(omniruntime::vec::DataTypes &inputTypes, std::string *projec
     std::vector<int32_t> &typeIds, int32_t *projectCols);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
-    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypeRawPtr returnType);
+    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
 
 std::string GenerateSpillPath();
 }

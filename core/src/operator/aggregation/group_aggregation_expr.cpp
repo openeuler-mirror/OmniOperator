@@ -14,8 +14,8 @@ using namespace omniruntime::type;
 
 HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
-    const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, ContainerDataTypePtr &sourceDataTypes,
-    ContainerDataTypePtr &aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial)
+    const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, ContainerDataTypePtr sourceDataTypes,
+    ContainerDataTypePtr aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial)
 {
     uint32_t aggColNum = aggKeys.size();
     uint32_t projectColNum = groupByNum + aggColNum;
@@ -28,7 +28,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     }
     std::vector<int32_t> hashAggCols;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
+    OperatorUtil::CreateRequiredProjectFuncs(*sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
         this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
 
     uint32_t groupByCols[groupByNum];

@@ -23,8 +23,9 @@ TEST(SpillTest, TestWriteRead)
     int32_t data1[dataSize] = {3, 5, 7, 9, 1};
     int64_t data2[dataSize] = {8, 4, 0, 2, 6};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType() }));
-    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), LongType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
 
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
@@ -40,7 +41,7 @@ TEST(SpillTest, TestWriteRead)
         auto result = reader.Next();
         auto resultVecBatch = result->GetVectorBatch();
         VectorHelper::PrintVecBatch(resultVecBatch);
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), dataSize, data1, data2);
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes->GetSize(), dataSize, data1, data2);
         VectorHelper::FreeVecBatch(resultVecBatch);
     }
     rmdir(path.c_str());
@@ -54,8 +55,9 @@ TEST(SpillTest, TestSpiller)
     int32_t data1[dataSize] = {-7, -3, 1, 5, 9};
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType() }));
-    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), LongType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
 
     std::vector<int32_t> sortCols = { 0, 1 };
     std::vector<int32_t> sortAscendings = { 1, 1 };
@@ -74,7 +76,7 @@ TEST(SpillTest, TestSpiller)
     int32_t data3[dataSize] = {-9, -5, -1, 3, 7};
     int64_t data4[dataSize] = {-2, 0, -4, -8, -6};
 
-    VectorBatchUnitIter memoryIter(TestUtil::CreateVectorBatch(sourceTypes, dataSize, data3, data4));
+    VectorBatchUnitIter memoryIter(TestUtil::CreateVectorBatch(*sourceTypes, dataSize, data3, data4));
     spiller.MergeFromDiskAndMemory(memoryIter);
     if (spiller.HasNext()) {
         int32_t expectedDataSize = 2 * dataSize;
@@ -83,7 +85,7 @@ TEST(SpillTest, TestSpiller)
         auto result = spiller.Next();
         auto resultVecBatch = result->GetVectorBatch();
         delete result;
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), expectedDataSize, expectedData1,
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes->GetSize(), expectedDataSize, expectedData1,
             expectedData2);
         VectorHelper::PrintVecBatch(resultVecBatch);
         VectorHelper::FreeVecBatch(resultVecBatch);
@@ -98,8 +100,9 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     int32_t data1[dataSize] = {-7, -3, 1, 5, 9};
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType() }));
-    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    std::vector<DataTypePtr> sourceFieldTypes{IntType(), LongType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
 
     std::vector<int32_t> sortCols = { 0, 1 };
     std::vector<int32_t> sortAscendings = { 1, 1 };

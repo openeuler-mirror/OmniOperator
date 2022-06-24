@@ -46,7 +46,7 @@ bool operator < (const RowComparator &left, const RowComparator &right);
 
 class TopNOperatorFactory : public OperatorFactory {
 public:
-    TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
+    TopNOperatorFactory(type::ContainerDataTypePtr sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperatorFactory() override;
@@ -54,7 +54,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    const type::DataTypes sourceTypes;
+    const type::ContainerDataTypePtr sourceTypes;
     std::vector<int32_t> sortCols;
     int32_t n = 0;
     std::vector<int32_t> sortAscendings;
@@ -64,7 +64,7 @@ private:
 
 class TopNOperator : public Operator {
 public:
-    TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
+    TopNOperator(type::ContainerDataTypePtr sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
         std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperator() override;
@@ -74,7 +74,8 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
 private:
-    const type::DataTypes &sourceTypes;
+    type::ContainerDataTypePtr sourceTypes;
+    std::vector<int32_t> typeIds;
     int32_t sourceTypesCount = 0;
     std::vector<int32_t> sortCols;
     int32_t n = 0;

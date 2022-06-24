@@ -128,7 +128,7 @@ private:
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
     ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs, int32_t nProj,
-        DataTypes &inputTypes, int32_t nCols);
+        ContainerDataTypePtr inputTypes, int32_t nCols);
 
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
@@ -139,7 +139,7 @@ public:
     }
 
 private:
-    DataTypes inputTypes;
+    ContainerDataTypePtr inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
     std::vector<DataTypeId> outTypeIds;

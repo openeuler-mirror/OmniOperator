@@ -143,7 +143,7 @@ llvm::Type *LLVMTypes::ToLLVMType(DataTypeId id)
     return (result == VectorToLLVMTypeMap.end()) ? NULL : result->second;
 }
 
-llvm::Type *LLVMTypes::VectorToLLVMType(DataTypeRawPtr type)
+llvm::Type *LLVMTypes::VectorToLLVMType(DataTypePtr type)
 {
     return ToLLVMType(type->GetId());
 }

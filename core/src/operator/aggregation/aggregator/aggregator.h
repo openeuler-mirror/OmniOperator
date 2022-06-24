@@ -69,7 +69,7 @@ public:
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
      *            */
-    Aggregator(FunctionType aggregateType, DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+    Aggregator(FunctionType aggregateType, DataTypePtr inputType, DataTypePtr outputType, int32_t channel,
                bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
           inputType(inputType),

@@ -5,6 +5,7 @@
 
 #include "hash_builder_expr.h"
 #include <memory>
+#include <utility>
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 
@@ -13,19 +14,19 @@ namespace op {
 using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
-    const ContainerDataTypePtr &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+    ContainerDataTypePtr buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
 {
     return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, filter,
         hashTableCount);
 }
 
-HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const ContainerDataTypePtr &buildTypes,
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(ContainerDataTypePtr buildTypes,
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
     int32_t hashTableCount)
 {
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(*buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
         this->buildHashCols, this->projectFuncs);
     this->buildTypes = std::make_shared<ContainerDataType>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(this->buildTypes,
@@ -43,10 +44,10 @@ Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
     return new HashBuilderWithExprOperator(buildTypes, buildHashCols, projectFuncs, hashBuilderOperator);
 }
 
-HashBuilderWithExprOperator::HashBuilderWithExprOperator(const ContainerDataTypePtr buildTypes,
+HashBuilderWithExprOperator::HashBuilderWithExprOperator(ContainerDataTypePtr buildTypes,
     const std::vector<int32_t> &buildHashCols, const std::vector<RowProjFunc> &projectFuncs,
     HashBuilderOperator *hashBuilderOperator)
-    : buildTypes(buildTypes),
+    : buildTypes(std::move(buildTypes)),
       buildHashCols(buildHashCols),
       projectFuncs(projectFuncs),
       hashBuilderOperator(hashBuilderOperator)
@@ -60,7 +61,7 @@ HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols, vecAllocator);
+        OperatorUtil::ProjectVectors(vecBatch, *buildTypes, projectFuncs, buildHashCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         hashBuilderOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

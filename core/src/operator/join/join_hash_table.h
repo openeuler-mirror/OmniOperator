@@ -154,7 +154,7 @@ public:
         return static_cast<uint32_t>(partitionedJoinPosition >> shiftSize);
     }
 
-    void SetBuildTypes(ContainerDataTypePtr &buildDataTypes)
+    void SetBuildTypes(ContainerDataTypePtr buildDataTypes)
     {
         this->buildTypes = buildDataTypes;
     }
@@ -164,7 +164,7 @@ public:
         return this->buildTypes;
     }
 
-    void SetProbeTypes(ContainerDataTypePtr &probeDataTypes)
+    void SetProbeTypes(ContainerDataTypePtr probeDataTypes)
     {
         this->probeTypes = probeDataTypes;
     }

@@ -18,9 +18,9 @@ namespace omniruntime {
 namespace op {
 class JoinResultBuilder {
 public:
-    JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
+    JoinResultBuilder(type::ContainerDataTypePtr leftTableOutputTypes, int32_t *leftTableOutputCols,
         int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
-        const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
+        type::ContainerDataTypePtr rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
         DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator);
 
     int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
@@ -38,11 +38,11 @@ private:
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     VectorBatch *NewEmptyVectorBatch() const;
 
-    const type::DataTypes &leftTableOutputTypes;
+    type::ContainerDataTypePtr leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
-    const type::DataTypes &rightTableOutputTypes;
+    type::ContainerDataTypePtr rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     DynamicPagesIndex *rightTablePagesIndex;

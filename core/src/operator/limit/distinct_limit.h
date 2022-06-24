@@ -18,18 +18,18 @@ namespace omniruntime {
 namespace op {
 class DistinctLimitOperatorFactory : public OperatorFactory {
 public:
-    DistinctLimitOperatorFactory(const type::DataTypes &sourceTypes, const int32_t *distinctCols,
+    DistinctLimitOperatorFactory(type::ContainerDataTypePtr sourceTypes, const int32_t *distinctCols,
         int32_t distinctColsCount, int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperatorFactory() override;
 
-    static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(const type::DataTypes &inSourceTypes,
+    static DistinctLimitOperatorFactory *CreateDistinctLimitOperatorFactory(type::ContainerDataTypePtr inSourceTypes,
         const int32_t *inDistinctCols, int32_t inDistinctColsCount, int32_t inHashColumn, int64_t inLimit);
 
     Operator *CreateOperator() override;
 
 private:
-    type::DataTypes sourceTypes;
+    type::ContainerDataTypePtr sourceTypes;
     std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;
@@ -65,7 +65,7 @@ public:
     static constexpr int32_t INVALID_DISTINCT_COL_ID = -1;
 
 public:
-    DistinctLimitOperator(type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols, int32_t distinctColsCount,
+    DistinctLimitOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &distinctCols, int32_t distinctColsCount,
         int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperator() override;
@@ -88,7 +88,7 @@ private:
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil>
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
-    type::DataTypes sourceTypes;
+    type::ContainerDataTypePtr sourceTypes;
     std::vector<DataTypePtr> outTypes;
     std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;

@@ -12,7 +12,7 @@ namespace op {
 class CountColumnAggregator : public Aggregator {
 public:
     CountColumnAggregator(const DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, new NoneDataType, out, channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneDataType::Instance(), out, channel)
     {}
 
     CountColumnAggregator(const DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)

@@ -18,7 +18,7 @@ namespace omniruntime {
 namespace op {
 class PagesIndex : public MemoryBuilder {
 public:
-    explicit PagesIndex(ContainerDataTypePtr &types);
+    explicit PagesIndex(const ContainerDataTypePtr &types);
 
     ~PagesIndex() override;
 
@@ -30,7 +30,7 @@ public:
         const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to) const;
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
-        ContainerDataType &sourceTypes, int32_t offset, int32_t length,
+        const int32_t *sourceTypes, int32_t offset, int32_t length,
         omniruntime::vec::VectorAllocator *vecAllocator) const;
 
     std::vector<omniruntime::vec::VectorBatch *> GetSortedVecBatch(VectorAllocator *vecAllocator);
@@ -67,6 +67,7 @@ public:
 
 private:
     ContainerDataTypePtr dataTypes;
+    std::vector<int32_t> dataTypeIds;
     uint32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
     uint64_t *valueAddresses;

@@ -26,18 +26,19 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType() }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    std::vector<DataTypePtr>sourceFieldTypes{ IntType(), LongType(), LongType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2, data3);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    FieldExpr *addLeft = new FieldExpr(0, new IntDataType());
-    LiteralExpr *addRight = new LiteralExpr(5, new IntDataType());
-    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, new IntDataType());
-    FieldExpr *modLeft = new FieldExpr(2, new LongDataType());
-    LiteralExpr *modRight = new LiteralExpr(3L, new LongDataType());
-    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, new LongDataType());
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
+    FieldExpr *modLeft = new FieldExpr(2, LongType());
+    LiteralExpr *modRight = new LiteralExpr(3L, LongType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
 
     auto topNWithExprOperatorFactory =
@@ -53,10 +54,10 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int64_t expData3[dataSize] = {8, 7, 3, 1, 2};
     int32_t expData4[dataSize] = {20, 18, 13, 13, 13};
     int64_t expData5[dataSize] = {2, 1, 0, 1, 2};
-    DataTypes expectTypes(
-        std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType(), new IntDataType(), new LongDataType() }));
+    std::vector<DataTypePtr> expectFieldTypes{ IntType(), LongType(), LongType(), IntType(), LongType() };
+    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
     VectorBatch *expectVecorBatch =
-        CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
+        CreateVectorBatch(*expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
@@ -80,16 +81,17 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType() }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    std::vector<DataTypePtr> sourceFieldTypes{ IntType(), LongType(), LongType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2, data3);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    FieldExpr *col0 = new FieldExpr(0, new IntDataType());
-    FieldExpr *modLeft = new FieldExpr(2, new LongDataType());
-    LiteralExpr *modRight = new LiteralExpr(3L, new LongDataType());
-    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, new LongDataType());
+    FieldExpr *col0 = new FieldExpr(0, IntType());
+    FieldExpr *modLeft = new FieldExpr(2, LongType());
+    LiteralExpr *modRight = new LiteralExpr(3L, LongType());
+    BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
 
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
@@ -105,9 +107,10 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int64_t expData2[dataSize] = {23, 0, 5, 4, 3};
     int64_t expData3[dataSize] = {8, 7, 3, 1, 2};
     int64_t expData4[dataSize] = {2, 1, 0, 1, 2};
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    std::vector<DataTypePtr> expectFieldTypes{ IntType(), LongType(), LongType(), LongType() };
+    ContainerDataTypePtr expectTypes= std::make_shared<ContainerDataType>(expectFieldTypes);
     VectorBatch *expectVecorBatch =
-        CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
+        CreateVectorBatch(*expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
@@ -131,14 +134,15 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType() }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    std::vector<DataTypePtr> sourceFieldTypes{ IntType(), LongType(), LongType() };
+    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2, data3);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    FieldExpr *col0 = new FieldExpr(0, new IntDataType());
-    FieldExpr *col2 = new FieldExpr(2, new LongDataType());
+    FieldExpr *col0 = new FieldExpr(0, IntType());
+    FieldExpr *col2 = new FieldExpr(2, LongType());
     std::vector<Expr *> sortExprs = { col0, col2 };
 
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
@@ -153,8 +157,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int32_t expData1[dataSize] = {15, 13, 8, 8, 8};
     int64_t expData2[dataSize] = {23, 0, 4, 3, 5};
     int64_t expData3[dataSize] = {8, 7, 1, 2, 3};
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new LongDataType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
+    std::vector<DataTypePtr> expectFieldTypes{ IntType(), LongType(), LongType() };
+    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    VectorBatch *expectVecorBatch = CreateVectorBatch(*expectTypes, expectedDataSize, expData1, expData2, expData3);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));

@@ -20,9 +20,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     // bufferedTbl t2: double c, int d;
     // streamedTbl t1:  int a, Long b;
     std::string blank = "";
-    std::vector<DataTypeRawPtr> streamTypeVector = { IntDataType::Instance(), LongDataType::Instance() };
-    DataTypes streamedTblTypes(streamTypeVector);
-    FieldExpr *col0 = new FieldExpr(0, new IntDataType());
+    std::vector<DataTypePtr> streamTypeVector = { IntType(), LongType() };
+    ContainerDataTypePtr streamedTblTypes = std::make_shared<ContainerDataType>(streamTypeVector);
+    FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
     int streamedOutputCols[1] = {1};
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
@@ -30,9 +30,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<DataTypeRawPtr> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
-    DataTypes bufferedTblTypes(bufferTypesVector);
-    FieldExpr *col1 = new FieldExpr(1, new IntDataType());
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
+    ContainerDataTypePtr bufferedTblTypes = std::make_shared<ContainerDataType>(bufferTypesVector);
+    FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
     int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
@@ -46,7 +46,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     int32_t streamedTblDataCol1[streamedTblDataSize] = {  0,   1,   2,   3,   4,   5};
     long streamedTblDataCol2[streamedTblDataSize] =  {6600, 5500, 4400, 3300, 2200, 1100};
     VectorBatch *streamedTblVecBatch1 =
-        CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
+        CreateVectorBatch(*streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
 
     int32_t addInputRetCode = -1;
     addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
@@ -56,7 +56,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int32_t bufferedTblDataCol2[bufferedTblSize] =  {  0,   1,   2,   3,   4,   5};
     VectorBatch *bufferedTblVecBatch1 =
-        CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
+        CreateVectorBatch(*bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
     // need add buffered table data
     addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatch1);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
@@ -110,9 +110,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     // bufferedTbl t2:  int c21, Long c22, varchar c23;
     // streamedTbl t1:  int c11, Long c12, varchar c13;
     std::string blank = "";
-    std::vector<DataTypeRawPtr> streamTypeVector = { new IntDataType(), new LongDataType() };
-    DataTypes streamedTblTypes(streamTypeVector);
-    FieldExpr *col0 = new FieldExpr(0, new IntDataType());
+    std::vector<DataTypePtr> streamTypeVector = { IntType(),LongType() };
+    ContainerDataTypePtr streamedTblTypes = std::make_shared<ContainerDataType>(streamTypeVector);
+    FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
     int streamedOutputCols[1] = {1};
@@ -121,9 +121,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<DataTypeRawPtr> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
-    DataTypes bufferedTblTypes(bufferTypesVector);
-    FieldExpr *col1 = new FieldExpr(1, new IntDataType());
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
+    ContainerDataTypePtr bufferedTblTypes = std::make_shared<ContainerDataType>(bufferTypesVector);
+    FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
     int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
@@ -137,7 +137,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     int32_t streamedTblDataCol1[streamedTblDataSize] = {  0,   1,   2,   3,   4,   5};
     long streamedTblDataCol2[streamedTblDataSize] =  {6600, 5500, 4400, 3300, 2200, 1100};
     VectorBatch *streamedTblVecBatch1 =
-        CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
+        CreateVectorBatch(*streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
 
     auto addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
@@ -146,7 +146,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int32_t bufferedTblDataCol2[bufferedTblSize] =  {  0,   1,   2,   3,   4,   5};
     VectorBatch *bufferedTblVecBatch1 =
-        CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
+        CreateVectorBatch(*bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
     // need add buffered table data
     addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatch1);
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));

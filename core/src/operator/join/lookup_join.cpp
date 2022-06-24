@@ -16,67 +16,69 @@ namespace omniruntime {
 namespace op {
 constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
 
-LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables)
+LookupJoinOperatorFactory::LookupJoinOperatorFactory(type::ContainerDataTypePtr probeTypes,
+    int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
+    int32_t *buildOutputCols, type::ContainerDataTypePtr buildOutputTypes, JoinType joinType,
+    JoinHashTables *hashTables)
     : joinType(joinType), hashTables(hashTables)
 {
     int32_t probeHashColTypes[probeHashColsCount];
     for (int32_t i = 0; i < probeHashColsCount; i++) {
-        probeHashColTypes[i] = probeTypes.GetIds()[probeHashCols[i]];
+        probeHashColTypes[i] = probeTypes->GetFieldType(probeHashCols[i])->GetId();
     }
-    this->probeTypes = std::make_unique<DataTypes>(probeTypes);
+    this->probeTypes = std::move(probeTypes);
     this->probeOutputCols.insert(this->probeOutputCols.end(), probeOutputCols, probeOutputCols + probeOutputColsCount);
     this->probeHashCols.insert(this->probeHashCols.end(), probeHashCols, probeHashCols + probeHashColsCount);
     this->probeHashColTypes.insert(this->probeHashColTypes.end(), probeHashColTypes,
         probeHashColTypes + probeHashColsCount);
     this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
-        buildOutputCols + buildOutputTypes.GetSize());
-    this->buildOutputTypes = std::make_unique<DataTypes>(buildOutputTypes);
-    this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
-    this->rowSize += OperatorUtil::GetRowSize(buildOutputTypes.Get());
-    this->hashTables->SetProbeTypes(probeTypes);
+        buildOutputCols + buildOutputTypes->GetSize());
+    this->buildOutputTypes = std::move(buildOutputTypes);
+    this->rowSize = OperatorUtil::GetOutputRowSize(this->probeTypes->GetFieldTypes(), probeOutputCols, probeOutputColsCount);
+    this->rowSize += OperatorUtil::GetRowSize(this->buildOutputTypes->GetFieldTypes());
+    this->hashTables->SetProbeTypes(this->probeTypes);
     this->hashTables->JoinFilterCodeGen();
 }
 
 LookupJoinOperatorFactory::~LookupJoinOperatorFactory() = default;
 
-LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const ContainerDataTypePtr &probeTypes,
-    int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    int32_t *buildOutputCols, const ContainerDataTypePtr &buildOutputTypes, JoinType inputJoinType,
-    int64_t hashBuilderFactoryAddr)
+LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
+    ContainerDataTypePtr probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
+    int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
+    ContainerDataTypePtr buildOutputTypes, JoinType inputJoinType, int64_t hashBuilderFactoryAddr)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory =
-        new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols,
-        probeHashColsCount, buildOutputCols, buildOutputTypes, inputJoinType, hashBuilderFactory->GetHashTables());
+        new LookupJoinOperatorFactory(std::move(probeTypes), probeOutputCols, probeOutputColsCount, probeHashCols,
+        probeHashColsCount, buildOutputCols, std::move(buildOutputTypes), inputJoinType, hashBuilderFactory->GetHashTables());
     return pOperatorFactory;
 }
 
 Operator *LookupJoinOperatorFactory::CreateOperator()
 {
-    auto pLookupJoinOperator = new LookupJoinOperator(*(probeTypes.get()), probeOutputCols, probeHashCols,
-        probeHashColTypes, buildOutputCols, *(buildOutputTypes.get()), joinType, hashTables, rowSize);
+    auto pLookupJoinOperator = new LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes,
+        buildOutputCols, buildOutputTypes, joinType, hashTables, rowSize);
     return pLookupJoinOperator;
 }
 
-LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
+LookupJoinOperator::LookupJoinOperator(ContainerDataTypePtr probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
-    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables, int32_t outputRowSize)
-    : probeTypes(probeTypes),
+    type::ContainerDataTypePtr buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
+    int32_t outputRowSize)
+    : probeTypes(std::move(probeTypes)),
       probeOutputCols(probeOutputCols),
       probeHashCols(probeHashCols),
       probeHashColTypes(probeHashColTypes),
       buildOutputCols(buildOutputCols),
-      buildOutputTypes(buildOutputTypes),
+      buildOutputTypes(std::move(buildOutputTypes)),
       probeOnOuterSide(joinType == JoinType::OMNI_JOIN_TYPE_LEFT || joinType == JoinType::OMNI_JOIN_TYPE_FULL),
       currentProbePositionProducedRow(false),
       hashTables(hashTables),
       joinProbe(nullptr),
       partitionedJoinPosition(INVALID_PARTITION_POSITION)
 {
-    this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeTypes.GetIds(), probeOutputCols.data(),
-        probeOutputCols.size(), buildOutputCols.data(), buildOutputTypes, outputRowSize);
+    this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols.data(),
+        probeOutputCols.size(), buildOutputCols.data(), this->buildOutputTypes, outputRowSize);
     this->executionContext = new ExecutionContext();
     this->executionContext->GetArena()->SetAllocator(vecAllocator);
 }
@@ -90,7 +92,7 @@ LookupJoinOperator::~LookupJoinOperator()
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
     this->input = vecBatch;
-    this->joinProbe = new JoinProbe(vecBatch, probeTypes.GetSize(), probeHashCols.data(), probeHashColTypes.data(),
+    this->joinProbe = new JoinProbe(vecBatch, probeTypes->GetSize(), probeHashCols.data(), probeHashColTypes.data(),
         probeHashCols.size());
     this->partitionedJoinPosition = INVALID_PARTITION_POSITION;
 
@@ -398,17 +400,18 @@ uint64_t JoinProbe::GetCurrentJoinPosition(const JoinHashTables *hashTables) con
     return currentJoinPosition;
 }
 
-LookupJoinOutputBuilder::LookupJoinOutputBuilder(const int32_t *probeTypes, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
+LookupJoinOutputBuilder::LookupJoinOutputBuilder(int32_t *probeOutputCols,
+    int32_t probeOutputColsCount, int32_t *buildOutputCols, type::ContainerDataTypePtr buildOutputTypes,
     int32_t outputRowSize)
-    : probeTypes(probeTypes),
-      probeOutputCols(probeOutputCols),
+    : probeOutputCols(probeOutputCols),
       probeOutputColsCount(probeOutputColsCount),
       buildOutputCols(buildOutputCols),
-      buildOutputTypes(buildOutputTypes),
+      buildOutputTypes(std::move(buildOutputTypes)),
       outputRowSize(outputRowSize),
       isSequentialProbeIndices(true)
-{}
+{
+    this->buildOutputTypes->GetIds(buildOutputTypeIds);
+}
 
 void LookupJoinOutputBuilder::AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition)
 {
@@ -513,7 +516,7 @@ void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, Vector **probeAllC
     }
 }
 
-void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probeAllColumns, const int32_t *probeTypes,
+void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probeAllColumns,
     const int32_t *probeOutputCols, int32_t probeOutputColsCount, std::vector<int32_t> &probeIndex, int32_t position,
     int32_t rowCount)
 {
@@ -534,7 +537,7 @@ void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probe
     }
 }
 
-void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, const int32_t *probeTypes,
+void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns,
     const int32_t *probeOutputCols, int32_t probeOutputColsCount, bool isSequentialProbeIndices,
     std::vector<int32_t> &probeIndex, int32_t position, int32_t rowCount)
 {
@@ -544,7 +547,7 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
     auto probeLength = static_cast<int32_t>(probeIndex.size());
     if (!isSequentialProbeIndices || probeLength == 0) {
         // probeIndices are discrete
-        ConstructProbeColumnsFromPositions(vectorBatch, probeAllColumns, probeTypes, probeOutputCols,
+        ConstructProbeColumnsFromPositions(vectorBatch, probeAllColumns, probeOutputCols,
             probeOutputColsCount, probeIndex, position, rowCount);
     } else if ((probeLength == probeAllColumns[probeOutputCols[0]]->GetSize()) && (probeLength == rowCount)) {
         // probeIndices are a simple covering of the vector
@@ -557,16 +560,16 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
 }
 
 void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashTables,
-                           const std::vector<DataTypePtr> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
-                           int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<uint64_t> &buildIndex, int32_t position,
-                           int32_t rowCount, VectorAllocator *vecAllocator)
+    const std::vector<DataTypePtr> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
+    int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<uint64_t> &buildIndex, int32_t position,
+    int32_t rowCount, VectorAllocator *vecAllocator)
 {
     Vector *buildColumn = nullptr;
     int32_t buildOutputCol = 0;
     int32_t outputColumnIndex = probeOutputColsCount;
     for (int32_t columnIdx = 0; columnIdx < buildOutputColsCount; columnIdx++) {
         buildOutputCol = buildOutputCols[columnIdx];
-        DataTypePtr dataType = buildOutputTypes[columnIdx];
+        const DataTypePtr &dataType = buildOutputTypes[columnIdx];
         switch (buildOutputIds[columnIdx]) {
             case OMNI_INT:
             case OMNI_DATE32:
@@ -613,7 +616,7 @@ void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const J
     int32_t tableCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
 
     Vector **probeAllColumns = joinProbe->GetProbeAllColumns();
-    int32_t columnCount = probeOutputColsCount + buildOutputTypes.GetSize();
+    int32_t columnCount = probeOutputColsCount + buildOutputTypes->GetSize();
 
     VectorBatch *vectorBatch = nullptr;
     int32_t position = 0;
@@ -622,10 +625,10 @@ void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const J
         rowCount = std::min(maxRowCount, positionCount - position);
         vectorBatch = new VectorBatch(columnCount, rowCount);
 
-        ConstructProbeColumns(vectorBatch, probeAllColumns, probeTypes, probeOutputCols, probeOutputColsCount,
+        ConstructProbeColumns(vectorBatch, probeAllColumns, probeOutputCols, probeOutputColsCount,
             isSequentialProbeIndices, probeIndex, position, rowCount);
-        ConstructBuildColumns(vectorBatch, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(),
-            buildOutputCols, buildOutputTypes.GetSize(), probeOutputColsCount, buildIndex, position, rowCount,
+        ConstructBuildColumns(vectorBatch, hashTables, buildOutputTypes->GetFieldTypes(), buildOutputTypeIds.data(),
+            buildOutputCols, buildOutputTypes->GetSize(), probeOutputColsCount, buildIndex, position, rowCount,
             vecAllocator);
 
         position += rowCount;

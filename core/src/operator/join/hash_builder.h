@@ -19,7 +19,7 @@ public:
         int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     int32_t Init();
     ~HashBuilderOperatorFactory() override;
-    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(ContainerDataTypePtr &dataTypes,
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(ContainerDataTypePtr dataTypes,
         const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
     JoinHashTables *GetHashTables() const
@@ -38,7 +38,7 @@ private:
 class HashBuilderOperator : public Operator {
 public:
     HashBuilderOperator(ContainerDataTypePtr buildTypes, std::vector<int32_t> &buildHashCols,
-        JoinHashTables *hashTables, int32_t partitionIndex, std::shared_ptr<PagesIndex> &pagesIndex);
+        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
 
     ~HashBuilderOperator() override;
 
@@ -53,7 +53,7 @@ private:
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
     int32_t partitionIndex;
-    std::shared_ptr<PagesIndex> pagesIndex;
+    std::unique_ptr<PagesIndex> pagesIndex;
 };
 } // end of op
 } // end of omniruntime
