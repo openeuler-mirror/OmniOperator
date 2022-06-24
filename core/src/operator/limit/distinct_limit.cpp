@@ -356,7 +356,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
 }
 
 void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector,
-    std::vector<type::DataTypeRawPtr> &outTypes, int32_t rowIndex)
+                     std::vector<type::DataTypePtr> &outTypes, int32_t rowIndex)
 {
     for (int i = 0; i < static_cast<int>(outTypes.size()); ++i) {
         // nullptr handle

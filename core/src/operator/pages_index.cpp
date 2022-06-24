@@ -34,10 +34,10 @@ int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, 
     int32_t to, int32_t len);
 
 // function implements for class PagesIndex
-PagesIndex::PagesIndex(const omniruntime::type::DataTypes &types)
-    : dataTypes(types.Get()),
-      dataTypeIds(types.GetIds()),
-      typesCount(types.GetSize()),
+PagesIndex::PagesIndex(ContainerDataTypePtr &types)
+    : dataTypes(types),
+//      dataTypeIds(types->GetIds()),
+      typesCount(types->GetSize()),
       columns(nullptr),
       valueAddresses(nullptr),
       positionCount(0)
@@ -825,7 +825,7 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, cons
 }
 
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
-    const int32_t *sourceTypes, int32_t offset, int32_t length, VectorAllocator *vecAllocator) const
+    ContainerDataType &sourceTypes, int32_t offset, int32_t length, VectorAllocator *vecAllocator) const
 {
     Vector ***inputVecBatches = this->columns;
 
@@ -833,7 +833,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
     int colTypeId = 0;
     for (int32_t j = 0; j < outputColsCount; j++) {
         outputCol = outputCols[j];
-        colTypeId = sourceTypes[outputCol];
+        colTypeId = sourceTypes.GetFieldType(outputCol)->GetId();
         Vector **inputVecBatch = inputVecBatches[outputCol];
 
         switch (colTypeId) {
@@ -858,7 +858,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch,
-                    (dataTypes[outputCol])->GetWidth(), vecAllocator);
+                    dataTypes->GetFieldType(outputCol)->GetWidth(), vecAllocator);
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
@@ -952,9 +952,9 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
 void PagesIndex::GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vector<int32_t> &outputCols,
     std::vector<VectorBatch *> &sortedVecBatches)
 {
-    std::vector<DataTypeRawPtr> types(dataTypes.begin(), dataTypes.end());
+//    std::vector<DataTypePtr> types(dataTypes.begin(), dataTypes.end());
     int32_t outputColsCount = outputCols.size();
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(types, outputCols.data(), outputColsCount);
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(dataTypes->GetFieldTypes(), outputCols.data(), outputColsCount);
     int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     sortedVecBatches.reserve(vecBatchCount);
 
@@ -964,7 +964,7 @@ void PagesIndex::GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vect
     for (int32_t i = 0; i < vecBatchCount; i++) {
         rowCount = std::min(maxRowCount, static_cast<int32_t>(positionCount) - offset);
         result = new VectorBatch(outputColsCount, rowCount);
-        GetOutput(outputCols.data(), outputColsCount, result, dataTypeIds, offset, rowCount, vectorAllocator);
+        GetOutput(outputCols.data(), outputColsCount, result, *dataTypes, offset, rowCount, vectorAllocator);
         offset += rowCount;
         sortedVecBatches.push_back(result);
     }

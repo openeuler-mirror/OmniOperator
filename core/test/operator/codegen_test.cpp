@@ -2929,7 +2929,7 @@ TEST(CodeGenTest, TestRowProjectLong)
 
 TEST(CodeGenTest, TestRowProjectVarchar)
 {
-    omniruntime::type::DataTypeRawPtr type = new VarcharDataType(10);
+    omniruntime::type::DataTypePtr type = new VarcharDataType(10);
     std::string values[2] = {"hello", "world"};
     omniruntime::vec::VarcharVector *vector = CreateVarcharVector(type, values, 2);
     auto slicedVector = vector->Slice(1, 1);

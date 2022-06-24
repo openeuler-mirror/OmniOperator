@@ -232,7 +232,7 @@ string GetFuncTestJson(int32_t rt, const string &func, const vector<string> &arg
 
 class TestExpr {
 public:
-    omniruntime::type::DataTypeRawPtr dataType = nullptr;
+    omniruntime::type::DataTypePtr dataType = nullptr;
 
     virtual bool isEqual(Expr *that) const
     {
@@ -459,7 +459,7 @@ class TestFuncExpr : public TestExpr {
     vector<TestExpr *> args;
 
 public:
-    TestFuncExpr(omniruntime::type::DataTypeRawPtr rt, string funcName, vector<TestExpr *> args)
+    TestFuncExpr(omniruntime::type::DataTypePtr rt, string funcName, vector<TestExpr *> args)
         : funcName(std::move(funcName)), args(std::move(args))
     {
         dataType = rt;

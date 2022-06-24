@@ -35,15 +35,15 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
     this->buildOutputTypes = std::make_unique<DataTypes>(buildOutputTypes);
     this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
     this->rowSize += OperatorUtil::GetRowSize(buildOutputTypes.Get());
-    this->hashTables->SetProbeTypes(this->probeTypes.get());
+    this->hashTables->SetProbeTypes(probeTypes);
     this->hashTables->JoinFilterCodeGen();
 }
 
 LookupJoinOperatorFactory::~LookupJoinOperatorFactory() = default;
 
-LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const type::DataTypes &probeTypes,
+LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const ContainerDataTypePtr &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType inputJoinType,
+    int32_t *buildOutputCols, const ContainerDataTypePtr &buildOutputTypes, JoinType inputJoinType,
     int64_t hashBuilderFactoryAddr)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
@@ -557,16 +557,16 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
 }
 
 void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashTables,
-    const std::vector<DataTypeRawPtr> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
-    int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<uint64_t> &buildIndex, int32_t position,
-    int32_t rowCount, VectorAllocator *vecAllocator)
+                           const std::vector<DataTypePtr> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
+                           int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<uint64_t> &buildIndex, int32_t position,
+                           int32_t rowCount, VectorAllocator *vecAllocator)
 {
     Vector *buildColumn = nullptr;
     int32_t buildOutputCol = 0;
     int32_t outputColumnIndex = probeOutputColsCount;
     for (int32_t columnIdx = 0; columnIdx < buildOutputColsCount; columnIdx++) {
         buildOutputCol = buildOutputCols[columnIdx];
-        DataTypeRawPtr dataType = buildOutputTypes[columnIdx];
+        DataTypePtr dataType = buildOutputTypes[columnIdx];
         switch (buildOutputIds[columnIdx]) {
             case OMNI_INT:
             case OMNI_DATE32:

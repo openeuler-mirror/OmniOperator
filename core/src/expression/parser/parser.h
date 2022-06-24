@@ -20,7 +20,7 @@ public:
     ~Parser();
 
     omniruntime::expressions::Expr *ParseRowExpression(const std::string &input,
-        omniruntime::type::DataTypes inputTypes, int32_t vecCount);
+        omniruntime::type::ContainerDataType inputTypes, int32_t vecCount);
 
     std::vector<omniruntime::expressions::Expr *> ParseExpressions(const std::string expressions[],
         int32_t numberOfExpressions, omniruntime::type::DataTypes inputTypes);
@@ -29,10 +29,10 @@ public:
         std::vector<omniruntime::expressions::Expr *> args);
 
     static omniruntime::expressions::FieldExpr *GenerateFieldExpr(std::string fieldStr,
-        const omniruntime::type::DataTypes &vecTypePtr);
+        const omniruntime::type::ContainerDataType &vecTypePtr);
     static omniruntime::expressions::LiteralExpr *GenerateLiteralExpr(std::string literalStr);
     static omniruntime::expressions::LiteralExpr *GenerateLiteralExprHelper(const std::string &literalStr,
-        omniruntime::expressions::DataTypeRawPtr inputType);
+        omniruntime::expressions::DataTypePtr inputType);
 
 private:
     ParserHelper ph;

@@ -11,11 +11,11 @@ namespace omniruntime {
 namespace op {
 class MinVarcharAggregator : public Aggregator {
 public:
-    MinVarcharAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel)
+    MinVarcharAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel)
     {}
 
-    MinVarcharAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel, bool inputRaw, bool outputPartial)
+    MinVarcharAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 

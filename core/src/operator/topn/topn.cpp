@@ -294,7 +294,7 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *
 void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
 {
     int vecIndex = 0;
-    for (const DataTypeRawPtr dataTypeRawPtr : sourceTypes.Get()) {
+    for (const DataTypePtr dataTypeRawPtr : sourceTypes.Get()) {
         if (dataTypeRawPtr->GetId() != OMNI_VARCHAR && dataTypeRawPtr->GetId() != OMNI_CHAR) {
             vecIndex++;
             continue;

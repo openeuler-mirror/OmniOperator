@@ -114,7 +114,7 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
     return vExprs;
 }
 
-Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes inputTypes, int32_t vecCount)
+Expr *Parser::ParseRowExpression(const string &inputStr, ContainerDataType inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
     auto firstParenInd = input.find('(');
@@ -177,15 +177,15 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     auto typeIdx = opStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
-    omniruntime::type::DataTypeRawPtr type;
+    omniruntime::type::DataTypePtr type;
     DataTypeId typeId;
     if (typeIdx != string::npos) {
         typeId = ParseReturnType(opStr.substr(typeIdx + 1));
         if (typeId == OMNI_CHAR) {
             width = stoi(opStr.substr(typeIdx + stepSize, opStr.size() - typeIdx - stepSize));
-            type = new CharDataType(width);
+            type = std::make_shared<CharDataType>(width);
         } else {
-            type = new DataType(typeId);
+            type = std::make_shared<DataType>(typeId);
         }
         opStr = opStr.substr(0, typeIdx);
     }
@@ -275,7 +275,7 @@ string *FixString(const string &dataStr)
     return fixedStr;
 }
 
-LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTypeRawPtr currType)
+LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTypePtr currType)
 {
     switch (currType->GetId()) {
         // handle boolean as int32
@@ -315,10 +315,10 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
     }
 }
 
-FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const DataTypes &inputTypes)
+FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const ContainerDataType &inputTypes)
 {
     int colIdx = stoi(fieldStr.substr(1));
-    DataTypeRawPtr colType = inputTypes.Get().at(colIdx);
+    DataTypePtr colType = inputTypes.GetFieldType(colIdx);
     return new FieldExpr(colIdx, colType);
 }
 
@@ -327,7 +327,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
     auto typeIdx = literalStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
-    DataTypeRawPtr currType;
+    DataTypePtr currType;
     DataTypeId currTypeId;
     if (typeIdx != string::npos) {
         currTypeId = ParseReturnType(literalStr.substr(typeIdx + 1));
@@ -342,7 +342,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
 
     // Case with boolean true/false
     if (literalStr == "true" || literalStr == "false") {
-        currType = new BooleanDataType();
+        currType = IntType();
         return new LiteralExpr(literalStr == "true", std::move(currType));
     }
 

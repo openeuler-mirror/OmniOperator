@@ -20,7 +20,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     using namespace omniruntime::expressions;
 
     // construct input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -42,8 +42,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes allTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType(), new DoubleDataType() }));
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new DoubleDataType() }));
+    DataTypes allTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType(), new DoubleDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new DoubleDataType() }));
 
     std::string argumentChannels[1] = { "ADD:3(#2, 50:3)" };
 
@@ -66,7 +66,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType(), new DoubleDataType(), new DoubleDataType() }));
+        std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType(), new DoubleDataType(), new DoubleDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
@@ -90,7 +90,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -112,7 +112,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
 
@@ -129,7 +129,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {3, 0, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1, 4.4};
@@ -152,7 +152,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -174,7 +174,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
 
@@ -191,7 +191,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new DoubleDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new DoubleDataType(), new LongDataType(), new LongDataType() }));
     double expectData1[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
@@ -212,7 +212,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -234,7 +234,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
 
@@ -250,7 +250,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
@@ -273,7 +273,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -295,7 +295,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
 
@@ -311,7 +311,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new DoubleDataType(), new IntDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new LongDataType(), new DoubleDataType(), new IntDataType(), new LongDataType() }));
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
     double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
     int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
@@ -334,7 +334,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -356,7 +356,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType(), new LongDataType() }));
     string argumentChannels[2] = {"-1", "-1"};
 
     // create expression objects
@@ -377,7 +377,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType(), new LongDataType() }));
+        std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType(), new LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
@@ -401,7 +401,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -425,7 +425,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType(), new LongDataType() }));
     string argumentChannels[2] = {"-1", "-1"};
 
     // create expression objects
@@ -445,7 +445,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType(), new LongDataType() }));
+        std::vector<DataTypePtr>({new IntDataType(), new LongDataType(), new DoubleDataType(), new LongDataType(), new LongDataType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
@@ -471,9 +471,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -515,8 +515,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
     string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
 
@@ -532,10 +532,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::type::DAY),
-        new Date32DataType(omniruntime::type::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::type::DAY),
+                                                    new Date32DataType(omniruntime::type::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -575,9 +575,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-                                                        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -620,8 +620,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
     string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
 
@@ -637,10 +637,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -679,9 +679,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 0), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 0), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -721,9 +721,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal128DataType(10, 0), new DoubleDataType(),
-                                                        new Decimal128DataType(4, 2) }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal128DataType(10, 0), new DoubleDataType(),
+                                                    new Decimal128DataType(4, 2) }));
     string argumentChannels[7] = {"ADD:1(2:1, #0)", "#1", "#2", "#3", "#4", "#5", "#8"};
 
     // create expression objects
@@ -743,11 +743,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 0), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new IntDataType(), new IntDataType(),
-                                                        new Date32DataType(omniruntime::vec::DAY), new Date32DataType(omniruntime::vec::MILLI), new LongDataType(),
-                                                        new Decimal128DataType(10, 0), new DoubleDataType(), new Decimal128DataType(4, 2) }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 0), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new IntDataType(), new IntDataType(),
+                                                    new Date32DataType(omniruntime::vec::DAY), new Date32DataType(omniruntime::vec::MILLI), new LongDataType(),
+                                                    new Decimal128DataType(10, 0), new DoubleDataType(), new Decimal128DataType(4, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -788,9 +788,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 2), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 2), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -830,8 +830,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new DoubleDataType(), new DoubleDataType(), new DoubleDataType(),
-        new DoubleDataType(), new Decimal64DataType(10, 4), new DoubleDataType(), new Decimal128DataType(4, 4) }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new DoubleDataType(), new DoubleDataType(), new DoubleDataType(),
+                                                    new DoubleDataType(), new Decimal64DataType(10, 4), new DoubleDataType(), new Decimal128DataType(4, 4) }));
     string argumentChannels[7] = {"#0", "ADD:1(2:8, #1)", "#2", "#3", "#4", "#5", "#8"};
 
     // create expression objects
@@ -850,11 +850,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 2), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(10, 4), new IntDataType(), new DoubleDataType(),
-        new DoubleDataType(), new DoubleDataType(), new DoubleDataType(), new Decimal64DataType(10, 4), new DoubleDataType(),
-                                                        new Decimal128DataType(4, 4) }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(5, 2), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(10, 4), new IntDataType(), new DoubleDataType(),
+                                                    new DoubleDataType(), new DoubleDataType(), new DoubleDataType(), new Decimal64DataType(10, 4), new DoubleDataType(),
+                                                    new Decimal128DataType(4, 4) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -892,9 +892,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -935,9 +935,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-                                                        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     // create expression objects
@@ -956,11 +956,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-                                                        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new IntDataType(),
-                                                        new Date32DataType(DAY), new Date32DataType(MILLI), new LongDataType(),
-                                                        new Decimal64DataType(1, 1), new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new IntDataType(),
+                                                    new Date32DataType(DAY), new Date32DataType(MILLI), new LongDataType(),
+                                                    new Decimal64DataType(1, 1), new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1000,9 +1000,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1043,9 +1043,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-                                                        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(#3, 2:2)", "#4", "#5", "#7", "#8"};
 
     Parser parser;
@@ -1063,11 +1063,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new IntDataType(),
-                                                        new Date32DataType(omniruntime::vec::DAY), new Date32DataType(omniruntime::vec::MILLI), new LongDataType(),
-                                                        new Decimal64DataType(1, 1), new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new IntDataType(),
+                                                    new Date32DataType(omniruntime::vec::DAY), new Date32DataType(omniruntime::vec::MILLI), new LongDataType(),
+                                                    new Decimal64DataType(1, 1), new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1107,9 +1107,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     using namespace omniruntime::expressions;
 
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1150,8 +1150,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
     string argumentChannels[8] = {"#0", "#1", "SUBTRACT:8(#2, 2:8)", "#3", "#4", "#5", "#7", "#8"};
     Parser parser;
     std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes);
@@ -1168,10 +1168,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-                                                        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new IntDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new IntDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1209,9 +1209,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     using namespace omniruntime::op;
     using namespace omniruntime::expressions;
     // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(DAY),
-                                                        new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(DAY),
+                                                    new Date32DataType(MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1259,8 +1259,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
-        new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType(), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     string argumentChannels[5] = {"ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     Parser parser;
@@ -1278,10 +1278,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
-                                                        new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
-                                                        new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new LongDataType(), new LongDataType(),
-        new LongDataType(), new LongDataType(), new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({new IntDataType(), new Date32DataType(omniruntime::vec::DAY),
+                                                    new Date32DataType(omniruntime::vec::MILLI), new LongDataType(), new Decimal64DataType(1, 1), new DoubleDataType(),
+                                                    new BooleanDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2), new LongDataType(), new LongDataType(), new LongDataType(),
+                                                    new LongDataType(), new LongDataType(), new DoubleDataType(), new VarcharDataType(3), new Decimal128DataType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1321,7 +1321,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
 
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new VarcharDataType(20), new VarcharDataType(20), new LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(20), new VarcharDataType(20), new LongDataType() }));
     std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
                                        "apple", "orange", "banana", "apple"};
     std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01", "2020-12-01",
@@ -1346,7 +1346,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     std::vector<Expr *> argumentChannelsExprs;
     argumentChannelsExprs.push_back(new FieldExpr(2, new LongDataType()));
 
@@ -1363,7 +1363,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypeRawPtr>({ new VarcharDataType(20), new VarcharDataType(20), new LongDataType(), new LongDataType() }));
+        std::vector<DataTypePtr>({new VarcharDataType(20), new VarcharDataType(20), new LongDataType(), new LongDataType() }));
     std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
                                          "banana", "banana", "banana", "orange"};
     std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
@@ -1390,7 +1390,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
 
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>(
+    DataTypes sourceTypes(std::vector<DataTypePtr>(
         { new VarcharDataType(20), new VarcharDataType(20), new LongDataType(), new IntDataType(), new IntDataType() }));
     std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
                                    "apple", "orange", "banana", "apple"};
@@ -1418,7 +1418,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     std::vector<Expr *> argumentChannelsExprs;
     argumentChannelsExprs.push_back(new FieldExpr(2, new LongDataType()));
 
@@ -1434,7 +1434,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypeRawPtr>(
+    DataTypes expectTypes(std::vector<DataTypePtr>(
         { new VarcharDataType(20), new VarcharDataType(20), new LongDataType(), new IntDataType(), new IntDataType(), new LongDataType() }));
     std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
                                          "banana", "banana", "banana", "orange"};
@@ -1464,7 +1464,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
 
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new VarcharDataType(20), new VarcharDataType(20), new LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(20), new VarcharDataType(20), new LongDataType() }));
     std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
                                        "apple", "orange", "banana", "apple"};
     std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01", "2020-12-01",
@@ -1489,7 +1489,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({new LongDataType() }));
     std::vector<Expr *> argumentChannelsExprs;
     argumentChannelsExprs.push_back(new FieldExpr(2, new LongDataType()));
 
@@ -1506,7 +1506,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypeRawPtr>({ new VarcharDataType(20), new VarcharDataType(20), new LongDataType(), new LongDataType() }));
+        std::vector<DataTypePtr>({new VarcharDataType(20), new VarcharDataType(20), new LongDataType(), new LongDataType() }));
     std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
                                          "banana", "banana", "banana", "orange"};
     std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",

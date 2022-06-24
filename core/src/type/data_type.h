@@ -271,9 +271,6 @@ public:
         return type;
     }
 
-//private:
-//    const static int32_t DEFAULT_PRECISION = 19;
-//    const static int32_t DEFAULT_SCALE = 0;
 };
 
 class Decimal128DataType : public DecimalDataType {
@@ -291,9 +288,6 @@ public:
         return type;
     }
 
-//private:
-//    const static int32_t DEFAULT_PRECISION = 38;
-//    const static int32_t DEFAULT_SCALE = 0;
 };
 
 class DateDataType : public DataType {
@@ -436,7 +430,7 @@ public:
         return fieldTypes;
     }
 
-    const DataTypePtr &GetFieldType(int32_t index)
+    const DataTypePtr &GetFieldType(int32_t index) const
     {
         return fieldTypes[index];
     }
@@ -446,13 +440,12 @@ public:
         return fieldTypes.size();
     }
 
-    std::vector<int32_t> GetIds() const
+    void GetIds(std::vector<int32_t> &ids) const
     {
-        std::vector<int32_t> ids(fieldTypes.size());
+        ids.reserve(fieldTypes.size());
         for (const auto & fieldType : fieldTypes) {
             ids.push_back(fieldType->GetId());
         }
-        return ids;
     }
 
     ContainerDataType &operator = (const DataType &right) override
@@ -546,8 +539,6 @@ public:
         return type;
     }
 
-private:
-    const static int32_t MAX_WIDTH = 65536;
 };
 } // namespace type
 } // namespace omniruntime

@@ -15,11 +15,11 @@ namespace omniruntime {
 namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
-    HashBuilderOperatorFactory(const type::DataTypes &buildTypes, const int32_t *buildHashCols,
+    HashBuilderOperatorFactory(ContainerDataTypePtr buildTypes, const int32_t *buildHashCols,
         int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     int32_t Init();
     ~HashBuilderOperatorFactory() override;
-    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const type::DataTypes &dataTypes,
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(ContainerDataTypePtr &dataTypes,
         const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
     JoinHashTables *GetHashTables() const
@@ -28,7 +28,7 @@ public:
     }
 
 private:
-    std::unique_ptr<type::DataTypes> buildTypes;
+    ContainerDataTypePtr buildTypes;
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
     int32_t hashTableCount;
@@ -37,8 +37,8 @@ private:
 
 class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(const type::DataTypes &buildTypes, std::vector<int32_t> &buildHashCols,
-        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
+    HashBuilderOperator(ContainerDataTypePtr buildTypes, std::vector<int32_t> &buildHashCols,
+        JoinHashTables *hashTables, int32_t partitionIndex, std::shared_ptr<PagesIndex> &pagesIndex);
 
     ~HashBuilderOperator() override;
 
@@ -49,11 +49,11 @@ public:
     OmniStatus Close() override;
 
 private:
-    const type::DataTypes &buildTypes;
+    ContainerDataTypePtr buildTypes;
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
     int32_t partitionIndex;
-    std::unique_ptr<PagesIndex> pagesIndex;
+    std::shared_ptr<PagesIndex> pagesIndex;
 };
 } // end of op
 } // end of omniruntime

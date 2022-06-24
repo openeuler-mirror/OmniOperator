@@ -53,7 +53,7 @@ public:
     explicit RowProjection(const omniruntime::expressions::Expr &expression);
     ~RowProjection();
     RowProjFunc Create();
-    DataTypeRawPtr GetReturnType();
+    DataTypePtr GetReturnType();
     bool IsColumnProjection();
     int GetIndexIfColumnProjection();
 

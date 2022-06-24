@@ -21,7 +21,7 @@ VectorBatch *CreateInput(VectorAllocator *vectorAllocator, const int32_t numRows
     const int32_t *inputTypeIds, int64_t *allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
-    vector<omniruntime::type::DataTypeRawPtr> inputTypes;
+    vector<omniruntime::type::DataTypePtr> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     vecBatch->NewVectors(vectorAllocator, inputTypes);
     for (int i = 0; i < numCols; ++i) {

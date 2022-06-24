@@ -17,12 +17,12 @@ namespace op {
  */
 class SumFinalDecimalAggregator : public Aggregator {
 public:
-    SumFinalDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel)
+    SumFinalDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumFinalDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel, bool inputRaw,
-        bool outputPartial)
+    SumFinalDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel, bool inputRaw,
+                              bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 

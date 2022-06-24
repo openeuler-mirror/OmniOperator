@@ -66,12 +66,12 @@ public:
         return realAggregator->GetType();
     }
 
-    DataTypeRawPtr GetInputType() const override
+    DataTypePtr GetInputType() const override
     {
         return realAggregator->GetInputType();
     }
 
-    DataTypeRawPtr GetOutputType() const override
+    DataTypePtr GetOutputType() const override
     {
         return realAggregator->GetOutputType();
     }

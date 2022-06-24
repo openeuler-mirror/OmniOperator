@@ -20,8 +20,8 @@ using namespace omniruntime::vec;
 
 using ColumnIndex = struct ColumnIndex {
     int32_t idx;
-    DataTypeRawPtr input;
-    DataTypeRawPtr output;
+    DataTypePtr input;
+    DataTypePtr output;
 };
 
 using AggregateState = union AggregateState {
@@ -69,8 +69,8 @@ public:
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
      *            */
-    Aggregator(FunctionType aggregateType, DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false)
+    Aggregator(FunctionType aggregateType, DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+               bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
           inputType(inputType),
           outputType(outputType),
@@ -107,12 +107,12 @@ public:
         return type;
     }
 
-    virtual DataTypeRawPtr GetInputType() const
+    virtual DataTypePtr GetInputType() const
     {
         return inputType;
     }
 
-    virtual DataTypeRawPtr GetOutputType() const
+    virtual DataTypePtr GetOutputType() const
     {
         return outputType;
     }
@@ -133,8 +133,8 @@ public:
 
 protected:
     FunctionType type;
-    DataTypeRawPtr inputType;
-    DataTypeRawPtr outputType;
+    DataTypePtr inputType;
+    DataTypePtr outputType;
     bool inputRaw;
     bool outputPartial;
     int32_t channel;

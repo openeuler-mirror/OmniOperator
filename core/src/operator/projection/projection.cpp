@@ -43,7 +43,7 @@ RowProjFunc RowProjection::Create()
 }
 
 // Return INVALIDDATAD if expression is unsupported
-DataTypeRawPtr RowProjection::GetReturnType()
+DataTypePtr RowProjection::GetReturnType()
 {
     if (this->expression == nullptr) {
         return new InvalidDataType() ;

@@ -78,8 +78,8 @@ void RowNumberFunction::RankingProcessRow(Vector *column, int32_t index, bool ne
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-    DataTypeRawPtr inputType, DataTypeRawPtr outputType, VectorAllocator *allocator,
-    std::unique_ptr<WindowFrameInfo> frame)
+                                                 DataTypePtr inputType, DataTypePtr outputType, VectorAllocator *allocator,
+                                                 std::unique_ptr<WindowFrameInfo> frame)
     : WindowFunction(std::move(frame)),
       windowIndex(nullptr),
       argumentChannels(argumentChannels),

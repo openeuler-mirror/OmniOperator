@@ -11,14 +11,14 @@ using namespace omniruntime::expressions;
 
 namespace omniruntime {
 namespace op {
-void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputTypes,
+void OperatorUtil::CreateProjectFuncs(const ContainerDataTypePtr &inputTypes,
     std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-    std::vector<omniruntime::type::DataTypeRawPtr> &newInputTypes,
+    std::vector<omniruntime::type::DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
     std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
 {
-    newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
-    int32_t inputTypesCount = inputTypes.GetSize();
+    newInputTypes.insert(newInputTypes.end(), inputTypes->GetFieldTypes().begin(), inputTypes->GetFieldTypes().end());
+    int32_t inputTypesCount = inputTypes->GetSize();
     for (int32_t i = 0; i < projectKeysCount; i++) {
         auto rowProjection = std::make_unique<RowProjection>(*(projectKeys[i]));
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
@@ -28,19 +28,19 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::type::DataTypes &inputT
             projectCols.push_back(inputTypesCount + projectFuncs.size());
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
-            DataTypeRawPtr returnType = rowProjection->GetReturnType();
+            DataTypePtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
     }
 }
 
-void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
-    omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypeRawPtr> &newInputTypes,
+void OperatorUtil::CreateRequiredProjectFuncs(ContainerDataTypePtr &inputTypes,
+    omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
     std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs)
 {
-    std::vector<DataTypeRawPtr> inputTypeVec = inputTypes.Get();
+    std::vector<DataTypePtr> inputTypeVec = inputTypes->GetFieldTypes();
     int32_t newProjectCol = 0;
     std::map<int32_t, int32_t> colIdMap;
     for (int32_t i = 0; i < projectKeysCount; i++) {
@@ -62,7 +62,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
             allCols.push_back(newProjectCol++);
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
-            DataTypeRawPtr returnType = rowProjection->GetReturnType();
+            DataTypePtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
@@ -94,8 +94,8 @@ static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *val
     return result;
 }
 
-static VarcharVector *ProjectVarcharVector(DataTypeRawPtr type, const RowProjFunc func, int64_t *valuesAddresses,
-    int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
+static VarcharVector *ProjectVarcharVector(DataTypePtr type, const RowProjFunc func, int64_t *valuesAddresses,
+                                           int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
 {
     VarcharVector *result = new VarcharVector(allocator, type->GetWidth() * rowCount, rowCount);
 
@@ -126,7 +126,7 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
     const int32_t *typeIds = newInputTypes.GetIds();
-    std::vector<DataTypeRawPtr> dataTypes = newInputTypes.Get();
+    std::vector<DataTypePtr> dataTypes = newInputTypes.Get();
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
         // skip the project key which is not expression
@@ -171,14 +171,14 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
     }
 }
 
-void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+void OperatorUtil::ProjectRequiredVectors(const ContainerDataType &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
     const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
     int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator)
 {
     int32_t projectColsCount = projectCols.size();
     int32_t projectFuncsIndex = 0;
-    const int32_t *typeIds = newInputTypes.GetIds();
-    std::vector<DataTypeRawPtr> dataTypes = newInputTypes.Get();
+    std::vector<int32_t> typeIds = newInputTypes.GetIds();
+    std::vector<DataTypePtr> dataTypes = newInputTypes.GetFieldTypes();
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
         // skip the project key which is not expression
@@ -218,7 +218,7 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
     }
 }
 
-VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
+VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataTypePtr &inputTypes,
     const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator)
 {
     int32_t projectFuncsCount = projectFuncs.size();
@@ -255,7 +255,7 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const Data
     return newInputVecBatch;
 }
 
-VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
+VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, const ContainerDataType &inputTypes,
     const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator)
 {
     int32_t vecCount = projectCols.size();

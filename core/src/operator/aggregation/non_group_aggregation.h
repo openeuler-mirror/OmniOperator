@@ -55,7 +55,7 @@ private:
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<uint32_t> aggInputColsVector;
     omniruntime::type::DataTypes aggOutputTypes;
-    std::vector<omniruntime::type::DataTypeRawPtr> aggInputTypes;
+    std::vector<omniruntime::type::DataTypePtr> aggInputTypes;
     std::vector<int32_t> aggInputCols;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };

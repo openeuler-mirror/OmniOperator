@@ -40,7 +40,7 @@ void JoinResultBuilder::JoinFilterCodeGen()
 {
     Parser parser;
     if (!filterExpStr.empty()) {
-        std::vector<DataTypeRawPtr> allTypes;
+        std::vector<DataTypePtr> allTypes;
         allTypes.insert(allTypes.end(), leftTableOutputTypes.Get().begin(), leftTableOutputTypes.Get().end());
         allTypes.insert(allTypes.end(), rightTableOutputTypes.Get().begin(), rightTableOutputTypes.Get().end());
         DataTypes dataTypes(allTypes);
@@ -56,13 +56,13 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
-    std::vector<DataTypeRawPtr> allTypes;
+    std::vector<DataTypePtr> allTypes;
     allTypes.reserve(outputColCount);
-    std::vector<DataTypeRawPtr> leftTypes = leftTableOutputTypes.Get();
+    std::vector<DataTypePtr> leftTypes = leftTableOutputTypes.Get();
     for (int idx = 0; idx < leftTableOutputColsCount; idx++) {
         allTypes.push_back(leftTypes.at(leftTableOutputCols[idx]));
     }
-    std::vector<DataTypeRawPtr> rightTypes = rightTableOutputTypes.Get();
+    std::vector<DataTypePtr> rightTypes = rightTableOutputTypes.Get();
     for (int idx = 0; idx < rightTableOutputColsCount; idx++) {
         allTypes.push_back(rightTypes.at(rightTableOutputCols[idx]));
     }

@@ -22,8 +22,8 @@ public:
      * @param outputPartial
      * @return
      */
-    virtual std::unique_ptr<Aggregator> CreateAggregator(DataTypeRawPtr inputType, DataTypeRawPtr outputType,
-        int32_t channel, bool inputRaw = true, bool outputPartial = false) = 0;
+    virtual std::unique_ptr<Aggregator> CreateAggregator(DataTypePtr inputType, DataTypePtr outputType,
+                                                         int32_t channel, bool inputRaw = true, bool outputPartial = false) = 0;
 };
 
 
@@ -31,8 +31,8 @@ class SumAggregatorFactory : public AggregatorFactory {
 public:
     SumAggregatorFactory() {}
     ~SumAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+                                                 bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType->GetId();
         switch (inputTypeId) {
@@ -83,8 +83,8 @@ class AverageAggregatorFactory : public AggregatorFactory {
 public:
     AverageAggregatorFactory() {}
     ~AverageAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+                                                 bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType->GetId();
         // TODO add a param to represent engine type or
@@ -123,8 +123,8 @@ class MinAggregatorFactory : public AggregatorFactory {
 public:
     MinAggregatorFactory() {}
     ~MinAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+                                                 bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType->GetId();
         auto outputTypeId = outputType->GetId();
@@ -184,8 +184,8 @@ class MaxAggregatorFactory : public AggregatorFactory {
 public:
     MaxAggregatorFactory() {}
     ~MaxAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+                                                 bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType->GetId();
         auto outputTypeId = outputType->GetId();
@@ -245,8 +245,8 @@ class CountColumnAggregatorFactory : public AggregatorFactory {
 public:
     CountColumnAggregatorFactory() {}
     ~CountColumnAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+                                                 bool inputRaw = true, bool outputPartial = false) override
     {
         return std::make_unique<CountColumnAggregator>(outputType, channel, inputRaw, outputPartial);
     }
@@ -256,8 +256,8 @@ class CountAllAggregatorFactory : public AggregatorFactory {
 public:
     CountAllAggregatorFactory() {}
     ~CountAllAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType, int32_t channel,
+                                                 bool inputRaw = true, bool outputPartial = false) override
     {
         return std::make_unique<CountAllAggregator>(outputType, inputRaw, outputPartial);
     }
@@ -267,8 +267,8 @@ template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
     MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
     ~MaskAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypeRawPtr inputType, const DataTypeRawPtr outputType,
-        int32_t inputChannel, bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypePtr inputType, const DataTypePtr outputType,
+                                                 int32_t inputChannel, bool inputRaw = true, bool outputPartial = false) override
     {
         std::unique_ptr<Aggregator> realAggregator =
             realFactory->CreateAggregator(inputType, outputType, inputChannel, inputRaw, outputPartial);

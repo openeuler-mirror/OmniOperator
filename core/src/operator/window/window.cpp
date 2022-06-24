@@ -211,7 +211,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
-    std::vector<DataTypeRawPtr> finalOutputTypes;
+    std::vector<DataTypePtr> finalOutputTypes;
     finalOutputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
         finalOutputTypes.push_back(allTypes.Get()[finalOutputCols[colIdx]]);
@@ -232,7 +232,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 }
 
 void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-    std::vector<type::DataTypeRawPtr> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
+                                 std::vector<type::DataTypePtr> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
@@ -260,8 +260,8 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     }
 }
 
-void WindowOperator::InitResultVectors(const std::vector<DataTypeRawPtr> &outputTypesField, VectorBatch *&vecBatchField,
-    const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const
+void WindowOperator::InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
+                                       const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const
 {
     for (int colIndex = outputColsCountField; colIndex < finalOutputColsCountField; ++colIndex) {
         auto type = outputTypesField[colIndex];
@@ -310,14 +310,12 @@ void WindowOperator::Initialization()
     pagesIndex->Prepare();
 
     // right now we assume the pregroup and presort are null
-    preGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), preGroupedCols.data(), preGroupedCount);
-    unGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), partitionCols.data(), partitionCount);
+    preGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(), preGroupedCols.data(), preGroupedCount);
+    unGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(), partitionCols.data(), partitionCount);
     preSortedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), preGroupedCols.data(), preGroupedCount);
+         preGroupedCols.data(), preGroupedCount);
     peerGroupHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), originSortCols.data(), originSortColCount);
+         originSortCols.data(), originSortColCount);
 }
 
 void WindowOperator::FinishPagesIndex()

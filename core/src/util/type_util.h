@@ -37,23 +37,23 @@ public:
     static bool IsDecimalType(omniruntime::type::DataTypeId type);
 };
 
-std::unique_ptr<omniruntime::type::DataType> IntType();
+std::shared_ptr<omniruntime::type::DataType> IntType();
 
-std::unique_ptr<omniruntime::type::DataType> Date32Type();
+std::shared_ptr<omniruntime::type::DataType> Date32Type();
 
-std::unique_ptr<omniruntime::type::DataType> LongType();
+std::shared_ptr<omniruntime::type::DataType> LongType();
 
-std::unique_ptr<omniruntime::type::DataType> DoubleType();
+std::shared_ptr<omniruntime::type::DataType> DoubleType();
 
-std::unique_ptr<omniruntime::type::DataType> BooleanType();
+std::shared_ptr<omniruntime::type::DataType> BooleanType();
 
-std::unique_ptr<omniruntime::type::DataType> VarcharType();
+std::shared_ptr<omniruntime::type::DataType> VarcharType();
 
-std::unique_ptr<omniruntime::type::DataType> VarcharType(int32_t width);
+std::shared_ptr<omniruntime::type::DataType> VarcharType(int32_t width);
 
-std::unique_ptr<omniruntime::type::DataType> CharType(int32_t width);
+std::shared_ptr<omniruntime::type::DataType> CharType(int32_t width);
 
-std::unique_ptr<omniruntime::type::DataType> Decimal64Type(int32_t precision, int32_t scale);
+std::shared_ptr<omniruntime::type::DataType> Decimal64Type(int32_t precision, int32_t scale);
 
-std::unique_ptr<omniruntime::type::DataType> Decimal128Type(int32_t precision, int32_t scale);
+std::shared_ptr<omniruntime::type::DataType> Decimal128Type(int32_t precision, int32_t scale);
 #endif // OMNI_RUNTIME_TYPE_INFER_H

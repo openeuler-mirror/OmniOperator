@@ -23,7 +23,7 @@ StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const
     int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter)
     : joinType(joinType), filter(filter), smjOperator(new SortMergeJoinOperator(joinType, filter))
 {
-    std::vector<DataTypeRawPtr> newBuildTypes;
+    std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(streamedTypes, streamedKeyExprCols, streamedKeyExprColsCnt, newBuildTypes,
         rowProjections, streamedKeyCols, projectFuncs);
     this->streamedTypes = std::make_unique<type::DataTypes>(newBuildTypes);
@@ -101,7 +101,7 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
     : streamTblWithExprOperatorFactory(
     reinterpret_cast<StreamedTableWithExprOperatorFactory *>(streamedTableFactoryAddr))
 {
-    std::vector<DataTypeRawPtr> newBuildTypes;
+    std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(bufferedTypes, bufferedKeyExprCols, bufferedKeyExprCnt, newBuildTypes,
         rowProjections, bufferedKeyCols, projectFuncs);
     this->bufferedTypes = std::make_unique<type::DataTypes>(newBuildTypes);

@@ -8,7 +8,7 @@
 using namespace omniruntime::vec;
 
 namespace VectorBatchTest {
-void VectorBatchTestInitDataTypes(std::vector<DataTypeRawPtr> &types)
+void VectorBatchTestInitDataTypes(std::vector<DataTypePtr> &types)
 {
     types.push_back(new IntDataType);
     types.push_back(new DoubleDataType);
@@ -41,7 +41,7 @@ TEST(VectorBatch, constructVectorBatchWithVectorCount)
 
 TEST(VectorBatch, constructVectorBatchWithTypes)
 {
-    std::vector<DataTypeRawPtr> types;
+    std::vector<DataTypePtr> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     VectorAllocator *allocator =
@@ -57,7 +57,7 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
 
 TEST(VectorBatch, getVectorCount)
 {
-    std::vector<DataTypeRawPtr> types;
+    std::vector<DataTypePtr> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorCount");
@@ -72,7 +72,7 @@ TEST(VectorBatch, getVectorCount)
 
 TEST(VectorBatch, getVectorTypes)
 {
-    std::vector<DataTypeRawPtr> types;
+    std::vector<DataTypePtr> types;
     VectorBatchTestInitDataTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(5, 1024);
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorTypes");

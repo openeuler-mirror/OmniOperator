@@ -93,7 +93,7 @@ private:
     int64_t totalRowCount;
     int64_t remainingRowCount;
     std::vector<int32_t> outputCols;
-    std::vector<omniruntime::type::DataTypeRawPtr> outputTypes;
+    std::vector<omniruntime::type::DataTypePtr> outputTypes;
     int32_t maxRowCountPerVecBatch;
     std::vector<VectorBatchWriter *> writers;
     std::vector<VectorBatchReader *> readers;

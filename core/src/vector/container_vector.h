@@ -22,7 +22,7 @@ class ContainerVector : public Vector {
 
 public:
     ContainerVector(VectorAllocator *allocator, int32_t positionCount, std::vector<uintptr_t> &fieldVectors,
-        int32_t vectorCount, std::vector<DataTypeRawPtr> &dataTypes);
+        int32_t vectorCount, std::vector<DataTypePtr> &dataTypes);
 
     ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount);
 
@@ -48,7 +48,7 @@ public:
         return vectorCount;
     }
 
-    std::vector<DataTypeRawPtr> ALWAYS_INLINE &GetDataTypes()
+    std::vector<DataTypePtr> ALWAYS_INLINE &GetDataTypes()
     {
         return dataTypes;
     }
@@ -68,14 +68,14 @@ public:
         return OMNI_VEC_ENCODING_CONTAINER;
     }
 
-    void SetDataTypes(const std::vector<DataTypeRawPtr> &dataTypes)
+    void SetDataTypes(const std::vector<DataTypePtr> &dataTypes)
     {
         this->dataTypes = dataTypes;
     }
 
 private:
     static const int BYTES = sizeof(T);
-    std::vector<DataTypeRawPtr> dataTypes;
+    std::vector<DataTypePtr> dataTypes;
     int32_t vectorCount;
     int32_t positionCount;
 

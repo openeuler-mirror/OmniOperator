@@ -10,14 +10,14 @@
 
 namespace omniruntime {
 namespace op {
-HashBuilderOperatorFactory::HashBuilderOperatorFactory(const type::DataTypes &buildTypes, const int32_t *buildHashCols,
+HashBuilderOperatorFactory::HashBuilderOperatorFactory(ContainerDataTypePtr buildTypes, const int32_t *buildHashCols,
     int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount)
     : hashTableCount(operatorCount), operatorIndex(0)
 {
-    this->buildTypes = std::make_unique<type::DataTypes>(buildTypes);
+    this->buildTypes = std::move(buildTypes);
     this->buildHashCols.insert(this->buildHashCols.end(), buildHashCols, buildHashCols + buildHashColsCount);
     this->hashTables = new JoinHashTables(operatorCount);
-    this->hashTables->SetBuildTypes(this->buildTypes.get());
+    this->hashTables->SetBuildTypes(this->buildTypes);
     this->hashTables->SetFilterExpression(filterExpr);
 }
 
@@ -27,7 +27,7 @@ HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
-    const type::DataTypes &dataTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr,
+    ContainerDataTypePtr &dataTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr,
     int32_t operatorCount)
 {
     return new HashBuilderOperatorFactory(dataTypes, buildHashCols, buildHashColsCount, filterExpr, operatorCount);
@@ -35,15 +35,14 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
 {
-    type::DataTypes &buildTypesRef = *(buildTypes.get());
-    std::unique_ptr<PagesIndex> pagesIndex = std::make_unique<PagesIndex>(buildTypesRef);
+    std::shared_ptr<PagesIndex> pagesIndex = std::make_shared<PagesIndex>(buildTypes);
     int32_t partitionIndex = operatorIndex++ % hashTables->GetHashTableCount();
 
-    return new HashBuilderOperator(buildTypesRef, buildHashCols, hashTables, partitionIndex, pagesIndex);
+    return new HashBuilderOperator(buildTypes, buildHashCols, hashTables, partitionIndex, pagesIndex);
 }
 
-HashBuilderOperator::HashBuilderOperator(const type::DataTypes &buildTypes, std::vector<int32_t> &buildHashCols,
-    JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex)
+HashBuilderOperator::HashBuilderOperator(ContainerDataTypePtr buildTypes, std::vector<int32_t> &buildHashCols,
+    JoinHashTables *hashTables, int32_t partitionIndex, std::shared_ptr<PagesIndex> &pagesIndex)
     : buildTypes(buildTypes),
       buildHashCols(buildHashCols),
       hashTables(hashTables),
@@ -68,7 +67,7 @@ int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch
     pagesIndex->Prepare();
 
     // build JoinHashTable
-    auto pagesHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(), buildTypes.GetIds(), buildTypes.GetSize(),
+    auto pagesHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(), *buildTypes,
         buildHashCols.data(), buildHashCols.size());
     auto joinHashTable =
         new JoinHashTable(pagesHashStrategy, pagesIndex->GetValueAddresses(), pagesIndex->GetRowCount());

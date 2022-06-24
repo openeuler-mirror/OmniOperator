@@ -45,52 +45,57 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
     }
 }
 
-std::unique_ptr<DataType> IntType()
+std::shared_ptr<DataType> NoneType()
 {
-    return std::make_unique<IntDataType>();
+    return NoneDataType::Instance();
 }
 
-std::unique_ptr<DataType> Date32Type()
+std::shared_ptr<DataType> IntType()
 {
-    return std::make_unique<Date32DataType>();
+    return IntDataType::Instance();
 }
 
-std::unique_ptr<DataType> LongType()
+std::shared_ptr<DataType> Date32Type()
 {
-    return std::make_unique<LongDataType>();
+    return Date32DataType::Instance();
 }
 
-std::unique_ptr<DataType> DoubleType()
+std::shared_ptr<DataType> LongType()
 {
-    return std::make_unique<DoubleDataType>();
+    return LongDataType::Instance();
 }
 
-std::unique_ptr<DataType> BooleanType()
+std::shared_ptr<DataType> DoubleType()
 {
-    return std::make_unique<DataType>(OMNI_BOOLEAN);
+    return DoubleDataType::Instance();
 }
 
-std::unique_ptr<DataType> VarcharType()
+std::shared_ptr<DataType> BooleanType()
 {
-    return std::make_unique<VarcharDataType>(INT_MAX);
+    return BooleanDataType::Instance();
 }
 
-std::unique_ptr<DataType> VarcharType(int32_t width)
+std::shared_ptr<DataType> VarcharType()
 {
-    return std::make_unique<VarcharDataType>(width);
+    return std::make_shared<VarcharDataType>(INT_MAX);
 }
 
-std::unique_ptr<DataType> CharType(int32_t width)
+std::shared_ptr<DataType> VarcharType(int32_t width)
 {
-    return std::make_unique<CharDataType>(width);
+    return std::make_shared<VarcharDataType>(width);
 }
 
-std::unique_ptr<DataType> Decimal64Type(int32_t precision, int32_t scale)
+std::shared_ptr<DataType> CharType(int32_t width)
 {
-    return std::make_unique<Decimal64DataType>(precision, scale);
+    return std::make_shared<CharDataType>(width);
 }
 
-std::unique_ptr<DataType> Decimal128Type(int32_t precision, int32_t scale)
+std::shared_ptr<DataType> Decimal64Type(int32_t precision, int32_t scale)
 {
-    return std::make_unique<Decimal128DataType>(precision, scale);
+    return std::make_shared<Decimal64DataType>(precision, scale);
+}
+
+std::shared_ptr<DataType> Decimal128Type(int32_t precision, int32_t scale)
+{
+    return std::make_shared<Decimal128DataType>(precision, scale);
 }

@@ -11,11 +11,11 @@ namespace omniruntime {
 namespace op {
 class CountAllAggregator : public Aggregator {
 public:
-    CountAllAggregator(const DataTypeRawPtr out)
+    CountAllAggregator(const DataTypePtr out)
         : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneDataType::Instance(), out, INVALID_INPUT_COL)
     {}
 
-    CountAllAggregator(const DataTypeRawPtr out, bool inputRaw, bool outputPartial)
+    CountAllAggregator(const DataTypePtr out, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneDataType::Instance(), out, INVALID_INPUT_COL, inputRaw,
         outputPartial)
     {}

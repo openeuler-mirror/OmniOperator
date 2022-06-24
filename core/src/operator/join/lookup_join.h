@@ -22,7 +22,7 @@ public:
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
         const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables);
     ~LookupJoinOperatorFactory() override;
-    static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const type::DataTypes &probeTypes,
+    static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const ContainerDataTypePtr &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
         int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
         int64_t hashBuilderFactoryAddr);

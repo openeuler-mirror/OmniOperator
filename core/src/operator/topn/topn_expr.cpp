@@ -15,7 +15,7 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
     int32_t sortKeyCount)
 {
-    std::vector<DataTypeRawPtr> newSourceTypes;
+    std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
         this->sortCols, this->projectFuncs);
 

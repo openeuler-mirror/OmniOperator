@@ -11,12 +11,12 @@ namespace omniruntime {
 namespace op {
 class AverageDecimalAggregator : public Aggregator {
 public:
-    AverageDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel)
+    AverageDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel)
     {}
 
-    AverageDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel, bool inputRaw,
-        bool outputPartial)
+    AverageDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel, bool inputRaw,
+                             bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
     {}
 

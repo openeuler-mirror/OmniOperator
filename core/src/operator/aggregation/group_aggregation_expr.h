@@ -17,7 +17,7 @@ class HashAggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     HashAggregationWithExprOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &groupByKeys,
         uint32_t groupByNum, const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum,
-        const DataTypes &sourceDataTypes, const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes,
+        ContainerDataTypePtr &sourceDataTypes, ContainerDataTypePtr &aggOutputTypes, uint32_t *aggFuncTypes,
         uint32_t *maskColumns, bool inputRaw, bool outputPartial);
 
     ~HashAggregationWithExprOperatorFactory() override;
@@ -25,9 +25,9 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<type::DataTypes> sourceTypes;
-    std::unique_ptr<type::DataTypes> groupByTypes;
-    std::unique_ptr<type::DataTypes> aggTypes;
+    ContainerDataTypePtr sourceTypes;
+    ContainerDataTypePtr groupByTypes;
+    ContainerDataTypePtr aggTypes;
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -36,7 +36,7 @@ private:
 
 class HashAggregationWithExprOperator : public Operator {
 public:
-    HashAggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
+    HashAggregationWithExprOperator(ContainerDataTypePtr sourceTypes, std::vector<int32_t> &projectCols,
         std::vector<RowProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator);
 
     ~HashAggregationWithExprOperator() override;
@@ -48,7 +48,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::type::DataTypes &sourceTypes;
+    ContainerDataTypePtr sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<RowProjFunc> projectFuncs;
     HashAggregationOperator *hashAggOperator;

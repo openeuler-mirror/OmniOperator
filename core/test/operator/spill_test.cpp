@@ -23,7 +23,7 @@ TEST(SpillTest, TestWriteRead)
     int32_t data1[dataSize] = {3, 5, 7, 9, 1};
     int64_t data2[dataSize] = {8, 4, 0, 2, 6};
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType() }));
     VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     std::string path = TestUtil::GenerateSpillPath();
@@ -54,7 +54,7 @@ TEST(SpillTest, TestSpiller)
     int32_t data1[dataSize] = {-7, -3, 1, 5, 9};
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType() }));
     VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     std::vector<int32_t> sortCols = { 0, 1 };
@@ -98,7 +98,7 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     int32_t data1[dataSize] = {-7, -3, 1, 5, 9};
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new LongDataType() }));
     VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     std::vector<int32_t> sortCols = { 0, 1 };

@@ -12,12 +12,12 @@ namespace omniruntime {
 namespace op {
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel)
+    SumLongDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumLongDecimalAggregator(const DataTypeRawPtr in, const DataTypeRawPtr out, int32_t channel, bool inputRaw,
-        bool outputPartial)
+    SumLongDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel, bool inputRaw,
+                             bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 

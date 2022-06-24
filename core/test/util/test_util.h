@@ -21,10 +21,10 @@
 namespace TestUtil {
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::type::DataTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypeRawPtr> &dataTypes);
-omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataTypeRawPtr type, std::string *values,
+omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
+omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataTypePtr type, std::string *values,
     int32_t length);
-omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataTypeRawPtr dataType, int32_t rowCount,
+omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataTypePtr dataType, int32_t rowCount,
     int32_t *ids, int32_t idsCount, ...);
 omniruntime::vec::ContainerVector *CreateContainerVector(std::vector<omniruntime::vec::DataType> fieldTypes,
     int32_t rowCount, va_list &args);

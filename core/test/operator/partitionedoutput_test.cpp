@@ -17,10 +17,10 @@ namespace PartitionedOutputTest {
 TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
 {
     const int32_t dataSize = 6;
-    DataTypes buildTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new IntDataType(), new IntDataType() }));
+    DataTypes buildTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType(), new IntDataType() }));
     int buildData1[dataSize] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData1, buildData1);
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType() }));
 
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
@@ -47,7 +47,7 @@ TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
 
     int32_t expectData0[dataSize] = {0, 1, 2, 3, 4, 5};
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4, 5};
-    DataTypes expectedTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new IntDataType() }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType() }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData0, expectData1);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
 
@@ -60,10 +60,10 @@ TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
 TEST(PartitionedOutputOperatorTest, TestMultiPartitionedOutput)
 {
     const int32_t dataSize = 7;
-    DataTypes buildTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes buildTypes(std::vector<DataTypePtr>({ IntDataType(), IntDataType(), IntDataType() }));
     int buildData1[dataSize] = { 0, 1, 2, 3, 4, 5, 6 };
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData1, buildData1);
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType(), new IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType(), new IntDataType() }));
 
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
@@ -108,7 +108,7 @@ TEST(PartitionedOutputOperatorTest, TestHashIntPartitionedOutput)
     DataTypes buildTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
     int buildData1[dataSize] = { 0, 1, 2, 3, 4, 5 };
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData1, buildData1);
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new IntDataType() }));
 
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
@@ -134,7 +134,7 @@ TEST(PartitionedOutputOperatorTest, TestHashIntPartitionedOutput)
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6); // 6 row
     int32_t expectData0[dataSize] = { 0, 1, 2, 3, 4, 5 };
-    DataTypes expectedTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ IntDataType() }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData0);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
 
@@ -154,7 +154,7 @@ TEST(PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new VarcharDataType(3) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(3) }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -197,7 +197,7 @@ TEST(PartitionedOutputOperatorTest, TestHashCharPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new CharDataType(3) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new CharDataType(3) }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -244,7 +244,7 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
     VectorBatch *vecBatch = CreateVectorBatch(dataSize, cols);
 
     bool isHashPrecomputed = false;
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new VarcharDataType(3) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new VarcharDataType(3) }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -289,7 +289,7 @@ TEST(PartitionedOutputOperatorTest, TestDecimalPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new Decimal64DataType(2, 0) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new Decimal64DataType(2, 0) }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -332,7 +332,7 @@ TEST(PartitionedOutputOperatorTest, TestDoublePartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new DoubleDataType() }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -375,7 +375,7 @@ TEST(PartitionedOutputOperatorTest, TestBoolPartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new BooleanDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new BooleanDataType() }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -418,7 +418,7 @@ TEST(PartitionedOutputOperatorTest, TestDecimal128PartitionedOutput)
 
     bool isHashPrecomputed = false;
 
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new Decimal128DataType(2, 0) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new Decimal128DataType(2, 0) }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };
@@ -464,12 +464,12 @@ TEST(PartitionedOutputOperatorTest, TestDictionaryPartitionedOutput)
     int32_t ids[] = { 0, 1, 2, 3, 4, 5 };
     VectorBatch *vecBatch = new VectorBatch(2, dataSize);
     for (int32_t i = 0; i < 2; i++) {
-        DataTypeRawPtr dataType = buildTypes.Get()[i];
+        DataTypePtr dataType = buildTypes.Get()[i];
         vecBatch->SetVector(i, CreateDictionaryVector(dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     bool isHashPrecomputed = false;
-    DataTypes sourceTypes(std::vector<DataTypeRawPtr>({ new LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({new LongDataType() }));
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = { 0 };

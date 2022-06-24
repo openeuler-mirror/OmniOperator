@@ -34,9 +34,9 @@ public:
     using CompareFunc = int32_t (*)(omniruntime::vec::Vector *leftVector, int32_t leftPosition,
         omniruntime::vec::Vector *rightVector, int32_t rightPosition);
 
-    static int32_t GetTypeSize(const DataTypeRawPtr dataTypeRawPtr)
+    static int32_t GetTypeSize(const DataTypePtr dataTypePtr)
     {
-        switch (dataTypeRawPtr->GetId()) {
+        switch (dataTypePtr->GetId()) {
             case OMNI_INT:
                 return OperatorUtil::SIZE_OF_INT;
             case OMNI_LONG:
@@ -55,14 +55,14 @@ public:
                 return OperatorUtil::SIZE_OF_DATE32;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                return dataTypeRawPtr->GetWidth();
+                return dataTypePtr->GetWidth();
             default:
                 return 0;
         }
     }
 
-    static int32_t GetOutputRowSize(const std::vector<DataTypeRawPtr> &dataTypes, const int32_t *outputCols,
-        int32_t outputColsCount)
+    static int32_t GetOutputRowSize(const std::vector<DataTypePtr> &dataTypes, const int32_t *outputCols,
+                                    int32_t outputColsCount)
     {
         int32_t rowSize = 0;
         for (int32_t i = 0; i < outputColsCount; i++) {
@@ -71,7 +71,7 @@ public:
         return rowSize;
     }
 
-    static int32_t GetRowSize(const std::vector<DataTypeRawPtr> &dataTypes)
+    static int32_t GetRowSize(const std::vector<DataTypePtr> &dataTypes)
     {
         int32_t rowSize = 0;
         for (const auto &dataType : dataTypes) {
@@ -86,8 +86,8 @@ public:
         return (MAX_VEC_BATCH_SIZE_IN_BYTES + rowSize - 1) / rowSize;
     }
 
-    static int32_t GetMaxRowCount(const std::vector<DataTypeRawPtr> &dataTypes, const int32_t *outputCols,
-        int32_t outputColsCount)
+    static int32_t GetMaxRowCount(const std::vector<DataTypePtr> &dataTypes, const int32_t *outputCols,
+                                  int32_t outputColsCount)
     {
         int32_t rowSize = GetOutputRowSize(dataTypes, outputCols, outputColsCount);
         return GetMaxRowCount(rowSize);
@@ -203,21 +203,21 @@ public:
         }
     }
 
-    static void CreateProjectFuncs(const DataTypes &intputTypes,
-        std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-        std::vector<DataTypeRawPtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
-        std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
+    static void CreateProjectFuncs(const ContainerDataTypePtr &intputTypes,
+                                   std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
+                                   std::vector<DataTypePtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
+                                   std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
 
-    static void CreateRequiredProjectFuncs(const DataTypes &intputTypes, omniruntime::expressions::Expr *projectKeys[],
-        int32_t projectKeysCount, std::vector<DataTypeRawPtr> &newIntputTypes,
+    static void CreateRequiredProjectFuncs(ContainerDataTypePtr &intputTypes, omniruntime::expressions::Expr *projectKeys[],
+        int32_t projectKeysCount, std::vector<DataTypePtr> &newIntputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
         std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 
-    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
+    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataTypePtr &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
         VectorAllocator *allocator);
 
-    static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
+    static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const ContainerDataType &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
         VectorAllocator *allocator);
 
@@ -226,7 +226,7 @@ private:
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 
-    static void ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    static void ProjectRequiredVectors(const ContainerDataType &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 };

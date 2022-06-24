@@ -16,10 +16,10 @@ namespace op {
 class HashBuilderWithExprOperatorFactory : public OperatorFactory {
 public:
     static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(
-        const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+        const ContainerDataTypePtr &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
         int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount);
 
-    HashBuilderWithExprOperatorFactory(const type::DataTypes &buildTypes,
+    HashBuilderWithExprOperatorFactory(const ContainerDataTypePtr &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
         std::string &filter, int32_t hashTableCount);
 
@@ -33,7 +33,7 @@ public:
     }
 
 private:
-    std::unique_ptr<type::DataTypes> buildTypes;
+    ContainerDataTypePtr buildTypes;
     std::vector<int32_t> buildHashCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -42,7 +42,7 @@ private:
 
 class HashBuilderWithExprOperator : public Operator {
 public:
-    HashBuilderWithExprOperator(const type::DataTypes &buildTypes, const std::vector<int32_t> &buildHashCols,
+    HashBuilderWithExprOperator(ContainerDataTypePtr buildTypes, const std::vector<int32_t> &buildHashCols,
         const std::vector<RowProjFunc> &projectFuncs, HashBuilderOperator *hashBuilderOperator);
 
     ~HashBuilderWithExprOperator() override;
@@ -54,7 +54,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::type::DataTypes &buildTypes;
+    const ContainerDataTypePtr buildTypes;
     std::vector<int32_t> buildHashCols;
     std::vector<RowProjFunc> projectFuncs;
     HashBuilderOperator *hashBuilderOperator;
