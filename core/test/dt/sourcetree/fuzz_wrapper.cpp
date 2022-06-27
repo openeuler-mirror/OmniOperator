@@ -114,9 +114,13 @@ void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     op->AddInput(sourceVecBatch);
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
+
+    Expr::DeleteExprs({ eqExpr });
+    Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete vecAllocator;
 }
 
 void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
