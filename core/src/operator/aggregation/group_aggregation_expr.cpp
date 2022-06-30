@@ -14,8 +14,8 @@ using namespace omniruntime::type;
 
 HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
-    const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, ContainerDataTypePtr sourceDataTypes,
-    ContainerDataTypePtr aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial)
+    const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
+    const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial)
 {
     uint32_t aggColNum = aggKeys.size();
     uint32_t projectColNum = groupByNum + aggColNum;
@@ -28,7 +28,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     }
     std::vector<int32_t> hashAggCols;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(*sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
+    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
         this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
 
     uint32_t groupByCols[groupByNum];
@@ -45,13 +45,13 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByTypeVec.push_back(newSourceTypes[groupByCols[i]]);
     }
-    this->groupByTypes = std::make_shared<ContainerDataType>(groupByTypeVec);
+    this->groupByTypes = std::make_unique<DataTypes>(groupByTypeVec);
     std::vector<DataTypePtr> aggTypeVec;
     aggTypeVec.reserve(aggColNum);
     for (uint32_t i = 0; i < aggColNum; i++) {
         aggTypeVec.push_back(newSourceTypes[aggCols[i]]);
     }
-    this->aggTypes = std::make_shared<ContainerDataType>(aggTypeVec);
+    this->aggTypes = std::make_unique<DataTypes>(aggTypeVec);
 
     std::vector<uint32_t> groupByCol =
         std::vector<uint32_t>(static_cast<uint32_t *>(groupByCols), static_cast<uint32_t *>(groupByCols) + groupByNum);
@@ -60,9 +60,9 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<uint32_t> aggFunc = std::vector<uint32_t>(aggFuncTypes, aggFuncTypes + aggNum);
     std::vector<uint32_t> maskColumnContext = std::vector<uint32_t>(maskColumns, maskColumns + aggNum);
 
-    this->sourceTypes = std::make_shared<ContainerDataType>(newSourceTypes);
-    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, groupByTypes, aggCol,
-        aggTypes, aggOutputTypes, aggFunc, maskColumnContext, inputRaw, outputPartial);
+    this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
+    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggCol, *aggTypes,
+        aggOutputTypes, aggFunc, maskColumnContext, inputRaw, outputPartial);
     this->hashAggOperatorFactory->Init();
 }
 
@@ -74,10 +74,10 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    return new HashAggregationWithExprOperator(sourceTypes, projectCols, projectFuncs, hashAggOperator);
+    return new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, hashAggOperator);
 }
 
-HashAggregationWithExprOperator::HashAggregationWithExprOperator(ContainerDataTypePtr sourceTypes,
+HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,
     std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator)
     : sourceTypes(sourceTypes), projectCols(projectCols), projectFuncs(projectFuncs), hashAggOperator(hashAggOperator)
 {}
@@ -90,7 +90,7 @@ HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectRequiredVectors(inputVecBatch, *sourceTypes, projectFuncs, projectCols, vecAllocator);
+        OperatorUtil::ProjectRequiredVectors(inputVecBatch, sourceTypes, projectFuncs, projectCols, vecAllocator);
     hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

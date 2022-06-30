@@ -3,6 +3,7 @@
  */
 
 #include <gtest/gtest.h>
+#include "util/type_util.h"
 #include "vector_common.h"
 
 using namespace omniruntime::vec;
@@ -10,11 +11,11 @@ using namespace omniruntime::vec;
 namespace VectorBatchTest {
 void VectorBatchTestInitDataTypes(std::vector<DataTypePtr> &types)
 {
-    types.push_back(IntDataType::Instance());
-    types.push_back(DoubleDataType::Instance());
-    types.push_back(LongDataType::Instance());
-    types.push_back(DoubleDataType::Instance());
-    types.push_back(ContainerDataType::Instance());
+    types.push_back(IntType());
+    types.push_back(DoubleType());
+    types.push_back(LongType());
+    types.push_back(DoubleType());
+    types.push_back(ContainerType());
 }
 
 TEST(VectorBatch, constructVectorBatchWithVectorCount)

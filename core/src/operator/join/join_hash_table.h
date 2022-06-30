@@ -154,17 +154,17 @@ public:
         return static_cast<uint32_t>(partitionedJoinPosition >> shiftSize);
     }
 
-    void SetBuildTypes(ContainerDataTypePtr buildDataTypes)
+    void SetBuildTypes(DataTypes *buildDataTypes)
     {
         this->buildTypes = buildDataTypes;
     }
 
-    ContainerDataTypePtr GetBuildDataTypes()
+    DataTypes *GetBuildDataTypes()
     {
         return this->buildTypes;
     }
 
-    void SetProbeTypes(ContainerDataTypePtr probeDataTypes)
+    void SetProbeTypes(DataTypes *probeDataTypes)
     {
         this->probeTypes = probeDataTypes;
     }
@@ -204,8 +204,8 @@ private:
     std::atomic_uint32_t hashTableSize;
     uint32_t partitionMask;
     uint32_t shiftSize;
-    ContainerDataTypePtr probeTypes;
-    ContainerDataTypePtr buildTypes;
+    DataTypes *probeTypes;
+    DataTypes *buildTypes;
     std::string filterExpression;
     omniruntime::expressions::Expr *filterExpr = nullptr;
     SimpleFilter *simpleFilter = nullptr;

@@ -68,12 +68,12 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *            */
+     *                */
     Aggregator(FunctionType aggregateType, DataTypePtr inputType, DataTypePtr outputType, int32_t channel,
-               bool inputRaw = true, bool outputPartial = false)
+        bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
-          inputType(inputType),
-          outputType(outputType),
+          inputType(std::move(inputType)),
+          outputType(std::move(outputType)),
           inputRaw(inputRaw),
           outputPartial(outputPartial),
           channel(channel),
@@ -107,12 +107,12 @@ public:
         return type;
     }
 
-    virtual DataTypePtr GetInputType() const
+    virtual const DataTypePtr &GetInputType() const
     {
         return inputType;
     }
 
-    virtual DataTypePtr GetOutputType() const
+    virtual const DataTypePtr &GetOutputType() const
     {
         return outputType;
     }

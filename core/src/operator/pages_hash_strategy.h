@@ -61,8 +61,8 @@ static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::V
  */
 class PagesHashStrategy {
 public:
-    PagesHashStrategy(omniruntime::vec::Vector ***columns, ContainerDataType &buildTypes,
-        int32_t *hashCols, int32_t hashColsCount);
+    PagesHashStrategy(omniruntime::vec::Vector ***columns, const DataTypes &buildTypes, int32_t *hashCols,
+        int32_t hashColsCount);
     ~PagesHashStrategy();
 
     bool IsPositionNull(int32_t pageIndex, int rowIndex) const

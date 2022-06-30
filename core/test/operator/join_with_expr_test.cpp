@@ -52,13 +52,12 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
 {
     // construct input data
     const int32_t dataSize = 4;
-    std::vector<DataTypePtr> buildFieldTypes { LongType(), LongType() };
-    ContainerDataTypePtr buildTypes = std::make_shared<ContainerDataType>(buildFieldTypes);
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     VectorBatch *buildVecBatch = new VectorBatch(2, dataSize);
     buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, dataSize));
-    DataTypePtr dataType = buildTypes->GetFieldType(1);
+    DataTypePtr dataType = buildTypes.GetType(1);
     int32_t ids[] = {0, 1, 2, 3};
     buildVecBatch->SetVector(1, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, buildData1));
 
@@ -74,13 +73,12 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     std::vector<VectorBatch *> hashBuilderOutput;
     hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
 
-    std::vector<DataTypePtr> probeFieldTypes { LongType(), LongType() };
-    ContainerDataTypePtr probeTypes = std::make_shared<ContainerDataType>(probeFieldTypes);
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = new VectorBatch(2, dataSize);
     probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, dataSize));
-    DataTypePtr probeDataType = probeTypes->GetFieldType(1);
+    DataTypePtr probeDataType = probeTypes.GetType(1);
     probeVecBatch->SetVector(1, CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1));
 
     int32_t probeOutputCols[2]= {0, 1};
@@ -89,8 +87,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
-    std::vector<DataTypePtr> outputTypes { LongType(), LongType() };
-    ContainerDataTypePtr buildOutputTypes = std::make_shared<ContainerDataType>(outputTypes);
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
     auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
@@ -108,7 +105,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
             {11, 33},
             {2, 4},
             {11, 33}};
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes->GetSize() + buildOutputColsCount, expectedDataSize,
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     Expr::DeleteExprs(buildHashKeys);
@@ -123,13 +120,12 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 {
     // construct input data
     const int32_t dataSize = 4;
-    std::vector<DataTypePtr> buildFieldTypes { LongType(), LongType() };
-    ContainerDataTypePtr buildTypes = std::make_shared<ContainerDataType>(buildFieldTypes);
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     VectorBatch *buildVecBatch = new VectorBatch(2, dataSize);
     buildVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(buildData0, dataSize));
-    DataTypePtr dataType = buildTypes->GetFieldType(1);
+    DataTypePtr dataType = buildTypes.GetType(1);
     int32_t ids[] = {0, 1, 2, 3};
     buildVecBatch->SetVector(1, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, buildData1));
 
@@ -146,13 +142,12 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     std::vector<VectorBatch *> hashBuilderOutput;
     hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
 
-    std::vector<DataTypePtr> probeFieldTypes { LongType(), LongType() };
-    ContainerDataTypePtr probeTypes = std::make_shared<ContainerDataType>(probeFieldTypes);
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = new VectorBatch(2, dataSize);
     probeVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(probeData0, dataSize));
-    DataTypePtr probeDataType = probeTypes->GetFieldType(1);
+    DataTypePtr probeDataType = probeTypes.GetType(1);
     probeVecBatch->SetVector(1, CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1));
 
     int32_t probeOutputCols[2]= {0, 1};
@@ -162,8 +157,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
-    std::vector<DataTypePtr> outputTypes { LongType(), LongType() };
-    ContainerDataTypePtr buildOutputTypes = std::make_shared<ContainerDataType>(outputTypes);
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
     auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
@@ -181,7 +175,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
             {11, 33},
             {2, 4},
             {11, 33}};
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes->GetSize() + buildOutputColsCount, expectedDataSize,
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     Expr::DeleteExprs(buildHashKeys);

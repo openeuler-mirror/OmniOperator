@@ -17,6 +17,8 @@ SortMergeJoinOperator::SortMergeJoinOperator(JoinType joinType, std::string &fil
 
 SortMergeJoinOperator::~SortMergeJoinOperator()
 {
+    delete streamedTypes;
+    delete bufferedTypes;
     streamedTblPagesIndex->FreeAllRemainingVecBatch();
     bufferedTblPagesIndex->FreeAllRemainingVecBatch();
     delete streamedTblPagesIndex;
@@ -25,18 +27,18 @@ SortMergeJoinOperator::~SortMergeJoinOperator()
     delete joinResultBuilder;
 }
 
-void SortMergeJoinOperator::ConfigStreamedTblInfo(type::ContainerDataTypePtr streamedDataTypes,
+void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streamedDataTypes,
     const std::vector<int32_t> &streamedKeysCols, const std::vector<int32_t> &streamedOutputCols)
 {
-    this->streamedTypes = streamedDataTypes;
+    this->streamedTypes = new DataTypes(streamedDataTypes);
     this->streamedKeysCols = streamedKeysCols;
     this->streamedOutputCols = streamedOutputCols;
 }
 
-void SortMergeJoinOperator::ConfigBufferedTblInfo(type::ContainerDataTypePtr bufferedDataTypes,
+void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &bufferedDataTypes,
     std::vector<int32_t> &bufferedKeysCols, std::vector<int32_t> &bufferedOutputCols)
 {
-    this->bufferedTypes = bufferedDataTypes;
+    this->bufferedTypes = new DataTypes(bufferedDataTypes);
     this->bufferedKeysCols = bufferedKeysCols;
     this->bufferedOutputCols = bufferedOutputCols;
 }
@@ -46,11 +48,11 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder()
     streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes);
     bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes);
 
-    smjScanner = new SortMergeJoinScanner(streamedTypes, streamedKeysCols.data(), streamedKeysCols.size(),
-        streamedTblPagesIndex, bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, false);
+    smjScanner = new SortMergeJoinScanner(*streamedTypes, streamedKeysCols.data(), streamedKeysCols.size(),
+        streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, false);
 
-    joinResultBuilder = new JoinResultBuilder(streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
-        streamedTblPagesIndex, bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
+    joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
+        streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
         bufferedTblPagesIndex, filter, vecAllocator);
 }
 

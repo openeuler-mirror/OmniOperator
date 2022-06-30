@@ -45,6 +45,11 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
     }
 }
 
+std::shared_ptr<DataType> InvalidType()
+{
+    return InvalidDataType::Instance();
+}
+
 std::shared_ptr<DataType> NoneType()
 {
     return NoneDataType::Instance();
@@ -53,6 +58,11 @@ std::shared_ptr<DataType> NoneType()
 std::shared_ptr<DataType> IntType()
 {
     return IntDataType::Instance();
+}
+
+std::shared_ptr<DataType> ShortType()
+{
+    return ShortDataType::Instance();
 }
 
 std::shared_ptr<DataType> Date32Type()
@@ -117,7 +127,7 @@ std::shared_ptr<DataType> VarcharType()
 
 std::shared_ptr<DataType> CharType()
 {
-    return std::make_shared<CharDataType>(MAX_WIDTH);
+    return std::make_shared<CharDataType>(CHAR_MAX_WIDTH);
 }
 
 std::shared_ptr<DataType> VarcharType(int32_t width)
@@ -158,4 +168,19 @@ std::shared_ptr<DataType> ContainerType()
 std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &fieldTypes)
 {
     return std::make_shared<ContainerDataType>(fieldTypes);
+}
+
+std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &&fieldTypes)
+{
+    return std::make_shared<ContainerDataType>(fieldTypes);
+}
+
+std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omniruntime::type::DataTypePtr> &&dataTypes)
+{
+    return std::make_shared<omniruntime::type::DataTypes>(dataTypes);
+}
+
+std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omniruntime::type::DataTypePtr> &dataTypes)
+{
+    return std::make_shared<omniruntime::type::DataTypes>(dataTypes);
 }

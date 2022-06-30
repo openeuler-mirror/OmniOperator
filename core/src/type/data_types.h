@@ -12,8 +12,10 @@ namespace omniruntime {
 namespace type {
 class DataTypes {
 public:
-    explicit DataTypes(std::vector<DataTypePtr> &dataTypes)
-        : dataTypesSize(dataTypes.size()), dataTypes(std::move(dataTypes)), dataTypeIds(nullptr)
+    DataTypes(const DataTypes &types) : DataTypes(types.dataTypes) {}
+
+    explicit DataTypes(const std::vector<DataTypePtr> &dataTypes)
+        : dataTypesSize(dataTypes.size()), dataTypes(dataTypes), dataTypeIds(nullptr)
     {
         InitDataTypeIds();
     }
@@ -37,6 +39,11 @@ public:
     const std::vector<DataTypePtr> &Get() const
     {
         return dataTypes;
+    }
+
+    const DataTypePtr &GetType(int i) const
+    {
+        return dataTypes[i];
     }
 
     const int32_t *GetIds() const
@@ -63,7 +70,6 @@ private:
     std::vector<DataTypePtr> dataTypes;
     int32_t *dataTypeIds;
 };
-using DataTypesPtr = std::shared_ptr<DataTypes>;
 }
 }
 

@@ -36,13 +36,13 @@ VecBatchWithPosition *SpillIterator::Next()
     return new VecBatchWithPosition(vecBatch, position++);
 }
 
-VecBatchWithPositionComparator::VecBatchWithPositionComparator(omniruntime::type::ContainerDataTypePtr sourceTypes,
+VecBatchWithPositionComparator::VecBatchWithPositionComparator(omniruntime::type::DataTypes &sourceTypes,
     std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts)
     : sortCols(sortCols), sortAscendings(sortAscendings), sortNullFirsts(sortNullFirsts)
 {
     auto sortColsCount = sortCols.size();
     for (size_t i = 0; i < sortColsCount; i++) {
-        int32_t sortColTypeId = sourceTypes->GetFieldType(sortCols[i])->GetId();
+        int32_t sortColTypeId = sourceTypes.GetType(sortCols[i])->GetId();
         switch (sortColTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:

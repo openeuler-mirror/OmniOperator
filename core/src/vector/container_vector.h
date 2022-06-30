@@ -15,8 +15,8 @@
  * intermediate count value.
  */
 namespace omniruntime {
-namespace vec {
 using DataType = type::DataType;
+namespace vec {
 class ContainerVector : public Vector {
     using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
 

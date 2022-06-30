@@ -55,14 +55,14 @@ public:
                 return OperatorUtil::SIZE_OF_DATE32;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                return dataTypePtr->GetWidth();
+                return static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
             default:
                 return 0;
         }
     }
 
     static int32_t GetOutputRowSize(const std::vector<DataTypePtr> &dataTypes, const int32_t *outputCols,
-                                    int32_t outputColsCount)
+        int32_t outputColsCount)
     {
         int32_t rowSize = 0;
         for (int32_t i = 0; i < outputColsCount; i++) {
@@ -87,7 +87,7 @@ public:
     }
 
     static int32_t GetMaxRowCount(const std::vector<DataTypePtr> &dataTypes, const int32_t *outputCols,
-                                  int32_t outputColsCount)
+        int32_t outputColsCount)
     {
         int32_t rowSize = GetOutputRowSize(dataTypes, outputCols, outputColsCount);
         return GetMaxRowCount(rowSize);
@@ -203,30 +203,30 @@ public:
         }
     }
 
-    static void CreateProjectFuncs(const ContainerDataType &intputTypes,
-                                   std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-                                   std::vector<DataTypePtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
-                                   std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
+    static void CreateProjectFuncs(const DataTypes &intputTypes,
+        std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
+        std::vector<DataTypePtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
+        std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
 
-    static void CreateRequiredProjectFuncs(const ContainerDataType &intputTypes, omniruntime::expressions::Expr *projectKeys[],
+    static void CreateRequiredProjectFuncs(const DataTypes &intputTypes, omniruntime::expressions::Expr *projectKeys[],
         int32_t projectKeysCount, std::vector<DataTypePtr> &newIntputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
         std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 
-    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const ContainerDataType &inputTypes,
+    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
         VectorAllocator *allocator);
 
-    static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const ContainerDataType &inputTypes,
+    static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
         VectorAllocator *allocator);
 
 private:
-    static void ProjectVectors(const ContainerDataType &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 
-    static void ProjectRequiredVectors(const ContainerDataType &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    static void ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 };

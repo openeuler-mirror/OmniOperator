@@ -10,10 +10,10 @@
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-SortMergeJoinScanner::SortMergeJoinScanner(ContainerDataTypePtr streamedTableKeysTypes, int32_t *streamedTableKeysCols,
-    int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, ContainerDataTypePtr bufferedTableKeysTypes,
+SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
+    int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
     int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch)
-    : streamedTableKeysTypes(std::move(streamedTableKeysTypes)),
+    : streamedTableKeysTypes(streamedTableKeysTypes),
       joinType(joinType),
       streamedTableKeysCols(streamedTableKeysCols),
       bufferedTableKeysCols(bufferedTableKeysCols),
@@ -251,7 +251,7 @@ int32_t SortMergeJoinScanner::CompareRowKeys(int64_t leftRowIndex, DynamicPagesI
     for (int i = 0; i < keyColsCount; ++i) {
         auto streamedColumn = leftPagesIndex->GetColumns(streamedBatchId, leftKeyCols[i]);
         auto bufferedColumn = rightPagesIndex->GetColumns(bufferedBatchId, rightKeyCols[i]);
-        auto com = OperatorUtil::CompareVectorAtPosition(streamedTableKeysTypes->GetFieldType(leftKeyCols[i])->GetId(),
+        auto com = OperatorUtil::CompareVectorAtPosition(streamedTableKeysTypes.GetIds()[leftKeyCols[i]],
             streamedColumn, DecodePosition(leftRowIndex), bufferedColumn, DecodePosition(rightRowIndex));
         if (com != 0) {
             return com;

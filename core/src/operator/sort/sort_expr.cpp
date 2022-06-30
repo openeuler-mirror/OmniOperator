@@ -14,7 +14,7 @@ namespace op {
 using namespace omniruntime::vec;
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-    const type::ContainerDataTypePtr &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortKeysCount)
 {
@@ -25,7 +25,7 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-    const type::ContainerDataTypePtr &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
@@ -34,15 +34,15 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
     return pOperatorFactory;
 }
 
-SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::ContainerDataTypePtr &sourceTypes, int32_t *outputCols,
+SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(*sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,
         this->sortCols, this->projectFuncs);
-    this->sourceTypes = std::make_shared<ContainerDataType>(newSourceTypes);
-    this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(this->sourceTypes, outputCols,
+    this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
+    this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
 }
 
@@ -54,13 +54,13 @@ SortWithExprOperatorFactory::~SortWithExprOperatorFactory()
 Operator *SortWithExprOperatorFactory::CreateOperator()
 {
     auto sortOperator = static_cast<SortOperator *>(sortOperatorFactory->CreateOperator());
-    auto pOperator = new SortWithExprOperator(sourceTypes, sortCols, projectFuncs, sortOperator);
+    auto pOperator = new SortWithExprOperator(*sourceTypes, sortCols, projectFuncs, sortOperator);
     return pOperator;
 }
 
-SortWithExprOperator::SortWithExprOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &sortCols,
+SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<RowProjFunc> &projectFuncs, SortOperator *sortOperator)
-    : sourceTypes(std::move(sourceTypes)), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
+    : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
 {}
 
 SortWithExprOperator::~SortWithExprOperator()
@@ -71,7 +71,7 @@ SortWithExprOperator::~SortWithExprOperator()
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, *sourceTypes, projectFuncs, sortCols, vecAllocator);
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         sortOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);

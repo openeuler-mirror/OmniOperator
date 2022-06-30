@@ -15,9 +15,9 @@ namespace omniruntime {
 namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
-    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, omniruntime::type::ContainerDataTypePtr aggOutputTypes,
-        bool inputRaw, bool outputPartial)
-        : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial), aggOutputTypes(std::move(aggOutputTypes))
+    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs,
+        const omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
+        : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial), aggOutputTypes(aggOutputTypes)
     {
         for (uint32_t i = 0; i < aggregators.size(); i++) {
             aggStates.push_back(AggregateState());
@@ -29,7 +29,7 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
 private:
-    omniruntime::type::ContainerDataTypePtr aggOutputTypes;
+    omniruntime::type::DataTypes aggOutputTypes;
     std::vector<AggregateState> aggStates;
 };
 
@@ -38,14 +38,14 @@ public:
     Operator *CreateOperator() override;
 
 public:
-    AggregationOperatorFactory(omniruntime::type::ContainerDataTypePtr sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
+    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
         std::vector<uint32_t> &aggInputColsVector, std::vector<uint32_t> &maskColsVector,
-        omniruntime::type::ContainerDataTypePtr aggOutputTypes, bool inputRaw, bool outputPartial)
+        omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
         : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsVector),
-          sourceTypes(std::move(sourceTypes)),
+          sourceTypes(sourceTypes),
           aggFuncTypesVector(aggFuncTypesVector),
           aggInputColsVector(aggInputColsVector),
-          aggOutputTypes(std::move(aggOutputTypes))
+          aggOutputTypes(aggOutputTypes)
     {}
 
     ~AggregationOperatorFactory() override {}
@@ -53,10 +53,10 @@ public:
     OmniStatus Close() override;
 
 private:
-    omniruntime::type::ContainerDataTypePtr sourceTypes;
+    omniruntime::type::DataTypes sourceTypes;
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<uint32_t> aggInputColsVector;
-    omniruntime::type::ContainerDataTypePtr aggOutputTypes;
+    omniruntime::type::DataTypes aggOutputTypes;
     std::vector<omniruntime::type::DataTypePtr> aggInputTypes;
     std::vector<int32_t> aggInputCols;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;

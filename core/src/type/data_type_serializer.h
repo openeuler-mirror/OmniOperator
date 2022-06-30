@@ -14,7 +14,7 @@ std::string Serialize(const std::vector<DataTypePtr> &types);
 
 std::string SerializeSingle(const DataTypePtr &type);
 
-ContainerDataTypePtr Deserialize(const std::string &dataTypes);
+DataTypes Deserialize(const std::string &dataTypes);
 
 DataTypePtr DeserializeSingle(const std::string &dataType);
 

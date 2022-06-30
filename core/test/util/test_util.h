@@ -20,13 +20,13 @@
 
 namespace TestUtil {
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
-omniruntime::vec::VectorBatch *CreateVectorBatch(const omniruntime::type::ContainerDataType &types, int32_t rowCount, ...);
+omniruntime::vec::VectorBatch *CreateVectorBatch(const omniruntime::type::DataTypes &types, int32_t rowCount, ...);
 omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
-omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataTypePtr type, std::string *values,
+omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataType &type, std::string *values,
     int32_t length);
-omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataTypePtr dataType, int32_t rowCount,
+omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
     int32_t *ids, int32_t idsCount, ...);
-omniruntime::vec::ContainerVector *CreateContainerVector(std::vector<omniruntime::vec::DataType> fieldTypes,
+omniruntime::vec::ContainerVector *CreateContainerVector(std::vector<omniruntime::vec::DataTypePtr> &fieldTypes,
     int32_t rowCount, va_list &args);
 omniruntime::vec::Vector *CreateVector(omniruntime::vec::DataType &dataType, int32_t rowCount, va_list &args);
 
@@ -140,9 +140,9 @@ template <typename T, typename E> void AssertVectorEquals(T *vector, E *expected
 }
 
 void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount,
-    std::vector<omniruntime::vec::DataTypeRawPtr> &dataTypes);
+    std::vector<omniruntime::vec::DataTypePtr> &dataTypes);
 
-void GetTestTypeIds(omniruntime::vec::DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
+void GetTestTypeIds(omniruntime::type::DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,

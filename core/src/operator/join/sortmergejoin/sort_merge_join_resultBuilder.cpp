@@ -12,15 +12,15 @@ namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
-JoinResultBuilder::JoinResultBuilder(type::ContainerDataTypePtr leftTableOutputTypes, int32_t *leftTableOutputCols,
+JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
     int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
-    type::ContainerDataTypePtr rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
+    const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
     DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator)
-    : leftTableOutputTypes(std::move(leftTableOutputTypes)),
+    : leftTableOutputTypes(leftTableOutputTypes),
       leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
       leftTablePagesIndex(leftTablePagesIndex),
-      rightTableOutputTypes(std::move(rightTableOutputTypes)),
+      rightTableOutputTypes(rightTableOutputTypes),
       rightTableOutputCols(rightTableOutputCols),
       rightTableOutputColsCount(rightTableOutputColsCount),
       rightTablePagesIndex(rightTablePagesIndex),
@@ -28,9 +28,9 @@ JoinResultBuilder::JoinResultBuilder(type::ContainerDataTypePtr leftTableOutputT
       vecAllocator(vecAllocator)
 {
     int32_t leftRowSize =
-        OperatorUtil::GetOutputRowSize(this->leftTableOutputTypes->GetFieldTypes(), leftTableOutputCols, leftTableOutputColsCount);
-    int32_t rightRowSize =
-        OperatorUtil::GetOutputRowSize(this->rightTableOutputTypes->GetFieldTypes(), rightTableOutputCols, rightTableOutputColsCount);
+        OperatorUtil::GetOutputRowSize(this->leftTableOutputTypes.Get(), leftTableOutputCols, leftTableOutputColsCount);
+    int32_t rightRowSize = OperatorUtil::GetOutputRowSize(this->rightTableOutputTypes.Get(), rightTableOutputCols,
+        rightTableOutputColsCount);
     int32_t eachRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
     this->JoinFilterCodeGen();
@@ -54,11 +54,11 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
     std::vector<DataTypePtr> allTypes;
     allTypes.reserve(outputColCount);
-    std::vector<DataTypePtr> leftTypes = leftTableOutputTypes->GetFieldTypes();
+    std::vector<DataTypePtr> leftTypes = leftTableOutputTypes.Get();
     for (int idx = 0; idx < leftTableOutputColsCount; idx++) {
         allTypes.push_back(leftTypes.at(leftTableOutputCols[idx]));
     }
-    std::vector<DataTypePtr> rightTypes = rightTableOutputTypes->GetFieldTypes();
+    std::vector<DataTypePtr> rightTypes = rightTableOutputTypes.Get();
     for (int idx = 0; idx < rightTableOutputColsCount; idx++) {
         allTypes.push_back(rightTypes.at(rightTableOutputCols[idx]));
     }
@@ -230,20 +230,20 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         return true;
     }
 
-    const int32_t allColsCount = leftTableOutputTypes->GetSize() + rightTableOutputTypes->GetSize();
+    const int32_t allColsCount = leftTableOutputTypes.GetSize() + rightTableOutputTypes.GetSize();
 
     int64_t values[allColsCount];
     bool nulls[allColsCount];
     int32_t lengths[allColsCount];
 
-    for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes->GetSize(); leftColIdx++) {
+    for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes.GetSize(); leftColIdx++) {
         auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
         nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
         values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
     }
 
-    for (int32_t rightColIdx = 0; rightColIdx < rightTableOutputTypes->GetSize(); rightColIdx++) {
-        int32_t colIdx = leftTableOutputTypes->GetSize() + rightColIdx;
+    for (int32_t rightColIdx = 0; rightColIdx < rightTableOutputTypes.GetSize(); rightColIdx++) {
+        int32_t colIdx = leftTableOutputTypes.GetSize() + rightColIdx;
         auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
         nulls[colIdx] = rightVector->IsValueNull(rightRowId);
         values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);

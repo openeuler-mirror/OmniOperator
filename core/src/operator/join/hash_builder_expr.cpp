@@ -14,22 +14,22 @@ namespace op {
 using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
-    ContainerDataTypePtr buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+    const DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
 {
     return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, filter,
         hashTableCount);
 }
 
-HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(ContainerDataTypePtr buildTypes,
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
     int32_t hashTableCount)
 {
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(*buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
         this->buildHashCols, this->projectFuncs);
-    this->buildTypes = std::make_shared<ContainerDataType>(newBuildTypes);
-    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(this->buildTypes,
+    this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
+    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes),
         this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);
 }
 
@@ -41,13 +41,13 @@ HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 {
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(operatorFactory->CreateOperator());
-    return new HashBuilderWithExprOperator(buildTypes, buildHashCols, projectFuncs, hashBuilderOperator);
+    return new HashBuilderWithExprOperator(*buildTypes, buildHashCols, projectFuncs, hashBuilderOperator);
 }
 
-HashBuilderWithExprOperator::HashBuilderWithExprOperator(ContainerDataTypePtr buildTypes,
+HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
     const std::vector<int32_t> &buildHashCols, const std::vector<RowProjFunc> &projectFuncs,
     HashBuilderOperator *hashBuilderOperator)
-    : buildTypes(std::move(buildTypes)),
+    : buildTypes(buildTypes),
       buildHashCols(buildHashCols),
       projectFuncs(projectFuncs),
       hashBuilderOperator(hashBuilderOperator)
@@ -61,7 +61,7 @@ HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, *buildTypes, projectFuncs, buildHashCols, vecAllocator);
+        OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         hashBuilderOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

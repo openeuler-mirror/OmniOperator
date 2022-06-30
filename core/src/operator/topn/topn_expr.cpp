@@ -11,17 +11,17 @@ namespace op {
 using namespace omniruntime::vec;
 using namespace std;
 
-TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::ContainerDataTypePtr &sourceDataTypes, int32_t n,
+TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
     int32_t sortKeyCount)
 {
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(*sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
         this->sortCols, this->projectFuncs);
 
-    this->sourceTypes = std::make_shared<ContainerDataType>(newSourceTypes);
-    this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(sourceTypes, n,
-        this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
+    this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
+    this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*sourceTypes, n, this->sortCols.data(), sortAsc,
+        sortNullFirsts, sortKeyCount);
 }
 
 TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
@@ -29,11 +29,11 @@ TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {
     auto topNOperator = static_cast<TopNOperator *>(topNOperatorFactory->CreateOperator());
-    auto pOperator = new TopNWithExprOperator(sourceTypes, sortCols, projectFuncs, topNOperator);
+    auto pOperator = new TopNWithExprOperator(*sourceTypes, sortCols, projectFuncs, topNOperator);
     return pOperator;
 }
 
-TopNWithExprOperator::TopNWithExprOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &sortCols,
+TopNWithExprOperator::TopNWithExprOperator(type::DataTypes sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator)
     : sourceTypes(std::move(sourceTypes)), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
 {}
@@ -46,7 +46,7 @@ TopNWithExprOperator::~TopNWithExprOperator()
 int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, *sourceTypes, projectFuncs, sortCols, vecAllocator);
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         topNOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);

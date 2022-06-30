@@ -16,14 +16,9 @@ namespace omniruntime {
 namespace op {
 class DynamicPagesIndex {
 public:
-    explicit DynamicPagesIndex(const omniruntime::type::ContainerDataType &types);
+    explicit DynamicPagesIndex(const omniruntime::type::DataTypes &types);
     ~DynamicPagesIndex();
     int32_t AddVecBatches(const std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
-
-    const int32_t *GetTypes() const
-    {
-        return dataTypeIds;
-    }
 
     int32_t GetTypesCount() const
     {
@@ -76,7 +71,6 @@ public:
     void FreeAllRemainingVecBatch();
 
 private:
-    const int32_t *dataTypeIds;
     int32_t typesCount;
     int32_t lastFreedVecBatchIdx = -1;
 

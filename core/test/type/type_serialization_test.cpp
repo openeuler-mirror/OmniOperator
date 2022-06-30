@@ -9,81 +9,58 @@
 
 using namespace omniruntime::type;
 using DataType = omniruntime::type::DataType;
-//using IntDataType = omniruntime::type::IntDataType;
-//using LongDataType = omniruntime::type::LongDataType;
-//using DoubleDataType = omniruntime::type::DoubleDataType;
-//using Decimal128DataType = omniruntime::type::Decimal128DataType;
 
 namespace TypeSerializationTest {
 TEST(DataTypeSerializer, serialization)
 {
-    std::vector<DataTypePtr> fieldTypes {IntType(), Decimal128Type(20, 10), VarcharType(256) };
-    std::vector<DataTypePtr> types = {IntType(),
-                                      DoubleType(),
-                                      BooleanType(),
-                                      LongType(),
-                                      Date32Type(MILLI),
-                                      Date64Type(MILLI),
-                                      Time32Type(SEC),
-                                      Time64Type(MICROSEC),
-                                      VarcharType(1024),
-                                      CharType(512),
-                                      Decimal128Type(30, 20),
-                                      Decimal64Type(20, 10),
-                                      ContainerType(fieldTypes) };
+    std::vector<DataTypePtr> fieldTypes { IntType(), Decimal128Type(20, 10), VarcharType(256) };
+    std::vector<DataTypePtr> types = { IntType(),
+        DoubleType(),
+        BooleanType(),
+        LongType(),
+        Date32Type(MILLI),
+        Date64Type(DAY),
+        Time32Type(SEC),
+        Time64Type(MICROSEC),
+        VarcharType(1024),
+        CharType(512),
+        Decimal128Type(30, 20),
+        Decimal64Type(20, 10),
+        ContainerType(fieldTypes) };
     std::string typesJson = omniruntime::type::Serialize(types);
-    ContainerDataTypePtr dataTypes = omniruntime::type::Deserialize(typesJson);
-    auto dataTypePtrs = dataTypes->GetFieldTypes();
-    EXPECT_EQ(dataTypePtrs.size(), types.size());
-    for (uint32_t i = 0; i < dataTypePtrs.size(); i++) {
-
-        EXPECT_EQ(dataTypePtrs[i]->GetId(), types[i]->GetId());
-        EXPECT_EQ(dataTypePtrs[i]->GetWidth(), types[i]->GetWidth());
-        EXPECT_EQ(dataTypePtrs[i]->GetPrecision(), types[i]->GetPrecision());
-        EXPECT_EQ(dataTypePtrs[i]->GetScale(), types[i]->GetScale());
-        EXPECT_EQ(dataTypePtrs[i]->GetDateUnit(), types[i]->GetDateUnit());
-        EXPECT_EQ(dataTypePtrs[i]->GetTimeUnit(), types[i]->GetTimeUnit());
-    }
-//    EXPECT_EQ(dataTypes[0]->GetId(), OMNI_INT);
-//    EXPECT_EQ(dataTypes[1]->GetId(), OMNI_DOUBLE);
-//    EXPECT_EQ(dataTypes[2]->GetId(), OMNI_DECIMAL128);
-//    EXPECT_EQ(static_cast<Decimal128DataType *>(&dataTypes[2])->GetScale(), decimal.GetScale());
-//    EXPECT_EQ(static_cast<Decimal128DataType *>(&dataTypes[2])->GetPrecision(), decimal.GetPrecision());
-//    EXPECT_EQ(static_cast<Decimal128DataType *>(&dataTypes[2])->GetScale(), decimal.GetScale());
-//    EXPECT_EQ(dataTypes[3].GetId(), OMNI_LONG);
-//    EXPECT_EQ(dataTypes[4].GetId(), OMNI_DATE32);
-//    EXPECT_EQ(static_cast<Date32DataType *>(&dataTypes[4])->GetDateUnit(), MILLI);
-//    EXPECT_EQ(dataTypes[5].GetId(), OMNI_DATE64);
-//    EXPECT_EQ(static_cast<Date32DataType *>(&dataTypes[5])->GetDateUnit(), MILLI);
-//    EXPECT_EQ(dataTypes[6].GetId(), OMNI_VARCHAR);
-//    EXPECT_EQ(static_cast<VarcharDataType *>(&dataTypes[6])->GetWidth(), 1024);
-    //    EXPECT_EQ(dataTypes[7].GetId(), OMNI_CONTAINER);
-    //    EXPECT_EQ(dataTypes[7].GetFieldTypes()[0].GetId(), OMNI_INT);
-    //    EXPECT_EQ(dataTypes[7].GetFieldTypes()[1].GetId(), OMNI_DECIMAL128);
-    //    EXPECT_EQ(dataTypes[7].GetFieldTypes()[1].GetPrecision(), 20);
-    //    EXPECT_EQ(dataTypes[7].GetFieldTypes()[1].GetScale(), 10);
-    //    EXPECT_EQ(dataTypes[7].GetFieldTypes()[2].GetId(), OMNI_VARCHAR);
-    //    EXPECT_EQ(dataTypes[7].GetFieldTypes()[2].GetWidth(), 512);
-
-//    auto dataTypesCopy = dataTypes;
-//    dataTypes = dataTypesCopy.Get();
-//    EXPECT_EQ(dataTypes.size(), types.size());
-//    EXPECT_EQ(dataTypes[0].GetId(), OMNI_INT);
-//    EXPECT_EQ(dataTypes[1].GetId(), OMNI_DOUBLE);
-//    EXPECT_EQ(dataTypes[2].GetId(), OMNI_DECIMAL128);
-//    EXPECT_EQ(static_cast<Decimal128DataType *>(&dataTypes[2])->GetScale(), decimal.GetScale());
-//    EXPECT_EQ(static_cast<Decimal128DataType *>(&dataTypes[2])->GetPrecision(), decimal.GetPrecision());
-//    EXPECT_EQ(static_cast<Decimal128DataType *>(&dataTypes[2])->GetScale(), decimal.GetScale());
-//    EXPECT_EQ(dataTypes[3].GetId(), OMNI_LONG);
-//    EXPECT_EQ(dataTypes[4].GetId(), OMNI_DATE32);
-//    EXPECT_EQ(static_cast<Date32DataType *>(&dataTypes[4])->GetDateUnit(), MILLI);
-//    EXPECT_EQ(dataTypes[5].GetId(), OMNI_DATE64);
-//    EXPECT_EQ(static_cast<Date32DataType *>(&dataTypes[5])->GetDateUnit(), MILLI);
-//    EXPECT_EQ(dataTypes[6].GetId(), OMNI_VARCHAR);
-//    EXPECT_EQ(static_cast<VarcharDataType *>(&dataTypes[6])->GetWidth(), 1024);
-//    std::string typeJson = omniruntime::type::SerializeSingle(IntDataType());
-//    auto dataType = omniruntime::type::DeserializeSingle(typeJson);
-//    EXPECT_EQ(dataType.GetId(), OMNI_INT);
+    DataTypes deserializedDataTypes = omniruntime::type::Deserialize(typesJson);
+    auto &dataTypes = deserializedDataTypes.Get();
+    EXPECT_EQ(dataTypes.size(), types.size());
+    EXPECT_EQ(dataTypes[0]->GetId(), OMNI_INT);
+    EXPECT_EQ(dataTypes[1]->GetId(), OMNI_DOUBLE);
+    EXPECT_EQ(dataTypes[2]->GetId(), OMNI_BOOLEAN);
+    EXPECT_EQ(dataTypes[3]->GetId(), OMNI_LONG);
+    EXPECT_EQ(dataTypes[4]->GetId(), OMNI_DATE32);
+    EXPECT_EQ(static_cast<DateDataType &>(*dataTypes[4]).GetDateUnit(), MILLI);
+    EXPECT_EQ(dataTypes[5]->GetId(), OMNI_DATE64);
+    EXPECT_EQ(static_cast<DateDataType &>(*dataTypes[5]).GetDateUnit(), DAY);
+    EXPECT_EQ(dataTypes[6]->GetId(), OMNI_TIME32);
+    EXPECT_EQ(static_cast<TimeDataType &>(*dataTypes[6]).GetTimeUnit(), SEC);
+    EXPECT_EQ(dataTypes[7]->GetId(), OMNI_TIME64);
+    EXPECT_EQ(static_cast<TimeDataType &>(*dataTypes[7]).GetTimeUnit(), MICROSEC);
+    EXPECT_EQ(dataTypes[8]->GetId(), OMNI_VARCHAR);
+    EXPECT_EQ(static_cast<VarcharDataType &>(*dataTypes[8]).GetWidth(), 1024);
+    EXPECT_EQ(dataTypes[9]->GetId(), OMNI_CHAR);
+    EXPECT_EQ(static_cast<CharDataType &>(*dataTypes[9]).GetWidth(), 512);
+    EXPECT_EQ(dataTypes[10]->GetId(), OMNI_DECIMAL128);
+    EXPECT_EQ(static_cast<Decimal128DataType &>(*dataTypes[10]).GetPrecision(), 30);
+    EXPECT_EQ(static_cast<Decimal128DataType &>(*dataTypes[10]).GetScale(), 20);
+    EXPECT_EQ(dataTypes[11]->GetId(), OMNI_DECIMAL64);
+    EXPECT_EQ(static_cast<Decimal64DataType &>(*dataTypes[11]).GetPrecision(), 20);
+    EXPECT_EQ(static_cast<Decimal64DataType &>(*dataTypes[11]).GetScale(), 10);
+    EXPECT_EQ(dataTypes[12]->GetId(), OMNI_CONTAINER);
+    auto containerDataType = static_cast<ContainerDataType &>(*dataTypes[12]);
+    EXPECT_EQ(containerDataType.GetFieldType(0)->GetId(), OMNI_INT);
+    EXPECT_EQ(containerDataType.GetFieldType(1)->GetId(), OMNI_DECIMAL128);
+    EXPECT_EQ(static_cast<Decimal128DataType &>(*containerDataType.GetFieldType(1)).GetPrecision(), 20);
+    EXPECT_EQ(static_cast<Decimal128DataType &>(*containerDataType.GetFieldType(1)).GetScale(), 10);
+    EXPECT_EQ(containerDataType.GetFieldType(2)->GetId(), OMNI_VARCHAR);
+    EXPECT_EQ(static_cast<VarcharDataType &>(*containerDataType.GetFieldType(2)).GetWidth(), 256);
 }
 
 
@@ -128,10 +105,17 @@ TEST(DataTypeSerializer, DataTypeBaseOperatorTest)
     EXPECT_EQ(varcharDataType3.GetWidth(), varcharDataType.GetWidth());
     EXPECT_EQ(varcharDataType3.GetWidth(), 1024);
 
-    std::vector<DataTypePtr> fieldTypes {IntType(), VarcharType(1024) };
-    std::vector<DataTypePtr> fieldTypes2 {IntType(), Date32Type(MILLI) };
+    std::vector<DataTypePtr> fieldTypes { IntType(), VarcharType(1024) };
+    std::vector<DataTypePtr> fieldTypes2 { IntType(), Date32Type(MILLI) };
+    std::vector<DataTypePtr> fieldTypes3 { IntType(), Date32Type(MILLI) };
     ContainerDataType containerDataType = ContainerDataType(fieldTypes);
     ContainerDataType containerDataType2 = ContainerDataType(fieldTypes2);
-//    ASSERT_FALSE()
+    ContainerDataType containerDataType3 = ContainerDataType(fieldTypes3);
+    ASSERT_TRUE(containerDataType != containerDataType2);
+    ASSERT_FALSE(containerDataType2 != containerDataType3);
+    containerDataType2 = containerDataType;
+    EXPECT_EQ(containerDataType2.GetFieldType(0)->GetId(), OMNI_INT);
+    EXPECT_EQ(containerDataType2.GetFieldType(1)->GetId(), OMNI_VARCHAR);
+    EXPECT_EQ(static_cast<VarcharDataType &>(*containerDataType2.GetFieldType(1)).GetWidth(), 1024);
 }
 }

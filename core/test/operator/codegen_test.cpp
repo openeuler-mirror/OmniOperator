@@ -47,6 +47,7 @@ TEST(CodeGenTest, SimpleFilter)
 
     int64_t *table = new int64_t[numCols];
     table[0] = reinterpret_cast<int64_t>(col1);
+    table[0] = reinterpret_cast<int64_t>(col1);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {

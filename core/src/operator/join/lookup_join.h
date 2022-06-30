@@ -18,23 +18,22 @@ namespace omniruntime {
 namespace op {
 class LookupJoinOperatorFactory : public OperatorFactory {
 public:
-    LookupJoinOperatorFactory(type::ContainerDataTypePtr probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
+    LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-        type::ContainerDataTypePtr buildOutputTypes, JoinType joinType, JoinHashTables *hashTables);
+        const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables);
     ~LookupJoinOperatorFactory() override;
-    static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(ContainerDataTypePtr probeTypes,
+    static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-        int32_t *buildOutputCols, ContainerDataTypePtr buildOutputTypes, JoinType joinType,
-        int64_t hashBuilderFactoryAddr);
+        int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr);
     Operator *CreateOperator() override;
 
 private:
-    ContainerDataTypePtr probeTypes; // all types for probe
-    std::vector<int32_t> probeOutputCols;        // output columns for probe
-    std::vector<int32_t> probeHashCols;          // join columns for probe
+    DataTypes probeTypes;                 // all types for probe
+    std::vector<int32_t> probeOutputCols; // output columns for probe
+    std::vector<int32_t> probeHashCols;   // join columns for probe
     std::vector<int32_t> probeHashColTypes;
-    std::vector<int32_t> buildOutputCols;              // output columns for build
-    ContainerDataTypePtr buildOutputTypes; // output column types for build
+    std::vector<int32_t> buildOutputCols; // output columns for build
+    DataTypes buildOutputTypes;           // output column types for build
     JoinType joinType;
     JoinHashTables *hashTables;
     int32_t rowSize;
@@ -45,9 +44,9 @@ class LookupJoinOutputBuilder;
 
 class LookupJoinOperator : public Operator {
 public:
-    LookupJoinOperator(type::ContainerDataTypePtr probeTypes, std::vector<int32_t> &probeOutputCols,
+    LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
         std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
-        std::vector<int32_t> &buildOutputCols, type::ContainerDataTypePtr buildOutputTypes, JoinType joinType,
+        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
         JoinHashTables *hashTables, int32_t outputRowSize);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
@@ -60,12 +59,12 @@ private:
     bool AdvanceProbePosition();
     uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
 
-    const type::ContainerDataTypePtr probeTypes;
+    DataTypes probeTypes;
     std::vector<int32_t> probeOutputCols;
     std::vector<int32_t> probeHashCols;
     std::vector<int32_t> probeHashColTypes;
     std::vector<int32_t> buildOutputCols;
-    const type::ContainerDataTypePtr buildOutputTypes;
+    DataTypes buildOutputTypes;
     bool probeOnOuterSide;
     bool currentProbePositionProducedRow;
     JoinHashTables *hashTables;
@@ -115,8 +114,8 @@ private:
 
 class LookupJoinOutputBuilder {
 public:
-    LookupJoinOutputBuilder( int32_t *probeOutputCols, int32_t probeOutputColsCount,
-        int32_t *buildOutputCols, type::ContainerDataTypePtr buildOutputTypes, int32_t outputRowSize);
+    LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+        const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition);
     void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
@@ -126,8 +125,7 @@ private:
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
     int32_t *buildOutputCols;
-    ContainerDataTypePtr buildOutputTypes;
-    std::vector<int32_t> buildOutputTypeIds;
+    DataTypes buildOutputTypes;
     int32_t outputRowSize;
     std::vector<int32_t> probeIndex;
     std::vector<uint64_t> buildIndex;

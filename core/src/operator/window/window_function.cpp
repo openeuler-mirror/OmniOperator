@@ -78,8 +78,7 @@ void RowNumberFunction::RankingProcessRow(Vector *column, int32_t index, bool ne
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-                                                 DataTypePtr inputType, DataTypePtr outputType, VectorAllocator *allocator,
-                                                 std::unique_ptr<WindowFrameInfo> frame)
+    DataTypePtr inputType, DataTypePtr outputType, VectorAllocator *allocator, std::unique_ptr<WindowFrameInfo> frame)
     : WindowFunction(std::move(frame)),
       windowIndex(nullptr),
       argumentChannels(argumentChannels),
@@ -151,7 +150,7 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
     } else {
-        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding, inputType, rowCount));
+        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding, *inputType, rowCount));
     }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =

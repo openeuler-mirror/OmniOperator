@@ -3,7 +3,6 @@
  */
 
 #include "topn.h"
-#include <utility>
 #include <vector>
 #include "operator/sort/sort.h"
 
@@ -12,9 +11,9 @@ namespace op {
 using namespace omniruntime::vec;
 using namespace std;
 
-TopNOperatorFactory::TopNOperatorFactory(type::ContainerDataTypePtr sourceTypes, int32_t n, int32_t *sortCols,
+TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
-    : sourceTypes(std::move(sourceTypes))
+    : sourceTypes(sourceTypes)
 {
     this->n = n;
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
@@ -30,16 +29,15 @@ Operator *TopNOperatorFactory::CreateOperator()
     return new TopNOperator(sourceTypes, n, sortCols, sortAscendings, sortNullFirsts, sortColCount);
 }
 
-TopNOperator::TopNOperator( type::ContainerDataTypePtr sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
+TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
-    : sourceTypes(std::move(sourceTypes)), sourceTypesCount(this->sourceTypes->GetSize())
+    : sourceTypes(sourceTypes), sourceTypesCount(this->sourceTypes.GetSize())
 {
     this->n = n;
     this->sortCols = sortCols;
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
     this->sortColCount = sortColCount;
-    this->sourceTypes->GetIds(typeIds);
 }
 
 TopNOperator::~TopNOperator()
@@ -90,20 +88,21 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
 
 int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
+    auto typeIds = sourceTypes.GetIds();
     int32_t position = 0;
     for (; (static_cast<int32_t>(pq.size()) < n) && (position < vectorBatch->GetRowCount()); ++position) {
         VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
-        pq.emplace(typeIds.data(), sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount,
+        pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount,
             singleRowVecBatch);
         singleRowVectorBatchList.push_back(singleRowVecBatch);
     }
     for (; position < vectorBatch->GetRowCount(); ++position) {
         VectorBatch *top = pq.top().GetVecBatch();
-        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount, sortCols.data(), typeIds.data(),
+        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount, sortCols.data(), typeIds,
             sortAscendings.data(), sortNullFirsts.data()) < 0) {
             pq.pop();
             UpdateSingleRowVectorBatch(vectorBatch, top, position);
-            pq.emplace(typeIds.data(), sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, top);
+            pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, top);
         }
     }
     VectorHelper::FreeVecBatch(vectorBatch);
@@ -138,6 +137,7 @@ static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowV
 void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
     int32_t position) const
 {
+    auto typeIds = sourceTypes.GetIds();
     for (int i = 0; i < sourceTypesCount; ++i) {
         int32_t originalPosition;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
@@ -179,6 +179,7 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVe
 
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
+    auto typeIds = sourceTypes.GetIds();
     auto singleRowVecBatch = new VectorBatch(sourceTypesCount, 1);
     for (int i = 0; i < sourceTypesCount; ++i) {
         int32_t originalPosition;
@@ -225,8 +226,9 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
         return 0;
     }
     auto tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
-    tmpVecBatch->NewVectors(vecAllocator, sourceTypes->GetFieldTypes());
+    tmpVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
     int64_t rowNum = 0;
+    auto typeIds = sourceTypes.GetIds();
     while (!pq.empty()) {
         VectorBatch *pqVecBatch = pq.top().GetVecBatch();
         int64_t index = positionCount - rowNum - 1;
@@ -292,13 +294,14 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *
 void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
 {
     int vecIndex = 0;
-    for (const DataTypePtr dataTypeRawPtr : sourceTypes->GetFieldTypes()) {
-        if (dataTypeRawPtr->GetId() != OMNI_VARCHAR && dataTypeRawPtr->GetId() != OMNI_CHAR) {
+    for (const DataTypePtr &dataTypePtr : sourceTypes.Get()) {
+        if (dataTypePtr->GetId() != OMNI_VARCHAR && dataTypePtr->GetId() != OMNI_CHAR) {
             vecIndex++;
             continue;
         }
 
-        auto varcharVector = new VarcharVector(vecAllocator, positionCount * dataTypeRawPtr->GetWidth(), positionCount);
+        auto varcharVector = new VarcharVector(vecAllocator,
+            positionCount * static_cast<VarcharDataType *>(dataTypePtr.get())->GetWidth(), positionCount);
         auto tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
         for (int32_t i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {

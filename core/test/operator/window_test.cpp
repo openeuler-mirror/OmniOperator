@@ -73,7 +73,8 @@ Vector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatch)
         }
         case OMNI_VARCHAR:
         case OMNI_CHAR: {
-            VarcharVector *col = new VarcharVector(vecAllocator, sourceType->GetWidth() * rowPerVecBatch, rowPerVecBatch);
+            VarcharVector *col = new VarcharVector(vecAllocator,
+                static_cast<VarcharDataType *>(sourceType.get())->GetWidth() * rowPerVecBatch, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 std::string str = std::to_string(j);
                 col->SetValue(j, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -105,12 +106,11 @@ VectorBatch **BuildWindowInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int3
 TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -128,8 +128,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -144,14 +143,13 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes {IntType(), LongType(), DoubleType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {3, 0, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1, 4.4};
     int64_t expectData4[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -164,12 +162,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 TEST(NativeOmniWindowOperatorTest, testRowNumber)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     int32_t outputCols[2] = {2, 1};
     int32_t sortCols[0] = {};
@@ -187,8 +184,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -203,12 +199,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldsTypes {DoubleType(), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldsTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ DoubleType(), LongType(), LongType() }));
     double expectData1[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -221,12 +216,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
 TEST(NativeOmniWindowOperatorTest, testRankPartition)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -244,8 +238,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -260,14 +253,13 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes {IntType(), LongType(), DoubleType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 2, 1, 2};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -280,12 +272,11 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
 TEST(NativeOmniWindowOperatorTest, testRank)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     int32_t outputCols[3] = {1, 2, 0};
     int32_t sortCols[1] = {1};
@@ -303,8 +294,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -319,14 +309,13 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{LongType(), DoubleType(), IntType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), DoubleType(), IntType(), LongType() }));
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
     double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
     int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
     int64_t expectData4[DATA_SIZE] = {1, 1, 3, 4, 5, 6};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -339,12 +328,11 @@ TEST(NativeOmniWindowOperatorTest, testRank)
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -362,8 +350,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType(), LongType()};
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
     int32_t argumentChannels[2] = {-1, -1};
 
     // dealing data with the operator
@@ -378,15 +365,14 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 2, 1, 2};
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -399,12 +385,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
 
@@ -424,8 +409,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType(), LongType()};
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
     int32_t argumentChannels[2] = {-1, -1};
 
     // dealing data with the operator
@@ -440,15 +424,14 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 1, 1, 2};
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
     expectVecBatch->GetVector(0)->SetValueNull(4);
     expectVecBatch->GetVector(0)->SetValueNull(5);
 
@@ -463,12 +446,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutSort)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
 
@@ -488,8 +470,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType(), LongType()};
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
     int32_t argumentChannels[2] = {-1, -1};
 
     // dealing data with the operator
@@ -504,15 +485,14 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 1, 5};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 5.5, 1.1};
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
     expectVecBatch->GetVector(0)->SetValueNull(4);
     expectVecBatch->GetVector(0)->SetValueNull(5);
 
@@ -527,12 +507,11 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
 TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
 {
     // construct input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
@@ -561,9 +540,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType(),
-                                           LongType(), DoubleType(), DoubleType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>(
+        { IntType(), LongType(), DoubleType(), LongType(), LongType(), DoubleType(), DoubleType(), LongType() }));
 
     int32_t argumentChannels[5] = {1, 1, 1, 2, 1};
 
@@ -579,9 +557,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(), LongType(),
-                              LongType(), DoubleType(), DoubleType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>(
+        { IntType(), LongType(), DoubleType(), LongType(), LongType(), DoubleType(), DoubleType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 1, 1};
     int64_t expectData2[DATA_SIZE] = {8, 4, 4, 2, 5, 1};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
@@ -590,7 +567,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     double expectData6[DATA_SIZE] = {8, 8, 4, 2, 5, 3};
     double expectData7[DATA_SIZE] = {6.6, 6.6, 2.2, 4.4, 1.1, 5.5};
     int64_t expectData8[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6, expectData7, expectData8);
     expectVecBatch->GetVector(0)->SetValueNull(4);
     expectVecBatch->GetVector(0)->SetValueNull(5);
@@ -607,12 +584,11 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
 TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
 {
     // construct input data
-    std::vector<DataTypePtr> sourceFieldTypes {IntType(), LongType(), DoubleType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
 
     vecBatch->GetVector(0)->SetValueNull(1);
     vecBatch->GetVector(0)->SetValueNull(5);
@@ -640,9 +616,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(), LongType(),
-                                           LongType(), DoubleType(), DoubleType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>(
+        { IntType(), LongType(), DoubleType(), LongType(), LongType(), DoubleType(), DoubleType(), LongType() }));
 
     int32_t argumentChannels[5] = {1, 1, 1, 2, 1};
 
@@ -659,9 +634,8 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(), LongType(),
-                              LongType(), DoubleType(), DoubleType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>(
+        { IntType(), LongType(), DoubleType(), LongType(), LongType(), DoubleType(), DoubleType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 1, 1};
     int64_t expectData2[DATA_SIZE] = {8, 4, 4, 2, 1, 5};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 5.5, 1.1};
@@ -670,7 +644,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     double expectData6[DATA_SIZE] = {8, 8, 4, 2, 3, 3};
     double expectData7[DATA_SIZE] = {6.6, 6.6, 2.2, 4.4, 5.5, 5.5};
     int64_t expectData8[DATA_SIZE] = {8, 8, 4, 2, 1, 1};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6, expectData7, expectData8);
     expectVecBatch->GetVector(0)->SetValueNull(4);
     expectVecBatch->GetVector(0)->SetValueNull(5);
@@ -687,10 +661,9 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
 TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -703,7 +676,7 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -740,27 +713,26 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFiledTypes{IntType(),
-                                           Date32Type(omniruntime::type::DAY),
-                                           Date32Type(omniruntime::type::MILLI),
-                              LongType(),
-                              Decimal64Type(1, 1),
-                              DoubleType(),
-                              BooleanType(),
-                              VarcharType(3),
-                              Decimal128Type(2, 2),
-                              CharType(3),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFiledTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(),
+        Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI),
+        LongType(),
+        Decimal64Type(1, 1),
+        DoubleType(),
+        BooleanType(),
+        VarcharType(3),
+        Decimal128Type(2, 2),
+        CharType(3),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -775,27 +747,26 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(),
-                              Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI),
-                              LongType(),
-                              Decimal64Type(1, 1),
-                              DoubleType(),
-                              BooleanType(),
-                              VarcharType(3),
-                              Decimal128Type(2, 2),
-                              CharType(3),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(),
+        Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI),
+        LongType(),
+        Decimal64Type(1, 1),
+        DoubleType(),
+        BooleanType(),
+        VarcharType(3),
+        Decimal128Type(2, 2),
+        CharType(3),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -818,7 +789,7 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     int64_t expectData19[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
 
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2, expectData3, expectData4,
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2, expectData3, expectData4,
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19);
 
@@ -831,13 +802,12 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
 }
 
 
-TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllContainerDataTypePtr)
+TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -850,7 +820,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllContainerDataTypePtr)
     std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -888,27 +858,26 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllContainerDataTypePtr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(),
-                              Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI),
-                              LongType(),
-                              Decimal64Type(1, 1),
-                              DoubleType(),
-                              BooleanType(),
-                              VarcharType(3),
-                              Decimal128Type(2, 2),
-                              CharType(3),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(),
+        Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI),
+        LongType(),
+        Decimal64Type(1, 1),
+        DoubleType(),
+        BooleanType(),
+        VarcharType(3),
+        Decimal128Type(2, 2),
+        CharType(3),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType() }));
     int32_t argumentChannels[0] = {};
 
     // dealing data with the operator
@@ -923,27 +892,26 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllContainerDataTypePtr)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(),
-                              Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI),
-                              LongType(),
-                              Decimal64Type(1, 1),
-                              DoubleType(),
-                              BooleanType(),
-                              VarcharType(3),
-                              Decimal128Type(2, 2),
-                              CharType(3),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType(),
-                              LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(),
+        Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI),
+        LongType(),
+        Decimal64Type(1, 1),
+        DoubleType(),
+        BooleanType(),
+        VarcharType(3),
+        Decimal128Type(2, 2),
+        CharType(3),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType(),
+        LongType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -966,7 +934,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllContainerDataTypePtr)
     int64_t expectData19[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
 
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2, expectData3, expectData4,
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2, expectData3, expectData4,
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19);
 
@@ -978,13 +946,12 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllContainerDataTypePtr)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowOperatorTest, testSumWithAllContainerDataTypePtr)
+TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -998,7 +965,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllContainerDataTypePtr)
     std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1026,12 +993,10 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllContainerDataTypePtr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(),
-                              Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
-                              Decimal128Type(10, 0), DoubleType(), Decimal128Type(2, 2) };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(2, 2) }));
     int32_t argumentChannels[7] = {0, 1, 2, 3, 4, 5, 8};
 
     // dealing data with the operator
@@ -1046,12 +1011,10 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllContainerDataTypePtr)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(),
-                              Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
-                              Decimal128Type(10, 0), DoubleType(), Decimal128Type(2, 2) };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -1073,7 +1036,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllContainerDataTypePtr)
     Decimal128 expectData16[DATA_SIZE] = {Decimal128(2, 2), Decimal128(2, 2), Decimal128(4, 4), Decimal128(4, 4),
         Decimal128(6, 6), Decimal128(6, 6)};
 
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
@@ -1088,10 +1051,9 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllContainerDataTypePtr)
 TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1105,7 +1067,7 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
     std::string data9[DATA_SIZE] = {"c1", "c1", "c2", "c2", "c3", "c3"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1133,12 +1095,10 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), DoubleType(),
-                              DoubleType(), DoubleType(), DoubleType(), Decimal64Type(10, 4), DoubleType(),
-                              Decimal128Type(4, 4) };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3), DoubleType(), DoubleType(), DoubleType(), DoubleType(),
+        Decimal64Type(10, 4), DoubleType(), Decimal128Type(4, 4) }));
     int32_t argumentChannels[7] = {0, 1, 2, 3, 4, 5, 8};
 
     // dealing data with the operator
@@ -1153,12 +1113,10 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), DoubleType(),
-                              DoubleType(), DoubleType(), DoubleType(), Decimal64Type(10, 4), DoubleType(),
-                              Decimal128Type(4, 4) };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3), DoubleType(), DoubleType(), DoubleType(), DoubleType(),
+        Decimal64Type(10, 4), DoubleType(), Decimal128Type(4, 4) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1178,7 +1136,7 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
     double expectData15[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
     Decimal128 expectData16[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
                                           Decimal128(0, 0), Decimal128(0, 0)};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
@@ -1190,13 +1148,12 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowOperatorTest, testMaxWithAllContainerDataTypePtr)
+TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1210,7 +1167,7 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllContainerDataTypePtr)
     std::string data9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1241,12 +1198,11 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllContainerDataTypePtr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(),
-                              Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
-                              Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3),
+        IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
+        Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t argumentChannels[9] = {0, 1, 2, 3, 4, 5, 7, 8, 9};
 
     // dealing data with the operator
@@ -1261,12 +1217,11 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllContainerDataTypePtr)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(),
-                              Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
-                              Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3),
+        IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
+        Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1288,7 +1243,7 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllContainerDataTypePtr)
     Decimal128 expectData17[DATA_SIZE] = {Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5),
         Decimal128(7, 7), Decimal128(7, 7)};
     std::string expectData18[DATA_SIZE] = {"c3", "c3", "c5", "c5", "c7", "c7"};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
@@ -1300,13 +1255,12 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllContainerDataTypePtr)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowOperatorTest, testMinWithAllContainerDataTypePtr)
+TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1320,7 +1274,7 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllContainerDataTypePtr)
     std::string data9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1351,12 +1305,11 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllContainerDataTypePtr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(),
-                              Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
-                              Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3),
+        IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
+        Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t argumentChannels[9] = {0, 1, 2, 3, 4, 5, 7, 8, 9};
 
     // dealing data with the operator
@@ -1371,12 +1324,11 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllContainerDataTypePtr)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), IntType(),
-                              Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
-                              Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3),
+        IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI), LongType(),
+        Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1398,7 +1350,7 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllContainerDataTypePtr)
     Decimal128 expectData17[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
         Decimal128(5, 5), Decimal128(5, 5)};
     std::string expectData18[DATA_SIZE] = {"c1", "c1", "c3", "c3", "c5", "c5"};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
@@ -1410,13 +1362,12 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllContainerDataTypePtr)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowOperatorTest, testCountWithAllContainerDataTypePtr)
+TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
+        Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), CharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1430,7 +1381,7 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllContainerDataTypePtr)
     std::string data9[DATA_SIZE] = {"c1", "c3", "c3", "c5", "c5", "c7"};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     const int32_t colCount = 10;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1462,12 +1413,10 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllContainerDataTypePtr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), LongType(),
-                              LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(),
-                              LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3),
+        LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t argumentChannels[9] = {0, 1, 2, 3, 4, 5, 7, 8, 9};
 
     // dealing data with the operator
@@ -1482,12 +1431,10 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllContainerDataTypePtr)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3), LongType(),
-                              LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(),
-                              LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), CharType(3),
+        LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1508,7 +1455,7 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllContainerDataTypePtr)
     int64_t expectData16[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData17[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData18[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
@@ -1523,15 +1470,15 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllContainerDataTypePtr)
 TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType(), LongType(), DoubleType(),BooleanType(), VarcharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), BooleanType(), VarcharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t data1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double data2[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data3[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data4[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
 
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
 
     vecBatch->GetVector(1)->SetValueNull(1);
     vecBatch->GetVector(1)->SetValueNull(2);
@@ -1573,10 +1520,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(),BooleanType(),
-                              VarcharType(3), LongType(), LongType(), LongType(), LongType(), LongType(),
-                              LongType(), LongType(), LongType(), LongType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), BooleanType(), VarcharType(3), LongType(),
+        LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t argumentChannels[10] = {0, -1, 1, -1, 2, -1, 3, -1, 4, -1};
 
     // dealing data with the operator
@@ -1591,10 +1537,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(),BooleanType(),
-                              VarcharType(3), LongType(), LongType(), LongType(), LongType(), LongType(),
-                              LongType(), LongType(), LongType(), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), BooleanType(), VarcharType(3), LongType(),
+        LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t expectData1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double expectData2[DATA_SIZE] = {1.1, 3.3, 5.5, 5.5, 5.5, 7.7};
@@ -1611,7 +1556,7 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     int64_t expectData13[DATA_SIZE] = {1, 1, 2, 2, 1, 1};
     int64_t expectData14[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
 
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14);
 
@@ -1635,15 +1580,15 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
 TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
 {
     // construct the input data
-    std::vector<DataTypePtr>  sourceFieldTypes{ IntType(), LongType(), DoubleType(),BooleanType(), VarcharType(3) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), BooleanType(), VarcharType(3) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t data1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double data2[DATA_SIZE] = {1.1, 3.3, 3.3, 5.5, 5.5, 7.7};
     bool data3[DATA_SIZE] = {false, false, true, true, false, false};
     std::string data4[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
 
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
 
     vecBatch->GetVector(1)->SetValueNull(1);
     vecBatch->GetVector(1)->SetValueNull(2);
@@ -1685,10 +1630,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), LongType(), DoubleType(),BooleanType(),
-                              VarcharType(3), LongType(), LongType(), LongType(), LongType(), LongType(),
-                              LongType(), LongType(), LongType(), LongType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), BooleanType(), VarcharType(3), LongType(),
+        LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t argumentChannels[10] = {0, -1, 1, -1, 2, -1, 3, -1, 4, -1};
 
     // dealing data with the operator
@@ -1703,10 +1647,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), LongType(), DoubleType(),BooleanType(),
-                              VarcharType(3), LongType(), LongType(), LongType(), LongType(), LongType(),
-                              LongType(), LongType(), LongType(), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), BooleanType(), VarcharType(3), LongType(),
+        LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int64_t expectData1[DATA_SIZE] = {11111, 33333, 33333, 55555, 55555, 77777};
     double expectData2[DATA_SIZE] = {1.1, 3.3, 5.5, 5.5, 5.5, 7.7};
@@ -1723,7 +1666,7 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     int64_t expectData13[DATA_SIZE] = {1, 1, 2, 2, 1, 1};
     int64_t expectData14[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
 
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14);
 
@@ -1747,10 +1690,9 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
 TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
 {
     // construct the input data
-    std::vector<DataTypePtr> sourceFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2) };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1765,8 +1707,8 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
 
     VectorBatch *vecBatch =
-        CreateVectorBatch(*sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
-    for (int32_t i = 0; i < sourceTypes->GetSize(); i++) {
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
+    for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         DictionaryVector *dictionaryVector = new DictionaryVector(vecBatch->GetVector(i), ids, DATA_SIZE);
         // dictionary will slice the vector, we should release original vector
         delete vecBatch->GetVector(i);
@@ -1799,11 +1741,10 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(), LongType(), LongType(),
-                              LongType(), DoubleType(), VarcharType(3), Decimal128Type(2, 2) };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
+        LongType(), LongType(), LongType(), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t argumentChannels[7] = {0, 1, 3, 4, 5, 7, 8};
 
     // dealing data with the operator
@@ -1818,11 +1759,10 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{IntType(), Date32Type(omniruntime::type::DAY),
-                              Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(),
-                              BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(), LongType(), LongType(),
-                              LongType(), DoubleType(), VarcharType(3), Decimal128Type(2, 2) };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY), Date32Type(omniruntime::type::MILLI),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
+        LongType(), LongType(), LongType(), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1841,7 +1781,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     std::string expectData14[DATA_SIZE] = {"s3", "s3", "s5", "s5", "s7", "s7"};
     Decimal128 expectData15[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
         Decimal128(5, 5), Decimal128(5, 5)};
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15);
 
@@ -1855,8 +1795,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
 
 TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 {
-    std::vector<DataTypePtr> sourceFieldTypes{LongType(), LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int32_t outputCols[2] = {0, 1};
     int32_t windowFunctionTypes[2] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
     int32_t windowFrameTypes[2] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
@@ -1871,8 +1810,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     int32_t nullFirsts[1] = {false};
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
-    std::vector<DataTypePtr> allFieldTypes{LongType(), LongType(), LongType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int32_t argumentChannels[2] = {1, -1};
 
     // dealing data with the operator
@@ -1882,7 +1820,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     operatorFactoryWithJit->Init();
     WindowOperator *windowOperatorWithJit = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactoryWithJit));
-    VectorBatch **input1 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes->GetFieldTypes());
+    VectorBatch **input1 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes.Get());
 
     Timer timer;
     timer.SetStart();
@@ -1922,7 +1860,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     std::cout << "after create factory" << std::endl;
     WindowOperator *windowOperatorWithoutJit =
         dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactoryWithoutJit));
-    VectorBatch **input2 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes->GetFieldTypes());
+    VectorBatch **input2 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes.Get());
 
     timer.Reset();
 
@@ -1973,15 +1911,14 @@ TEST(NativeOmniWindowOperatorTest, testFrameBound)
 {
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
-    std::vector<DataTypePtr> sourceFieldTypes{VarcharType(20), VarcharType(20), LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType() }));
     std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
                                    "apple", "orange", "banana", "apple"};
     std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01",
                                    "2020-12-01", "2020-12-02", "2020-12-07", "2020-12-04", "2021-01-01", "2021-01-01",
                                    "2021-01-01", "2021-02-01"};
     int64_t data2[MY_DATA_SIZE] = {7400, 8000, 7800, 7000, 7500, 6500, 4500, 8500, 9000, 8000, 8500, 9500};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, MY_DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, MY_DATA_SIZE, data0, data1, data2);
 
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
@@ -2000,8 +1937,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBound)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{VarcharType(20), VarcharType(20), LongType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), LongType() }));
 
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
@@ -2015,8 +1951,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBound)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{VarcharType(20), VarcharType(20), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), LongType() }));
     std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
                                          "banana", "banana", "banana", "orange"};
     std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
@@ -2026,7 +1961,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBound)
     int64_t expectData4[MY_DATA_SIZE] = {1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 1};
 
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+        CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -2040,8 +1975,8 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
 {
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
-    std::vector<DataTypePtr> sourceFieldTypes{ VarcharType(20), VarcharType(20), LongType(), IntType(), IntType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(
+        std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), IntType(), IntType() }));
     std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
                                    "apple", "orange", "banana", "apple"};
     std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01", "2020-12-01",
@@ -2050,7 +1985,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
     int64_t data2[MY_DATA_SIZE] = {7400, 8000, 7800, 7000, 7500, 6500, 4500, 8500, 9000, 8000, 8500, 9500};
     int32_t data3[MY_DATA_SIZE] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // frame start col
     int32_t data4[MY_DATA_SIZE] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}; // frane end col
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, MY_DATA_SIZE, data0, data1, data2, data3, data4);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, MY_DATA_SIZE, data0, data1, data2, data3, data4);
 
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
@@ -2069,8 +2004,8 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allFieldTypes{ VarcharType(20), VarcharType(20), LongType(), IntType(), IntType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allFieldTypes);
+    DataTypes allTypes(
+        std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), IntType(), IntType(), LongType() }));
 
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
@@ -2084,8 +2019,8 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{ VarcharType(20), VarcharType(20), LongType(), IntType(), IntType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(
+        std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), IntType(), IntType(), LongType() }));
     std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
                                          "banana", "banana", "banana", "orange"};
     std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
@@ -2096,7 +2031,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
     int32_t expectData5[MY_DATA_SIZE] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}; // frane end col
     int64_t expectData6[MY_DATA_SIZE] = {3, 4, 3, 2, 3, 4, 4, 4, 4, 3, 2, 1};
 
-    VectorBatch *expectVecBatch = CreateVectorBatch(*expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -2111,15 +2046,14 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
 {
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
-    std::vector<DataTypePtr> sourceFieldTypes{VarcharType(20), VarcharType(20), LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType() }));
     std::string data0[MY_DATA_SIZE] = {"banana", "apple", "banana", "apple", "banana", "banana", "banana", "banana",
                                    "apple", "orange", "banana", "apple"};
     std::string data1[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2020-10-01", "2020-11-01", "2020-12-01",
                                        "2020-12-02", "2020-12-07", "2020-12-04", "2021-01-01", "2021-01-01",
                                        "2021-01-01", "2021-02-01"};
     int64_t data2[MY_DATA_SIZE] = {7400, 8000, 7800, 7000, 7500, 6500, 4500, 8500, 9000, 8000, 8500, 9500};
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, MY_DATA_SIZE, data0, data1, data2);
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, MY_DATA_SIZE, data0, data1, data2);
 
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
@@ -2138,8 +2072,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    std::vector<DataTypePtr> allTFieldypes{VarcharType(20), VarcharType(20), LongType(), LongType() };
-    ContainerDataTypePtr allTypes = std::make_shared<ContainerDataType>(allTFieldypes);
+    DataTypes allTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), LongType() }));
 
     // dealing data with the operator
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
@@ -2153,8 +2086,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    std::vector<DataTypePtr> expectFieldTypes{VarcharType(20), VarcharType(20), LongType(), LongType() };
-    ContainerDataTypePtr expectTypes = std::make_shared<ContainerDataType>(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), LongType() }));
     std::string expectData1[MY_DATA_SIZE] = {"apple", "apple", "apple", "apple", "banana", "banana", "banana", "banana",
                                          "banana", "banana", "banana", "orange"};
     std::string expectData2[MY_DATA_SIZE] = {"2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2020-10-01",
@@ -2164,7 +2096,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
     int64_t expectData4[MY_DATA_SIZE] = {4, 4, 4, 4, 7, 7, 7, 7, 7, 7, 7, 1};
 
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(*expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
+        CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 

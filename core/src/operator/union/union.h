@@ -14,24 +14,24 @@ namespace omniruntime {
 namespace op {
 class UnionOperatorFactory : public OperatorFactory {
 public:
-    UnionOperatorFactory(type::ContainerDataTypePtr sourceTypes, int32_t sourceTypesCount, bool isDistinct);
+    UnionOperatorFactory(const type::DataTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
 
     ~UnionOperatorFactory() override;
 
-    static UnionOperatorFactory *CreateUnionOperatorFactory(type::ContainerDataTypePtr sourceTypesField,
+    static UnionOperatorFactory *CreateUnionOperatorFactory(const type::DataTypes &sourceTypesField,
         int32_t sourceTypesCountField, bool distinct);
 
     Operator *CreateOperator() override;
 
 private:
-    type::ContainerDataTypePtr sourceTypes;
+    type::DataTypes sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
 };
 
 class UnionOperator : public Operator {
 public:
-    UnionOperator(type::ContainerDataTypePtr sourceTypes, int32_t sourceTypesCount, bool isDistinct);
+    UnionOperator(const type::DataTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
 
     ~UnionOperator() override;
 
@@ -42,7 +42,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    type::ContainerDataTypePtr sourceTypes;
+    type::DataTypes sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
     std::vector<vec::VectorBatch *> inputVecBatches;

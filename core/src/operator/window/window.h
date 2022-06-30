@@ -16,36 +16,36 @@ namespace omniruntime {
 namespace op {
 class WindowOperatorFactory : public OperatorFactory {
 public:
-    WindowOperatorFactory(type::ContainerDataTypePtr sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    WindowOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
         int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
         int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-        type::ContainerDataTypePtr allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount,
+        const type::DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount,
         int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
         int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField);
 
     ~WindowOperatorFactory() override;
 
-    static WindowOperatorFactory *CreateWindowOperatorFactory(type::ContainerDataTypePtr sourceTypesField,
+    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypesField,
         int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
         int32_t windowFunctionCountField, int32_t *partitionColsField, int32_t partitionCountField,
         int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
         int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField,
-        int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, type::ContainerDataTypePtr allTypesField,
+        int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
         int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
         int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
         int32_t *windowFrameEndChannelsField);
 
     Operator *CreateOperator() override;
 
-    const ContainerDataTypePtr &GetSourceTypes() const
+    const DataTypes &GetSourceTypes() const
     {
         return sourceTypes;
     }
 
     int32_t GetTypesCount() const
     {
-        return sourceTypes->GetSize();
+        return sourceTypes.GetSize();
     }
 
     int32_t *GetOutputCols() const
@@ -118,14 +118,14 @@ public:
         return expectedPositions;
     }
 
-    const ContainerDataTypePtr &GetAllTypes() const
+    const DataTypes &GetAllTypes() const
     {
         return allTypes;
     }
 
     int32_t GetAllCount() const
     {
-        return allTypes->GetSize();
+        return allTypes.GetSize();
     }
 
     int32_t *GetArgumentChannels() const
@@ -166,7 +166,7 @@ public:
     OmniStatus Init();
 
 private:
-    ContainerDataTypePtr sourceTypes;
+    DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;
     std::vector<int32_t> windowFunctionTypes;
@@ -181,7 +181,7 @@ private:
     int32_t sortColCount;
     int32_t preSortedChannelPrefix;
     int32_t expectedPositions;
-    ContainerDataTypePtr allTypes;
+    DataTypes allTypes;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
     std::vector<int32_t> windowFrameTypes;
@@ -193,12 +193,12 @@ private:
 
 class WindowOperator : public Operator {
 public:
-    WindowOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &outputCols, int32_t outputColsCount,
+    WindowOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols, int32_t outputColsCount,
         std::vector<int32_t> &windowFunctionTypes, int32_t windowFunctionCount, std::vector<int32_t> &partitionCols,
         int32_t partitionCount, std::vector<int32_t> &preGroupedCols, int32_t preGroupedCount,
         std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts,
         int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
-        type::ContainerDataTypePtr allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount,
+        const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount,
         const std::vector<int32_t> &windowFrameTypes, const std::vector<int32_t> &windowFrameStartTypes,
         const std::vector<int32_t> &windowFrameStartChannels, const std::vector<int32_t> &windowFrameEndTypes,
         const std::vector<int32_t> &windowFrameEndChannels);
@@ -214,8 +214,7 @@ public:
     OmniStatus Init() override;
 
 private:
-    const type::ContainerDataTypePtr sourceTypes;
-    std::vector<int32_t> sourceTypeIds;
+    type::DataTypes sourceTypes;
     int32_t typesCount;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;
@@ -233,7 +232,7 @@ private:
     int32_t sortColCount;
     int32_t preSortedChannelPrefix;
     int32_t expectedPositions;
-    const type::ContainerDataTypePtr allTypes;
+    type::DataTypes allTypes;
     std::unique_ptr<PagesIndex> pagesIndex;
     omniruntime::vec::VectorBatch *pendingInput;
     std::unique_ptr<PagesHashStrategy> preGroupedPartitionHashStrategy = nullptr;
@@ -253,11 +252,11 @@ private:
     void Initialization();
 
     void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-                     std::vector<type::DataTypePtr> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
-                     int32_t &rowCount);
+        std::vector<type::DataTypePtr> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
+        int32_t &rowCount);
 
     void InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
-                           const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
+        const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);

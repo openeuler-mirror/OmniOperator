@@ -11,12 +11,11 @@ namespace omniruntime {
 namespace op {
 class AverageDecimalAggregator : public Aggregator {
 public:
-    AverageDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel)
+    AverageDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel)
     {}
 
-    AverageDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel, bool inputRaw,
-                             bool outputPartial)
+    AverageDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
     {}
 
@@ -139,7 +138,8 @@ public:
             auto outType = outputType->GetId();
             auto inType = inputType->GetId();
             if (inType == OMNI_DECIMAL64 || inType == OMNI_DECIMAL128) {
-                scaleDiff = outputType->GetScale() - inputType->GetScale();
+                scaleDiff = static_cast<DecimalDataType *>(outputType.get())->GetScale() -
+                    static_cast<DecimalDataType *>(inputType.get())->GetScale();
             }
             Decimal128 rescaledDividend;
             // rescale dividend and divisor to output scale

@@ -3,8 +3,8 @@
  */
 
 #include "data_type_serializer.h"
-
 #include <nlohmann/json.hpp>
+#include "util/type_util.h"
 
 namespace omniruntime {
 namespace type {
@@ -20,14 +20,14 @@ std::string SerializeSingle(const DataTypePtr &type)
     return json(type).dump();
 }
 
-ContainerDataTypePtr Deserialize(const std::string &dataTypes)
+DataTypes Deserialize(const std::string &dataTypes)
 {
     auto dataTypeJsons = nlohmann::json::parse(dataTypes);
     std::vector<DataTypePtr> types;
-    for (const auto& dataTypeJson : dataTypeJsons) {
+    for (const auto &dataTypeJson : dataTypeJsons) {
         types.push_back(DataTypeJsonParser(dataTypeJson));
     }
-    return std::make_shared<ContainerDataType>(types);
+    return DataTypes(types);
 }
 
 DataTypePtr DeserializeSingle(const std::string &dataType)
@@ -38,71 +38,49 @@ DataTypePtr DeserializeSingle(const std::string &dataType)
 
 DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
 {
-    DataTypePtr dataTypePtr = nullptr;
     int dataTypeId = dataTypeJson[ID].get<int>();
     switch (dataTypeId) {
         case OMNI_NONE:
-            dataTypePtr = NoneDataType::Instance();
-            break;
+            return NoneType();
         case OMNI_INVALID:
-            dataTypePtr = InvalidDataType::Instance();
-            break;
+            return InvalidType();
         case OMNI_INT:
-            dataTypePtr = IntDataType::Instance();
-            break;
+            return IntType();
         case OMNI_LONG:
-            dataTypePtr = LongDataType::Instance();
-            break;
+            return LongType();
         case OMNI_DOUBLE:
-            dataTypePtr = DoubleDataType::Instance();
-            break;
+            return DoubleType();
         case OMNI_BOOLEAN:
-            dataTypePtr = BooleanDataType::Instance();
-            break;
+            return BooleanType();
         case OMNI_SHORT:
-            dataTypePtr = ShortDataType::Instance();
-            break;
+            return ShortType() ;
         case OMNI_DECIMAL64:
-            dataTypePtr =
-                std::make_shared<Decimal64DataType>(dataTypeJson[PRECISION].get<int32_t>(), dataTypeJson[SCALE].get<int32_t>());
-            break;
+            return Decimal64Type(dataTypeJson[PRECISION].get<int32_t>(), dataTypeJson[SCALE].get<int32_t>());
         case OMNI_DECIMAL128:
-            dataTypePtr =
-                    std::make_shared<Decimal128DataType>(dataTypeJson[PRECISION].get<int32_t>(), dataTypeJson[SCALE].get<int32_t>());
-            break;
+            return Decimal128Type(dataTypeJson[PRECISION].get<int32_t>(), dataTypeJson[SCALE].get<int32_t>());
         case OMNI_DATE32:
-            dataTypePtr = std::make_shared<Date32DataType>(dataTypeJson[DATE_UNIT].get<DateUnit>());
-            break;
+            return Date32Type(dataTypeJson[DATE_UNIT].get<DateUnit>());
         case OMNI_DATE64:
-            dataTypePtr = std::make_shared<Date64DataType>(dataTypeJson[DATE_UNIT].get<DateUnit>());
-            break;
+            return Date64Type(dataTypeJson[DATE_UNIT].get<DateUnit>());
         case OMNI_TIME32:
-            dataTypePtr = std::make_shared<Time32DataType>(dataTypeJson[TIME_UNIT].get<TimeUnit>());
-            break;
+            return Time32Type(dataTypeJson[TIME_UNIT].get<TimeUnit>());
         case OMNI_TIME64:
-            dataTypePtr = std::make_shared<Time64DataType>(dataTypeJson[TIME_UNIT].get<TimeUnit>());
-            break;
+            return Time64Type(dataTypeJson[TIME_UNIT].get<TimeUnit>());
         case OMNI_VARCHAR:
-            dataTypePtr = std::make_shared<VarcharDataType>(dataTypeJson[WIDTH].get<uint32_t>());
-            break;
+            return VarcharType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_CHAR:
-            dataTypePtr = std::make_shared<CharDataType>(dataTypeJson[WIDTH].get<uint32_t>());
-            break;
+            return CharType(dataTypeJson[WIDTH].get<uint32_t>());
         case OMNI_CONTAINER: {
             std::vector<DataTypePtr> fieldTypes;
-            for (const auto& fieldJson : dataTypeJson[FIELD_TYPES]) {
+            for (const auto &fieldJson : dataTypeJson[FIELD_TYPES]) {
                 fieldTypes.push_back(DataTypeJsonParser(fieldJson));
             }
-            dataTypePtr = std::make_shared<ContainerDataType>(fieldTypes);
-            break;
+            return ContainerType(fieldTypes);
         }
-        case OMNI_TIMESTAMP:
-        case OMNI_INTERVAL_MONTHS:
-        case OMNI_INTERVAL_DAY_TIME:
         default:
             LogError("Not Supported Data Type : %d", dataTypeId);
+            return nullptr;
     }
-    return dataTypePtr;
 }
 }
 }

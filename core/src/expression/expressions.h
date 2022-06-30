@@ -89,7 +89,7 @@ Operator StringToOperator(const std::string &opStr);
 class Expr {
 public:
     DataTypePtr dataType; // dataType of returned value
-    const DataTypePtr &GetReturnType() const;
+    DataTypePtr GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;
     virtual ~Expr() = default;

@@ -6,20 +6,20 @@
 #define __HASH_BUILDER_H__
 
 #include <memory>
-#include "../operator_factory.h"
-#include "../operator.h"
-#include "../pages_index.h"
+#include "operator/operator_factory.h"
+#include "operator/operator.h"
+#include "operator/pages_index.h"
 #include "join_hash_table.h"
 
 namespace omniruntime {
 namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
-    HashBuilderOperatorFactory(ContainerDataTypePtr buildTypes, const int32_t *buildHashCols,
-        int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
+    HashBuilderOperatorFactory(const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount,
+        std::string &filterExpr, int32_t operatorCount);
     int32_t Init();
     ~HashBuilderOperatorFactory() override;
-    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(ContainerDataTypePtr dataTypes,
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const DataTypes &dataTypes,
         const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
     JoinHashTables *GetHashTables() const
@@ -28,7 +28,7 @@ public:
     }
 
 private:
-    ContainerDataTypePtr buildTypes;
+    DataTypes buildTypes;
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
     int32_t hashTableCount;
@@ -37,8 +37,8 @@ private:
 
 class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(ContainerDataTypePtr buildTypes, std::vector<int32_t> &buildHashCols,
-        JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
+    HashBuilderOperator(const DataTypes &buildTypes, std::vector<int32_t> &buildHashCols, JoinHashTables *hashTables,
+        int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
 
     ~HashBuilderOperator() override;
 
@@ -49,7 +49,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    ContainerDataTypePtr buildTypes;
+    DataTypes buildTypes;
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
     int32_t partitionIndex;

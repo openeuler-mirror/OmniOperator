@@ -4,6 +4,8 @@
  */
 
 #include "lookup_join_expr.h"
+
+#include <utility>
 #include "hash_builder_expr.h"
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
@@ -13,31 +15,30 @@ namespace op {
 using namespace omniruntime::vec;
 
 LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
-    const ContainerDataTypePtr &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
+    const DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
-    int32_t *buildOutputCols, const ContainerDataTypePtr &buildOutputTypes, JoinType joinType,
-    int64_t hashBuilderFactoryAddr)
+    int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr)
 {
     auto operatorFactory = new LookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputTypes, joinType, hashBuilderFactoryAddr);
     return operatorFactory;
 }
 
-LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const ContainerDataTypePtr &probeTypes,
+LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
-    int32_t *buildOutputCols, const ContainerDataTypePtr &buildOutputTypes, JoinType joinType,
-    int64_t hashBuilderFactoryAddr)
+    int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr)
 {
     std::vector<DataTypePtr> newProbeTypes;
-    OperatorUtil::CreateProjectFuncs(*probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->rowProjections,
         this->probeHashCols, this->projectFuncs);
-    this->probeTypes = std::make_shared<ContainerDataType>(newProbeTypes);
+    this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
-    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(this->probeTypes,
+    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes.get()),
         probeOutputCols, probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
-        buildOutputTypes, joinType, (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
+        std::move(buildOutputTypes), joinType,
+        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
@@ -48,12 +49,12 @@ LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
 Operator *LookupJoinWithExprOperatorFactory::CreateOperator()
 {
     auto lookupJoinOperator = static_cast<LookupJoinOperator *>(operatorFactory->CreateOperator());
-    return new LookupJoinWithExprOperator(probeTypes, probeHashCols, projectFuncs, lookupJoinOperator);
+    return new LookupJoinWithExprOperator(*probeTypes, probeHashCols, projectFuncs, lookupJoinOperator);
 }
 
-LookupJoinWithExprOperator::LookupJoinWithExprOperator(type::ContainerDataTypePtr probeTypes,
+LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &probeTypes,
     std::vector<int32_t> &probeHashCols, std::vector<RowProjFunc> &projectFuncs, LookupJoinOperator *lookupJoinOperator)
-    : probeTypes(std::move(probeTypes)),
+    : probeTypes(probeTypes),
       probeHashCols(probeHashCols),
       projectFuncs(projectFuncs),
       lookupJoinOperator(lookupJoinOperator)
@@ -67,7 +68,7 @@ LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, *probeTypes, projectFuncs, probeHashCols, vecAllocator);
+        OperatorUtil::ProjectVectors(vecBatch, probeTypes, projectFuncs, probeHashCols, vecAllocator);
     if (newInputVecBatch != nullptr) {
         lookupJoinOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

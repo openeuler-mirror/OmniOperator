@@ -36,7 +36,7 @@ private:
 
 class WindowPartition {
 public:
-    WindowPartition(type::ContainerDataTypePtr sourceTypes, omniruntime::op::PagesIndex *pagesIndex, int32_t partitionStart,
+    WindowPartition(const type::DataTypes &sourceTypes, omniruntime::op::PagesIndex *pagesIndex, int32_t partitionStart,
         int32_t partitionEnd, int32_t *outputChannels, int32_t outputChannelsCount,
         std::vector<std::unique_ptr<WindowFunction>> &windowFunctions,
         omniruntime::op::PagesHashStrategy *peerGroupHashStrategy);
@@ -77,7 +77,7 @@ private:
     int64_t GetFrameValue(int32_t channel, std::string &valueTypeName);
 
 private:
-    const type::ContainerDataTypePtr sourceTypes;
+    type::DataTypes sourceTypes;
     omniruntime::op::PagesIndex *pagesIndex;
     int32_t partitionStart;
     int32_t partitionEnd;

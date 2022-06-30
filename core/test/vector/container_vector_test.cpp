@@ -245,7 +245,7 @@ TEST(ContainerVector, testNullFlagWithSet)
     auto *sub2 = new LongVector(allocator, rows);
 
     std::vector<uintptr_t> subAddrs = { reinterpret_cast<uintptr_t>(sub1), reinterpret_cast<uintptr_t>(sub2) };
-    std::vector<DataType> subTypes = { IntDataType(), LongDataType() };
+    std::vector<DataTypePtr> subTypes = { IntType(), LongType() };
     auto *hasNulls = new ContainerVector(allocator, rows, subAddrs, 2, subTypes);
 
     std::vector<bool> nulls = { true, false, true, false, true, false, true, false, true, false };

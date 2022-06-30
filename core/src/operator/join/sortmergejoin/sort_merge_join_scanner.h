@@ -57,9 +57,10 @@ public:
 
 class SortMergeJoinScanner {
 public:
-    SortMergeJoinScanner(omniruntime::type::ContainerDataTypePtr streamedTableKeysTypes, int32_t *streamedTableKeysCols,
-        int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, omniruntime::type::ContainerDataTypePtr bufferedTableKeysTypes,
-        int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch);
+    SortMergeJoinScanner(const omniruntime::type::DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
+        int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex,
+        const omniruntime::type::DataTypes &bufferedTableKeysTypes, int32_t *bufferedTableKeysCols,
+        DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch);
 
     int64_t FindNextJoinRows();
 
@@ -106,7 +107,7 @@ private:
 
     int32_t CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex);
 
-    omniruntime::type::ContainerDataTypePtr streamedTableKeysTypes;
+    omniruntime::type::DataTypes streamedTableKeysTypes;
     JoinType joinType;
     int32_t *streamedTableKeysCols;
     int32_t *bufferedTableKeysCols;

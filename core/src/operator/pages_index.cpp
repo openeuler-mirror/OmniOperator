@@ -34,15 +34,14 @@ int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, 
     int32_t to, int32_t len);
 
 // function implements for class PagesIndex
-PagesIndex::PagesIndex(const ContainerDataTypePtr &types)
+PagesIndex::PagesIndex(const DataTypes &types)
     : dataTypes(types),
-      typesCount(types->GetSize()),
+      dataTypeIds(types.GetIds()),
+      typesCount(types.GetSize()),
       columns(nullptr),
       valueAddresses(nullptr),
       positionCount(0)
-{
-    types->GetIds(dataTypeIds);
-}
+{}
 
 
 inline void Swap(uint64_t *valueAddresses, int32_t a, int32_t b)
@@ -859,7 +858,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch,
-                    dataTypes->GetFieldType(outputCol)->GetWidth(), vecAllocator);
+                    static_cast<VarcharDataType *>(dataTypes.GetType(outputCol).get())->GetWidth(), vecAllocator);
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
@@ -953,9 +952,8 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
 void PagesIndex::GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vector<int32_t> &outputCols,
     std::vector<VectorBatch *> &sortedVecBatches)
 {
-//    std::vector<DataTypePtr> types(dataTypes.begin(), dataTypes.end());
     int32_t outputColsCount = outputCols.size();
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(dataTypes->GetFieldTypes(), outputCols.data(), outputColsCount);
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputColsCount);
     int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     sortedVecBatches.reserve(vecBatchCount);
 
@@ -965,7 +963,7 @@ void PagesIndex::GetSortedVecBatches(VectorAllocator *vectorAllocator, std::vect
     for (int32_t i = 0; i < vecBatchCount; i++) {
         rowCount = std::min(maxRowCount, static_cast<int32_t>(positionCount) - offset);
         result = new VectorBatch(outputColsCount, rowCount);
-        GetOutput(outputCols.data(), outputColsCount, result, dataTypeIds.data(), offset, rowCount, vectorAllocator);
+        GetOutput(outputCols.data(), outputColsCount, result, dataTypes.GetIds(), offset, rowCount, vectorAllocator);
         offset += rowCount;
         sortedVecBatches.push_back(result);
     }

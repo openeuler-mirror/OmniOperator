@@ -16,15 +16,15 @@ namespace omniruntime {
 namespace op {
 class SortWithExprOperatorFactory : public OperatorFactory {
 public:
-    static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::ContainerDataTypePtr &sourceTypes,
+    static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::DataTypes &sourceTypes,
         int32_t *outputCols, int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys,
         int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount);
 
-    static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::ContainerDataTypePtr &sourceTypes,
+    static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::DataTypes &sourceTypes,
         int32_t *outputCols, int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys,
         int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig);
 
-    SortWithExprOperatorFactory(const type::ContainerDataTypePtr &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortKeysCount, const OperatorConfig &operatorConfig);
 
@@ -33,7 +33,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    ContainerDataTypePtr sourceTypes;
+    std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> sortCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -42,7 +42,7 @@ private:
 
 class SortWithExprOperator : public Operator {
 public:
-    SortWithExprOperator(type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &sortCols,
+    SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
         std::vector<RowProjFunc> &projectFuncs, SortOperator *sortOperator);
 
     ~SortWithExprOperator() override;
@@ -54,7 +54,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const ContainerDataTypePtr sourceTypes;
+    DataTypes sourceTypes;
     std::vector<int32_t> sortCols;
     std::vector<RowProjFunc> projectFuncs;
     SortOperator *sortOperator;

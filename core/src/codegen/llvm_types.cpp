@@ -143,9 +143,9 @@ llvm::Type *LLVMTypes::ToLLVMType(DataTypeId id)
     return (result == VectorToLLVMTypeMap.end()) ? NULL : result->second;
 }
 
-llvm::Type *LLVMTypes::VectorToLLVMType(DataTypePtr type)
+llvm::Type *LLVMTypes::VectorToLLVMType(const DataType &type)
 {
-    return ToLLVMType(type->GetId());
+    return ToLLVMType(type.GetId());
 }
 
 llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)

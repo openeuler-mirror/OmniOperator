@@ -11,9 +11,9 @@ using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace op {
-PagesHashStrategy::PagesHashStrategy(Vector ***columns, ContainerDataType &buildTypes,
-    int32_t *hashCols, int32_t hashColsCount)
-    : buildColumns(columns), buildColumnCount(buildTypes.GetSize()), buildHashColsCount(hashColsCount)
+PagesHashStrategy::PagesHashStrategy(Vector ***columns, const DataTypes &columnTypes, int32_t *hashCols,
+    int32_t hashColsCount)
+    : buildColumns(columns), buildColumnCount(columnTypes.GetSize()), buildHashColsCount(hashColsCount)
 {
     if (hashColsCount > 0) {
         this->buildHashColTypes = new int32_t[hashColsCount];
@@ -22,7 +22,7 @@ PagesHashStrategy::PagesHashStrategy(Vector ***columns, ContainerDataType &build
         for (int32_t i = 0; i < hashColsCount; i++) {
             hashColumn = hashCols[i];
             buildHashColumns[i] = columns[hashColumn];
-            buildHashColTypes[i] = (buildTypes.GetFieldType(hashColumn))->GetId();
+            buildHashColTypes[i] = (columnTypes.GetType(hashColumn))->GetId();
         }
     } else {
         this->buildHashColTypes = nullptr;

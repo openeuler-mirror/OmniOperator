@@ -30,14 +30,14 @@ VectorBatch::~VectorBatch()
     delete[] vectorTypeIds;
 }
 
-void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<DataType> &types)
+void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types)
 {
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
-        vectorTypeIds[colIndex] = types[colIndex].GetId();
+        vectorTypeIds[colIndex] = types[colIndex]->GetId();
         auto currVecType = types[colIndex];
         int32_t vectorEncodingId =
-            currVecType.GetId() == type::OMNI_CONTAINER ? OMNI_VEC_ENCODING_CONTAINER : OMNI_VEC_ENCODING_FLAT;
-        SetVector(colIndex, VectorHelper::CreateVector(vecAllocator, vectorEncodingId, currVecType, rowCount));
+            currVecType->GetId() == type::OMNI_CONTAINER ? OMNI_VEC_ENCODING_CONTAINER : OMNI_VEC_ENCODING_FLAT;
+        SetVector(colIndex, VectorHelper::CreateVector(vecAllocator, vectorEncodingId, *currVecType, rowCount));
     }
 }
 

@@ -101,7 +101,7 @@ DataTypeId ParseReturnType(const string &typeString)
 }
 
 std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const string expressions[],
-    int32_t numberOfExpressions, ContainerDataType &inputTypes)
+    int32_t numberOfExpressions, DataTypes &inputTypes)
 {
     std::vector<Expr *> vExprs;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
@@ -114,7 +114,7 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
     return vExprs;
 }
 
-Expr *Parser::ParseRowExpression(const string &inputStr, ContainerDataType &inputTypes, int32_t vecCount)
+Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes &inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
     auto firstParenInd = input.find('(');
@@ -315,10 +315,10 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
     }
 }
 
-FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const ContainerDataType &inputTypes)
+FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const DataTypes &inputTypes)
 {
     int colIdx = stoi(fieldStr.substr(1));
-    const DataTypePtr& colType = inputTypes.GetFieldType(colIdx);
+    const DataTypePtr &colType = inputTypes.GetType(colIdx);
     return new FieldExpr(colIdx, colType);
 }
 

@@ -26,7 +26,7 @@ using HashFuncVect = void (*)(Vector *vector, const uint32_t s, const uint32_t r
 using DuplicateKeyValue = void (*)(AggregateState &state, Vector *vector, const uint32_t offset,
     ExecutionContext *context);
 using IsSameNodeFunc = void (*)(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame);
-using SetVector = void (*)(VectorBatch *vecBatch, DataTypePtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
+using SetVector = void (*)(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 using FillValue = void (*)(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
 
@@ -61,11 +61,11 @@ void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t
 void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset, ExecutionContext *context);
 
 template <typename V>
-void SetVectorImpl(VectorBatch *vecBatch, DataTypePtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetVectorImpl(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
-void SetVarcharVector(VectorBatch *vecBatch, DataTypePtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
-void SetContainerVector(VectorBatch *vecBatch, DataTypePtr type, int32_t columnIndex, VectorAllocator *vecAllocator,
+void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 
 template <typename V, typename D>
@@ -76,8 +76,8 @@ void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &te
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<int32_t> &aggInputCols,
-        ContainerDataTypePtr aggInputTypes, ContainerDataTypePtr aggOutputTypes,
-        std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
+        const DataTypes &aggInputTypes, const DataTypes &aggOutputTypes, std::vector<std::unique_ptr<Aggregator>> aggs,
+        bool inputRaw, bool outputPartial)
         : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -94,7 +94,7 @@ public:
     int32_t GetOutput(std::vector<VectorBatch *> &data) override;
 
     explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators,
-        ContainerDataTypePtr aggInputTypes, ContainerDataTypePtr aggOutputTypes)
+        const DataTypes &aggInputTypes, const DataTypes &aggOutputTypes)
         : AggregationCommonOperator(std::move(aggregators), true, false),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes)
@@ -130,8 +130,8 @@ private:
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<int32_t> aggInputCols;
-    ContainerDataTypePtr aggInputTypes;
-    ContainerDataTypePtr aggOutputTypes;
+    DataTypes aggInputTypes;
+    DataTypes aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
 };
 
@@ -139,15 +139,15 @@ class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, ContainerDataTypePtr groupInputTypes,
-        std::vector<uint32_t> &aggCol, ContainerDataTypePtr aggInputTypes, ContainerDataTypePtr aggOutputTypes,
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
+        std::vector<uint32_t> &aggCol, const DataTypes &aggInputTypes, const DataTypes &aggOutputTypes,
         std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColsVector, bool inputRaw, bool outputPartial)
         : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsVector),
           groupByColsVector(groupByCol),
-          groupByTypes(std::move(groupInputTypes)),
+          groupByTypes(groupInputTypes),
           aggInputColsVector(aggCol),
-          aggInputTypes(std::move(aggInputTypes)),
-          aggOutputTypes(std::move(aggOutputTypes)),
+          aggInputTypes(aggInputTypes),
+          aggOutputTypes(aggOutputTypes),
           aggFuncTypesVector(aggFuncTypes)
     {}
 
@@ -158,11 +158,11 @@ public:
 private:
     std::vector<uint32_t> groupByColsVector;
     std::vector<int32_t> groupByColIdx;
-    ContainerDataTypePtr groupByTypes;
+    DataTypes groupByTypes;
     std::vector<uint32_t> aggInputColsVector;
     std::vector<int32_t> aggInputCols;
-    ContainerDataTypePtr aggInputTypes;
-    ContainerDataTypePtr aggOutputTypes;
+    DataTypes aggInputTypes;
+    DataTypes aggOutputTypes;
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };

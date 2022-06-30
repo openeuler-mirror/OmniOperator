@@ -6,7 +6,7 @@
 #define OMNI_RUNTIME_TYPE_INFER_H
 
 #include <cstdint>
-#include "type/data_type.h"
+#include "type/data_types.h"
 #include "debug.h"
 
 class TypeUtil {
@@ -37,9 +37,13 @@ public:
     static bool IsDecimalType(omniruntime::type::DataTypeId type);
 };
 
+std::shared_ptr<omniruntime::type::DataType> InvalidType();
+
 std::shared_ptr<omniruntime::type::DataType> NoneType();
 
 std::shared_ptr<omniruntime::type::DataType> IntType();
+
+std::shared_ptr<omniruntime::type::DataType> ShortType();
 
 std::shared_ptr<omniruntime::type::DataType> Date32Type();
 
@@ -81,6 +85,10 @@ std::shared_ptr<omniruntime::type::DataType> Decimal128Type(int32_t precision, i
 
 std::shared_ptr<omniruntime::type::DataType> ContainerType();
 
-std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(std::vector<omniruntime::type::DataTypePtr> &fieldTypes);
+std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
+    std::vector<omniruntime::type::DataTypePtr> &fieldTypes);
+
+std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
+    std::vector<omniruntime::type::DataTypePtr> &&fieldTypes);
 
 #endif // OMNI_RUNTIME_TYPE_INFER_H

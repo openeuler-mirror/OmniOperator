@@ -142,7 +142,7 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 VarcharVector *CreateVarcharVector(DataType &type, std::string *values, int32_t length)
 {
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
-    uint32_t width = type.GetWidth();
+    uint32_t width = static_cast<VarcharDataType &>(type).GetWidth();
     VarcharVector *vector = new VarcharVector(vecAllocator, length * width, length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
@@ -160,14 +160,15 @@ Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
     return vector;
 }
 
-ContainerVector *CreateContainerVector(std::vector<DataType> fieldTypes, int32_t rowCount, va_list &args)
+ContainerVector *CreateContainerVector(std::vector<DataTypePtr> &fieldTypes, int32_t rowCount, va_list &args)
 {
     int32_t fieldCount = fieldTypes.size();
     std::vector<uintptr_t> vectorAddresses(fieldCount);
     for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
-        auto *fieldVector = fieldTypes[colIdx].GetId() == OMNI_CONTAINER ?
-            CreateContainerVector(fieldTypes[colIdx].GetFieldTypes(), rowCount, args) :
-            CreateVector((DataType &)fieldTypes[colIdx], rowCount, args);
+        auto *fieldVector = fieldTypes[colIdx]->GetId() == OMNI_CONTAINER ?
+            CreateContainerVector(static_cast<ContainerDataType *>(fieldTypes[colIdx].get())->GetFieldTypes(), rowCount,
+            args) :
+            CreateVector(*fieldTypes[colIdx], rowCount, args);
         vectorAddresses[colIdx] = reinterpret_cast<uintptr_t>(fieldVector);
     }
     omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocator::GetGlobalAllocator();
@@ -193,7 +194,8 @@ Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
         case OMNI_DECIMAL128:
             return CreateDecimal128Vector(va_arg(args, Decimal128 *), rowCount);
         case OMNI_CONTAINER:
-            return static_cast<Vector *>(CreateContainerVector(dataType.GetFieldTypes(), rowCount, args));
+            return static_cast<Vector *>(
+                CreateContainerVector(static_cast<ContainerDataType &>(dataType).GetFieldTypes(), rowCount, args));
         default:
             std::cerr << "Unsupported type : " << dataType.GetId() << std::endl;
             return nullptr;
@@ -211,14 +213,14 @@ DictionaryVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, i
     return vec;
 }
 
-VectorBatch *CreateVectorBatch(const ContainerDataType &types, int32_t rowCount, ...)
+VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
 {
     int32_t typesCount = types.GetSize();
-    auto *vectorBatch = new VectorBatch(typesCount);
+    auto *vectorBatch = new VectorBatch(typesCount, rowCount);
     va_list args;
     va_start(args, rowCount);
     for (int32_t i = 0; i < typesCount; i++) {
-        const DataTypePtr& type = types.GetFieldType(i);
+        DataTypePtr type = types.GetType(i);
         vectorBatch->SetVector(i, CreateVector(*type, rowCount, args));
     }
     va_end(args);

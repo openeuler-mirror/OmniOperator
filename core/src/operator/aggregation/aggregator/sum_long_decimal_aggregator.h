@@ -12,12 +12,11 @@ namespace omniruntime {
 namespace op {
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel)
+    SumLongDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumLongDecimalAggregator(const DataTypePtr in, const DataTypePtr out, int32_t channel, bool inputRaw,
-                             bool outputPartial)
+    SumLongDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 
@@ -68,10 +67,10 @@ public:
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
     {
         auto v = static_cast<VarcharVector *>(vector);
-            if (state.val == nullptr) {
-                v->SetValueNull(rowIndex);
-                return;
-            }
+        if (state.val == nullptr) {
+            v->SetValueNull(rowIndex);
+            return;
+        }
         // write decimal if not overflow. otherwise throw exception
         int64_t isOverflow = 0;
         Decimal128 result;
@@ -82,8 +81,7 @@ public:
         DecimalOperations::ThrowIfOverflows(result);
 
         if (outputPartial) {
-            v->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
-                PARTIAL_SUM_OUTPUT_LENGTH);
+            v->SetValue(rowIndex, static_cast<uint8_t *>(state.val), PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
             // this branch is for window operator
             static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, result);

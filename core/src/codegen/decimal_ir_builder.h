@@ -24,7 +24,7 @@ public:
     virtual ~DecimalIRBuilder() = default;
     llvm::Value *CallDecimalFunction(const std::string &function_name, llvm::Type *return_type,
         const std::vector<llvm::Value *> &args, llvm::Value *executionContextPtr = nullptr);
-    std::shared_ptr<DecimalValue> BuildDecimalValue(llvm::Value *data, omniruntime::type::DataTypePtr retType,
+    std::shared_ptr<DecimalValue> BuildDecimalValue(llvm::Value *data, omniruntime::type::DataType &retType,
         llvm::Value *isNull = nullptr);
     // Make from i128 value
     DecimalSplitValue Split(llvm::Value *fullValue);

@@ -251,8 +251,7 @@ public:
         dataType = expr->GetReturnType();
     }
 
-    template <typename T>
-    explicit TestLiteralExpr(T val, DataTypePtr dt) : expr(new LiteralExpr(val,dt))
+    template <typename T> explicit TestLiteralExpr(T val, DataTypePtr dt) : expr(new LiteralExpr(val, dt))
     {
         dataType = expr->GetReturnType();
     }
@@ -307,7 +306,8 @@ public:
 
     bool operator == (const FieldExpr &rhs) const
     {
-        return *(expr->GetReturnType()) == *(rhs.GetReturnType()) && expr->isNull == rhs.isNull && expr->colVal == rhs.colVal;
+        return *(expr->GetReturnType()) == *(rhs.GetReturnType()) && expr->isNull == rhs.isNull &&
+            expr->colVal == rhs.colVal;
     }
 
     bool isEqual(Expr *that) const override
@@ -550,8 +550,8 @@ public:
 
     bool operator == (const IfExpr &rhs) const
     {
-        return (*dataType == *rhs.GetReturnType() && condition->isEqual(rhs.condition) && tExpr->isEqual(rhs.trueExpr) &&
-            fExpr->isEqual(rhs.falseExpr));
+        return (*dataType == *rhs.GetReturnType() && condition->isEqual(rhs.condition) &&
+            tExpr->isEqual(rhs.trueExpr) && fExpr->isEqual(rhs.falseExpr));
     }
 
     bool isEqual(Expr *that) const override

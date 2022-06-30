@@ -13,11 +13,10 @@ namespace omniruntime {
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace TestUtil;
+using namespace omniruntime::expressions;
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {
-    using namespace omniruntime::expressions;
-
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
     const int32_t aggNum = 2;
@@ -29,11 +28,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    std::vector<DataTypePtr> sourceFieldTypes { LongType(), LongType(), IntType(), IntType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
-    std::vector<DataTypePtr> outputTypes { LongType(), IntType() };
-    ContainerDataTypePtr aggOutputTypes = std::make_shared<ContainerDataType>(outputTypes);
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2, data3, data4);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     // groupByKeys
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
@@ -65,8 +62,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {180};
     int32_t expData4[] = {36};
-    std::vector<DataTypePtr> expectFieldTypes { LongType(), IntType(), LongType(), IntType() };
-    ContainerDataType expectTypes(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
@@ -96,11 +92,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    std::vector<DataTypePtr> sourceFieldTypes { LongType(), LongType(), IntType(), IntType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
-    std::vector<DataTypePtr> outputTypes { LongType(), IntType() };
-    ContainerDataTypePtr aggOutputTypes = std::make_shared<ContainerDataType>(outputTypes);
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2, data3, data4);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     FieldExpr *modLeft = new FieldExpr(0, LongType());
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
@@ -136,8 +130,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t expData2[] = {10};
     int64_t expData3[] = {180};
     int32_t expData4[] = {76};
-    std::vector<DataTypePtr> expectFieldTypes { LongType(), IntType(), LongType(), IntType() };
-    ContainerDataType expectTypes(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
@@ -167,11 +160,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    std::vector<DataTypePtr> sourceFieldTypes { LongType(), LongType(), IntType(), IntType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
-    std::vector<DataTypePtr> outputTypes { LongType(), IntType(), LongType() };
-    ContainerDataTypePtr aggOutputTypes = std::make_shared<ContainerDataType>(outputTypes);
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2, data3, data4);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     std::vector<Expr *> groupByKeys = { new FieldExpr(0, LongType()), new FieldExpr(2, IntType()) };
     std::vector<Expr *> aggKeys = { new FieldExpr(1, LongType()), new FieldExpr(3, IntType()) };
@@ -194,8 +185,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int64_t expData3[] = {36};
     int32_t expData4[] = {36};
     int64_t expData5[]={8};
-    std::vector<DataTypePtr> expectFieldTypes { LongType(), IntType(), LongType(), IntType() };
-    ContainerDataType expectTypes(expectFieldTypes);
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), LongType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 

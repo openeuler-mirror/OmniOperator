@@ -18,7 +18,7 @@
 /*
  * ProjFunc is retrieved from ProjectionCodeGen
  * projector(data, rowCount, outVec, selectedRows, numSelectedRows, inputBitmap, inputOffset, outputBitmap,
- *     outputOffset, context, dictionaryVectors)
+ * outputOffset, context, dictionaryVectors)
  * data: 2D array containing vector values
  * rowCount: number of rows in data
  * selectedRows: array of row numbers which pass the filter
@@ -64,7 +64,7 @@ private:
 
 class Projection {
 public:
-    Projection(const expressions::Expr &expr, bool filter, DataType outType);
+    Projection(const expressions::Expr &expr, bool filter, DataTypePtr outType);
     ~Projection()
     {
         this->codegen.reset();
@@ -86,9 +86,9 @@ public:
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
         int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    omniruntime::type::DataType GetOutputType() const
+    omniruntime::type::DataType &GetOutputType() const
     {
-        return this->outType;
+        return *(this->outType);
     }
 
 private:
@@ -97,7 +97,7 @@ private:
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
-    DataType outType;
+    DataTypePtr outType;
     ProjFunc projector;
     bool Initialize(bool filter);
 };
@@ -128,7 +128,7 @@ private:
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
     ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs, int32_t nProj,
-        ContainerDataTypePtr inputTypes, int32_t nCols);
+        const DataTypes &inputTypes, int32_t nCols);
 
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
@@ -139,7 +139,7 @@ public:
     }
 
 private:
-    ContainerDataTypePtr inputTypes;
+    DataTypes inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
     std::vector<DataTypeId> outTypeIds;

@@ -21,13 +21,12 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType(),LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
     auto col0 = new FieldExpr(0, IntType());
-    auto col1 = new FieldExpr(1,LongType());
+    auto col1 = new FieldExpr(1, LongType());
     std::vector<Expr *> sortExprs { col0, col1 };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -42,7 +41,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    auto expectVecBatch = CreateVectorBatch(*sourceTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
@@ -57,9 +56,8 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType(),LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
     auto col0 = new FieldExpr(0, IntType());
@@ -80,7 +78,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    auto expectVecBatch = CreateVectorBatch(*sourceTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
@@ -95,17 +93,16 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType(),LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
-    VectorBatch *vecBatch = CreateVectorBatch(*sourceTypes, dataSize, data1, data2);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
     auto add1Col = new FieldExpr(0, IntType());
     auto add1Literal = new LiteralExpr(50, IntType());
-    auto add2Col = new FieldExpr(1,LongType());
-    auto add2Literal = new LiteralExpr(50,LongType());
+    auto add2Col = new FieldExpr(1, LongType());
+    auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col,LongType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
@@ -120,7 +117,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    auto expectVecBatch = CreateVectorBatch(*sourceTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
@@ -139,22 +136,21 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
     void *datas[3] = {data0, data1, data2};
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType(),LongType(),LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = new VectorBatch(3, dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        DataTypePtr dataType = sourceTypes->GetFieldType(i);
+        DataTypePtr dataType = sourceTypes.GetType(i);
         vecBatch->SetVector(i, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     int32_t outputCols[2] = {1, 2};
     auto add1Col = new FieldExpr(0, IntType());
     auto add1Literal = new LiteralExpr(50, IntType());
-    auto add2Col = new FieldExpr(2,LongType());
-    auto add2Literal = new LiteralExpr(50,LongType());
+    auto add2Col = new FieldExpr(2, LongType());
+    auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col,LongType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
@@ -168,9 +164,8 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    std::vector<DataTypePtr> expectedFieldTypes{LongType(),LongType()};
-    ContainerDataTypePtr expectedTypes = std::make_shared<ContainerDataType>(expectedFieldTypes);
-    auto expectVecBatch = CreateVectorBatch(*expectedTypes, dataSize, expectData1, expectData2);
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
+    auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
@@ -190,8 +185,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     VectorBatch *vecBatch = new VectorBatch(vecCount, dataSize);
     vecBatch->SetVector(0, vector);
 
-    std::vector<DataTypePtr> sourceFieldTypes{ type };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ type }));
     int32_t outputCols[vecCount] = {0};
 
     auto substrCol = new FieldExpr(0, VarcharType(200));
@@ -260,15 +254,14 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     vecBatch->SetVector(1, slicedVec1);
     vecBatch->SetVector(2, slicedVec2);
 
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType(),LongType(),LongType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     int32_t outputCols[2] = {1, 2};
     auto add1Col = new FieldExpr(0, IntType());
     auto add1Literal = new LiteralExpr(50, IntType());
-    auto add2Col = new FieldExpr(2,LongType());
-    auto add2Literal = new LiteralExpr(50,LongType());
+    auto add2Col = new FieldExpr(2, LongType());
+    auto add2Literal = new LiteralExpr(50, LongType());
     auto add1Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add1Col, add1Literal, IntType());
-    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col,LongType());
+    auto add2Expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, add2Literal, add2Col, LongType());
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
 
     int32_t ascendings[2] = {false, true};
@@ -282,9 +275,8 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
     int64_t expectData1[5] = {0, 0, 5, 1, 3};
     int64_t expectData2[5] = {0, 0, 11, 55, 33};
-    std::vector<DataTypePtr> expectedFieldTypes{LongType(),LongType() };
-    ContainerDataTypePtr expectedTypes = std::make_shared<ContainerDataType>(expectedFieldTypes);
-    auto expectVecBatch = CreateVectorBatch(*expectedTypes, 5, expectData1, expectData2);
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
+    auto expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
     expectVecBatch->GetVector(0)->SetValueNull(1);
     expectVecBatch->GetVector(1)->SetValueNull(0);
@@ -300,20 +292,19 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
 TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 {
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType() }));
 
     const int32_t dataSize1 = 5;
     int32_t data1[dataSize1] = {4, 3, 2, 1, 0};
-    auto vecBatch1 = CreateVectorBatch(*sourceTypes, dataSize1, data1);
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1);
 
     const int32_t dataSize2 = 1;
     int32_t data2[dataSize2] = {8};
-    auto vecBatch2 = CreateVectorBatch(*sourceTypes, dataSize2, data2);
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data2);
 
     const int32_t dataSize3 = 4;
     int32_t data3[dataSize3] = {7, 9, 6, 5};
-    auto vecBatch3 = CreateVectorBatch(*sourceTypes, dataSize3, data3);
+    auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize3, data3);
 
     int outputCols[1] = {0};
     auto col0 = new FieldExpr(0, IntType());
@@ -335,7 +326,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 
     auto totalDataSize = dataSize1 + dataSize2 + dataSize3;
     int32_t expectData[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    auto expectVecBatch = CreateVectorBatch(*sourceTypes, totalDataSize, expectData);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
@@ -347,18 +338,17 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 
 TEST(SortWithExprTest, TestSortSpillWithOneRecord)
 {
-    std::vector<DataTypePtr> sourceFieldTypes{ IntType() };
-    ContainerDataTypePtr sourceTypes = std::make_shared<ContainerDataType>(sourceFieldTypes);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType() }));
 
     const int32_t dataSize = 1;
     int32_t data1[dataSize] = {3};
-    auto vecBatch1 = CreateVectorBatch(*sourceTypes, dataSize, data1);
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1);
 
     int32_t data2[dataSize] = {8};
-    auto vecBatch2 = CreateVectorBatch(*sourceTypes, dataSize, data2);
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data2);
 
     int32_t data3[dataSize] = {6};
-    auto vecBatch3 = CreateVectorBatch(*sourceTypes, dataSize, data3);
+    auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize, data3);
 
     int outputCols[1] = {0};
     auto col0 = new FieldExpr(0, IntType());
@@ -380,7 +370,7 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
 
     auto totalDataSize = dataSize * 3;
     int32_t expectData[] = {3, 6, 8};
-    auto expectVecBatch = CreateVectorBatch(*sourceTypes, totalDataSize, expectData);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);

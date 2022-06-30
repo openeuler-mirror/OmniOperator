@@ -82,15 +82,15 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
         }
         case OMNI_DECIMAL64: {
             auto decimalVal = jsonExpr["value"].get<int64_t>();
-            return new LiteralExpr(decimalVal,
-                                   std::make_shared<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
+            return new LiteralExpr(decimalVal, std::make_shared<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(),
+                jsonExpr["scale"].get<int32_t>()));
         }
         case OMNI_DECIMAL128: {
             auto *dec128String = new string(jsonExpr["value"].get<string>());
-            return new LiteralExpr(dec128String, std::make_shared<Decimal128DataType>(jsonExpr["precision"].get<int32_t>(),
-                jsonExpr["scale"].get<int32_t>()));
+            return new LiteralExpr(dec128String, std::make_shared<Decimal128DataType>(
+                jsonExpr["precision"].get<int32_t>(), jsonExpr["scale"].get<int32_t>()));
         }
-        case OMNI_CHAR:{
+        case OMNI_CHAR: {
             auto *stringVal = new string(jsonExpr["value"].get<string>());
             auto width = jsonExpr["width"].get<int32_t>();
             return new LiteralExpr(stringVal, std::make_shared<CharDataType>(width));

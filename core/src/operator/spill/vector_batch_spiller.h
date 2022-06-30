@@ -15,10 +15,10 @@ namespace omniruntime {
 namespace op {
 class VectorBatchSpiller : public Spiller {
 public:
-    VectorBatchSpiller(const std::string &path, omniruntime::type::ContainerDataTypePtr sourceTypes,
+    VectorBatchSpiller(const std::string &path, const omniruntime::type::DataTypes &sourceTypes,
         VecBatchWithPositionComparator *comparator)
         : path(path),
-          sourceTypes(std::move(sourceTypes)),
+          sourceTypes(sourceTypes),
           comparator(comparator),
           merger(nullptr),
           tracker(nullptr),
@@ -26,18 +26,18 @@ public:
           totalRowCount(0),
           remainingRowCount(0)
     {
-        for (int32_t i = 0; i < this->sourceTypes->GetSize(); i++) {
+        for (int32_t i = 0; i < this->sourceTypes.GetSize(); i++) {
             outputCols.push_back(i);
-            outputTypes.push_back(this->sourceTypes->GetFieldType(i));
+            outputTypes.push_back(this->sourceTypes.GetType(i));
         }
         int32_t rowSize = OperatorUtil::GetRowSize(outputTypes);
         maxRowCountPerVecBatch = OperatorUtil::GetMaxRowCount(rowSize);
     }
 
-    VectorBatchSpiller(std::string &path, omniruntime::type::ContainerDataTypePtr sourceTypes, std::vector<int32_t> &outputCols,
+    VectorBatchSpiller(std::string &path, omniruntime::type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols,
         VecBatchWithPositionComparator *comparator, VectorAllocator *vectorAllocator)
         : path(path),
-          sourceTypes(std::move(sourceTypes)),
+          sourceTypes(sourceTypes),
           comparator(comparator),
           merger(nullptr),
           tracker(nullptr),
@@ -47,7 +47,7 @@ public:
           outputCols(outputCols)
     {
         for (auto &outputCol : outputCols) {
-            outputTypes.push_back(this->sourceTypes->GetFieldType(outputCol));
+            outputTypes.push_back(this->sourceTypes.GetType(outputCol));
         }
         int32_t rowSize = OperatorUtil::GetRowSize(outputTypes);
         maxRowCountPerVecBatch = OperatorUtil::GetMaxRowCount(rowSize);
@@ -85,7 +85,7 @@ public:
 
 private:
     std::string path;
-    omniruntime::type::ContainerDataTypePtr sourceTypes;
+    omniruntime::type::DataTypes sourceTypes;
     VecBatchWithPositionComparator *comparator;
     VectorBatchMerger *merger;
     SpillTracker *tracker;

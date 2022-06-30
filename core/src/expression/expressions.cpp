@@ -54,7 +54,8 @@ ExprType Expr::GetType() const
     return ExprType::INVALID_E;
 }
 
-const DataTypePtr &Expr::GetReturnType() const {
+DataTypePtr Expr::GetReturnType() const
+{
     return dataType;
 }
 
@@ -328,7 +329,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
     const Function *function)
-    : funcName(std::move(fnName)), arguments(std::move(args)), function(function)
+    : funcName(fnName), arguments(args), function(function)
 {
     dataType = std::move(returnType);
 }
