@@ -74,10 +74,10 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         }
         case OMNI_CONTAINER: {
             auto *containerVector = static_cast<ContainerVector *>(vector);
-            auto *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
-            auto *longVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
-            std::cout << "temp average: " << doubleVector->GetValue(originalRowIndex) << " temp count: " <<
-                longVector->GetValue(originalRowIndex) << "\t";
+            int32_t fieldCount = containerVector->GetVectorCount();
+            for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+                PrintVectorValue(reinterpret_cast<Vector *>(containerVector->GetValue(colIdx)), rowIndex);
+            }
             break;
         }
         default:

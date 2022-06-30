@@ -154,8 +154,7 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
     } else {
-        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding,
-            static_cast<int32_t>(inputType.GetId()), rowCount * static_cast<int32_t>(width), rowCount));
+        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding, inputType, rowCount));
     }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =

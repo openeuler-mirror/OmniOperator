@@ -193,10 +193,10 @@ TEST(VectorHelper, createVector)
     auto *decimal128Vector = reinterpret_cast<Decimal128Vector *>(tmp);
     EXPECT_EQ(decimal128Vector->GetSize(), rowCount);
     EXPECT_EQ(decimal128Vector->GetTypeId(), OMNI_DECIMAL128);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_VEC_ENCODING_DICTIONARY, 1024, rowCount);
+    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_DICTIONARY, OMNI_INT, 1024, rowCount);
     auto *dictionaryVector = reinterpret_cast<DictionaryVector *>(tmp);
     EXPECT_EQ(dictionaryVector->GetSize(), rowCount);
-    EXPECT_EQ(dictionaryVector->GetTypeId(), OMNI_VEC_ENCODING_DICTIONARY);
+    EXPECT_EQ(dictionaryVector->GetTypeId(), OMNI_INT);
     tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_LAZY, OMNI_NONE, 1024, rowCount);
     auto *lazyVector = reinterpret_cast<LazyVector *>(tmp);
     EXPECT_EQ(lazyVector->GetSize(), rowCount);

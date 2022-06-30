@@ -15,29 +15,6 @@ namespace op {
 using namespace std;
 using namespace vec;
 
-void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
-    int32_t currentRowIndex)
-{
-    ContainerVector *containerVec = static_cast<ContainerVector *>(origintVector);
-    auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->GetValue(0));
-    auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->GetValue(1));
-    int64_t longValue = static_cast<LongVector *>(avgCountVector)->GetValue(originRowIndex);
-    double doubleValue = static_cast<DoubleVector *>(avgValVector)->GetValue(originRowIndex);
-    ContainerVector *currentContainerVec = static_cast<ContainerVector *>(currentVector);
-    auto *currentAvgValVector = reinterpret_cast<DoubleVector *>(currentContainerVec->GetValue(0));
-    auto *currentAvgCountVector = reinterpret_cast<LongVector *>(currentContainerVec->GetValue(1));
-    static_cast<DoubleVector *>(currentAvgValVector)->SetValue(currentRowIndex, doubleValue);
-    static_cast<LongVector *>(currentAvgCountVector)->SetValue(currentRowIndex, longValue);
-}
-
-void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
-    int32_t currentRowIndex)
-{
-    uint8_t *value = nullptr;
-    int32_t length = static_cast<VarcharVector *>(origintVector)->GetValue(originRowIndex, &value);
-    static_cast<VarcharVector *>(currentVector)->SetValue(currentRowIndex, value, length);
-}
-
 class PartitionedOutputOperatorFactory : public OperatorFactory {
 public:
     PartitionedOutputOperatorFactory(const DataTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
@@ -107,9 +84,24 @@ private:
     int32_t hashChannelsCount;
     vector<VectorBatch *> vectorBatches = {};
     map<int, vector<int>> partitionedMap = {};
+
     void BuildVecBatch(int32_t vecCount, int32_t rowCount);
+
     int32_t GetPartition(VectorBatch *vecBatch, int32_t startVecIndex, int32_t rowIndex);
+
     void MergeVectorBatch(VectorBatch *vecBatch, int32_t vecCount);
+
+    long GetHash(int32_t rowIndex, Vector *vector);
+
+    long GetContainerHash(int32_t rowIndex, ContainerVector *vector);
+
+    void Insert(Vector *originVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex);
+
+    void ALWAYS_INLINE InsertVarchar(Vector *originVector, int32_t originRowIndex, Vector *currentVector,
+        int32_t currentRowIndex);
+
+    void ALWAYS_INLINE InsertContainer(Vector *originVector, int32_t originRowIndex, Vector *currentVector,
+        int32_t currentRowIndex);
 };
 }
 }

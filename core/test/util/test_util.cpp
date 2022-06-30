@@ -114,6 +114,20 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
                     }
                     break;
                 }
+                case OMNI_CONTAINER: {
+                    int32_t fieldCount = static_cast<ContainerVector *>(actualCol)->GetVectorCount();
+                    for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+                        auto *actualFieldCol =
+                            reinterpret_cast<Vector *>(static_cast<ContainerVector *>(actualCol)->GetValue(colIdx));
+                        auto *expectFieldCol =
+                            reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectCol)->GetValue(colIdx));
+                        result = ColumnMatch(actualFieldCol, expectFieldCol);
+                        if (!result) {
+                            break;
+                        }
+                    }
+                    break;
+                }
                 default:
                     result = false;
             }
@@ -147,6 +161,20 @@ Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
     return vector;
 }
 
+ContainerVector *CreateContainerVector(std::vector<DataType> fieldTypes, int32_t rowCount, va_list &args)
+{
+    int32_t fieldCount = fieldTypes.size();
+    std::vector<uintptr_t> vectorAddresses(fieldCount);
+    for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+        auto *fieldVector = fieldTypes[colIdx].GetId() == OMNI_CONTAINER ?
+            CreateContainerVector(fieldTypes[colIdx].GetFieldTypes(), rowCount, args) :
+            CreateVector((DataType &)fieldTypes[colIdx], rowCount, args);
+        vectorAddresses[colIdx] = reinterpret_cast<uintptr_t>(fieldVector);
+    }
+    omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocator::GetGlobalAllocator();
+    return new ContainerVector(vecAllocator, rowCount, vectorAddresses, fieldCount, fieldTypes);
+}
+
 Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
     switch (dataType.GetId()) {
@@ -165,6 +193,8 @@ Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
             return CreateVarcharVector(static_cast<VarcharDataType &>(dataType), va_arg(args, std::string *), rowCount);
         case OMNI_DECIMAL128:
             return CreateDecimal128Vector(va_arg(args, Decimal128 *), rowCount);
+        case OMNI_CONTAINER:
+            return static_cast<Vector *>(CreateContainerVector(dataType.GetFieldTypes(), rowCount, args));
         default:
             std::cerr << "Unsupported type : " << dataType.GetId() << std::endl;
             return nullptr;
