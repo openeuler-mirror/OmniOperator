@@ -17,12 +17,13 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
     const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial)
 {
-    uint32_t projectColNum = groupByNum + aggNum;
+    uint32_t aggColNum = aggKeys.size();
+    uint32_t projectColNum = groupByNum + aggColNum;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
     for (uint32_t i = 0; i < groupByNum; ++i) {
         projectKeys[i] = groupByKeys.at(i);
     }
-    for (uint32_t i = 0, j = groupByNum; i < aggNum; ++i, ++j) {
+    for (uint32_t i = 0, j = groupByNum; i < aggColNum; ++i, ++j) {
         projectKeys[j] = aggKeys.at(i);
     }
     std::vector<int32_t> hashAggCols;
@@ -34,8 +35,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     for (uint32_t i = 0; i < groupByNum; ++i) {
         groupByCols[i] = static_cast<uint32_t>(hashAggCols[i]);
     }
-    uint32_t aggCols[aggNum];
-    for (uint32_t i = 0, j = groupByNum; i < aggNum; ++i, ++j) {
+    uint32_t aggCols[aggColNum];
+    for (uint32_t i = 0, j = groupByNum; i < aggColNum; ++i, ++j) {
         aggCols[i] = static_cast<uint32_t>(hashAggCols[j]);
     }
 
@@ -46,8 +47,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     }
     this->groupByTypes = std::make_unique<DataTypes>(groupByTypeVec);
     std::vector<DataType> aggTypeVec;
-    aggTypeVec.reserve(aggNum);
-    for (uint32_t i = 0; i < aggNum; i++) {
+    aggTypeVec.reserve(aggColNum);
+    for (uint32_t i = 0; i < aggColNum; i++) {
         aggTypeVec.push_back(newSourceTypes[aggCols[i]]);
     }
     this->aggTypes = std::make_unique<DataTypes>(aggTypeVec);
@@ -55,7 +56,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<uint32_t> groupByCol =
         std::vector<uint32_t>(static_cast<uint32_t *>(groupByCols), static_cast<uint32_t *>(groupByCols) + groupByNum);
     std::vector<uint32_t> aggCol =
-        std::vector<uint32_t>(static_cast<uint32_t *>(aggCols), static_cast<uint32_t *>(aggCols) + aggNum);
+        std::vector<uint32_t>(static_cast<uint32_t *>(aggCols), static_cast<uint32_t *>(aggCols) + aggColNum);
     std::vector<uint32_t> aggFunc = std::vector<uint32_t>(aggFuncTypes, aggFuncTypes + aggNum);
     std::vector<uint32_t> maskColumnContext = std::vector<uint32_t>(maskColumns, maskColumns + aggNum);
 

@@ -157,7 +157,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
-    const int32_t aggNum = 2;
+    const int32_t aggNum = 3;
     const int32_t expectDataSize = 1;
 
     // prepare data
@@ -167,16 +167,17 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
     DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
-    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
+    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     std::vector<Expr *> groupByKeys = { new FieldExpr(0, LongType()), new FieldExpr(2, IntType()) };
     std::vector<Expr *> aggKeys = { new FieldExpr(1, LongType()), new FieldExpr(3, IntType()) };
 
-    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
+    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                                   OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
-    auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
+    auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, aggNum);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
@@ -191,9 +192,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {36};
     int32_t expData4[] = {36};
-    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
+    int64_t expData5[]={8};
+    DataTypes expectTypes(
+        std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType(), LongDataType() }));
     VectorBatch *expectVecorBatch =
-        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
