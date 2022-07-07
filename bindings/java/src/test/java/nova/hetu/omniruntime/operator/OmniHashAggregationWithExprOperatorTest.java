@@ -199,8 +199,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
         String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
 
-        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
+                OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE, LongDataType.LONG};
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
@@ -220,9 +221,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         VecBatch resultVecBatch = results.next();
         assertEquals(results.hasNext(), false);
         assertEquals(resultVecBatch.getRowCount(), 1);
-        assertEquals(resultVecBatch.getVectorCount(), 4);
+        assertEquals(resultVecBatch.getVectorCount(), 5);
 
-        Object[][] expectedDatas = {{2L}, {5}, {36L}, {4.5}};
+        Object[][] expectedDatas = {{2L}, {5}, {36L}, {4.5}, {8L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
