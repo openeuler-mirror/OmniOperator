@@ -91,6 +91,47 @@ bool AssertDivideAllSign(Decimal128 &dividend, Decimal128 &divisor, int32_t divi
     return allSignResult1 && allSignResult2 && allSignResult3 && allSignResult4;
 }
 
+static const int DECIMAL128_HALF_BIT_LENGTH = 64;
+static const __int128 INT_128_MIN = __int128(1) << 127;
+static const __int128 INT_128_MAX = ~INT_128_MIN;
+bool AssertAddReturnOverflow(Decimal128 &lvalue, Decimal128 &rvalue)
+{
+    // expect:
+    // overflow = (lvalue + rvalue)/(2^127)
+    // res = (lvalue + rvalue)%(2^127)
+    Decimal128 result;
+    long overflow = DecimalOperations::AddWithOverflow(lvalue, rvalue, result);
+
+    __int128 left = (__int128(lvalue.HighBits() & (~(1L << 63))) << 64) + lvalue.LowBits();
+    __int128 right = (__int128(rvalue.HighBits() & (~(1L << 63))) << 64) + rvalue.LowBits();
+    __int128 res = (__int128(result.HighBits() & (~(1L << 63))) << 64) + result.LowBits();
+
+    left *= ((lvalue.HighBits() >> (DECIMAL128_HALF_BIT_LENGTH - 1)) & 1) == 1 ? -1 : 1;
+    right *= ((rvalue.HighBits() >> (DECIMAL128_HALF_BIT_LENGTH - 1)) & 1) == 1 ? -1 : 1;
+    res *= ((result.HighBits() >> (DECIMAL128_HALF_BIT_LENGTH - 1)) & 1) == 1 ? -1 : 1;
+
+    __int128 actualResult = left + right;
+    __int128 quotient = 0;
+    __int128 remainder = 0;
+    if (left > 0 && right > 0 && (actualResult) < 0) {
+        // actualResult = INT_128_MIN + overflow - 1
+        quotient = 1;
+        remainder = (actualResult - INT_128_MIN + 1) - 1;
+    } else if (left < 0 && right < 0 && actualResult > 0) {
+        // actualResult = INT_128_MAX + overflow + 1
+        quotient = -1;
+        remainder = actualResult - INT_128_MAX - 1;
+    } else if (actualResult == INT_128_MIN) {
+        // actualResult = -2^127
+        quotient = -1;
+        remainder = 0;
+    } else {
+        // -2^127 < actualResult <= 2^127 -1
+        quotient = 0;
+        remainder = actualResult;
+    }
+    return quotient == overflow && (res == remainder);
+}
 
 TEST(Decimal128, abs_test)
 {
@@ -697,5 +738,601 @@ TEST(Decimal128, div_roundup_3)
     Decimal128 expectQuotient32(0x0, 0x0a);
     Decimal128 expectRemainder32(0x0, 0x00);
     EXPECT_THROW(AssertDivideAllSign(lValue32, rValue32, 0, 0, expectQuotient32, expectRemainder32), std::exception);
+}
+
+
+TEST(Decimal128, add)
+{
+    // 0 + 0 = 0
+    Decimal128 lValue1(0x0, 0x0);
+    Decimal128 rValue1(0x0, 0x0);
+    Decimal128 result1;
+    DecimalOperations::AddWithOverflow(lValue1, rValue1, result1);
+    EXPECT_EQ(Decimal128(0x0, 0x0), result1);
+
+    // 1 + 0 = 1
+    Decimal128 lValue2(0x0, 0x1);
+    Decimal128 rValue2(0x0, 0x0);
+    Decimal128 result2;
+    DecimalOperations::AddWithOverflow(lValue2, rValue2, result2);
+    EXPECT_EQ(Decimal128(0x0, 0x1), result2);
+
+    // 1 + 1 = 2
+    Decimal128 lValue3(0x0, 0x1);
+    Decimal128 rValue3(0x0, 0x1);
+    Decimal128 result3;
+    DecimalOperations::AddWithOverflow(lValue3, rValue3, result3);
+    EXPECT_EQ(Decimal128(0x0, 0x2), result3);
+
+    // 4294967296 + 0 = 4294967296
+    Decimal128 lValue4(0x0, 0x100000000);
+    Decimal128 rValue4(0x0, 0x0);
+    Decimal128 result4;
+    DecimalOperations::AddWithOverflow(lValue4, rValue4, result4);
+    EXPECT_EQ(Decimal128(0x0, 0x100000000), result4);
+
+    // 2147483648 + 2147483648 = 4294967296
+    Decimal128 lValue5(0x0, 0x80000000);
+    Decimal128 rValue5(0x0, 0x80000000);
+    Decimal128 result5;
+    DecimalOperations::AddWithOverflow(lValue5, rValue5, result5);
+    EXPECT_EQ(Decimal128(0x0, 0x100000000), result5);
+
+    // 4294967296 + 8589934592 = 12884901888
+    Decimal128 lValue6(0x0, 0x100000000);
+    Decimal128 rValue6(0x0, 0x200000000);
+    Decimal128 result6;
+    DecimalOperations::AddWithOverflow(lValue6, rValue6, result6);
+    EXPECT_EQ(Decimal128(0x0, 0x300000000), result6);
+}
+
+TEST(Decimal128, DISABLED_addReturnOverflow)
+{
+    // 99999999999999999999999999999999999999 + 99999999999999999999999999999999999999
+    Decimal128 lValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 rValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    EXPECT_TRUE(AssertAddReturnOverflow(lValue2, rValue2));
+
+    // -99999999999999999999999999999999999999 + (-99999999999999999999999999999999999999)
+    Decimal128 lValue5(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 rValue5(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    EXPECT_TRUE(AssertAddReturnOverflow(lValue5, rValue5));
+}
+
+TEST(Decimal128, addReturnOverflow)
+{
+    // 2 + 2
+    Decimal128 lValue1(0x0, 0x2);
+    Decimal128 rValue1(0x0, 0x2);
+    EXPECT_TRUE(AssertAddReturnOverflow(lValue1, rValue1));
+
+    // -99999999999999999999999999999999999999 + 99999999999999999999999999999999999999
+    Decimal128 lValue3(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 rValue3(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    EXPECT_TRUE(AssertAddReturnOverflow(lValue3, rValue3));
+
+    // 99999999999999999999999999999999999999 + (-99999999999999999999999999999999999999)
+    Decimal128 lValue4(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 rValue4(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    EXPECT_TRUE(AssertAddReturnOverflow(lValue4, rValue4));
+
+    // -99999999999999999999999999999999999998 + 1
+    Decimal128 lValue6(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFE);
+    Decimal128 rValue6(0x0, 0x1);
+    EXPECT_TRUE(AssertAddReturnOverflow(lValue6, rValue6));
+}
+
+TEST(Decimal128, multiply)
+{
+    // 0 * MAX_DECIMAL = 0
+    Decimal128 lValue1(0x0, 0x0);
+    Decimal128 rValue1(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result1;
+    DecimalOperations::Multiply(lValue1, rValue1, result1);
+    EXPECT_EQ(Decimal128(0x0, 0x0), result1);
+
+    // 1 * MAX_DECIMAL = MAX_DECIMAL
+    Decimal128 lValue2(0x0, 0x1);
+    Decimal128 rValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result2;
+    DecimalOperations::Multiply(lValue2, rValue2, result2);
+    EXPECT_EQ(Decimal128(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF), result2);
+
+    // 1 * MIN_DECIMAL = MIN_DECIMAL
+    Decimal128 lValue3(0x0, 0x1);
+    Decimal128 rValue3(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result3;
+    DecimalOperations::Multiply(lValue3, rValue3, result3);
+    EXPECT_EQ(Decimal128(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF), result3);
+
+    // -1 * MAX_DECIMAL = MIN_DECIMAL
+    Decimal128 lValue4(0x8000000000000000, 0x1);
+    Decimal128 rValue4(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result4;
+    DecimalOperations::Multiply(lValue4, rValue4, result4);
+    EXPECT_EQ(Decimal128(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF), result4);
+
+    // -1 * MIN_DECIMAL = MAX_DECIMAL
+    Decimal128 lValue5(0x8000000000000000, 0x1);
+    Decimal128 rValue5(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result5;
+    DecimalOperations::Multiply(lValue5, rValue5, result5);
+    EXPECT_EQ(Decimal128(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF), result5);
+
+    // 18446744073709551615 * 72057594037927935 = 1329227995784915854385005392532865025
+    Decimal128 lValue6(0x0, 0xFFFFFFFFFFFFFFFF);
+    Decimal128 rValue6(0x0, 0xFFFFFFFFFFFFFF);
+    Decimal128 result6;
+    DecimalOperations::Multiply(lValue6, rValue6, result6);
+    EXPECT_EQ(Decimal128(0xFFFFFFFFFFFFFE, 0xFF00000000000001), result6);
+
+    // 18446742976727070720 * 4107341382742775296 = 75767070805130745462670906105260933120
+    Decimal128 lValue7(0x0, 0xFFFFFF0096BFB800);
+    Decimal128 rValue7(0x0, 0x39003539D9A51600);
+    Decimal128 result7;
+    DecimalOperations::Multiply(lValue7, rValue7, result7);
+    EXPECT_EQ(Decimal128(0x39003500FB00AB76, 0x1CDBB17E11D00000), result7);
+
+    // Integer.MAX_VALUE * Integer.MIN_VALUE = -4611686016279904256
+    Decimal128 lValue8(0x0, 0x7FFFFFFF);
+    Decimal128 rValue8(0x8000000000000000, 0x80000000);
+    Decimal128 result8;
+    DecimalOperations::Multiply(lValue8, rValue8, result8);
+    EXPECT_EQ(Decimal128(0x8000000000000000, 0x3FFFFFFF80000000), result8);
+
+    // 99999999999999 * -1000000000000000000000000 = -99999999999999000000000000000000000000
+    Decimal128 lValue9(0x0, 0x5AF3107A3FFF);
+    Decimal128 rValue9(0x800000000000D3C2, 0x1BCECCEDA1000000);
+    Decimal128 result9;
+    DecimalOperations::Multiply(lValue9, rValue9, result9);
+    EXPECT_EQ(Decimal128(0xCB3B4CA85A85F0B7, 0xEDBB55525F000000), result9);
+
+    // 12380837221737387489365741632769922889 * 3 = 37142511665212162468097224898309768667
+    Decimal128 lValue10(0x950766754840EB8, 0xDF69328A17B69749);
+    Decimal128 rValue10(0x0, 0x3);
+    Decimal128 result10;
+    DecimalOperations::Multiply(lValue10, rValue10, result10);
+    EXPECT_EQ(Decimal128(0x1BF16335FD8C2C2A, 0x9E3B979E4723C5DB), result10);
+}
+
+TEST(Decimal128, multiplyByInt)
+{
+    // 0 * 1 = 0
+    Decimal128 lValue1(0x0, 0x0);
+    Decimal128 rValue1(0x0, 0x1);
+    Decimal128 result1;
+    DecimalOperations::Multiply(lValue1, rValue1, result1);
+    EXPECT_EQ(Decimal128(0x0, 0x0), result1);
+
+    // 2 * Integer.MAX_VALUE = 4294967294
+    Decimal128 lValue2(0x0, 0x2);
+    Decimal128 rValue2(0x0, 0x7FFFFFFF);
+    Decimal128 result2;
+    DecimalOperations::Multiply(lValue2, rValue2, result2);
+    EXPECT_EQ(Decimal128(0x0, 0xFFFFFFFE), result2);
+
+    // Integer.MAX_VALUE * -3 = -6442450941
+    Decimal128 lValue3(0x0, 0x7FFFFFFF);
+    Decimal128 rValue3(0x8000000000000000, 0x3);
+    Decimal128 result3;
+    DecimalOperations::Multiply(lValue3, rValue3, result3);
+    EXPECT_EQ(Decimal128(0x8000000000000000, 0x17FFFFFFD), result3);
+
+    // Integer.MIN_VALUE * -3 = 6442450944
+    Decimal128 lValue4(0x8000000000000000, 0x80000000);
+    Decimal128 rValue4(0x8000000000000000, 0x3);
+    Decimal128 result4;
+    DecimalOperations::Multiply(lValue4, rValue4, result4);
+    EXPECT_EQ(Decimal128(0x0, 0x180000000), result4);
+
+    // 1267650600228229401496703205375 * 2 = 2535301200456458802993406410750
+    Decimal128 lValue5(0xFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
+    Decimal128 rValue5(0x0, 0x2);
+    Decimal128 result5;
+    DecimalOperations::Multiply(lValue5, rValue5, result5);
+    EXPECT_EQ(Decimal128(0x1FFFFFFFFF, 0xFFFFFFFFFFFFFFFE), result5);
+}
+
+TEST(Decimal128, multiplyOverflow)
+{
+    // 99999999999999 * -10000000000000000000000000
+    Decimal128 lValue1(0x0, 0x5AF3107A3FFF);
+    Decimal128 rValue1(0x8000000000108B2A, 0x161401484A000000);
+    Decimal128 result1;
+    EXPECT_THROW(DecimalOperations::Multiply(lValue1, rValue1, result1), std::exception);
+
+    // MAX_DECIMAL * 10
+    Decimal128 lValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 rValue2(0x0, 0xA);
+    Decimal128 result2;
+    EXPECT_THROW(DecimalOperations::Multiply(lValue2, rValue2, result2), std::exception);
+}
+
+TEST(Decimal128, shiftLeftMultiPrecision)
+{
+    std::vector<int32_t> number1 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result1 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    DecimalOperations::ShiftLeftMultiPrecision(number1, 4, 0);
+    EXPECT_EQ(number1, result1);
+
+    std::vector<int32_t> number2 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result2 { static_cast<int32_t>(0b01000010100010110100001010001010),
+        static_cast<int32_t>(0b10101101001011010110101010101011),
+        static_cast<int32_t>(0b10100101111100011111000101010100),
+        static_cast<int32_t>(0b11111110000000110101010101010110),
+        static_cast<int32_t>(0b00000000000000000000000000000001) };
+    DecimalOperations::ShiftLeftMultiPrecision(number2, 5, 1);
+    EXPECT_EQ(number2, result2);
+
+    std::vector<int32_t> number3 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result3 { static_cast<int32_t>(0b10000000000000000000000000000000),
+        static_cast<int32_t>(0b11010000101000101101000010100010),
+        static_cast<int32_t>(0b00101011010010110101101010101010),
+        static_cast<int32_t>(0b10101001011111000111110001010101),
+        static_cast<int32_t>(0b01111111100000001101010101010101) };
+    DecimalOperations::ShiftLeftMultiPrecision(number3, 5, 31);
+    EXPECT_EQ(number3, result3);
+
+    std::vector<int32_t> number4 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result4 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    DecimalOperations::ShiftLeftMultiPrecision(number4, 5, 32);
+    EXPECT_EQ(number4, result4);
+
+    std::vector<int32_t> number5 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result5 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b01000010100010110100001010001010),
+        static_cast<int32_t>(0b10101101001011010110101010101011),
+        static_cast<int32_t>(0b10100101111100011111000101010100),
+        static_cast<int32_t>(0b11111110000000110101010101010110),
+        static_cast<int32_t>(0b00000000000000000000000000000001) };
+    DecimalOperations::ShiftLeftMultiPrecision(number5, 6, 33);
+    EXPECT_EQ(number5, result5);
+
+    std::vector<int32_t> number6 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result6 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00101000101101000010100010100000),
+        static_cast<int32_t>(0b11010010110101101010101010110100),
+        static_cast<int32_t>(0b01011111000111110001010101001010),
+        static_cast<int32_t>(0b11100000001101010101010101101010),
+        static_cast<int32_t>(0b00000000000000000000000000011111) };
+    DecimalOperations::ShiftLeftMultiPrecision(number6, 6, 37);
+    EXPECT_EQ(number6, result6);
+
+    std::vector<int32_t> number7 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result7 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    DecimalOperations::ShiftLeftMultiPrecision(number7, 6, 64);
+    EXPECT_EQ(number7, result7);
+}
+
+TEST(Decimal128, shiftRightMultiPrecision)
+{
+    std::vector<int32_t> number1 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    std::vector<int32_t> result1 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    DecimalOperations::ShiftRightMultiPrecision(number1, 4, 0);
+    EXPECT_EQ(number1, result1);
+
+    std::vector<int32_t> number2 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    std::vector<int32_t> result2 { static_cast<int32_t>(0b10000000000000000000000000000000),
+        static_cast<int32_t>(0b11010000101000101101000010100010),
+        static_cast<int32_t>(0b00101011010010110101101010101010),
+        static_cast<int32_t>(0b10101001011111000111110001010101),
+        static_cast<int32_t>(0b01111111100000001101010101010101) };
+    DecimalOperations::ShiftRightMultiPrecision(number2, 5, 1);
+    EXPECT_EQ(number2, result2);
+
+    std::vector<int32_t> number3 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    std::vector<int32_t> result3 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    DecimalOperations::ShiftRightMultiPrecision(number3, 5, 32);
+    EXPECT_EQ(number3, result3);
+
+    std::vector<int32_t> number4 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    std::vector<int32_t> result4 { static_cast<int32_t>(0b10000000000000000000000000000000),
+        static_cast<int32_t>(0b11010000101000101101000010100010),
+        static_cast<int32_t>(0b00101011010010110101101010101010),
+        static_cast<int32_t>(0b10101001011111000111110001010101),
+        static_cast<int32_t>(0b01111111100000001101010101010101),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    DecimalOperations::ShiftRightMultiPrecision(number4, 6, 33);
+    EXPECT_EQ(number4, result4);
+
+    std::vector<int32_t> number5 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    std::vector<int32_t> result5 { static_cast<int32_t>(0b00101000000000000000000000000000),
+        static_cast<int32_t>(0b10101101000010100010110100001010),
+        static_cast<int32_t>(0b01010010101101001011010110101010),
+        static_cast<int32_t>(0b01011010100101111100011111000101),
+        static_cast<int32_t>(0b00000111111110000000110101010101),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    DecimalOperations::ShiftRightMultiPrecision(number5, 6, 37);
+    EXPECT_EQ(number5, result5);
+
+    std::vector<int32_t> number6 { static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011) };
+    std::vector<int32_t> result6 { static_cast<int32_t>(0b10100001010001011010000101000101),
+        static_cast<int32_t>(0b01010110100101101011010101010101),
+        static_cast<int32_t>(0b01010010111110001111100010101010),
+        static_cast<int32_t>(0b11111111000000011010101010101011),
+        static_cast<int32_t>(0b00000000000000000000000000000000),
+        static_cast<int32_t>(0b00000000000000000000000000000000) };
+    DecimalOperations::ShiftRightMultiPrecision(number6, 6, 64);
+    EXPECT_EQ(number6, result6);
+}
+
+TEST(Decimal128, rescaleLE18)
+{
+    // 10  (0) = 10
+    Decimal128 value1(0x0, 0xA);
+    Decimal128 result1;
+    DecimalOperations::Rescale128(value1, 0, result1);
+    EXPECT_EQ(Decimal128(0x0, 0xA), result1);
+
+    // 15  (-1) = 2
+    Decimal128 value3(0x0, 0xF);
+    Decimal128 result3;
+    DecimalOperations::Rescale128(value3, -1, result3);
+    EXPECT_EQ(Decimal128(0x0, 0x2), result3);
+
+    // 1050  (-3) = 1
+    Decimal128 value4(0x0, 0x41A);
+    Decimal128 result4;
+    DecimalOperations::Rescale128(value4, -3, result4);
+    EXPECT_EQ(Decimal128(0x0, 0x1), result4);
+
+    // 15  (1) = 150
+    Decimal128 value5(0x0, 0xF);
+    Decimal128 result5;
+    DecimalOperations::Rescale128(value5, 1, result5);
+    EXPECT_EQ(Decimal128(0x0, 0x96), result5);
+
+    // -14  (-1) = -1
+    Decimal128 value6(0x8000000000000000, 0xE);
+    Decimal128 result6;
+    DecimalOperations::Rescale128(value6, -1, result6);
+    EXPECT_EQ(Decimal128(0x8000000000000000, 0x1), result6);
+
+    // -14  (1) = -140
+    Decimal128 value7(0x8000000000000000, 0xE);
+    Decimal128 result7;
+    DecimalOperations::Rescale128(value7, 1, result7);
+    EXPECT_EQ(Decimal128(0x8000000000000000, 0x8C), result7);
+
+    // 0  (1) = 0
+    Decimal128 value8(0x0, 0x0);
+    Decimal128 result8;
+    DecimalOperations::Rescale128(value8, 1, result8);
+    EXPECT_EQ(Decimal128(0x0, 0x0), result8);
+
+    // 5  (-1) = 1
+    Decimal128 value9(0x0, 0x5);
+    Decimal128 result9;
+    DecimalOperations::Rescale128(value9, -1, result9);
+    EXPECT_EQ(Decimal128(0x0, 0x1), result9);
+
+    // 10  (10) = 100000000000
+    Decimal128 value10(0x0, 0xA);
+    Decimal128 result10;
+    DecimalOperations::Rescale128(value10, 10, result10);
+    EXPECT_EQ(Decimal128(0x0, 0x174876E800), result10);
+
+    // 150500000000000000000  (-18) = 151
+    Decimal128 value14(0x8, 0x289B689DE84A0000);
+    Decimal128 result14;
+    DecimalOperations::Rescale128(value14, -18, result14);
+    EXPECT_EQ(Decimal128(0x0, 0x97), result14);
+
+    // -140000000000000000000  (-18) = -140
+    Decimal128 value15(0x8000000000000007, 0x96E3EA3F8AB00000);
+    Decimal128 result15;
+    DecimalOperations::Rescale128(value15, -18, result15);
+    EXPECT_EQ(Decimal128(0x8000000000000000, 0x8C), result15);
+
+    // 9223372036854775808  (-18) = 9
+    Decimal128 value16(0x0, 0x8000000000000000);
+    Decimal128 result16;
+    DecimalOperations::Rescale128(value16, -18, result16);
+    EXPECT_EQ(Decimal128(0x0, 0x9), result16);
+
+    // 4611686018427387904  (-18) = 5
+    Decimal128 value17(0x0, 0x4000000000000000);
+    Decimal128 result17;
+    DecimalOperations::Rescale128(value17, -18, result17);
+    EXPECT_EQ(Decimal128(0x0, 0x5), result17);
+
+    // 99999999999999999999999999999999999999  (-1) = 10000000000000000000000000000000000000
+    Decimal128 value19(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result19;
+    DecimalOperations::Rescale128(value19, -1, result19);
+    EXPECT_EQ(Decimal128(0x785EE10D5DA46D9, 0xF436A000000000), result19);
+
+    // -99999999999999999999999999999999999999  (-10) = -10000000000000000000000000000
+    Decimal128 value20(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128 result20;
+    DecimalOperations::Rescale128(value20, -10, result20);
+    EXPECT_EQ(Decimal128(0x80000000204FCE5E, 0x3E25026110000000), result20);
+}
+
+TEST(Decimal128, DISABLED_rescaleGT18)
+{
+    // 10  (-20) = 0
+    Decimal128 value2(0x0, 0xA);
+    Decimal128 result2;
+    DecimalOperations::Rescale128(value2, -20, result2);
+    EXPECT_EQ(Decimal128(0x0, 0x0), result2);
+
+    // 150000000000000000000  (-20) = 2
+    Decimal128 value11(0x8, 0x21AB0D4414980000);
+    Decimal128 result11;
+    DecimalOperations::Rescale128(value11, -20, result11);
+    EXPECT_EQ(Decimal128(0x0, 0x2), result11);
+
+    // -140000000000000000000  (-20) = -1
+    Decimal128 value12(0x8000000000000007, 0x96E3EA3F8AB00000);
+    Decimal128 result12;
+    DecimalOperations::Rescale128(value12, -20, result12);
+    EXPECT_EQ(Decimal128(0x8000000000000000, 0x1), result12);
+
+    // 50000000000000000000  (-20) = 1
+    Decimal128 value13(0x2, 0xB5E3AF16B1880000);
+    Decimal128 result13;
+    DecimalOperations::Rescale128(value13, -20, result13);
+    EXPECT_EQ(Decimal128(0x0, 0x1), result13);
+
+    // 4611686018427387904  (-19) = 0
+    Decimal128 value18(0x0, 0x4000000000000000);
+    Decimal128 result18;
+    DecimalOperations::Rescale128(value18, -19, result18);
+    EXPECT_EQ(Decimal128(0x0, 0x0), result18);
+
+    // 1  (37) = 10000000000000000000000000000000000000
+    Decimal128 value21(0x0, 0x1);
+    Decimal128 result21;
+    DecimalOperations::Rescale128(value21, 37, result21);
+    EXPECT_EQ(Decimal128(0x785EE10D5DA46D9, 0xF436A000000000), result21);
+
+    // -1  (37) = -10000000000000000000000000000000000000
+    Decimal128 value22(0x8000000000000000, 0x1);
+    Decimal128 result22;
+    DecimalOperations::Rescale128(value22, 37, result22);
+    EXPECT_EQ(Decimal128(0x8785EE10D5DA46D9, 0xF436A000000000), result22);
+
+    // 10000000000000000000000000000000000000  (-37) = 1
+    Decimal128 value23(0x785EE10D5DA46D9, 0xF436A000000000);
+    Decimal128 result23;
+    DecimalOperations::Rescale128(value23, -37, result23);
+    EXPECT_EQ(Decimal128(0x0, 0x1), result23);
+}
+
+TEST(Decimal128, shiftLeftDestructive)
+{
+    // 446319580078125 << 19 = 234000000000000000000
+    Decimal128 value1(0x0, 0x195ECE006E02D);
+    Decimal128 result1(0xC, 0xAF67003701680000);
+    DecimalOperations::ShiftLeftDestructive(value1, 19);
+    EXPECT_EQ(value1, result1);
+
+    // 2 << 10 = 2048
+    Decimal128 value2(0x0, 0x2);
+    Decimal128 result2(0x0, 0x800);
+    DecimalOperations::ShiftLeftDestructive(value2, 10);
+    EXPECT_EQ(value2, result2);
+
+    // 34 << 10 = 34816
+    Decimal128 value3(0x0, 0x22);
+    Decimal128 result3(0x0, 0x8800);
+    DecimalOperations::ShiftLeftDestructive(value3, 10);
+    EXPECT_EQ(value3, result3);
+
+    // 2 << 100 = 2535301200456458802993406410752
+    Decimal128 value4(0x0, 0x2);
+    Decimal128 result4(0x2000000000, 0x0);
+    DecimalOperations::ShiftLeftDestructive(value4, 100);
+    EXPECT_EQ(value4, result4);
+
+    // 34 << 100 = 43100120407759799650887908982784
+    Decimal128 value5(0x0, 0x22);
+    Decimal128 result5(0x22000000000, 0x0);
+    DecimalOperations::ShiftLeftDestructive(value5, 100);
+    EXPECT_EQ(value5, result5);
+
+    // 1180591620717411303424 << 30 = 1267650600228229401496703205376
+    Decimal128 value6(0x40, 0x0);
+    Decimal128 result6(0x1000000000, 0x0);
+    DecimalOperations::ShiftLeftDestructive(value6, 30);
+    EXPECT_EQ(value6, result6);
+
+    // 1180591620717411303426 << 30 = 1267650600228229401498850689024
+    Decimal128 value7(0x40, 0x2);
+    Decimal128 result7(0x1000000000, 0x80000000);
+    DecimalOperations::ShiftLeftDestructive(value7, 30);
+    EXPECT_EQ(value7, result7);
+
+    // 81129638414606681695789005144064 << 20 = 85070591730234615865843651857942052864
+    Decimal128 value8(0x40000000000, 0x0);
+    Decimal128 result8(0x4000000000000000, 0x0);
+    DecimalOperations::ShiftLeftDestructive(value8, 20);
+    EXPECT_EQ(value8, result8);
+
+    // 81129638414606681695789005144066 << 20 = 85070591730234615865843651857944150016
+    Decimal128 value9(0x40000000000, 0x2);
+    Decimal128 result9(0x4000000000000000, 0x200000);
+    DecimalOperations::ShiftLeftDestructive(value9, 20);
+    EXPECT_EQ(value9, result9);
 }
 }

@@ -566,10 +566,12 @@ public:
                 ThrowIllegalState();
             }
         }
+
         if (wordShifts > 0) {
             std::copy(number.begin() + wordShifts, number.begin() + length, number.begin());
-            std::fill(number.begin() + length - wordShifts, number.begin() + 2 * length - wordShifts, 0);
+            std::fill(number.begin() + length - wordShifts, number.begin() + length, 0);
         }
+
         int32_t bitShifts = shifts & 0b11111;
         if (bitShifts > 0) {
             if (number[0] << (32 - bitShifts) != 0) {
@@ -903,7 +905,7 @@ public:
         int32_t shiftRestore = 64 - bitShiftsInWord;
 
         if (bitShiftsInWord != 0) {
-            if ((GetLong(decimal, 1 - wordShifts) & (-1 << shiftRestore)) != 0) {
+            if ((GetLong(decimal, 1 - wordShifts) & (-1LL << shiftRestore)) != 0) {
                 ThrowOverflow();
             }
         }
