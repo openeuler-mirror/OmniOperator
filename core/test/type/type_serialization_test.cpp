@@ -17,12 +17,12 @@ namespace TypeSerializationTest {
 TEST(DataTypeSerializer, serialization)
 {
     Decimal128DataType decimal(10, 2);
-    std::vector<DataType> types = { IntDataType(),        DoubleDataType(),      decimal,
-        LongDataType(),       Date32DataType(MILLI), Date64DataType(MILLI),
-        VarcharDataType(1024) };
+    std::vector<DataType> types = { IntDataType(), DoubleDataType(), decimal, LongDataType(), Date32DataType(MILLI),
+        Date64DataType(MILLI), VarcharDataType(1024), ContainerDataType(
+        std::vector<DataType>{IntDataType(), Decimal128DataType(20, 10), VarcharDataType(512)})};
     std::string typesJson = omniruntime::type::Serialize(types);
-    auto vecTypes = omniruntime::type::Deserialize(typesJson);
-    auto check = vecTypes.Get();
+    auto dataTypes = omniruntime::type::Deserialize(typesJson);
+    auto check = dataTypes.Get();
     EXPECT_EQ(check.size(), types.size());
     EXPECT_EQ(check[0].GetId(), OMNI_INT);
     EXPECT_EQ(check[1].GetId(), OMNI_DOUBLE);
@@ -37,11 +37,16 @@ TEST(DataTypeSerializer, serialization)
     EXPECT_EQ(static_cast<Date32DataType *>(&check[5])->GetDateUnit(), MILLI);
     EXPECT_EQ(check[6].GetId(), OMNI_VARCHAR);
     EXPECT_EQ(static_cast<VarcharDataType *>(&check[6])->GetWidth(), 1024);
+    EXPECT_EQ(check[7].GetId(), OMNI_CONTAINER);
+    EXPECT_EQ(check[7].GetFieldTypes()[0].GetId(), OMNI_INT);
+    EXPECT_EQ(check[7].GetFieldTypes()[1].GetId(), OMNI_DECIMAL128);
+    EXPECT_EQ(check[7].GetFieldTypes()[1].GetPrecision(), 20);
+    EXPECT_EQ(check[7].GetFieldTypes()[1].GetScale(), 10);
+    EXPECT_EQ(check[7].GetFieldTypes()[2].GetId(), OMNI_VARCHAR);
+    EXPECT_EQ(check[7].GetFieldTypes()[2].GetWidth(), 512);
 
-    std::cout << omniruntime::type::Serialize(types) << std::endl;
-
-    auto vecTypesCopy = vecTypes;
-    check = vecTypesCopy.Get();
+    auto dataTypesCopy = dataTypes;
+    check = dataTypesCopy.Get();
     EXPECT_EQ(check.size(), types.size());
     EXPECT_EQ(check[0].GetId(), OMNI_INT);
     EXPECT_EQ(check[1].GetId(), OMNI_DOUBLE);
@@ -56,10 +61,8 @@ TEST(DataTypeSerializer, serialization)
     EXPECT_EQ(static_cast<Date32DataType *>(&check[5])->GetDateUnit(), MILLI);
     EXPECT_EQ(check[6].GetId(), OMNI_VARCHAR);
     EXPECT_EQ(static_cast<VarcharDataType *>(&check[6])->GetWidth(), 1024);
-
-    std::cout << omniruntime::type::Serialize(types) << std::endl;
     std::string typeJson = omniruntime::type::SerializeSingle(IntDataType());
-    auto vecType = omniruntime::type::DeserializeSingle(typeJson);
-    EXPECT_EQ(vecType.GetId(), OMNI_INT);
+    auto dataType = omniruntime::type::DeserializeSingle(typeJson);
+    EXPECT_EQ(dataType.GetId(), OMNI_INT);
 }
 }

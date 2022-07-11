@@ -21,6 +21,7 @@ const std::string PRECISION = "precision";
 const std::string SCALE = "scale";
 const std::string DATE_UNIT = "dateUnit";
 const std::string TIME_UNIT = "timeUnit";
+const std::string FIELD_TYPES = "fieldTypes";
 
 enum DataTypeId {
     OMNI_NONE = 0,
@@ -97,45 +98,55 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(DataTypeId, { { OMNI_NONE, nullptr },
-    { OMNI_INT, "OMNI_INT" },
-    { OMNI_LONG, "OMNI_LONG" },
-    { OMNI_DOUBLE, "OMNI_DOUBLE" },
-    { OMNI_BOOLEAN, "OMNI_BOOLEAN" },
-    { OMNI_SHORT, "OMNI_SHORT" },
-    { OMNI_DECIMAL64, "OMNI_DECIMAL64" },
-    { OMNI_DECIMAL128, "OMNI_DECIMAL128" },
-    { OMNI_DATE32, "OMNI_DATE32" },
-    { OMNI_DATE64, "OMNI_DATE64" },
-    { OMNI_TIME32, "OMNI_TIME32" },
-    { OMNI_TIME64, "OMNI_TIME64" },
-    { OMNI_TIMESTAMP, "OMNI_TIMESTAMP" },
-    { OMNI_INTERVAL_MONTHS, "OMNI_INTERVAL_MONTHS" },
-    { OMNI_INTERVAL_DAY_TIME, "OMNI_INTERVAL_DAY_TIME" },
-    { OMNI_VARCHAR, "OMNI_VARCHAR" },
-    { OMNI_CHAR, "OMNI_CHAR" },
-    { OMNI_CONTAINER, "OMNI_CONTAINER" },
-    { OMNI_INVALID, "OMNI_INVALID" } })
+enum DateUnit {
+    DAY = 0,
+    MILLI = 1
+};
 
-enum DateUnit { DAY, MILLI };
-
-NLOHMANN_JSON_SERIALIZE_ENUM(DateUnit, { { DAY, "DAY" }, { MILLI, "MILLI" } })
-
-enum TimeUnit { SEC, MILLISEC, MICROSEC, NANOSEC };
-
-NLOHMANN_JSON_SERIALIZE_ENUM(TimeUnit,
-    { { SEC, "SEC" }, { MILLISEC, "MILLISEC" }, { MICROSEC, "MICROSEC" }, { NANOSEC, "NANOSEC" } })
+enum TimeUnit {
+    SEC = 0,
+    MILLISEC = 1,
+    MICROSEC = 2,
+    NANOSEC = 3
+};
 
 class DataType {
 public:
-    DataType(const DataType &type)
-        : id(type.id),
-          width(type.width),
-          precision(type.precision),
-          scale(type.scale),
-          dateUnit(type.dateUnit),
-          timeUnit(type.timeUnit)
-    {}
+    DataType(const DataType &type) : DataType(type.id)
+    {
+        switch (type.id) {
+            case OMNI_BOOLEAN:
+            case OMNI_SHORT:
+            case OMNI_INT:
+            case OMNI_LONG:
+            case OMNI_DOUBLE:
+            case OMNI_NONE:
+            case OMNI_INVALID:
+                break;
+            case OMNI_DECIMAL64:
+            case OMNI_DECIMAL128:
+                this->precision = type.precision;
+                this->scale = type.scale;
+                break;
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
+                this->width = type.width;
+                break;
+            case OMNI_DATE32:
+            case OMNI_DATE64:
+                this->dateUnit = type.dateUnit;
+                break;
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+                this->timeUnit = type.timeUnit;
+                break;
+            case OMNI_CONTAINER:
+                this->fieldTypes = type.fieldTypes;
+                break;
+            default:
+                LogError("Not Supported Data Type : %d", type.id);
+        }
+    }
 
     DataType() : DataType(OMNI_INVALID) {}
 
@@ -168,22 +179,96 @@ public:
         return scale;
     }
 
+    std::vector<DataType> GetFieldTypes() const
+    {
+        return fieldTypes;
+    }
+
+
     friend void to_json(nlohmann::json &nlohmannJson, const DataType &dataType)
     {
-        nlohmannJson = nlohmann::json {
-            { ID, dataType.id },       { WIDTH, dataType.width },        { PRECISION, dataType.precision },
-            { SCALE, dataType.scale }, { DATE_UNIT, dataType.dateUnit }, { TIME_UNIT, dataType.timeUnit }
-        };
+        switch (dataType.id) {
+            case OMNI_BOOLEAN:
+            case OMNI_SHORT:
+            case OMNI_INT:
+            case OMNI_LONG:
+            case OMNI_DOUBLE:
+            case OMNI_NONE:
+            case OMNI_INVALID:
+                nlohmannJson = nlohmann::json { { ID, dataType.id } };
+                break;
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
+                nlohmannJson = nlohmann::json { { ID, dataType.id }, { WIDTH, dataType.width } };
+                break;
+            case OMNI_DECIMAL64:
+            case OMNI_DECIMAL128:
+                nlohmannJson = nlohmann::json { { ID, dataType.id },
+                    { PRECISION, dataType.precision },
+                    { SCALE, dataType.scale } };
+                break;
+            case OMNI_DATE32:
+            case OMNI_DATE64:
+                nlohmannJson = nlohmann::json { { ID, dataType.id }, { DATE_UNIT, dataType.dateUnit } };
+                break;
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+                nlohmannJson = nlohmann::json { { ID, dataType.id }, { TIME_UNIT, dataType.timeUnit } };
+                break;
+            case OMNI_CONTAINER: {
+                nlohmannJson = nlohmann::json { { ID, dataType.id } };
+                for (auto &fieldType : dataType.fieldTypes) {
+                    nlohmann::json fieldTypeJson;
+                    to_json(fieldTypeJson, fieldType);
+                    nlohmannJson[FIELD_TYPES].push_back(fieldTypeJson);
+                }
+                break;
+            }
+            default:
+                LogError("Not Supported Data Type Serialize : %d", dataType.id);
+        }
     }
 
     friend void from_json(const nlohmann::json &nlohmannJson, DataType &dataType)
     {
         nlohmannJson.at(ID).get_to(dataType.id);
-        nlohmannJson.at(WIDTH).get_to(dataType.width);
-        nlohmannJson.at(PRECISION).get_to(dataType.precision);
-        nlohmannJson.at(SCALE).get_to(dataType.scale);
-        nlohmannJson.at(DATE_UNIT).get_to(dataType.dateUnit);
-        nlohmannJson.at(TIME_UNIT).get_to(dataType.timeUnit);
+        switch (dataType.id) {
+            case OMNI_BOOLEAN:
+            case OMNI_SHORT:
+            case OMNI_INT:
+            case OMNI_LONG:
+            case OMNI_DOUBLE:
+            case OMNI_NONE:
+            case OMNI_INVALID:
+                break;
+            case OMNI_CHAR:
+            case OMNI_VARCHAR:
+                nlohmannJson.at(WIDTH).get_to(dataType.width);
+                break;
+            case OMNI_DATE32:
+            case OMNI_DATE64:
+                nlohmannJson.at(DATE_UNIT).get_to(dataType.dateUnit);
+                break;
+            case OMNI_DECIMAL64:
+            case OMNI_DECIMAL128:
+                nlohmannJson.at(PRECISION).get_to(dataType.precision);
+                nlohmannJson.at(SCALE).get_to(dataType.scale);
+                break;
+            case OMNI_TIME32:
+            case OMNI_TIME64:
+                nlohmannJson.at(TIME_UNIT).get_to(dataType.timeUnit);
+                break;
+            case OMNI_CONTAINER: {
+                for (auto &fieldTypeJson : nlohmannJson[FIELD_TYPES]) {
+                    DataType fieldType;
+                    from_json(fieldTypeJson, fieldType);
+                    dataType.fieldTypes.push_back(fieldType);
+                }
+                break;
+            }
+            default:
+                LogError("Not Supported Data Type Deserialize: %d", dataType.id);
+        }
     }
 
     DataType &operator = (const DataType &right)
@@ -194,6 +279,7 @@ public:
         scale = right.scale;
         dateUnit = right.dateUnit;
         timeUnit = right.timeUnit;
+        fieldTypes = right.fieldTypes;
         return *this;
     }
 
@@ -205,7 +291,7 @@ public:
     bool operator == (const DataType &right) const
     {
         return id == right.id && width == right.width && precision == right.precision && scale == right.scale &&
-            dateUnit == right.dateUnit && timeUnit == right.timeUnit;
+            dateUnit == right.dateUnit && timeUnit == right.timeUnit && fieldTypes == right.fieldTypes;
     }
 
 protected:
@@ -215,6 +301,7 @@ protected:
     int32_t scale;
     DateUnit dateUnit;
     TimeUnit timeUnit;
+    std::vector<DataType> fieldTypes;
 };
 
 class NoneDataType : public DataType {
@@ -400,6 +487,11 @@ public:
 class ContainerDataType : public DataType {
 public:
     explicit ContainerDataType() : DataType(DataTypeId::OMNI_CONTAINER) {}
+
+    explicit ContainerDataType(std::vector<DataType> fieldTypes) : DataType(DataTypeId::OMNI_CONTAINER)
+    {
+        this->fieldTypes = fieldTypes;
+    }
 
     ~ContainerDataType() override {}
 
