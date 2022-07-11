@@ -12,10 +12,14 @@
 #include "vector_allocator.h"
 #include "vector_encoding.h"
 #include "tracer/vector_tracer.h"
+#include "util/bit_map.h"
+
+#include <optional>
 
 namespace omniruntime {
 namespace vec {
 using DataTypeId = type::DataTypeId;
+const static int32_t UNKNOWN_NULL_COUNT = -1;
 class Vector {
 public:
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);
@@ -87,14 +91,16 @@ public:
         return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
     }
 
-    void SetValueNull(int index)
+    virtual void SetValueNull(int index)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
+        hasNull = true;
     }
 
     virtual void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
+        hasNull = value;
     }
 
     void SetValueNotNull(int index)
@@ -137,6 +143,24 @@ public:
         return OMNI_VEC_ENCODING_FLAT;
     }
 
+    virtual bool MayHaveNull() const
+    {
+        return hasNull;
+    }
+
+    void SetNullFlag(bool newHasNull)
+    {
+        hasNull = newHasNull;
+    }
+
+    int32_t GetNullCount() const
+    {
+        if (nullCount != UNKNOWN_NULL_COUNT) {
+            return nullCount;
+        }
+        return hasNull ? BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) : 0;
+    }
+
 protected:
     // this method is mainly used for vector slice
     Vector(Vector *vector, int size, int positionOffset);
@@ -153,6 +177,8 @@ protected:
     VectorReference *reference = nullptr;
     VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;
+    bool hasNull;
+    int32_t nullCount;
 };
 } // namespace vec
 } // namespace omniruntime

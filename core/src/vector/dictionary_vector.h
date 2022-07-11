@@ -110,6 +110,11 @@ public:
         return OMNI_VEC_ENCODING_DICTIONARY;
     }
 
+    bool MayHaveNull() const override
+    {
+        return Vector::MayHaveNull() || dictionary->MayHaveNull();
+    }
+
 private:
     DictionaryVector(DictionaryVector *vector, int size, int positionOffset)
         : Vector(vector, size, positionOffset),

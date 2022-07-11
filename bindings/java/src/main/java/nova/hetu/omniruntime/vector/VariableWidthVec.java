@@ -205,8 +205,8 @@ public abstract class VariableWidthVec extends Vec {
 
     @Override
     public void setNull(int index) {
+        super.setNull(index);
         fillSlots(index);
-        nullsBuf.setByte(index + offset, (byte) 1);
         setValueOffset(index + 1, getValueOffset(index));
         lastOffsetPosition = index;
     }

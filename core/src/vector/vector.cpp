@@ -13,7 +13,9 @@ Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTy
       size(size),
       dataTypeId(dataTypeId),
       reference(nullptr),
-      allocator(allocator)
+      allocator(allocator),
+      hasNull(false),
+      nullCount(UNKNOWN_NULL_COUNT)
 {
     ASSERT(allocator != nullptr);
     allocator->NewVector(this, capacityInBytes, size, dataTypeId);
@@ -28,7 +30,9 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
       size(size),
       dataTypeId(vector->dataTypeId),
       reference(vector->reference),
-      allocator(vector->allocator)
+      allocator(vector->allocator),
+      hasNull(vector->hasNull),
+      nullCount(vector->nullCount == 0 ? 0 : UNKNOWN_NULL_COUNT)
 {
     allocator->SliceVector(vector, this);
     valuesAddress = reference->GetValuesAddress();
@@ -46,12 +50,8 @@ Vector::~Vector()
 
 void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
 {
-    errno_t ret = EOK;
-    if (length > 0) {
-        ret = memcpy_s(((bool *)valueNullsAddress) + startIndex, size, nulls, length);
-    }
-    if (ret != EOK) {
-        LogError("Set value nulls failed, ret:%d.", ret);
+    for (int32_t i = 0; i < length; i++) {
+        SetValueNull(i + startIndex, nulls[i]);
     }
 }
 

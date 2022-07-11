@@ -357,3 +357,24 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataC
     JNI_METHOD_END(valueAddr)
     return valueAddr;
 }
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector, jboolean jHasNull)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
+    nativeVector->SetNullFlag(jHasNull);
+}
+
+JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_mayHaveNullNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
+    return nativeVector->MayHaveNull();
+}
+
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getNullCountNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
+    return nativeVector->GetNullCount();
+}

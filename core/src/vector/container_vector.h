@@ -73,6 +73,10 @@ public:
         this->dataTypes = dataTypes;
     }
 
+    bool MayHaveNull() const override
+    {
+        return hasNull;
+    }
 
 private:
     static const int BYTES = sizeof(T);

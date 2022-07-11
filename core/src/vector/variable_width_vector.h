@@ -47,18 +47,18 @@ public:
         lastOffsetPosition = index;
     }
 
-    void ALWAYS_INLINE SetValueNull(int index)
+    void ALWAYS_INLINE SetValueNull(int index) override
     {
+        Vector::SetValueNull(index);
         FillSlots(index);
-        (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
         SetValueOffset(index + 1, GetValueOffset(index));
         lastOffsetPosition = index;
     }
 
     void ALWAYS_INLINE SetValueNull(int index, bool value) override
     {
+        Vector::SetValueNull(index, value);
         FillSlots(index);
-        (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
         if (value) {
             SetValueOffset(index + 1, GetValueOffset(index));
         }
