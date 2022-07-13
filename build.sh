@@ -7,7 +7,7 @@ set -e
 targz_name=boostkit-omniop-operator-1.0.0-aarch64
 zip_name=BoostKit-omniop_1.0.0
 
-if [ "$1" = 'release' ]; then
+if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
   open_source_dir="open_source"
   mkdir -p ./${open_source_dir}
   cp -r ../huawei_secure_c ${open_source_dir}
@@ -43,31 +43,44 @@ else
   cd core/build
 fi
 
-echo "Start build C++ modules using $1"
+echo "Start building modules using $1"
 echo "-- Enter" $(dirname $(readlink -f $0))
-if [ "$1" = 'coverage-c++' ]; then
+
+if [ "$1" = 'coverage-java' ]; then
+    echo "-- Enable coverage for java"
+    sh build.sh release
+    ./test/omtest --gtest_output=xml:test_detail.xml
+
+    cd ../../bindings/java
+    mvn clean install devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
+elif [ "$1" = 'coverage-c++' ]; then
     echo "-- Enable coverage for c++"
     sh build.sh coverage --disable-jit
     ./test/omtest --gtest_output=xml:test_detail.xml
     lcov --d ../ --c --output-file test.info --rc lcov_branch_coverage=1
     genhtml test.info -o test_coverage --branch-coverage --rc lcov_branch_coverage=1
-else
-    echo "-- Disable coverage for c++"
+
+    cd ../../bindings/java
+    mvn clean install -DskipTests
+elif [ "$1" = 'release' ]; then
+    echo "-- Only build"
+    sh build.sh release
+
+    cd ../../bindings/java
+    mvn clean install -DskipTests
+elif [ "$1" = 'test' ]; then
+    echo "-- Enable build and test"
     sh build.sh release
     ./test/omtest --gtest_output=xml:test_detail.xml
-fi
 
-echo "Start build java modules using $1"
-cd ../../bindings/java
-
-if [ "$1" = 'coverage-java' ]; then
-    echo "-- Enable coverage for java"
-    mvn clean install devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
-elif [ "$1" = 'coverage-c++' ]; then
-    echo "-- Disable coverage for java and skip tests"
-    mvn clean install -DskipTests
+    cd ../../bindings/java
+    mvn clean install
 else
-    echo "-- Disable coverage for java"
+    echo "-- Enable default options"
+    sh build.sh release
+    ./test/omtest --gtest_output=xml:test_detail.xml
+
+    cd ../../bindings/java
     mvn clean install
 fi
 
