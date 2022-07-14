@@ -67,14 +67,14 @@ elif [ "$1" = 'release' ]; then
     sh build.sh release
 
     cd ../../bindings/java
-    mvn clean install -DskipTests
+    mvn clean install
 elif [ "$1" = 'test' ]; then
     echo "-- Enable build and test"
     sh build.sh release
     ./test/omtest --gtest_output=xml:test_detail.xml
 
     cd ../../bindings/java
-    mvn clean install
+    mvn clean install -DskipTests
 else
     echo "-- Enable default options"
     sh build.sh release
