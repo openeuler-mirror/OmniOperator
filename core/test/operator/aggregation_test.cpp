@@ -1027,8 +1027,9 @@ TEST(AggregationOperatorTest, verify_correctness)
         LongDataType::Instance(), 3, true, true));
     aggs.push_back(std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongDataType::Instance(),
         LongDataType::Instance(), 4, true, true));
-    DataTypes aggPartialOutputTypes(
-        std::vector<DataType> { LongDataType(), ContainerDataType(), LongDataType(), LongDataType(), LongDataType() });
+    DataTypes aggPartialOutputTypes(std::vector<DataType> { LongDataType(),
+        ContainerDataType(std::vector<DataType> { DoubleDataType(), LongDataType() }), LongDataType(), LongDataType(),
+        LongDataType() });
     auto aggregate1 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -1137,8 +1138,9 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
         LongDataType::Instance(), 4, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(9, std::move(aggregator)));
 
-    DataTypes aggPartialOutputTypes(
-        std::vector<DataType> { LongDataType(), LongDataType(), ContainerDataType(), LongDataType(), LongDataType() });
+    DataTypes aggPartialOutputTypes(std::vector<DataType> { LongDataType(), LongDataType(),
+        ContainerDataType(std::vector<DataType> { DoubleDataType(), LongDataType() }), LongDataType(),
+        LongDataType() });
     auto aggregate1 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
 
     aggregate1->AddInput(vecBatch1);

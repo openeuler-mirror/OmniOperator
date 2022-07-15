@@ -26,11 +26,14 @@ omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::VarcharD
     int32_t length);
 omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
     int32_t *ids, int32_t idsCount, ...);
+omniruntime::vec::ContainerVector *CreateContainerVector(std::vector<omniruntime::vec::DataType> fieldTypes,
+    int32_t rowCount, va_list &args);
+omniruntime::vec::Vector *CreateVector(omniruntime::vec::DataType &dataType, int32_t rowCount, va_list &args);
+
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
     int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::string *expectedValues);
-
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
 void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory);

@@ -47,7 +47,6 @@ public:
 
 private:
     void Init();
-    Vector *NewContainerVec(VectorAllocator *vecAllocator);
 
     int vectorCount;
     int rowCount;
