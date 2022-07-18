@@ -43,7 +43,7 @@ void SetNulls(omniruntime::vec::Vector *vector, std::vector<bool> &nulls);
 
 omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &values, std::vector<bool> &nulls);
 
-omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector*> vectors);
+omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector *> &vectors);
 
 bool ColumnMatch(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
 

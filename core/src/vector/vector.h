@@ -97,9 +97,7 @@ public:
     virtual void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
-        if (value) {
-            hasNull = true;
-        }
+        hasNull = value || hasNull;
     }
 
     void SetValueNotNull(int index)

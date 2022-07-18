@@ -393,13 +393,13 @@ public class TestVarcharVec {
         assertEquals(noNull.getNullCount(), 0);
         noNull.close();
 
-        // hash null value
-        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        // has null value
+        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
         byte[] nulls = new byte[] {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
-        hashNulls.close();
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
+        hasNulls.close();
 
         VarcharVec hasNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
         for (int i = 0; i < hasNull.size; i++) {
@@ -416,70 +416,70 @@ public class TestVarcharVec {
 
     @Test
     public void testNullFlagWithCopyPosition() {
-        // hash null value
-        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        // has null value
+        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
         byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
 
         int[] positions = new int[]{0, 1};
-        VarcharVec copyPositionNoNull = hashNulls.copyPositions(positions, 0, 2);
+        VarcharVec copyPositionNoNull = hasNulls.copyPositions(positions, 0, 2);
         assertFalse(copyPositionNoNull.mayHaveNull());
         assertEquals(copyPositionNoNull.getNullCount(), 0);
         copyPositionNoNull.close();
 
         positions = new int[]{1, 2, 3, 4};
-        VarcharVec copyPositionHasNull = hashNulls.copyPositions(positions, 0, 4);
+        VarcharVec copyPositionHasNull = hasNulls.copyPositions(positions, 0, 4);
         assertTrue(copyPositionHasNull.mayHaveNull());
         assertEquals(copyPositionHasNull.getNullCount(), 2);
         copyPositionHasNull.close();
 
-        hashNulls.close();
+        hasNulls.close();
     }
 
     @Test
     public void testNullFlagWithSlice() {
-        // hash null value
-        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        // has null value
+        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
         byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
 
-        VarcharVec sliceNoNull = hashNulls.slice(0, 1);
+        VarcharVec sliceNoNull = hasNulls.slice(0, 1);
         assertTrue(sliceNoNull.mayHaveNull());
         assertEquals(sliceNoNull.getNullCount(), 0);
         sliceNoNull.close();
 
-        VarcharVec sliceHasNull = hashNulls.slice(1, 4);
+        VarcharVec sliceHasNull = hasNulls.slice(1, 4);
         assertTrue(sliceHasNull.mayHaveNull());
         assertEquals(sliceHasNull.getNullCount(), 2);
         sliceHasNull.close();
 
-        hashNulls.close();
+        hasNulls.close();
     }
 
     @Test
     public void testNullFlagWithCopyRegion() {
-        // hash null value
-        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        // has null value
+        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
         byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
 
-        VarcharVec copyRegionNoNull = hashNulls.copyRegion(0, 2);
+        VarcharVec copyRegionNoNull = hasNulls.copyRegion(0, 2);
         assertFalse(copyRegionNoNull.mayHaveNull());
         assertEquals(copyRegionNoNull.getNullCount(), 0);
         copyRegionNoNull.close();
 
-        VarcharVec copyRegionHasNull = hashNulls.copyRegion(1, 4);
+        VarcharVec copyRegionHasNull = hasNulls.copyRegion(1, 4);
         assertTrue(copyRegionHasNull.mayHaveNull());
         assertEquals(copyRegionHasNull.getNullCount(), 2);
         copyRegionHasNull.close();
 
-        hashNulls.close();
+        hasNulls.close();
     }
 
     @Test

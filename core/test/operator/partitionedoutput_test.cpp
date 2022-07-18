@@ -245,7 +245,8 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
     std::vector<bool> nulls2 = {false, false, false};
     VarcharVector *col0 = CreateVarcharVector(buildData1, nulls1);
     VarcharVector *col1 = CreateVarcharVector(buildData2, nulls2);
-    VectorBatch *vecBatch = CreateVectorBatch(dataSize, {col0, col1});
+    std::vector<Vector *> cols = {col0, col1};
+    VectorBatch *vecBatch = CreateVectorBatch(dataSize, cols);
 
     bool isHashPrecomputed = false;
     DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(3) }));
@@ -274,8 +275,8 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
     std::vector<std::string> expectData0 = {"", "de", "f"};
     std::vector<bool> nulls = {true, false, false};
     DataTypes expectedTypes(std::vector<DataType>({ VarcharDataType(3) }));
-    VarcharVector *expectCol0 = CreateVarcharVector(expectData0, nulls);
-    VectorBatch *expectVecBatch = CreateVectorBatch(3, {expectCol0});
+    std::vector<Vector *> expectCols = {CreateVarcharVector(expectData0, nulls)};
+    VectorBatch *expectVecBatch = CreateVectorBatch(3, expectCols);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatch);

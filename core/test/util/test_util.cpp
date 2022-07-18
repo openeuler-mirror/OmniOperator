@@ -570,8 +570,9 @@ omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &v
 {
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
     static int32_t initCapacity = 1024; // 1k
-    auto *out = new VarcharVector(vecAllocator, initCapacity, values.size());
-    for (int32_t i = 0; i < values.size(); i++) {
+    int32_t rowCount = values.size();
+    auto *out = new VarcharVector(vecAllocator, initCapacity, rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
         if (nulls[i]) {
             out->SetValueNull(i);
         } else {
@@ -581,10 +582,11 @@ omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &v
     return out;
 }
 
-omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector*> vectors)
+omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector *> &vectors)
 {
-    auto *vectorBatch = new VectorBatch(vectors.size(), rowCount);
-    for (int32_t i = 0; i < vectors.size(); i++) {
+    int32_t vecCount = vectors.size();
+    auto *vectorBatch = new VectorBatch(vecCount, rowCount);
+    for (int32_t i = 0; i < vecCount; i++) {
         vectorBatch->SetVector(i, vectors[i]);
     }
     return vectorBatch;

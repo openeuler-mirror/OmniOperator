@@ -268,8 +268,6 @@ public abstract class Vec implements Closeable {
 
     private static native boolean mayHaveNullNative(long nativeVector);
 
-    private static native void setNullCountNative(long nativeVector, int newNullCount);
-
     private static native int getNullCountNative(long nativeVector);
 
     /**

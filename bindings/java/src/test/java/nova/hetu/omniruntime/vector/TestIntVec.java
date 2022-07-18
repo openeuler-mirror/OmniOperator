@@ -211,13 +211,13 @@ public class TestIntVec {
         assertEquals(noNull.getNullCount(), 0);
         noNull.close();
 
-        // hash null value
-        IntVec hashNulls = new IntVec(10);
+        // has null value
+        IntVec hasNulls = new IntVec(10);
         byte[] nulls = new byte[] {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(noNull.mayHaveNull());
-        assertEquals(noNull.getNullCount(), 5);
-        hashNulls.close();
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
+        hasNulls.close();
 
         IntVec hasNull = new IntVec(10);
         for (int i = 0; i < hasNull.size; i++) {
@@ -234,70 +234,70 @@ public class TestIntVec {
 
     @Test
     public void testNullFlagWithCopyPosition() {
-        // hash null value
-        IntVec hashNulls = new IntVec(10);
+        // has null value
+        IntVec hasNulls = new IntVec(10);
         byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
 
         int[] positions = new int[]{0, 1};
-        IntVec copyPositionNoNull = hashNulls.copyPositions(positions, 0, 2);
+        IntVec copyPositionNoNull = hasNulls.copyPositions(positions, 0, 2);
         assertFalse(copyPositionNoNull.mayHaveNull());
         assertEquals(copyPositionNoNull.getNullCount(), 0);
         copyPositionNoNull.close();
 
         positions = new int[]{1, 2, 3, 4};
-        IntVec copyPositionHasNull = hashNulls.copyPositions(positions, 0, 4);
+        IntVec copyPositionHasNull = hasNulls.copyPositions(positions, 0, 4);
         assertTrue(copyPositionHasNull.mayHaveNull());
         assertEquals(copyPositionHasNull.getNullCount(), 2);
         copyPositionHasNull.close();
 
-        hashNulls.close();
+        hasNulls.close();
     }
 
     @Test
     public void testNullFlagWithSlice() {
-        // hash null value
-        IntVec hashNulls = new IntVec(10);
+        // has null value
+        IntVec hasNulls = new IntVec(10);
         byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
 
-        IntVec sliceNoNull = hashNulls.slice(0, 1);
+        IntVec sliceNoNull = hasNulls.slice(0, 1);
         assertTrue(sliceNoNull.mayHaveNull());
         assertEquals(sliceNoNull.getNullCount(), 0);
         sliceNoNull.close();
 
-        IntVec sliceHasNull = hashNulls.slice(1, 4);
+        IntVec sliceHasNull = hasNulls.slice(1, 4);
         assertTrue(sliceHasNull.mayHaveNull());
         assertEquals(sliceHasNull.getNullCount(), 2);
         sliceHasNull.close();
 
-        hashNulls.close();
+        hasNulls.close();
     }
 
     @Test
     public void testNullFlagWithCopyRegion() {
-        // hash null value
-        IntVec hashNulls = new IntVec(10);
+        // has null value
+        IntVec hasNulls = new IntVec(10);
         byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hashNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hashNulls.mayHaveNull());
-        assertEquals(hashNulls.getNullCount(), 5);
+        hasNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
 
-        IntVec copyRegionNoNull = hashNulls.copyRegion(0, 2);
+        IntVec copyRegionNoNull = hasNulls.copyRegion(0, 2);
         assertFalse(copyRegionNoNull.mayHaveNull());
         assertEquals(copyRegionNoNull.getNullCount(), 0);
         copyRegionNoNull.close();
 
-        IntVec copyRegionHasNull = hashNulls.copyRegion(1, 4);
+        IntVec copyRegionHasNull = hasNulls.copyRegion(1, 4);
         assertTrue(copyRegionHasNull.mayHaveNull());
         assertEquals(copyRegionHasNull.getNullCount(), 2);
         copyRegionHasNull.close();
 
-        hashNulls.close();
+        hasNulls.close();
     }
 
     @Test

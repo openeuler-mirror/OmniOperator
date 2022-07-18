@@ -1617,8 +1617,8 @@ TEST(FilterTest, Coalesce2)
 
     DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce2");
-    VarcharVector *col0 = CreateVarcharVector(strings, nulls);
-    auto *t = CreateVectorBatch(numRows, {col0});
+    std::vector<Vector *> cols = {CreateVarcharVector(strings, nulls)};
+    auto *t = CreateVectorBatch(numRows, cols);
 
     CoalesceExpr *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, VarcharType()), new LiteralExpr(new std::string("bye"), VarcharType()));
