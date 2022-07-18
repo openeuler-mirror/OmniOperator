@@ -236,4 +236,23 @@ TEST(ContainerVector, appendVector)
     delete appended;
     delete allocator;
 }
+
+TEST(ContainerVector, testNullFlagWithSet)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithSet");
+    int rows = 10;
+    auto *sub1 = new IntVector(allocator, rows);
+    auto *sub2 = new LongVector(allocator, rows);
+
+    std::vector<uintptr_t> subAddrs = { reinterpret_cast<uintptr_t>(sub1), reinterpret_cast<uintptr_t>(sub2) };
+    std::vector<DataType> subTypes = { IntDataType(), LongDataType() };
+    auto *hasNulls = new ContainerVector(allocator, rows, subAddrs, 2, subTypes);
+
+    std::vector<bool> nulls = { true, false, true, false, true, false, true, false, true, false };
+    TestUtil::SetNulls(hasNulls, nulls);
+    EXPECT_TRUE(hasNulls->MayHaveNull());
+    EXPECT_EQ(hasNulls->GetNullCount(), 5);
+    delete hasNulls;
+    delete allocator;
+}
 }

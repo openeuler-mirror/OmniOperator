@@ -20,16 +20,10 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
     }
 
     for (int32_t i = 0; i < idsCount; i++) {
-        if (dictionary->IsValueNull(ids[i]) ) {
+        if (dictionary->IsValueNull(ids[i])) {
             this->SetValueNull(i);
         }
     }
-}
-
-DictionaryVector::DictionaryVector(Vector *dictionary, int32_t idsCount)
-    : DictionaryVector(dictionary->GetAllocator(), dictionary->GetTypeId(), idsCount)
-{
-    this->dictionary = dictionary->Slice(0, dictionary->GetSize());
 }
 
 DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t idsCount)

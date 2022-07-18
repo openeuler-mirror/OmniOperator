@@ -14,8 +14,7 @@ Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTy
       dataTypeId(dataTypeId),
       reference(nullptr),
       allocator(allocator),
-      hasNull(false),
-      nullCount(UNKNOWN_NULL_COUNT)
+      hasNull(false)
 {
     ASSERT(allocator != nullptr);
     allocator->NewVector(this, capacityInBytes, size, dataTypeId);
@@ -31,8 +30,7 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
       dataTypeId(vector->dataTypeId),
       reference(vector->reference),
       allocator(vector->allocator),
-      hasNull(vector->hasNull),
-      nullCount(vector->nullCount == 0 ? 0 : UNKNOWN_NULL_COUNT)
+      hasNull(vector->hasNull)
 {
     allocator->SliceVector(vector, this);
     valuesAddress = reference->GetValuesAddress();

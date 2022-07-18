@@ -995,12 +995,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
-    std::string expectData2[expectedDataSize] = {"5", "0", "3", "1", "4"};
-    VarcharVector *expectCol2 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
-    for (int i = 0; i < expectedDataSize; ++i) {
-        std::string str = expectData2[i];
-        expectCol2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
-    }
+    std::vector<std::string> expectData2 = {"", "0", "3", "1", "4"};
+    std::vector<bool> nulls = {true, false, false, false, false};
+    VarcharVector *expectCol2 = CreateVarcharVector(expectData2, nulls);
+
     double expectData3[expectedDataSize] = {1.1, 6.6, 3.3, 5.5, 2.2};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
@@ -1009,7 +1007,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     expectVecorBatch->SetVector(1, expectCol2);
     expectVecorBatch->SetVector(2, expectCol3);
     expectVecorBatch->GetVector(0)->SetValueNull(0);
-    expectVecorBatch->GetVector(1)->SetValueNull(0);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
@@ -1073,12 +1070,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
-    std::string expectData2[expectedDataSize] = {"5", "0", "3", "1", "4"};
-    VarcharVector *expectCol2 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
-    for (int i = 0; i < expectedDataSize; ++i) {
-        std::string str = expectData2[i];
-        expectCol2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
-    }
+    std::vector<std::string> expectData2 = {"5", "0", "3", "1", "4"};
+    std::vector<bool> nulls = {true, false, false, false, false};
+    VarcharVector *expectCol2 = CreateVarcharVector(expectData2, nulls);
     double expectData3[expectedDataSize] = {1.1, 6.6, 3.3, 5.5, 2.2};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
@@ -1087,7 +1081,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     expectVecorBatch->SetVector(1, expectCol2);
     expectVecorBatch->SetVector(2, expectCol3);
     expectVecorBatch->GetVector(0)->SetValueNull(0);
-    expectVecorBatch->GetVector(1)->SetValueNull(0);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));

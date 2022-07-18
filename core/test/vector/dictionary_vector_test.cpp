@@ -370,4 +370,41 @@ TEST(DictionaryVector, NestedDictionaryVectorGetIds)
     delete nested;
     delete allocator;
 }
+TEST(DictionaryVector, testNullFlag)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlag");
+    auto *originalVector = new LongVector(allocator, 10);
+    for (int i = 0; i < 10; i++) {
+        if (i % 2 == 0) {
+            originalVector->SetValueNull(i);
+        } else {
+            originalVector->SetValue(i, i);
+        }
+    }
+
+    std::vector<int32_t> ids = { 6, 8, 9 };
+    auto *dictionaryVec = new DictionaryVector(originalVector, ids.data(), ids.size());
+    delete originalVector;
+    EXPECT_TRUE(dictionaryVec->MayHaveNull());
+    EXPECT_EQ(dictionaryVec->GetNullCount(), 2);
+
+    DictionaryVector *copyRegion = dictionaryVec->CopyRegion(1, 2);
+    EXPECT_TRUE(copyRegion->MayHaveNull());
+    EXPECT_EQ(copyRegion->GetNullCount(), 1);
+    delete copyRegion;
+
+    DictionaryVector *slice = dictionaryVec->Slice(2, 3);
+    EXPECT_TRUE(slice->MayHaveNull());
+    EXPECT_EQ(slice->GetNullCount(), 0);
+    delete slice;
+
+    std::vector<int32_t> positions = { 0, 2 };
+    DictionaryVector *copyPosition = dictionaryVec->CopyPositions(positions.data(), 0, 2);
+    EXPECT_TRUE(copyPosition->MayHaveNull());
+    EXPECT_EQ(copyPosition->GetNullCount(), 1);
+    delete copyPosition;
+
+    delete dictionaryVec;
+    delete allocator;
+}
 }

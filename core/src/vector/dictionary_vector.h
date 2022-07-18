@@ -17,8 +17,6 @@ class DictionaryVector : public Vector {
 public:
     DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount);
 
-    DictionaryVector(Vector *dictionary, int32_t idsCount);
-
     DictionaryVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t idsCount);
 
     ~DictionaryVector() override;
@@ -94,25 +92,16 @@ public:
             return;
         }
         // when set dictionary, means we slice a dictionary vector, we need set nulls here.
-        bool *nulls = new bool[size];
         for (int32_t i = 0; i < size; i++) {
-            nulls[i] = dictionaryVector->IsValueNull(GetId(i));
+            if (dictionary->IsValueNull(GetId(i)) ) {
+                this->SetValueNull(i);
+            }
         }
-        errno_t ret = memcpy_s(valueNullsAddress, size * sizeof(bool), nulls, size * sizeof(bool));
-        if (ret != EOK) {
-            LogError("Memory copy failed. %d", ret);
-        }
-        delete[] nulls;
     }
 
     VectorEncoding GetEncoding() override
     {
         return OMNI_VEC_ENCODING_DICTIONARY;
-    }
-
-    bool MayHaveNull() const override
-    {
-        return Vector::MayHaveNull() || dictionary->MayHaveNull();
     }
 
 private:

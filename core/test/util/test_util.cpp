@@ -15,7 +15,6 @@ using namespace omniruntime::expressions;
 
 namespace TestUtil {
 bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber);
-bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
 bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
@@ -556,5 +555,38 @@ std::string GenerateSpillPath()
     std::string result = std::string(dirName) + std::string("/") + std::to_string(time(nullptr));
     free(dirName);
     return result;
+}
+
+void SetNulls(omniruntime::vec::Vector *vector, std::vector<bool> &nulls)
+{
+    for (int32_t i = 0; i < nulls.size(); i++) {
+        if (nulls[i]) {
+            vector->SetValueNull(i);
+        }
+    }
+}
+
+omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &values, std::vector<bool> &nulls)
+{
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
+    static int32_t initCapacity = 1024; // 1k
+    auto *out = new VarcharVector(vecAllocator, initCapacity, values.size());
+    for (int32_t i = 0; i < values.size(); i++) {
+        if (nulls[i]) {
+            out->SetValueNull(i);
+        } else {
+            out->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
+        }
+    }
+    return out;
+}
+
+omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector*> vectors)
+{
+    auto *vectorBatch = new VectorBatch(vectors.size(), rowCount);
+    for (int32_t i = 0; i < vectors.size(); i++) {
+        vectorBatch->SetVector(i, vectors[i]);
+    }
+    return vectorBatch;
 }
 }

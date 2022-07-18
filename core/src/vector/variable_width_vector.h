@@ -47,7 +47,7 @@ public:
         lastOffsetPosition = index;
     }
 
-    void ALWAYS_INLINE SetValueNull(int index) override
+    void ALWAYS_INLINE SetValueNull(int index)
     {
         Vector::SetValueNull(index);
         FillSlots(index);

@@ -85,6 +85,12 @@ public:
         return loadedVector->MayHaveNull();
     }
 
+    int32_t GetNullCount() const override
+    {
+        AssureLoaded();
+        return loadedVector->GetNullCount();
+    }
+
 private:
     VectorLoader *loader;
     mutable Vector *loadedVector;

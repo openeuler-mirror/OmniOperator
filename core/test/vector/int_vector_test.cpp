@@ -4,8 +4,10 @@
 
 #include <gtest/gtest.h>
 #include "vector_common.h"
+#include "../util/test_util.h"
 
 using namespace omniruntime::vec;
+using namespace TestUtil;
 
 namespace IntVectorTest {
 TEST(IntVector, newVector)
@@ -180,18 +182,18 @@ TEST(IntVector, copyPositions)
         originalVector->SetValue(i, i);
     }
 
-    int *possions = new int[2];
-    possions[0] = 1;
-    possions[1] = 3;
-    IntVector *copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
+    int *positions = new int[2];
+    positions[0] = 1;
+    positions[1] = 3;
+    IntVector *copyPositionVector = originalVector->CopyPositions(positions, 0, 2);
 
-    for (int i = 0; i < copyPostionVector->GetSize(); i++) {
-        EXPECT_EQ(copyPostionVector->GetValue(i), originalVector->GetValue(possions[i]));
+    for (int i = 0; i < copyPositionVector->GetSize(); i++) {
+        EXPECT_EQ(copyPositionVector->GetValue(i), originalVector->GetValue(positions[i]));
     }
 
-    delete[] possions;
+    delete[] positions;
     delete originalVector;
-    delete copyPostionVector;
+    delete copyPositionVector;
     delete allocator;
 }
 
@@ -226,5 +228,128 @@ TEST(IntVector, jniFreeVector)
     Vector *vector = (Vector *)originalVector;
     std::cout << typeid(*vector).hash_code() << std::endl;
     delete vector;
+}
+
+TEST(IntVector, testNullFlagWithSet)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithSet");
+    // no null value
+    auto *noNull = new IntVector(allocator, 10);
+    EXPECT_FALSE(noNull->MayHaveNull());
+    delete noNull;
+
+    // hash null value
+    auto *hashNulls = new IntVector(allocator, 10);
+    std::vector<bool> nulls = { false, true, false, true, false, true, false, true, false, true };
+    SetNulls(hashNulls, nulls);
+    EXPECT_TRUE(hashNulls->MayHaveNull());
+    EXPECT_EQ(hashNulls->GetNullCount(), 5);
+    delete hashNulls;
+    delete allocator;
+}
+
+TEST(IntVector, testNullFlagWithCopyPosition)
+{
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithCopyPosition");
+    // hash null value
+    auto *hashNulls = new IntVector(allocator, 10);
+    std::vector<bool> nulls = { false, false, true, true, false, true, false, true, false, true };
+    TestUtil::SetNulls(hashNulls, nulls);
+    EXPECT_TRUE(hashNulls->MayHaveNull());
+    EXPECT_EQ(hashNulls->GetNullCount(), 5);
+
+    std::vector<int32_t> positions = { 0, 1 };
+    IntVector *copyPositionNoNull = hashNulls->CopyPositions(positions.data(), 0, 2);
+    EXPECT_FALSE(copyPositionNoNull->MayHaveNull());
+    EXPECT_EQ(copyPositionNoNull->GetNullCount(), 0);
+    delete copyPositionNoNull;
+
+    positions = { 1, 2, 3, 4 };
+    IntVector *copyPositionHasNull = hashNulls->CopyPositions(positions.data(), 0, 4);
+    EXPECT_TRUE(copyPositionHasNull->MayHaveNull());
+    EXPECT_EQ(copyPositionHasNull->GetNullCount(), 2);
+    delete copyPositionHasNull;
+
+    delete hashNulls;
+    delete allocator;
+}
+
+TEST(IntVector, testNullFlagWithSlice)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithSlice");
+    // hash null value
+    auto *hashNulls = new IntVector(allocator, 10);
+    std::vector<bool> nulls = { false, false, true, true, false, true, false, true, false, true };
+    SetNulls(hashNulls, nulls);
+    EXPECT_TRUE(hashNulls->MayHaveNull());
+    EXPECT_EQ(hashNulls->GetNullCount(), 5);
+
+    IntVector *sliceNoNull = hashNulls->Slice(0, 1);
+    EXPECT_TRUE(sliceNoNull->MayHaveNull());
+    EXPECT_EQ(sliceNoNull->GetNullCount(), 0);
+    delete sliceNoNull;
+
+    IntVector *sliceHasNull = hashNulls->Slice(1, 4);
+    EXPECT_TRUE(sliceHasNull->MayHaveNull());
+    EXPECT_EQ(sliceHasNull->GetNullCount(), 2);
+    delete sliceHasNull;
+
+    delete hashNulls;
+}
+
+TEST(IntVector, testNullFlagWithCopyRegion)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithCopyRegion");
+    // hash null value
+    auto *hashNulls = new IntVector(allocator, 10);
+    std::vector<bool> nulls = { false, false, true, true, false, true, false, true, false, true };
+    SetNulls(hashNulls, nulls);
+    EXPECT_TRUE(hashNulls->MayHaveNull());
+    EXPECT_EQ(hashNulls->GetNullCount(), 5);
+
+    IntVector *copyRegionNoNull = hashNulls->CopyRegion(0, 2);
+    EXPECT_FALSE(copyRegionNoNull->MayHaveNull());
+    delete copyRegionNoNull;
+
+    IntVector *copyRegionHasNull = hashNulls->CopyRegion(1, 4);
+    EXPECT_TRUE(copyRegionHasNull->MayHaveNull());
+    EXPECT_EQ(copyRegionHasNull->GetNullCount(), 2);
+    delete copyRegionHasNull;
+
+    delete hashNulls;
+    delete allocator;
+}
+
+TEST(IntVector, testNullFlagWithAppend)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithAppend");
+
+    int rowCount = 5;
+    auto *src = new IntVector(allocator, rowCount);
+    for (int i = 0; i < rowCount; i++) {
+        src->SetValue(i, i + 1);
+    }
+
+    auto *appended = new IntVector(allocator, 15);
+    appended->Append(src, 0, rowCount);
+    delete src;
+    EXPECT_FALSE(appended->MayHaveNull());
+    EXPECT_EQ(appended->GetNullCount(), 0);
+
+    auto *withNull = new IntVector(allocator, rowCount);
+    std::vector<bool> nulls = { false, true, true, false, true };
+    SetNulls(withNull, nulls);
+    appended->Append(withNull, 5, rowCount);
+    EXPECT_TRUE(appended->MayHaveNull());
+    EXPECT_EQ(appended->GetNullCount(), 3);
+
+    appended->Append(withNull, 10, rowCount);
+    EXPECT_TRUE(appended->MayHaveNull());
+    EXPECT_EQ(appended->GetNullCount(), 6);
+    delete withNull;
+
+    delete appended;
+    delete allocator;
 }
 }

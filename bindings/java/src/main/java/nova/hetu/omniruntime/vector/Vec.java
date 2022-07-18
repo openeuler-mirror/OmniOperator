@@ -15,13 +15,14 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * base class of vec.
  *
  * @since 2021-07-17
  */
-//@NotThreadSafe
+@NotThreadSafe
 public abstract class Vec implements Closeable {
     /**
      * indicates a null value in a nulls buffer.
@@ -263,7 +264,7 @@ public abstract class Vec implements Closeable {
     protected static native void appendVectorNative(long destNativeVector, int positionOffset, long srcNativeVector,
             int length);
 
-    private static native void setNullFlagNative(long nativeVector, boolean newHasNull);
+    private static native void setNullFlagNative(long nativeVector, boolean hasNull);
 
     private static native boolean mayHaveNullNative(long nativeVector);
 
@@ -639,7 +640,7 @@ public abstract class Vec implements Closeable {
     public boolean mayHaveNull() {
         return mayHaveNullNative(nativeVector);
     }
-    
+
     /**
      * get the number of nulls in vec
      *

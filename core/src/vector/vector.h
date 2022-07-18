@@ -14,12 +14,9 @@
 #include "tracer/vector_tracer.h"
 #include "util/bit_map.h"
 
-#include <optional>
-
 namespace omniruntime {
 namespace vec {
 using DataTypeId = type::DataTypeId;
-const static int32_t UNKNOWN_NULL_COUNT = -1;
 class Vector {
 public:
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);
@@ -91,7 +88,7 @@ public:
         return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
     }
 
-    virtual void SetValueNull(int index)
+    void SetValueNull(int index)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
         hasNull = true;
@@ -100,7 +97,9 @@ public:
     virtual void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
-        hasNull = value;
+        if (value) {
+            hasNull = true;
+        }
     }
 
     void SetValueNotNull(int index)
@@ -153,11 +152,8 @@ public:
         hasNull = newHasNull;
     }
 
-    int32_t GetNullCount() const
+    virtual int32_t GetNullCount() const
     {
-        if (nullCount != UNKNOWN_NULL_COUNT) {
-            return nullCount;
-        }
         return hasNull ? BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) : 0;
     }
 
@@ -178,7 +174,6 @@ protected:
     VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;
     bool hasNull;
-    int32_t nullCount;
 };
 } // namespace vec
 } // namespace omniruntime

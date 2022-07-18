@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_VARCHAR;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import org.testng.Assert;
@@ -381,6 +382,135 @@ public class TestVarcharVec {
 
         src1.close();
         src2.close();
+        appended.close();
+    }
+
+    @Test
+    public void testNullFlagWithSet() {
+        // no null value
+        VarcharVec noNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        assertFalse(noNull.mayHaveNull());
+        assertEquals(noNull.getNullCount(), 0);
+        noNull.close();
+
+        // hash null value
+        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        byte[] nulls = new byte[] {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+        hashNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hashNulls.mayHaveNull());
+        assertEquals(hashNulls.getNullCount(), 5);
+        hashNulls.close();
+
+        VarcharVec hasNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        for (int i = 0; i < hasNull.size; i++) {
+            if (i % 2 == 0) {
+                hasNull.setNull(i);
+            } else {
+                hasNull.set(i, String.valueOf(i).getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        assertTrue(hasNull.mayHaveNull());
+        assertEquals(hasNull.getNullCount(), 5);
+        hasNull.close();
+    }
+
+    @Test
+    public void testNullFlagWithCopyPosition() {
+        // hash null value
+        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
+        hashNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hashNulls.mayHaveNull());
+        assertEquals(hashNulls.getNullCount(), 5);
+
+        int[] positions = new int[]{0, 1};
+        VarcharVec copyPositionNoNull = hashNulls.copyPositions(positions, 0, 2);
+        assertFalse(copyPositionNoNull.mayHaveNull());
+        assertEquals(copyPositionNoNull.getNullCount(), 0);
+        copyPositionNoNull.close();
+
+        positions = new int[]{1, 2, 3, 4};
+        VarcharVec copyPositionHasNull = hashNulls.copyPositions(positions, 0, 4);
+        assertTrue(copyPositionHasNull.mayHaveNull());
+        assertEquals(copyPositionHasNull.getNullCount(), 2);
+        copyPositionHasNull.close();
+
+        hashNulls.close();
+    }
+
+    @Test
+    public void testNullFlagWithSlice() {
+        // hash null value
+        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
+        hashNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hashNulls.mayHaveNull());
+        assertEquals(hashNulls.getNullCount(), 5);
+
+        VarcharVec sliceNoNull = hashNulls.slice(0, 1);
+        assertTrue(sliceNoNull.mayHaveNull());
+        assertEquals(sliceNoNull.getNullCount(), 0);
+        sliceNoNull.close();
+
+        VarcharVec sliceHasNull = hashNulls.slice(1, 4);
+        assertTrue(sliceHasNull.mayHaveNull());
+        assertEquals(sliceHasNull.getNullCount(), 2);
+        sliceHasNull.close();
+
+        hashNulls.close();
+    }
+
+    @Test
+    public void testNullFlagWithCopyRegion() {
+        // hash null value
+        VarcharVec hashNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
+        hashNulls.setNulls(0, nulls, 0, nulls.length);
+        assertTrue(hashNulls.mayHaveNull());
+        assertEquals(hashNulls.getNullCount(), 5);
+
+        VarcharVec copyRegionNoNull = hashNulls.copyRegion(0, 2);
+        assertFalse(copyRegionNoNull.mayHaveNull());
+        assertEquals(copyRegionNoNull.getNullCount(), 0);
+        copyRegionNoNull.close();
+
+        VarcharVec copyRegionHasNull = hashNulls.copyRegion(1, 4);
+        assertTrue(copyRegionHasNull.mayHaveNull());
+        assertEquals(copyRegionHasNull.getNullCount(), 2);
+        copyRegionHasNull.close();
+
+        hashNulls.close();
+    }
+
+    @Test
+    public void testNullFlagWithAppend() {
+        int rowCount = 5;
+        VarcharVec src = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rowCount);
+
+        for (int i = 0; i < rowCount; i++) {
+            src.set(i, String.valueOf(i + 1).getBytes(StandardCharsets.UTF_8));
+        }
+
+        VarcharVec appended = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 15);
+        appended.append(src, 0, rowCount);
+        src.close();
+        assertFalse(appended.mayHaveNull());
+        assertEquals(appended.getNullCount(), 0);
+
+        VarcharVec withNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rowCount);
+        byte[] nulls = new byte[] {0, 1, 1, 0, 1};
+        withNull.setNulls(0, nulls, 0, 5);
+        int[] offsets = new int[] {0, 2, 2, 2, 3, 3};
+        withNull.put(0, "abe".getBytes(StandardCharsets.UTF_8), 0, offsets, 0, rowCount);
+        appended.append(withNull, 5, rowCount);
+        assertTrue(appended.mayHaveNull());
+        assertEquals(appended.getNullCount(), 3);
+
+        appended.append(withNull, 10, rowCount);
+        assertTrue(appended.mayHaveNull());
+        assertEquals(appended.getNullCount(), 6);
+        withNull.close();
+
         appended.close();
     }
 
