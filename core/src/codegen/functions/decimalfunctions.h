@@ -19,24 +19,34 @@ namespace codegen {
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow);
+extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
+    int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale);
 
-extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, int64_t yHigh,
+    uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, int64_t yHigh,
+    uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr);
 
 extern "C" DLLEXPORT void DivDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
     int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow, int64_t *outHighPtr,
+extern "C" DLLEXPORT void ModDec128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, int64_t yHigh,
+    uint64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr);
+extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
+    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr);
+extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr);
 
 extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(double x, int32_t precision, int32_t scale);
 
@@ -51,9 +61,44 @@ extern "C" DLLEXPORT void MakeDecimal64To128(int64_t x, int32_t precision, int32
 
 extern "C" DLLEXPORT int64_t MakeDecimalLongTo64(int64_t x, int32_t precision, int32_t scale);
 
-extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y);
+extern "C" DLLEXPORT int32_t Decimal64Compare(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
+    int32_t yPrecision, int32_t yScale);
 
-extern "C" DLLEXPORT int64_t DownScaleDec64(int64_t x, int32_t y);
+extern "C" DLLEXPORT int64_t AddDec64Ret64(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y, int32_t yPrecision,
+    int32_t yScale, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void AddDec64Ret128(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y, int32_t yPrecision,
+    int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t SubDec64Ret64(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y, int32_t yPrecision,
+    int32_t yScale, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void SubDec64Ret128(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y, int32_t yPrecision,
+    int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+
+extern "C" DLLEXPORT int64_t MulDec64Ret64(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y, int32_t yPrecision,
+    int32_t yScale, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void MulDec64Ret128(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y, int32_t yPrecision,
+    int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t DivDec64Ret64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
+    int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void DivDec64Ret128(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
+    int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t ModDec64Ret64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
+    int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT void ModDec64Ret128(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
+    int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t AbsDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, int32_t outPrecision,
+    int32_t outScale);
 
 extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale);
 

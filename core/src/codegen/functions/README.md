@@ -84,7 +84,7 @@ In your function whenever you need to throw an error or exception, set error mes
 #include "context_helper.h"
 
 // Make sure you have the contextPtr as the first arg in your function
-extern "C" DLLEXPORT int64_t DivDec64(int64_t contextPtr, int64_t x, int64_t y)
+extern "C" DLLEXPORT int64_t DivDec64Ret64(int64_t contextPtr, int64_t x, int64_t y)
 {
     if (y == 0) {
         char message[] = "Divided by zero error!";

@@ -2588,7 +2588,7 @@ TEST(CodeGenTest, DecimalOperators3)
     delete context;
 }
 
-TEST(CodeGenTest, DISABLED_DecimalNegate)
+TEST(CodeGenTest, DecimalNegate)
 {
     // currently fails
     FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
@@ -2618,8 +2618,8 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     // creating decimal
     int64_t c1[2] = {3, 0};
     int64_t d1[2] = {4, 0};
-    int64_t e1[2] = {3, -1};
-    int64_t f1[2] = {4, -1};
+    int64_t e1[2] = {3, 1L << 63};
+    int64_t f1[2] = {4, 1L << 63};
 
     int64_t *vals = new int64_t[4];
     vals[0] = reinterpret_cast<int64_t>(c1);
@@ -2645,9 +2645,9 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
-        reinterpret_cast<int64_t>(context), dictionaries);
-    EXPECT_EQ(result, 1);
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
+    EXPECT_TRUE(result);
 
     for (int i = 0; i < 4; i++) {
         delete[] bitmap[i];
@@ -2662,7 +2662,7 @@ TEST(CodeGenTest, DISABLED_DecimalNegate)
     delete context;
 }
 
-TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
+TEST(CodeGenTest, Decimal128AbsAndCompare)
 {
     // currently fails
     FieldExpr *col0 = new FieldExpr(0, Decimal128Type(38, 0));
@@ -2688,7 +2688,7 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
     expr->Accept(printExprTree);
 
     // creating decimal
-    int64_t c1[2] = {3, -1};
+    int64_t c1[2] = {3, 1L << 63};
     int64_t d1[2] = {3, 0};
 
     int64_t *vals = new int64_t[2];
@@ -2713,9 +2713,9 @@ TEST(CodeGenTest, DISABLED_Decimal128AbsAndCompare)
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
-        reinterpret_cast<int64_t>(context), dictionaries);
-    EXPECT_EQ(result, 1);
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
+    EXPECT_TRUE(result);
 
     for (int i = 0; i < 2; i++) {
         delete[] bitmap[i];
@@ -2789,9 +2789,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     EXPECT_EQ(newNullValues[0], true);
     EXPECT_EQ(newNullValues[1], true);
     EXPECT_EQ(newNullValues[2], true);
-    EXPECT_EQ(oVec[0], 0);
-    EXPECT_EQ(oVec[1], 0);
-    EXPECT_EQ(oVec[2], 0);
+
     context->GetArena()->Reset();
     for (int i = 0; i < 1; i++) {
         delete[] bitmap[i];
@@ -2870,13 +2868,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     EXPECT_EQ(newNullValues[0], true);
     EXPECT_EQ(newNullValues[1], true);
     EXPECT_EQ(newNullValues[2], true);
-
-    EXPECT_EQ(oVec.at(0), 0);
-    EXPECT_EQ(oVec.at(1), 0);
-    EXPECT_EQ(oVec.at(2), 0);
-    EXPECT_EQ(oVec.at(3), 0);
-    EXPECT_EQ(oVec.at(4), 0);
-    EXPECT_EQ(oVec.at(5), 0);
 
     context->GetArena()->Reset();
     for (int i = 0; i < 1; i++) {
@@ -3222,7 +3213,7 @@ TEST(CodeGenTest, Mm3HashLong)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Int64(v1[0], false, 42);
+    int32_t expectedRes = Mm3Int64(v1[0], false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3272,7 +3263,7 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Double(v1[0], false, 42);
+    int32_t expectedRes = Mm3Double(v1[0], false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3323,7 +3314,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42);
+    int32_t expectedRes = Mm3String(v1.c_str(), v1.size(), false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3372,7 +3363,7 @@ TEST(CodeGenTest, Mm3HashDecimal64)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Decimal64(v1[0], false, 42);
+    int32_t expectedRes = Mm3Decimal64(v1[0], 8, 2, false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });
@@ -3422,7 +3413,7 @@ TEST(CodeGenTest, Mm3HashDecimal128)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], false, 42);
+    int32_t expectedRes = Mm3Decimal128(v1[1], v1[0], 38, 20, false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });

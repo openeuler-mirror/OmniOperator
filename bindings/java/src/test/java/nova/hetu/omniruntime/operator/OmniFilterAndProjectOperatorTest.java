@@ -1458,8 +1458,8 @@ public class OmniFilterAndProjectOperatorTest {
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0,"
-                        + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":7,"
-                        + "\"precision\":21,\"scale\":5,\"isNull\":false,\"value\":\"2000\"}}",
+                        + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":6,"
+                        + "\"precision\":9,\"scale\":5,\"isNull\":false,\"value\":2000}}",
                 types, projectionsJSON, 1);
 
         assertFalse(factory.isSupported());

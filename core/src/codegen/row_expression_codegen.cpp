@@ -17,7 +17,14 @@ std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(std::string n
     const omniruntime::expressions::Expr &expression)
 {
     std::unique_ptr<RowExpressionCodeGen> codegen { new RowExpressionCodeGen(std::move(name), expression) };
-    codegen->Initialize();
+    LLVMEngine::Create(&(codegen->llvmEngine));
+    codegen->context = codegen->GetContext();
+    codegen->builder = codegen->GetIRBuilder();
+    codegen->module = codegen->GetModule();
+    codegen->jit = codegen->GetJit();
+    codegen->llvmTypes = codegen->GetTypes();
+    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
+    codegen->ExtractVectorIndexes();
     return codegen;
 }
 
@@ -101,7 +108,7 @@ Function *RowExpressionCodeGen::CreateFunction()
     args.push_back(llvmTypes->I64Type());
 
     FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
-    func = Function::Create(prototype, Function::ExternalLinkage, FUNCTION_NAME, module.get());
+    func = Function::Create(prototype, Function::ExternalLinkage, FUNCTION_NAME, module);
 
     std::string argNames[] = {
         "data", "isNulls", "lengths", "isResultNull",
@@ -113,7 +120,7 @@ Function *RowExpressionCodeGen::CreateFunction()
         idx++;
     }
 
-    codeGenUtils->RecordMainFunction(func);
+    llvmEngine->RecordMainFunction(func);
 
     BasicBlock *body = BasicBlock::Create(*context, "FUNC_BODY", func);
     builder->SetInsertPoint(body);
@@ -136,8 +143,16 @@ Function *RowExpressionCodeGen::CreateFunction()
         builder->CreateStore(result->length, lengthGep);
     }
 
+    int32_t outputNullIndex = 3;
+    Argument *isResultNull = this->func->getArg(outputNullIndex);
+    Value *nullGep = builder->CreateGEP(isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
+    builder->CreateStore(result->isNull, nullGep);
+
     // Return value
     builder->CreateRet(result->data);
+
+    llvmEngine->OptimizeModule();
+
     verifyFunction(*func);
     return func;
 }
@@ -156,16 +171,13 @@ int64_t RowExpressionCodeGen::GetFunction()
         return 0;
     }
 
-    OptimizeFunctionsAndModule();
-
 #ifdef DEBUG_LLVM
-    module->print(errs(), nullptr);
+    GetModule()->print(errs(), nullptr);
 #endif
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    auto threadSafeModule = ThreadSafeModule(move(module), move(context));
-    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
+    llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
 
     auto sym = eoe(jit->lookup(FUNCTION_NAME));

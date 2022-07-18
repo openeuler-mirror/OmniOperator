@@ -23,8 +23,6 @@ public:
 
     int64_t GetFunction() override;
 
-    int64_t GetExpressionEvaluator();
-
 private:
     FilterCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
         : ExpressionCodeGen(std::move(name), expression)
