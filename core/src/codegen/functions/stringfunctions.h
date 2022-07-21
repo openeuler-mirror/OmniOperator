@@ -19,6 +19,13 @@
 #define DLLEXPORT
 #endif
 
+namespace omniruntime {
+namespace codegen {
+// Defining constant of the gap for case conversions
+const int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
+}
+}
+
 extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen);
 extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen);
 extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
@@ -66,7 +73,9 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
     if (res != EOK) {
-        std::cerr << "Substring failed" << std::endl;
+        char message[] = "Substring failed";
+        omniruntime::codegen::SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return nullptr;
     }
     return ret;
 }
@@ -99,7 +108,9 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
     if (res != EOK) {
-        std::cerr << "Substring failed" << std::endl;
+        char message[] = "Substring failed";
+        omniruntime::codegen::SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        return nullptr;
     }
     return ret;
 }
@@ -111,9 +122,23 @@ extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char 
     return SubstrWithStart(contextPtr, str, strLen, startIdx, outLen);
 }
 
-extern DLLEXPORT const char *ToUpper(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
+extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
 
 extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
     int32_t *outLen);
 
+extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
+
+extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+    int32_t *outLen);
+
+extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strLen);
+
+extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen);
+
+extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
+    const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, int32_t *outLen);
+
+extern DLLEXPORT const char *ReplaceStrStrWithoutRep(int64_t contextPtr, const char *str, int32_t strLen,
+    const char *searchStr, int32_t searchLen, int32_t *outLen);
 #endif

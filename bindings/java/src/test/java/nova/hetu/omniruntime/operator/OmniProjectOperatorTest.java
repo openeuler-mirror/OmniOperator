@@ -4,6 +4,8 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -211,5 +213,61 @@ public class OmniProjectOperatorTest {
         assertEquals(factory2, factory1);
         assertEquals(factory1, factory1);
         assertNotEquals(factory3, factory1);
+    }
+
+    @Test
+    public void testReplaceWithRep() {
+        DataType[] types = {new VarcharDataType(20), new VarcharDataType(10), new VarcharDataType(10)};
+        Object[][] datas = {{"varchar100", "varchar200", "varchar300"}, {"char1", "char", "char3"},
+                {"opera", "*#", "VARCHAR"}};
+        VecBatch vecBatch = createVecBatch(types, datas);
+        String[] expressions = {"{\"exprType\":\"FUNCTION\",\"returnType\":15,\"function_name\":\"replace\","
+                + "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":0,\"width\":20},"
+                + "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":1,\"width\":10},{\"exprType\":"
+                + "\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":2,\"width\":10}],\"width\":100}"};
+        DataType[] inputTypes = {new VarcharDataType(20)};
+
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(expressions, inputTypes, 1,
+                new OperatorConfig());
+
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{"varopera00", "var*#200", "varVARCHAR00"}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(resultVecBatch);
+        op.close();
+        factory.close();
+    }
+
+    @Test
+    public void testReplaceWithoutRep() {
+        DataType[] types = {new VarcharDataType(20), new VarcharDataType(10)};
+        Object[][] datas = {{"varchar100", "varchar200", "varchar300"}, {"char1", "char2", "char3"}};
+        VecBatch vecBatch = createVecBatch(types, datas);
+        String[] expressions = {"{\"exprType\":\"FUNCTION\",\"returnType\":15,\"function_name\":\"replace\","
+                + "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":0,\"width\":20},"
+                + "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":1,\"width\":10}],\"width\":100}"};
+        DataType[] inputTypes = {new VarcharDataType(20)};
+
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(expressions, inputTypes, 1,
+                new OperatorConfig());
+
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{"var00", "var00", "var00"}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(resultVecBatch);
+        op.close();
+        factory.close();
     }
 }

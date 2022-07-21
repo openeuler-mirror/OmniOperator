@@ -985,14 +985,14 @@ TEST(FunctionTest, SubstrCharWithStart)
     delete context;
 }
 
-TEST(FunctionTest, ToUpper)
+TEST(FunctionTest, ToUpperStr)
 {
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
     string test = "[\\]^_abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     string expected = "[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     int32_t outLen = 0;
-    const char *result = ToUpper(contextptr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToUpperStr(contextptr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1008,6 +1008,35 @@ TEST(FunctionTest, ToUpperChar)
     int32_t width = 100;
     int32_t outLen = 0;
     const char *result = ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), &outLen);
+    string actual = string(result, outLen);
+    EXPECT_EQ(actual, expected);
+    EXPECT_EQ(outLen, 62);
+    delete context;
+}
+
+TEST(FunctionTest, ToLowerStr)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    string test = "[\\]^_abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
+    string expected = "[\\]^_abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz{|}.";
+    int32_t outLen = 0;
+    const char *result = ToLowerStr(contextPtr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
+    string actual = string(result, outLen);
+    EXPECT_EQ(actual, expected);
+    EXPECT_EQ(outLen, 62);
+    delete context;
+}
+
+TEST(FunctionTest, ToLowerChar)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    string test = "[\\]^_abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
+    string expected = "[\\]^_abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz{|}.";
+    int32_t width = 100;
+    int32_t outLen = 0;
+    const char *result = ToLowerChar(contextPtr, test.c_str(), width, static_cast<int32_t>(test.length()), &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1082,6 +1111,134 @@ TEST(FunctionTest, CastString)
     EXPECT_EQ(result, 3652);
     result = CastString(contextptr, "1453-05-29", 10);
     EXPECT_EQ(result, -188682);
+    delete context;
+}
+
+TEST(FunctionTest, LengthChar)
+{
+    string test = "abcd";
+    int32_t width = 10;
+    auto len = LengthChar(test.c_str(), width, test.length());
+    EXPECT_EQ(len, 10);
+}
+
+TEST(FunctionTest, LengthStr)
+{
+    string test = "abcd";
+    auto len = LengthStr(test.c_str(), test.length());
+    EXPECT_EQ(len, 4);
+}
+
+TEST(FunctionTest, ReplaceStrStrStrWithRep)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen = 0;
+
+    string str = "operator1";
+    string searchStr = "o";
+    string replaceStr = "**";
+    auto result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+        replaceStr.c_str(), replaceStr.length(), &outLen);
+    string expected = "**perat**r1";
+    EXPECT_EQ(outLen, 11);
+    EXPECT_EQ(string(result, outLen), expected);
+
+    str = "operator2";
+    searchStr = "";
+    replaceStr = "*";
+    result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+        replaceStr.c_str(), replaceStr.length(), &outLen);
+    expected = "*o*p*e*r*a*t*o*r*2*";
+    EXPECT_EQ(outLen, 19);
+    EXPECT_EQ(string(result, outLen), expected);
+
+    str = "operator3";
+    searchStr = "era";
+    replaceStr = "ER";
+    result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+        replaceStr.c_str(), replaceStr.length(), &outLen);
+    expected = "opERtor3";
+    EXPECT_EQ(outLen, 8);
+    EXPECT_EQ(string(result, outLen), expected);
+    delete context;
+}
+
+TEST(FunctionTest, ReplaceStrStrWithoutRep)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen = 0;
+
+    string str = "operator1";
+    string searchStr = "o";
+    auto result =
+        ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(), &outLen);
+    string expected = "peratr1";
+    EXPECT_EQ(outLen, 7);
+    EXPECT_EQ(string(result, outLen), expected);
+
+    str = "operator2";
+    searchStr = "";
+    result =
+        ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(), &outLen);
+    expected = "operator2";
+    EXPECT_EQ(outLen, 9);
+    EXPECT_EQ(string(result, outLen), expected);
+
+    str = "operator3";
+    searchStr = "era";
+    result =
+        ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(), &outLen);
+    expected = "optor3";
+    EXPECT_EQ(outLen, 6);
+    EXPECT_EQ(string(result, outLen), expected);
+    delete context;
+}
+
+TEST(FunctionTest, ReplaceStrCharStr)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen = 0;
+
+    string str[] = {"", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7"};
+    string searchStr[] =
+            {"          ", " char200  ", "char300   ", "char400   ", "char500   ", "char600   ", "char700   "};
+    string replaceStr[] = {"", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7"};
+    int32_t resultLen[] = {0, 9, 0,  8, 8, 8, 8};
+    string expected[] = {"", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7"};
+
+    for (int32_t i = 0; i < 7; i++) {
+        auto result = ReplaceStrStrStrWithRep(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
+            searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), &outLen);
+        EXPECT_EQ(outLen, resultLen[i]);
+        EXPECT_EQ(string(result, outLen), expected[i]);
+    }
+    delete context;
+}
+
+TEST(FunctionTest, ReplaceCharCharChar)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen = 0;
+
+    string str[] = {"          ", " char200  ", "          ", "char400   ", "char500   ", "char600   ", "char700   "};
+    string searchStr[] =
+            {"cha1     ", " char2     ", "char3     ", "char4     ", "char5     ", "char6     ", "char7     "};
+    string replaceStr[] =
+            {"varchar100", "varchar200", "varchar300", "varchar400", "varchar500", "varchar600", "varchar700"};
+    int32_t resultLen[] = {10, 10, 10, 10, 10, 10, 10};
+    string expected[] =
+            {"          ", " char200  ", "          ", "char400   ", "char500   ", "char600   ", "char700   "};
+
+    for (int32_t i = 0; i < 7; i++) {
+        auto result = ReplaceStrStrStrWithRep(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
+            searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), &outLen);
+        EXPECT_EQ(outLen, resultLen[i]);
+        EXPECT_EQ(string(result, outLen), expected[i]);
+    }
     delete context;
 }
 }
