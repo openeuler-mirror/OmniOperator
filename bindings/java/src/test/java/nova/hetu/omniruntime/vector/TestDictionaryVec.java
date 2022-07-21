@@ -5,6 +5,7 @@
 package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.util.TestUtils;
 
@@ -297,5 +298,41 @@ public class TestDictionaryVec {
         originalVector.close();
         dictionaryVec.close();
         copyRegion.close();
+    }
+
+    @Test
+    public void testNullFlag() {
+        LongVec originalVector = new LongVec(10);
+        for (int i = 0; i < 10; i++) {
+            if (i % 2 == 0) {
+                originalVector.setNull(i);
+            } else {
+                originalVector.set(i, i);
+            }
+        }
+
+        int[] ids = {6, 8, 9};
+        DictionaryVec dictionaryVec = new DictionaryVec(originalVector, ids);
+        originalVector.close();
+        assertTrue(dictionaryVec.mayHaveNull());
+        assertEquals(dictionaryVec.getNullCount(), 2);
+
+        DictionaryVec copyRegion = dictionaryVec.copyRegion(1, 2);
+        assertTrue(copyRegion.mayHaveNull());
+        assertEquals(copyRegion.getNullCount(), 1);
+        copyRegion.close();
+
+        DictionaryVec slice = dictionaryVec.slice(2, 3);
+        assertTrue(slice.mayHaveNull());
+        assertEquals(slice.getNullCount(), 0);
+        slice.close();
+
+        int[] positions = {0, 2};
+        DictionaryVec copyPosition = dictionaryVec.copyPositions(positions, 0, 2);
+        assertTrue(copyPosition.mayHaveNull());
+        assertEquals(copyPosition.getNullCount(), 1);
+        copyPosition.close();
+
+        dictionaryVec.close();
     }
 }

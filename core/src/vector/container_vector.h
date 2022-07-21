@@ -73,7 +73,6 @@ public:
         this->dataTypes = dataTypes;
     }
 
-
 private:
     static const int BYTES = sizeof(T);
     std::vector<DataType> dataTypes;

@@ -269,6 +269,27 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNativ
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *, jclass, jlong, jint);
 
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    setNullFlagNative
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(JNIEnv *, jclass, jlong, jboolean);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    mayHaveNullNative
+ * Signature: (J)Z
+ */
+JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_mayHaveNullNative(JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getNullCountNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getNullCountNative(JNIEnv *, jclass, jlong);
+
 #ifdef __cplusplus
 }
 #endif

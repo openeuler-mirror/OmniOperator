@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.vector;
 import static nova.hetu.omniruntime.type.DoubleDataType.DOUBLE;
 import static nova.hetu.omniruntime.type.LongDataType.LONG;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.type.DataType;
@@ -174,5 +175,32 @@ public class TestContainerVec {
 
         vec.close();
         vecAllocator.close();
+    }
+
+    @Test
+    public void testNullFlagWithSet() {
+        int rows = 10;
+        IntVec sub1 = new IntVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rows);
+        LongVec sub2 = new LongVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rows);
+
+        long[] subAddrs = new long[]{sub1.slice(0, rows).getNativeVector(), sub2.slice(0, rows).getNativeVector()};
+        DataType[] subTypes = new DataType[]{IntDataType.INTEGER, LONG};
+        ContainerVec hasNulls = new ContainerVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 2, rows, subAddrs, subTypes);
+        byte[] nulls = new byte[] {1, 0, 1, 0, 1, 0, 1, 0, 1, 0};
+        hasNulls.setNulls(0, nulls, 0, rows);
+        assertTrue(hasNulls.mayHaveNull());
+        assertEquals(hasNulls.getNullCount(), 5);
+        hasNulls.close();
+
+        subAddrs = new long[]{sub1.getNativeVector(), sub2.getNativeVector()};
+        ContainerVec hasNull = new ContainerVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 2, rows, subAddrs, subTypes);
+        for (int i = 0; i < rows; i++) {
+            if (i % 2 == 0) {
+                hasNull.setNull(i);
+            }
+        }
+        assertTrue(hasNull.mayHaveNull());
+        assertEquals(hasNull.getNullCount(), 5);
+        hasNull.close();
     }
 }

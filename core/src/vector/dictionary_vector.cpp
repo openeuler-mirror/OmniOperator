@@ -19,24 +19,11 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
         return;
     }
 
-    bool *nulls = new bool[idsCount];
     for (int32_t i = 0; i < idsCount; i++) {
-        nulls[i] = dictionary->IsValueNull(ids[i]);
+        if (dictionary->IsValueNull(ids[i])) {
+            this->SetValueNull(i);
+        }
     }
-    ret = memcpy_s(valueNullsAddress, idsCount * sizeof(bool), nulls, idsCount * sizeof(bool));
-    if (ret != EOK) {
-        LogError("Memory copy failed. %d", ret);
-        delete this->dictionary;
-        delete[] nulls;
-        return;
-    }
-    delete[] nulls;
-}
-
-DictionaryVector::DictionaryVector(Vector *dictionary, int32_t idsCount)
-    : DictionaryVector(dictionary->GetAllocator(), dictionary->GetTypeId(), idsCount)
-{
-    this->dictionary = dictionary->Slice(0, dictionary->GetSize());
 }
 
 DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t idsCount)

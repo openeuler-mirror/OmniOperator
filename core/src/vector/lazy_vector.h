@@ -27,7 +27,7 @@ public:
         return this->loader;
     }
 
-    void AssureLoaded()
+    void AssureLoaded() const
     {
         if (loadedVector == nullptr) {
             loadedVector = loader->Load();
@@ -79,9 +79,21 @@ public:
         return OMNI_VEC_ENCODING_LAZY;
     }
 
+    bool MayHaveNull() const override
+    {
+        AssureLoaded();
+        return loadedVector->MayHaveNull();
+    }
+
+    int32_t GetNullCount() const override
+    {
+        AssureLoaded();
+        return loadedVector->GetNullCount();
+    }
+
 private:
     VectorLoader *loader;
-    Vector *loadedVector;
+    mutable Vector *loadedVector;
 };
 }
 }

@@ -39,6 +39,14 @@ omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *
 void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory);
 omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input);
 
+void SetNulls(omniruntime::vec::Vector *vector, std::vector<bool> &nulls);
+
+omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &values, std::vector<bool> &nulls);
+
+omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector *> &vectors);
+
+bool ColumnMatch(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
+
 class Timer {
 public:
     Timer() : wallElapsed(0), cpuElapsed(0) {}

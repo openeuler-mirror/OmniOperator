@@ -208,6 +208,9 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             selectedRows, context, dictionaryVectors);
     }
     context->GetArena()->Reset();
+    // fixme::true means projected vec has null in it, when project supports whether the vec of the output flag is null
+    // or not, it is obtained directly from the project flag
+    projectedVec->SetNullFlag(true);
     return projectedVec;
 }
 

@@ -1602,26 +1602,24 @@ TEST(FilterTest, Coalesce2)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
-    vector<string *> strings;
-    int64_t *col1 = new int64_t[numRows];
+    vector<string> strings;
     for (int32_t i = 0; i < numRows; i++) {
-        std::string *s = new std::string("hello");
-        col1[i] = (int64_t)(s->c_str());
-        strings.push_back(s);
+        strings.emplace_back("hello");
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
-    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce2");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
-
+    vector<bool> nulls;
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
-            t->GetVector(0)->SetValueNull(i);
+            nulls.emplace_back(true);
         } else {
-            // Seemingly necessary so that the bitmap doesn't get default values
-            t->GetVector(0)->SetValueNotNull(i);
-        };
+            nulls.emplace_back(false);
+        }
     }
+
+    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce2");
+    std::vector<Vector *> cols = {CreateVarcharVector(strings, nulls)};
+    auto *t = CreateVectorBatch(numRows, cols);
+
     CoalesceExpr *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, VarcharType()), new LiteralExpr(new std::string("bye"), VarcharType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr,
@@ -1639,11 +1637,8 @@ TEST(FilterTest, Coalesce2)
 
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
-    for (auto &s : strings) {
-        delete s;
-    }
+
     VectorHelper::FreeVecBatches(ret);
-    delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;

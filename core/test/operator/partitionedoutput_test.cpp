@@ -239,10 +239,14 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
 {
     const int32_t dataSize = 3;
     DataTypes buildTypes(std::vector<DataType>({ VarcharDataType(3), VarcharDataType(3) }));
-    std::string buildData1[dataSize] = { "abc", "de", "f" };
-    std::string buildData2[dataSize] = { "def", "bc", "a" };
-    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData2);
-    vecBatch->GetVector(0)->SetValueNull(0);
+    std::vector<std::string> buildData1 = {"", "de", "f"};
+    std::vector<bool> nulls1 = {true, false, false};
+    std::vector<string> buildData2 = {"def", "bc", "a"};
+    std::vector<bool> nulls2 = {false, false, false};
+    VarcharVector *col0 = CreateVarcharVector(buildData1, nulls1);
+    VarcharVector *col1 = CreateVarcharVector(buildData2, nulls2);
+    std::vector<Vector *> cols = {col0, col1};
+    VectorBatch *vecBatch = CreateVectorBatch(dataSize, cols);
 
     bool isHashPrecomputed = false;
     DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(3) }));
@@ -260,7 +264,7 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
     partitionedOutputOperatorFactory->SetJitContext(nullptr);
-    PartitionedOutputOperator *partitionedOperator =
+    auto *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
@@ -268,10 +272,11 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
-    string expectData0[3] = { "abe", "de", "f" };
+    std::vector<std::string> expectData0 = {"", "de", "f"};
+    std::vector<bool> nulls = {true, false, false};
     DataTypes expectedTypes(std::vector<DataType>({ VarcharDataType(3) }));
-    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
-    expectVecBatch->GetVector(0)->SetValueNull(0);
+    std::vector<Vector *> expectCols = {CreateVarcharVector(expectData0, nulls)};
+    VectorBatch *expectVecBatch = CreateVectorBatch(3, expectCols);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatch);

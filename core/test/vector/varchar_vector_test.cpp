@@ -5,8 +5,10 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include "vector_common.h"
+#include "../util/test_util.h"
 
 using namespace omniruntime::vec;
+using namespace TestUtil;
 
 namespace VacharVectorTest {
 TEST(VarcharVector, newVector)
@@ -370,6 +372,175 @@ TEST(VarcharVector, appendExpand)
 
     delete src1;
     delete src2;
+    delete appended;
+    delete allocator;
+}
+
+TEST(VarcharVector, testNullFlagWithSet)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithSet");
+    // no null value
+    auto *noNull = new VarcharVector(allocator, 10);
+    EXPECT_FALSE(noNull->MayHaveNull());
+    EXPECT_EQ(noNull->GetNullCount(), 0);
+    delete noNull;
+
+    // has null value
+    std::vector<std::string> values = { "1", "", "3", "", "5", "", "7", "", "9", "" };
+    std::vector<bool> nulls = { false, true, false, true, false, true, false, true, false, true };
+    auto *hasNulls = CreateVarcharVector(values, nulls);
+    EXPECT_TRUE(hasNulls->MayHaveNull());
+    EXPECT_EQ(hasNulls->GetNullCount(), 5);
+    auto *expected = CreateVarcharVector(values, nulls);
+    ColumnMatch(hasNulls, expected);
+    delete expected;
+    delete hasNulls;
+
+    delete allocator;
+}
+
+TEST(VarcharVector, testNullFlagWithCopyPosition)
+{
+    VectorAllocator *allocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithCopyPosition");
+    // has null value
+    std::vector<std::string> values = { "1", "2", "", "", "5", "", "7", "", "9", "" };
+    std::vector<bool> nulls = { false, false, true, true, false, true, false, true, false, true };
+    auto *hasNulls = CreateVarcharVector(values, nulls);
+    EXPECT_TRUE(hasNulls->MayHaveNull());
+    EXPECT_EQ(hasNulls->GetNullCount(), 5);
+
+    std::vector<int32_t> positions = { 0, 1 };
+    VarcharVector *copyPositionNoNull = hasNulls->CopyPositions(positions.data(), 0, 2);
+    EXPECT_FALSE(copyPositionNoNull->MayHaveNull());
+    EXPECT_EQ(copyPositionNoNull->GetNullCount(), 0);
+
+    std::vector<std::string> expectedValue1 = { "1", "2" };
+    std::vector<bool> expectedNull1 = { false, false };
+    VarcharVector *expected1 = CreateVarcharVector(expectedValue1, expectedNull1);
+    ColumnMatch(copyPositionNoNull, expected1);
+    delete expected1;
+    delete copyPositionNoNull;
+
+    positions = { 1, 2, 3, 4 };
+    VarcharVector *copyPositionHasNull = hasNulls->CopyPositions(positions.data(), 0, 4);
+    EXPECT_TRUE(copyPositionHasNull->MayHaveNull());
+    EXPECT_EQ(copyPositionHasNull->GetNullCount(), 2);
+    std::vector<std::string> expectedValue2 = { "1", "2", "", "" };
+    std::vector<bool> expectedNull2 = { false, false, true, true };
+    VarcharVector *expected2 = CreateVarcharVector(expectedValue2, expectedNull2);
+    ColumnMatch(copyPositionHasNull, expected2);
+    delete expected2;
+    delete copyPositionHasNull;
+
+    delete hasNulls;
+    delete allocator;
+}
+
+TEST(VarcharVector, testNullFlagWithSlice)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithSlice");
+    // has null value
+    std::vector<std::string> values = { "1", "2", "", "", "5", "", "7", "", "9", "" };
+    std::vector<bool> nulls = { false, false, true, true, false, true, false, true, false, true };
+    auto *hasNulls = CreateVarcharVector(values, nulls);
+    EXPECT_TRUE(hasNulls->MayHaveNull());
+    EXPECT_EQ(hasNulls->GetNullCount(), 5);
+
+    VarcharVector *sliceNoNull = hasNulls->Slice(0, 1);
+    EXPECT_TRUE(sliceNoNull->MayHaveNull());
+    EXPECT_EQ(sliceNoNull->GetNullCount(), 0);
+    std::vector<std::string> expectedValues1 = { "1" };
+    std::vector<bool> expectedNulls1 = { false };
+    VarcharVector *expected1 = CreateVarcharVector(expectedValues1, expectedNulls1);
+    ColumnMatch(sliceNoNull, expected1);
+    delete expected1;
+    delete sliceNoNull;
+
+
+    VarcharVector *sliceHasNull = hasNulls->Slice(1, 4);
+    EXPECT_TRUE(sliceHasNull->MayHaveNull());
+    EXPECT_EQ(sliceHasNull->GetNullCount(), 2);
+    std::vector<std::string> expectedValues2 = { "2", "", "", "5" };
+    std::vector<bool> expectedNulls2 = { false, true, true, false };
+    VarcharVector *expected2 = CreateVarcharVector(expectedValues2, expectedNulls2);
+    ColumnMatch(sliceHasNull, expected2);
+    delete expected2;
+    delete sliceHasNull;
+
+    delete hasNulls;
+    delete allocator;
+}
+
+TEST(VarcharVector, testNullFlagWithCopyRegion)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithCopyRegion");
+    // has null value
+    std::vector<std::string> values = { "1", "2", "", "", "5", "", "7", "", "9", "" };
+    std::vector<bool> nulls = { false, false, true, true, false, true, false, true, false, true };
+    auto *hasNulls = CreateVarcharVector(values, nulls);
+    EXPECT_TRUE(hasNulls->MayHaveNull());
+    EXPECT_EQ(hasNulls->GetNullCount(), 5);
+
+    VarcharVector *copyRegionNoNull = hasNulls->CopyRegion(0, 2);
+    EXPECT_FALSE(copyRegionNoNull->MayHaveNull());
+    EXPECT_EQ(copyRegionNoNull->GetNullCount(), 0);
+    std::vector<std::string> expectedValues1 = { "1", "2" };
+    std::vector<bool> expectedNulls1 = { false, false };
+    VarcharVector *expected1 = CreateVarcharVector(expectedValues1, expectedNulls1);
+    ColumnMatch(copyRegionNoNull, expected1);
+    delete expected1;
+    delete copyRegionNoNull;
+
+    VarcharVector *copyRegionHasNull = hasNulls->CopyRegion(1, 4);
+    EXPECT_TRUE(copyRegionHasNull->MayHaveNull());
+    EXPECT_EQ(copyRegionHasNull->GetNullCount(), 2);
+    std::vector<std::string> expectedValues2 = { "2", "", "", "5" };
+    std::vector<bool> expectedNulls2 = { false, true, true, false };
+    VarcharVector *expected2 = CreateVarcharVector(expectedValues2, expectedNulls2);
+    ColumnMatch(copyRegionHasNull, expected2);
+    delete expected2;
+    delete copyRegionHasNull;
+
+    delete hasNulls;
+    delete allocator;
+}
+
+TEST(VarcharVector, testNullFlagWithAppend)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithAppend");
+    int rowCount = 5;
+    auto *src = new VarcharVector(allocator, rowCount);
+
+    for (int i = 0; i < rowCount; i++) {
+        std::string str = std::to_string(i + 1);
+        src->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+    }
+
+    auto *appended = new VarcharVector(allocator, 15);
+    appended->Append(src, 0, rowCount);
+    delete src;
+    EXPECT_FALSE(appended->MayHaveNull());
+    EXPECT_EQ(appended->GetNullCount(), 0);
+
+    std::vector<std::string> values = { "1", "", "", "3", "" };
+    std::vector<bool> nulls = { false, true, true, false, true };
+    VarcharVector *withNull = CreateVarcharVector(values, nulls);
+    appended->Append(withNull, 5, rowCount);
+    EXPECT_TRUE(appended->MayHaveNull());
+    EXPECT_EQ(appended->GetNullCount(), 3);
+
+    appended->Append(withNull, 10, rowCount);
+    EXPECT_TRUE(appended->MayHaveNull());
+    EXPECT_EQ(appended->GetNullCount(), 6);
+    std::vector<std::string> expectedValues = { "1", "2", "3", "4", "5", "1", "", "", "3", "", "1", "", "", "3", "" };
+    std::vector<bool> expectedNulls = { false, false, false, false, false, false, true, true,
+        false, true,  false, true,  true,  false, true };
+    VarcharVector *expected = CreateVarcharVector(values, nulls);
+    ColumnMatch(appended, expected);
+    delete expected;
+    delete withNull;
+
     delete appended;
     delete allocator;
 }
