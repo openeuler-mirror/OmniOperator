@@ -97,7 +97,8 @@ public class OmniWindowWithExprOperatorFactory
             int[] windFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
             int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
             String windowFunctionReturnType, int[] windowFrameTypes, int[] windowFrameStartTypes,
-            int[] windowFrameStartChannels, int[] windowFrameEndTypes, int[] windowFrameEndChannels);
+            int[] windowFrameStartChannels, int[] windowFrameEndTypes, int[] windowFrameEndChannels,
+            String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
@@ -107,7 +108,8 @@ public class OmniWindowWithExprOperatorFactory
                 context.preSortedChannelPrefix, context.expectedPositions, context.argumentKeys,
                 DataTypeSerializer.serialize(context.windowFunctionReturnType), toNativeConstants(context.frameTypes),
                 toNativeConstants(context.frameStartTypes), context.frameStartChannels,
-                toNativeConstants(context.frameEndTypes), context.frameEndChannels);
+                toNativeConstants(context.frameEndTypes), context.frameEndChannels,
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

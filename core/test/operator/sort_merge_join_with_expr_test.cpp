@@ -25,9 +25,10 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
     int streamedOutputCols[1] = {1};
+    auto overflowConfig = new OverflowConfig();
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
         StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
-        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
+        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank, overflowConfig);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
     std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
@@ -38,7 +39,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
-        bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr);
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr, overflowConfig);
     omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
 
     // construct data
@@ -101,6 +102,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
     DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput)
@@ -116,9 +118,10 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
     int streamedOutputCols[1] = {1};
+    auto overflowConfig = new OverflowConfig();
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
         StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
-        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
+        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank, overflowConfig);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
     std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
@@ -129,7 +132,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
-        bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr);
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr, overflowConfig);
     omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
 
     // construct data
@@ -191,5 +194,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
     DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
 }
 }

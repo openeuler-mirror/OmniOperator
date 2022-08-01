@@ -27,7 +27,7 @@ SimpleFilter::~SimpleFilter()
     this->codegen.reset();
 }
 
-bool SimpleFilter::Initialize()
+bool SimpleFilter::Initialize(OverflowConfig *overflowConfig)
 {
     if (this->expression == nullptr) {
         LogWarn("Unable to parse expression for simple filter");
@@ -39,7 +39,7 @@ bool SimpleFilter::Initialize()
         return false;
     }
 
-    this->codegen = RowExpressionCodeGen::Create("simple_row_expr_eval", *this->expression);
+    this->codegen = RowExpressionCodeGen::Create("simple_row_expr_eval", *this->expression, overflowConfig);
     if (this->codegen == nullptr) {
         LogWarn("Unable to generate function for simple filter");
         return false;
@@ -73,7 +73,8 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, const DataTypes &inputDataTypes,
-    int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
+    int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount,
+    OverflowConfig *overflowConfig)
     : inputDataTypes(inputDataTypes), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
 {
 #ifdef DEBUG
@@ -82,13 +83,14 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     parsedExpr->Accept(printExprTree);
     std::cout << std::endl;
 #endif
-    this->filter = make_unique<Filter>(*parsedExpr);
+    this->filter = make_unique<Filter>(*parsedExpr, overflowConfig);
     if (!this->filter->IsSupported()) {
         this->isSupportedExpr = false;
     }
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto projection = make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnType());
+        auto projection =
+            make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnType(), overflowConfig);
         if (!projection->IsSupported()) {
             this->isSupportedExpr = false;
             break;
@@ -217,8 +219,8 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-Filter::Filter(const expressions::Expr &expression)
-    : codeGen(FilterCodeGen::Create("filterFunc", expression)), expr(&expression)
+Filter::Filter(const expressions::Expr &expression, OverflowConfig *overflowConfig)
+    : codeGen(FilterCodeGen::Create("filterFunc", expression, overflowConfig)), expr(&expression)
 {
     auto f = this->codeGen->GetFunction();
     if (f == 0) {

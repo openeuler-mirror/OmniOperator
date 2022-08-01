@@ -20,11 +20,13 @@ class LookupJoinOperatorFactory : public OperatorFactory {
 public:
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-        const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables);
+        const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
+        OverflowConfig *overflowConfig);
     ~LookupJoinOperatorFactory() override;
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-        int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr);
+        int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType,
+        int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:

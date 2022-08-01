@@ -45,6 +45,7 @@
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
 #include "llvm_engine.h"
+#include "operator/config/operator_config.h"
 
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
@@ -52,10 +53,10 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 // Given an expression generates the function for it.
 class ExpressionCodeGen : public ExprVisitor {
 public:
-    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
+    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr,
+        omniruntime::op::OverflowConfig *overflowConfig);
     ~ExpressionCodeGen() override;
 
-    void Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
     // visitor methods
@@ -138,6 +139,7 @@ protected:
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
     int numGlobalValues = 0;
+    omniruntime::op::OverflowConfig *overflowConfig;
 
 private:
     std::string funcName;
@@ -173,14 +175,15 @@ private:
     bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
         const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
         std::pair<llvm::Value **, llvm::Value **> cmpPair);
-    std::vector<llvm::Value *> GetNullResultIfNullArgFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+    std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull,
+        bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetValidNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::Value **isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+    std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
     std::vector<llvm::Value *> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
+    void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
 };
 
 #endif

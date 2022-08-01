@@ -33,9 +33,10 @@ const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
 
 std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
-    const omniruntime::expressions::Expr &expression, bool filter)
+    const omniruntime::expressions::Expr &expression, bool filter, omniruntime::op::OverflowConfig *overflowConfig)
 {
-    std::unique_ptr<ProjectionCodeGen> codegen { new ProjectionCodeGen(std::move(name), expression, filter) };
+    std::unique_ptr<ProjectionCodeGen> codegen { new ProjectionCodeGen(std::move(name), expression, filter,
+        overflowConfig) };
     LLVMEngine::Create(&(codegen->llvmEngine));
     codegen->context = codegen->GetContext();
     codegen->builder = codegen->GetIRBuilder();

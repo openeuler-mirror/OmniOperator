@@ -327,7 +327,7 @@ static bool CheckExpressionsSupported(bool skipVerify, const std::vector<Expr *>
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
-    jint jProjectLength, jint jParseFormat, jboolean jIsSkipVerify)
+    jint jProjectLength, jint jParseFormat, jstring jOperatorConfig)
 {
     auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
     std::string filterExpression = std::string(expressionCharPtr);
@@ -336,6 +336,12 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
     env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     auto inputLength = (int32_t)jInputLength;
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto configPair = OperatorConfig::DeserializeIsSkipVerifyAndOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+    bool isSkipVerify = configPair.first;
+    OverflowConfig *overflowConfig = configPair.second;
 
     auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
     std::string projectExpressions[jProjectLength];
@@ -347,47 +353,51 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         JNI_METHOD_START
         auto filterJsonExpr = nlohmann::json::parse(filterExpression);
         filterExpr = JSONParser::ParseJSON(filterJsonExpr);
-        JNI_METHOD_END(0L)
+        JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
         JNI_METHOD_START
         nlohmann::json jsonProjectExprs[jProjectLength];
         for (int32_t i = 0; i < jProjectLength; i++) {
             jsonProjectExprs[i] = nlohmann::json::parse(projectExpressions[i]);
         }
         projectExprs = JSONParser::ParseJSON(jsonProjectExprs, jProjectLength);
-        JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
+        JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, { filterExpr }, overflowConfig)
     } else {
         Parser parser;
         JNI_METHOD_START
         filterExpr = parser.ParseRowExpression(filterExpression, inputDataTypes, inputLength);
-        JNI_METHOD_END(0L)
+        JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
         JNI_METHOD_START
         projectExprs = parser.ParseExpressions(projectExpressions, jProjectLength, inputDataTypes);
-        JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
+        JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, { filterExpr }, overflowConfig)
     }
     if (filterExpr == nullptr || (projectExprs.size() != static_cast<size_t>(jProjectLength))) {
         delete filterExpr;
         Expr::DeleteExprs(projectExprs);
+        delete overflowConfig;
         return 0;
     }
 
-    if (!CheckExpressionSupported(jIsSkipVerify, filterExpr)) {
+    if (!CheckExpressionSupported(isSkipVerify, filterExpr)) {
         delete filterExpr;
         Expr::DeleteExprs(projectExprs);
+        delete overflowConfig;
         return 0;
     }
-    if (!CheckExpressionsSupported(jIsSkipVerify, projectExprs)) {
+    if (!CheckExpressionsSupported(isSkipVerify, projectExprs)) {
         delete filterExpr;
         Expr::DeleteExprs(projectExprs);
+        delete overflowConfig;
         return 0;
     }
 
     FilterAndProjectOperatorFactory *factory = nullptr;
     JNI_METHOD_START
-    factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputDataTypes, inputLength, projectExprs, jProjectLength);
-    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, projectExprs)
+    factory = new FilterAndProjectOperatorFactory(filterExpr, inputDataTypes, inputLength, projectExprs, jProjectLength,
+        overflowConfig);
+    JNI_METHOD_END_WITH_MULTI_EXPRS_OVERFLOW(0L, { filterExpr }, projectExprs, overflowConfig)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projectExprs);
+    delete overflowConfig;
 
     if (!factory->IsSupportedExpr()) {
         delete factory;
@@ -400,7 +410,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *env,
     jclass jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jint jParseFormat,
-    jboolean jIsSkipVerify)
+    jstring jOperatorConfig)
 {
     auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
     std::string exprs[jExprsLength];
@@ -410,6 +420,12 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     auto inputDataTypes = Deserialize(inputTypesCharPtr);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
     auto inputLength = static_cast<int32_t>(jInputLength);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto configPair = OperatorConfig::DeserializeIsSkipVerifyAndOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+    bool isSkipVerify = configPair.first;
+    OverflowConfig *overflowConfig = configPair.second;
 
     std::vector<omniruntime::expressions::Expr *> expressions;
     JNI_METHOD_START
@@ -423,22 +439,25 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
         Parser parser;
         expressions = parser.ParseExpressions(exprs, jExprsLength, inputDataTypes);
     }
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
     if (expressions.size() != static_cast<size_t>(jExprsLength)) {
         Expr::DeleteExprs(expressions);
+        delete overflowConfig;
         return 0;
     }
 
-    if (!CheckExpressionsSupported(jIsSkipVerify, expressions)) {
+    if (!CheckExpressionsSupported(isSkipVerify, expressions)) {
         Expr::DeleteExprs(expressions);
+        delete overflowConfig;
         return 0;
     }
 
     ProjectionOperatorFactory *factory = nullptr;
     JNI_METHOD_START
-    factory = new ProjectionOperatorFactory(expressions, jExprsLength, inputDataTypes, inputLength);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, expressions)
+    factory = new ProjectionOperatorFactory(expressions, jExprsLength, inputDataTypes, inputLength, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, expressions, overflowConfig)
     Expr::DeleteExprs(expressions);
+    delete overflowConfig;
 
     if (!factory->IsSupported()) {
         delete factory;
@@ -488,7 +507,7 @@ omniruntime::expressions::Expr *CreateJoinFilterExpr(const std::string &filterSt
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
     jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
-    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory)
+    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory, jstring jOperatorConfig)
 {
     auto probeTypesCharPtr = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
@@ -503,6 +522,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesCharPtr);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesCharPtr);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     Expr *filterExpr = nullptr;
     JNI_METHOD_START
     // extract the expression and the BuildDataTypes to parse the expression
@@ -510,15 +533,16 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     std::string filterExpression = hashTables->GetFilterExpression();
     filterExpr = CreateJoinFilterExpr(filterExpression);
     hashTables->SetFilterExpr(filterExpr);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     LookupJoinOperatorFactory *lookupJoinOperatorFactory = nullptr;
     JNI_METHOD_START
     lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeDataTypes,
         probeOutputColsArr, probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr,
-        buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
+        buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, { filterExpr }, overflowConfig)
     Expr::DeleteExprs({ filterExpr });
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(lookupJoinOperatorFactory);
 }
@@ -590,28 +614,32 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesChars);
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
-    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    auto operatorAndOverflowConfig = OperatorConfig::DeserializeOperatorAndOverflowConfig(operatorConfigChars);
+    auto operatorConfig = operatorAndOverflowConfig.first;
+    auto overflowConfig = operatorAndOverflowConfig.second;
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     vector<omniruntime::expressions::Expr *> sortKeyExprArr;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(sortKeysArr, sortKeysCount, sortKeyExprArr);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     SortWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceDataTypes, outputCols,
-        outputColsCount, sortKeyExprArr, ascendings, nullFirsts, sortKeysCount, operatorConfig);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, sortKeyExprArr)
+        outputColsCount, sortKeyExprArr, ascendings, nullFirsts, sortKeysCount, operatorConfig, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, sortKeyExprArr, overflowConfig)
     Expr::DeleteExprs(sortKeyExprArr);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(operatorFactory);
 }
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_createHashBuilderWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashKeys, jstring jFilter, jint jHashTableCount)
+    JNIEnv *env, jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashKeys, jstring jFilter, jint jHashTableCount,
+    jstring jOperatorConfig)
 {
     auto buildTypesChars = env->GetStringUTFChars(jBuildTypes, JNI_FALSE);
     auto buildHashKeysCount = env->GetArrayLength(jBuildHashKeys);
@@ -624,18 +652,23 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     std::string filterExpression = std::string(filterChars);
     env->ReleaseStringUTFChars(jFilter, filterChars);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     vector<omniruntime::expressions::Expr *> buildHashKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(buildHashKeysArr, buildHashKeysCount, buildHashKeysArrExprs);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     HashBuilderWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildDataTypes,
-        buildHashKeysArrExprs, buildHashKeysCount, filterExpression, jHashTableCount);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, buildHashKeysArrExprs)
+        buildHashKeysArrExprs, buildHashKeysCount, filterExpression, jHashTableCount, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, buildHashKeysArrExprs, overflowConfig)
     Expr::DeleteExprs(buildHashKeysArrExprs);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(operatorFactory);
 }
@@ -643,7 +676,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_createLookupJoinWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
-    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory)
+    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory,
+    jstring jOperatorConfig)
 {
     auto probeTypesChars = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputCols = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
@@ -659,6 +693,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesChars);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     // extract the expression and the BuildDataTypes to parse the expression
     auto hashTables = reinterpret_cast<HashBuilderWithExprOperatorFactory *>(jHashBuilderOperatorFactory)
                           ->GetHashBuilderOperatorFactory()
@@ -668,22 +706,23 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_START
     filterExpr = CreateJoinFilterExpr(filterExpression);
     hashTables->SetFilterExpr(filterExpr);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(probeHashKeysArr, probeHashKeysCount, probeHashKeysArrExprs);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, { filterExpr }, overflowConfig)
 
     LookupJoinWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
         probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
-        buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory);
-    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, probeHashKeysArrExprs)
+        buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
+    JNI_METHOD_END_WITH_MULTI_EXPRS_OVERFLOW(0L, { filterExpr }, probeHashKeysArrExprs, overflowConfig)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(probeHashKeysArrExprs);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(operatorFactory);
 }
@@ -759,7 +798,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jobjectArray jArgumentKeys,
     jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
-    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels)
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels,
+    jstring jOperatorConfig)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
@@ -785,6 +825,10 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
     jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
@@ -796,17 +840,19 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(argumentKeysArr, argumentKeysCount, argumentKeysArrExprs);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     WindowWithExprOperatorFactory *windowWithExprOperatorFactory = nullptr;
     JNI_METHOD_START
-    windowWithExprOperatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputDataTypes,
-        outputChannels, outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount,
-        preGroupedChannels, preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount,
-        preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeysArrExprs, argumentKeysCount,
-        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, argumentKeysArrExprs)
+    windowWithExprOperatorFactory =
+        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputDataTypes, outputChannels,
+        outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels,
+        preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix,
+        expectedPositions, outputDataTypes, argumentKeysArrExprs, argumentKeysCount, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, argumentKeysArrExprs, overflowConfig)
     Expr::DeleteExprs(argumentKeysArrExprs);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(windowWithExprOperatorFactory);
 }
@@ -814,7 +860,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
-    jintArray jAggFuncType, jintArray jMaskCols, jstring jOutputType, jboolean inputRaw, jboolean outputPartial)
+    jintArray jAggFuncType, jintArray jMaskCols, jstring jOutputType, jboolean inputRaw, jboolean outputPartial,
+    jstring jOperatorConfig)
 {
     // groupby channel and id
     auto groupByNum = static_cast<int32_t>(env->GetArrayLength(jGroupByChannel));
@@ -836,33 +883,39 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     env->ReleaseStringUTFChars(jSourceType, sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jOutputType, outTypesCharPtr);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     vector<omniruntime::expressions::Expr *> groupByKeysExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(groupByKeys, groupByNum, groupByKeysExprs);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     vector<omniruntime::expressions::Expr *> aggKeysExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(aggKeys, aggColsNum, aggKeysExprs);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, groupByKeysExprs)
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, groupByKeysExprs, overflowConfig)
 
     HashAggregationWithExprOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
     nativeOperatorFactory =
         new HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprs, aggNum, sourceDataTypes,
-        outDataTypes, (uint32_t *)aggFuncTypes, (uint32_t *)maskColumns, inputRaw, outputPartial);
+        outDataTypes, (uint32_t *)aggFuncTypes, (uint32_t *)maskColumns, inputRaw, outputPartial, overflowConfig);
     JNI_METHOD_END_WITH_MULTI_EXPRS(0L, groupByKeysExprs, aggKeysExprs)
     Expr::DeleteExprs(groupByKeysExprs);
     Expr::DeleteExprs(aggKeysExprs);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(nativeOperatorFactory);
 }
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprOperatorFactory(JNIEnv *env,
-    jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts)
+    jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts,
+    jstring jOperatorConfig)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint sortKeyCount = env->GetArrayLength(jSortKeys);
@@ -875,18 +928,23 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     vector<omniruntime::expressions::Expr *> sortKeyExprArr;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(sortKeysArr, sortKeyCount, sortKeyExprArr);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory = nullptr;
     JNI_METHOD_START
-    topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceDataTypes, n, sortKeyExprArr, sortAsc, sortNullFirsts, sortKeyCount);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, sortKeyExprArr)
+    topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceDataTypes, n, sortKeyExprArr, sortAsc,
+        sortNullFirsts, sortKeyCount, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, sortKeyExprArr, overflowConfig)
     Expr::DeleteExprs(sortKeyExprArr);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(topNWithExprOperatorFactory);
 }
@@ -932,7 +990,7 @@ Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_creat
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory_createSmjStreamedTableWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
-    jint jJoinType, jstring jFilter)
+    jint jJoinType, jstring jFilter, jstring jOperatorConfig)
 {
     if ((JoinType)jJoinType != JoinType::OMNI_JOIN_TYPE_INNER) {
         return 0L;
@@ -949,6 +1007,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
     auto streamedOutputColsCnt = env->GetArrayLength(jOutputChannels);
     auto streamedOutputCols = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     std::string filterExpression;
     if (jFilter == nullptr) {
         filterExpression = "";
@@ -962,15 +1024,16 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(streamedKeyExpsArr, streamedKeyExpsCount, streamedKeysArrExprs);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     StreamedTableWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
         streamedDataTypes, streamedKeysArrExprs, streamedKeyExpsCount, streamedOutputCols, streamedOutputColsCnt,
-        (JoinType)jJoinType, filterExpression);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, streamedKeysArrExprs)
+        (JoinType)jJoinType, filterExpression, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, streamedKeysArrExprs, overflowConfig)
     Expr::DeleteExprs(streamedKeysArrExprs);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(operatorFactory);
 }
@@ -978,7 +1041,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
-    jlong jSmjStreamedTableWithExprOperatorFactory)
+    jlong jSmjStreamedTableWithExprOperatorFactory, jstring jOperatorConfig)
 {
     auto bufferedTypesChars = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     auto bufferedDataTypes = Deserialize(bufferedTypesChars);
@@ -991,19 +1054,24 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     auto bufferedOutputCols = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
     auto bufferedOutputColsCnt = env->GetArrayLength(jOutputChannels);
 
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
     vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(bufferedKeyExpsArr, bufferedKeyExpsCnt, bufferedKeysArrExprs);
-    JNI_METHOD_END(0L)
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
 
     BufferedTableWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
         bufferedDataTypes, bufferedKeysArrExprs, bufferedKeyExpsCnt, bufferedOutputCols, bufferedOutputColsCnt,
-        jSmjStreamedTableWithExprOperatorFactory);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, bufferedKeysArrExprs)
+        jSmjStreamedTableWithExprOperatorFactory, overflowConfig);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, bufferedKeysArrExprs, overflowConfig)
     Expr::DeleteExprs(bufferedKeysArrExprs);
+    delete overflowConfig;
 
     return reinterpret_cast<int64_t>(operatorFactory);
 }

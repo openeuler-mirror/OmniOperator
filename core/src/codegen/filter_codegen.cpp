@@ -20,9 +20,10 @@ const int EXECUTION_CONTEXT_IDX = 5;
 const int DICTIONARY_VECTORS_IDX = 6;
 }
 
-std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression)
+std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression,
+    omniruntime::op::OverflowConfig *overflowConfig)
 {
-    std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression) };
+    std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression, overflowConfig) };
     LLVMEngine::Create(&(codegen->llvmEngine));
     codegen->context = codegen->GetContext();
     codegen->builder = codegen->GetIRBuilder();

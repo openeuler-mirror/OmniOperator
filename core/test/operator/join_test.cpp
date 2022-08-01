@@ -164,7 +164,7 @@ LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFac
     auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        joinType, hashBuilderFactoryAddr);
+        joinType, hashBuilderFactoryAddr, nullptr);
 
     return lookupJoinFactory;
 }
@@ -435,7 +435,7 @@ LookupJoinOperatorFactory *PrepareLookupJoin(const HashBuilderOperatorFactory *h
     auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderOperatorFactory);
     auto lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     return lookupJoinOperatorFactory;
 }
 
@@ -822,7 +822,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoin)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -882,7 +882,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinChar)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -941,7 +941,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDate32)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1000,7 +1000,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinShort)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1059,7 +1059,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal64)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1118,7 +1118,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal128)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1186,7 +1186,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1251,7 +1251,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNulls)
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1326,7 +1326,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1410,7 +1410,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1516,7 +1516,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1593,7 +1593,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1676,7 +1676,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1869,7 +1869,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory =
         LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinTypes, joinColumns, joinTypesSize, joinColumns,
-        joinTypesSize, joinColumns, joinTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        joinTypesSize, joinColumns, joinTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -1923,7 +1923,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory =
         LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinTypes, joinColumns, joinTypesSize, joinColumns,
-        joinTypesSize, joinColumns, joinTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+        joinTypesSize, joinColumns, joinTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -2072,7 +2072,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoin)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     auto lookupOuterJoinFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -2158,7 +2158,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinChar)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
     auto lookupOuterJoinOperatorFactory =
         LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes, probeOutputCols,
             probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -2244,7 +2244,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDate32)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
     auto lookupOuterJoinOperatorFactory =
         LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes, probeOutputCols,
             probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -2331,7 +2331,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal64)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
 
     auto lookupOuterJoinOperatorFactory =
         LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes, probeOutputCols,
@@ -2419,7 +2419,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal128)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
     auto lookupOuterJoinOperatorFactory =
         LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes, probeOutputCols,
             probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -2516,7 +2516,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     auto lookupOuterJoinFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -2604,7 +2604,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinHasOutputNulls)
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr);
+        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
     LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     auto lookupOuterJoinFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,

@@ -176,8 +176,9 @@ TEST(FilterTest, LessThan)
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()) };
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
         new LiteralExpr(2000, IntType()), BooleanType());
+    OverflowConfig *overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -195,6 +196,7 @@ TEST(FilterTest, LessThan)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, LessThanWihtoutParsing)
@@ -217,10 +219,10 @@ TEST(FilterTest, LessThanWihtoutParsing)
     FieldExpr *left = new FieldExpr(0, IntType());
     LiteralExpr *right = new LiteralExpr(2000, IntType());
     BinaryExpr *LTExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, left, right, BooleanType());
-
     std::vector<Expr *> projections = { column };
+    OverflowConfig *overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(LTExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(LTExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
 
@@ -239,6 +241,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, GreaterThan)
@@ -264,9 +267,9 @@ TEST(FilterTest, GreaterThan)
     FieldExpr *gtLeft = new FieldExpr(0, IntType());
     LiteralExpr *gtRight = new LiteralExpr(20, IntType());
     BinaryExpr *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(gtExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(gtExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -287,6 +290,7 @@ TEST(FilterTest, GreaterThan)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, EqualTo)
@@ -315,9 +319,9 @@ TEST(FilterTest, EqualTo)
     LiteralExpr *eqRight = new LiteralExpr(50.0, DoubleType());
 
     BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -339,6 +343,7 @@ TEST(FilterTest, EqualTo)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, GreaterThanOrEqualTo)
@@ -368,9 +373,9 @@ TEST(FilterTest, GreaterThanOrEqualTo)
     FieldExpr *gteLeft = new FieldExpr(1, IntType());
     LiteralExpr *gteRight = new LiteralExpr(30, IntType());
     BinaryExpr *gteExpr = new BinaryExpr(omniruntime::expressions::Operator::GTE, gteLeft, gteRight, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(gteExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(gteExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(in1);
     std::vector<VectorBatch *> ret;
@@ -388,6 +393,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, NotEqualTo)
@@ -412,9 +418,9 @@ TEST(FilterTest, NotEqualTo)
     LiteralExpr *neqRight = new LiteralExpr(0, DoubleType());
 
     BinaryExpr *neqExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, neqLeft, neqRight, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(neqExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(neqExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -433,6 +439,7 @@ TEST(FilterTest, NotEqualTo)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, AllPass)
@@ -456,8 +463,9 @@ TEST(FilterTest, AllPass)
     FieldExpr *eqLeft = new FieldExpr(0, IntType());
     LiteralExpr *eqRight = new LiteralExpr(9348, IntType());
     BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -472,6 +480,7 @@ TEST(FilterTest, AllPass)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, MultipleInputs)
@@ -498,9 +507,9 @@ TEST(FilterTest, MultipleInputs)
     FieldExpr *lteLeft = new FieldExpr(0, IntType());
     LiteralExpr *lteRight = new LiteralExpr(4, IntType());
     BinaryExpr *lteExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lteLeft, lteRight, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(lteExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(lteExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -524,6 +533,7 @@ TEST(FilterTest, MultipleInputs)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, NegativeValues)
@@ -564,9 +574,9 @@ TEST(FilterTest, NegativeValues)
     BinaryExpr *lte2Expr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lte2Left, lte2Right, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, lte1Expr, lte2Expr, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -584,6 +594,7 @@ TEST(FilterTest, NegativeValues)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, AllTypes)
@@ -627,8 +638,9 @@ TEST(FilterTest, AllTypes)
     BinaryExpr *eq1Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eq1Left, eq1Right, BooleanType());
 
     Expr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eq1Expr, innerAndExpr, BooleanType());
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -646,6 +658,7 @@ TEST(FilterTest, AllTypes)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, Compile)
@@ -696,8 +709,9 @@ TEST(FilterTest, Compile)
 
     BinaryExpr *filterExpr =
         new BinaryExpr(omniruntime::expressions::Operator::AND, and1Expression, and2Expression, BooleanType());
-
-    OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, 1);
+    auto overflowConfig = new OverflowConfig();
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, 1, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -714,6 +728,7 @@ TEST(FilterTest, Compile)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, LogicalOperators1)
@@ -774,9 +789,9 @@ TEST(FilterTest, LogicalOperators1)
     BinaryExpr *gteExpr =
         new BinaryExpr(omniruntime::expressions::Operator::GTE, new FieldExpr(5, LongType()), gteRight, BooleanType());
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, gteExpr, andExpr4, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -796,6 +811,7 @@ TEST(FilterTest, LogicalOperators1)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, LogicalOperators2)
@@ -843,9 +859,9 @@ TEST(FilterTest, LogicalOperators2)
     BinaryExpr *orExpr2 = new BinaryExpr(omniruntime::expressions::Operator::OR, ltExpr, eqExpr, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, orExpr1, orExpr2, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -863,6 +879,7 @@ TEST(FilterTest, LogicalOperators2)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, LogicalOperators3)
@@ -928,9 +945,9 @@ TEST(FilterTest, LogicalOperators3)
         new BinaryExpr(omniruntime::expressions::Operator::NEQ, new FieldExpr(1, LongType()), neqRight, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, neqExpr, or6Expr, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -951,6 +968,7 @@ TEST(FilterTest, LogicalOperators3)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, ArithmeticAdd)
@@ -975,8 +993,9 @@ TEST(FilterTest, ArithmeticAdd)
         new LiteralExpr(1, IntType()), IntType());
     BinaryExpr *filterExpr =
         new BinaryExpr(omniruntime::expressions::Operator::GT, addExpr, new LiteralExpr(4, IntType()), BooleanType());
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -994,6 +1013,7 @@ TEST(FilterTest, ArithmeticAdd)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, ArithmeticSubtract)
@@ -1019,9 +1039,9 @@ TEST(FilterTest, ArithmeticSubtract)
         new LiteralExpr(5, IntType()), IntType());
     BinaryExpr *filterExpr =
         new BinaryExpr(omniruntime::expressions::Operator::LT, new LiteralExpr(0, IntType()), subExpr, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1040,6 +1060,7 @@ TEST(FilterTest, ArithmeticSubtract)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, ArithmeticMultiply)
@@ -1073,9 +1094,9 @@ TEST(FilterTest, ArithmeticMultiply)
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eqExpr, gtExpr, BooleanType());
 
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1096,6 +1117,7 @@ TEST(FilterTest, ArithmeticMultiply)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, Conditional)
@@ -1131,9 +1153,9 @@ TEST(FilterTest, Conditional)
 
     BinaryExpr *filterExpr =
         new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, new LiteralExpr(55, IntType()), BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1149,6 +1171,7 @@ TEST(FilterTest, Conditional)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, Conditional2)
@@ -1187,9 +1210,9 @@ TEST(FilterTest, Conditional2)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1205,6 +1228,7 @@ TEST(FilterTest, Conditional2)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 
@@ -1237,8 +1261,9 @@ TEST(FilterTest, In)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1258,6 +1283,7 @@ TEST(FilterTest, In)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, Between)
@@ -1283,9 +1309,9 @@ TEST(FilterTest, Between)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1307,6 +1333,7 @@ TEST(FilterTest, Between)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, NotEqualToAbs)
@@ -1333,9 +1360,9 @@ TEST(FilterTest, NotEqualToAbs)
         new BinaryExpr(omniruntime::expressions::Operator::NEQ, absExpr, new LiteralExpr(4, IntType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1349,6 +1376,7 @@ TEST(FilterTest, NotEqualToAbs)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 
@@ -1399,8 +1427,9 @@ TEST(FilterTest, MathFunctionFilter1)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1424,6 +1453,7 @@ TEST(FilterTest, MathFunctionFilter1)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 
@@ -1464,9 +1494,9 @@ TEST(FilterTest, MathFunctionFilter2)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1482,6 +1512,7 @@ TEST(FilterTest, MathFunctionFilter2)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 // String Filter and varcharvec testing
@@ -1511,9 +1542,9 @@ TEST(FilterTest, FilterString1)
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1542,6 +1573,7 @@ TEST(FilterTest, FilterString1)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 
@@ -1578,8 +1610,9 @@ TEST(FilterTest, Coalesce1)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1595,6 +1628,7 @@ TEST(FilterTest, Coalesce1)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, Coalesce2)
@@ -1625,9 +1659,9 @@ TEST(FilterTest, Coalesce2)
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
-
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1641,6 +1675,7 @@ TEST(FilterTest, Coalesce2)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 
@@ -1671,8 +1706,9 @@ TEST(FilterTest, ExternalMathFunc)
     auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
 
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()) };
-    OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projections.size());
+    auto overflowConfig = new OverflowConfig();
+    OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections,
+        projections.size(), overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1687,6 +1723,7 @@ TEST(FilterTest, ExternalMathFunc)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 
@@ -1732,8 +1769,9 @@ TEST(FilterTest, ExternalStringFunc)
 
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1750,6 +1788,7 @@ TEST(FilterTest, ExternalStringFunc)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 // Testing multithreading
@@ -1820,8 +1859,9 @@ TEST(FilterTest, Multithreading)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections1 = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
-    OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr1, inputTypes, numCols, projections1, projectCount);
+    auto overflowConfig = new OverflowConfig();
+    OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr1, inputTypes, numCols, projections1,
+        projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     std::thread thread1(process, op, t, ret, numReturned);
 
@@ -1832,7 +1872,8 @@ TEST(FilterTest, Multithreading)
     std::vector<Expr *> projections2 = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
 
-    OperatorFactory *factory2 = new FilterAndProjectOperatorFactory(filterExpr2, inputTypes2, numCols, projections2, 3);
+    OperatorFactory *factory2 =
+        new FilterAndProjectOperatorFactory(filterExpr2, inputTypes2, numCols, projections2, 3, overflowConfig);
     omniruntime::op::Operator *op2 = factory2->CreateOperator();
     std::thread thread2(process, op2, t2, ret2, numReturned2);
 
@@ -1861,6 +1902,7 @@ TEST(FilterTest, Multithreading)
     delete numReturned;
     delete numReturned2;
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, TestFilterDictionaryVec)
@@ -1891,8 +1933,9 @@ TEST(FilterTest, TestFilterDictionaryVec)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
     op->AddInput(copiedBatch);
@@ -1916,6 +1959,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, TestFilterDictionaryVarchar)
@@ -1943,8 +1987,9 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
         new LiteralExpr(6, IntType()), BooleanType());
     const int32_t projectCount = 2;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, VarcharType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
     op->AddInput(copiedBatch);
@@ -1971,6 +2016,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, TestFilterDictionaryVecNested)
@@ -2004,8 +2050,9 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
     op->AddInput(copiedBatch);
@@ -2030,6 +2077,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, DecimalFilterBinaryTest)
@@ -2057,8 +2105,9 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     LiteralExpr *lteRight = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 0));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE,
         new FieldExpr(0, Decimal128Type(38, 0)), lteRight, BooleanType());
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -2083,6 +2132,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, DecimalFilterAbsTest)
@@ -2135,8 +2185,9 @@ TEST(FilterTest, DecimalFilterAbsTest)
 
     BinaryExpr *eqExpr2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, absExpr3, absExpr4, BooleanType());
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, eqExpr1, eqExpr2, BooleanType());
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto start = std::chrono::system_clock::now();
@@ -2158,6 +2209,7 @@ TEST(FilterTest, DecimalFilterAbsTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, FilterStringWithNull)
@@ -2178,8 +2230,9 @@ TEST(FilterTest, FilterStringWithNull)
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
     std::vector<VectorBatch *> ret;
@@ -2202,6 +2255,7 @@ TEST(FilterTest, FilterStringWithNull)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, TestFilterSlicedDictionaryVec)
@@ -2240,8 +2294,9 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(intput);
     op->AddInput(copiedBatch);
@@ -2264,6 +2319,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
@@ -2306,8 +2362,9 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
     const int32_t projectCount = 3;
     std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
         new FieldExpr(2, IntType()) };
+    auto overflowConfig = new OverflowConfig();
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(intput);
     op->AddInput(copiedBatch);
@@ -2330,6 +2387,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, SimpleFilter)
@@ -2347,8 +2405,9 @@ TEST(FilterTest, SimpleFilter)
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
         new LiteralExpr(2000, IntType()), BooleanType());
+    auto overflowConfig = new OverflowConfig();
     auto filter = new SimpleFilter(*filterExpr);
-    bool initialized = filter->Initialize();
+    bool initialized = filter->Initialize(overflowConfig);
     EXPECT_TRUE(initialized);
 
     ExecutionContext context;
@@ -2370,6 +2429,7 @@ TEST(FilterTest, SimpleFilter)
     delete filter;
     delete[] col1;
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, SimpleFilterWithNulls)
@@ -2388,9 +2448,9 @@ TEST(FilterTest, SimpleFilterWithNulls)
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
         new LiteralExpr(2000, IntType()), BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     auto filter = new SimpleFilter(*filterExpr);
-    bool initialized = filter->Initialize();
+    bool initialized = filter->Initialize(overflowConfig);
     EXPECT_TRUE(initialized);
 
     // set first 500 elements to null
@@ -2417,6 +2477,7 @@ TEST(FilterTest, SimpleFilterWithNulls)
     delete filter;
     delete[] col1;
     delete vectorAllocator;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, SimpleFilterIntWithNulls)
@@ -2430,8 +2491,9 @@ TEST(FilterTest, SimpleFilterIntWithNulls)
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
         new FieldExpr(1, IntType()), BooleanType());
+    auto overflowConfig = new OverflowConfig();
     auto filter = new SimpleFilter(*filterExpr);
-    bool initialized = filter->Initialize();
+    bool initialized = filter->Initialize(overflowConfig);
     EXPECT_TRUE(initialized);
 
     for (int i = 0; i < numRows; i++) {
@@ -2457,6 +2519,7 @@ TEST(FilterTest, SimpleFilterIntWithNulls)
     Expr::DeleteExprs({ filterExpr });
     VectorHelper::FreeVecBatch(vecBatch);
     delete filter;
+    delete overflowConfig;
 }
 
 TEST(FilterTest, SimpleFilterCharWithNulls)
@@ -2495,9 +2558,9 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     args2.push_back(new LiteralExpr(5, IntType()));
     auto substrExpr2 = GetFuncExpr(funcStr, args2, VarcharType());
     auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, substrExpr1, substrExpr2, BooleanType());
-
+    auto overflowConfig = new OverflowConfig();
     auto filter = new SimpleFilter(*filterExpr);
-    bool initialized = filter->Initialize();
+    bool initialized = filter->Initialize(overflowConfig);
     EXPECT_TRUE(initialized);
 
     ExecutionContext context;
@@ -2523,6 +2586,7 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     delete filter;
     VectorHelper::FreeVecBatch(vecBatch);
     delete vecAllocator;
+    delete overflowConfig;
 }
 }
 }

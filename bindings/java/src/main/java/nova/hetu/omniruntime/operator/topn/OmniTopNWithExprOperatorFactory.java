@@ -51,12 +51,13 @@ public class OmniTopNWithExprOperatorFactory
     }
 
     private static native long createTopNWithExprOperatorFactory(String sourceTypes, int limitN, String[] sortKeys,
-            int[] sortAssendings, int[] sortNullFirsts);
+            int[] sortAssendings, int[] sortNullFirsts, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createTopNWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-                context.sortKeys, context.sortAssendings, context.sortNullFirsts);
+                context.sortKeys, context.sortAssendings, context.sortNullFirsts,
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

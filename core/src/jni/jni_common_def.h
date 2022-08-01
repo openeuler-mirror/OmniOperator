@@ -41,6 +41,37 @@
     }                                                                                 \
     // macro end
 
+#define JNI_METHOD_END_WITH_OVERFLOW(fallBackExpr, overflowConfig) \
+    }                                                              \
+    catch (const std::exception &e)                                \
+    {                                                              \
+        delete overflowConfig;                                     \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());        \
+        return fallBackExpr;                                       \
+    }
+
+#define JNI_METHOD_END_WITH_EXPRS_OVERFLOW(fallBackExpr, toDeleteExprs, overflowConfig) \
+    }                                                                                   \
+    catch (const std::exception &e)                                                     \
+    {                                                                                   \
+        Expr::DeleteExprs(toDeleteExprs);                                               \
+        delete overflowConfig;                                                          \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());                             \
+        return fallBackExpr;                                                            \
+    }
+
+
+#define JNI_METHOD_END_WITH_MULTI_EXPRS_OVERFLOW(fallBackExpr, toDeleteExprs1, toDeleteExprs2, overflowConfig) \
+    }                                                                                                          \
+    catch (const std::exception &e)                                                                            \
+    {                                                                                                          \
+        Expr::DeleteExprs(toDeleteExprs1);                                                                     \
+        Expr::DeleteExprs(toDeleteExprs2);                                                                     \
+        delete overflowConfig;                                                                                 \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());                                                    \
+        return fallBackExpr;                                                                                   \
+    }
+
 #ifdef __cplusplus
 extern "C" {
 #endif

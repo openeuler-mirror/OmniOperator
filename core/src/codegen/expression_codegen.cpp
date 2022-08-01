@@ -90,7 +90,10 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     builder->CreateCall(codegenContext->print, args, "printfCall");
 }
 
-ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr) : expr(&cpExpr), funcName(std::move(name)) {}
+ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr,
+    omniruntime::op::OverflowConfig *overflowConfig)
+    : expr(&cpExpr), overflowConfig(overflowConfig), funcName(std::move(name))
+{}
 
 ExpressionCodeGen::~ExpressionCodeGen()
 {
@@ -1449,7 +1452,6 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     Value *cmpLeft, *cmpRight;
     std::pair<llvm::Value **, llvm::Value **> cmpPair = std::make_pair(&cmpLeft, &cmpRight);
     bool supportedType = VisitBetweenExprHelper(*bExpr, val, lowerVal, upperVal, cmpPair);
-
     if (supportedType) {
         std::vector<Value *> andValues;
         andValues.push_back(isNeitherNull);
@@ -1598,14 +1600,14 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetDefaultFunctionArgValues(
     return argVals;
 }
 
-std::vector<llvm::Value *> ExpressionCodeGen::GetNullResultIfNullArgFunctionArgValues(
-    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
+std::vector<llvm::Value *> ExpressionCodeGen::GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr,
+    llvm::Value **isAnyNull, bool &isInvalidExpr)
 {
     return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
 }
 
-std::vector<llvm::Value *> ExpressionCodeGen::GetValidNotNullResultFunctionArgValues(
-    const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
+std::vector<llvm::Value *> ExpressionCodeGen::GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
+    llvm::Value **isAnyNull, bool &isInvalidExpr)
 {
     std::vector<Value *> argVals;
     CodeGenValuePtr resultPtr;
@@ -1640,12 +1642,36 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetValidNotNullResultFunctionArgVa
     return argVals;
 }
 
-std::vector<llvm::Value *> ExpressionCodeGen::GetNotNullResultFunctionArgValues(
+std::vector<llvm::Value *> ExpressionCodeGen::GetDataAndOverflowNullArgs(
     const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull, bool &isInvalidExpr)
 {
-    auto argVals = GetValidNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
-    auto *isValidResult = llvmTypes->CreateConstantBool(true);
-    argVals.push_back(isValidResult);
+    std::vector<Value *> argVals;
+    CodeGenValuePtr resultPtr;
+    int numArgs = fExpr.arguments.size();
+
+    for (int i = 0; i < numArgs; i++) {
+        Expr *argN = fExpr.arguments[i];
+        resultPtr = VisitExpr(*argN);
+        if (!resultPtr->IsValidValue()) {
+            isInvalidExpr = true;
+            return argVals;
+        }
+        argVals.push_back(resultPtr->data);
+        *isAnyNull = builder->CreateOr(*isAnyNull, resultPtr->isNull);
+        if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
+            if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
+            }
+            argVals.push_back(this->value->length);
+        }
+        if (TypeUtil::IsDecimalType(argN->GetReturnTypeId())) {
+            argVals.push_back(llvmTypes->CreateConstantInt(
+                static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision()));
+            argVals.push_back(
+                llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale()));
+        }
+    }
     return argVals;
 }
 
@@ -1653,20 +1679,91 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetFunctionArgValues(const omnirun
     llvm::Value **isAnyNull, bool &isInvalidExpr)
 {
     switch (fExpr.function->GetNullableResultType()) {
-        case NULL_RESULT_IF_ANY_NULL_ARG:
-            return GetNullResultIfNullArgFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
-        case VALID_NOT_NULL_RESULT:
-            return GetValidNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
-        case NOT_NULL_RESULT:
-            return GetNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+        case INPUT_DATA:
+            return GetDataArgs(fExpr, isAnyNull, isInvalidExpr);
+        case INPUT_DATA_AND_NULL:
+            return GetDataAndNullArgs(fExpr, isAnyNull, isInvalidExpr);
         default:
             return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
     }
 }
-// Handles all functions
 
+string ChangeFuncNameToNull(string signature)
+{
+    size_t pos = signature.find_first_of("_");
+    return signature.insert(pos, "null");
+}
+
+void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
+{
+    Value *isAnyNull = llvmTypes->CreateConstantBool(false);
+    auto res = std::find_if(fExpr.arguments.begin(), fExpr.arguments.end(),
+        [](Expr *exp) { return exp->GetReturnTypeId() == OMNI_DECIMAL128; });
+    bool isDecimalFunction = res != fExpr.arguments.end();
+    DataTypeId funcRetType = fExpr.GetReturnTypeId();
+    bool isInvalidExpr = false;
+
+    auto argVals = GetDataAndOverflowNullArgs(fExpr, &isAnyNull, isInvalidExpr);
+    if (isInvalidExpr) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+    Value *ret = nullptr;
+    Value *outputLen = nullptr;
+    AllocaInst *outputLenPtr = nullptr;
+    AllocaInst *overflowNull = nullptr;
+    overflowNull = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "overflow_null");
+    string functionName = ChangeFuncNameToNull(fExpr.function->GetId());
+
+    // Call Decimal IR Generator for decimal functions
+    if (TypeUtil::IsDecimalType(funcRetType)) {
+        argVals.push_back(
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision()));
+        argVals.push_back(
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale()));
+        argVals.push_back(overflowNull);
+
+        auto outputValuePtr = decimalIRBuilder->BuildDecimalValue(nullptr, *(fExpr.GetReturnType()));
+        ret = decimalIRBuilder->CallDecimalFunction(functionName, llvmTypes->ToLLVMType(funcRetType), argVals);
+        outputValuePtr->data = ret;
+        outputValuePtr->isNull = builder->CreateOr(isAnyNull, builder->CreateLoad(overflowNull));
+        outputValuePtr->length = outputLen;
+        this->value = std::move(outputValuePtr);
+        return;
+    } else {
+        if (TypeUtil::IsStringType(funcRetType)) {
+            outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
+            argVals.push_back(outputLenPtr);
+        }
+        argVals.push_back(overflowNull);
+
+        auto f = module->getFunction(functionName);
+        if (f) {
+            ret = isDecimalFunction ?
+                decimalIRBuilder->CallDecimalFunction(functionName, llvmTypes->ToLLVMType(funcRetType), argVals) :
+                llvmEngine->CreateCall(f, argVals, functionName);
+            InlineFunctionInfo inlineFunctionInfo;
+            llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
+            outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
+            Value *finalNull = builder->CreateOr(isAnyNull, builder->CreateLoad(overflowNull));
+            this->value = make_shared<CodeGenValue>(ret, finalNull, outputLen);
+            return;
+        } else {
+            LogWarn("Unable to generate function : %s", fExpr.funcName.c_str());
+            this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+            return;
+        }
+    }
+}
+
+// Handles all functions
 void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
 {
+    if (this->overflowConfig != nullptr &&
+        this->overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        FuncExprOverflowNullHelper(fExpr);
+        return;
+    }
     Value *isAnyNull = llvmTypes->CreateConstantBool(false);
     auto res = std::find_if(fExpr.arguments.begin(), fExpr.arguments.end(),
         [](Expr *exp) { return exp->GetReturnTypeId() == OMNI_DECIMAL128; });

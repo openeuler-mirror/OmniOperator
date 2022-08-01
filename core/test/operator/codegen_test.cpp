@@ -47,7 +47,6 @@ TEST(CodeGenTest, SimpleFilter)
 
     int64_t *table = new int64_t[numCols];
     table[0] = reinterpret_cast<int64_t>(col1);
-    table[0] = reinterpret_cast<int64_t>(col1);
 
     bool **bitmap = new bool *[numCols];
     for (int col = 0; col < numCols; col++) {
@@ -63,7 +62,7 @@ TEST(CodeGenTest, SimpleFilter)
     }
 
     RowProjection rowProjection(*lessThanExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_BOOLEAN);
 
     int32_t *dataLength = new int32_t(0);
@@ -128,7 +127,7 @@ TEST(CodeGenTest, SimpleProject)
     }
 
     RowProjection rowProjection(*addExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     bool isNull = false;
     int32_t *dataLength = new int32_t[1];
@@ -212,7 +211,7 @@ TEST(CodeGenTest, SingleCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -308,7 +307,7 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -419,7 +418,7 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     }
 
     RowProjection rowProjection(*switchExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -500,7 +499,7 @@ TEST(CodeGenTest, SwitchElseNull)
     }
 
     RowProjection rowProjection(*switchExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -575,7 +574,7 @@ TEST(CodeGenTest, SingleProject)
     }
 
     RowProjection rowProjection(*ifExpr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -639,7 +638,7 @@ TEST(CodeGenTest, ShortCircuitProject)
     }
 
     RowProjection rowProjection(*colExpr1);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_TRUE(rowProjection.IsColumnProjection());
     EXPECT_EQ(rowProjection.GetIndexIfColumnProjection(), 1);
 
@@ -716,7 +715,7 @@ TEST(CodeGenTest, Operators1)
 
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
 
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
@@ -802,7 +801,7 @@ TEST(CodeGenTest, MathFunctions1)
     for (int col = 0; col < 3; col++) {
         offsets[col] = new int32_t[1];
     }
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
 
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
@@ -874,7 +873,7 @@ TEST(CodeGenTest, MathFunctions2)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -963,7 +962,7 @@ TEST(CodeGenTest, MathFunctions3)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1058,7 +1057,7 @@ TEST(CodeGenTest, MathFunctions4)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1178,7 +1177,7 @@ TEST(CodeGenTest, CastNumbers1)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1262,7 +1261,7 @@ TEST(CodeGenTest, CastNumbers2)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1353,7 +1352,7 @@ TEST(CodeGenTest, Like)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1435,7 +1434,7 @@ TEST(CodeGenTest, DateCast)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1545,7 +1544,7 @@ TEST(CodeGenTest, SubstrIn)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1644,7 +1643,7 @@ TEST(CodeGenTest, ConcatStr)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1747,7 +1746,7 @@ TEST(CodeGenTest, ConcatChars)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -1840,7 +1839,7 @@ TEST(CodeGenTest, ToUpper)
     offsets[1][0] = 0;
     offsets[1][1] = s1[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[2] = {};
 
     auto context = new ExecutionContext();
@@ -1905,7 +1904,7 @@ TEST(CodeGenTest, ToUpperChar)
     offsets[1][0] = 0;
     offsets[1][1] = s1[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[2] = {};
 
     auto context = new ExecutionContext();
@@ -1978,7 +1977,7 @@ TEST(CodeGenTest, StringWithOps)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create("stringTest1", *expr);
+    auto codegen = FilterCodeGen::Create("stringTest1", *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
@@ -2064,7 +2063,7 @@ TEST(CodeGenTest, Coalesce)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -2125,7 +2124,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     bool oVec[3];
@@ -2192,7 +2191,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     bool oVec[3];
@@ -2258,7 +2257,7 @@ TEST(CodeGenTest, IsNull)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
@@ -2309,7 +2308,7 @@ TEST(CodeGenTest, IsNotNull)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[1];
     }
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
@@ -2370,7 +2369,7 @@ TEST(CodeGenTest, DecimalOperators1)
         offsets[col] = new int32_t[2];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
@@ -2431,7 +2430,7 @@ TEST(CodeGenTest, DecimalOperators2)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
@@ -2498,7 +2497,7 @@ TEST(CodeGenTest, DecimalOperators3)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -2572,7 +2571,7 @@ TEST(CodeGenTest, DecimalNegate)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[4] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
@@ -2638,7 +2637,7 @@ TEST(CodeGenTest, Decimal128AbsAndCompare)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[2] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
@@ -2688,7 +2687,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     vector<int64_t> oVec(6);
@@ -2761,7 +2760,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     vector<int64_t> oVec(6);
@@ -2821,7 +2820,7 @@ TEST(CodeGenTest, TestRowProjectLong)
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
 
     RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
 
     int32_t positionOffset = slicedVector->GetPositionOffset();
     int64_t *valueAddress = (int64_t *)(slicedVector->GetValues()) + positionOffset;
@@ -2871,7 +2870,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     auto expr = GetFuncExpr(funcStr, args, VarcharType());
 
     RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
 
     int32_t positionOffset = slicedVector->GetPositionOffset();
     uint8_t *valueAddress = (uint8_t *)(slicedVector->GetValues());
@@ -2937,7 +2936,7 @@ TEST(CodeGenTest, CastNumbers3)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
@@ -3017,7 +3016,7 @@ TEST(CodeGenTest, Mm3HashDate32)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr);
+    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr, nullptr);
 
     int64_t dictionaries[1] = {};
 
@@ -3071,7 +3070,7 @@ TEST(CodeGenTest, Mm3HashInt)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr);
+    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr, nullptr);
 
     int64_t dictionaries[1] = {};
 
@@ -3115,7 +3114,7 @@ TEST(CodeGenTest, Mm3HashLong)
     offsets[0][0] = 0;
 
     RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -3161,7 +3160,7 @@ TEST(CodeGenTest, Mm3HashDouble)
     offsets[0][0] = 0;
 
     RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -3209,7 +3208,7 @@ TEST(CodeGenTest, Mm3HashString)
     offsets[0][1] = v1.size();
 
     RowProjection codegen(*expr);
-    RowProjFunc func = codegen.Create();
+    RowProjFunc func = codegen.Create(nullptr);
     EXPECT_EQ(codegen.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
@@ -3256,7 +3255,7 @@ TEST(CodeGenTest, Mm3HashDecimal64)
     offsets[0][0] = 0;
 
     RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -3303,7 +3302,7 @@ TEST(CodeGenTest, Mm3HashDecimal128)
     offsets[0][0] = 0;
 
     RowProjection rowProjection(*expr);
-    RowProjFunc func = rowProjection.Create();
+    RowProjFunc func = rowProjection.Create(nullptr);
     EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -3368,7 +3367,7 @@ TEST(CodeGenTest, Pmod)
 
 
     string testName = "pmodTest";
-    auto codegen = FilterCodeGen::Create(testName, *expr);
+    auto codegen = FilterCodeGen::Create(testName, *expr, nullptr);
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     int64_t dictionaries[1] = {};
 
@@ -3428,7 +3427,7 @@ TEST(CodeGenTest, CombineHash)
         offsets[i][0] = false;
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
@@ -3521,7 +3520,7 @@ TEST(CodeGenTest, JSONFunc)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();

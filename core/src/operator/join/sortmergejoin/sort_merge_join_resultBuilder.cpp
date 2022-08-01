@@ -15,7 +15,8 @@ using namespace omniruntime::type;
 JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
     int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
     const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
-    DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator)
+    DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator,
+    OverflowConfig *overflowConfig)
     : leftTableOutputTypes(leftTableOutputTypes),
       leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
@@ -33,10 +34,10 @@ JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes
         rightTableOutputColsCount);
     int32_t eachRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
-    this->JoinFilterCodeGen();
+    this->JoinFilterCodeGen(overflowConfig);
 }
 
-void JoinResultBuilder::JoinFilterCodeGen()
+void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
 {
     Parser parser;
     if (!filterExpStr.empty()) {
@@ -44,7 +45,7 @@ void JoinResultBuilder::JoinFilterCodeGen()
         executionContext = new ExecutionContext();
         executionContext->GetArena()->SetAllocator(vecAllocator);
         simpleFilter = new SimpleFilter(*filterExpr);
-        simpleFilter->Initialize();
+        simpleFilter->Initialize(overflowConfig);
     }
 }
 

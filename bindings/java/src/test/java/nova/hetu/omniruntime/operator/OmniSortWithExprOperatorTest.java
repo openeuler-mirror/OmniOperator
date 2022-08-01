@@ -17,6 +17,7 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
+import nova.hetu.omniruntime.operator.config.OverflowConfig;
 import nova.hetu.omniruntime.operator.config.SparkSpillConfig;
 import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory.FactoryContext;
@@ -346,7 +347,7 @@ public class OmniSortWithExprOperatorTest {
                             Integer.MAX_VALUE);
                     OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(
                             sourceTypes, outputCols, sortKeys, ascendings, nullFirsts,
-                            new OperatorConfig(spillConfig, true));
+                            new OperatorConfig(spillConfig, new OverflowConfig(), true));
                     sortWithExprOperatorFactory.close();
                 } finally {
                     countDownLatch.countDown();

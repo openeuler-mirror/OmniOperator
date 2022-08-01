@@ -20,7 +20,7 @@ public:
      * @return unique_ptr to the RowExpressionCodeGen instance
      */
     static std::unique_ptr<RowExpressionCodeGen> Create(std::string name,
-        const omniruntime::expressions::Expr &expression);
+        const omniruntime::expressions::Expr &expression, omniruntime::op::OverflowConfig *overflowConfig);
 
     ~RowExpressionCodeGen() override = default;
 
@@ -29,8 +29,9 @@ public:
     int64_t GetFunction() override;
 
 private:
-    RowExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
-        : ExpressionCodeGen(std::move(name), expression)
+    RowExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expression,
+        omniruntime::op::OverflowConfig *overflowConfig)
+        : ExpressionCodeGen(std::move(name), expression, overflowConfig)
     {}
     llvm::Function *CreateFunction() override;
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);

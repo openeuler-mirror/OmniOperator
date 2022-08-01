@@ -72,13 +72,13 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
-            int expressionsLength, int parseFormat, boolean isSkipVerify);
+            int expressionsLength, int parseFormat, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         long factoryAddr = createProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
                 context.inputTypes.length, context.expressions, context.expressions.length, context.parseFormat,
-                context.operatorConfig.isSkipExpressionVerify());
+                OperatorConfig.serialize(context.operatorConfig));
         if (factoryAddr != 0) {
             isSupported = true;
         }

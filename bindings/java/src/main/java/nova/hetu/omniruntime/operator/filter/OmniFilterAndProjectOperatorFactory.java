@@ -81,13 +81,13 @@ public class OmniFilterAndProjectOperatorFactory
     }
 
     private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
-            String expression, Object[] projections, int projectLength, int parseFormat, boolean isSkipVerify);
+            String expression, Object[] projections, int projectLength, int parseFormat, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         long factoryAddr = createFilterAndProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
                 context.inputTypes.length, context.expression, context.projections.toArray(),
-                context.projections.size(), context.parseFormat, context.operatorConfig.isSkipExpressionVerify());
+                context.projections.size(), context.parseFormat, OperatorConfig.serialize(context.operatorConfig));
         if (factoryAddr != 0) {
             isSupported = true;
         }

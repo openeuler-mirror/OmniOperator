@@ -143,7 +143,8 @@ TEST(ProjectionTest, Cast)
     std::vector<Expr *> exprs = { castExpr1, castExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Cast");
@@ -171,6 +172,7 @@ TEST(ProjectionTest, Cast)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, CastDouble)
@@ -195,7 +197,8 @@ TEST(ProjectionTest, CastDouble)
     std::vector<Expr *> exprs = { castExpr1, castExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
@@ -223,6 +226,7 @@ TEST(ProjectionTest, CastDouble)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, CastInt64ToDecimal128)
@@ -239,7 +243,8 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     std::vector<Expr *> exprs = { castExpr };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -265,6 +270,7 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, MakeDecimal64ToDiffScale)
@@ -282,7 +288,8 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -308,6 +315,7 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, MakeDecimal128ToDiffScale)
@@ -325,7 +333,8 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128ToDiffScale");
@@ -352,6 +361,7 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
@@ -370,7 +380,8 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2, makeExpr3 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -401,6 +412,7 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Simple)
@@ -414,7 +426,8 @@ TEST(ProjectionTest, Simple)
     std::vector<Expr *> exprs = { addExpr };
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Simple");
@@ -448,6 +461,7 @@ TEST(ProjectionTest, Simple)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, AbsWithNullValues)
@@ -477,7 +491,8 @@ TEST(ProjectionTest, AbsWithNullValues)
     std::vector<Expr *> exprs = { absExpr1, absExpr2, absExpr3 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
                                 reinterpret_cast<int64_t>(col3)};
@@ -521,6 +536,7 @@ TEST(ProjectionTest, AbsWithNullValues)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Negatives)
@@ -534,7 +550,8 @@ TEST(ProjectionTest, Negatives)
     std::vector<Expr *> exprs = { subExpr };
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Negatives");
@@ -554,6 +571,7 @@ TEST(ProjectionTest, Negatives)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Longs)
@@ -567,7 +585,8 @@ TEST(ProjectionTest, Longs)
     std::vector<Expr *> exprs = { mulExpr };
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Longs");
@@ -587,6 +606,7 @@ TEST(ProjectionTest, Longs)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Doubles)
@@ -601,7 +621,8 @@ TEST(ProjectionTest, Doubles)
     std::vector<Expr *> exprs = { divExpr };
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
@@ -622,6 +643,7 @@ TEST(ProjectionTest, Doubles)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Doubles_DivideByZero)
@@ -637,7 +659,8 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     std::vector<Expr *> exprs = { divExpr };
     std::vector<DataTypePtr> vecOfTypes = { DoubleType(), DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
@@ -654,6 +677,7 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testModDoubles)
@@ -669,7 +693,8 @@ TEST(ProjectionTest, testModDoubles)
     std::vector<Expr *> exprs = { modExpr };
     std::vector<DataTypePtr> vecOfTypes = { DoubleType(), DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testModDoubles");
@@ -698,6 +723,7 @@ TEST(ProjectionTest, testModDoubles)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testModDoubles2)
@@ -712,7 +738,8 @@ TEST(ProjectionTest, testModDoubles2)
     std::vector<Expr *> exprs = { modExpr };
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testModDoubles2");
@@ -738,6 +765,7 @@ TEST(ProjectionTest, testModDoubles2)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DoublesModulusByZero)
@@ -752,7 +780,8 @@ TEST(ProjectionTest, DoublesModulusByZero)
     std::vector<Expr *> exprs = { divExpr };
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
@@ -770,6 +799,7 @@ TEST(ProjectionTest, DoublesModulusByZero)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, MultipleColumns)
@@ -792,7 +822,8 @@ TEST(ProjectionTest, MultipleColumns)
     const int32_t numCols = 3;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
@@ -817,6 +848,7 @@ TEST(ProjectionTest, MultipleColumns)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, BenchmarkMultipleColumns)
@@ -854,7 +886,8 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     const int32_t numCols = 4;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType(), VarcharType(1000) };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4)};
@@ -897,7 +930,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     std::vector<Expr *> exprs2 = { subExpr2, substrExpr };
 
-    factory = new ProjectionOperatorFactory(exprs2, numProject, inputTypes, numCols);
+    factory = new ProjectionOperatorFactory(exprs2, numProject, inputTypes, numCols, overflowConfig);
     op = factory->CreateOperator();
 
     for (int i = 0; i < 10; i++) {
@@ -925,6 +958,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DependOtherColumn)
@@ -953,7 +987,8 @@ TEST(ProjectionTest, DependOtherColumn)
     const int32_t numCols = 3;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
@@ -979,6 +1014,7 @@ TEST(ProjectionTest, DependOtherColumn)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ProjectString1)
@@ -1019,8 +1055,8 @@ TEST(ProjectionTest, ProjectString1)
     auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { substrExpr, col0 };
-
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -1048,6 +1084,7 @@ TEST(ProjectionTest, ProjectString1)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DictionaryVecTest)
@@ -1090,8 +1127,8 @@ TEST(ProjectionTest, DictionaryVecTest)
     BinaryExpr *addExpr3 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft3, addRight3, IntType());
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
-
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1114,6 +1151,7 @@ TEST(ProjectionTest, DictionaryVecTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DictionaryVecDoubleTest)
@@ -1138,7 +1176,8 @@ TEST(ProjectionTest, DictionaryVecDoubleTest)
     LiteralExpr *addRight = new LiteralExpr(10.0, DoubleType());
     std::vector<Expr *> exprs = { new BinaryExpr(omniruntime::expressions::Operator::ADD,
         new FieldExpr(0, DoubleType()), addRight, DoubleType()) };
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1157,6 +1196,7 @@ TEST(ProjectionTest, DictionaryVecDoubleTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DictionaryVecVarcharTest)
@@ -1194,7 +1234,8 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
     args.push_back(new LiteralExpr(3, IntType()));
     auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     std::vector<Expr *> exprs = { substrExpr };
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -1219,6 +1260,7 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DictionaryVecDecimal128Test)
@@ -1245,7 +1287,8 @@ TEST(ProjectionTest, DictionaryVecDecimal128Test)
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD,
         new FieldExpr(0, Decimal128Type(38, 0)), addRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { addExpr };
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1265,6 +1308,7 @@ TEST(ProjectionTest, DictionaryVecDecimal128Test)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DictionaryVecNestedTest)
@@ -1308,8 +1352,8 @@ TEST(ProjectionTest, DictionaryVecNestedTest)
     BinaryExpr *addExpr3 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft3, addRight3, IntType());
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
-
-    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, dataTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1333,6 +1377,7 @@ TEST(ProjectionTest, DictionaryVecNestedTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Decimal128Arithmetic)
@@ -1349,7 +1394,9 @@ TEST(ProjectionTest, Decimal128Arithmetic)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -1371,6 +1418,7 @@ TEST(ProjectionTest, Decimal128Arithmetic)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DISABLED_Decimal128Arithmetic2)
@@ -1394,7 +1442,9 @@ TEST(ProjectionTest, DISABLED_Decimal128Arithmetic2)
     std::vector<Expr *> exprs = { subExpr0, subExpr1 };
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -1428,6 +1478,7 @@ TEST(ProjectionTest, DISABLED_Decimal128Arithmetic2)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, DISABLED_Decimal128Arithmetic3)
@@ -1451,7 +1502,9 @@ TEST(ProjectionTest, DISABLED_Decimal128Arithmetic3)
     std::vector<Expr *> exprs = { addExpr0, addExpr1 };
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -1461,7 +1514,7 @@ TEST(ProjectionTest, DISABLED_Decimal128Arithmetic3)
     op->AddInput(t);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
-    for (int64_t i = 0; i < numRows; i++) {
+    for (int i = 0; i < numRows; i++) {
         Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
         Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
         Decimal128 old0 = ((Decimal128Vector *)t->GetVector(0))->GetValue(i);
@@ -1488,6 +1541,7 @@ TEST(ProjectionTest, DISABLED_Decimal128Arithmetic3)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Decimal128Multiply)
@@ -1504,7 +1558,9 @@ TEST(ProjectionTest, Decimal128Multiply)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -1526,6 +1582,7 @@ TEST(ProjectionTest, Decimal128Multiply)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Decimal128Divide)
@@ -1541,7 +1598,9 @@ TEST(ProjectionTest, Decimal128Divide)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vecAllocator =
@@ -1563,6 +1622,7 @@ TEST(ProjectionTest, Decimal128Divide)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, MultipleDecimal128Columns)
@@ -1586,7 +1646,9 @@ TEST(ProjectionTest, MultipleDecimal128Columns)
     const int32_t numCols = 2;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
     VectorAllocator *vecAllocator =
@@ -1616,6 +1678,7 @@ TEST(ProjectionTest, MultipleDecimal128Columns)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, StringSubstr)
@@ -1664,7 +1727,8 @@ TEST(ProjectionTest, StringSubstr)
 
     auto col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { concatExpr, col0 };
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -1697,6 +1761,7 @@ TEST(ProjectionTest, StringSubstr)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, SlicedDictionaryVecTest)
@@ -1748,7 +1813,8 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
     BinaryExpr *addExpr3 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft3, addRight3, IntType());
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputDataTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputDataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1770,6 +1836,7 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
@@ -1806,8 +1873,8 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
     FieldExpr *addRight = new FieldExpr(0, IntType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
     std::vector<Expr *> exprs = { addExpr };
-
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1830,6 +1897,7 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Tpcds96)
@@ -1866,7 +1934,8 @@ TEST(ProjectionTest, Tpcds96)
 
     std::vector<DataTypePtr> vecOfTypes = { LongType(), LongType(), LongType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
         reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3)};
@@ -1912,6 +1981,7 @@ TEST(ProjectionTest, Tpcds96)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Round)
@@ -1994,7 +2064,8 @@ TEST(ProjectionTest, Round)
     std::vector<Expr *> exprs = { roundExpr0, roundExpr1, roundExpr2, roundExpr3, roundExpr4, roundExpr5 };
 
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
         reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4),
@@ -2047,6 +2118,7 @@ TEST(ProjectionTest, Round)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ConcatStrAndChar)
@@ -2079,8 +2151,8 @@ TEST(ProjectionTest, ConcatStrAndChar)
     concatArgs2.push_back(new LiteralExpr(new std::string("store"), VarcharType()));
     auto concatCharStr = GetFuncExpr(concatStr, concatArgs2, CharType(21));
     std::vector<Expr *> exprs = { concatStrChar, concatCharStr };
-
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -2111,6 +2183,7 @@ TEST(ProjectionTest, ConcatStrAndChar)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, varcharExpand)
@@ -2166,7 +2239,8 @@ TEST(ProjectionTest, varcharExpand)
 
     FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { concatExpr, col0 };
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -2199,6 +2273,7 @@ TEST(ProjectionTest, varcharExpand)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDivDecimal128)
@@ -2215,7 +2290,9 @@ TEST(ProjectionTest, testDivDecimal128)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDivDecimal");
@@ -2232,6 +2309,7 @@ TEST(ProjectionTest, testDivDecimal128)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 
@@ -2249,7 +2327,9 @@ TEST(ProjectionTest, testAddDecimal128)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testAddDecimal128");
@@ -2266,6 +2346,7 @@ TEST(ProjectionTest, testAddDecimal128)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDecimal128Between)
@@ -2282,7 +2363,9 @@ TEST(ProjectionTest, testDecimal128Between)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator =
@@ -2299,6 +2382,7 @@ TEST(ProjectionTest, testDecimal128Between)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 
@@ -2316,7 +2400,9 @@ TEST(ProjectionTest, testDecimal128In)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128In");
@@ -2332,6 +2418,7 @@ TEST(ProjectionTest, testDecimal128In)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 
@@ -2354,7 +2441,9 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator =
@@ -2371,6 +2460,7 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, TestAndExprWithNull)
@@ -2386,7 +2476,8 @@ TEST(ProjectionTest, TestAndExprWithNull)
     std::vector<Expr *> exprs = { andExpr };
     std::vector<DataTypePtr> vecOfTypes = { BooleanType(), BooleanType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2) };
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestAndExprWithNull");
@@ -2422,6 +2513,7 @@ TEST(ProjectionTest, TestAndExprWithNull)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, TestOrExprWithNull)
@@ -2437,7 +2529,8 @@ TEST(ProjectionTest, TestOrExprWithNull)
     std::vector<Expr *> exprs = { orExpr };
     std::vector<DataTypePtr> vecOfTypes = { BooleanType(), BooleanType() };
     DataTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2) };
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestOrExprWithNull");
@@ -2473,6 +2566,7 @@ TEST(ProjectionTest, TestOrExprWithNull)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 
@@ -2490,7 +2584,9 @@ TEST(ProjectionTest, testSubDecimal64)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testSubDecimal64");
@@ -2505,6 +2601,7 @@ TEST(ProjectionTest, testSubDecimal64)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testMulDecimal64)
@@ -2521,7 +2618,9 @@ TEST(ProjectionTest, testMulDecimal64)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testMulDecimal64");
@@ -2536,6 +2635,7 @@ TEST(ProjectionTest, testMulDecimal64)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDivDecimal64)
@@ -2551,7 +2651,9 @@ TEST(ProjectionTest, testDivDecimal64)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDivDecimal64");
@@ -2566,6 +2668,7 @@ TEST(ProjectionTest, testDivDecimal64)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testModDecimal64)
@@ -2581,7 +2684,9 @@ TEST(ProjectionTest, testModDecimal64)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testModDecimal64");
@@ -2596,6 +2701,7 @@ TEST(ProjectionTest, testModDecimal64)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
@@ -2615,7 +2721,9 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
 
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
@@ -2637,6 +2745,7 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDecimal64In)
@@ -2654,7 +2763,9 @@ TEST(ProjectionTest, testDecimal64In)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64In");
@@ -2669,6 +2780,7 @@ TEST(ProjectionTest, testDecimal64In)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDecimal64Between)
@@ -2684,7 +2796,9 @@ TEST(ProjectionTest, testDecimal64Between)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Between");
@@ -2699,6 +2813,7 @@ TEST(ProjectionTest, testDecimal64Between)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, testDecimal64Comprehensive)
@@ -2723,7 +2838,9 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     int64_t allData[numCols] = {};
@@ -2740,6 +2857,7 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, Decimal64ColDivide)
@@ -2754,7 +2872,9 @@ TEST(ProjectionTest, Decimal64ColDivide)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type() };
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal64ColDivide");
@@ -2775,6 +2895,7 @@ TEST(ProjectionTest, Decimal64ColDivide)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 Expr *GetConcatFuncExpr(DataTypePtr dataType0, DataTypePtr dataType1, DataTypePtr returnType)
@@ -2850,7 +2971,8 @@ TEST(ProjectionTest, ConcatStrCharTest)
     std::vector<Expr *> exprs = { concatExpr };
     std::vector<DataTypePtr> vecOfTypes = { CharType(20), VarcharType(30) };
     DataTypes inputTypes(vecOfTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrCharTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
@@ -2873,6 +2995,7 @@ TEST(ProjectionTest, ConcatStrCharTest)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ConcatCharStrTest)
@@ -2881,7 +3004,8 @@ TEST(ProjectionTest, ConcatCharStrTest)
     std::vector<Expr *> exprs = { concatExpr };
     std::vector<DataTypePtr> vecOfTypes = { VarcharType(20), CharType(30) };
     DataTypes inputTypes(vecOfTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatCharStrTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
@@ -2908,6 +3032,7 @@ TEST(ProjectionTest, ConcatCharStrTest)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ConcatStrStrTest)
@@ -2916,7 +3041,8 @@ TEST(ProjectionTest, ConcatStrStrTest)
     std::vector<Expr *> exprs = { concatExpr };
     std::vector<DataTypePtr> vecOfTypes = { VarcharType(20), VarcharType(30) };
     DataTypes inputTypes(vecOfTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrStrTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
@@ -2939,6 +3065,7 @@ TEST(ProjectionTest, ConcatStrStrTest)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ConcatCharCharTest)
@@ -2947,7 +3074,8 @@ TEST(ProjectionTest, ConcatCharCharTest)
     std::vector<Expr *> exprs = { concatExpr };
     std::vector<DataTypePtr> vecOfTypes = { CharType(20), CharType(30) };
     DataTypes inputTypes(vecOfTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatCharCharTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
@@ -2974,6 +3102,7 @@ TEST(ProjectionTest, ConcatCharCharTest)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 
 Expr *GetStringFuncExpr(std::vector<DataTypePtr> inputTypes, DataTypePtr returnType, string funcStr)
@@ -2994,7 +3123,7 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     auto replaceFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(100), replaceFuncStr);
     vector<Expr *> exprs = { replaceFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
 
     string str[] = { "varchar100", "varchar200", "varchar300" };
     string search[] = { "char1", "char2", "char3" };
@@ -3026,7 +3155,7 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     auto replaceFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(100), replaceFuncStr);
     vector<Expr *> exprs = { replaceFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
 
     string str[] = { "varchar100", "varchar200", "varchar300" };
     string search[] = { "char1", "char2", "char3" };
@@ -3057,7 +3186,7 @@ TEST(ProjectionTest, LowerStr)
     auto lowerFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(20), lowerFuncStr);
     vector<Expr *> exprs = { lowerFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3087,7 +3216,7 @@ TEST(ProjectionTest, LowerChar)
     auto lowerFuncExpr = GetStringFuncExpr(vecTypes, CharType(20), lowerFuncStr);
     vector<Expr *> exprs = { lowerFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3117,7 +3246,7 @@ TEST(ProjectionTest, LengthChar)
     auto lenFuncExpr = GetStringFuncExpr(vecTypes, LongType(), lenFuncStr);
     vector<Expr *> exprs = { lenFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3147,7 +3276,7 @@ TEST(ProjectionTest, LengthStr)
     auto lenFuncExpr = GetStringFuncExpr(vecTypes, LongType(), lenFuncStr);
     vector<Expr *> exprs = { lenFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3185,7 +3314,9 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
     const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
-    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto overflowConfig = new OverflowConfig();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {};
     VectorAllocator *vecAllocator =
@@ -3203,5 +3334,6 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
     delete op;
     delete factory;
     delete vecAllocator;
+    delete overflowConfig;
 }
 }

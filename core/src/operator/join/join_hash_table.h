@@ -193,7 +193,7 @@ public:
         return this->filterExpression;
     }
 
-    void JoinFilterCodeGen();
+    void JoinFilterCodeGen(OverflowConfig *overflowConfig);
 
     SimpleFilter *GetSimpleFilter()
     {

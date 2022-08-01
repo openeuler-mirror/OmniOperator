@@ -63,14 +63,14 @@ public class OmniLookupJoinWithExprOperatorFactory
 
     private static native long createLookupJoinWithExprOperatorFactory(String probeTypes, int[] probeOutputCols,
             String[] probeHashKeys, int[] buildOutputCols, String buildOutputTypes, int joinType,
-            long hashBuilderWithExprOperatorFactory);
+            long hashBuilderWithExprOperatorFactory, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createLookupJoinWithExprOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
                 context.probeOutputCols, context.probeHashKeys, context.buildOutputCols,
                 DataTypeSerializer.serialize(context.buildOutputTypes), context.joinType.getValue(),
-                context.getHashBuilderWithExprOperatorFactory());
+                context.getHashBuilderWithExprOperatorFactory(), OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
