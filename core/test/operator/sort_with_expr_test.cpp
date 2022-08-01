@@ -32,9 +32,9 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     std::vector<Expr *> sortExprs { col0, col1, col2 };
     int ascendings[3] = {true, false, false};
     int nullFirsts[3] = {true, true, true};
-
-    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 3,
-        sortExprs, ascendings, nullFirsts, 3, nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 2, overflowConfig);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -52,6 +52,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortOneExprColumns)
@@ -71,8 +72,9 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, nullptr);
+        sortExprs, ascendings, nullFirsts, 2, overflowConfig);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -89,6 +91,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortTwoExprColumns)
@@ -109,9 +112,9 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
-
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, nullptr);
+        sortExprs, ascendings, nullFirsts, 2, overflowConfig);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -128,6 +131,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
@@ -157,9 +161,9 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     std::vector<Expr *> sortExprs { add1Expr, add2Expr };
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
-
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, nullptr);
+        sortExprs, ascendings, nullFirsts, 2, overflowConfig);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -176,6 +180,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
@@ -200,9 +205,9 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 
     int32_t ascendings[vecCount] = {true};
     int32_t nullFirsts[vecCount] = {true};
-
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols,
-        vecCount, sortExprs, ascendings, nullFirsts, vecCount, nullptr);
+        vecCount, sortExprs, ascendings, nullFirsts, vecCount, overflowConfig);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -220,6 +225,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
@@ -269,8 +275,9 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, nullptr);
+        sortExprs, ascendings, nullFirsts, 2, overflowConfig);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -291,6 +298,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
@@ -316,9 +324,9 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     int nullFirsts[1] = {true};
     SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 4);
     OperatorConfig operatorConfig(spillConfig);
-
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
-        sortExprs, ascendings, nullFirsts, 1, operatorConfig, nullptr);
+        sortExprs, ascendings, nullFirsts, 1, operatorConfig, overflowConfig);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch1);
@@ -337,6 +345,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 
 TEST(SortWithExprTest, TestSortSpillWithOneRecord)
@@ -360,9 +369,9 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     int nullFirsts[1] = {true};
     SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
     OperatorConfig operatorConfig(spillConfig);
-
+    auto overflowConfig = new OverflowConfig();
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
-        sortExprs, ascendings, nullFirsts, 1, operatorConfig, nullptr);
+        sortExprs, ascendings, nullFirsts, 1, operatorConfig, overflowConfig);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch1);
@@ -381,5 +390,6 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
+    delete overflowConfig;
 }
 }

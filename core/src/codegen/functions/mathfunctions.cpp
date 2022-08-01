@@ -259,3 +259,16 @@ extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
         return r;
     }
 }
+
+extern "C" DLLEXPORT double OverflowThrowException(int64_t contextPtr, int x)
+{
+    char message[] = "OVERFLOW";
+    SetError(contextPtr, message, sizeof(message) / sizeof(char));
+    return x;
+}
+
+extern "C" DLLEXPORT double OverflowReturnNull(int x, bool *isNull)
+{
+    *isNull = true;
+    return x;
+}

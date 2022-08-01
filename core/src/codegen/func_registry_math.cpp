@@ -132,7 +132,11 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(Round<int64_t>), roundFnStr, {},
                  { OMNI_LONG, OMNI_INT }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(Round<double>), roundFnStr, {},
-                 { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE, INPUT_DATA)
+                 { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(OverflowThrowException), overflowFnStr, {},
+                 { OMNI_INT }, OMNI_DOUBLE, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(OverflowReturnNull), overflowFnStr + "null", {},
+                 { OMNI_INT }, OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL)
     };
     return mathFnRegistry;
 }

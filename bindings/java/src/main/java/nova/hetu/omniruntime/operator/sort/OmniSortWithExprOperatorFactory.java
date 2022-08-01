@@ -36,7 +36,7 @@ public class OmniSortWithExprOperatorFactory
     }
 
     /**
-     * Instantiates a new Omni sort with expression operator factory with default
+     * Instantiates a new Omni sort with elxpression operator factory with default
      * operator config.
      *
      * @param sourceTypes the source types
