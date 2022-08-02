@@ -52,8 +52,10 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t LimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
-    outputPages.push_back(outputVecBatch);
-    outputVecBatch = nullptr;
+    if (outputVecBatch != nullptr) {
+        outputPages.push_back(outputVecBatch);
+        outputVecBatch = nullptr;
+    }
 
     if (remainingLimit <= 0) {
         SetStatus(OMNI_STATUS_FINISHED);
