@@ -69,8 +69,9 @@ public:
 
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
     {
+        auto v = static_cast<VarcharVector *>(vector);
         if (state.val == nullptr) {
-            vector->SetValueNull(rowIndex);
+            v->SetValueNull(rowIndex);
             return;
         }
 

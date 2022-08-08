@@ -67,11 +67,11 @@ public:
 
     void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
     {
-        if (state.val == nullptr) {
-            vector->SetValueNull(rowIndex);
-            return;
-        }
-
+        auto v = static_cast<VarcharVector *>(vector);
+            if (state.val == nullptr) {
+                v->SetValueNull(rowIndex);
+                return;
+            }
         // write decimal if not overflow. otherwise throw exception
         int64_t isOverflow = 0;
         Decimal128 result;
@@ -82,7 +82,7 @@ public:
         DecimalOperations::ThrowIfOverflows(result);
 
         if (outputPartial) {
-            static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
+            v->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
                 PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
             // this branch is for window operator
