@@ -31,7 +31,8 @@ public class VecAllocator implements AutoCloseable {
         // parse environment variable OMNI_OFFHEAP_MEMORY_SIZE
         String memorySize = System.getenv("OMNI_OFFHEAP_MEMORY_SIZE");
         long rootLimit = memorySize == null ? VM.maxDirectMemory() : ParseUtil.parserMemoryParameters(memorySize);
-        // the off heap memory from director or environment variable, set rootAllocator limit
+        // the off heap memory from director or environment variable, set rootAllocator
+        // limit
         setRootAllocatorLimit(rootLimit);
         GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(getGlobalVectorAllocator());
     }
@@ -118,7 +119,7 @@ public class VecAllocator implements AutoCloseable {
      * get peak allocated memory of current allocator
      *
      * @return peak allocated memory in bytes
-     * */
+     */
     public long getPeakAllocated() {
         return getPeakAllocatedNative(nativeAllocator);
     }

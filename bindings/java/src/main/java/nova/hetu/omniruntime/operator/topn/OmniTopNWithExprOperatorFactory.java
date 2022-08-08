@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.operator.topn;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -33,8 +32,7 @@ public class OmniTopNWithExprOperatorFactory
      */
     public OmniTopNWithExprOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
             int[] sortNullFirsts, OperatorConfig operatorConfig) {
-        super(new FactoryContext(
-                new JitContext(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, operatorConfig)));
+        super(new FactoryContext(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, operatorConfig));
     }
 
     /**
@@ -49,28 +47,24 @@ public class OmniTopNWithExprOperatorFactory
      */
     public OmniTopNWithExprOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
             int[] sortNullFirsts) {
-        this(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, new OperatorConfig(true));
+        this(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts, new OperatorConfig());
     }
 
     private static native long createTopNWithExprOperatorFactory(String sourceTypes, int limitN, String[] sortKeys,
-            int[] sortAssendings, int[] sortNullFirsts, long nativeJitContext);
-
-    private static native long createTopNWithExprJitContext(String sourceTypes, int limitN, String[] sortKeys,
             int[] sortAssendings, int[] sortNullFirsts);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createTopNWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-                context.sortKeys, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
+                context.sortKeys, context.sortAssendings, context.sortNullFirsts);
     }
 
     /**
-     * The type Jit context.
+     * The type Context.
      *
-     * @since 2021-06-30
+     * @since 2021-10-26
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final int limitN;
@@ -80,6 +74,8 @@ public class OmniTopNWithExprOperatorFactory
         private final int[] sortAssendings;
 
         private final int[] sortNullFirsts;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -91,14 +87,14 @@ public class OmniTopNWithExprOperatorFactory
          * @param sortNullFirsts the sort null firsts
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
+        public FactoryContext(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
                 int[] sortNullFirsts, OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
             this.sortKeys = sortKeys;
             this.sortAssendings = sortAssendings;
             this.sortNullFirsts = sortNullFirsts;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -115,34 +111,12 @@ public class OmniTopNWithExprOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext context = (JitContext) obj;
+            FactoryContext context = (FactoryContext) obj;
             return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes)
                     && Arrays.equals(sortKeys, context.sortKeys)
                     && Arrays.equals(sortAssendings, context.sortAssendings)
                     && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
                     && operatorConfig.equals(context.operatorConfig);
-        }
-    }
-
-    /**
-     * The type Context.
-     *
-     * @since 2021-10-26
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return createTopNWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
-                    context.sortKeys, context.sortAssendings, context.sortNullFirsts);
         }
     }
 }

@@ -13,7 +13,6 @@
 #include "operator/aggregation/aggregator/all_aggregators.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation.h"
-#include "jit_context/jit_context.h"
 #include "vector/vector_helper.h"
 #include "util/perf_util.h"
 #include "../util/test_util.h"
@@ -240,13 +239,11 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
     std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(aggFunType, aggFunType + 2);
     std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + 2);
 
-    auto jitContext = CreateHashAggregationJitContext(groupByTypes, 2);
     std::cout << "after jit" << std::endl;
-    omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
+    auto *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVector, aggInputTypes,
         aggOutputTypes, aggFuncTypeVector, maskColsVector, inputRaw, outputPartial);
     std::cout << "after create factory" << std::endl;
-    nativeOperatorFactory->SetJitContext(jitContext);
     nativeOperatorFactory->Init();
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
 }
@@ -265,13 +262,11 @@ uintptr_t CreateAggFactoryWithJit()
                                         static_cast<uint32_t>(-1)};
     std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + CONST_VALUE_4);
 
-    auto jitContext = CreateAggregationJitContext();
     std::cout << "after jit" << std::endl;
     auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeVector, aggInputColsVector,
         maskColsVector, sourceTypes, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
-    nativeOperatorFactory->SetJitContext(jitContext);
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
 }
 
@@ -341,7 +336,7 @@ void PerfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int3
     // create operatory
     HashAggregationOperatorFactory *nativeOperatorFactory =
         reinterpret_cast<HashAggregationOperatorFactory *>(moduleAddr);
-    auto groupBy = reinterpret_cast<HashAggModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
+    auto groupBy = nativeOperatorFactory->CreateOperator();
 
     // execution
     for (int pageIndex = 0; pageIndex < vecBatchNum; ++pageIndex) {
@@ -1400,14 +1395,12 @@ TEST(HashAggregationOperatorTest, compare_perf)
         std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskCols), reinterpret_cast<uint32_t *>(maskCols) + 2);
 
     // ------------------------------------------Create operator--------------------------------------------
-    auto jitContext = CreateHashAggregationJitContext(groupInputTypes, 2);
     std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVector, aggInput,
         aggOutput, aggFuncTypeVector, maskColsVector, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
-    nativeOperatorFactory->SetJitContext(jitContext);
     // create operator
     auto jitGroupBy = CreateTestOperator(nativeOperatorFactory);
 

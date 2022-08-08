@@ -145,8 +145,7 @@ public class Decimal128Vec extends DecimalVec {
             System.arraycopy(bytes, 0, lowBytes, Long.BYTES - byteArrayLength, Math.min(byteArrayLength, Long.BYTES));
         } else {
             int offset = byteArrayLength - Long.BYTES;
-            System.arraycopy(bytes, 0, highBytes, 2 * Long.BYTES - byteArrayLength,
-                    Math.min(offset, Long.BYTES));
+            System.arraycopy(bytes, 0, highBytes, 2 * Long.BYTES - byteArrayLength, Math.min(offset, Long.BYTES));
             System.arraycopy(bytes, offset, lowBytes, 0, Long.BYTES);
         }
         boolean isNegative = bigInteger.compareTo(new BigInteger("0")) == -1;

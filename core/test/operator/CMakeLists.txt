@@ -3,5 +3,5 @@ set(OP_TEST_TARGET optest)
 add_library(${OP_TEST_TARGET} ${OP_TESTS_LIST})
 
 # dependent library
-target_link_libraries(${OP_TEST_TARGET} jit jit_context memory util type ${OMNI_CODEGEN_SO} ${OMNI_OPERATOR_SO} ${OMNI_VECTOR_SO})
+target_link_libraries(${OP_TEST_TARGET} memory util type ${OMNI_CODEGEN_SO} ${OMNI_OPERATOR_SO} ${OMNI_VECTOR_SO})
 target_include_directories(${OP_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/operator/algorithm)

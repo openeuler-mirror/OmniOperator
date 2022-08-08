@@ -145,9 +145,6 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
     }
     Vector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
-    uint32_t width = (inputType.GetId() == OMNI_VARCHAR || inputType.GetId() == OMNI_CHAR) ?
-        static_cast<const VarcharDataType &>(inputType).GetWidth() :
-        0;
     // this is important to package data into an extra vector and use it to do the aggregation
     // the vector is used for aggregation in window operation
     auto resultVectorBatch = new VectorBatch(1, rowCount);

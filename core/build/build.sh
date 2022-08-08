@@ -44,9 +44,6 @@ append_options()
             elif [ "$i" = 'llvm' ]; then
               echo "-- Enable LLVM Debug"
               options="$options -DDEBUG_LLVM=ON"
-            elif [ "$i" = '--disable-jit' ]; then
-              echo "-- Disable JIT"
-              options="$options -DDISABLE_JIT=ON"
             elif [ "$i" = '--disable-cpuchecker' ]; then
               echo "-- Disable CPU checker"
               options="$options -DDISABLE_CPU_CHECKER=ON"

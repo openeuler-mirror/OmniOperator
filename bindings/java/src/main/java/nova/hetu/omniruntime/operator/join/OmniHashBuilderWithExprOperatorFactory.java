@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator.join;
 
 import static java.util.Objects.requireNonNull;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -35,8 +34,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      */
     public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
             Optional<String> filterExpression, int operatorCount, OperatorConfig operatorConfig) {
-        super(new FactoryContext(
-                new JitContext(buildTypes, buildHashKeys, filterExpression, operatorCount, operatorConfig)));
+        super(new FactoryContext(buildTypes, buildHashKeys, filterExpression, operatorCount, operatorConfig));
     }
 
     /**
@@ -50,29 +48,24 @@ public class OmniHashBuilderWithExprOperatorFactory
      */
     public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
             Optional<String> filterExpression, int operatorCount) {
-        this(buildTypes, buildHashKeys, filterExpression, operatorCount, new OperatorConfig(true));
+        this(buildTypes, buildHashKeys, filterExpression, operatorCount, new OperatorConfig());
     }
 
     private static native long createHashBuilderWithExprOperatorFactory(String buildTypes, String[] buildHashKeys,
-            String filterExpression, int operatorCount, long jitContext);
-
-    private static native long createHashBuilderWithExprJitContext(String buildTypes, String[] buildHashKeys,
             String filterExpression, int operatorCount);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createHashBuilderWithExprOperatorFactory(DataTypeSerializer.serialize(context.buildTypes),
-                context.buildHashKeys, context.filterExpression, context.operatorCount,
-                factoryContext.getNativeJitContext());
+                context.buildHashKeys, context.filterExpression, context.operatorCount);
     }
 
     /**
-     * The jit Context.
+     * The Factory context.
      *
      * @since 2021-10-16
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] buildTypes;
 
         private final String[] buildHashKeys;
@@ -80,6 +73,8 @@ public class OmniHashBuilderWithExprOperatorFactory
         private final String filterExpression;
 
         private final int operatorCount;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -90,13 +85,14 @@ public class OmniHashBuilderWithExprOperatorFactory
          * @param operatorCount the operator count
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] buildTypes, String[] buildHashKeys, Optional<String> filterExpression,
+        public FactoryContext(DataType[] buildTypes, String[] buildHashKeys, Optional<String> filterExpression,
                 int operatorCount, OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashKeys = requireNonNull(buildHashKeys, "buildHashKeys");
             this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
             this.operatorCount = operatorCount;
+            this.operatorConfig = operatorConfig;
+            setNeedCache(false);
         }
 
         @Override
@@ -113,33 +109,10 @@ public class OmniHashBuilderWithExprOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext that = (JitContext) obj;
+            FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildHashKeys, that.buildHashKeys)
                     && filterExpression.equals(that.filterExpression) && operatorCount == that.operatorCount
                     && operatorConfig.equals(that.operatorConfig);
-        }
-    }
-
-    /**
-     * The Factory context.
-     *
-     * @since 2021-10-16
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-            setNeedCache(false);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return createHashBuilderWithExprJitContext(DataTypeSerializer.serialize(context.buildTypes),
-                    context.buildHashKeys, context.filterExpression, context.operatorCount);
         }
     }
 }

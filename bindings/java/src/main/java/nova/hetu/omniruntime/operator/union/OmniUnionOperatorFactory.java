@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.operator.union;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -28,7 +27,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      * @param operatorConfig the operator config
      */
     public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct, OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(sourceTypes, isDistinct, operatorConfig)));
+        super(new FactoryContext(sourceTypes, isDistinct, operatorConfig));
     }
 
     /**
@@ -38,29 +37,27 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      * @param isDistinct mark union or union all
      */
     public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct) {
-        this(sourceTypes, isDistinct, new OperatorConfig(true));
+        this(sourceTypes, isDistinct, new OperatorConfig());
     }
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
-        return createUnionOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.isDistinct,
-                factoryContext.getNativeJitContext());
+    protected long createNativeOperatorFactory(FactoryContext context) {
+        return createUnionOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.isDistinct);
     }
 
-    private static native long createUnionOperatorFactory(String sourceTypes, boolean isDistinct, long jitcontext);
-
-    private static native long createUnionJitContext(String sourceTypes, boolean isDistinct);
+    private static native long createUnionOperatorFactory(String sourceTypes, boolean isDistinct);
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-06-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final boolean isDistinct;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Jit context.
@@ -69,10 +66,10 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
          * @param isDistinct the is distinct
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, boolean isDistinct, OperatorConfig operatorConfig) {
-            super(operatorConfig);
+        public FactoryContext(DataType[] sourceTypes, boolean isDistinct, OperatorConfig operatorConfig) {
             this.sourceTypes = sourceTypes;
             this.isDistinct = isDistinct;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -83,10 +80,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext context = null;
-            if (obj instanceof JitContext) {
-                context = (JitContext) obj;
-            }
+            FactoryContext context = (FactoryContext) obj;
             return isDistinct == context.isDistinct && Arrays.equals(sourceTypes, context.sourceTypes)
                     && operatorConfig.equals(context.operatorConfig);
         }
@@ -94,27 +88,6 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), isDistinct, operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-06-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return 0;
         }
     }
 }

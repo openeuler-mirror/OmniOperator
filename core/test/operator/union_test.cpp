@@ -32,7 +32,6 @@ TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
 
     UnionOperatorFactory *operatorFactory =
         UnionOperatorFactory::CreateUnionOperatorFactory(sourceTypes, sourceTypes.GetSize(), false);
-    operatorFactory->SetJitContext(nullptr);
     UnionOperator *unionOperator = dynamic_cast<UnionOperator *>(CreateTestOperator(operatorFactory));
     unionOperator->AddInput(vecBatch1);
     unionOperator->AddInput(vecBatch2);

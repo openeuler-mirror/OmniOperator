@@ -6,7 +6,6 @@
 #include "operator/window/window_expr.h"
 #include "../util/test_util.h"
 #include "vector/vector_helper.h"
-#include "jit_context/jit_context.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -438,9 +437,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
         sourceTypes, outputCols, 3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -529,9 +525,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
         sourceTypes, outputCols, 9, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -637,9 +630,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
         sourceTypes, outputCols, 9, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
-        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
-    operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);

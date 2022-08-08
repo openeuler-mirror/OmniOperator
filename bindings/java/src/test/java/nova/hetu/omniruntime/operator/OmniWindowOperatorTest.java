@@ -12,6 +12,7 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -21,6 +22,7 @@ import nova.hetu.omniruntime.constants.OmniWindowFrameBoundType;
 import nova.hetu.omniruntime.constants.OmniWindowFrameType;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
+import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -84,7 +86,7 @@ public class OmniWindowOperatorTest {
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
                 windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
-                winddowFrameEndChannels, new OperatorConfig(false));
+                winddowFrameEndChannels, new OperatorConfig());
         OmniOperator windowOperatorWithoutJit = windowOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> vecsWithoutJit = buildVecs();
 
@@ -100,7 +102,7 @@ public class OmniWindowOperatorTest {
                 outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
                 sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
                 windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
-                winddowFrameEndChannels, new OperatorConfig(true));
+                winddowFrameEndChannels, new OperatorConfig());
         OmniOperator windowOperatorWithJit = windowOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> vecsWithJit = buildVecs();
 
@@ -235,7 +237,7 @@ public class OmniWindowOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
                 FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL};
         OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
@@ -255,20 +257,18 @@ public class OmniWindowOperatorTest {
         DataType[] windowFunctionReturnType = {LongDataType.LONG, LongDataType.LONG};
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputChannels = {0, 1};
-        OmniWindowOperatorFactory.JitContext factory1 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
-                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
-                winddowFrameEndChannels, new OperatorConfig());
-        OmniWindowOperatorFactory.JitContext factory2 = new OmniWindowOperatorFactory.JitContext(sourceTypes,
-                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType,
-                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
-                winddowFrameEndChannels, new OperatorConfig());
-        OmniWindowOperatorFactory.JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory1 = new FactoryContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
+                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
+                argumentChannels, windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes,
+                winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
+                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
+                argumentChannels, windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes,
+                winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels, new OperatorConfig());
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 
     private VecBatch buildData() {

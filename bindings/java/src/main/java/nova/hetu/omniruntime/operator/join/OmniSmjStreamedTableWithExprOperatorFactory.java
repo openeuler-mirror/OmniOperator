@@ -7,7 +7,6 @@ package nova.hetu.omniruntime.operator.join;
 import static java.util.Objects.requireNonNull;
 
 import nova.hetu.omniruntime.constants.JoinType;
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -37,8 +36,7 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      */
     public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
             int[] outputChannels, JoinType joinType, Optional<String> filter, OperatorConfig operatorConfig) {
-        super(new FactoryContext(
-                new JitContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, operatorConfig)));
+        super(new FactoryContext(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, operatorConfig));
     }
 
     /**
@@ -53,30 +51,25 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
      */
     public OmniSmjStreamedTableWithExprOperatorFactory(DataType[] sourceTypes, String[] equalKeyExprs,
             int[] outputChannels, JoinType joinType, Optional<String> filter) {
-        this(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, new OperatorConfig(true));
+        this(sourceTypes, equalKeyExprs, outputChannels, joinType, filter, new OperatorConfig());
     }
 
     private static native long createSmjStreamedTableWithExprOperatorFactory(String sourceTypes, String[] equalKeyExprs,
-            int[] outputChannels, int joinType, String filter, long jitContext);
-
-    private static native long createSmjStreamedTableWithExprJitContext(String sourceTypes, String[] equalKeyExprs,
             int[] outputChannels, int joinType, String filter);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         String filter = context.filter.isPresent() ? context.filter.get() : null;
         return createSmjStreamedTableWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
-                context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter,
-                factoryContext.getNativeJitContext());
+                context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter);
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-10-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final String[] equalKeyExprs;
@@ -86,6 +79,8 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
         private final JoinType joinType;
 
         private final Optional<String> filter;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -97,14 +92,15 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
          * @param filter condition for not equal expression
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, String[] equalKeyExprs, int[] outputChannels, JoinType joinType,
+        public FactoryContext(DataType[] sourceTypes, String[] equalKeyExprs, int[] outputChannels, JoinType joinType,
                 Optional<String> filter, OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes");
             this.equalKeyExprs = requireNonNull(equalKeyExprs, "equalKeyExprs");
             this.outputChannels = requireNonNull(outputChannels, "outputChannels");
             this.joinType = requireNonNull(joinType, "joinType");
             this.filter = requireNonNull(filter, "filter");
+            this.operatorConfig = operatorConfig;
+            setNeedCache(false);
         }
 
         @Override
@@ -121,34 +117,10 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext that = (JitContext) obj;
+            FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(equalKeyExprs, that.equalKeyExprs)
                     && Arrays.equals(outputChannels, that.outputChannels) && joinType == that.joinType
                     && filter.equals(that.filter) && operatorConfig.equals(that.operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-10-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-            setNeedCache(false);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            String filter = context.filter.isPresent() ? context.filter.get() : null;
-            return createSmjStreamedTableWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes),
-                    context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter);
         }
     }
 }

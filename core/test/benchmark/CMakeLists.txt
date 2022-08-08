@@ -1,4 +1,3 @@
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR} BENCHMARK_TESTS_LIST)
 set(BENCHMARK_TESTS_TARGET benchtest)
 add_library(${BENCHMARK_TESTS_TARGET} ${BENCHMARK_TESTS_LIST})
-target_link_libraries(${BENCHMARK_TESTS_TARGET} PUBLIC jit)

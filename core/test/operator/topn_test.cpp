@@ -9,7 +9,6 @@
 #include "operator/topn/topn.h"
 #include "vector/vector_helper.h"
 #include "util/perf_util.h"
-#include "jit_context/jit_context.h"
 #include "../util/test_util.h"
 #include "../../libconfig.h"
 
@@ -47,8 +46,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -143,8 +140,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 1);
-    topNOperatorFactory->SetJitContext(jitContext);
     auto s = clock();
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -841,9 +836,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
-
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
@@ -984,8 +976,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, 2);
-    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 

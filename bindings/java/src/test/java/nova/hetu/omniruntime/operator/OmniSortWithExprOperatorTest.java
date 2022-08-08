@@ -13,11 +13,13 @@ import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.config.SparkSpillConfig;
 import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory;
+import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -178,7 +180,7 @@ public class OmniSortWithExprOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         int[] outputCols = {0, 1};
         String[] sortKeys = {
@@ -186,14 +188,14 @@ public class OmniSortWithExprOperatorTest {
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonLiteral(1, false, 5), getOmniJsonFieldReference(1, 1))};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory.JitContext factory1 = new OmniSortWithExprOperatorFactory.JitContext(
-                sourceTypes, outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig());
-        OmniSortWithExprOperatorFactory.JitContext factory2 = new OmniSortWithExprOperatorFactory.JitContext(
-                sourceTypes, outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig());
-        OmniSortWithExprOperatorFactory.JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory1 = new FactoryContext(sourceTypes, outputCols, sortKeys, ascendings, nullFirsts,
+                new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(sourceTypes, outputCols, sortKeys, ascendings, nullFirsts,
+                new OperatorConfig());
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 
     /**
@@ -208,7 +210,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig(true, generateSpillPath(), 1024, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 1024, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5, 3, 2, 6, 1}, {5L, 3L, 2L, 6L, 1L}};
@@ -248,7 +250,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig(true, generateSpillPath(), 1024, 1)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 1024, 1)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5}, {3L}};
@@ -284,10 +286,10 @@ public class OmniSortWithExprOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory1 = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(false, new SparkSpillConfig(null, 1)));
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(null, 1)));
 
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory2 = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(false, new SparkSpillConfig("", 1)));
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("", 1)));
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*PATH_EXIST.*")
@@ -298,8 +300,7 @@ public class OmniSortWithExprOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig("/opt", 1)));
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("/opt", 1)));
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*DISK_STAT_FAILED.*")
@@ -310,8 +311,7 @@ public class OmniSortWithExprOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(false, new SparkSpillConfig("+-ab23", 1)));
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("+-ab23", 1)));
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
@@ -346,7 +346,7 @@ public class OmniSortWithExprOperatorTest {
                             Integer.MAX_VALUE);
                     OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(
                             sourceTypes, outputCols, sortKeys, ascendings, nullFirsts,
-                            new OperatorConfig(true, spillConfig, true));
+                            new OperatorConfig(spillConfig, true));
                     sortWithExprOperatorFactory.close();
                 } finally {
                     countDownLatch.countDown();

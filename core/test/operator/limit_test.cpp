@@ -42,7 +42,6 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
         CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    operatorFactory->SetJitContext(nullptr);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
     limitOperator->AddInput(vecBatch1);
     std::vector<VectorBatch *> outputVecBatches;
@@ -85,7 +84,6 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
 
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data01, data02);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    operatorFactory->SetJitContext(nullptr);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
     std::vector<VectorBatch *> outputVecBatches;
     limitOperator->AddInput(vecBatch1);
@@ -131,7 +129,6 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    operatorFactory->SetJitContext(nullptr);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
 
     // set null to vector batch to simulate null value

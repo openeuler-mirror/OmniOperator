@@ -11,16 +11,15 @@ import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
-import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.JitContext;
+import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -57,8 +56,7 @@ public class OmniAggregationOperatorTest {
         int[] maskChannels = {-1, -1, -1};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniAggregationOperatorFactory factoryWithJit = new OmniAggregationOperatorFactory(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false,
-                new OperatorConfig(true));
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false, new OperatorConfig());
         OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
@@ -78,8 +76,7 @@ public class OmniAggregationOperatorTest {
         System.out.println("Aggregation with jit use " + (end1 - start1) + " ms.");
 
         OmniAggregationOperatorFactory factoryWithoutJit = new OmniAggregationOperatorFactory(sourceTypes,
-                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false,
-                new OperatorConfig(false));
+                aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false, new OperatorConfig());
         OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
@@ -160,22 +157,22 @@ public class OmniAggregationOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                 OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         int[] aggInputChannels = {0, 1, 2, 3};
         int[] maskChannels = {-1, -1, -1, -1};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
-        JitContext factory1 = new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
+        FactoryContext factory1 = new FactoryContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
                 aggOutputTypes, true, false, new OperatorConfig());
-        JitContext factory2 = new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
+        FactoryContext factory2 = new FactoryContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
                 aggOutputTypes, true, false, new OperatorConfig());
-        JitContext factory3 = null;
+        FactoryContext factory3 = null;
 
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 
     @Test

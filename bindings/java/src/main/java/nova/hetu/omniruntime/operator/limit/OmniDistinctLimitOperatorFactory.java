@@ -6,19 +6,14 @@ package nova.hetu.omniruntime.operator.limit;
 
 import static java.util.Objects.requireNonNull;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DataTypeSerializer;
-import nova.hetu.omniruntime.utils.OmniErrorType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * The type Omni distinct limit operator factory.
@@ -38,7 +33,7 @@ public class OmniDistinctLimitOperatorFactory
      */
     public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit,
             OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(sourceTypes, distinctCols, hashCol, limit, operatorConfig)));
+        super(new FactoryContext(sourceTypes, distinctCols, hashCol, limit, operatorConfig));
     }
 
     /**
@@ -51,39 +46,24 @@ public class OmniDistinctLimitOperatorFactory
      * @param limit the limit count
      */
     public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
-        this(sourceTypes, distinctCols, hashCol, limit, new OperatorConfig(true));
+        this(sourceTypes, distinctCols, hashCol, limit, new OperatorConfig());
     }
 
     private static native long createDistinctLimitOperatorFactory(String sourceTypes, int[] distinctCols, int hashCol,
             long limit);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createDistinctLimitOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.distinctCols, context.hashCol, context.limit);
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-06-30
      */
-    public static class JitContext extends OmniJitContext {
-        private static Set<DataType.DataTypeId> supportTypes = new HashSet<DataType.DataTypeId>() {
-            {
-                add(DataType.DataTypeId.OMNI_INT);
-                add(DataType.DataTypeId.OMNI_LONG);
-                add(DataType.DataTypeId.OMNI_DOUBLE);
-                add(DataType.DataTypeId.OMNI_BOOLEAN);
-                add(DataType.DataTypeId.OMNI_DECIMAL64);
-                add(DataType.DataTypeId.OMNI_DECIMAL128);
-                add(DataType.DataTypeId.OMNI_DATE32);
-                add(DataType.DataTypeId.OMNI_CHAR);
-                add(DataType.DataTypeId.OMNI_VARCHAR);
-            }
-        };
-
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final int[] distinctCols;
@@ -91,6 +71,8 @@ public class OmniDistinctLimitOperatorFactory
         private final int hashCol;
 
         private final long limit;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -101,23 +83,13 @@ public class OmniDistinctLimitOperatorFactory
          * @param limit the limit count
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit,
+        public FactoryContext(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit,
                 OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = requireNonNull(sourceTypes, "Source types array is null.");
             this.distinctCols = requireNonNull(distinctCols, "Distinct cols array is null.");
-            checkDataType();
             this.limit = limit;
             this.hashCol = hashCol;
-        }
-
-        private void checkDataType() {
-            for (int index : distinctCols) {
-                if (!supportTypes.contains(sourceTypes[index].getId())) {
-                    throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                            "DataType(" + sourceTypes[index].getId() + ") of column" + index + " is not supported.");
-                }
-            }
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -128,7 +100,7 @@ public class OmniDistinctLimitOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext context = (JitContext) obj;
+            FactoryContext context = (FactoryContext) obj;
             return limit == context.limit && operatorConfig.equals(context.operatorConfig);
         }
 
@@ -136,28 +108,6 @@ public class OmniDistinctLimitOperatorFactory
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(distinctCols), limit, hashCol,
                     operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-06-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            // future.
-            return 0;
         }
     }
 }

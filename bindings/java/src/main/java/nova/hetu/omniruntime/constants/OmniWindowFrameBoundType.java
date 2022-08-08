@@ -12,8 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * @since 2022-04-15
  */
-public class OmniWindowFrameBoundType
-        extends Constant {
+public class OmniWindowFrameBoundType extends Constant {
     /**
      * The constant OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING.
      */

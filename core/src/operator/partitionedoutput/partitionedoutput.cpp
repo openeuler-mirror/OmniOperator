@@ -198,7 +198,7 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
     int32_t vecCount = vecBatch->GetVectorCount() - partitionChannelsCount;
     for (int rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
         bool shouldReplicate = (replicatesAnyRow && !hasAnyRowBeenReplicated) ||
-            nullChannel > -1 && vecBatch->GetVector(nullChannel)->IsValueNull(rowIdx);
+            (nullChannel > -1 && vecBatch->GetVector(nullChannel)->IsValueNull(rowIdx));
         if (shouldReplicate) {
             for (int partitionedIdx = 0; partitionedIdx < partitionCount; ++partitionedIdx) {
                 partitionedMap[partitionedIdx].push_back(rowIdx);

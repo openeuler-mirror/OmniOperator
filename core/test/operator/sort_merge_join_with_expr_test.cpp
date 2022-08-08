@@ -28,7 +28,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
         StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
-    streamedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
     std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
@@ -40,7 +39,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
         bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr);
-    bufferedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
 
     // construct data
@@ -121,7 +119,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
         StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, blank);
-    streamedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
     std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
@@ -133,7 +130,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
         bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr);
-    bufferedWithExprOperatorFactory->SetJitContext(nullptr);
     omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
 
     // construct data

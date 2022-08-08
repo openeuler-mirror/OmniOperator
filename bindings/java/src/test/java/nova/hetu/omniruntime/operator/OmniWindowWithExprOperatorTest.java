@@ -15,7 +15,9 @@ import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.constants.FunctionType;
@@ -23,6 +25,7 @@ import nova.hetu.omniruntime.constants.OmniWindowFrameBoundType;
 import nova.hetu.omniruntime.constants.OmniWindowFrameType;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
+import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
@@ -113,7 +116,7 @@ public class OmniWindowWithExprOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
         int[] outputChannels = {0, 1, 2};
         FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
@@ -131,20 +134,18 @@ public class OmniWindowWithExprOperatorTest {
         String[] argumentKeys = {omniJsonFourArithmeticExpr("ADD", 3, getOmniJsonFieldReference(3, 2),
                 getOmniJsonLiteral(3, false, 50))};
         DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
-        OmniWindowWithExprOperatorFactory.JitContext factory1 = new OmniWindowWithExprOperatorFactory.JitContext(
-                sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
-                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType,
-                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
-                winddowFrameEndChannels, new OperatorConfig());
-        OmniWindowWithExprOperatorFactory.JitContext factory2 = new OmniWindowWithExprOperatorFactory.JitContext(
-                sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
-                sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType,
-                windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes,
-                winddowFrameEndChannels, new OperatorConfig());
-        OmniWindowWithExprOperatorFactory.JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory1 = new FactoryContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
+                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000,
+                argumentKeys, windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes,
+                winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
+                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, 10000,
+                argumentKeys, windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes,
+                winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels, new OperatorConfig());
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 
     @Test

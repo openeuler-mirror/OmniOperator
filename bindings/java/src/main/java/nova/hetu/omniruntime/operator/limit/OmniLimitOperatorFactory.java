@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.operator.limit;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -24,7 +23,7 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      * @param operatorConfig the operator config
      */
     public OmniLimitOperatorFactory(long limit, OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(limit, operatorConfig)));
+        super(new FactoryContext(limit, operatorConfig));
     }
 
     /**
@@ -33,24 +32,25 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      * @param limit the limit count
      */
     public OmniLimitOperatorFactory(long limit) {
-        this(limit, new OperatorConfig(true));
+        this(limit, new OperatorConfig());
     }
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createLimitOperatorFactory(context.limit);
     }
 
     private static native long createLimitOperatorFactory(long limit);
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-06-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final long limit;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -58,9 +58,9 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
          * @param limit the limit count
          * @param operatorConfig the operator config
          */
-        public JitContext(long limit, OperatorConfig operatorConfig) {
-            super(operatorConfig);
+        public FactoryContext(long limit, OperatorConfig operatorConfig) {
             this.limit = limit;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -71,34 +71,13 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext context = (JitContext) obj;
+            FactoryContext context = (FactoryContext) obj;
             return limit == context.limit && operatorConfig.equals(context.operatorConfig);
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(this.limit, operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-06-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return 0;
         }
     }
 }

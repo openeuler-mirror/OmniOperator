@@ -6,8 +6,6 @@
 #include <memory>
 #include "hash_builder.h"
 #include "vector/vector_common.h"
-#include "operator/optimization.h"
-#include "jit/annotation.h"
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 #include "operator/pages_hash_strategy.h"
@@ -315,7 +313,6 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, uint32_t rowCount,
     }
 }
 
-SPECIALIZE(OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES)
 void PopulateHashes(Vector **hashCols, uint32_t rowCount, int32_t *hashColTypes, uint32_t hashColsCount,
     int64_t *hashes, bool *nulls)
 {
@@ -559,7 +556,6 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
     }
 }
 
-SPECIALIZE(OMNIJIT_CONSTRUCT_BUILD_COLUMNS)
 void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashTables,
     const std::vector<DataType> &buildOutputTypes, const int32_t *buildOutputIds, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, int32_t probeOutputColsCount, std::vector<uint64_t> &buildIndex, int32_t position,
