@@ -9,7 +9,6 @@ import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.constants.OmniWindowFrameBoundType;
 import nova.hetu.omniruntime.constants.OmniWindowFrameType;
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -54,10 +53,10 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
             OmniWindowFrameBoundType[] windowFrameStartTypes, int[] winddowFrameStartChannels,
             OmniWindowFrameBoundType[] windowFrameEndTypes, int[] winddowFrameEndChannels,
             OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
-                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
-                argumentChannels, windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes,
-                winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels, operatorConfig)));
+        super(new FactoryContext(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels,
+                sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels,
+                windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels,
+                windowFrameEndTypes, winddowFrameEndChannels, operatorConfig));
     }
 
     /**
@@ -90,40 +89,32 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
         this(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels,
                 sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels,
                 windowFunctionReturnType, windowFrameTypes, windowFrameStartTypes, winddowFrameStartChannels,
-                windowFrameEndTypes, winddowFrameEndChannels, new OperatorConfig(true));
+                windowFrameEndTypes, winddowFrameEndChannels, new OperatorConfig());
     }
-
-    private static native long createWindowJitContext(String sourceTypes, int[] outputChannels, int[] windFunction,
-            int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
-            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
-            String windowFunctionReturnType, int[] windowFrameTypes, int[] windowFrameStartTypes,
-            int[] windowFrameStartChannels, int[] windowFrameEndTypes, int[] windowFrameEndChannels);
 
     private static native long createWindowOperatorFactory(String sourceTypes, int[] outputChannels, int[] windFunction,
             int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
             int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
             String windowFunctionReturnType, int[] windowFrameTypes, int[] windowFrameStartTypes,
-            int[] windowFrameStartChannels, int[] windowFrameEndTypes, int[] windowFrameEndChannels, long jitContext);
+            int[] windowFrameStartChannels, int[] windowFrameEndTypes, int[] windowFrameEndChannels);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createWindowOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.outputChannels,
                 toNativeConstants(context.windFunction), context.partitionChannels, context.preGroupedChannels,
                 context.sortChannels, context.sortOrder, context.sortNullFirsts, context.preSortedChannelPrefix,
                 context.expectedPositions, context.argumentChannels,
                 DataTypeSerializer.serialize(context.windowFunctionReturnType), toNativeConstants(context.frameTypes),
                 toNativeConstants(context.frameStartTypes), context.frameStartChannels,
-                toNativeConstants(context.frameEndTypes), context.frameEndChannels,
-                factoryContext.getNativeJitContext());
+                toNativeConstants(context.frameEndTypes), context.frameEndChannels);
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 20210630
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final int[] outputChannels;
@@ -158,6 +149,8 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
 
         private final int[] frameEndChannels;
 
+        private final OperatorConfig operatorConfig;
+
         /**
          * Instantiates a new Context.
          *
@@ -180,14 +173,13 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
          * @param winddowFrameEndChannels channel values of frame end value
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
+        public FactoryContext(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
                 int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
                 int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
                 DataType[] windowFunctionReturnType, OmniWindowFrameType[] windowFrameTypes,
                 OmniWindowFrameBoundType[] windowFrameStartTypes, int[] winddowFrameStartChannels,
                 OmniWindowFrameBoundType[] windowFrameEndTypes, int[] winddowFrameEndChannels,
                 OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.outputChannels = outputChannels;
             this.windFunction = windowFunction;
@@ -205,6 +197,7 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
             this.frameStartChannels = winddowFrameStartChannels;
             this.frameEndTypes = windowFrameEndTypes;
             this.frameEndChannels = winddowFrameEndChannels;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -226,7 +219,7 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext context = (JitContext) obj;
+            FactoryContext context = (FactoryContext) obj;
             return preSortedChannelPrefix == context.preSortedChannelPrefix
                     && expectedPositions == context.expectedPositions && Arrays.equals(sourceTypes, context.sourceTypes)
                     && Arrays.equals(outputChannels, context.outputChannels)
@@ -243,33 +236,6 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
                     && Arrays.equals(frameEndTypes, context.frameEndTypes)
                     && Arrays.equals(frameEndChannels, context.frameEndChannels)
                     && operatorConfig.equals(context.operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 20210630
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return createWindowJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.outputChannels,
-                    toNativeConstants(context.windFunction), context.partitionChannels, context.preGroupedChannels,
-                    context.sortChannels, context.sortOrder, context.sortNullFirsts, context.preSortedChannelPrefix,
-                    context.expectedPositions, context.argumentChannels,
-                    DataTypeSerializer.serialize(context.windowFunctionReturnType),
-                    toNativeConstants(context.frameTypes), toNativeConstants(context.frameStartTypes),
-                    context.frameStartChannels, toNativeConstants(context.frameEndTypes), context.frameEndChannels);
         }
     }
 }

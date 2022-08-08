@@ -302,7 +302,6 @@ ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &
     DataTypes &inputTypes, int32_t nCols)
     : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
 {
-    this->SetJitContext(nullptr);
     for (auto expr : exprs) {
         auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnType());
         if (!projection->IsSupported()) {

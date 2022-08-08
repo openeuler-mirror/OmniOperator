@@ -45,7 +45,6 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitBasic)
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    operatorFactory->SetJitContext(nullptr);
 
     DistinctLimitOperator *distinctLimitOperator =
         dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
@@ -86,7 +85,6 @@ static void TestDistinctLimitTypeCheckAction(const DataTypes &sourceTypes, int32
     distinctCols[0] = typeId; // requires: typeId == colId in sourceTypes vector
     operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes, distinctCols,
         sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    operatorFactory->SetJitContext(nullptr);
     distinctLimitOperator = CreateTestOperator(operatorFactory);
     EXPECT_TRUE((distinctLimitOperator != nullptr) == support);
 
@@ -168,7 +166,6 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithNull)
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    operatorFactory->SetJitContext(nullptr);
 
     DistinctLimitOperator *distinctLimitOperator =
         dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
@@ -217,7 +214,6 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithRepeat)
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    operatorFactory->SetJitContext(nullptr);
 
     DistinctLimitOperator *distinctLimitOperator =
         dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
@@ -264,7 +260,6 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    operatorFactory->SetJitContext(nullptr);
 
     DistinctLimitOperator *distinctLimitOperator =
         dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
@@ -307,7 +302,6 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitVarchar)
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    operatorFactory->SetJitContext(nullptr);
 
     DistinctLimitOperator *distinctLimitOperator =
         dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
@@ -356,7 +350,6 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitHashCol)
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), hashChannelIndex, limitSize);
-    operatorFactory->SetJitContext(nullptr);
 
     DistinctLimitOperator *distinctLimitOperator =
         dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));

@@ -4,52 +4,21 @@
 
 package nova.hetu.omniruntime.operator;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.util.concurrent.UncheckedExecutionException;
-
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
-
-import java.util.Objects;
-import java.util.concurrent.ExecutionException;
-
 /**
  * The type Omni operator factory context.
  *
- * @param <T> the type parameter
  * @since 2021-06-30
  */
-public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
-    private static final Cache<OmniJitContext, Long> JIT_CONTEXT_CACHE = CacheBuilder.newBuilder()
-            .expireAfterAccess(java.time.Duration.ofHours(24)).maximumSize(100000).build();
-
+public abstract class OmniOperatorFactoryContext {
     /**
      * Whether the omni operator factory needs to be cached.
      */
     private boolean isNeedCache = true;
 
-    private final long nativeJitContext;
-
-    private final OmniJitContext jitContext;
-
     /**
      * Instantiates a new Omni operator factory context.
-     *
-     * @param jitContext the jit context
      */
-    public OmniOperatorFactoryContext(T jitContext) {
-        if (!jitContext.operatorConfig.isJitEnabled()) {
-            this.nativeJitContext = 0L;
-        } else {
-            try {
-                this.nativeJitContext = JIT_CONTEXT_CACHE.get(jitContext, () -> createNativeJitContext(jitContext));
-            } catch (ExecutionException e) {
-                throw new RuntimeException("Get instance failed.");
-            } catch (UncheckedExecutionException e) {
-                throw new OmniRuntimeException(e.getCause().getMessage());
-            }
-        }
-        this.jitContext = jitContext;
+    public OmniOperatorFactoryContext() {
     }
 
     /**
@@ -69,47 +38,4 @@ public abstract class OmniOperatorFactoryContext<T extends OmniJitContext> {
     public void setNeedCache(boolean isNeedCache) {
         this.isNeedCache = isNeedCache;
     }
-
-    /**
-     * Gets native jit context.
-     *
-     * @return the native jit context
-     */
-    public long getNativeJitContext() {
-        return nativeJitContext;
-    }
-
-    /**
-     * Gets jit context.
-     *
-     * @return the jit context
-     */
-    public T getJitContext() {
-        return (T) jitContext;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(jitContext);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null || getClass() != obj.getClass()) {
-            return false;
-        }
-        OmniOperatorFactoryContext context = (OmniOperatorFactoryContext) obj;
-        return jitContext.equals(context.jitContext);
-    }
-
-    /**
-     * Create native jit context long.
-     *
-     * @param context the context
-     * @return the long
-     */
-    protected abstract long createNativeJitContext(T context);
 }

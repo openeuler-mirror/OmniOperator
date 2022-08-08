@@ -6,7 +6,6 @@
 #include "operator/topn/topn_expr.h"
 #include "vector/vector_helper.h"
 #include "../util/test_util.h"
-#include "jit_context/jit_context.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
@@ -41,10 +40,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
 
-    auto jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs);
     auto topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
-    topNWithExprOperatorFactory->SetJitContext(jitContext);
     auto topNWithExprOperator = static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
     topNWithExprOperator->AddInput(vecBatch);
@@ -95,10 +92,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
 
-    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortKeys);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts, sortKeyCnt);
-    topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator =
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
@@ -146,10 +141,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     FieldExpr *col2 = new FieldExpr(2, LongType());
     std::vector<Expr *> sortExprs = { col0, col2 };
 
-    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
-    topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator =
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 

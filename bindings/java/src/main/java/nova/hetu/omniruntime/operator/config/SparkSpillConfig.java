@@ -58,7 +58,7 @@ public class SparkSpillConfig extends SpillConfig {
     /**
      * set the num elements for spill threshold.
      *
-     * @param  numElementsForSpillThreshold the num elements for spill threshold
+     * @param numElementsForSpillThreshold the num elements for spill threshold
      */
     public void setNumElementsForSpillThreshold(int numElementsForSpillThreshold) {
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;

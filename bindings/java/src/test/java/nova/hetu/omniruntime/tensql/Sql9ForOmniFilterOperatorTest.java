@@ -139,7 +139,6 @@ public class Sql9ForOmniFilterOperatorTest {
             "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":11}",
             "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":12}");
 
-
     @Test
     public void testMustExpJson() {
         int[] resultKeepRowIdxForEXP1 = {2, 4};

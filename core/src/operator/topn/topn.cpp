@@ -4,8 +4,6 @@
 
 #include "topn.h"
 #include <vector>
-#include "jit/annotation.h"
-#include "operator/optimization.h"
 #include "operator/sort/sort.h"
 
 namespace omniruntime {
@@ -50,7 +48,6 @@ TopNOperator::~TopNOperator()
     }
 }
 
-SPECIALIZE(OMNIJIT_TOPN_COMPARE)
 int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPosition, VectorBatch *right,
     int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts)

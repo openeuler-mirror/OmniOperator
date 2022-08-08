@@ -8,7 +8,6 @@ import static java.util.Objects.requireNonNull;
 import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -39,8 +38,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
     public OmniAggregationOperatorFactory(DataType[] sourceTypes, FunctionType[] aggFunctionTypes,
             int[] aggInputChannels, int[] maskChannels, DataType[] aggOutputTypes, boolean isInputRaw,
             boolean isOutputPartial, OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
-                aggOutputTypes, isInputRaw, isOutputPartial, operatorConfig)));
+        super(new FactoryContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes,
+                isInputRaw, isOutputPartial, operatorConfig));
     }
 
     /**
@@ -59,32 +58,26 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
             int[] aggInputChannels, int[] maskChannels, DataType[] aggOutputTypes, boolean isInputRaw,
             boolean isOutputPartial) {
         this(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, isInputRaw, isOutputPartial,
-                new OperatorConfig(true));
+                new OperatorConfig());
     }
 
     private static native long createAggregationOperatorFactory(String sourceTypes, int[] aggFunctionTypes,
             int[] aggInputChannels, int[] maskChannels, String aggOutputTypes, boolean isInputRaw,
-            boolean isOutputPartial, long jitContext);
-
-    private static native long createAggregationJitContext(String sourceTypes, int[] aggFunctionTypes,
-            int[] aggInputChannels, int[] maskChannels, String aggOutputTypes, boolean isInputRaw,
             boolean isOutputPartial);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createAggregationOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 toNativeConstants(context.aggFunctionTypes), context.aggInputChannels, context.maskChannels,
-                DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial,
-                factoryContext.getNativeJitContext());
+                DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial);
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-06-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final FunctionType[] aggFunctionTypes;
@@ -99,6 +92,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
 
         private final boolean isOutputPartial;
 
+        private final OperatorConfig operatorConfig;
+
         /**
          * Instantiates a new Context.
          *
@@ -111,10 +106,9 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
          * @param isOutputPartial the output partial
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
+        public FactoryContext(DataType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
                 int[] maskChannels, DataType[] aggOutputTypes, boolean isInputRaw, boolean isOutputPartial,
                 OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes is null");
             this.aggInputChannels = requireNonNull(aggInputChannels, "aggInputChannels is null");
@@ -122,6 +116,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
             this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes is null");
             this.isInputRaw = isInputRaw;
             this.isOutputPartial = isOutputPartial;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -139,36 +134,13 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext that = (JitContext) obj;
+            FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes)
                     && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes)
                     && Arrays.equals(aggInputChannels, that.aggInputChannels)
                     && Arrays.equals(maskChannels, that.maskChannels)
                     && Arrays.equals(aggOutputTypes, that.aggOutputTypes) && isInputRaw == that.isInputRaw
                     && isOutputPartial == that.isOutputPartial && operatorConfig.equals(that.operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-06-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return createAggregationJitContext(DataTypeSerializer.serialize(context.sourceTypes),
-                    toNativeConstants(context.aggFunctionTypes), context.aggInputChannels, context.maskChannels,
-                    DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw, context.isOutputPartial);
         }
     }
 }

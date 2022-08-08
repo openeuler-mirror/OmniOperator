@@ -9,7 +9,6 @@
 #include "type/decimal128.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
-#include "jit_context/jit_context.h"
 #include "operator/aggregation/aggregator/aggregator.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation.h"
@@ -81,9 +80,6 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
 
 void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
 {
-    if (operatorFactory->GetJitContext() != nullptr) {
-        delete operatorFactory->GetJitContext();
-    }
     delete operatorFactory;
 }
 
@@ -267,7 +263,6 @@ void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32
         CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
     UnionOperatorFactory *operatorFactory =
         UnionOperatorFactory::CreateUnionOperatorFactory(sourceTypes, sourceTypes.GetSize(), false);
-    operatorFactory->SetJitContext(nullptr);
     auto unionOperator = operatorFactory->CreateOperator();
     unionOperator->AddInput(vecBatch1);
     unionOperator->AddInput(vecBatch2);

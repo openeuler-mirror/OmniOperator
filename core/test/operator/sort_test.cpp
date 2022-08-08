@@ -11,7 +11,6 @@
 
 #include "gtest/gtest.h"
 #include "operator/sort/sort.h"
-#include "jit_context/jit_context.h"
 #include "vector/vector_helper.h"
 #include "../util/test_util.h"
 
@@ -296,8 +295,6 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
 
     auto operatorFactory =
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->SetJitContext(jitContext);
 
     Timer timer;
     timer.SetStart();
@@ -349,12 +346,6 @@ SortOperatorFactory *PrepareOrderBy(bool isOriginal)
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, outputColsCount,
         sortCols, ascendings, nullFirsts, sortColsCount);
-    JitContext *jitContext = nullptr;
-    if (!isOriginal) {
-        jitContext = CreateSortJitContext(sourceTypes, outputCols, outputColsCount, sortCols, ascendings, nullFirsts,
-            sortColsCount);
-    }
-    operatorFactory->SetJitContext(jitContext);
     return operatorFactory;
 }
 
@@ -872,9 +863,6 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
-        sourceTypesSize);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(sourceVecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -921,9 +909,6 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize);
-    auto jitContext = CreateSortJitContext(sourceTypes, outputCols, sourceTypesSize, sortCols, ascendings, nullFirsts,
-        sourceTypesSize);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(sourceVecBatch);
     vector<VectorBatch *> outputVecBatches;

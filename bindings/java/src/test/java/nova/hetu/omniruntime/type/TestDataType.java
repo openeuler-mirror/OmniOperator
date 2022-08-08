@@ -60,7 +60,6 @@ public class TestDataType {
         List<nova.hetu.omniruntime.type.DataType> types = new ArrayList<>();
         types.add(LongDataType.LONG);
         types.add(new Decimal128DataType(1, 2));
-        assertEquals(map.writeValueAsString(types),
-                "[{\"id\":2},{\"precision\":1,\"scale\":2,\"id\":7}]");
+        assertEquals(map.writeValueAsString(types), "[{\"id\":2},{\"precision\":1,\"scale\":2,\"id\":7}]");
     }
 }

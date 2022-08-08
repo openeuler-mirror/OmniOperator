@@ -3,7 +3,6 @@ aux_source_directory(${CMAKE_CURRENT_LIST_DIR} TEST_ROOT_SRCS)
 add_subdirectory(operator)
 add_subdirectory(util)
 add_subdirectory(vector)
-add_subdirectory(llvm)
 add_subdirectory(memory)
 add_subdirectory(benchmark)
 add_subdirectory(parser)
@@ -19,7 +18,6 @@ set(MY_LINK
         optest
         testutil
         vectest
-        llvmtest
         memtest
         benchtest
         parsertest
@@ -41,7 +39,8 @@ target_link_libraries(${OM_TEST_TARGET}
         gtest
         pthread
         stdc++
-        dl)
+        dl
+        LLVM-12)
 target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 
 # dependent include

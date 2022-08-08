@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.operator.partitionedoutput;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -39,8 +38,8 @@ public class OmniPartitionedOutPutOperatorFactory
     public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean isReplicatesAnyRow,
             OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels, OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels,
-                partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels, operatorConfig)));
+        super(new FactoryContext(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels, partitionCount,
+                bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels, operatorConfig));
     }
 
     /**
@@ -61,34 +60,28 @@ public class OmniPartitionedOutPutOperatorFactory
             OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels) {
         this(sourceTypes, isReplicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
-                isHashPrecomputed, hashChannelTypes, hashChannels, new OperatorConfig(true));
+                isHashPrecomputed, hashChannelTypes, hashChannels, new OperatorConfig());
     }
 
     private static native long createPartitionedOutputOperatorFactory(String sourceTypes, boolean isReplicatesAnyRow,
             int nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
-            boolean isHashPrecomputed, String hashChannelTypes, int[] hashChannels, long jitContext);
-
-    private static native long createPartitionedOutputJitContext(String sourceTypes, boolean isReplicatesAnyRow,
-            int nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
             boolean isHashPrecomputed, String hashChannelTypes, int[] hashChannels);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         int nullChannel = context.nullChannel.isPresent() ? context.nullChannel.getAsInt() : -1;
         return createPartitionedOutputOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.isReplicatesAnyRow, nullChannel, context.partitionChannels, context.partitionCount,
                 context.bucketToPartition, context.isHashPrecomputed,
-                DataTypeSerializer.serialize(context.hashChannelTypes), context.hashChannels,
-                factoryContext.getNativeJitContext());
+                DataTypeSerializer.serialize(context.hashChannelTypes), context.hashChannels);
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-06-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final boolean isReplicatesAnyRow;
@@ -107,6 +100,8 @@ public class OmniPartitionedOutPutOperatorFactory
 
         private final int[] hashChannels;
 
+        private OperatorConfig operatorConfig;
+
         /**
          * Instantiates a new Jit context.
          *
@@ -121,10 +116,9 @@ public class OmniPartitionedOutPutOperatorFactory
          * @param hashChannels the hash channels
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, boolean isReplicatesAnyRow, OptionalInt nullChannel,
+        public FactoryContext(DataType[] sourceTypes, boolean isReplicatesAnyRow, OptionalInt nullChannel,
                 int[] partitionChannels, int partitionCount, int[] bucketToPartition, boolean isHashPrecomputed,
                 DataType[] hashChannelTypes, int[] hashChannels, OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.isReplicatesAnyRow = isReplicatesAnyRow;
             this.nullChannel = nullChannel;
@@ -134,6 +128,7 @@ public class OmniPartitionedOutPutOperatorFactory
             this.isHashPrecomputed = isHashPrecomputed;
             this.hashChannelTypes = hashChannelTypes;
             this.hashChannels = hashChannels;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -144,10 +139,7 @@ public class OmniPartitionedOutPutOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext context = null;
-            if (obj instanceof JitContext) {
-                context = (JitContext) obj;
-            }
+            FactoryContext context = (FactoryContext) obj;
             return isReplicatesAnyRow == context.isReplicatesAnyRow && partitionCount == context.partitionCount
                     && Arrays.equals(sourceTypes, context.sourceTypes)
                     && Objects.equals(nullChannel, context.nullChannel)
@@ -165,27 +157,6 @@ public class OmniPartitionedOutPutOperatorFactory
                     Arrays.hashCode(partitionChannels), partitionCount, Arrays.hashCode(bucketToPartition),
                     isHashPrecomputed, Arrays.hashCode(hashChannelTypes), Arrays.hashCode(hashChannels),
                     operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-06-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return 0;
         }
     }
 }

@@ -9,8 +9,6 @@
 #include "vector/vector_helper.h"
 #include "vector/container_vector.h"
 #include "operator/status.h"
-#include "jit/annotation.h"
-#include "operator/optimization.h"
 #include "util/type_util.h"
 #include "operator/hash_util.h"
 #include "operator/util/operator_util.h"
@@ -218,7 +216,6 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
     return -1;
 }
 
-SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
 void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
 {
@@ -315,7 +312,6 @@ int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataType> 
     return rowSize;
 }
 
-SPECIALIZE(OMNIJIT_HASH_GROUPBY_HASH_COLUMN)
 void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
     ChainIterator &rowIterator, int32_t rowIndex)
 {
@@ -327,7 +323,6 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
 
 // currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
-SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
 void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
     ChainIterator &rowIterator, int32_t rowIndex)
 {

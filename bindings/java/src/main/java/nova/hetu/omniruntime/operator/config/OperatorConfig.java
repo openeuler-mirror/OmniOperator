@@ -26,8 +26,6 @@ public class OperatorConfig {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private boolean isJitEnabled;
-
     private SpillConfig spillConfig;
 
     private boolean isSkipExpressionVerify;
@@ -36,36 +34,7 @@ public class OperatorConfig {
      * Operator config default constructor.
      */
     public OperatorConfig() {
-        this(true, SpillConfig.NONE, false);
-    }
-
-    /**
-     * Operator config constructor.
-     *
-     * @param isJitEnabled whether the jit enabled
-     */
-    public OperatorConfig(boolean isJitEnabled) {
-        this(isJitEnabled, SpillConfig.NONE, false);
-    }
-
-    /**
-     * Operator config constructor.
-     *
-     * @param isJitEnabled whether the jit enabled
-     * @param isSkipExpressionVerify whether to skip exprVerify
-     */
-    public OperatorConfig(boolean isJitEnabled, boolean isSkipExpressionVerify) {
-        this(isJitEnabled, SpillConfig.NONE, isSkipExpressionVerify);
-    }
-
-    /**
-     * Operator config constructor.
-     *
-     * @param isJitEnabled whether the jit enabled
-     * @param spillConfig the spill config
-     */
-    public OperatorConfig(boolean isJitEnabled, SpillConfig spillConfig) {
-        this(isJitEnabled, spillConfig, false);
+        this(SpillConfig.NONE, false);
     }
 
     /**
@@ -74,18 +43,16 @@ public class OperatorConfig {
      * @param spillConfig the spill config
      */
     public OperatorConfig(SpillConfig spillConfig) {
-        this(true, spillConfig, false);
+        this(spillConfig, false);
     }
 
     /**
      * Operator config constructor.
      *
-     * @param isJitEnabled whether the jit enabled
      * @param spillConfig the spill config
      * @param isSkipExpressionVerify whether to skip exprVerify
      */
-    public OperatorConfig(boolean isJitEnabled, SpillConfig spillConfig, boolean isSkipExpressionVerify) {
-        this.isJitEnabled = isJitEnabled;
+    public OperatorConfig(SpillConfig spillConfig, boolean isSkipExpressionVerify) {
         this.spillConfig = spillConfig;
         this.isSkipExpressionVerify = isSkipExpressionVerify;
     }
@@ -106,24 +73,6 @@ public class OperatorConfig {
      */
     public void setSpillConfig(SpillConfig spillConfig) {
         this.spillConfig = spillConfig;
-    }
-
-    /**
-     * Get the status whether jit enabled.
-     *
-     * @return return true if jit enabled, return false if jit disabled
-     */
-    public boolean isJitEnabled() {
-        return isJitEnabled;
-    }
-
-    /**
-     * Set jit enabled.
-     *
-     * @param isJitEnabled whether the jit enabled
-     */
-    public void setJitEnabled(boolean isJitEnabled) {
-        this.isJitEnabled = isJitEnabled;
     }
 
     /**
@@ -181,11 +130,11 @@ public class OperatorConfig {
             return false;
         }
         OperatorConfig operatorConfig = (OperatorConfig) obj;
-        return isJitEnabled == operatorConfig.isJitEnabled && spillConfig.equals(operatorConfig.getSpillConfig());
+        return spillConfig.equals(operatorConfig.getSpillConfig());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(isJitEnabled, spillConfig);
+        return Objects.hash(spillConfig);
     }
 }

@@ -79,7 +79,6 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
     : inputDataTypes(inputDataTypes), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
 {
-    this->SetJitContext(nullptr);
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << expression << std::endl;
     ExprPrinter printExprTree;

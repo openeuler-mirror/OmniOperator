@@ -48,6 +48,8 @@ else ()
 endif ()
 
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
+message(STATUS "OMNI_HOME is $ENV{OMNI_HOME}")
+message(STATUS "JAVA_HOME is $ENV{JAVA_HOME}")
 
 # clean all target
 set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_RUNTIME_SO}.so

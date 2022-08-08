@@ -5,8 +5,6 @@
 #include "pages_hash_strategy.h"
 #include <memory>
 #include "vector/vector_common.h"
-#include "optimization.h"
-#include "jit/annotation.h"
 #include "util/operator_util.h"
 
 using namespace omniruntime::vec;
@@ -66,7 +64,6 @@ static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, ui
     }
 }
 
-SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
 bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
     uint32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
 {
@@ -90,7 +87,6 @@ bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRow
     return true;
 }
 
-SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
 bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
     Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
 {

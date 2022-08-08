@@ -4,8 +4,6 @@
  */
 #include "pages_index.h"
 #include <algorithm>
-#include "optimization.h"
-#include "jit/annotation.h"
 
 using namespace omniruntime::vec;
 
@@ -826,7 +824,6 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, cons
         to, 0);
 }
 
-SPECIALIZE(OMNIJIT_PAGE_INDEX_GET_OUTPUT)
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
     const int32_t *sourceTypes, int32_t offset, int32_t length, VectorAllocator *vecAllocator) const
 {

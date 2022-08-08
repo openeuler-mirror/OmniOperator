@@ -19,7 +19,7 @@ public class NativeLog {
     /**
      * Native Log init.
      *
-     *  @since 20220320
+     * @since 20220320
      */
     private NativeLog() {
         initLog();
@@ -45,7 +45,6 @@ public class NativeLog {
 
     /**
      * Init global logger.
-     *
      */
     public static native void initLog();
 }

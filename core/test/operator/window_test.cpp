@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 #include "operator/window/window.h"
 #include "../util/test_util.h"
-#include "jit_context/jit_context.h"
 #include "vector/vector_helper.h"
 #include "../../libconfig.h"
 #include "perf_util.h"
@@ -102,17 +101,6 @@ VectorBatch **BuildWindowInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int3
         input[i] = vecBatch;
     }
     return input;
-}
-
-
-JitContext *CreateTestWindowJitContextWithFactory(omniruntime::op::WindowOperatorFactory *windowOperatorFactory)
-{
-    return CreateWindowJitContext(*(windowOperatorFactory->GetSourceTypes()), windowOperatorFactory->GetOutputCols(),
-        windowOperatorFactory->GetOutputColsCount(), windowOperatorFactory->GetPartitionCols(),
-        windowOperatorFactory->GetPartitionCount(), windowOperatorFactory->GetSortCols(),
-        windowOperatorFactory->GetSortAscendings(), windowOperatorFactory->GetSortNullFirsts(),
-        windowOperatorFactory->GetSortColCount(), windowOperatorFactory->GetAllTypes(),
-        windowOperatorFactory->GetAllCount());
 }
 
 TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
@@ -432,8 +420,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
         3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -570,8 +556,6 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
         3, windowFunctionTypes, 5, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 5, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1780,8 +1764,6 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
         9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 7, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
-    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
@@ -1849,10 +1831,6 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 2, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     operatorFactoryWithJit->Init();
-    std::cout << "after create factory" << std::endl;
-    JitContext *jitContext = CreateTestWindowJitContextWithFactory(operatorFactoryWithJit);
-    std::cout << "after JIT" << std::endl;
-    operatorFactoryWithJit->SetJitContext(jitContext);
     WindowOperator *windowOperatorWithJit = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactoryWithJit));
     VectorBatch **input1 = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 2, sourceTypes.Get());
 

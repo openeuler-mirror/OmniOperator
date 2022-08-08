@@ -9,11 +9,14 @@ import static nova.hetu.omniruntime.util.TestUtils.createDictionaryVec;
 import static nova.hetu.omniruntime.util.TestUtils.createLongVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
+import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
@@ -141,15 +144,13 @@ public class OmniUnionOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
-        OmniUnionOperatorFactory.JitContext factory1 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false,
-                new OperatorConfig());
-        OmniUnionOperatorFactory.JitContext factory2 = new OmniUnionOperatorFactory.JitContext(sourceTypes, false,
-                new OperatorConfig());
-        OmniUnionOperatorFactory.JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory1 = new FactoryContext(sourceTypes, false, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(sourceTypes, false, new OperatorConfig());
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 }

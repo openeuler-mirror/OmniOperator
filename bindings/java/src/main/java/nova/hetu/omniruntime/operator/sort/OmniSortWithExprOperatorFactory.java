@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.operator.sort;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -32,8 +31,8 @@ public class OmniSortWithExprOperatorFactory
      */
     public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
             int[] sortAscendings, int[] sortNullFirsts) {
-        super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts,
-                OperatorConfig.NONE)));
+        super(new FactoryContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts,
+                OperatorConfig.NONE));
     }
 
     /**
@@ -49,30 +48,25 @@ public class OmniSortWithExprOperatorFactory
      */
     public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
             int[] sortAscendings, int[] sortNullFirsts, OperatorConfig operatorConfig) {
-        super(new FactoryContext(
-                new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts, operatorConfig)));
+        super(new FactoryContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts, operatorConfig));
     }
 
     private static native long createSortWithExprOperatorFactory(String sourceTypes, int[] outputCols,
-            String[] sortKeys, int[] ascendings, int[] nullFirsts, long jitContext, String operatorConfig);
-
-    private static native long createSortWithExprJitContext(String sourceTypes, int[] outputCols, String[] sortKeys,
-            int[] ascendings, int[] nullFirsts);
+            String[] sortKeys, int[] ascendings, int[] nullFirsts, String operatorConfig);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createSortWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.outputColumns, context.sortKeys, context.sortAscendings, context.sortNullFirsts,
-                factoryContext.getNativeJitContext(), OperatorConfig.serialize(context.getOperatorConfig()));
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
-     * The type Context.
+     * The Factory context.
      *
      * @since 2021-10-16
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
 
         private final int[] outputColumns;
@@ -82,6 +76,8 @@ public class OmniSortWithExprOperatorFactory
         private final int[] sortAscendings;
 
         private final int[] sortNullFirsts;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -93,14 +89,14 @@ public class OmniSortWithExprOperatorFactory
          * @param sortNullFirsts the sort null firsts
          * @param operatorConfig the operator config
          */
-        public JitContext(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings,
+        public FactoryContext(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings,
                 int[] sortNullFirsts, OperatorConfig operatorConfig) {
-            super(operatorConfig);
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
             this.sortKeys = sortKeys;
             this.sortAscendings = sortAscendings;
             this.sortNullFirsts = sortNullFirsts;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -117,32 +113,10 @@ public class OmniSortWithExprOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext that = (JitContext) obj;
+            FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
                     && Arrays.equals(sortKeys, that.sortKeys) && Arrays.equals(sortAscendings, that.sortAscendings)
                     && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
-        }
-    }
-
-    /**
-     * The Factory context.
-     *
-     * @since 2021-10-16
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return createSortWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes),
-                    context.outputColumns, context.sortKeys, context.sortAscendings, context.sortNullFirsts);
         }
     }
 }

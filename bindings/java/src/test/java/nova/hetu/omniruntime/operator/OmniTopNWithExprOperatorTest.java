@@ -13,10 +13,12 @@ import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.topn.OmniTopNWithExprOperatorFactory;
+import nova.hetu.omniruntime.operator.topn.OmniTopNWithExprOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -154,19 +156,19 @@ public class OmniTopNWithExprOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 2)};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
         int expectedRowSize = 5;
-        OmniTopNWithExprOperatorFactory.JitContext factory1 = new OmniTopNWithExprOperatorFactory.JitContext(
-                sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst, new OperatorConfig());
-        OmniTopNWithExprOperatorFactory.JitContext factory2 = new OmniTopNWithExprOperatorFactory.JitContext(
-                sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst, new OperatorConfig());
-        OmniTopNWithExprOperatorFactory.JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory1 = new FactoryContext(sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst,
+                new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst,
+                new OperatorConfig());
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 }

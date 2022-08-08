@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
-#include "jit_context/jit_context.h"
 #include "vector/vector_helper.h"
 #include "vector/dictionary_vector.h"
 #include "../util/test_util.h"
@@ -127,7 +126,7 @@ void BuildTestData(VectorBatch **vecBatches, int32_t vecBatchCount, VectorAlloca
     }
 }
 
-HashBuilderOperatorFactory *CreateSimpleBuildFactory(int32_t operatorCount, bool isJitEnabled)
+HashBuilderOperatorFactory *CreateSimpleBuildFactory(int32_t operatorCount)
 {
     DataTypes buildTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int32_t buildJoinCols[1] = {0};
@@ -136,21 +135,10 @@ HashBuilderOperatorFactory *CreateSimpleBuildFactory(int32_t operatorCount, bool
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = nullptr;
-    if (isJitEnabled) {
-        hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount);
-    }
-    hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     return hashBuilderFactory;
 }
 
-HashBuilderOperatorFactory *CreateSimpleBuildFactory(int32_t operatorCount)
-{
-    return CreateSimpleBuildFactory(operatorCount, true);
-}
-
-LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFactory *hashBuilderFactory,
-    bool isJitEnabled)
+LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFactory *hashBuilderFactory)
 {
     DataTypes probeTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
     int32_t probeOutputCols[1] = {1};
@@ -165,18 +153,7 @@ LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFac
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
         JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
 
-    JitContext *lookupJoinJitContext = nullptr;
-    if (isJitEnabled) {
-        lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputColsCount, probeHashCols,
-            probeHashColsCount, buildOutputTypes, buildOutputCols);
-    }
-    lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     return lookupJoinFactory;
-}
-
-LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFactory *hashBuilderFactory)
-{
-    return CreateSimpleProbeFactory(hashBuilderFactory, true);
 }
 
 TEST(NativeOmniJoinTest, TestComparePerf)
@@ -186,7 +163,7 @@ TEST(NativeOmniJoinTest, TestComparePerf)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("test_compare_pref");
     BuildTestData(builderVecBatchesWithoutJit, buildVecBatchCount, vecAllocator, COLUMN_COUNT_4);
 
-    auto hashBuilderFactoryWithoutJit = CreateSimpleBuildFactory(1, false);
+    auto hashBuilderFactoryWithoutJit = CreateSimpleBuildFactory(1);
     auto hashBuilderOperatorWithoutJit =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactoryWithoutJit));
 
@@ -209,7 +186,7 @@ TEST(NativeOmniJoinTest, TestComparePerf)
     auto **probeVecBatchesWithoutJit = new VectorBatch *[probeVecBatchCount];
     BuildTestData(probeVecBatchesWithoutJit, probeVecBatchCount, vecAllocator, COLUMN_COUNT_4);
 
-    auto lookupJoinFactoryWithoutJit = CreateSimpleProbeFactory(hashBuilderFactoryWithoutJit, false);
+    auto lookupJoinFactoryWithoutJit = CreateSimpleProbeFactory(hashBuilderFactoryWithoutJit);
     auto lookupJoinOperatorWithoutJit =
         dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactoryWithoutJit));
 
@@ -228,7 +205,7 @@ TEST(NativeOmniJoinTest, TestComparePerf)
     auto **builderVecBatchesWithJit = new VectorBatch *[buildVecBatchCount];
     BuildTestData(builderVecBatchesWithJit, buildVecBatchCount, vecAllocator, COLUMN_COUNT_4);
 
-    auto hashBuilderFactoryWithJit = CreateSimpleBuildFactory(1, true);
+    auto hashBuilderFactoryWithJit = CreateSimpleBuildFactory(1);
     auto hashBuilderOperatorWithJit =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactoryWithJit));
 
@@ -249,7 +226,7 @@ TEST(NativeOmniJoinTest, TestComparePerf)
     auto **probeVecBatchesWithJit = new VectorBatch *[probeVecBatchCount];
     BuildTestData(probeVecBatchesWithJit, probeVecBatchCount, vecAllocator, COLUMN_COUNT_4);
 
-    auto lookupJoinFactoryWithJit = CreateSimpleProbeFactory(hashBuilderFactoryWithJit, true);
+    auto lookupJoinFactoryWithJit = CreateSimpleProbeFactory(hashBuilderFactoryWithJit);
     auto lookupJoinOperatorWithJit = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactoryWithJit));
 
     timer.Reset();
@@ -305,7 +282,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithOneBuildOp)
     hashBuilderOperator->GetOutput(hashBuildOutput);
 
     VectorBatch *probeVecBatch = ConstructSimpleProbeData();
-    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory, false);
+    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory);
     LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -339,7 +316,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithTwoBuildOp)
     hashBuilderOperator1->GetOutput(hashBuildOutput);
 
     VectorBatch *probeVecBatch = ConstructSimpleProbeData();
-    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory, false);
+    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory);
     LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
@@ -406,12 +383,6 @@ HashBuilderOperatorFactory *PrepareHashBuilder(int32_t operatorCount, bool isOri
     HashBuilderOperatorFactory *hashBuilderOperatorFactory =
         HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildHashCols, buildHashColsCount,
         filterExpression, operatorCount);
-    if (isOriginal) {
-        hashBuilderOperatorFactory->SetJitContext(nullptr);
-    } else {
-        auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildHashCols, buildHashColsCount);
-        hashBuilderOperatorFactory->SetJitContext(hashBuilderJitContext);
-    }
     return hashBuilderOperatorFactory;
 }
 
@@ -429,13 +400,6 @@ LookupJoinOperatorFactory *PrepareLookupJoin(const HashBuilderOperatorFactory *h
     auto lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
         JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    if (isOriginal) {
-        lookupJoinOperatorFactory->SetJitContext(nullptr);
-    } else {
-        auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputColsCount, probeHashCols,
-            probeHashColsCount, buildOutputTypes, buildOutputCols);
-        lookupJoinOperatorFactory->SetJitContext(lookupJoinJitContext);
-    }
     return lookupJoinOperatorFactory;
 }
 

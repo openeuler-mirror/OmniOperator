@@ -417,8 +417,8 @@ public class VecBatchSerializerTest {
         freeVecBatch(checkVecBatch);
     }
 
-    @Test(expectedExceptions = IllegalStateException.class,
-        expectedExceptionsMessageRegExp = "Unexpected data type: OMNI_INVALID")
+    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Unexpected data type: "
+            + "OMNI_INVALID")
     public void testSerializeInvalidType() {
         int row = 5;
         IntVec invalidType = new IntVec(row);

@@ -7,12 +7,14 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
+import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -195,7 +197,7 @@ public class OmniProjectOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] types = {};
         String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", "
                 + "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": "
@@ -203,13 +205,11 @@ public class OmniProjectOperatorTest {
                 + "[{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": true}]}, \"if_true\": "
                 + "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, "
                 + "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
-        OmniProjectOperatorFactory.JitContext factory1 = new OmniProjectOperatorFactory.JitContext(projectionsJSON,
-                types, 1, new OperatorConfig());
-        OmniProjectOperatorFactory.JitContext factory2 = new OmniProjectOperatorFactory.JitContext(projectionsJSON,
-                types, 1, new OperatorConfig());
-        OmniProjectOperatorFactory.JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory1 = new FactoryContext(projectionsJSON, types, 1, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(projectionsJSON, types, 1, new OperatorConfig());
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 }

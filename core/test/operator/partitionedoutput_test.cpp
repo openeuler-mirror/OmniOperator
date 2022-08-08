@@ -36,7 +36,6 @@ TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, true, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         static_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -79,7 +78,6 @@ TEST(PartitionedOutputOperatorTest, TestMultiPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 2, true, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -127,7 +125,6 @@ TEST(PartitionedOutputOperatorTest, TestHashIntPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 2, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -171,7 +168,6 @@ TEST(PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -215,7 +211,6 @@ TEST(PartitionedOutputOperatorTest, TestHashCharPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -263,8 +258,7 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
-    auto *partitionedOperator =
+    PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
@@ -309,7 +303,6 @@ TEST(PartitionedOutputOperatorTest, TestDecimalPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -353,7 +346,6 @@ TEST(PartitionedOutputOperatorTest, TestDoublePartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -397,7 +389,6 @@ TEST(PartitionedOutputOperatorTest, TestBoolPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -441,7 +432,6 @@ TEST(PartitionedOutputOperatorTest, TestDecimal128PartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -493,7 +483,6 @@ TEST(PartitionedOutputOperatorTest, TestDictionaryPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
@@ -540,7 +529,6 @@ TEST(PartitionedOutputOperatorTest, TestContainerPartitionedOutput)
         PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
         nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
         hashChannelTypesCount, hashChannels, hashChannelsCount);
-    partitionedOutputOperatorFactory->SetJitContext(nullptr);
     PartitionedOutputOperator *partitionedOperator =
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vectorBatch);

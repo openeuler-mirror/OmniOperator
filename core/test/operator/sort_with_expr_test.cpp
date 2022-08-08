@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "operator/sort/sort_expr.h"
 #include "vector/vector_helper.h"
-#include "jit_context/jit_context.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
@@ -158,8 +157,6 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -203,9 +200,6 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols,
         vecCount, sortExprs, ascendings, nullFirsts, vecCount);
-    auto jitContext =
-        CreateSortWithExprJitContext(sourceTypes, outputCols, vecCount, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -274,8 +268,6 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     int32_t nullFirsts[2] = {true, true};
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
