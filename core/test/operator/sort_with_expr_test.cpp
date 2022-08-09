@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "operator/sort/sort_expr.h"
 #include "vector/vector_helper.h"
-#include "jit_context/jit_context.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
@@ -22,7 +21,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -57,7 +56,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -94,7 +93,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -137,12 +136,12 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
     void *datas[3] = {data0, data1, data2};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = new VectorBatch(3, dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        DataType dataType = sourceTypes.Get()[i];
-        vecBatch->SetVector(i, CreateDictionaryVector(dataType, dataSize, ids, dataSize, datas[i]));
+        DataTypePtr dataType = sourceTypes.GetType(i);
+        vecBatch->SetVector(i, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     int32_t outputCols[2] = {1, 2};
@@ -158,8 +157,6 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -167,7 +164,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -180,15 +177,15 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
 TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 {
-    VarcharDataType type(10);
+    DataTypePtr type = VarcharType(10);
     const int32_t dataSize = 4;
     const int32_t vecCount = 1;
     std::string values[dataSize] = {"hello", "world", "omni", "runtime"};
-    VarcharVector *vector = CreateVarcharVector(type, values, dataSize);
+    VarcharVector *vector = CreateVarcharVector(*type, values, dataSize);
     VectorBatch *vecBatch = new VectorBatch(vecCount, dataSize);
     vecBatch->SetVector(0, vector);
 
-    DataTypes sourceTypes(std::vector<DataType>({ type }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ type }));
     int32_t outputCols[vecCount] = {0};
 
     auto substrCol = new FieldExpr(0, VarcharType(200));
@@ -203,9 +200,6 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols,
         vecCount, sortExprs, ascendings, nullFirsts, vecCount);
-    auto jitContext =
-        CreateSortWithExprJitContext(sourceTypes, outputCols, vecCount, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -213,7 +207,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     VectorHelper::PrintVecBatch(outputVecBatches[0]);
 
     std::string expectValues[dataSize] = {"hello", "omni", "runtime", "world"};
-    auto expectVector = CreateVarcharVector(type, expectValues, dataSize);
+    auto expectVector = CreateVarcharVector(*type, expectValues, dataSize);
     auto expectVecBatch = new VectorBatch(vecCount, dataSize);
     expectVecBatch->SetVector(0, expectVector);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -260,7 +254,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     vecBatch->SetVector(1, slicedVec1);
     vecBatch->SetVector(2, slicedVec2);
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     int32_t outputCols[2] = {1, 2};
     auto add1Col = new FieldExpr(0, IntType());
     auto add1Literal = new LiteralExpr(50, IntType());
@@ -274,8 +268,6 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     int32_t nullFirsts[2] = {true, true};
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
         sortExprs, ascendings, nullFirsts, 2);
-    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
-    operatorFactory->SetJitContext(jitContext);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -283,7 +275,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
     int64_t expectData1[5] = {0, 0, 5, 1, 3};
     int64_t expectData2[5] = {0, 0, 11, 55, 33};
-    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
     expectVecBatch->GetVector(0)->SetValueNull(1);
@@ -300,7 +292,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 
 TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 {
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType() }));
 
     const int32_t dataSize1 = 5;
     int32_t data1[dataSize1] = {4, 3, 2, 1, 0};
@@ -346,7 +338,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
 
 TEST(SortWithExprTest, TestSortSpillWithOneRecord)
 {
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType() }));
 
     const int32_t dataSize = 1;
     int32_t data1[dataSize] = {3};

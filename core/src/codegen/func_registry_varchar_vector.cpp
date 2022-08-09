@@ -11,6 +11,6 @@ std::vector<Function> VarcharVectorFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
     std::vector<Function> varcharVectorFnRegistry = { Function(reinterpret_cast<void *>(WrapVarcharVector),
-        "WrapVarcharVector", {}, paramTypes, OMNI_INT, false) };
+        "WrapVarcharVector", {}, paramTypes, OMNI_INT) };
     return varcharVectorFnRegistry;
 }

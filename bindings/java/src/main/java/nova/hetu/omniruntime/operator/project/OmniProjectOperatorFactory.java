@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator.project;
 
 import static java.util.Objects.requireNonNull;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -32,7 +31,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      * @param operatorConfig the operator config
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(expressions, inputTypes, operatorConfig)));
+        super(new FactoryContext(expressions, inputTypes, operatorConfig));
     }
 
     /**
@@ -43,7 +42,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      * @param inputTypes the input types
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes) {
-        this(expressions, inputTypes, new OperatorConfig(true));
+        this(expressions, inputTypes, new OperatorConfig());
     }
 
     /**
@@ -57,7 +56,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat,
             OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat, operatorConfig)));
+        super(new FactoryContext(expressions, inputTypes, parseFormat, operatorConfig));
     }
 
     /**
@@ -69,22 +68,17 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      * @param parseFormat the parse format
      */
     public OmniProjectOperatorFactory(String[] expressions, DataType[] inputTypes, int parseFormat) {
-        this(expressions, inputTypes, parseFormat, new OperatorConfig(true));
+        this(expressions, inputTypes, parseFormat, new OperatorConfig());
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
-            int expressionsLength, long jitContext, int parseFormat, boolean isSkipVerify);
-
-    private static native long createProjectJitContext(String inputTypes, int inputLength, Object[] expressions,
-            int expressionsLength);
+            int expressionsLength, int parseFormat, boolean isSkipVerify);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         long factoryAddr = createProjectOperatorFactory(DataTypeSerializer.serialize(context.inputTypes),
-                context.inputTypes.length, context.expressions, context.expressions.length,
-                factoryContext.getNativeJitContext(), context.parseFormat,
-                context.getOperatorConfig().isSkipExpressionVerify());
+                context.inputTypes.length, context.expressions, context.expressions.length, context.parseFormat,
+                context.operatorConfig.isSkipExpressionVerify());
         if (factoryAddr != 0) {
             isSupported = true;
         }
@@ -96,16 +90,18 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-06-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] inputTypes;
 
         private final String[] expressions;
 
         private final int parseFormat;
+
+        private final OperatorConfig operatorConfig;
 
         /**
          * Instantiates a new Context.
@@ -114,7 +110,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * @param inputTypes the input types
          * @param operatorConfig the operator config
          */
-        public JitContext(String[] expressions, DataType[] inputTypes, OperatorConfig operatorConfig) {
+        public FactoryContext(String[] expressions, DataType[] inputTypes, OperatorConfig operatorConfig) {
             this(expressions, inputTypes, 0, operatorConfig);
         }
 
@@ -126,11 +122,12 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * @param parseFormat the parse format
          * @param operatorConfig the operator config
          */
-        public JitContext(String[] expressions, DataType[] inputTypes, int parseFormat, OperatorConfig operatorConfig) {
-            super(operatorConfig);
+        public FactoryContext(String[] expressions, DataType[] inputTypes, int parseFormat,
+                OperatorConfig operatorConfig) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expressions = requireNonNull(expressions, "Expressions is null.");
             this.parseFormat = parseFormat;
+            this.operatorConfig = operatorConfig;
         }
 
         @Override
@@ -146,30 +143,9 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext that = (JitContext) obj;
+            FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(expressions, that.expressions) && Arrays.equals(inputTypes, that.inputTypes)
                     && parseFormat == that.parseFormat && operatorConfig.equals(that.operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-06-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         */
-        public FactoryContext(JitContext jitContext) {
-            super(jitContext);
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return 0;
         }
     }
 }

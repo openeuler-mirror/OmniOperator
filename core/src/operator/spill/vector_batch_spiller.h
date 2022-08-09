@@ -26,9 +26,9 @@ public:
           totalRowCount(0),
           remainingRowCount(0)
     {
-        for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
+        for (int32_t i = 0; i < this->sourceTypes.GetSize(); i++) {
             outputCols.push_back(i);
-            outputTypes.push_back(sourceTypes.Get()[i]);
+            outputTypes.push_back(this->sourceTypes.GetType(i));
         }
         int32_t rowSize = OperatorUtil::GetRowSize(outputTypes);
         maxRowCountPerVecBatch = OperatorUtil::GetMaxRowCount(rowSize);
@@ -47,7 +47,7 @@ public:
           outputCols(outputCols)
     {
         for (auto &outputCol : outputCols) {
-            outputTypes.push_back(sourceTypes.Get()[outputCol]);
+            outputTypes.push_back(this->sourceTypes.GetType(outputCol));
         }
         int32_t rowSize = OperatorUtil::GetRowSize(outputTypes);
         maxRowCountPerVecBatch = OperatorUtil::GetMaxRowCount(rowSize);
@@ -93,7 +93,7 @@ private:
     int64_t totalRowCount;
     int64_t remainingRowCount;
     std::vector<int32_t> outputCols;
-    std::vector<omniruntime::type::DataType> outputTypes;
+    std::vector<omniruntime::type::DataTypePtr> outputTypes;
     int32_t maxRowCountPerVecBatch;
     std::vector<VectorBatchWriter *> writers;
     std::vector<VectorBatchReader *> readers;

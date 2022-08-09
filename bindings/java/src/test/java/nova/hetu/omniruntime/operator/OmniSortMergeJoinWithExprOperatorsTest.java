@@ -13,9 +13,9 @@ import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
-import static nova.hetu.omniruntime.util.TestUtils.omniJsonNotEqualExpr;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -48,7 +48,8 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         String[] streamedKeyExps = {
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
         int[] streamedOutputCols = {1};
-        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory = new OmniSmjStreamedTableWithExprOperatorFactory(
+        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory =
+                new OmniSmjStreamedTableWithExprOperatorFactory(
                 streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty());
 
         DataType[] bufferedTypes = {LongDataType.LONG, IntDataType.INTEGER};
@@ -56,7 +57,8 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         int[] bufferedOutputCols = {0};
         String[] bufferedKeyExps = {
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 1), getOmniJsonLiteral(1, false, 5))};
-        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory = new OmniSmjBufferedTableWithExprOperatorFactory(
+        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory =
+                new OmniSmjBufferedTableWithExprOperatorFactory(
                 bufferedTypes, bufferedKeyExps, bufferedOutputCols, streamedBuilderWithExprOperatorFactory);
         OmniOperator bufferedTableOperator = bufferedWithExprOperatorFactory.createOperator();
 
@@ -96,7 +98,8 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         streamedBuilderWithExprOperatorFactory.close();
     }
 
-    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp =
+            ".*EXPRESSION_NOT_SUPPORT.*")
     public void testInvalidStreamedKeys() {
         DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
         String[] streamedKeyExps = {omniFunctionExpr("abc", 1, getOmniJsonFieldReference(1, 0))};
@@ -105,52 +108,65 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
                 streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty());
     }
 
-    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp =
+            ".*EXPRESSION_NOT_SUPPORT.*")
     public void testInvalidBufferedKeys() {
         DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
         String[] streamedKeyExps = {
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
         int[] streamedOutputCols = {1};
-        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory = new OmniSmjStreamedTableWithExprOperatorFactory(
+        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory =
+                new OmniSmjStreamedTableWithExprOperatorFactory(
                 streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty());
 
         DataType[] bufferedTypes = {LongDataType.LONG, IntDataType.INTEGER};
         int[] bufferedOutputCols = {0};
         String[] bufferedKeyExps = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1))};
-        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory = new OmniSmjBufferedTableWithExprOperatorFactory(
+        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory =
+                new OmniSmjBufferedTableWithExprOperatorFactory(
                 bufferedTypes, bufferedKeyExps, bufferedOutputCols, streamedBuilderWithExprOperatorFactory);
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
 
         String[] streamedKeyExps = {
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
         int[] streamedOutputCols = {1};
-        OmniSmjStreamedTableWithExprOperatorFactory.JitContext streamedBuilderWithExprOperatorFactory1 = new OmniSmjStreamedTableWithExprOperatorFactory.JitContext(
+        OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext streamedBuilderWithExprOperatorFactory1 =
+                new OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext(
                 streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty(),
                 new OperatorConfig());
-        OmniSmjStreamedTableWithExprOperatorFactory.JitContext streamedBuilderWithExprOperatorFactory2 = new OmniSmjStreamedTableWithExprOperatorFactory.JitContext(
+        OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext streamedBuilderWithExprOperatorFactory2 =
+                new OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext(
                 streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty(),
                 new OperatorConfig());
-        OmniSmjStreamedTableWithExprOperatorFactory.JitContext streamedBuilderWithExprOperatorFactory3 = null;
-        assertTrue(streamedBuilderWithExprOperatorFactory1.equals(streamedBuilderWithExprOperatorFactory2));
-        assertTrue(streamedBuilderWithExprOperatorFactory1.equals(streamedBuilderWithExprOperatorFactory1));
-        assertFalse(streamedBuilderWithExprOperatorFactory1.equals(streamedBuilderWithExprOperatorFactory3));
+        OmniSmjStreamedTableWithExprOperatorFactory.FactoryContext streamedBuilderWithExprOperatorFactory3 = null;
+        assertEquals(streamedBuilderWithExprOperatorFactory2, streamedBuilderWithExprOperatorFactory1);
+        assertEquals(streamedBuilderWithExprOperatorFactory1, streamedBuilderWithExprOperatorFactory1);
+        assertNotEquals(streamedBuilderWithExprOperatorFactory3, streamedBuilderWithExprOperatorFactory1);
 
         DataType[] bufferedTypes = {LongDataType.LONG, IntDataType.INTEGER};
+
+        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory =
+                new OmniSmjStreamedTableWithExprOperatorFactory(
+                streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_INNER, Optional.empty());
 
         int[] bufferedOutputCols = {0};
         String[] bufferedKeyExps = {
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
-        OmniSmjBufferedTableWithExprOperatorFactory.JitContext bufferedWithExprOperatorFactory1 = new OmniSmjBufferedTableWithExprOperatorFactory.JitContext(
-                bufferedTypes, bufferedKeyExps, bufferedOutputCols, new OperatorConfig());
-        OmniSmjBufferedTableWithExprOperatorFactory.JitContext bufferedWithExprOperatorFactory2 = new OmniSmjBufferedTableWithExprOperatorFactory.JitContext(
-                bufferedTypes, bufferedKeyExps, bufferedOutputCols, new OperatorConfig());
-        OmniSmjBufferedTableWithExprOperatorFactory.JitContext bufferedWithExprOperatorFactory3 = null;
-        assertTrue(bufferedWithExprOperatorFactory1.equals(bufferedWithExprOperatorFactory2));
-        assertTrue(bufferedWithExprOperatorFactory1.equals(bufferedWithExprOperatorFactory1));
-        assertFalse(bufferedWithExprOperatorFactory1.equals(bufferedWithExprOperatorFactory3));
+        OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext bufferedWithExprOperatorFactory1 =
+                new OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext(
+                bufferedTypes, bufferedKeyExps, bufferedOutputCols, new OperatorConfig(),
+                streamedBuilderWithExprOperatorFactory);
+        OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext bufferedWithExprOperatorFactory2 =
+                new OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext(
+                bufferedTypes, bufferedKeyExps, bufferedOutputCols, new OperatorConfig(),
+                streamedBuilderWithExprOperatorFactory);
+        OmniSmjBufferedTableWithExprOperatorFactory.FactoryContext bufferedWithExprOperatorFactory3 = null;
+        assertEquals(bufferedWithExprOperatorFactory2, bufferedWithExprOperatorFactory1);
+        assertEquals(bufferedWithExprOperatorFactory1, bufferedWithExprOperatorFactory1);
+        assertNotEquals(bufferedWithExprOperatorFactory3, bufferedWithExprOperatorFactory1);
     }
 }

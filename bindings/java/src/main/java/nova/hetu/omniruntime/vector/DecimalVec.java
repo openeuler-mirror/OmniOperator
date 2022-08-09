@@ -124,7 +124,7 @@ public abstract class DecimalVec extends FixedWidthVec {
     /**
      * get long values from the specified position with element number
      *
-     * @param index  the position of element
+     * @param index the position of element
      * @param length the number of element
      * @return long value array
      */

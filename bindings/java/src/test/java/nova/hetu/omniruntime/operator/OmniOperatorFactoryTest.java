@@ -87,7 +87,7 @@ public class OmniOperatorFactoryTest {
          * @param context the context
          */
         public MockOperatorFactory(long context) {
-            super(new FactoryContext(new JitContext(context, new OperatorConfig())));
+            super(new FactoryContext(context, new OperatorConfig()));
         }
 
         @Override
@@ -96,22 +96,24 @@ public class OmniOperatorFactoryTest {
         }
 
         /**
-         * The type Mock context.
+         * Factory Context
          *
          * @since 2021-7-13
          */
-        public static class JitContext extends OmniJitContext {
+        public static class FactoryContext extends OmniOperatorFactoryContext {
+            private final OperatorConfig operatorConfig;
+
             private final long context;
 
             /**
-             * Instantiates a new Mock context.
+             * Instantiates a new Context.
              *
-             * @param context the context
-             * @param operatorConfig the operator config
+             * @param operatorConfig operatorConfig
+             * @param context context
              */
-            public JitContext(long context, OperatorConfig operatorConfig) {
-                super(operatorConfig);
+            public FactoryContext(long context, OperatorConfig operatorConfig) {
                 this.context = context;
+                this.operatorConfig = operatorConfig;
             }
 
             /**
@@ -132,28 +134,7 @@ public class OmniOperatorFactoryTest {
              */
             @Override
             public boolean equals(Object that) {
-                return context == ((JitContext) that).context;
-            }
-        }
-
-        /**
-         * Factory Context
-         *
-         * @since 2021-7-13
-         */
-        public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-            /**
-             * Instantiates a new Context.
-             *
-             * @param jitContext jitContext input
-             */
-            public FactoryContext(JitContext jitContext) {
-                super(jitContext);
-            }
-
-            @Override
-            protected long createNativeJitContext(JitContext context) {
-                return context.context;
+                return context == ((FactoryContext) that).context;
             }
         }
     }

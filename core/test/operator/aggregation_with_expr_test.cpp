@@ -6,7 +6,6 @@
 #include "operator/aggregation/aggregation.h"
 #include "operator/aggregation/group_aggregation_expr.h"
 #include "vector/vector_helper.h"
-#include "jit_context/jit_context.h"
 #include "../util/test_util.h"
 #include "../../libconfig.h"
 
@@ -14,11 +13,10 @@ namespace omniruntime {
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace TestUtil;
+using namespace omniruntime::expressions;
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {
-    using namespace omniruntime::expressions;
-
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
     const int32_t aggNum = 2;
@@ -30,8 +28,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
-    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     // groupByKeys
@@ -51,10 +49,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
-    JitContext *jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto *hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
-    hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -66,7 +62,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {180};
     int32_t expData4[] = {36};
-    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
@@ -96,8 +92,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
-    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     FieldExpr *modLeft = new FieldExpr(0, LongType());
@@ -121,10 +117,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
-    auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
-    hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -136,7 +130,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t expData2[] = {10};
     int64_t expData3[] = {180};
     int32_t expData4[] = {76};
-    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
@@ -157,7 +151,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
-    const int32_t aggNum = 2;
+    const int32_t aggNum = 3;
     const int32_t expectDataSize = 1;
 
     // prepare data
@@ -166,20 +160,19 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    DataTypes sourceTypes(std::vector<DataType>({ LongDataType(), LongDataType(), IntDataType(), IntDataType() }));
-    DataTypes aggOutputTypes(std::vector<DataType>({ LongDataType(), IntDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     std::vector<Expr *> groupByKeys = { new FieldExpr(0, LongType()), new FieldExpr(2, IntType()) };
     std::vector<Expr *> aggKeys = { new FieldExpr(1, LongType()), new FieldExpr(3, IntType()) };
 
-    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
+    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                                   OMNI_AGGREGATION_TYPE_COUNT_ALL};
+    uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
-    auto jitContext = CreateHashAggregationWithExprJitContext(groupByKeys, 2);
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
         aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
-    hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -191,9 +184,10 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {36};
     int32_t expData4[] = {36};
-    DataTypes expectTypes(std::vector<DataType>({ LongDataType(), IntDataType(), LongDataType(), IntDataType() }));
+    int64_t expData5[]={8};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), LongType() }));
     VectorBatch *expectVecorBatch =
-        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));

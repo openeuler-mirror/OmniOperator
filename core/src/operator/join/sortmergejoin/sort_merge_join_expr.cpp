@@ -23,13 +23,13 @@ StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const
     int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter)
     : joinType(joinType), filter(filter), smjOperator(new SortMergeJoinOperator(joinType, filter))
 {
-    std::vector<DataType> newBuildTypes;
+    std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(streamedTypes, streamedKeyExprCols, streamedKeyExprColsCnt, newBuildTypes,
         rowProjections, streamedKeyCols, projectFuncs);
-    this->streamedTypes = std::make_unique<type::DataTypes>(newBuildTypes);
+    this->streamedTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->streamedOutputCols.insert(this->streamedOutputCols.end(), streamedOutputCols,
         streamedOutputCols + streamedOutputColsCnt);
-    smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes.get()), streamedKeyCols, this->streamedOutputCols);
+    smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes), streamedKeyCols, this->streamedOutputCols);
 }
 
 StreamedTableWithExprOperatorFactory::~StreamedTableWithExprOperatorFactory()
@@ -39,7 +39,7 @@ StreamedTableWithExprOperatorFactory::~StreamedTableWithExprOperatorFactory()
 
 Operator *StreamedTableWithExprOperatorFactory::CreateOperator()
 {
-    return new StreamedTableWithExprOperator(*(streamedTypes.get()), streamedKeyCols, projectFuncs, smjOperator);
+    return new StreamedTableWithExprOperator(*streamedTypes, streamedKeyCols, projectFuncs, smjOperator);
 }
 
 SortMergeJoinOperator *StreamedTableWithExprOperatorFactory::GetSmjOperator()
@@ -101,15 +101,15 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
     : streamTblWithExprOperatorFactory(
     reinterpret_cast<StreamedTableWithExprOperatorFactory *>(streamedTableFactoryAddr))
 {
-    std::vector<DataType> newBuildTypes;
+    std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(bufferedTypes, bufferedKeyExprCols, bufferedKeyExprCnt, newBuildTypes,
         rowProjections, bufferedKeyCols, projectFuncs);
-    this->bufferedTypes = std::make_unique<type::DataTypes>(newBuildTypes);
+    this->bufferedTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->bufferedOutputCols.insert(this->bufferedOutputCols.end(), bufferedOutputCols,
         bufferedOutputCols + bufferedOutputColsCnt);
 
-    streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes.get()),
-        bufferedKeyCols, this->bufferedOutputCols);
+    streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes), bufferedKeyCols,
+        this->bufferedOutputCols);
     streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder();
 }
 
@@ -118,7 +118,7 @@ BufferedTableWithExprOperatorFactory::~BufferedTableWithExprOperatorFactory() {}
 Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 {
     auto smjOperator = streamTblWithExprOperatorFactory->GetSmjOperator();
-    return new BufferedTableWithExprOperator(*(bufferedTypes.get()), bufferedKeyCols, projectFuncs, smjOperator);
+    return new BufferedTableWithExprOperator(*bufferedTypes, bufferedKeyCols, projectFuncs, smjOperator);
 }
 
 BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes,

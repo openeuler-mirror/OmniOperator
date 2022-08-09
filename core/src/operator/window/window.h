@@ -38,19 +38,14 @@ public:
 
     Operator *CreateOperator() override;
 
-    DataTypes *GetSourceTypes()
+    const DataTypes &GetSourceTypes() const
     {
-        return sourceTypes.get();
-    }
-
-    int32_t *GetSourceTypeIds() const
-    {
-        return const_cast<int32_t *>(sourceTypes->GetIds());
+        return sourceTypes;
     }
 
     int32_t GetTypesCount() const
     {
-        return sourceTypes->GetSize();
+        return sourceTypes.GetSize();
     }
 
     int32_t *GetOutputCols() const
@@ -123,14 +118,14 @@ public:
         return expectedPositions;
     }
 
-    int32_t *GetAllTypes() const
+    const DataTypes &GetAllTypes() const
     {
-        return const_cast<int32_t *>(allTypes->GetIds());
+        return allTypes;
     }
 
     int32_t GetAllCount() const
     {
-        return allTypes->GetSize();
+        return allTypes.GetSize();
     }
 
     int32_t *GetArgumentChannels() const
@@ -171,7 +166,7 @@ public:
     OmniStatus Init();
 
 private:
-    std::unique_ptr<type::DataTypes> sourceTypes;
+    DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;
     std::vector<int32_t> windowFunctionTypes;
@@ -186,7 +181,7 @@ private:
     int32_t sortColCount;
     int32_t preSortedChannelPrefix;
     int32_t expectedPositions;
-    std::unique_ptr<type::DataTypes> allTypes;
+    DataTypes allTypes;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
     std::vector<int32_t> windowFrameTypes;
@@ -219,7 +214,7 @@ public:
     OmniStatus Init() override;
 
 private:
-    const type::DataTypes &sourceTypes;
+    type::DataTypes sourceTypes;
     int32_t typesCount;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;
@@ -237,7 +232,7 @@ private:
     int32_t sortColCount;
     int32_t preSortedChannelPrefix;
     int32_t expectedPositions;
-    const type::DataTypes &allTypes;
+    type::DataTypes allTypes;
     std::unique_ptr<PagesIndex> pagesIndex;
     omniruntime::vec::VectorBatch *pendingInput;
     std::unique_ptr<PagesHashStrategy> preGroupedPartitionHashStrategy = nullptr;
@@ -257,10 +252,10 @@ private:
     void Initialization();
 
     void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-        std::vector<type::DataType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
+        std::vector<type::DataTypePtr> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
         int32_t &rowCount);
 
-    void InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField,
+    void InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
         const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
 };
 

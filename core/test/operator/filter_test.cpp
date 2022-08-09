@@ -21,7 +21,7 @@ VectorBatch *CreateInput(VectorAllocator *vectorAllocator, const int32_t numRows
     const int32_t *inputTypeIds, int64_t *allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
-    vector<DataType> inputTypes;
+    vector<omniruntime::type::DataTypePtr> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     vecBatch->NewVectors(vectorAllocator, inputTypes);
     for (int i = 0; i < numCols; ++i) {
@@ -167,7 +167,7 @@ TEST(FilterTest, LessThan)
         col1[i] = i;
     }
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LessThan");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -206,7 +206,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
         col1[i] = i;
     }
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LessThanWihtoutParsing");
@@ -252,7 +252,7 @@ TEST(FilterTest, GreaterThan)
         col2[i] = 3e9;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_GreaterThan");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -301,7 +301,7 @@ TEST(FilterTest, EqualTo)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col3),
         reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_EqualTo");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -355,7 +355,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_GreaterThanOrEqualTo");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -400,7 +400,7 @@ TEST(FilterTest, NotEqualTo)
     }
 
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ DoubleDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_NotEqualTo");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -444,7 +444,7 @@ TEST(FilterTest, AllPass)
         col1[i] = 9348;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_AllPass");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -485,7 +485,7 @@ TEST(FilterTest, MultipleInputs)
         data2[i] = i % 6 + 1;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_MultipleInputs");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -543,7 +543,7 @@ TEST(FilterTest, NegativeValues)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_NegativeValues");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -601,7 +601,7 @@ TEST(FilterTest, AllTypes)
 
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
         reinterpret_cast<int64_t>(data3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_AllTypes");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -665,8 +665,7 @@ TEST(FilterTest, Compile)
 
     int64_t datas[4] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
         reinterpret_cast<int64_t>(data3), reinterpret_cast<int64_t>(data4)};
-    DataTypes inputTypes(
-        std::vector<DataType>({ DoubleDataType(), IntDataType(), DoubleDataType(), DoubleDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), IntType(), DoubleType(), DoubleType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Compile");
     VectorBatch *t = CreateInput(vectorAllocator, dataSize, numCols, inputTypes.GetIds(), datas);
     // TPCH 6
@@ -738,8 +737,8 @@ TEST(FilterTest, LogicalOperators1)
         reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4), reinterpret_cast<int64_t>(col5),
         reinterpret_cast<int64_t>(col6)};
     // int int int long double long
-    DataTypes inputTypes(std::vector<DataType>(
-        { IntDataType(), IntDataType(), IntDataType(), LongDataType(), DoubleDataType(), LongDataType() }));
+    DataTypes inputTypes(
+        std::vector<DataTypePtr>({ IntType(), IntType(), IntType(), LongType(), DoubleType(), LongType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LogicalOperators1");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -815,7 +814,7 @@ TEST(FilterTest, LogicalOperators2)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), LongType(), LongType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LogicalOperators2");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -886,7 +885,7 @@ TEST(FilterTest, LogicalOperators3)
     col1[7] = 13;
     col2[2] = 0;
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), DoubleDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), DoubleType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LogicalOperators3");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -963,7 +962,7 @@ TEST(FilterTest, ArithmeticAdd)
         col1[i] = i % 5;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ArithmeticAdd");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1008,7 +1007,7 @@ TEST(FilterTest, ArithmeticSubtract)
         col2[i] = i;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ArithmeticSubtract");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1054,7 +1053,7 @@ TEST(FilterTest, ArithmeticMultiply)
         col2[i] = i % 10 + 1;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ArithmeticMultiply");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1113,7 +1112,7 @@ TEST(FilterTest, Conditional)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Conditional");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     const int32_t projectCount = 3;
@@ -1166,7 +1165,7 @@ TEST(FilterTest, Conditional2)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Conditional2");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1223,7 +1222,7 @@ TEST(FilterTest, In)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_In");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
     // filter
@@ -1275,7 +1274,7 @@ TEST(FilterTest, Between)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Between");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1319,7 +1318,7 @@ TEST(FilterTest, NotEqualToAbs)
         col1[i] = i - 32435;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_NotEqualToAbs");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1369,7 +1368,7 @@ TEST(FilterTest, MathFunctionFilter1)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_MathFunctionFilter1");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1444,7 +1443,7 @@ TEST(FilterTest, MathFunctionFilter2)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_MathFunctionFilter2");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1504,7 +1503,7 @@ TEST(FilterTest, FilterString1)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_FilterString1");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1561,7 +1560,7 @@ TEST(FilterTest, Coalesce1)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
         reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce1");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -1602,26 +1601,24 @@ TEST(FilterTest, Coalesce2)
 {
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
-    vector<string *> strings;
-    int64_t *col1 = new int64_t[numRows];
+    vector<string> strings;
     for (int32_t i = 0; i < numRows; i++) {
-        std::string *s = new std::string("hello");
-        col1[i] = (int64_t)(s->c_str());
-        strings.push_back(s);
+        strings.emplace_back("hello");
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
-    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce2");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
-
+    vector<bool> nulls;
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
-            t->GetVector(0)->SetValueNull(i);
+            nulls.emplace_back(true);
         } else {
-            // Seemingly necessary so that the bitmap doesn't get default values
-            t->GetVector(0)->SetValueNotNull(i);
-        };
+            nulls.emplace_back(false);
+        }
     }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce2");
+    std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
+    auto *t = CreateVectorBatch(numRows, cols);
+
     CoalesceExpr *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, VarcharType()), new LiteralExpr(new std::string("bye"), VarcharType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr,
@@ -1639,11 +1636,8 @@ TEST(FilterTest, Coalesce2)
 
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
-    for (auto &s : strings) {
-        delete s;
-    }
+
     VectorHelper::FreeVecBatches(ret);
-    delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1661,7 +1655,7 @@ TEST(FilterTest, ExternalMathFunc)
         col2[i] = i + 2;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ExternalMathFunc");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1723,7 +1717,7 @@ TEST(FilterTest, ExternalStringFunc)
         }
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(30) }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ExternalStringFunc");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1788,8 +1782,8 @@ TEST(FilterTest, Multithreading)
 
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
                                 reinterpret_cast<int64_t>(col3)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), LongDataType(), IntDataType() }));
-    DataTypes inputTypes2(std::vector<DataType>({ IntDataType(), LongDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), IntType() }));
+    DataTypes inputTypes2(std::vector<DataTypePtr>({ IntType(), LongType(), IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Multithreading");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -1886,7 +1880,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
         col3->SetValue(i, (i % 21) - 3);
     }
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorBatch *batch = new VectorBatch(numCols, numRows);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -1940,7 +1934,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
         col2->SetValue(i, reinterpret_cast<const uint8_t *>(tmp.c_str()), tmp.length());
     }
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), VarcharDataType(50) }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), VarcharType(50) }));
     VectorBatch *batch = new VectorBatch(numCols, numRows);
     batch->SetVector(0, col1);
     batch->SetVector(1, dictionaryVector);
@@ -1999,7 +1993,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
         col2->SetValue(i, i % 11);
     }
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorBatch *batch = new VectorBatch(numCols, numRows);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -2052,7 +2046,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     }
 
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DecimalFilterBinaryTest");
@@ -2108,8 +2102,7 @@ TEST(FilterTest, DecimalFilterAbsTest)
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
         reinterpret_cast<int64_t>(data3)};
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128), DataType(OMNI_DECIMAL128),
-        DataType(OMNI_DECIMAL128) };
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DecimalFilterAbsTest");
@@ -2177,7 +2170,7 @@ TEST(FilterTest, FilterStringWithNull)
     col0->SetValue(0, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     col0->SetValueNull(1);
 
-    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(1000) }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(1000) }));
     VectorBatch *batch = new VectorBatch(numCols, numRows);
     batch->SetVector(0, col0);
 
@@ -2236,7 +2229,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
     delete col2;
     delete dictionaryVector;
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorBatch *intput = new VectorBatch(numCols, slicedCol1->GetSize());
     intput->SetVector(0, slicedCol1);
     intput->SetVector(1, slicedCol2);
@@ -2302,7 +2295,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
     delete col2;
     delete dictionaryVector;
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorBatch *intput = new VectorBatch(numCols, slicedCol1->GetSize());
     intput->SetVector(0, slicedCol1);
     intput->SetVector(1, slicedCol2);
@@ -2348,7 +2341,7 @@ TEST(FilterTest, SimpleFilter)
         col1[i] = i;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_SimpleFilter");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
@@ -2388,7 +2381,7 @@ TEST(FilterTest, SimpleFilterWithNulls)
         col1[i] = i;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1)};
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_SimpleFilterWithNulls");
     VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
@@ -2432,7 +2425,7 @@ TEST(FilterTest, SimpleFilterIntWithNulls)
     int32_t data0[numRows] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
     int32_t data1[numRows] = {20, 16, 13, 4, 20, 4, 22, 19, 8, 7};
 
-    DataTypes inputTypes(std::vector<DataType>({ IntDataType(), IntDataType() }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
     auto vecBatch = CreateVectorBatch(inputTypes, numRows, data0, data1);
 
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, IntType()),
@@ -2480,12 +2473,13 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
             vec0->SetValue(i, (uint8_t *)(data0[i].c_str()), data0[i].length());
         }
     }
-    auto vec1 = CreateVarcharVector(VarcharDataType(5), data1, numRows);
+    VarcharDataType type(5);
+    auto vec1 = CreateVarcharVector(type, data1, numRows);
     auto vecBatch = new VectorBatch(2, numRows);
     vecBatch->SetVector(0, vec0);
     vecBatch->SetVector(1, vec1);
 
-    DataTypes inputTypes(std::vector<DataType>({ VarcharDataType(5), VarcharDataType(5) }));
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(5), VarcharType(5) }));
     // filter expression object
     std::string funcStr = "substr";
     DataTypePtr retType = VarcharType();

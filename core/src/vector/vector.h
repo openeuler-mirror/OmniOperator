@@ -12,6 +12,7 @@
 #include "vector_allocator.h"
 #include "vector_encoding.h"
 #include "tracer/vector_tracer.h"
+#include "util/bit_map.h"
 
 namespace omniruntime {
 namespace vec {
@@ -90,11 +91,13 @@ public:
     void SetValueNull(int index)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
+        hasNull = true;
     }
 
     virtual void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
+        hasNull = value || hasNull;
     }
 
     void SetValueNotNull(int index)
@@ -137,6 +140,21 @@ public:
         return OMNI_VEC_ENCODING_FLAT;
     }
 
+    virtual bool MayHaveNull() const
+    {
+        return hasNull;
+    }
+
+    void SetNullFlag(bool newHasNull)
+    {
+        hasNull = newHasNull;
+    }
+
+    virtual int32_t GetNullCount() const
+    {
+        return hasNull ? BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) : 0;
+    }
+
 protected:
     // this method is mainly used for vector slice
     Vector(Vector *vector, int size, int positionOffset);
@@ -153,6 +171,7 @@ protected:
     VectorReference *reference = nullptr;
     VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;
+    bool hasNull;
 };
 } // namespace vec
 } // namespace omniruntime

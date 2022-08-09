@@ -114,6 +114,19 @@ public:
         return length;
     }
 
+    static Vector *CreateVector(VectorAllocator *allocator, int32_t vectorEncodingId, DataType &dataType, int32_t size)
+    {
+        if (vectorEncodingId == OMNI_VEC_ENCODING_CONTAINER) {
+            return CreateContainerVector(allocator, static_cast<ContainerDataType &>(dataType).GetFieldTypes(), size);
+        } else {
+            int32_t dataTypeId = dataType.GetId();
+            int32_t capacityInBytes = (dataTypeId == type::OMNI_CHAR || dataTypeId == type::OMNI_VARCHAR) ?
+                static_cast<int32_t>(static_cast<VarcharDataType &>(dataType).GetWidth()) * size :
+                0;
+            return CreateVector(allocator, vectorEncodingId, dataTypeId, capacityInBytes, size);
+        }
+    }
+
     static Vector *CreateVector(VectorAllocator *allocator, int32_t vectorEncodingId, int32_t dataTypeId,
         int32_t capacityInBytes, int32_t size)
     {
@@ -181,6 +194,21 @@ public:
             }
         }
         return vector;
+    }
+
+    static Vector *CreateContainerVector(VectorAllocator *vecAllocator, std::vector<DataTypePtr> &fieldTypes,
+        int32_t size)
+    {
+        int32_t fieldVecCount = fieldTypes.size();
+        std::vector<uintptr_t> vectorAddresses(fieldVecCount);
+        for (int32_t colIdx = 0; colIdx < fieldVecCount; colIdx++) {
+            auto currVecType = fieldTypes[colIdx];
+            int32_t vectorEncodingId =
+                currVecType->GetId() == type::OMNI_CONTAINER ? OMNI_VEC_ENCODING_CONTAINER : OMNI_VEC_ENCODING_FLAT;
+            Vector *fieldVector = CreateVector(vecAllocator, vectorEncodingId, *currVecType, size);
+            vectorAddresses[colIdx] = reinterpret_cast<uintptr_t>(fieldVector);
+        }
+        return new ContainerVector(vecAllocator, size, vectorAddresses, fieldVecCount, fieldTypes);
     }
 
     static Vector *ExpandVectorAndIndex(Vector *vector, int32_t index, int32_t &originalIndex)

@@ -24,7 +24,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    const type::DataTypes sourceTypes;
+    type::DataTypes sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
 };
@@ -42,7 +42,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const type::DataTypes &sourceTypes;
+    type::DataTypes sourceTypes;
     int32_t sourceTypesCount;
     bool isDistinct;
     std::vector<vec::VectorBatch *> inputVecBatches;

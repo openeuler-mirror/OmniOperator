@@ -35,7 +35,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<type::DataTypes> sourceTypes;
+    std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> argumentChannels;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -56,7 +56,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const type::DataTypes &sourceTypes;
+    type::DataTypes sourceTypes;
     std::vector<int32_t> argumentChannels;
     std::vector<RowProjFunc> projectFuncs;
     WindowOperator *windowOperator;

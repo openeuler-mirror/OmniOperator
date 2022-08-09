@@ -25,6 +25,12 @@ RowProjFunc RowProjection::Create()
     if (this->expression == nullptr) {
         return nullptr;
     }
+#ifdef DEBUG
+    std::cout << "RowProjection: " << std::endl;
+    ExprPrinter p;
+    this->expression->Accept(p);
+    std::cout << std::endl;
+#endif
     this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
     if (fPtr == 0) {
@@ -37,10 +43,10 @@ RowProjFunc RowProjection::Create()
 }
 
 // Return INVALIDDATAD if expression is unsupported
-DataType RowProjection::GetReturnType()
+DataTypePtr RowProjection::GetReturnType()
 {
     if (this->expression == nullptr) {
-        return DataType(OMNI_INVALID);
+        return std::make_shared<InvalidDataType>();
     }
     return this->expression->GetReturnType();
 }
@@ -86,21 +92,19 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(const Expr &expr, bool filter, vec::DataTypeId outTypeId)
-    : expr(&expr), projector(nullptr), outTypeId(outTypeId)
+Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType)
+    : expr(&expr), outType(std::move(outType)), projector(nullptr)
 {
+#ifdef DEBUG
+    std::cout << "Expression in projection:" << std::endl;
+    ExprPrinter printExprTree;
+    expr.Accept(printExprTree);
+    std::cout << std::endl;
+#endif
     bool initialized = this->Initialize(filter);
     if (!initialized) {
         this->isSupported = false;
     }
-#ifdef DEBUG
-    if (initialized) {
-        std::cout << "Expression in projection:" << std::endl;
-        ExprPrinter printExprTree;
-        expr.Accept(printExprTree);
-        std::cout << std::endl;
-    }
-#endif
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
@@ -161,7 +165,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         }
     }
 
-    DataTypeId outTypeId = this->GetOutputTypeId();
+    DataTypeId outTypeId = this->GetOutputType().GetId();
     Vector *outVec = nullptr;
     int32_t avgStringLength = 200;
     switch (outTypeId) {
@@ -176,10 +180,11 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case type::OMNI_DOUBLE:
             outVec = new DoubleVector(vecAllocator, numSelectedRows);
             break;
-        case type::OMNI_VARCHAR:
         case type::OMNI_CHAR:
-            // Must set capacity appropriately (to do)
-            // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
+            outVec = new VarcharVector(vecAllocator,
+                numSelectedRows * static_cast<CharDataType &>(this->GetOutputType()).GetWidth(), numSelectedRows);
+            break;
+        case type::OMNI_VARCHAR:
             outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
         case type::OMNI_DECIMAL128:
@@ -203,6 +208,9 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             selectedRows, context, dictionaryVectors);
     }
     context->GetArena()->Reset();
+    // fixme::true means projected vec has null in it, when project supports whether the vec of the output flag is null
+    // or not, it is obtained directly from the project flag
+    projectedVec->SetNullFlag(true);
     return projectedVec;
 }
 
@@ -291,12 +299,11 @@ OmniStatus ProjectionOperator::Close()
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
-    DataTypes &inputTypes, int32_t nCols)
+    const DataTypes &inputTypes, int32_t nCols)
     : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
 {
-    this->SetJitContext(nullptr);
     for (auto expr : exprs) {
-        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnTypeId());
+        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnType());
         if (!projection->IsSupported()) {
             this->isSupported = false;
             break;

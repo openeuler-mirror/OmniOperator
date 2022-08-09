@@ -27,7 +27,7 @@ TEST(ContainerVector, sliceVector)
     longVector->SetValues(0, data2, rows);
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
-    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> dataTypes = {DoubleType(), LongType() };
     auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
 
     int offset = 1;
@@ -55,7 +55,7 @@ TEST(ContainerVector, setAndGetValue)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataType> VECTOR_TYPES = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> VECTOR_TYPES = {DoubleType(), LongType() };
     ContainerVector *vector =
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
     Vector *values[] = {new DoubleVector(allocator, POSITION_COUNT), new LongVector(allocator, POSITION_COUNT)};
@@ -89,7 +89,7 @@ TEST(ContainerVector, copyPositions)
     longVector->SetValues(0, data2, rows);
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
-    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> dataTypes = {DoubleType(), LongType() };
     auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
 
     int32_t positions[] = {1, 3, 5, 7, 9};
@@ -125,7 +125,7 @@ TEST(ContainerVector, copyRegion)
     longVector->SetValues(0, data2, rows);
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
-    std::vector<DataType> dataTypes = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> dataTypes = {DoubleType(), LongType() };
     auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
 
     int offset = 1;
@@ -153,7 +153,7 @@ TEST(ContainerVector, jniFreeVector)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataType> VECTOR_TYPES = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> VECTOR_TYPES = {DoubleType(), LongType() };
     ContainerVector *vector =
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
     Vector *vec = (Vector *)vector;
@@ -172,7 +172,7 @@ TEST(ContainerVector, getVectorAllocator)
     std::vector<uintptr_t> vectorAddresses(2);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataType> VECTOR_TYPES = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> VECTOR_TYPES = {DoubleType(), LongType() };
     ContainerVector *vector =
         new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, VECTOR_TYPES);
 
@@ -202,7 +202,7 @@ TEST(ContainerVector, appendVector)
     const int32_t columnCount = 2;
     std::vector<uintptr_t> vectorAddresses = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(src1) };
-    std::vector<DataType> vectorTypes = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> vectorTypes = {DoubleType(), LongType() };
     auto *vector = new ContainerVector(allocator, rows, vectorAddresses, columnCount, vectorTypes);
 
     auto *src2 = new LongVector(allocator, rows);
@@ -213,14 +213,14 @@ TEST(ContainerVector, appendVector)
     doubleVector1->SetValues(0, data22, rows);
 
     std::vector<uintptr_t> vecAddr2 = { reinterpret_cast<uintptr_t>(doubleVector1), reinterpret_cast<uintptr_t>(src2) };
-    std::vector<DataType> dataTypes2 = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> dataTypes2 = {DoubleType(), LongType() };
     auto *vector2 = new ContainerVector(allocator, rows, vecAddr2, columnCount, dataTypes2);
 
     auto *appendedDouble = new DoubleVector(allocator, 10);
     auto *appendedLong = new LongVector(allocator, 10);
     std::vector<uintptr_t> appendedAddr = { reinterpret_cast<uintptr_t>(appendedDouble),
         reinterpret_cast<uintptr_t>(appendedLong) };
-    std::vector<DataType> appendedDataType = { DoubleDataType(), LongDataType() };
+    std::vector<DataTypePtr> appendedDataType = {DoubleType(), LongType() };
     auto *appended = new ContainerVector(allocator, rows, appendedAddr, columnCount, appendedDataType);
     appended->Append(vector, 0, 5);
     appended->Append(vector2, 5, 5);
@@ -234,6 +234,25 @@ TEST(ContainerVector, appendVector)
     delete vector;
     delete vector2;
     delete appended;
+    delete allocator;
+}
+
+TEST(ContainerVector, testNullFlagWithSet)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlagWithSet");
+    int rows = 10;
+    auto *sub1 = new IntVector(allocator, rows);
+    auto *sub2 = new LongVector(allocator, rows);
+
+    std::vector<uintptr_t> subAddrs = { reinterpret_cast<uintptr_t>(sub1), reinterpret_cast<uintptr_t>(sub2) };
+    std::vector<DataTypePtr> subTypes = { IntType(), LongType() };
+    auto *hasNulls = new ContainerVector(allocator, rows, subAddrs, 2, subTypes);
+
+    std::vector<bool> nulls = { true, false, true, false, true, false, true, false, true, false };
+    TestUtil::SetNulls(hasNulls, nulls);
+    EXPECT_TRUE(hasNulls->MayHaveNull());
+    EXPECT_EQ(hasNulls->GetNullCount(), 5);
+    delete hasNulls;
     delete allocator;
 }
 }

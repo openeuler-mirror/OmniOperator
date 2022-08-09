@@ -77,7 +77,7 @@ private:
     int64_t GetFrameValue(int32_t channel, std::string &valueTypeName);
 
 private:
-    const type::DataTypes &sourceTypes;
+    type::DataTypes sourceTypes;
     omniruntime::op::PagesIndex *pagesIndex;
     int32_t partitionStart;
     int32_t partitionEnd;
@@ -88,7 +88,7 @@ private:
     int32_t peerGroupStart;
     int32_t peerGroupEnd;
     std::vector<WindowFunction *> windowFunctions;
-    std::unique_ptr<WindowIndex> windowIndex;
+    std::shared_ptr<WindowIndex> windowIndex;
 };
 
 bool PositionEqualsPosition(omniruntime::op::PagesIndex *pagesIndex,

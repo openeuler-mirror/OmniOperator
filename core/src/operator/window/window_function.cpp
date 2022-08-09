@@ -78,15 +78,14 @@ void RowNumberFunction::RankingProcessRow(Vector *column, int32_t index, bool ne
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-    const DataType &inputType, const DataType &outputType, VectorAllocator *allocator,
-    std::unique_ptr<WindowFrameInfo> frame)
+    DataTypePtr inputType, DataTypePtr outputType, VectorAllocator *allocator, std::unique_ptr<WindowFrameInfo> frame)
     : WindowFunction(std::move(frame)),
       windowIndex(nullptr),
       argumentChannels(argumentChannels),
       currentStart(0),
       currentEnd(0),
-      inputType(inputType),
-      outputType(outputType),
+      inputType(std::move(inputType)),
+      outputType(std::move(outputType)),
       allocator(allocator)
 {
     this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
@@ -145,17 +144,13 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
     }
     Vector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
-    uint32_t width = (inputType.GetId() == OMNI_VARCHAR || inputType.GetId() == OMNI_CHAR) ?
-        static_cast<const VarcharDataType &>(inputType).GetWidth() :
-        0;
     // this is important to package data into an extra vector and use it to do the aggregation
     // the vector is used for aggregation in window operation
     auto resultVectorBatch = new VectorBatch(1, rowCount);
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
     } else {
-        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding,
-            static_cast<int32_t>(inputType.GetId()), rowCount * static_cast<int32_t>(width), rowCount));
+        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding, *inputType, rowCount));
     }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =

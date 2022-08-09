@@ -5,17 +5,15 @@
 #include "pages_hash_strategy.h"
 #include <memory>
 #include "vector/vector_common.h"
-#include "optimization.h"
-#include "jit/annotation.h"
 #include "util/operator_util.h"
 
 using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace op {
-PagesHashStrategy::PagesHashStrategy(Vector ***columns, const int32_t *columnTypes, int32_t columnCount,
-    int32_t *hashCols, int32_t hashColsCount)
-    : buildColumns(columns), buildColumnCount(columnCount), buildHashColsCount(hashColsCount)
+PagesHashStrategy::PagesHashStrategy(Vector ***columns, const DataTypes &columnTypes, int32_t *hashCols,
+    int32_t hashColsCount)
+    : buildColumns(columns), buildColumnCount(columnTypes.GetSize()), buildHashColsCount(hashColsCount)
 {
     if (hashColsCount > 0) {
         this->buildHashColTypes = new int32_t[hashColsCount];
@@ -24,7 +22,7 @@ PagesHashStrategy::PagesHashStrategy(Vector ***columns, const int32_t *columnTyp
         for (int32_t i = 0; i < hashColsCount; i++) {
             hashColumn = hashCols[i];
             buildHashColumns[i] = columns[hashColumn];
-            buildHashColTypes[i] = columnTypes[hashColumn];
+            buildHashColTypes[i] = (columnTypes.GetType(hashColumn))->GetId();
         }
     } else {
         this->buildHashColTypes = nullptr;
@@ -66,7 +64,6 @@ static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, ui
     }
 }
 
-SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
 bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
     uint32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
 {
@@ -90,7 +87,6 @@ bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRow
     return true;
 }
 
-SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
 bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
     Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
 {

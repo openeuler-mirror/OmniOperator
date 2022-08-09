@@ -5,8 +5,6 @@
 #include "join_hash_table.h"
 #include <algorithm>
 #include <memory>
-#include "operator/optimization.h"
-#include "jit/annotation.h"
 
 namespace omniruntime {
 namespace op {
@@ -381,7 +379,6 @@ static void ReadColumnCharHashes(uint32_t offset, uint32_t addressesCount, uint6
     }
 }
 
-SPECIALIZE(OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS)
 static void ProcessColumns(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector ***columns,
     int32_t *types, uint32_t colCount, int64_t *hashes, bool *nullPositions)
 {

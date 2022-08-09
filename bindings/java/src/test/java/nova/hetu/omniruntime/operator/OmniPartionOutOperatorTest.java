@@ -8,11 +8,12 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
-import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory.JitContext;
+import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.CharDataType;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
@@ -125,7 +126,7 @@ public class OmniPartionOutOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] sourceTypes = {CharDataType.CHAR};
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
@@ -134,13 +135,13 @@ public class OmniPartionOutOperatorTest {
         DataType[] hashChannelTypes = {CharDataType.CHAR};
         int[] hashChannels = {0};
 
-        JitContext factory1 = new JitContext(sourceTypes, false, nullChannel, partitionChannels, partitionCount,
+        FactoryContext factory1 = new FactoryContext(sourceTypes, false, nullChannel, partitionChannels, partitionCount,
                 bucketToPartition, false, hashChannelTypes, hashChannels, new OperatorConfig());
-        JitContext factory2 = new JitContext(sourceTypes, false, nullChannel, partitionChannels, partitionCount,
+        FactoryContext factory2 = new FactoryContext(sourceTypes, false, nullChannel, partitionChannels, partitionCount,
                 bucketToPartition, false, hashChannelTypes, hashChannels, new OperatorConfig());
-        JitContext factory3 = null;
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        FactoryContext factory3 = null;
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 }

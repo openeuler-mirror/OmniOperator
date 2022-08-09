@@ -30,7 +30,7 @@ public:
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount);
 
-    static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &vecTypes, int32_t *outputCols,
+    static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols,
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount, const OperatorConfig &operatorConfig);
 
@@ -38,7 +38,7 @@ public:
 
     int32_t GetSourceTypeCount()
     {
-        return sourceTypes->GetSize();
+        return sourceTypes.GetSize();
     }
 
     int32_t *GetOutputCols()
@@ -72,7 +72,7 @@ public:
     }
 
 private:
-    std::unique_ptr<type::DataTypes> sourceTypes;
+    DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;

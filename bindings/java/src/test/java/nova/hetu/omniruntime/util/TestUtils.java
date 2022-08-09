@@ -790,7 +790,7 @@ public class TestUtils {
                     + "\"function_name\":\"%s\",\"arguments\":[%s]}", returnType, function, arguments);
         }
         return String.format(Locale.ROOT,
-                "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"%s\",\"arguments\":[%s]}",
-                returnType, function, arguments);
+                "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"%s\",\"arguments\":[%s]}", returnType,
+                function, arguments);
     }
 }

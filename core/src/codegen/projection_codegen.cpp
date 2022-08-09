@@ -36,7 +36,14 @@ std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
     const omniruntime::expressions::Expr &expression, bool filter)
 {
     std::unique_ptr<ProjectionCodeGen> codegen { new ProjectionCodeGen(std::move(name), expression, filter) };
-    codegen->Initialize();
+    LLVMEngine::Create(&(codegen->llvmEngine));
+    codegen->context = codegen->GetContext();
+    codegen->builder = codegen->GetIRBuilder();
+    codegen->module = codegen->GetModule();
+    codegen->jit = codegen->GetJit();
+    codegen->llvmTypes = codegen->GetTypes();
+    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
+    codegen->ExtractVectorIndexes();
     return codegen;
 }
 
@@ -87,7 +94,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "PROJECT_WRAPPER", module);
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *addToOutput = BasicBlock::Create(*context, "ADD_OUTPUT", funcDecl);
@@ -101,7 +108,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Argument *outputAddress = funcDecl->getArg(OUTPUT_ADDRESS_INDEX);
     outputAddress->setName("OUTPUT_ADDRESS");
 
-    codeGenUtils->RecordMainFunction(funcDecl);
+    llvmEngine->RecordMainFunction(funcDecl);
 
     // Only use these values if filter enabled
     Argument *selected = nullptr;
@@ -248,7 +255,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
-        auto call = codeGenUtils->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
+        auto call = llvmEngine->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
         InlineFunctionInfo inlineFunctionInfo;
         InlineFunction(*call, inlineFunctionInfo);
     } else {
@@ -279,13 +286,12 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     // Return results
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
-    OptimizeFunctionsAndModule();
+    llvmEngine->OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
-    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
+    llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
     auto sym = eoe(jit->lookup("PROJECT_WRAPPER"));
     return sym.getAddress();
@@ -326,8 +332,8 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
-    codeGenUtils->RecordMainFunction(funcDecl);
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module);
+    llvmEngine->RecordMainFunction(funcDecl);
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);
@@ -362,14 +368,13 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     builder->CreateStore(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"), retStore);
 
     builder->CreateRet(retStore);
-    OptimizeModule();
+    llvmEngine->OptimizeModule();
     llvm::verifyFunction(*func);
-#ifdef DEBUG
-    module->print(errs(), nullptr);
+#ifdef DEBUG_LLVM
+    GetModule()->print(errs(), nullptr);
 #endif
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
-    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
+    llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
     return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
 }

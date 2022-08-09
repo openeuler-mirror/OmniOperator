@@ -20,7 +20,9 @@
 #endif
 
 extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen);
-extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen);
+extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen);
+extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
+    int32_t regexLen);
 extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bpLen, int32_t *outLen);
 extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
@@ -29,7 +31,7 @@ extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, i
     const char *bp, int32_t bpLen, int32_t *outLen);
 extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bWidth, int32_t bpLen, int32_t *outLen);
-extern DLLEXPORT const char *CastString(int64_t contextPtr, const char *str, int32_t strLen);
+extern DLLEXPORT int32_t CastString(int64_t contextPtr, const char *str, int32_t strLen);
 
 template <typename T>
 extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, T startIdx, T length,

@@ -9,10 +9,11 @@ using namespace omniruntime::type;
 
 namespace omniruntime {
 Function::Function(void *address, const std::string &name, const std::vector<std::string> &aliases,
-    const std::vector<DataTypeId> &paramTypes, const DataTypeId &retType, bool setExecutionContext)
+    const std::vector<DataTypeId> &paramTypes, const DataTypeId &retType, NullableResultType nullableResultType,
+    bool setExecutionContext)
 {
     this->address = address;
-    // update function name used for lookup in codegen
+    this->nullableResultType = nullableResultType;
     this->isExecContextSet = setExecutionContext;
     // create function sig to register for codegen
     this->signatures.emplace_back(name, paramTypes, retType, address);
@@ -51,6 +52,11 @@ const std::vector<DataTypeId> &Function::GetParamTypes() const
 const void *Function::GetAddress() const
 {
     return this->address;
+}
+
+const NullableResultType Function::GetNullableResultType() const
+{
+    return this->nullableResultType;
 }
 
 bool Function::IsExecutionContextSet() const

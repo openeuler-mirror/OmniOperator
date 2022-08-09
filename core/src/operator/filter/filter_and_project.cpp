@@ -14,16 +14,16 @@ using namespace omniruntime::mem;
 using namespace std;
 
 SimpleFilter::SimpleFilter(const Expr &expression)
-    : codegen(nullptr),
-      expression(&expression),
-      func(nullptr),
-      isResultNull(nullptr),
-      resultLength(nullptr),
-      initialized(false)
-{}
+    : codegen(nullptr), expression(&expression), func(nullptr), initialized(false)
+{
+    resultLength = new int(0);
+    isResultNull = new bool(false);
+}
 
 SimpleFilter::~SimpleFilter()
 {
+    delete this->isResultNull;
+    delete this->resultLength;
     this->codegen.reset();
 }
 
@@ -68,14 +68,14 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
 
 bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
 {
-    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
+    auto result = this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
+    return *this->isResultNull ? false : result;
 }
 
-FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, const DataTypes &inputDataTypes,
     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
     : inputDataTypes(inputDataTypes), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
 {
-    this->SetJitContext(nullptr);
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << expression << std::endl;
     ExprPrinter printExprTree;
@@ -83,12 +83,12 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     std::cout << std::endl;
 #endif
     this->filter = make_unique<Filter>(*parsedExpr);
-    if (!this->filter->isSupported) {
+    if (!this->filter->IsSupported()) {
         this->isSupportedExpr = false;
     }
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto projection = make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnTypeId());
+        auto projection = make_unique<Projection>(*(projectExprs[i]), true, projectExprs[i]->GetReturnType());
         if (!projection->IsSupported()) {
             this->isSupportedExpr = false;
             break;

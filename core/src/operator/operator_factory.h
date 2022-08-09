@@ -6,7 +6,6 @@
 #define __OMNI_OPERATOR_FACTORY_H__
 
 #include "operator.h"
-#include "jit_context/jit_context.h"
 
 namespace omniruntime {
 namespace op {
@@ -20,19 +19,6 @@ public:
     {
         return nullptr;
     }
-
-    virtual void SetJitContext(JitContext *JitContext)
-    {
-        jitContext = JitContext;
-    }
-
-    virtual JitContext *GetJitContext() const
-    {
-        return jitContext;
-    }
-
-private:
-    JitContext *jitContext = nullptr;
 };
 
 using OptModule = omniruntime::op::Operator *(*)(OperatorFactory *);

@@ -28,9 +28,9 @@ JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes
       vecAllocator(vecAllocator)
 {
     int32_t leftRowSize =
-        OperatorUtil::GetOutputRowSize(leftTableOutputTypes.Get(), leftTableOutputCols, leftTableOutputColsCount);
-    int32_t rightRowSize =
-        OperatorUtil::GetOutputRowSize(rightTableOutputTypes.Get(), rightTableOutputCols, rightTableOutputColsCount);
+        OperatorUtil::GetOutputRowSize(this->leftTableOutputTypes.Get(), leftTableOutputCols, leftTableOutputColsCount);
+    int32_t rightRowSize = OperatorUtil::GetOutputRowSize(this->rightTableOutputTypes.Get(), rightTableOutputCols,
+        rightTableOutputColsCount);
     int32_t eachRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
     this->JoinFilterCodeGen();
@@ -40,10 +40,6 @@ void JoinResultBuilder::JoinFilterCodeGen()
 {
     Parser parser;
     if (!filterExpStr.empty()) {
-        std::vector<DataType> allTypes;
-        allTypes.insert(allTypes.end(), leftTableOutputTypes.Get().begin(), leftTableOutputTypes.Get().end());
-        allTypes.insert(allTypes.end(), rightTableOutputTypes.Get().begin(), rightTableOutputTypes.Get().end());
-        DataTypes dataTypes(allTypes);
         omniruntime::expressions::Expr *filterExpr = JSONParser::ParseJSON(nlohmann::json::parse(filterExpStr));
         executionContext = new ExecutionContext();
         executionContext->GetArena()->SetAllocator(vecAllocator);
@@ -56,13 +52,13 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
-    std::vector<DataType> allTypes;
+    std::vector<DataTypePtr> allTypes;
     allTypes.reserve(outputColCount);
-    std::vector<DataType> leftTypes = leftTableOutputTypes.Get();
+    std::vector<DataTypePtr> leftTypes = leftTableOutputTypes.Get();
     for (int idx = 0; idx < leftTableOutputColsCount; idx++) {
         allTypes.push_back(leftTypes.at(leftTableOutputCols[idx]));
     }
-    std::vector<DataType> rightTypes = rightTableOutputTypes.Get();
+    std::vector<DataTypePtr> rightTypes = rightTableOutputTypes.Get();
     for (int idx = 0; idx < rightTableOutputColsCount; idx++) {
         allTypes.push_back(rightTypes.at(rightTableOutputCols[idx]));
     }

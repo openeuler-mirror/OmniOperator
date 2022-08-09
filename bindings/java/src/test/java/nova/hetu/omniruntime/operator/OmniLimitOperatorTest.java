@@ -6,11 +6,14 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.limit.OmniLimitOperatorFactory;
+import nova.hetu.omniruntime.operator.limit.OmniLimitOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
@@ -77,13 +80,13 @@ public class OmniLimitOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
-        OmniLimitOperatorFactory.JitContext factory1 = new OmniLimitOperatorFactory.JitContext(6, new OperatorConfig());
-        OmniLimitOperatorFactory.JitContext factory2 = new OmniLimitOperatorFactory.JitContext(6, new OperatorConfig());
-        OmniLimitOperatorFactory.JitContext factory3 = null;
+    public void testFactoryContextEquals() {
+        FactoryContext factory1 = new FactoryContext(6, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(6, new OperatorConfig());
+        FactoryContext factory3 = null;
 
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 }

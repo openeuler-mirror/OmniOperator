@@ -16,14 +16,13 @@ import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertNotEquals;
 
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory;
-import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory.JitContext;
+import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -59,7 +58,7 @@ public class OmniHashAggregationWithExprOperatorTest {
 
         OmniHashAggregationWithExprOperatorFactory factoryWithJit = new OmniHashAggregationWithExprOperatorFactory(
                 groupByChannel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig(true));
+                new OperatorConfig());
         OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
@@ -80,7 +79,7 @@ public class OmniHashAggregationWithExprOperatorTest {
 
         OmniHashAggregationWithExprOperatorFactory factoryWithoutJit = new OmniHashAggregationWithExprOperatorFactory(
                 groupByChannel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig(false));
+                new OperatorConfig());
         OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
@@ -199,8 +198,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
         String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
 
-        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
+                OMNI_AGGREGATION_TYPE_COUNT_ALL};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE, LongDataType.LONG};
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
@@ -220,9 +220,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         VecBatch resultVecBatch = results.next();
         assertEquals(results.hasNext(), false);
         assertEquals(resultVecBatch.getRowCount(), 1);
-        assertEquals(resultVecBatch.getVectorCount(), 4);
+        assertEquals(resultVecBatch.getVectorCount(), 5);
 
-        Object[][] expectedDatas = {{2L}, {5}, {36L}, {4.5}};
+        Object[][] expectedDatas = {{2L}, {5}, {36L}, {4.5}, {8L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
@@ -255,7 +255,7 @@ public class OmniHashAggregationWithExprOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
         String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
 
@@ -264,15 +264,15 @@ public class OmniHashAggregationWithExprOperatorTest {
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
-        JitContext factory1 = new JitContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes,
-                true, false, new OperatorConfig());
-        JitContext factory2 = new JitContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes,
-                true, false, new OperatorConfig());
-        JitContext factory3 = null;
+        FactoryContext factory1 = new FactoryContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
+                aggOutputTypes, true, false, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
+                aggOutputTypes, true, false, new OperatorConfig());
+        FactoryContext factory3 = null;
 
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 
     private List<Vec> buildDataForCount(int rowNum) {

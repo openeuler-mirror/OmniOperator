@@ -12,7 +12,7 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
+import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -59,7 +60,7 @@ public class OmniHashAggregationOperatorTest {
 
         OmniHashAggregationOperatorFactory factoryWithJit = new OmniHashAggregationOperatorFactory(groupByChannel,
                 groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig(true));
+                new OperatorConfig());
         OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
@@ -80,7 +81,7 @@ public class OmniHashAggregationOperatorTest {
 
         OmniHashAggregationOperatorFactory factoryWithoutJit = new OmniHashAggregationOperatorFactory(groupByChannel,
                 groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig(false));
+                new OperatorConfig());
         OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
@@ -215,7 +216,7 @@ public class OmniHashAggregationOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         String[] groupByChannel = {"#0", "#1"};
         DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
         String[] aggChannels = {"#3"};
@@ -223,17 +224,15 @@ public class OmniHashAggregationOperatorTest {
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
         DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
 
-        OmniHashAggregationOperatorFactory.JitContext factory1 = new OmniHashAggregationOperatorFactory.JitContext(
-                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig());
-        OmniHashAggregationOperatorFactory.JitContext factory2 = new OmniHashAggregationOperatorFactory.JitContext(
-                groupByChannel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig());
-        OmniHashAggregationOperatorFactory.JitContext factory3 = null;
+        FactoryContext factory1 = new FactoryContext(groupByChannel, groupByTypes, aggChannels, aggTypes,
+                aggFunctionTypes, aggOutputTypes, true, false, new OperatorConfig());
+        FactoryContext factory2 = new FactoryContext(groupByChannel, groupByTypes, aggChannels, aggTypes,
+                aggFunctionTypes, aggOutputTypes, true, false, new OperatorConfig());
+        FactoryContext factory3 = null;
 
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        assertEquals(factory2, factory1);
+        assertNotEquals(factory3, factory1);
+        assertEquals(factory1, factory1);
     }
 
     @Test
@@ -265,7 +264,6 @@ public class OmniHashAggregationOperatorTest {
         omniOperator.close();
         factory.close();
     }
-
 
     private void multiThreadExecution(int threadCount, int rowNum, int pageCount) {
         String[] groupByChanel = {"#0", "#1"};

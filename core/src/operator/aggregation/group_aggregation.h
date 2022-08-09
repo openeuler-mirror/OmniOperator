@@ -76,8 +76,8 @@ void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &te
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<int32_t> &aggInputCols,
-        omniruntime::type::DataTypes &aggInputTypes, omniruntime::type::DataTypes &aggOutputTypes,
-        std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
+        const DataTypes &aggInputTypes, const DataTypes &aggOutputTypes, std::vector<std::unique_ptr<Aggregator>> aggs,
+        bool inputRaw, bool outputPartial)
         : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -94,7 +94,7 @@ public:
     int32_t GetOutput(std::vector<VectorBatch *> &data) override;
 
     explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators,
-        omniruntime::type::DataTypes aggInputTypes, omniruntime::type::DataTypes aggOutputTypes)
+        const DataTypes &aggInputTypes, const DataTypes &aggOutputTypes)
         : AggregationCommonOperator(std::move(aggregators), true, false),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes)
@@ -114,7 +114,7 @@ public:
 
 private:
     std::vector<BucketIterator> FindBuckets(uint64_t *hash, int32_t blockSize);
-    int32_t GetRowSizeAndOutputTypes(std::vector<DataType> &types, int32_t columnCount);
+    int32_t GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types, int32_t columnCount);
 
     void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
         int32_t rowIndex);
@@ -130,8 +130,8 @@ private:
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<int32_t> aggInputCols;
-    omniruntime::type::DataTypes aggInputTypes;
-    omniruntime::type::DataTypes aggOutputTypes;
+    DataTypes aggInputTypes;
+    DataTypes aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
 };
 
@@ -139,8 +139,8 @@ class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, DataTypes groupInputTypes,
-        std::vector<uint32_t> &aggCol, DataTypes aggInputTypes, DataTypes aggOutputTypes,
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
+        std::vector<uint32_t> &aggCol, const DataTypes &aggInputTypes, const DataTypes &aggOutputTypes,
         std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColsVector, bool inputRaw, bool outputPartial)
         : AggregationCommonOperatorFactory(inputRaw, outputPartial, maskColsVector),
           groupByColsVector(groupByCol),

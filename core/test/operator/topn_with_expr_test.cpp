@@ -6,7 +6,6 @@
 #include "operator/topn/topn_expr.h"
 #include "vector/vector_helper.h"
 #include "../util/test_util.h"
-#include "jit_context/jit_context.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
@@ -27,7 +26,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
@@ -41,10 +40,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
 
-    auto jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs);
     auto topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
-    topNWithExprOperatorFactory->SetJitContext(jitContext);
     auto topNWithExprOperator = static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
     topNWithExprOperator->AddInput(vecBatch);
@@ -56,8 +53,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int64_t expData3[dataSize] = {8, 7, 3, 1, 2};
     int32_t expData4[dataSize] = {20, 18, 13, 13, 13};
     int64_t expData5[dataSize] = {2, 1, 0, 1, 2};
-    DataTypes expectTypes(
-        std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType(), IntDataType(), LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), IntType(), LongType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
 
@@ -83,7 +79,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
@@ -95,10 +91,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
 
-    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortKeys);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts, sortKeyCnt);
-    topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator =
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
@@ -110,7 +104,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int64_t expData2[dataSize] = {23, 0, 5, 4, 3};
     int64_t expData3[dataSize] = {8, 7, 3, 1, 2};
     int64_t expData4[dataSize] = {2, 1, 0, 1, 2};
-    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType(), LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), LongType() }));
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
 
@@ -136,7 +130,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int64_t data2[dataSize] = {2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L};
     int64_t data3[dataSize] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     int32_t ascendings[sortKeyCnt] = {false, true};
@@ -146,10 +140,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     FieldExpr *col2 = new FieldExpr(2, LongType());
     std::vector<Expr *> sortExprs = { col0, col2 };
 
-    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
         new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
-    topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator =
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
@@ -160,7 +152,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int32_t expData1[dataSize] = {15, 13, 8, 8, 8};
     int64_t expData2[dataSize] = {23, 0, 4, 3, 5};
     int64_t expData3[dataSize] = {8, 7, 1, 2, 3};
-    DataTypes expectTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);

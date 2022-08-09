@@ -210,8 +210,7 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
     Vector *columnVector = columnVectors[channel][vecBatchIndex];
     int32_t originalRowIndex;
     Vector *originalVector = nullptr;
-    const int32_t *sourceTypeIds = sourceTypes.GetIds();
-    int32_t typeId = sourceTypeIds[channel];
+    int32_t typeId = sourceTypes.GetType(channel)->GetId();
 
     originalVector = VectorHelper::ExpandVectorAndIndex(columnVector, rowIndex, originalRowIndex);
     if (originalVector->IsValueNull(originalRowIndex)) {

@@ -5,7 +5,6 @@
 #include "sort.h"
 #include "util/type_util.h"
 #include "util/debug.h"
-#include "vector/vector_common.h"
 #include "vector/vector_helper.h"
 #include "operator/util/operator_util.h"
 #include "operator/spill/vector_batch_spiller.h"
@@ -19,9 +18,8 @@ using namespace omniruntime::vec;
 SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     const OperatorConfig &operatorConfig)
-    : operatorConfig(operatorConfig)
+    : sourceTypes(dataTypes), operatorConfig(operatorConfig)
 {
-    this->sourceTypes = std::make_unique<DataTypes>(dataTypes);
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
@@ -51,7 +49,7 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
 Operator *SortOperatorFactory::CreateOperator()
 {
     auto pSortOperator =
-        new SortOperator(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts, operatorConfig);
+        new SortOperator(sourceTypes, outputCols, sortCols, sortAscendings, sortNullFirsts, operatorConfig);
     return pSortOperator;
 }
 
@@ -64,7 +62,7 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->sortCols = sortCols;
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
-    this->pagesIndex = std::make_unique<PagesIndex>(dataTypes);
+    this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
 }
 
 SortOperator::~SortOperator() = default;
@@ -141,7 +139,7 @@ void SortOperator::Sort()
     int32_t from = 0;
     int32_t sortColTypes[sortColCount];
     for (int32_t i = 0; i < sortColCount; i++) {
-        sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
+        sortColTypes[i] = sourceTypes.GetType(sortCols[i])->GetId();
     }
     pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount, from,
         to);

@@ -15,14 +15,14 @@
  * intermediate count value.
  */
 namespace omniruntime {
-namespace vec {
 using DataType = type::DataType;
+namespace vec {
 class ContainerVector : public Vector {
     using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
 
 public:
     ContainerVector(VectorAllocator *allocator, int32_t positionCount, std::vector<uintptr_t> &fieldVectors,
-        int32_t vectorCount, std::vector<DataType> &dataTypes);
+        int32_t vectorCount, std::vector<DataTypePtr> &dataTypes);
 
     ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount);
 
@@ -48,7 +48,7 @@ public:
         return vectorCount;
     }
 
-    std::vector<DataType> ALWAYS_INLINE &GetDataTypes()
+    std::vector<DataTypePtr> ALWAYS_INLINE &GetDataTypes()
     {
         return dataTypes;
     }
@@ -68,15 +68,14 @@ public:
         return OMNI_VEC_ENCODING_CONTAINER;
     }
 
-    void SetDataTypes(const std::vector<DataType> &dataTypes)
+    void SetDataTypes(const std::vector<DataTypePtr> &dataTypes)
     {
         this->dataTypes = dataTypes;
     }
 
-
 private:
     static const int BYTES = sizeof(T);
-    std::vector<DataType> dataTypes;
+    std::vector<DataTypePtr> dataTypes;
     int32_t vectorCount;
     int32_t positionCount;
 

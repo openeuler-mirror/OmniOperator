@@ -34,9 +34,9 @@ public:
     using CompareFunc = int32_t (*)(omniruntime::vec::Vector *leftVector, int32_t leftPosition,
         omniruntime::vec::Vector *rightVector, int32_t rightPosition);
 
-    static int32_t GetTypeSize(const DataType &vecType)
+    static int32_t GetTypeSize(const DataTypePtr dataTypePtr)
     {
-        switch (vecType.GetId()) {
+        switch (dataTypePtr->GetId()) {
             case OMNI_INT:
                 return OperatorUtil::SIZE_OF_INT;
             case OMNI_LONG:
@@ -55,13 +55,13 @@ public:
                 return OperatorUtil::SIZE_OF_DATE32;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                return ((VarcharDataType &)vecType).GetWidth();
+                return static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
             default:
                 return 0;
         }
     }
 
-    static int32_t GetOutputRowSize(const std::vector<DataType> &dataTypes, const int32_t *outputCols,
+    static int32_t GetOutputRowSize(const std::vector<DataTypePtr> &dataTypes, const int32_t *outputCols,
         int32_t outputColsCount)
     {
         int32_t rowSize = 0;
@@ -71,7 +71,7 @@ public:
         return rowSize;
     }
 
-    static int32_t GetRowSize(const std::vector<DataType> &dataTypes)
+    static int32_t GetRowSize(const std::vector<DataTypePtr> &dataTypes)
     {
         int32_t rowSize = 0;
         for (const auto &dataType : dataTypes) {
@@ -86,7 +86,7 @@ public:
         return (MAX_VEC_BATCH_SIZE_IN_BYTES + rowSize - 1) / rowSize;
     }
 
-    static int32_t GetMaxRowCount(const std::vector<DataType> &dataTypes, const int32_t *outputCols,
+    static int32_t GetMaxRowCount(const std::vector<DataTypePtr> &dataTypes, const int32_t *outputCols,
         int32_t outputColsCount)
     {
         int32_t rowSize = GetOutputRowSize(dataTypes, outputCols, outputColsCount);
@@ -205,11 +205,11 @@ public:
 
     static void CreateProjectFuncs(const DataTypes &intputTypes,
         std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-        std::vector<DataType> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
+        std::vector<DataTypePtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
         std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
 
     static void CreateRequiredProjectFuncs(const DataTypes &intputTypes, omniruntime::expressions::Expr *projectKeys[],
-        int32_t projectKeysCount, std::vector<DataType> &newIntputTypes,
+        int32_t projectKeysCount, std::vector<DataTypePtr> &newIntputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
         std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 

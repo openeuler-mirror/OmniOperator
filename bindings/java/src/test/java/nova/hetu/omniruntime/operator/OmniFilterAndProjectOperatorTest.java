@@ -10,12 +10,14 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
+import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -1458,8 +1460,8 @@ public class OmniFilterAndProjectOperatorTest {
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0,"
-                        + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":7,"
-                        + "\"precision\":21,\"scale\":5,\"isNull\":false,\"value\":\"2000\"}}",
+                        + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":6,"
+                        + "\"precision\":9,\"scale\":5,\"isNull\":false,\"value\":2000}}",
                 types, projectionsJSON, 1);
 
         assertFalse(factory.isSupported());
@@ -1467,25 +1469,25 @@ public class OmniFilterAndProjectOperatorTest {
     }
 
     @Test
-    public void testFactoryJitContextEquals() {
+    public void testFactoryContextEquals() {
         DataType[] types = {DoubleDataType.DOUBLE};
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
 
-        OmniFilterAndProjectOperatorFactory.JitContext factory1 = new OmniFilterAndProjectOperatorFactory.JitContext(
+        FactoryContext factory1 = new FactoryContext(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
                         + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
                 types, projectionsJSON, 1, new OperatorConfig());
-        OmniFilterAndProjectOperatorFactory.JitContext factory2 = new OmniFilterAndProjectOperatorFactory.JitContext(
+        FactoryContext factory2 = new FactoryContext(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\""
                         + ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
                 types, projectionsJSON, 1, new OperatorConfig());
-        OmniFilterAndProjectOperatorFactory.JitContext factory3 = null;
+        FactoryContext factory3 = null;
 
-        assertTrue(factory1.equals(factory2));
-        assertTrue(factory1.equals(factory1));
-        assertFalse(factory1.equals(factory3));
+        assertEquals(factory2, factory1);
+        assertEquals(factory1, factory1);
+        assertNotEquals(factory3, factory1);
     }
 }

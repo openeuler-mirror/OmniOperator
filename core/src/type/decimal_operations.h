@@ -566,10 +566,12 @@ public:
                 ThrowIllegalState();
             }
         }
+
         if (wordShifts > 0) {
             std::copy(number.begin() + wordShifts, number.begin() + length, number.begin());
-            std::fill(number.begin() + length - wordShifts, number.begin() + 2 * length - wordShifts, 0);
+            std::fill(number.begin() + length - wordShifts, number.begin() + length, 0);
         }
+
         int32_t bitShifts = shifts & 0b11111;
         if (bitShifts > 0) {
             if (number[0] << (32 - bitShifts) != 0) {
@@ -794,6 +796,46 @@ public:
         ShiftRightMultiPrecision(dividend, normalizedDividendLength, nlz);
     }
 
+    static inline void Divide(Decimal128 dividend, Decimal128 divisor, int32_t dividendScaleFactor,
+                              int32_t divisorScaleFactor, Decimal128 &quotient, Decimal128 &remainder)
+    {
+        if (dividendScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
+            ThrowOverflow();
+        }
+
+        if (divisorScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
+            ThrowOverflow();
+        }
+
+        int64_t dividendHigh = dividend.HighBits();
+        int64_t dividendLow = dividend.LowBits();
+        int64_t divisorHigh = divisor.HighBits();
+        int64_t divisorLow = divisor.LowBits();
+
+        bool dividendIsNegative = dividendHigh < 0;
+        bool divisorIsNegative = divisorHigh < 0;
+        bool quotientIsNegative = (dividendIsNegative != divisorIsNegative);
+
+        if (dividendIsNegative) {
+            int64_t tmpHigh = NegateHigh(dividendHigh, dividendLow);
+            dividendHigh = tmpHigh;
+        }
+
+        if (divisorIsNegative) {
+            int64_t tmpHigh = NegateHigh(divisorHigh, divisorLow);
+            divisorHigh = tmpHigh;
+        }
+
+        DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh, divisorScaleFactor,
+                        quotient, remainder);
+        if (dividendIsNegative) {
+            Negate(remainder, 0);
+        }
+        if (quotientIsNegative) {
+            Negate(quotient, 0);
+        }
+    }
+
     // not support dividend's precision is greater than 27. All input long should be positive.
     static inline void DividePositives(int64_t dividendLow, int64_t dividendHigh, int32_t dividendScaleFactor,
         int64_t divisorLow, int64_t divisorHigh, int32_t divisorScaleFactor, Decimal128 &quotient,
@@ -892,6 +934,15 @@ public:
         return quotient;
     }
 
+    static inline Decimal128 Remainder(Decimal128 &dividend, int32_t dividendScaleFactor, Decimal128 &divisor,
+       int32_t divisorScaleFactor)
+    {
+        Decimal128 quotient;
+        Decimal128 remainder;
+        Divide(dividend, divisor, dividendScaleFactor, divisorScaleFactor, quotient, remainder);
+        return remainder;
+    }
+
     static inline void ShiftLeftDestructive(Decimal128 &decimal, int32_t shift)
     {
         if (shift == 0) {
@@ -903,7 +954,7 @@ public:
         int32_t shiftRestore = 64 - bitShiftsInWord;
 
         if (bitShiftsInWord != 0) {
-            if ((GetLong(decimal, 1 - wordShifts) & (-1 << shiftRestore)) != 0) {
+            if ((GetLong(decimal, 1 - wordShifts) & (-1LL << shiftRestore)) != 0) {
                 ThrowOverflow();
             }
         }
@@ -969,10 +1020,21 @@ public:
         return value;
     }
 
+    static inline int32_t RescaleFactor(int32_t fromScale, int32_t toScale)
+    {
+        return std::max(0, toScale - fromScale);
+    }
+
+    static inline int32_t DivideRescaleFactor(int32_t dividendScale, int32_t divisorScale, int32_t resultScale)
+    {
+        return resultScale - dividendScale + divisorScale;
+    }
+
     static inline void Rescale128(Decimal128 &decimal, int32_t rescaleFactor, Decimal128 &result)
     {
         if (rescaleFactor == 0) {
             result = decimal;
+            return;
         }
         Decimal128 scaleValue;
         scaleValue.SetValue(0, int64_t(pow(10, abs(rescaleFactor))));

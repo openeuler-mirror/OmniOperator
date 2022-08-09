@@ -38,11 +38,11 @@ SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
-    std::vector<DataType> newSourceTypes;
+    std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,
         this->sortCols, this->projectFuncs);
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes.get()), outputCols,
+    this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
 }
 
@@ -54,7 +54,7 @@ SortWithExprOperatorFactory::~SortWithExprOperatorFactory()
 Operator *SortWithExprOperatorFactory::CreateOperator()
 {
     auto sortOperator = static_cast<SortOperator *>(sortOperatorFactory->CreateOperator());
-    auto pOperator = new SortWithExprOperator(*(sourceTypes.get()), sortCols, projectFuncs, sortOperator);
+    auto pOperator = new SortWithExprOperator(*sourceTypes, sortCols, projectFuncs, sortOperator);
     return pOperator;
 }
 

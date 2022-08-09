@@ -17,20 +17,21 @@ constexpr char DECIMAL128_DEFAULT_VALUE[] = "0";
 omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId, int32_t precision,
     int32_t scale)
 {
+    DataTypePtr destType;
     if (TypeUtil::IsDecimalType(destTypeId)) {
         switch (destTypeId) {
             case OMNI_DECIMAL64: {
-                DataTypePtr destType = make_unique<DataType>(Decimal64DataType(precision, scale));
+                destType = std::make_shared<Decimal64DataType>(precision, scale);
                 return new LiteralExpr(LONG_DEFAULT_VALUE, std::move(destType));
             }
             case OMNI_DECIMAL128:
             default: {
-                DataTypePtr destType = make_unique<DataType>(Decimal128DataType(precision, scale));
+                destType = std::make_shared<Decimal128DataType>(precision, scale);
                 return new LiteralExpr(new string(DECIMAL128_DEFAULT_VALUE), std::move(destType));
             }
         }
     } else {
-        DataTypePtr destType = make_unique<DataType>(destTypeId);
+        destType = std::make_shared<DataType>(destTypeId);
         switch (destTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
@@ -55,36 +56,36 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
 DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
 {
     DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
-    int precision = 0;
-    int scale = 0;
-    int width = 0;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    uint32_t width = 0;
     switch (typeId) {
         case OMNI_BOOLEAN:
-            return make_unique<BooleanDataType>();
+            return std::make_shared<BooleanDataType>();
         case OMNI_INT:
-            return make_unique<IntDataType>();
+            return std::make_shared<IntDataType>();
         case OMNI_DATE32:
-            return make_unique<DataType>(OMNI_DATE32);
+            return std::make_shared<Date32DataType>();
         case OMNI_LONG:
-            return make_unique<LongDataType>();
+            return std::make_shared<LongDataType>();
         case OMNI_DOUBLE:
-            return make_unique<DoubleDataType>();
+            return std::make_shared<DoubleDataType>();
         case OMNI_DECIMAL64:
             precision = jsonExpr["precision"].get<int32_t>();
             scale = jsonExpr["scale"].get<int32_t>();
-            return make_unique<Decimal64DataType>(precision, scale);
+            return std::make_shared<Decimal64DataType>(precision, scale);
         case OMNI_DECIMAL128:
             precision = jsonExpr["precision"].get<int32_t>();
             scale = jsonExpr["scale"].get<int32_t>();
-            return make_unique<Decimal128DataType>(precision, scale);
+            return std::make_shared<Decimal128DataType>(precision, scale);
         case OMNI_VARCHAR:
-            width = jsonExpr["width"].get<int32_t>();
-            return make_unique<VarcharDataType>(width);
+            width = jsonExpr["width"].get<uint32_t>();
+            return std::make_shared<VarcharDataType>(width);
         case OMNI_CHAR:
-            width = jsonExpr["width"].get<int32_t>();
-            return make_unique<CharDataType>(width);
+            width = jsonExpr["width"].get<uint32_t>();
+            return std::make_shared<CharDataType>(width);
         case OMNI_NONE:
-            return make_unique<DataType>();
+            return std::make_shared<NoneDataType>();
         default:
             LogError("Unsupported data type %d ", typeId);
             return nullptr;

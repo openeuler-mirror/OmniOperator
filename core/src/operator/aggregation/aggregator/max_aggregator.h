@@ -11,11 +11,11 @@ namespace omniruntime {
 namespace op {
 template <typename InputVecType, typename OutputVecType, typename ResultType> class MaxAggregator : public Aggregator {
 public:
-    MaxAggregator(const DataType &in, const DataType &out, int32_t channel)
+    MaxAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel)
     {}
 
-    MaxAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw, bool outputPartial)
+    MaxAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel, inputRaw, outputPartial)
     {}
 

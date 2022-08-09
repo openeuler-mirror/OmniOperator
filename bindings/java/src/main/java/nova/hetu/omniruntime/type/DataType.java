@@ -5,6 +5,9 @@
 package nova.hetu.omniruntime.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -14,17 +17,9 @@ import java.util.Objects;
  *
  * @since 2021-08-05
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "id")
+@JsonTypeIdResolver(DataTypeSerializer.DataTypeResolver.class)
 public class DataType implements Serializable {
-    /**
-     * It is a none data type.
-     */
-    public static final DataType NONE = new DataType(DataTypeId.OMNI_NONE);
-
-    /**
-     * It is a invalid data type.
-     */
-    public static final DataType INVALID = new DataType(DataTypeId.OMNI_INVALID);
-
     private static final long serialVersionUID = 2589766491688675794L;
 
     @JsonProperty
@@ -52,43 +47,91 @@ public class DataType implements Serializable {
      * The data type id.
      */
     public enum DataTypeId {
-        OMNI_NONE,
-        OMNI_INT,
-        OMNI_LONG,
-        OMNI_DOUBLE,
-        OMNI_BOOLEAN,
-        OMNI_SHORT,
-        OMNI_DECIMAL64,
-        OMNI_DECIMAL128,
-        OMNI_DATE32,
-        OMNI_DATE64,
-        OMNI_TIME32,
-        OMNI_TIME64,
-        OMNI_TIMESTAMP,
-        OMNI_INTERVAL_MONTHS,
-        OMNI_INTERVAL_DAY_TIME,
-        OMNI_VARCHAR,
-        OMNI_CHAR,
-        OMNI_CONTAINER,
-        OMNI_INVALID
+        OMNI_NONE(0),
+        OMNI_INT(1),
+        OMNI_LONG(2),
+        OMNI_DOUBLE(3),
+        OMNI_BOOLEAN(4),
+        OMNI_SHORT(5),
+        OMNI_DECIMAL64(6),
+        OMNI_DECIMAL128(7),
+        OMNI_DATE32(8),
+        OMNI_DATE64(9),
+        OMNI_TIME32(10),
+        OMNI_TIME64(11),
+        OMNI_TIMESTAMP(12),
+        OMNI_INTERVAL_MONTHS(13),
+        OMNI_INTERVAL_DAY_TIME(14),
+        OMNI_VARCHAR(15),
+        OMNI_CHAR(16),
+        OMNI_CONTAINER(17),
+        OMNI_INVALID(18);
+
+        private final int value;
+
+        DataTypeId(int value) {
+            this.value = value;
+        }
+
+        /**
+         * Serialize the ordinal of enum.
+         *
+         * @return the ordinal.
+         */
+        @JsonValue
+        public int toValue() {
+            return this.value;
+        }
     }
 
     /**
      * The unit of date.
      */
     public enum DateUnit {
-        DAY,
-        MILLI
+        DAY(0),
+        MILLI(1);
+
+        private final int value;
+
+        DateUnit(int value) {
+            this.value = value;
+        }
+
+        /**
+         * Serialize the value of enum.
+         *
+         * @return the value.
+         */
+        @JsonValue
+        public int toValue() {
+            return this.value;
+        }
     }
 
     /**
      * The unit of time.
      */
     public enum TimeUnit {
-        SEC,
-        MILLISEC,
-        MICROSEC,
-        NANOSEC
+        SEC(0),
+        MILLISEC(1),
+        MICROSEC(2),
+        NANOSEC(3);
+
+        private final int value;
+
+        TimeUnit(int value) {
+            this.value = value;
+        }
+
+        /**
+         * Serialize the value of enum.
+         *
+         * @return the value.
+         */
+        @JsonValue
+        public int toValue() {
+            return this.value;
+        }
     }
 
     @Override

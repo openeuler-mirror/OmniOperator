@@ -19,6 +19,17 @@
 #include "codegen/row_expression_codegen.h"
 #include "operator/execution_context.h"
 
+/*
+ * FilterFunc is retrieved from FilterCodeGen
+ * arguments to func are (data, rowCount, selectedRows, bitmap, offsets, context, dictionaries)
+ * data: 2D array containing vector values
+ * rowCount: number of rows in data
+ * selectedRows: array of row numbers which pass the Filter; is modified in func
+ * bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
+ * offsets: used by char and varchar, size = rowCount + 1
+ * context: store some error message
+ * dictionaries: contains dictionary vec, will be restored inside codegen
+ */
 using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 
 namespace omniruntime {
@@ -35,7 +46,6 @@ public:
      * Simple Filter constructor
      *
      * @param expression the filter expression, must return evaluates to boolean type
-     * @param inputType types for all involved values
      */
     explicit SimpleFilter(const omniruntime::expressions::Expr &expression);
 
@@ -94,21 +104,16 @@ public:
     {
         this->codeGen.reset();
     }
-    bool isSupported;
-
+    bool IsSupported() const
+    {
+        return isSupported;
+    }
     FilterFunc apply;
 
 private:
     std::unique_ptr<FilterCodeGen> codeGen;
     const expressions::Expr *expr;
-    // Filter function is retrieved from FilterCodeGen
-    // arguments to func are (data, numSelectedRows, rowCount, bitmap, offsets, allocator)
-    // data: 2D array containing vector values
-    // selectedRows: array of row numbers which pass the Filter; is modified in func
-    // rowCount: number of rows in data
-    // bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
-    // value offsets
-    // address to an allocator
+    bool isSupported;
 };
 
 class FilterAndProjectOperator : public Operator {
@@ -148,7 +153,7 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, DataTypes &inputDataTypes,
+    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, const DataTypes &inputDataTypes,
         int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
         int32_t projectVecCount);
 
@@ -156,7 +161,10 @@ public:
 
     Operator *CreateOperator() override;
 
-    bool isSupportedExpr = true;
+    bool IsSupportedExpr() const
+    {
+        return isSupportedExpr;
+    }
 
 private:
     std::string expression;
@@ -165,6 +173,7 @@ private:
     int32_t projectVecCount;
     std::unique_ptr<Filter> filter;
     std::vector<std::unique_ptr<Projection>> projections;
+    bool isSupportedExpr = true;
 };
 } // end of op
 } // end of omniruntime

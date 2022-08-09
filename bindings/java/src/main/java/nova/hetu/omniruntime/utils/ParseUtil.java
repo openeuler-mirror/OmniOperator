@@ -56,7 +56,7 @@ public class ParseUtil {
     private static long getOperatorSystemFreeMemorySize() {
         java.lang.management.OperatingSystemMXBean langOSMXBean = ManagementFactory.getOperatingSystemMXBean();
         if (langOSMXBean instanceof OperatingSystemMXBean) {
-            OperatingSystemMXBean osmxb = (OperatingSystemMXBean) langOSMXBean ;
+            OperatingSystemMXBean osmxb = (OperatingSystemMXBean) langOSMXBean;
             return osmxb.getFreePhysicalMemorySize();
         }
         throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "Cannot get system freeMemorySize");

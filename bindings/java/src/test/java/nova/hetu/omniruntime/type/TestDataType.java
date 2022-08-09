@@ -2,7 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
-package nova.hetu.omniruntime.vector;
+package nova.hetu.omniruntime.type;
 
 import static org.testng.Assert.assertEquals;
 
@@ -60,7 +60,6 @@ public class TestDataType {
         List<nova.hetu.omniruntime.type.DataType> types = new ArrayList<>();
         types.add(LongDataType.LONG);
         types.add(new Decimal128DataType(1, 2));
-        assertEquals(map.writeValueAsString(types),
-                "[{\"id\":\"OMNI_LONG\"},{\"precision\":1,\"scale\":2,\"id\":\"OMNI_DECIMAL128\"}]");
+        assertEquals(map.writeValueAsString(types), "[{\"id\":2},{\"precision\":1,\"scale\":2,\"id\":7}]");
     }
 }

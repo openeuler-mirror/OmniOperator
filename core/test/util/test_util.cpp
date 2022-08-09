@@ -15,7 +15,6 @@ using namespace omniruntime::expressions;
 
 namespace TestUtil {
 bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber);
-bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
 bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
@@ -114,6 +113,20 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
                     }
                     break;
                 }
+                case OMNI_CONTAINER: {
+                    int32_t fieldCount = static_cast<ContainerVector *>(actualCol)->GetVectorCount();
+                    for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+                        auto *actualFieldCol =
+                            reinterpret_cast<Vector *>(static_cast<ContainerVector *>(actualCol)->GetValue(colIdx));
+                        auto *expectFieldCol =
+                            reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectCol)->GetValue(colIdx));
+                        result = ColumnMatch(actualFieldCol, expectFieldCol);
+                        if (!result) {
+                            break;
+                        }
+                    }
+                    break;
+                }
                 default:
                     result = false;
             }
@@ -126,10 +139,10 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
     return true;
 }
 
-VarcharVector *CreateVarcharVector(VarcharDataType type, std::string *values, int32_t length)
+VarcharVector *CreateVarcharVector(DataType &type, std::string *values, int32_t length)
 {
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
-    uint32_t width = type.GetWidth();
+    uint32_t width = static_cast<VarcharDataType &>(type).GetWidth();
     VarcharVector *vector = new VarcharVector(vecAllocator, length * width, length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
@@ -147,6 +160,21 @@ Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
     return vector;
 }
 
+ContainerVector *CreateContainerVector(std::vector<DataTypePtr> &fieldTypes, int32_t rowCount, va_list &args)
+{
+    int32_t fieldCount = fieldTypes.size();
+    std::vector<uintptr_t> vectorAddresses(fieldCount);
+    for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+        auto *fieldVector = fieldTypes[colIdx]->GetId() == OMNI_CONTAINER ?
+            CreateContainerVector(static_cast<ContainerDataType *>(fieldTypes[colIdx].get())->GetFieldTypes(), rowCount,
+            args) :
+            CreateVector(*fieldTypes[colIdx], rowCount, args);
+        vectorAddresses[colIdx] = reinterpret_cast<uintptr_t>(fieldVector);
+    }
+    omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocator::GetGlobalAllocator();
+    return new ContainerVector(vecAllocator, rowCount, vectorAddresses, fieldCount, fieldTypes);
+}
+
 Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
     switch (dataType.GetId()) {
@@ -162,9 +190,12 @@ Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
             return CreateVector<BooleanVector>(va_arg(args, bool *), rowCount);
         case OMNI_VARCHAR:
         case OMNI_CHAR:
-            return CreateVarcharVector(static_cast<VarcharDataType &>(dataType), va_arg(args, std::string *), rowCount);
+            return CreateVarcharVector(dataType, va_arg(args, std::string *), rowCount);
         case OMNI_DECIMAL128:
             return CreateDecimal128Vector(va_arg(args, Decimal128 *), rowCount);
+        case OMNI_CONTAINER:
+            return static_cast<Vector *>(
+                CreateContainerVector(static_cast<ContainerDataType &>(dataType).GetFieldTypes(), rowCount, args));
         default:
             std::cerr << "Unsupported type : " << dataType.GetId() << std::endl;
             return nullptr;
@@ -182,21 +213,21 @@ DictionaryVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, i
     return vec;
 }
 
-VectorBatch *CreateVectorBatch(DataTypes &types, int32_t rowCount, ...)
+VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
 {
     int32_t typesCount = types.GetSize();
-    auto *vectorBatch = new VectorBatch(typesCount);
+    auto *vectorBatch = new VectorBatch(typesCount, rowCount);
     va_list args;
     va_start(args, rowCount);
     for (int32_t i = 0; i < typesCount; i++) {
-        DataType type = types.Get()[i];
-        vectorBatch->SetVector(i, CreateVector(type, rowCount, args));
+        DataTypePtr type = types.GetType(i);
+        vectorBatch->SetVector(i, CreateVector(*type, rowCount, args));
     }
     va_end(args);
     return vectorBatch;
 }
 
-VectorBatch *CreateEmptyVectorBatch(const std::vector<DataType> &dataTypes)
+VectorBatch *CreateEmptyVectorBatch(const std::vector<DataTypePtr> &dataTypes)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator();
     VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
@@ -387,29 +418,11 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory)
 {
-    omniruntime::op::Operator *nativeOperator = nullptr;
-
-#if defined(DEBUG_OPERATOR)
-    nativeOperator = operatorFactory->CreateOperator();
-#else
-    auto jitContext = operatorFactory->GetJitContext();
-    if (jitContext == nullptr) {
-        nativeOperator = operatorFactory->CreateOperator();
-    } else {
-        auto optModule = reinterpret_cast<omniruntime::op::OptModule>(jitContext->func);
-        nativeOperator = optModule(operatorFactory);
-    }
-#endif
-    return nativeOperator;
+    return operatorFactory->CreateOperator();;
 }
 
 void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
 {
-    auto jitContext = operatorFactory->GetJitContext();
-    if (jitContext != nullptr) {
-        delete jitContext->jit;
-        delete jitContext;
-    }
     delete operatorFactory;
 }
 
@@ -424,18 +437,18 @@ VectorBatch *DuplicateVectorBatch(VectorBatch *input)
     return duplication;
 }
 
-void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataType> &dataTypes)
+void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount, std::vector<DataTypePtr> &dataTypes)
 {
     uint32_t defaultVarcharLength = 50;
     for (int i = 0; i < dataTypeCount; ++i) {
         if (dataTypeIds[i] == OMNI_VARCHAR) {
-            dataTypes.push_back(VarcharDataType(defaultVarcharLength));
+            dataTypes.push_back(VarcharType(defaultVarcharLength));
             continue;
         } else if (dataTypeIds[i] == OMNI_CHAR) {
-            dataTypes.push_back(CharDataType(defaultVarcharLength));
+            dataTypes.push_back(CharType(defaultVarcharLength));
             continue;
         }
-        dataTypes.push_back(DataType(dataTypeIds[i]));
+        dataTypes.push_back(std::make_shared<DataType>(dataTypeIds[i]));
     }
 }
 
@@ -515,7 +528,7 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
     auto signature = FunctionSignature(funcName, argTypes, returnType->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
-        return new FuncExpr(funcName, args, std::move(returnType), function);
+        return new FuncExpr(funcName, args, returnType, function);
     }
     return nullptr;
 }
@@ -526,5 +539,40 @@ std::string GenerateSpillPath()
     std::string result = std::string(dirName) + std::string("/") + std::to_string(time(nullptr));
     free(dirName);
     return result;
+}
+
+void SetNulls(omniruntime::vec::Vector *vector, std::vector<bool> &nulls)
+{
+    for (int32_t i = 0; i < nulls.size(); i++) {
+        if (nulls[i]) {
+            vector->SetValueNull(i);
+        }
+    }
+}
+
+omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &values, std::vector<bool> &nulls)
+{
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
+    static int32_t initCapacity = 1024; // 1k
+    int32_t rowCount = values.size();
+    auto *out = new VarcharVector(vecAllocator, initCapacity, rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (nulls[i]) {
+            out->SetValueNull(i);
+        } else {
+            out->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
+        }
+    }
+    return out;
+}
+
+omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector *> &vectors)
+{
+    int32_t vecCount = vectors.size();
+    auto *vectorBatch = new VectorBatch(vecCount, rowCount);
+    for (int32_t i = 0; i < vecCount; i++) {
+        vectorBatch->SetVector(i, vectors[i]);
+    }
+    return vectorBatch;
 }
 }

@@ -30,6 +30,12 @@ else()
     set(DEBUG_COMPILE_LEVEL "-O0")
 endif()
 
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
+
 set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 
@@ -42,6 +48,8 @@ else ()
 endif ()
 
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
+message(STATUS "OMNI_HOME is $ENV{OMNI_HOME}")
+message(STATUS "JAVA_HOME is $ENV{JAVA_HOME}")
 
 # clean all target
 set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_RUNTIME_SO}.so

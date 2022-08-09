@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator.join;
 
 import static java.util.Objects.requireNonNull;
 
-import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -36,7 +35,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
     public OmniSmjBufferedTableWithExprOperatorFactory(DataType[] soruceTypes, String[] equalKeyExprs,
             int[] outputChannels, OmniSmjStreamedTableWithExprOperatorFactory smjStreamedTableOperatorFactory,
             OperatorConfig operatorConfig) {
-        super(new FactoryContext(new JitContext(soruceTypes, equalKeyExprs, outputChannels, operatorConfig),
+        super(new FactoryContext(soruceTypes, equalKeyExprs, outputChannels, operatorConfig,
                 smjStreamedTableOperatorFactory));
     }
 
@@ -52,29 +51,24 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
      */
     public OmniSmjBufferedTableWithExprOperatorFactory(DataType[] soruceTypes, String[] equalKeyExprs,
             int[] outputChannels, OmniSmjStreamedTableWithExprOperatorFactory smjStreamedTableOperatorFactory) {
-        this(soruceTypes, equalKeyExprs, outputChannels, smjStreamedTableOperatorFactory, new OperatorConfig(true));
+        this(soruceTypes, equalKeyExprs, outputChannels, smjStreamedTableOperatorFactory, new OperatorConfig());
     }
 
     private static native long createSmjBufferedTableWithExprOperatorFactory(String soruceTypes, String[] equalKeyExprs,
-            int[] outputChannels, long smjStreamedTableOperatorFactory, long jitContext);
-
-    private static native long createSmjBufferedTableWithExprJitContext(String soruceTypes, String[] equalKeyExprs,
-            int[] outputChannels);
+            int[] outputChannels, long smjStreamedTableOperatorFactory);
 
     @Override
-    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
-        JitContext context = factoryContext.getJitContext();
+    protected long createNativeOperatorFactory(FactoryContext context) {
         return createSmjBufferedTableWithExprOperatorFactory(DataTypeSerializer.serialize(context.soruceTypes),
-                context.equalKeyExprs, context.outputChannels, factoryContext.getStreamedTableOperatorFactory(),
-                factoryContext.getNativeJitContext());
+                context.equalKeyExprs, context.outputChannels, context.getStreamedTableOperatorFactory());
     }
 
     /**
-     * The type Context.
+     * The type Factory context.
      *
      * @since 2021-10-30
      */
-    public static class JitContext extends OmniJitContext {
+    public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] soruceTypes;
 
         private final String[] equalKeyExprs;
@@ -83,6 +77,8 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
 
         private final OperatorConfig operatorConfig;
 
+        private final long streamedTableOperatorFactory;
+
         /**
          * Instantiates a new Context.
          *
@@ -90,14 +86,17 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
          * @param equalKeyExps equal condition key expressions
          * @param outputChannels output of streamed table
          * @param operatorConfig the operator config
+         * @param streamedTableOperatorFactory streamedTableOperatorFactory
          */
-        public JitContext(DataType[] soruceTypes, String[] equalKeyExps, int[] outputChannels,
-                OperatorConfig operatorConfig) {
-            super(operatorConfig);
+        public FactoryContext(DataType[] soruceTypes, String[] equalKeyExps, int[] outputChannels,
+                OperatorConfig operatorConfig,
+                OmniSmjStreamedTableWithExprOperatorFactory streamedTableOperatorFactory) {
             this.soruceTypes = requireNonNull(soruceTypes, "soruceTypes");
             this.equalKeyExprs = requireNonNull(equalKeyExps, "equalKeyExprs");
             this.outputChannels = requireNonNull(outputChannels, "outputChannels");
             this.operatorConfig = requireNonNull(operatorConfig, "operatorConfig");
+            this.streamedTableOperatorFactory = streamedTableOperatorFactory.getNativeOperatorFactory();
+            setNeedCache(false);
         }
 
         @Override
@@ -114,37 +113,9 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            JitContext that = (JitContext) obj;
+            FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(soruceTypes, that.soruceTypes) && Arrays.equals(equalKeyExprs, that.equalKeyExprs)
                     && Arrays.equals(outputChannels, that.outputChannels) && operatorConfig.equals(that.operatorConfig);
-        }
-    }
-
-    /**
-     * The type Factory context.
-     *
-     * @since 2021-10-30
-     */
-    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
-        private final long streamedTableOperatorFactory;
-
-        /**
-         * Instantiates a new Context.
-         *
-         * @param jitContext the jit context
-         * @param streamedTableOperatorFactory streamed table operator factory instance
-         */
-        public FactoryContext(JitContext jitContext,
-                OmniSmjStreamedTableWithExprOperatorFactory streamedTableOperatorFactory) {
-            super(jitContext);
-            setNeedCache(false);
-            this.streamedTableOperatorFactory = streamedTableOperatorFactory.getNativeOperatorFactory();
-        }
-
-        @Override
-        protected long createNativeJitContext(JitContext context) {
-            return createSmjBufferedTableWithExprJitContext(DataTypeSerializer.serialize(context.soruceTypes),
-                    context.equalKeyExprs, context.outputChannels);
         }
 
         public long getStreamedTableOperatorFactory() {

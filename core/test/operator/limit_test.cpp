@@ -32,17 +32,20 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     bool data8[dataSize] = {true, false, false, true};
     std::string data9[dataSize] = {"123", "456", "789", "012"};
 
-    std::vector<DataType> types = { IntDataType::Instance(),       DoubleDataType::Instance(),
-        VarcharDataType(10),           LongDataType::Instance(),
-        Decimal128DataType(10, 2),     Date32DataType::Instance(),
-        Decimal64DataType::Instance(), BooleanDataType::Instance(),
+    std::vector<DataTypePtr> types = { IntType(),
+        DoubleType(),
+        VarcharType(10),
+        LongType(),
+        Decimal128Type(10, 2),
+        Date32Type(),
+        Decimal64DataType::Instance(),
+        BooleanType(),
         CharDataType::Instance() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 =
         CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    operatorFactory->SetJitContext(nullptr);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
     limitOperator->AddInput(vecBatch1);
     std::vector<VectorBatch *> outputVecBatches;
@@ -80,12 +83,11 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     int32_t data01[dataSize] = {0, 1, 2};
     double data02[dataSize] = {6.6, 5.5, 4.4};
 
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
     DataTypes sourceTypes(types);
 
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data01, data02);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    operatorFactory->SetJitContext(nullptr);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
     std::vector<VectorBatch *> outputVecBatches;
     limitOperator->AddInput(vecBatch1);
@@ -127,11 +129,10 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     int32_t data1[dataSize] = {0, 1, 2, 0, 1, 2};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    operatorFactory->SetJitContext(nullptr);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
 
     // set null to vector batch to simulate null value
