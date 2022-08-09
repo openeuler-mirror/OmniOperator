@@ -20,11 +20,6 @@ public:
     ~DynamicPagesIndex();
     int32_t AddVecBatches(const std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
 
-    const int32_t *GetTypes() const
-    {
-        return dataTypeIds;
-    }
-
     int32_t GetTypesCount() const
     {
         return typesCount;
@@ -76,7 +71,6 @@ public:
     void FreeAllRemainingVecBatch();
 
 private:
-    const int32_t *dataTypeIds;
     int32_t typesCount;
     int32_t lastFreedVecBatchIdx = -1;
 

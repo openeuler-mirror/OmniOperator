@@ -25,7 +25,7 @@ TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
     int32_t data3[dataSize] = {10, 11, 12, 10, 11, 12};
     double data4[dataSize] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1};
 
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data3, data4);

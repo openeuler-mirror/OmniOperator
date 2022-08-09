@@ -39,8 +39,6 @@ TEST(CodeGenTest, SimpleFilter)
         new BinaryExpr(omniruntime::expressions::Operator::LT, lessThanLeft, lessThanRight, BooleanType());
 
     const int32_t numCols = 1;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
     const int numRows = 100;
     int32_t *col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
@@ -48,6 +46,7 @@ TEST(CodeGenTest, SimpleFilter)
     }
 
     int64_t *table = new int64_t[numCols];
+    table[0] = reinterpret_cast<int64_t>(col1);
     table[0] = reinterpret_cast<int64_t>(col1);
 
     bool **bitmap = new bool *[numCols];
@@ -65,7 +64,7 @@ TEST(CodeGenTest, SimpleFilter)
 
     RowProjection rowProjection(*lessThanExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_BOOLEAN);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_BOOLEAN);
 
     int32_t *dataLength = new int32_t(0);
     int64_t dictionaries[numCols] = {};
@@ -105,8 +104,6 @@ TEST(CodeGenTest, SimpleProject)
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
     const int32_t numCols = 1;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 100;
     int32_t *col1 = new int32_t[numRows];
@@ -132,7 +129,7 @@ TEST(CodeGenTest, SimpleProject)
 
     RowProjection rowProjection(*addExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     bool isNull = false;
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -186,8 +183,6 @@ TEST(CodeGenTest, SingleCaseSwitch)
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
 
     const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 10;
     int32_t *col1 = new int32_t[numRows];
@@ -218,7 +213,7 @@ TEST(CodeGenTest, SingleCaseSwitch)
 
     RowProjection rowProjection(*switchExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -284,8 +279,6 @@ TEST(CodeGenTest, DoubleCaseSwitch)
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
 
     const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 10;
     int32_t *col1 = new int32_t[numRows];
@@ -316,7 +309,7 @@ TEST(CodeGenTest, DoubleCaseSwitch)
 
     RowProjection rowProjection(*switchExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -373,7 +366,7 @@ TEST(CodeGenTest, ThreeCaseSwitch)
 
     FieldExpr *addLeft2 = new FieldExpr(0, IntType());
     LiteralExpr *addRight2 = new LiteralExpr(10, IntType());
-    BinaryExpr *addExpr2 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft2, addRight2, IntType());
+    auto *addExpr2 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft2, addRight2, IntType());
 
     FieldExpr *mulLeft = new FieldExpr(0, IntType());
     LiteralExpr *mulRight = new LiteralExpr(-1, IntType());
@@ -397,8 +390,6 @@ TEST(CodeGenTest, ThreeCaseSwitch)
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, mulExpr);
 
     const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 10;
     int32_t *col1 = new int32_t[numRows];
@@ -429,7 +420,7 @@ TEST(CodeGenTest, ThreeCaseSwitch)
 
     RowProjection rowProjection(*switchExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -467,7 +458,7 @@ TEST(CodeGenTest, SwitchElseNull)
     LiteralExpr *addRight = new LiteralExpr(10, IntType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
 
-    DataTypePtr destType = make_unique<DataType>(OMNI_INT);
+    DataTypePtr destType = IntType();
     LiteralExpr *nullExpr = new LiteralExpr();
     nullExpr->isNull = true;
     nullExpr->dataType = std::move(destType);
@@ -480,8 +471,6 @@ TEST(CodeGenTest, SwitchElseNull)
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, nullExpr);
 
     const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 10;
     int32_t *col1 = new int32_t[numRows];
@@ -512,7 +501,7 @@ TEST(CodeGenTest, SwitchElseNull)
 
     RowProjection rowProjection(*switchExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -557,8 +546,6 @@ TEST(CodeGenTest, SingleProject)
     IfExpr *ifExpr = new IfExpr(gtExpr, addExpr, mulExpr);
 
     const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 1000;
     int32_t *col1 = new int32_t[numRows];
@@ -589,7 +576,7 @@ TEST(CodeGenTest, SingleProject)
 
     RowProjection rowProjection(*ifExpr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -623,8 +610,6 @@ TEST(CodeGenTest, ShortCircuitProject)
     FieldExpr *colExpr1 = new FieldExpr(1, LongType());
 
     const int32_t numCols = 2;
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
 
     const int numRows = 1000;
     int32_t *col1 = new int32_t[numRows];
@@ -704,10 +689,6 @@ TEST(CodeGenTest, Operators1)
     BinaryExpr *andLeft = new BinaryExpr(omniruntime::expressions::Operator::AND, ltExpr, eqExpr, BooleanType());
 
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::AND, gteExpr, andLeft, BooleanType());
-
-
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -798,9 +779,6 @@ TEST(CodeGenTest, MathFunctions1)
     auto eq2 = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs3, abs4, BooleanType());
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::AND, eq1, eq2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
-
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -870,9 +848,6 @@ TEST(CodeGenTest, MathFunctions2)
     FieldExpr *lowerExpr = new FieldExpr(0, IntType());
     FieldExpr *upperExpr = new FieldExpr(2, IntType());
     BetweenExpr *expr = new BetweenExpr(valueExpr, lowerExpr, upperExpr);
-
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
 
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -964,8 +939,6 @@ TEST(CodeGenTest, MathFunctions3)
     BinaryExpr *fexp = new BinaryExpr(omniruntime::expressions::Operator::LT, col03, data03, BooleanType());
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1061,8 +1034,6 @@ TEST(CodeGenTest, MathFunctions4)
     }
     InExpr *expr = new InExpr(args);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_INT), DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1183,8 +1154,6 @@ TEST(CodeGenTest, CastNumbers1)
 
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, abs0, abs1, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1269,8 +1238,6 @@ TEST(CodeGenTest, CastNumbers2)
     auto col2 = new FieldExpr(2, DoubleType());
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, cast, col2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_LONG), DataType(OMNI_DOUBLE) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1355,8 +1322,6 @@ TEST(CodeGenTest, Like)
     args.push_back(data);
     auto expr = GetFuncExpr(funcStr, args, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1439,8 +1404,6 @@ TEST(CodeGenTest, DateCast)
     auto col0 = new FieldExpr(0, IntType());
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, cast, col0, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1551,8 +1514,6 @@ TEST(CodeGenTest, SubstrIn)
 
     InExpr *expr = new InExpr(args);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1653,8 +1614,6 @@ TEST(CodeGenTest, ConcatStr)
     auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarcharType(11));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, concatExpr, helloWorldExpr, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -1761,10 +1720,6 @@ TEST(CodeGenTest, ConcatChars)
         new LiteralExpr(new std::string("hello                         , world               "), CharType(52));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, outerConcat, helloExpr, BooleanType());
 
-    CharDataType charTypeA(30);
-    CharDataType charTypeB(20);
-    std::vector<DataType> vecOfTypes = { IntDataType(), DataType(charTypeA), DataType(charTypeB) };
-    DataTypes types(vecOfTypes);
     Parser parser {};
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -1991,8 +1946,6 @@ TEST(CodeGenTest, StringWithOps)
 
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::OR, eqExpr1, eqExpr2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_VARCHAR), DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -2088,8 +2041,6 @@ TEST(CodeGenTest, Coalesce)
     right->dataType = LongType();
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr, right, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -2157,8 +2108,6 @@ TEST(CodeGenTest, ProjectionCoalesce)
     right->dataType = LongType();
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr, right, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2226,8 +2175,6 @@ TEST(CodeGenTest, ProjectionIsNull)
     FieldExpr *col0 = new FieldExpr(0, LongType());
     IsNullExpr *expr = new IsNullExpr(col0);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2292,11 +2239,9 @@ TEST(CodeGenTest, ProjectionIsNull)
 
 TEST(CodeGenTest, IsNull)
 {
-    FieldExpr *col0 = new FieldExpr(0, LongType());
-    IsNullExpr *expr = new IsNullExpr(col0);
+    auto *col0 = new FieldExpr(0, LongType());
+    auto *expr = new IsNullExpr(col0);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2345,12 +2290,10 @@ TEST(CodeGenTest, IsNull)
 
 TEST(CodeGenTest, IsNotNull)
 {
-    FieldExpr *col0 = new FieldExpr(0, LongType());
-    IsNullExpr *isNull = new IsNullExpr(col0);
-    UnaryExpr *expr = new UnaryExpr(omniruntime::expressions::Operator::NOT, isNull, BooleanType());
+    auto *col0 = new FieldExpr(0, LongType());
+    auto *isNull = new IsNullExpr(col0);
+    auto *expr = new UnaryExpr(omniruntime::expressions::Operator::NOT, isNull, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2407,8 +2350,6 @@ TEST(CodeGenTest, DecimalOperators1)
     LiteralExpr *equalRight = new LiteralExpr(new string("15"), Decimal128Type(38, 0));
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, addExpr, equalRight, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2463,9 +2404,6 @@ TEST(CodeGenTest, DecimalOperators2)
 
     BetweenExpr *expr = new BetweenExpr(col0, col1, col2);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128), DataType(OMNI_DECIMAL128),
-        DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2533,9 +2471,6 @@ TEST(CodeGenTest, DecimalOperators3)
 
     IfExpr *expr = new IfExpr(condition, texp, fexp);
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128), DataType(OMNI_DECIMAL128),
-        DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2610,8 +2545,6 @@ TEST(CodeGenTest, DecimalNegate)
 
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::AND, lteExpr, gteExpr, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2682,8 +2615,6 @@ TEST(CodeGenTest, Decimal128AbsAndCompare)
 
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, compExpr, eqRight, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128), DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2738,8 +2669,6 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
 
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, LongType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2812,8 +2741,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     BinaryExpr *expr =
         new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(38, 0));
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -2894,8 +2821,6 @@ TEST(CodeGenTest, TestRowProjectLong)
 
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
 
@@ -2946,8 +2871,6 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     args.push_back(substrLen);
     auto expr = GetFuncExpr(funcStr, args, VarcharType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
 
@@ -2991,8 +2914,6 @@ TEST(CodeGenTest, CastNumbers3)
     FieldExpr *col2 = new FieldExpr(2, DoubleType());
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::LT, col1, col2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT), DataType(OMNI_DOUBLE), DataType(OMNI_DOUBLE) };
-    DataTypes types(vecOfTypes);
     Parser parser {};
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
@@ -3082,8 +3003,6 @@ TEST(CodeGenTest, Mm3HashDate32)
 
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, mhash, equalRight, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DATE32) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -3138,8 +3057,6 @@ TEST(CodeGenTest, Mm3HashInt)
 
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, mhash, equalRight, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -3187,9 +3104,6 @@ TEST(CodeGenTest, Mm3HashLong)
     args.push_back(new LiteralExpr(42, IntType()));
     auto expr = GetFuncExpr(funcStr, args, IntType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
-
     int64_t v1[1] = {-2147483648};
     auto *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(v1);
@@ -3203,7 +3117,7 @@ TEST(CodeGenTest, Mm3HashLong)
 
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     bool isNull = false;
@@ -3236,9 +3150,6 @@ TEST(CodeGenTest, Mm3HashDouble)
     args.push_back(new LiteralExpr(42, IntType()));
     auto expr = GetFuncExpr(funcStr, args, IntType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DOUBLE) };
-    DataTypes types(vecOfTypes);
-
     double v1[1] = {123.456};
     auto *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(v1);
@@ -3252,7 +3163,7 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -3286,9 +3197,6 @@ TEST(CodeGenTest, Mm3HashString)
     args.push_back(new LiteralExpr(42, IntType()));
     auto expr = GetFuncExpr(funcStr, args, IntType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_VARCHAR) };
-    DataTypes types(vecOfTypes);
-
     std::string v1 = "hello world";
     auto *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(v1.c_str());
@@ -3303,7 +3211,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     RowProjection codegen(*expr);
     RowProjFunc func = codegen.Create();
-    EXPECT_EQ(codegen.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(codegen.GetReturnType()->GetId(), OMNI_INT);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -3337,9 +3245,6 @@ TEST(CodeGenTest, Mm3HashDecimal64)
     args.push_back(new LiteralExpr(42, IntType()));
     auto expr = GetFuncExpr(funcStr, args, IntType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL64) };
-    DataTypes types(vecOfTypes);
-
     int64_t v1[1] = {-2147483648};
     auto *vals = new int64_t[1];
     vals[0] = (int64_t)v1;
@@ -3353,7 +3258,7 @@ TEST(CodeGenTest, Mm3HashDecimal64)
 
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     bool isNull = false;
@@ -3386,9 +3291,6 @@ TEST(CodeGenTest, Mm3HashDecimal128)
     args.push_back(new LiteralExpr(42, IntType()));
     auto expr = GetFuncExpr(funcStr, args, IntType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_DECIMAL128) };
-    DataTypes types(vecOfTypes);
-
     // creating decimal
     int64_t v1[2] = {4000, 0};
     auto *vals = new int64_t[1];
@@ -3403,7 +3305,7 @@ TEST(CodeGenTest, Mm3HashDecimal128)
 
     RowProjection rowProjection(*expr);
     RowProjFunc func = rowProjection.Create();
-    EXPECT_EQ(rowProjection.GetReturnType().GetId(), OMNI_INT);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     bool isNull = false;
@@ -3450,8 +3352,6 @@ TEST(CodeGenTest, Pmod)
     auto equalRight = new LiteralExpr(20, IntType());
 
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, pmod, equalRight, BooleanType());
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_INT) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
@@ -3506,8 +3406,6 @@ TEST(CodeGenTest, CombineHash)
     FieldExpr *col2 = new FieldExpr(2, LongType());
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, combineHash, col2, BooleanType());
 
-    std::vector<DataType> vecOfTypes = { DataType(OMNI_LONG), DataType(OMNI_LONG), DataType(OMNI_LONG) };
-    DataTypes types(vecOfTypes);
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 

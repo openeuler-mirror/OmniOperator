@@ -43,10 +43,10 @@ RowProjFunc RowProjection::Create()
 }
 
 // Return INVALIDDATAD if expression is unsupported
-DataType RowProjection::GetReturnType()
+DataTypePtr RowProjection::GetReturnType()
 {
     if (this->expression == nullptr) {
-        return DataType(OMNI_INVALID);
+        return std::make_shared<InvalidDataType>();
     }
     return this->expression->GetReturnType();
 }
@@ -92,8 +92,8 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(const Expr &expr, bool filter, DataType outType)
-    : expr(&expr), outType(outType), projector(nullptr)
+Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType)
+    : expr(&expr), outType(std::move(outType)), projector(nullptr)
 {
 #ifdef DEBUG
     std::cout << "Expression in projection:" << std::endl;
@@ -181,8 +181,8 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             outVec = new DoubleVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_CHAR:
-            outVec =
-                new VarcharVector(vecAllocator, numSelectedRows * this->GetOutputType().GetWidth(), numSelectedRows);
+            outVec = new VarcharVector(vecAllocator,
+                numSelectedRows * static_cast<CharDataType &>(this->GetOutputType()).GetWidth(), numSelectedRows);
             break;
         case type::OMNI_VARCHAR:
             outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
@@ -299,7 +299,7 @@ OmniStatus ProjectionOperator::Close()
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
-    DataTypes &inputTypes, int32_t nCols)
+    const DataTypes &inputTypes, int32_t nCols)
     : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
 {
     for (auto expr : exprs) {

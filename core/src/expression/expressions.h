@@ -16,6 +16,7 @@ class ExprVisitor;
 
 namespace omniruntime {
 namespace expressions {
+using namespace type;
 // place holder context class here
 class Context {};
 
@@ -85,12 +86,10 @@ bool IsComparisonOperator(Operator op);
 bool IsLogicalOperator(Operator op);
 Operator StringToOperator(const std::string &opStr);
 
-using DataTypePtr = std::unique_ptr<omniruntime::type::DataType>;
-
 class Expr {
 public:
     DataTypePtr dataType; // dataType of returned value
-    omniruntime::type::DataType &GetReturnType() const;
+    DataTypePtr GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;
     virtual ~Expr() = default;

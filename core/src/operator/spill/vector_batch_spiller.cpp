@@ -96,7 +96,7 @@ VectorBatchUnit *VectorBatchSpiller::Next()
         auto position = vecBatchWithPosition->GetPosition();
         for (int32_t i = 0; i < colCount; i++) {
             int32_t outputCol = outputCols[i];
-            switch (outputTypes[i].GetId()) {
+            switch (outputTypes[i]->GetId()) {
                 case OMNI_INT:
                 case OMNI_DATE32:
                     SetValue<IntVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);

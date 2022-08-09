@@ -38,11 +38,11 @@ private:
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     VectorBatch *NewEmptyVectorBatch() const;
 
-    const type::DataTypes &leftTableOutputTypes;
+    type::DataTypes leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
-    const type::DataTypes &rightTableOutputTypes;
+    type::DataTypes rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     DynamicPagesIndex *rightTablePagesIndex;

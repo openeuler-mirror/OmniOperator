@@ -5,6 +5,7 @@
 
 #include "hash_builder_expr.h"
 #include <memory>
+#include <utility>
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 
@@ -24,11 +25,11 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const Dat
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
     int32_t hashTableCount)
 {
-    std::vector<DataType> newBuildTypes;
+    std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
         this->buildHashCols, this->projectFuncs);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
-    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes.get()),
+    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes),
         this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);
 }
 
@@ -40,7 +41,7 @@ HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 {
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(operatorFactory->CreateOperator());
-    return new HashBuilderWithExprOperator(*(buildTypes.get()), buildHashCols, projectFuncs, hashBuilderOperator);
+    return new HashBuilderWithExprOperator(*buildTypes, buildHashCols, projectFuncs, hashBuilderOperator);
 }
 
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,

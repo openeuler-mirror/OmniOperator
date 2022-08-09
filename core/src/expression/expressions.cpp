@@ -54,9 +54,9 @@ ExprType Expr::GetType() const
     return ExprType::INVALID_E;
 }
 
-DataType &Expr::GetReturnType() const
+DataTypePtr Expr::GetReturnType() const
 {
-    return *dataType;
+    return dataType;
 }
 
 DataTypeId Expr::GetReturnTypeId() const
@@ -237,7 +237,7 @@ SwitchExpr::~SwitchExpr()
 
 SwitchExpr::SwitchExpr(const std::vector<std::pair<Expr *, Expr *>> &whens, Expr *fexp)
 {
-    dataType = std::make_unique<DataType>(fexp->GetReturnType());
+    dataType = fexp->GetReturnType();
     whenClause = whens;
     falseExpr = fexp;
 }
@@ -258,7 +258,7 @@ IfExpr::~IfExpr()
 
 IfExpr::IfExpr(Expr *cond, Expr *texp, Expr *fexp)
 {
-    dataType = std::make_unique<DataType>(texp->GetReturnType());
+    dataType = texp->GetReturnType();
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
@@ -279,7 +279,7 @@ CoalesceExpr::~CoalesceExpr()
 
 CoalesceExpr::CoalesceExpr(Expr *val1, Expr *val2)
 {
-    dataType = std::make_unique<DataType>(val1->GetReturnType());
+    dataType = val1->GetReturnType();
     value1 = val1;
     value2 = val2;
 }
@@ -299,6 +299,7 @@ IsNullExpr::~IsNullExpr()
 IsNullExpr::IsNullExpr(Expr *value)
 {
     dataType = BooleanType();
+
     this->value = value;
 }
 

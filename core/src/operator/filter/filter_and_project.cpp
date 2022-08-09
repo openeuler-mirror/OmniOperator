@@ -14,10 +14,7 @@ using namespace omniruntime::mem;
 using namespace std;
 
 SimpleFilter::SimpleFilter(const Expr &expression)
-    : codegen(nullptr),
-      expression(&expression),
-      func(nullptr),
-      initialized(false)
+    : codegen(nullptr), expression(&expression), func(nullptr), initialized(false)
 {
     resultLength = new int(0);
     isResultNull = new bool(false);
@@ -71,11 +68,11 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
 
 bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
 {
-    auto result =  this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
+    auto result = this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
     return *this->isResultNull ? false : result;
 }
 
-FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, DataTypes &inputDataTypes,
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, const DataTypes &inputDataTypes,
     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
     : inputDataTypes(inputDataTypes), inputVecCount(inputVecCount), projectVecCount(projectVecCount)
 {

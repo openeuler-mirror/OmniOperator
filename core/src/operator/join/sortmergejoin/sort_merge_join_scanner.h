@@ -107,7 +107,7 @@ private:
 
     int32_t CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex);
 
-    std::unique_ptr<omniruntime::type::DataTypes> streamedTableKeysTypes;
+    omniruntime::type::DataTypes streamedTableKeysTypes;
     JoinType joinType;
     int32_t *streamedTableKeysCols;
     int32_t *bufferedTableKeysCols;

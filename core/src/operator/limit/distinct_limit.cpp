@@ -4,7 +4,6 @@
 #include "distinct_limit.h"
 #include <memory>
 #include <algorithm>
-#include "vector/vector_common.h"
 #include "vector/vector_helper.h"
 #include "vector/container_vector.h"
 #include "vector/vector_batch.h"
@@ -210,7 +209,7 @@ void GenerateCombinedHash(Vector **inputVectors, const int32_t start, int32_t ro
     }
 }
 
-DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols,
+DistinctLimitOperator::DistinctLimitOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, int32_t hashCol, int64_t limit)
     : executionContext(new ExecutionContext()),
       sourceTypes(sourceTypes),
@@ -222,7 +221,7 @@ DistinctLimitOperator::DistinctLimitOperator(type::DataTypes &sourceTypes, std::
       limit(limit),
       resultBatch(nullptr)
 {
-    auto &sourceDataType = sourceTypes.Get();
+    auto &sourceDataType = this->sourceTypes.Get();
     for (int i = 0; i < distinctColsCount; ++i) {
         int colIndex = distinctCols[i];
         outTypes.push_back(sourceDataType[colIndex]);
@@ -240,14 +239,13 @@ DistinctLimitOperator::~DistinctLimitOperator()
     delete executionContext;
 }
 
-bool IsExistSameRow(type::DataTypes &inputTypes, Vector **inputVectors, std::vector<int32_t> &distinctCols,
+bool IsExistSameRow(const type::DataTypes &inputTypes, Vector **inputVectors, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, std::vector<std::vector<AggregateState>> &bucket, int rowIndex)
 {
     bool isSame = true;
     int32_t columnId;
     int32_t typeId;
     Vector *inputVector = nullptr;
-    const int32_t *dataTypeIds = inputTypes.GetIds();
 
     for (uint32_t i = 0; i < bucket.size(); i++) {
         isSame = true;
@@ -257,7 +255,7 @@ bool IsExistSameRow(type::DataTypes &inputTypes, Vector **inputVectors, std::vec
         Vector *originalVector = nullptr;
         for (int32_t column = 0; ((column < distinctColsCount) && isSame); ++column) {
             columnId = distinctCols[column];
-            typeId = dataTypeIds[columnId];
+            typeId = inputTypes.GetType(columnId)->GetId();
             inputVector = inputVectors[columnId];
 
             originalVector = VectorHelper::ExpandVectorAndIndex(inputVector, rowIndex, originalRowIndex);
@@ -356,7 +354,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
 }
 
 void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector,
-    std::vector<type::DataType> &outTypes, int32_t rowIndex)
+    std::vector<type::DataTypePtr> &outTypes, int32_t rowIndex)
 {
     for (int i = 0; i < static_cast<int>(outTypes.size()); ++i) {
         // nullptr handle
@@ -366,7 +364,7 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
             continue;
         }
 
-        DISTINCT_LIMIT_FUNC_SET[outTypes[i].GetId()].fillOutputFunc(resultBatch, rowVector, rowIndex, i);
+        DISTINCT_LIMIT_FUNC_SET[outTypes[i]->GetId()].fillOutputFunc(resultBatch, rowVector, rowIndex, i);
     }
 }
 

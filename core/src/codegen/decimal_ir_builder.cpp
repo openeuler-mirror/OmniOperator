@@ -79,8 +79,14 @@ std::shared_ptr<DecimalValue> DecimalIRBuilder::BuildDecimalValue(llvm::Value *d
     omniruntime::type::DataType &retType, llvm::Value *isNull)
 {
     LLVMTypes llvmTypes(*context);
-    llvm::Value *precision = llvmTypes.CreateConstantInt(retType.GetPrecision());
-    llvm::Value *scale = llvmTypes.CreateConstantInt(retType.GetScale());
+    llvm::Value *precision;
+    llvm::Value *scale;
+    if (TypeUtil::IsDecimalType(retType.GetId())) {
+        precision = llvmTypes.CreateConstantInt(static_cast<DecimalDataType &>(retType).GetPrecision());
+        scale = llvmTypes.CreateConstantInt(static_cast<DecimalDataType &>(retType).GetScale());
+    } else {
+        precision = llvmTypes.CreateConstantInt(0);
+        scale = llvmTypes.CreateConstantInt(0);
+    }
     return std::make_shared<DecimalValue>(data, isNull, precision, scale);
 }
-

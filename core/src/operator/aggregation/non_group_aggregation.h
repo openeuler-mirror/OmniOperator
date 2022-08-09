@@ -6,6 +6,8 @@
 #define NON_GROUP_AGGREGATION_H
 
 #include "aggregation.h"
+
+#include <utility>
 #include "type/data_types.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
@@ -13,8 +15,8 @@ namespace omniruntime {
 namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
-    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, omniruntime::type::DataTypes &aggOutputTypes,
-        bool inputRaw, bool outputPartial)
+    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs,
+        const omniruntime::type::DataTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
         : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial), aggOutputTypes(aggOutputTypes)
     {
         for (uint32_t i = 0; i < aggregators.size(); i++) {
@@ -55,7 +57,7 @@ private:
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<uint32_t> aggInputColsVector;
     omniruntime::type::DataTypes aggOutputTypes;
-    std::vector<omniruntime::type::DataType> aggInputTypes;
+    std::vector<omniruntime::type::DataTypePtr> aggInputTypes;
     std::vector<int32_t> aggInputCols;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };

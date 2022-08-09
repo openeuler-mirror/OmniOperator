@@ -11,6 +11,7 @@
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "vector/vector_common.h"
+#include "type/data_types.h"
 
 namespace omniruntime {
 namespace op {
@@ -54,7 +55,7 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    const type::DataTypes sourceTypes;
+    type::DataTypes sourceTypes;
     std::vector<int32_t> sortCols;
     int32_t n = 0;
     std::vector<int32_t> sortAscendings;
@@ -74,7 +75,7 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
 private:
-    const type::DataTypes &sourceTypes;
+    type::DataTypes sourceTypes;
     int32_t sourceTypesCount = 0;
     std::vector<int32_t> sortCols;
     int32_t n = 0;

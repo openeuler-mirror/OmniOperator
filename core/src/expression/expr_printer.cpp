@@ -19,9 +19,9 @@ string ExprPrinter::BinaryExprPrinterHelper(const Operator &op, const DataType &
     string typeStr = TypeUtil::TypeToString(type.GetId());
     if (TypeUtil::IsDecimalType(type.GetId())) {
         typeStr += "(";
-        typeStr += to_string(type.GetPrecision());
+        typeStr += to_string(static_cast<const DecimalDataType &>(type).GetPrecision());
         typeStr += ", ";
-        typeStr += to_string(type.GetScale());
+        typeStr += to_string(static_cast<const DecimalDataType &>(type).GetScale());
         typeStr += ")";
     }
 
@@ -97,8 +97,8 @@ std::string GetCharValOutput(const LiteralExpr &e)
     string output = "Literal:";
     if (e.GetReturnTypeId() == OMNI_CHAR) {
         // meant to look like "%s[%d]:'%s'"
-        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" + to_string(e.dataType->GetWidth()) + "]" + ":'" +
-            *(e.stringVal) + "'";
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" +
+            to_string(static_cast<CharDataType *>(e.dataType.get())->GetWidth()) + "]" + ":'" + *(e.stringVal) + "'";
     } else {
         // meant to look like "%s:'%s'"
         output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + *(e.stringVal) + "'";
@@ -112,9 +112,9 @@ std::string GetDecimal64ValOutput(const LiteralExpr &e)
     string output = "Literal:";
     output += TypeUtil::TypeToString(e.GetReturnTypeId());
     output += "(";
-    output += to_string(e.dataType->GetPrecision());
+    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetPrecision());
     output += ", ";
-    output += to_string(e.dataType->GetScale());
+    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetScale());
     output += "):";
     output += to_string(e.longVal);
     return output;
@@ -126,9 +126,9 @@ std::string GetDecimal128ValOutput(const LiteralExpr &e)
     string output = "Literal:";
     output += TypeUtil::TypeToString(e.GetReturnTypeId());
     output += "(";
-    output += to_string(e.dataType->GetPrecision());
+    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetPrecision());
     output += ", ";
-    output += to_string(e.dataType->GetScale());
+    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetScale());
     output += "):";
     output += "'";
     output += *(e.stringVal);
@@ -154,7 +154,7 @@ std::string GetDecimal128ValOutput(const LiteralExpr &e)
 void ExprPrinter::Visit(const BinaryExpr &e)
 {
     string indent = GenerateIndentation();
-    string message = BinaryExprPrinterHelper(e.op, e.GetReturnType());
+    string message = BinaryExprPrinterHelper(e.op, *(e.GetReturnType()));
     if (message == "Invalid") {
         message = "InvalidBinaryOperator:" + to_string(static_cast<int32_t>(e.op)) + "(";
     }
@@ -240,12 +240,12 @@ void ExprPrinter::Visit(const FieldExpr &e)
     string output = GenerateIndentation() + "Field:";
     output += TypeUtil::TypeToString(e.GetReturnTypeId());
     if (e.GetReturnTypeId() == OMNI_CHAR) {
-        output += '[' + to_string(e.GetReturnType().GetWidth()) + ']';
+        output += '[' + to_string(static_cast<CharDataType &>(*(e.GetReturnType())).GetWidth()) + ']';
     } else if (e.GetReturnTypeId() == OMNI_DECIMAL64 || e.GetReturnTypeId() == OMNI_DECIMAL128) {
         output += "(";
-        output += to_string(e.dataType->GetPrecision());
+        output += to_string(static_cast<DecimalDataType *>(e.dataType.get())->GetPrecision());
         output += ", ";
-        output += to_string(e.dataType->GetScale());
+        output += to_string(static_cast<DecimalDataType *>(e.dataType.get())->GetScale());
         output += ")";
     }
     output += ":#" + to_string(e.colVal);
@@ -424,14 +424,15 @@ void ExprPrinter::Visit(const FuncExpr &e)
     string indent = GenerateIndentation();
     string typeStr = TypeUtil::TypeToString(e.GetReturnTypeId());
     if (TypeUtil::IsDecimalType(e.GetReturnTypeId())) {
+        auto decimalDataType = static_cast<DecimalDataType *>(e.GetReturnType().get());
         typeStr += "(";
-        typeStr += to_string(e.GetReturnType().GetPrecision());
+        typeStr += to_string(decimalDataType->GetPrecision());
         typeStr += ", ";
-        typeStr += to_string(e.GetReturnType().GetScale());
+        typeStr += to_string(decimalDataType->GetScale());
         typeStr += ")";
     } else if (TypeUtil::IsStringType(e.GetReturnTypeId())) {
         typeStr += "[";
-        typeStr += to_string(e.GetReturnType().GetWidth());
+        typeStr += to_string(static_cast<VarcharDataType *>(e.GetReturnType().get())->GetWidth());
         typeStr += "]";
     }
 

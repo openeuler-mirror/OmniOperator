@@ -77,9 +77,8 @@ void ExprVerifier::Visit(const UnaryExpr &unaryExpr)
 
 void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
 {
-    DataType leftType = binaryExpr.left->GetReturnType();
-    DataType rightType = binaryExpr.right->GetReturnType();
-    DataType returnType = binaryExpr.GetReturnType();
+    const type::DataType &leftType = *(binaryExpr.left->GetReturnType());
+    const type::DataType &rightType = *(binaryExpr.right->GetReturnType());
 
     if (AreInvalidDataTypes(leftType.GetId(), rightType.GetId())) {
         this->supportedFlag = false;

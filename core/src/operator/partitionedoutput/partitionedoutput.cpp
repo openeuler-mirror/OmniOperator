@@ -14,31 +14,26 @@ namespace op {
 PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const DataTypes &sourceTypes,
     int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel, int32_t *partitionChannels,
     int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition, int32_t bucketToPartitionCount,
-    bool isHashPrecomputed, int32_t *hashChannelTypes, int32_t hashChannelTypesCount, int32_t *hashChannels,
-    int32_t hashChannelsCount)
-    : sourceTypeCount(sourceTypeCount),
+    bool isHashPrecomputed, const DataTypes &hashChannelTypes, int32_t *hashChannels, int32_t hashChannelsCount)
+    : sourceTypes(sourceTypes),
+      sourceTypeCount(sourceTypeCount),
       replicatesAnyRow(replicatesAnyRow),
       nullChannel(nullChannel),
       partitionChannelsCount(partitionChannelsCount),
       partitionCount(partitionCount),
       bucketToPartitionCount(bucketToPartitionCount),
       hashPrecomputed(isHashPrecomputed),
-      hashChannelTypesCount(hashChannelTypesCount),
+      hashChannelTypes(hashChannelTypes),
       hashChannelsCount(hashChannelsCount)
 {
-    if (partitionChannelsCount <= 0 || bucketToPartitionCount <= 0 || hashChannelTypesCount <= 0 ||
+    if (partitionChannelsCount <= 0 || bucketToPartitionCount <= 0 || this->hashChannelTypes.GetSize() <= 0 ||
         hashChannelsCount <= 0) {
         throw std::exception();
     }
-
-    this->sourceTypes = std::make_unique<DataTypes>(sourceTypes);
-
     this->partitionChannels.insert(this->partitionChannels.end(), partitionChannels,
         partitionChannels + partitionChannelsCount);
     this->bucketToPartition.insert(this->bucketToPartition.end(), bucketToPartition,
         bucketToPartition + bucketToPartitionCount);
-    this->hashChannelTypes.insert(this->hashChannelTypes.end(), hashChannelTypes,
-        hashChannelTypes + hashChannelTypesCount);
     this->hashChannels.insert(this->hashChannels.end(), hashChannels, hashChannels + hashChannelsCount);
 }
 
@@ -48,30 +43,29 @@ PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartit
     const DataTypes &sourceTypesField, int32_t sourceTypeCountField, bool replicatesAnyRowField,
     int32_t nullChannelField, int32_t *partitionChannelsField, int32_t partitionChannelsCountField,
     int32_t partitionCountField, int32_t *bucketToPartitionField, int32_t bucketToPartitionCountField,
-    bool hashPrecomputed, int32_t *hashChannelTypesField, int32_t hashChannelTypesCountField,
-    int32_t *hashChannelsField, int32_t hashChannelsCountField)
+    bool hashPrecomputed, const DataTypes &hashChannelTypesField, int32_t *hashChannelsField,
+    int32_t hashChannelsCountField)
 {
     PartitionedOutputOperatorFactory *operatorFactory = new PartitionedOutputOperatorFactory(sourceTypesField,
         sourceTypeCountField, replicatesAnyRowField, nullChannelField, partitionChannelsField,
         partitionChannelsCountField, partitionCountField, bucketToPartitionField, bucketToPartitionCountField,
-        hashPrecomputed, hashChannelTypesField, hashChannelTypesCountField, hashChannelsField, hashChannelsCountField);
+        hashPrecomputed, hashChannelTypesField, hashChannelsField, hashChannelsCountField);
     return operatorFactory;
 }
 
 Operator *PartitionedOutputOperatorFactory::CreateOperator()
 {
-    auto partitionedOutputOperator =
-        new PartitionedOutputOperator(*(this->sourceTypes.get()), sourceTypeCount, replicatesAnyRow, nullChannel,
-        partitionChannels, partitionChannelsCount, partitionCount, bucketToPartition, bucketToPartitionCount,
-        hashPrecomputed, this->hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    auto partitionedOutputOperator = new PartitionedOutputOperator(sourceTypes, sourceTypeCount, replicatesAnyRow,
+        nullChannel, partitionChannels, partitionChannelsCount, partitionCount, bucketToPartition,
+        bucketToPartitionCount, hashPrecomputed, this->hashChannelTypes, hashChannels, hashChannelsCount);
     return partitionedOutputOperator;
 }
 
 PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceTypes, int32_t sourceTypeCount,
     bool replicatesAnyRow, int nullChannel, std::vector<int32_t> &partitionChannels, int32_t partitionChannelsCount,
     int32_t partitionCount, std::vector<int32_t> &bucketToPartition, int32_t bucketToPartitionCount,
-    bool isHashPrecomputed, std::vector<int32_t> &hashChannelTypes, int32_t hashChannelTypesCount,
-    std::vector<int32_t> &hashChannels, int32_t hashChannelsCount)
+    bool isHashPrecomputed, const DataTypes &hashChannelTypes, std::vector<int32_t> &hashChannels,
+    int32_t hashChannelsCount)
     : sourceTypes(sourceTypes),
       sourceTypeCount(sourceTypeCount),
       replicatesAnyRow(replicatesAnyRow),
@@ -83,7 +77,6 @@ PartitionedOutputOperator::PartitionedOutputOperator(const DataTypes &sourceType
       bucketToPartitionCount(bucketToPartitionCount),
       hashPrecomputed(isHashPrecomputed),
       hashChannelTypes(hashChannelTypes),
-      hashChannelTypesCount(hashChannelTypesCount),
       hashChannels(hashChannels),
       hashChannelsCount(hashChannelsCount)
 {}
@@ -104,7 +97,7 @@ void ALWAYS_INLINE PartitionedOutputOperator::InsertContainer(Vector *originVect
     ContainerVector *originContainerVec = static_cast<ContainerVector *>(originVector);
     ContainerVector *currentContainerVec = static_cast<ContainerVector *>(currentVector);
     int32_t fieldCount = originContainerVec->GetVectorCount();
-    std::vector<DataType> dataTypes = originContainerVec->GetDataTypes();
+    std::vector<DataTypePtr> &dataTypes = originContainerVec->GetDataTypes();
     for (int32_t i = 0; i < fieldCount; i++) {
         auto *originFieldVector = reinterpret_cast<Vector *>(originContainerVec->GetValue(i));
         if (originFieldVector->GetTypeId() == type::OMNI_NONE) {
@@ -218,11 +211,11 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
 long PartitionedOutputOperator::GetContainerHash(int32_t rowIndex, ContainerVector *vector)
 {
     int32_t fieldCount = vector->GetVectorCount();
-    std::vector<DataType> fieldTypes = vector->GetDataTypes();
+    std::vector<DataTypePtr> &fieldTypes = vector->GetDataTypes();
     long result = 1;
     for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
         Vector *fieldVector = reinterpret_cast<Vector *>(vector->GetValue(colIdx));
-        result = fieldTypes[colIdx].GetId() == type::OMNI_CONTAINER ?
+        result = fieldTypes[colIdx]->GetId() == type::OMNI_CONTAINER ?
             HashUtil::CombineHash(result, GetContainerHash(rowIndex, static_cast<ContainerVector *>(fieldVector))) :
             HashUtil::CombineHash(result, GetHash(rowIndex, fieldVector));
     }

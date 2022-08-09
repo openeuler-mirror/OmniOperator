@@ -6,7 +6,6 @@
 #define OMNI_RUNTIME_VECTOR_COMMON_H
 
 #include "type/data_type.h"
-#include "type/data_types.h"
 #include "vector_encoding.h"
 #include "vector.h"
 #include "vector_batch.h"

@@ -45,52 +45,142 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
     }
 }
 
-std::unique_ptr<DataType> IntType()
+std::shared_ptr<DataType> InvalidType()
 {
-    return std::make_unique<DataType>(OMNI_INT);
+    return InvalidDataType::Instance();
 }
 
-std::unique_ptr<DataType> Date32Type()
+std::shared_ptr<DataType> NoneType()
 {
-    return std::make_unique<DataType>(OMNI_DATE32);
+    return NoneDataType::Instance();
 }
 
-std::unique_ptr<DataType> LongType()
+std::shared_ptr<DataType> IntType()
 {
-    return std::make_unique<DataType>(OMNI_LONG);
+    return IntDataType::Instance();
 }
 
-std::unique_ptr<DataType> DoubleType()
+std::shared_ptr<DataType> ShortType()
 {
-    return std::make_unique<DataType>(OMNI_DOUBLE);
+    return ShortDataType::Instance();
 }
 
-std::unique_ptr<DataType> BooleanType()
+std::shared_ptr<DataType> Date32Type()
 {
-    return std::make_unique<DataType>(OMNI_BOOLEAN);
+    return Date32DataType::Instance();
 }
 
-std::unique_ptr<DataType> VarcharType()
+std::shared_ptr<DataType> Date64Type()
 {
-    return std::make_unique<VarcharDataType>(INT_MAX);
+    return Date64DataType::Instance();
 }
 
-std::unique_ptr<DataType> VarcharType(int32_t width)
+std::shared_ptr<DataType> Date32Type(omniruntime::type::DateUnit dateUnit)
 {
-    return std::make_unique<VarcharDataType>(width);
+    return std::make_shared<Date32DataType>(dateUnit);
 }
 
-std::unique_ptr<DataType> CharType(int32_t width)
+std::shared_ptr<DataType> Date64Type(omniruntime::type::DateUnit dateUnit)
 {
-    return std::make_unique<CharDataType>(width);
+    return std::make_shared<Date64DataType>(dateUnit);
 }
 
-std::unique_ptr<DataType> Decimal64Type(int32_t precision, int32_t scale)
+std::shared_ptr<DataType> Time32Type()
 {
-    return std::make_unique<Decimal64DataType>(precision, scale);
+    return Time32DataType::Instance();
 }
 
-std::unique_ptr<DataType> Decimal128Type(int32_t precision, int32_t scale)
+std::shared_ptr<DataType> Time64Type()
 {
-    return std::make_unique<Decimal128DataType>(precision, scale);
+    return Time64DataType::Instance();
+}
+
+std::shared_ptr<DataType> Time32Type(omniruntime::type::TimeUnit timeUnit)
+{
+    return std::make_shared<Time32DataType>(timeUnit);
+}
+
+std::shared_ptr<DataType> Time64Type(omniruntime::type::TimeUnit timeUnit)
+{
+    return std::make_shared<Time64DataType>(timeUnit);
+}
+
+std::shared_ptr<DataType> LongType()
+{
+    return LongDataType::Instance();
+}
+
+std::shared_ptr<DataType> DoubleType()
+{
+    return DoubleDataType::Instance();
+}
+
+std::shared_ptr<DataType> BooleanType()
+{
+    return BooleanDataType::Instance();
+}
+
+std::shared_ptr<DataType> VarcharType()
+{
+    return std::make_shared<VarcharDataType>(INT_MAX);
+}
+
+std::shared_ptr<DataType> CharType()
+{
+    return std::make_shared<CharDataType>(CHAR_MAX_WIDTH);
+}
+
+std::shared_ptr<DataType> VarcharType(int32_t width)
+{
+    return std::make_shared<VarcharDataType>(width);
+}
+
+std::shared_ptr<DataType> CharType(int32_t width)
+{
+    return std::make_shared<CharDataType>(width);
+}
+
+std::shared_ptr<DataType> Decimal64Type()
+{
+    return std::make_shared<Decimal64DataType>(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE);
+}
+
+std::shared_ptr<DataType> Decimal128Type()
+{
+    return std::make_shared<Decimal128DataType>(DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE);
+}
+
+std::shared_ptr<DataType> Decimal64Type(int32_t precision, int32_t scale)
+{
+    return std::make_shared<Decimal64DataType>(precision, scale);
+}
+
+std::shared_ptr<DataType> Decimal128Type(int32_t precision, int32_t scale)
+{
+    return std::make_shared<Decimal128DataType>(precision, scale);
+}
+
+std::shared_ptr<DataType> ContainerType()
+{
+    return std::make_shared<ContainerDataType>();
+}
+
+std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &fieldTypes)
+{
+    return std::make_shared<ContainerDataType>(fieldTypes);
+}
+
+std::shared_ptr<ContainerDataType> ContainerType(std::vector<DataTypePtr> &&fieldTypes)
+{
+    return std::make_shared<ContainerDataType>(fieldTypes);
+}
+
+std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omniruntime::type::DataTypePtr> &&dataTypes)
+{
+    return std::make_shared<omniruntime::type::DataTypes>(dataTypes);
+}
+
+std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omniruntime::type::DataTypePtr> &dataTypes)
+{
+    return std::make_shared<omniruntime::type::DataTypes>(dataTypes);
 }

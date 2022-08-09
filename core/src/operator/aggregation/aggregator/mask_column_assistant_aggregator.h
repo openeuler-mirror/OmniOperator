@@ -66,14 +66,14 @@ public:
         return realAggregator->GetType();
     }
 
-    DataType &GetInputType() const override
+    const DataTypePtr &GetInputType() const override
     {
-        return const_cast<DataType &>(realAggregator->GetInputType());
+        return realAggregator->GetInputType();
     }
 
-    DataType &GetOutputType() const override
+    const DataTypePtr &GetOutputType() const override
     {
-        return const_cast<DataType &>(realAggregator->GetOutputType());
+        return realAggregator->GetOutputType();
     }
 
     int32_t GetInputChannel() const override

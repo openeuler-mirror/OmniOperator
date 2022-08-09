@@ -27,7 +27,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         projectKeys[j] = aggKeys.at(i);
     }
     std::vector<int32_t> hashAggCols;
-    std::vector<DataType> newSourceTypes;
+    std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
         this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs);
 
@@ -40,13 +40,13 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         aggCols[i] = static_cast<uint32_t>(hashAggCols[j]);
     }
 
-    std::vector<DataType> groupByTypeVec;
+    std::vector<DataTypePtr> groupByTypeVec;
     groupByTypeVec.reserve(groupByNum);
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByTypeVec.push_back(newSourceTypes[groupByCols[i]]);
     }
     this->groupByTypes = std::make_unique<DataTypes>(groupByTypeVec);
-    std::vector<DataType> aggTypeVec;
+    std::vector<DataTypePtr> aggTypeVec;
     aggTypeVec.reserve(aggColNum);
     for (uint32_t i = 0; i < aggColNum; i++) {
         aggTypeVec.push_back(newSourceTypes[aggCols[i]]);
@@ -61,8 +61,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<uint32_t> maskColumnContext = std::vector<uint32_t>(maskColumns, maskColumns + aggNum);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *(this->groupByTypes.get()), aggCol,
-        *(this->aggTypes.get()), aggOutputTypes, aggFunc, maskColumnContext, inputRaw, outputPartial);
+    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggCol, *aggTypes,
+        aggOutputTypes, aggFunc, maskColumnContext, inputRaw, outputPartial);
     this->hashAggOperatorFactory->Init();
 }
 
@@ -74,7 +74,7 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    return new HashAggregationWithExprOperator(*(sourceTypes), projectCols, projectFuncs, hashAggOperator);
+    return new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, hashAggOperator);
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,

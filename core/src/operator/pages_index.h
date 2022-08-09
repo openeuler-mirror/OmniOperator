@@ -18,7 +18,7 @@ namespace omniruntime {
 namespace op {
 class PagesIndex : public MemoryBuilder {
 public:
-    explicit PagesIndex(const omniruntime::type::DataTypes &types);
+    explicit PagesIndex(const DataTypes &types);
 
     ~PagesIndex() override;
 
@@ -40,9 +40,9 @@ public:
 
     void Clear();
 
-    const int32_t *GetTypes() const
+    const DataTypes &GetTypes() const
     {
-        return dataTypeIds;
+        return dataTypes;
     }
 
     int32_t GetTypesCount() const
@@ -66,7 +66,7 @@ public:
     }
 
 private:
-    const omniruntime::type::DataType *dataTypes;
+    const DataTypes dataTypes;
     const int32_t *dataTypeIds;
     uint32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]

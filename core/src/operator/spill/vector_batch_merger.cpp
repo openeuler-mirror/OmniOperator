@@ -42,7 +42,7 @@ VecBatchWithPositionComparator::VecBatchWithPositionComparator(omniruntime::type
 {
     auto sortColsCount = sortCols.size();
     for (size_t i = 0; i < sortColsCount; i++) {
-        int32_t sortColTypeId = sourceTypes.GetIds()[sortCols[i]];
+        int32_t sortColTypeId = sourceTypes.GetType(sortCols[i])->GetId();
         switch (sortColTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:

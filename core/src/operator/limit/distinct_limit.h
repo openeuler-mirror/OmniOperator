@@ -65,8 +65,8 @@ public:
     static constexpr int32_t INVALID_DISTINCT_COL_ID = -1;
 
 public:
-    DistinctLimitOperator(type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols, int32_t distinctColsCount,
-        int32_t hashCol, int64_t limit);
+    DistinctLimitOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols,
+        int32_t distinctColsCount, int32_t hashCol, int64_t limit);
 
     ~DistinctLimitOperator() override;
 
@@ -89,7 +89,7 @@ private:
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
     type::DataTypes sourceTypes;
-    std::vector<DataType> outTypes;
+    std::vector<DataTypePtr> outTypes;
     std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;

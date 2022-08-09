@@ -15,13 +15,13 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
     int32_t sortKeyCount)
 {
-    std::vector<DataType> newSourceTypes;
+    std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
         this->sortCols, this->projectFuncs);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*(this->sourceTypes.get()), n,
-        this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
+    this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*sourceTypes, n, this->sortCols.data(), sortAsc,
+        sortNullFirsts, sortKeyCount);
 }
 
 TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
@@ -29,13 +29,13 @@ TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {
     auto topNOperator = static_cast<TopNOperator *>(topNOperatorFactory->CreateOperator());
-    auto pOperator = new TopNWithExprOperator(*(sourceTypes.get()), sortCols, projectFuncs, topNOperator);
+    auto pOperator = new TopNWithExprOperator(*sourceTypes, sortCols, projectFuncs, topNOperator);
     return pOperator;
 }
 
-TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
+TopNWithExprOperator::TopNWithExprOperator(type::DataTypes sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator)
-    : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
+    : sourceTypes(std::move(sourceTypes)), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
 {}
 
 TopNWithExprOperator::~TopNWithExprOperator()

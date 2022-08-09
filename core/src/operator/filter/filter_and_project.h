@@ -109,6 +109,7 @@ public:
         return isSupported;
     }
     FilterFunc apply;
+
 private:
     std::unique_ptr<FilterCodeGen> codeGen;
     const expressions::Expr *expr;
@@ -152,7 +153,7 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, DataTypes &inputDataTypes,
+    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, const DataTypes &inputDataTypes,
         int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
         int32_t projectVecCount);
 

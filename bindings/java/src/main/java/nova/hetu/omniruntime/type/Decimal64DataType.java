@@ -15,7 +15,7 @@ public class Decimal64DataType extends DecimalDataType {
     /**
      * Default precision value of decimal.
      */
-    public static final int DEFAULT_PRECISION = 19;
+    public static final int DEFAULT_PRECISION = 18;
 
     /**
      * Default scale value of decimal.

@@ -10,13 +10,15 @@
 
 namespace omniruntime {
 namespace type {
-std::string Serialize(const std::vector<DataType> &types);
+std::string Serialize(const std::vector<DataTypePtr> &types);
 
-std::string SerializeSingle(const DataType &type);
+std::string SerializeSingle(const DataTypePtr &type);
 
 DataTypes Deserialize(const std::string &dataTypes);
 
-DataType DeserializeSingle(const std::string &dataType);
+DataTypePtr DeserializeSingle(const std::string &dataType);
+
+DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson);
 }
 }
 

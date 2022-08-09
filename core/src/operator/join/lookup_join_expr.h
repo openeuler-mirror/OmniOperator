@@ -17,24 +17,23 @@ namespace omniruntime {
 namespace op {
 class LookupJoinWithExprOperatorFactory : public OperatorFactory {
 public:
-    static LookupJoinWithExprOperatorFactory *CreateLookupJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
+    static LookupJoinWithExprOperatorFactory *CreateLookupJoinWithExprOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
-        int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
-        int64_t hashBuilderFactoryAddr);
+        int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr);
 
-    LookupJoinWithExprOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
+    LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
-        int32_t probeHashKeysCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
-        JoinType joinType, int64_t hashBuilderFactoryAddr);
+        int32_t probeHashKeysCount, int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType,
+        int64_t hashBuilderFactoryAddr);
 
     ~LookupJoinWithExprOperatorFactory() override;
 
     omniruntime::op::Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<type::DataTypes> probeTypes; // all types for probe
-    std::vector<int32_t> probeHashCols;          // join columns for probe
+    std::unique_ptr<DataTypes> probeTypes; // all types for probe
+    std::vector<int32_t> probeHashCols;    // join columns for probe
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
     LookupJoinOperatorFactory *operatorFactory;
@@ -54,7 +53,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::type::DataTypes &probeTypes;
+    DataTypes probeTypes;
     std::vector<int32_t> probeHashCols;
     std::vector<RowProjFunc> projectFuncs;
     LookupJoinOperator *lookupJoinOperator;

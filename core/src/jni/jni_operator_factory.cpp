@@ -92,7 +92,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                                       */
+ *                                                                                      */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -252,7 +252,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
 
-    std::vector<DataType> allTypesVec;
+    std::vector<DataTypePtr> allTypesVec;
     allTypesVec.insert(allTypesVec.end(), inputDataTypes.Get().begin(), inputDataTypes.Get().end());
     allTypesVec.insert(allTypesVec.end(), outputDataTypes.Get().begin(), outputDataTypes.Get().end());
 
@@ -564,15 +564,13 @@ Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOpera
     jint hashChannelTypesCount = hashChannelDataTypes.GetSize();
     jint hashChannelCount = env->GetArrayLength(jHashChannels);
 
-    auto hashChannelTypesArr = const_cast<int32_t *>(hashChannelDataTypes.GetIds());
-
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory = nullptr;
     JNI_METHOD_START
     partitionedOutputOperatorFactory = PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
         sourceDataTypes, sourceTypesCount, jReplicatesAnyRow, jNullChannel, partitionChannelsArr,
         partitionChannelsCount, jPartitionCount, bucketToPartitionArr, bucketToPartitionCount, isHashPrecomputed,
-        hashChannelTypesArr, hashChannelTypesCount, hashChannels, hashChannelCount);
+        hashChannelDataTypes, hashChannels, hashChannelCount);
     JNI_METHOD_END(0L)
     JNI_DEBUG_LOG("create partitionedoutput operator factory finished, elapsed time: %ld ms.", END(start));
 

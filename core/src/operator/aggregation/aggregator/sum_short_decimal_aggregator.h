@@ -16,12 +16,11 @@ namespace op {
 
 class SumShortDecimalAggregator : public Aggregator {
 public:
-    SumShortDecimalAggregator(const DataType &in, const DataType &out, int32_t channel)
+    SumShortDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
     {}
 
-    SumShortDecimalAggregator(const DataType &in, const DataType &out, int32_t channel, bool inputRaw,
-        bool outputPartial)
+    SumShortDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
 

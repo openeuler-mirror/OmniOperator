@@ -30,7 +30,7 @@ SortMergeJoinOperator::~SortMergeJoinOperator()
 void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streamedDataTypes,
     const std::vector<int32_t> &streamedKeysCols, const std::vector<int32_t> &streamedOutputCols)
 {
-    this->streamedTypes = new type::DataTypes(streamedDataTypes);
+    this->streamedTypes = new DataTypes(streamedDataTypes);
     this->streamedKeysCols = streamedKeysCols;
     this->streamedOutputCols = streamedOutputCols;
 }
@@ -38,7 +38,7 @@ void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streame
 void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &bufferedDataTypes,
     std::vector<int32_t> &bufferedKeysCols, std::vector<int32_t> &bufferedOutputCols)
 {
-    this->bufferedTypes = new type::DataTypes(bufferedDataTypes);
+    this->bufferedTypes = new DataTypes(bufferedDataTypes);
     this->bufferedKeysCols = bufferedKeysCols;
     this->bufferedOutputCols = bufferedOutputCols;
 }

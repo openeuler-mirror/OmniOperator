@@ -17,7 +17,7 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
     const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount, int32_t *windowFrameTypesField,
     int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
     int32_t *windowFrameEndChannelsField)
-    : sourceTypes(std::make_unique<DataTypes>(sourceTypes)),
+    : sourceTypes(sourceTypes),
       outputColsCount(outputColsCount),
       windowFunctionCount(windowFunctionCount),
       partitionCount(partitionCount),
@@ -25,7 +25,7 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
       sortColCount(sortColCount),
       preSortedChannelPrefix(preSortedChannelPrefix),
       expectedPositions(expectedPositions),
-      allTypes(std::make_unique<DataTypes>(allTypes)),
+      allTypes(allTypes),
       argumentChannelsCount(argumentChannelsCount)
 {
     this->outputCols.insert(this->outputCols.begin(), outputCols, outputCols + outputColsCount);
@@ -79,9 +79,9 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
 Operator *WindowOperatorFactory::CreateOperator()
 {
     auto windowOperator =
-        new WindowOperator(*(sourceTypes), outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
+        new WindowOperator(sourceTypes, outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
         partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts,
-        sortColCount, preSortedChannelPrefix, expectedPositions, *(allTypes), argumentChannels, argumentChannelsCount,
+        sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, argumentChannelsCount,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
     windowOperator->Init();
     return windowOperator;
@@ -157,13 +157,13 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MAX:
             case OMNI_AGGREGATION_TYPE_MIN:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator,
+                    sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator,
                     std::move(windowFrame))));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(
-                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, DataType(OMNI_NONE),
-                    allTypes.Get()[sourceTypes.GetSize() + i], vecAllocator, std::move(windowFrame))));
+                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, NoneDataType::Instance(),
+                    allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator, std::move(windowFrame))));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;
@@ -211,10 +211,10 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
-    std::vector<DataType> finalOutputTypes;
+    std::vector<DataTypePtr> finalOutputTypes;
     finalOutputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
-        finalOutputTypes.push_back(allTypes.Get()[finalOutputCols[colIdx]]);
+        finalOutputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
     }
 
     VectorBatch *vecBatch = nullptr;
@@ -232,7 +232,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 }
 
 void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-    std::vector<type::DataType> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
+    std::vector<type::DataTypePtr> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
@@ -260,12 +260,12 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
     }
 }
 
-void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypesField, VectorBatch *&vecBatchField,
+void WindowOperator::InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
     const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const
 {
     for (int colIndex = outputColsCountField; colIndex < finalOutputColsCountField; ++colIndex) {
         auto type = outputTypesField[colIndex];
-        switch (type.GetId()) {
+        switch (type->GetId()) {
             case OMNI_BOOLEAN:
                 vecBatchField->SetVector(colIndex, new BooleanVector(vecAllocator, rowCountField));
                 break;
@@ -289,7 +289,7 @@ void WindowOperator::InitResultVectors(const std::vector<DataType> &outputTypesF
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                uint32_t width = (static_cast<const VarcharDataType *>(&type))->GetWidth();
+                uint32_t width = static_cast<VarcharDataType &>(*type).GetWidth();
                 vecBatchField->SetVector(colIndex,
                     new VarcharVector(vecAllocator, rowCountField * static_cast<int32_t>(width), rowCountField));
                 break;
@@ -311,13 +311,13 @@ void WindowOperator::Initialization()
 
     // right now we assume the pregroup and presort are null
     preGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), preGroupedCols.data(), preGroupedCount);
+        preGroupedCols.data(), preGroupedCount);
     unGroupedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), partitionCols.data(), partitionCount);
+        partitionCols.data(), partitionCount);
     preSortedPartitionHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), preGroupedCols.data(), preGroupedCount);
+        preGroupedCols.data(), preGroupedCount);
     peerGroupHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
-        pagesIndex->GetTypesCount(), originSortCols.data(), originSortColCount);
+        originSortCols.data(), originSortColCount);
 }
 
 void WindowOperator::FinishPagesIndex()
@@ -330,7 +330,7 @@ void WindowOperator::SortPagesIndexIfNecessary()
     if (pagesIndex->GetRowCount() > 1 && sortColCount != 0) {
         int32_t sortColTypes[sortColCount];
         for (int32_t i = 0; i < sortColCount; i++) {
-            sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
+            sortColTypes[i] = sourceTypes.GetType(sortCols[i])->GetId();
         }
 
         int32_t startPosition = 0;

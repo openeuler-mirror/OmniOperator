@@ -185,7 +185,7 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getData
     jlong jNativeVector)
 {
     ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
-    auto DataTypes = containerVec->GetDataTypes();
+    auto &DataTypes = containerVec->GetDataTypes();
     return env->NewStringUTF(Serialize(DataTypes).data());
 }
 

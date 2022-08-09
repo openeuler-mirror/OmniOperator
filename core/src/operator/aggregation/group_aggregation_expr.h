@@ -25,9 +25,9 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    std::unique_ptr<type::DataTypes> sourceTypes;
-    std::unique_ptr<type::DataTypes> groupByTypes;
-    std::unique_ptr<type::DataTypes> aggTypes;
+    std::unique_ptr<DataTypes> sourceTypes;
+    std::unique_ptr<DataTypes> groupByTypes;
+    std::unique_ptr<DataTypes> aggTypes;
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
@@ -48,7 +48,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    const omniruntime::type::DataTypes &sourceTypes;
+    DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<RowProjFunc> projectFuncs;
     HashAggregationOperator *hashAggOperator;

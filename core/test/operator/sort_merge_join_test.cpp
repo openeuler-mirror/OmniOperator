@@ -19,7 +19,7 @@ using namespace TestUtil;
 namespace SortMergeJoinTest {
 TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
 {
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
     DataTypes sourceTypes(types);
     DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
@@ -64,7 +64,7 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
 
 TEST(NativeSortMergeJoinTest, TestDataValue)
 {
-    std::vector<DataType> types = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
     DataTypes sourceTypes(types);
     DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
@@ -135,7 +135,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
     std::string blank = "";
     SortMergeJoinOperator *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
 
-    std::vector<DataType> streamTypesVector = { IntDataType::Instance(), LongDataType::Instance() };
+    std::vector<DataTypePtr> streamTypesVector = { IntType(), LongDataType::Instance() };
     DataTypes streamedTblTypes(streamTypesVector);
     std::vector<int32_t> streamedKeysCols;
     streamedKeysCols.push_back(0);
@@ -143,7 +143,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
     streamedOutputCols.push_back(1);
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols);
 
-    std::vector<DataType> bufferTypesVector = { DoubleDataType::Instance(), IntDataType::Instance() };
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleType(), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
     std::vector<int32_t> bufferedKeysCols;
     bufferedKeysCols.push_back(1);
@@ -220,12 +220,12 @@ void ExpectVectorEqual(std::vector<int64_t> expected, std::vector<int64_t> actua
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner1)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -268,12 +268,12 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner1)
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner2)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -323,12 +323,12 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner2)
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner3)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -371,12 +371,12 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner3)
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner4)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -423,12 +423,12 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner4)
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner5)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -471,12 +471,12 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner5)
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner6)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -523,12 +523,12 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner6)
 
 TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys1)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -575,12 +575,12 @@ TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys1)
 
 TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys2)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -623,12 +623,12 @@ TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys2)
 
 TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys1)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -671,12 +671,12 @@ TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys1)
 
 TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys2)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -719,12 +719,12 @@ TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys2)
 
 TEST(NativeSortMergeJoinTest, TestMultipleTableKeys)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int32_t streamedCols[] = {1, 2};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int32_t bufferedCols[] = {0, 1};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -779,10 +779,10 @@ TEST(NativeSortMergeJoinTest, TestMultipleTableKeys)
 
 TEST(NativeSortMergeJoinTest, TestNullKeys)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType(), LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int32_t streamedCols[] = {1, 2};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType(), LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
     int32_t bufferedCols[] = {0, 1};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -840,13 +840,12 @@ TEST(NativeSortMergeJoinTest, TestNullKeys)
 
 TEST(NativeSortMergeJoinTest, TestDateTypes)
 {
-    DataTypes streamedTypes(
-        std::vector<DataType>({ LongDataType(), DoubleDataType(), VarcharDataType(5), BooleanDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ DoubleDataType(), VarcharDataType(5), BooleanDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(5), BooleanType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(5), BooleanType() }));
     int32_t streamedCols[] = {1, 2, 3};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ DoubleDataType(), VarcharDataType(5), BooleanDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ DoubleDataType(), VarcharDataType(5), BooleanDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(5), BooleanType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(5), BooleanType() }));
     int32_t bufferedCols[] = {0, 1, 2};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -859,7 +858,7 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     VectorBatch *streamedVecBatch = new VectorBatch(4, dataSize);
     streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
     streamedVecBatch->SetVector(1, CreateVector<DoubleVector, double>(streamData1, dataSize));
-    streamedVecBatch->SetVector(2, CreateVarcharVector(VarcharDataType(5), streamData2, dataSize));
+    streamedVecBatch->SetVector(2, CreateVarcharVector(*VarcharType(5), streamData2, dataSize));
     streamedVecBatch->SetVector(3, CreateVector<BooleanVector, bool>(streamData3, dataSize));
     auto streamed = std::vector<VectorBatch *>();
     streamed.push_back(streamedVecBatch);
@@ -870,7 +869,7 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     bool bufferData2[] = {false, false, false, true};
     VectorBatch *bufferedVecBatch = new VectorBatch(3, dataSize);
     bufferedVecBatch->SetVector(0, CreateVector<DoubleVector, double>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVarcharVector(VarcharDataType(5), bufferData1, dataSize));
+    bufferedVecBatch->SetVector(1, CreateVarcharVector(*VarcharType(5), bufferData1, dataSize));
     bufferedVecBatch->SetVector(2, CreateVector<BooleanVector, bool>(bufferData2, dataSize));
     auto buffered = std::vector<VectorBatch *>();
     buffered.push_back(bufferedVecBatch);
@@ -900,12 +899,12 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
 
 TEST(NativeSortMergeJoinTest, TestMultipleVecBatch)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -1015,12 +1014,12 @@ TEST(NativeSortMergeJoinTest, TestMultipleVecBatch)
 
 TEST(NativeSortMergeJoinTest, TestReturnCode)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -1097,12 +1096,12 @@ TEST(NativeSortMergeJoinTest, TestReturnCode)
 
 TEST(NativeSortMergeJoinTest, TestReturnCode2)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType(), LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -1162,12 +1161,12 @@ TEST(NativeSortMergeJoinTest, TestReturnCode2)
 
 TEST(NativeSortMergeJoinTest, TestJoinScanner7)
 {
-    DataTypes streamedTypes(std::vector<DataType>({ LongDataType() }));
-    DataTypes streamedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType() }));
+    DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
     auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
-    DataTypes bufferedTypes(std::vector<DataType>({ LongDataType() }));
-    DataTypes bufferedKeysTypes(std::vector<DataType>({ LongDataType() }));
+    DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType() }));
+    DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
     auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
@@ -1297,9 +1296,9 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner7)
 
 TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 {
-    std::vector<DataType> leftTypes = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> leftTypes = { IntType(), DoubleType() };
     DataTypes leftSourceTypes(leftTypes);
-    std::vector<DataType> rightTypes = { IntDataType::Instance(), DoubleDataType::Instance(), VarcharDataType(3) };
+    std::vector<DataTypePtr> rightTypes = { IntType(), DoubleType(), VarcharType(3) };
     DataTypes rightSourceTypes(rightTypes);
 
     auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes);
@@ -1400,9 +1399,9 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 
 TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
 {
-    std::vector<DataType> leftTypes = { IntDataType::Instance(), DoubleDataType::Instance() };
+    std::vector<DataTypePtr> leftTypes = { IntType(), DoubleType() };
     DataTypes leftSourceTypes(leftTypes);
-    std::vector<DataType> rightTypes = { IntDataType::Instance(), DoubleDataType::Instance(), VarcharDataType(3) };
+    std::vector<DataTypePtr> rightTypes = { IntType(), DoubleType(), VarcharType(3) };
     DataTypes rightSourceTypes(rightTypes);
 
     auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes);

@@ -36,7 +36,7 @@ public:
     SortMergeJoinOperator *GetSmjOperator();
 
 private:
-    std::unique_ptr<type::DataTypes> streamedTypes;
+    std::unique_ptr<DataTypes> streamedTypes;
     std::vector<int32_t> streamedKeyCols;
     std::vector<int32_t> streamedOutputCols;
     JoinType joinType;
@@ -62,7 +62,7 @@ public:
 
 private:
     SortMergeJoinOperator *smjOperator;
-    const omniruntime::type::DataTypes &streamedTypes;
+    DataTypes streamedTypes;
     std::vector<int32_t> streamedKeyCols;
     std::vector<RowProjFunc> projectFuncs;
 };
@@ -107,7 +107,7 @@ public:
 
 private:
     SortMergeJoinOperator *smjOperator;
-    const omniruntime::type::DataTypes &bufferedTypes;
+    DataTypes bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<RowProjFunc> projectFuncs;
 };

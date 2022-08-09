@@ -31,7 +31,7 @@ Operator *TopNOperatorFactory::CreateOperator()
 
 TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
-    : sourceTypes(sourceTypes), sourceTypesCount(sourceTypes.GetSize())
+    : sourceTypes(sourceTypes), sourceTypesCount(this->sourceTypes.GetSize())
 {
     this->n = n;
     this->sortCols = sortCols;
@@ -294,13 +294,14 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *
 void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
 {
     int vecIndex = 0;
-    for (const DataType &item : sourceTypes.Get()) {
-        if (item.GetId() != OMNI_VARCHAR && item.GetId() != OMNI_CHAR) {
+    for (const DataTypePtr &dataTypePtr : sourceTypes.Get()) {
+        if (dataTypePtr->GetId() != OMNI_VARCHAR && dataTypePtr->GetId() != OMNI_CHAR) {
             vecIndex++;
             continue;
         }
-        auto dataType = (VarcharDataType &)item;
-        auto varcharVector = new VarcharVector(vecAllocator, positionCount * dataType.GetWidth(), positionCount);
+
+        auto varcharVector = new VarcharVector(vecAllocator,
+            positionCount * static_cast<VarcharDataType *>(dataTypePtr.get())->GetWidth(), positionCount);
         auto tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
         for (int32_t i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {

@@ -41,7 +41,7 @@ public:
 
     const int32_t *GetVectorTypeIds();
 
-    void NewVectors(VectorAllocator *vecAllocator, const std::vector<DataType> &types);
+    void NewVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types);
 
     void ReleaseAllVectors();
 

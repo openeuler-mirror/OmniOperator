@@ -69,8 +69,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
         data4[i] = to_string(i % vecSize);
     }
 
-    DataTypes sourceTypes(
-        std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType(), VarcharDataType(9) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), VarcharType(9) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     int32_t outputCols[vecSize] = {0, 1, 2, 3};
@@ -106,7 +105,7 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
@@ -141,7 +140,7 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
     const int32_t dataSize = 6;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0, -1};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4, -1};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(dataSize - 1);
     vecBatch->GetVector(1)->SetValueNull(dataSize - 1);
@@ -176,7 +175,7 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
     const int32_t dataSize = 6;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0, -1};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4, -1};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(dataSize - 1);
     vecBatch->GetVector(1)->SetValueNull(dataSize - 1);
@@ -211,7 +210,7 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
     const int32_t dataSize = 6;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0, -1};
     int64_t data2[dataSize] = {0, 1, -1, -1, -1, -1};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
     vecBatch->GetVector(0)->SetValueNull(dataSize - 1);
     for (int32_t i = dataSize - 1; i > 1; i--) {
@@ -250,7 +249,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), DoubleDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t outputCols[2] = {1, 2};
@@ -268,7 +267,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     double expectData2[dataSize] = {1.1, 4.4, 2.2, 5.5, 3.3, 6.6};
-    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), DoubleDataType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), DoubleType() });
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -287,7 +286,7 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     BuildSortTestData(vecBatches, vecAllocator, COLUMN_COUNT_2);
     std::cout << "finish build sort data" << endl;
 
-    DataTypes sourceTypes(std::vector<DataType> { LongDataType(), LongDataType() });
+    DataTypes sourceTypes(std::vector<DataTypePtr> { LongType(), LongType() });
     int32_t outputCols[] = {0, 1};
     int32_t sortCols[] = {0, 1};
     int32_t ascendings[] = {1, 1};
@@ -336,7 +335,7 @@ void SetSortThreadArgs(struct SortThreadArgs *sortThreadArgs, SortOperatorFactor
 
 SortOperatorFactory *PrepareOrderBy(bool isOriginal)
 {
-    DataTypes sourceTypes(std::vector<DataType> { LongDataType(), LongDataType(), LongDataType(), LongDataType() });
+    DataTypes sourceTypes(std::vector<DataTypePtr> { LongType(), LongType(), LongType(), LongType() });
     int32_t outputCols[] = {0, 1};
     int32_t outputColsCount = 2;
     int32_t sortCols[] = {2, 3};
@@ -480,7 +479,7 @@ TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     std::string data2[dataSize] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"};
-    DataTypes sourceTypes(std::vector<DataType>({ VarcharDataType(3), LongDataType(), VarcharDataType(3) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(3), LongType(), VarcharType(3) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t outputCols[2] = {1, 2};
@@ -499,7 +498,7 @@ TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     std::string expectData2[dataSize] = {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"};
-    DataTypes expectedTypes(std::vector<DataType>({ LongDataType(), VarcharDataType(3) }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(3) }));
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -518,7 +517,7 @@ TEST(NativeOmniSortTest, TestSortTwoCharColumn)
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     std::string data2[dataSize] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"};
-    DataTypes sourceTypes(std::vector<DataType>({ CharDataType(3), LongDataType(), CharDataType(3) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ CharType(3), LongType(), CharType(3) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t outputCols[2] = {1, 2};
@@ -537,7 +536,7 @@ TEST(NativeOmniSortTest, TestSortTwoCharColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     std::string expectData2[dataSize] = {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"};
-    DataTypes expectedTypes(std::vector<DataType>({ LongDataType(), CharDataType(3) }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), CharType(3) }));
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -556,7 +555,7 @@ TEST(NativeOmniSortTest, TestSortTwoDate32Column)
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int32_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    DataTypes sourceTypes(std::vector<DataType>({ Date32DataType(DAY), LongDataType(), Date32DataType(MILLI) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ Date32Type(DAY), LongType(), Date32Type(MILLI) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t outputCols[2] = {1, 2};
@@ -575,7 +574,7 @@ TEST(NativeOmniSortTest, TestSortTwoDate32Column)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int32_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataType>({ LongDataType(), Date32DataType(MILLI) }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), Date32Type(MILLI) }));
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -594,7 +593,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal64Column)
     int64_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    DataTypes sourceTypes(std::vector<DataType>({ Decimal64DataType(2, 0), LongDataType(), Decimal64DataType(2, 0) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ Decimal64Type(2, 0), LongType(), Decimal64Type(2, 0) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t outputCols[2] = {1, 2};
@@ -613,7 +612,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal64Column)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataType>({ LongDataType(), Decimal64DataType(2, 0) }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), Decimal64Type(2, 0) }));
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -632,8 +631,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal128Column)
     Decimal128 data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     Decimal128 data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    DataTypes sourceTypes(
-        std::vector<DataType>({ Decimal128DataType(2, 0), LongDataType(), Decimal128DataType(2, 0) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ Decimal128Type(2, 0), LongType(), Decimal128Type(2, 0) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t outputCols[2] = {1, 2};
@@ -652,7 +650,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal128Column)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     Decimal128 expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataType>({ LongDataType(), Decimal128DataType(2, 0) }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), Decimal128Type(2, 0) }));
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -672,12 +670,12 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
     void *datas[3] = {data0, data1, data2};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = new VectorBatch(3, dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        DataType dataType = sourceTypes.Get()[i];
-        vecBatch->SetVector(i, CreateDictionaryVector(dataType, dataSize, ids, dataSize, datas[i]));
+        DataTypePtr dataType = sourceTypes.GetType(i);
+        vecBatch->SetVector(i, CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]));
     }
 
     int32_t outputCols[2] = {1, 2};
@@ -695,7 +693,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataType> { LongDataType(), LongDataType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
@@ -710,14 +708,17 @@ VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas
     VectorAllocator *vectorAllocator, bool isDictionary, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
-    std::vector<DataType> sourceTypesVec = sourceTypes.Get();
+    auto &sourceTypesVec = sourceTypes.Get();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
     int32_t totalDataSize = dataSize * loopCount;
 
     Vector *sourceVectors[sourceTypesSize];
     for (int32_t i = 0; i < sourceTypesSize; i++) {
         sourceVectors[i] = VectorHelper::CreateVector(vectorAllocator, OMNI_VEC_ENCODING_FLAT, sourceTypeIds[i],
-            sourceTypesVec[i].GetWidth() * totalDataSize, totalDataSize);
+            (sourceTypesVec[i]->GetId() == OMNI_VARCHAR || sourceTypesVec[i]->GetId() == OMNI_CHAR) ?
+            static_cast<VarcharDataType *>(sourceTypesVec[i].get())->GetWidth() * totalDataSize :
+            0,
+            totalDataSize);
         VectorHelper::SetValue(sourceVectors[i], 0, sortDatas[i]);
     }
     for (int32_t i = 1; i < totalDataSize; i++) {
@@ -756,14 +757,17 @@ VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortData
     VectorAllocator *vectorAllocator, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
-    std::vector<DataType> sourceTypesVec = sourceTypes.Get();
+    auto &sourceTypesVec = sourceTypes.Get();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
     int32_t totalDataSize = dataSize * loopCount;
 
     Vector *expectVectors[sourceTypesSize];
     for (int32_t i = 0; i < sourceTypesSize; i++) {
         expectVectors[i] = VectorHelper::CreateVector(vectorAllocator, OMNI_VEC_ENCODING_FLAT, sourceTypeIds[i],
-            sourceTypesVec[i].GetWidth() * totalDataSize, totalDataSize);
+            (sourceTypesVec[i]->GetId() == OMNI_VARCHAR || sourceTypesVec[i]->GetId() == OMNI_CHAR) ?
+            static_cast<VarcharDataType *>(sourceTypesVec[i].get())->GetWidth() * totalDataSize :
+            0,
+            totalDataSize);
     }
 
     for (int32_t i = 0; i < dataSize; i++) {
@@ -797,8 +801,8 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
     const int32_t dataSize = 10;
     void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
         &stringValue, &stringValue};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
-        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(),
+        Date32Type(DAY), Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
 
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
@@ -844,8 +848,8 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
     const int32_t dataSize = 10;
     void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
         &stringValue, &stringValue};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
-        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(),
+        Date32Type(DAY), Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
 
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
@@ -890,8 +894,8 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
     const int32_t dataSize = 10;
     void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
         &stringValue, &stringValue};
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
-        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(),
+        Date32Type(DAY), Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
 
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
@@ -925,8 +929,8 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
 
 TEST(NativeOmniSortTest, TestSortZeroRowCountInMemory)
 {
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
-        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(),
+        Date32Type(DAY), Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
     int32_t sortCols[sourceTypesSize];
@@ -956,7 +960,7 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemory)
 
 TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
 {
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     auto sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[] = {0, 1};
     int32_t sortCols[] = {0, 1};
@@ -995,8 +999,8 @@ TEST(NativeOmniSortTest, TestSortSpillWithDictionaryAndNulls)
     void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
         &stringValue, &stringValue};
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
-        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(),
+        Date32Type(DAY), Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
     int32_t sortCols[sourceTypesSize];
@@ -1050,8 +1054,8 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemoryWithSpill)
     void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
         &stringValue, &stringValue};
 
-    DataTypes sourceTypes(std::vector<DataType>({ IntDataType(), LongDataType(), BooleanDataType(), DoubleDataType(),
-        Date32DataType(DAY), Decimal64DataType(2, 0), Decimal128DataType(2, 0), VarcharDataType(2), CharDataType(2) }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(),
+        Date32Type(DAY), Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
     int32_t sortCols[sourceTypesSize];

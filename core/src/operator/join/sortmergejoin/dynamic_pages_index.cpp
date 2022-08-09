@@ -12,7 +12,7 @@ using namespace omniruntime::vec;
 
 // function implements for class PagesIndex
 DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types)
-    : dataTypeIds(types.GetIds()), typesCount(types.GetSize()), positionCount(0), finishAddData(false)
+    : typesCount(types.GetSize()), positionCount(0), finishAddData(false)
 {}
 
 int32_t DynamicPagesIndex::AddVecBatches(const std::vector<VectorBatch *> &vecBatches)
