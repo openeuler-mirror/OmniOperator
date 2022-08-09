@@ -36,7 +36,7 @@ private:
     int64_t limit;
 };
 
-using DistinctRowInfo = struct {
+using DistinctRowInfo = struct RowInfo {
     uint64_t hashValue; // hash value of the row
     int32_t slotIndex;  // index when hash conflict
 };

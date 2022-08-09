@@ -418,7 +418,7 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory)
 {
-    return operatorFactory->CreateOperator();;
+    return operatorFactory->CreateOperator();
 }
 
 void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
@@ -543,7 +543,7 @@ std::string GenerateSpillPath()
 
 void SetNulls(omniruntime::vec::Vector *vector, std::vector<bool> &nulls)
 {
-    for (int32_t i = 0; i < nulls.size(); i++) {
+    for (int32_t i = 0; i < (int32_t)nulls.size(); i++) {
         if (nulls[i]) {
             vector->SetValueNull(i);
         }

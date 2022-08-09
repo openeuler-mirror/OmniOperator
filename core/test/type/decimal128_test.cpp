@@ -246,7 +246,7 @@ TEST(Decimal128, multiple_mix)
     Decimal128 right = Decimal128(0L, 1000000);
     Decimal128 result;
     DecimalOperations::Multiply(left, right, result);
-    Decimal128 expected = Decimal128(-9223372036854775796L, 13166071127830380608);
+    Decimal128 expected = Decimal128(-9223372036854775796L, 13166071127830380608U);
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
@@ -350,7 +350,7 @@ TEST(Decimal128, negative_dividend_positive_divisor_and_with_scale_factor)
     Decimal128 left = DecimalOperations::UnscaledDecimal(-124861912500);
     Decimal128 right = DecimalOperations::UnscaledDecimal(1652201977500);
     auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
-    Decimal128 expected(-9223372036854775808, 755730317481720);
+    Decimal128 expected((int64_t)9223372036854775808U, 755730317481720);
     EXPECT_EQ(result, expected);
 }
 

@@ -8,9 +8,10 @@
     <groupId>com.huawei.boostkit</groupId>
     <artifactId>boostkit-omniop-bindings</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 
     <properties >
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <guava.version>30.0-jre</guava.version>
         <java.version>8</java.version>
         <maven.compiler.source>8</maven.compiler.source>
@@ -156,6 +157,7 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.6.1</version>
                 <configuration>
+                    <protocExecutable>protoc</protocExecutable>
                 </configuration>
                 <executions>
                     <execution>

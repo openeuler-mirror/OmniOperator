@@ -176,7 +176,6 @@ llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
     std::vector<omniruntime::type::DataTypeId> intParams = { OMNI_INT, OMNI_INT };
-    Value *output = nullptr;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi);
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:

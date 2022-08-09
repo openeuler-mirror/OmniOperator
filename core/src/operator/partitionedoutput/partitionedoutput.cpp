@@ -94,10 +94,9 @@ void ALWAYS_INLINE PartitionedOutputOperator::InsertVarchar(Vector *originVector
 void ALWAYS_INLINE PartitionedOutputOperator::InsertContainer(Vector *originVector, int32_t originRowIndex,
     Vector *currentVector, int32_t currentRowIndex)
 {
-    ContainerVector *originContainerVec = static_cast<ContainerVector *>(originVector);
-    ContainerVector *currentContainerVec = static_cast<ContainerVector *>(currentVector);
+    auto *originContainerVec = static_cast<ContainerVector *>(originVector);
+    auto *currentContainerVec = static_cast<ContainerVector *>(currentVector);
     int32_t fieldCount = originContainerVec->GetVectorCount();
-    std::vector<DataTypePtr> &dataTypes = originContainerVec->GetDataTypes();
     for (int32_t i = 0; i < fieldCount; i++) {
         auto *originFieldVector = reinterpret_cast<Vector *>(originContainerVec->GetValue(i));
         if (originFieldVector->GetTypeId() == type::OMNI_NONE) {
