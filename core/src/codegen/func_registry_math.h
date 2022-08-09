@@ -7,7 +7,6 @@
 #include "function.h"
 #include "func_registry_base.h"
 
-std::vector<omniruntime::Function> GetMathFunctionRegistry();
 namespace omniruntime {
 class MathFunctionRegistry : public BaseFunctionRegistry {
 public:

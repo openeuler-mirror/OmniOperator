@@ -185,6 +185,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows,
             valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         if (context->HasError()) {
+            delete col;
             // resource cleanup
             for (int32_t j = 0; j < i; j++) {
                 delete projectedVecs->GetVector(j);

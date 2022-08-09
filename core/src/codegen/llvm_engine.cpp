@@ -187,9 +187,8 @@ CallInst *LLVMEngine::CreateCall(llvm::Function *func, std::vector<llvm::Value *
     return builder->CreateCall(func, argsVals, name);
 }
 
-llvm::Value *LLVMEngine::CallExternFunction(const std::string fn_name,
-    std::vector<omniruntime::type::DataTypeId> params, const omniruntime::type::DataTypeId &returnType,
-    std::vector<llvm::Value *> args, llvm::Value *executionContextPtr, std::string msg)
+llvm::Value *LLVMEngine::CallExternFunction(const string fn_name, vector<DataTypeId> params,
+    const DataTypeId returnType, vector<Value *> args, llvm::Value *executionContextPtr, const string msg)
 {
     if (executionContextPtr != nullptr) {
         args.insert(args.begin(), executionContextPtr);

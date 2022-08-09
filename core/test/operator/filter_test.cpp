@@ -1489,6 +1489,18 @@ TEST(FilterTest, FilterString1)
     int32_t numReturned = op->GetOutput(ret);
 
     EXPECT_EQ(numReturned, 25);
+    for (int32_t i = 0; i < numReturned; i++) {
+        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+
+        // Truncate the resulting string
+        void *charArr = &actualChar;
+        auto charArrCasted = static_cast<char **>(charArr);
+        string actualStr(*charArrCasted, 0, len);
+        ASSERT_STREQ(actualStr.c_str(), "hello");
+    }
 
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);

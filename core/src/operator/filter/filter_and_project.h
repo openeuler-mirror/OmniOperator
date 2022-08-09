@@ -14,7 +14,7 @@
 #include "operator/status.h"
 #include "vector/vector_batch.h"
 #include "operator/projection/projection.h"
-#include "codegen/filter_codegen.h"
+#include "codegen/batch_filter_codegen.h"
 #include "expression/expressions.h"
 #include "codegen/row_expression_codegen.h"
 #include "operator/execution_context.h"
@@ -112,7 +112,7 @@ public:
     FilterFunc apply;
 
 private:
-    std::unique_ptr<FilterCodeGen> codeGen;
+    std::unique_ptr<BatchFilterCodeGen> codeGen;
     const expressions::Expr *expr;
     bool isSupported;
 };

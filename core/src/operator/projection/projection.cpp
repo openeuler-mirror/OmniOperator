@@ -264,7 +264,6 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
         Vector *outCol =
             proj[i]->Project(vecAllocator, vecBatch, valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         if (context->HasError()) {
-            // resource cleanup
             delete outCol;
             for (int32_t j = 0; j < i; j++) {
                 delete outBatch->GetVector(j);

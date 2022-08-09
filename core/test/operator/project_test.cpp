@@ -931,16 +931,20 @@ TEST(ProjectionTest, ProjectString1)
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
 
-    for (int32_t i = 0; i < numRows; i += 20) {
-        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
-
-        uint8_t *actualChar = nullptr;
-        int len = vcVec->GetValue(i, &actualChar);
-
+    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    uint8_t *actualChar = nullptr;
+    int len;
+    for (int32_t i = 0; i < numRows; i++) {
+        len = vcVec->GetValue(i, &actualChar);
         // Truncate the resulting string
         void *charArr = &actualChar;
         auto charArrCasted = static_cast<char **>(charArr);
         string actualStr(*charArrCasted, len);
+        if (i % 40 == 0) {
+            EXPECT_STREQ(actualStr.c_str(), "hel");
+        } else {
+            EXPECT_STREQ(actualStr.c_str(), "abc");
+        }
     }
 
     Expr::DeleteExprs(exprs);
@@ -1596,13 +1600,11 @@ TEST(ProjectionTest, StringSubstr)
 
     string expected1 = "hello world";
     string expected2 = "Bonjo world";
-    for (int32_t i = 0; i < numRows; i += 20) {
-        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
-
-        uint8_t *actualChar = nullptr;
+    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    uint8_t *actualChar = nullptr;
+    for (int32_t i = 0; i < numRows; i++) {
         int len = vcVec->GetValue(i, &actualChar);
-
-        string actualStr(reinterpret_cast<char *>(actualChar), len);
+        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
         if (i % 2 == 0) {
             EXPECT_EQ(actualStr, expected1);
         } else {
@@ -2223,7 +2225,6 @@ TEST(ProjectionTest, testDecimal128Between)
     delete overflowConfig;
 }
 
-
 TEST(ProjectionTest, testDecimal128In)
 {
     const int32_t numRows = 1;
@@ -2257,7 +2258,6 @@ TEST(ProjectionTest, testDecimal128In)
     delete vecAllocator;
     delete overflowConfig;
 }
-
 
 TEST(ProjectionTest, testDecimal128Comprehensive)
 {
@@ -2308,12 +2308,22 @@ TEST(ProjectionTest, TestAndExprWithNull)
     const int32_t numCols = 2;
     auto andLeft = new FieldExpr(0, BooleanType());
     auto andRight = new FieldExpr(1, BooleanType());
+    auto andLeft1 = new FieldExpr(0, BooleanType());
+    auto andRight1 = new FieldExpr(1, BooleanType());
+    auto andLeft2 = new FieldExpr(0, BooleanType());
+    auto andRight2 = new FieldExpr(1, BooleanType());
     BinaryExpr *andExpr = new BinaryExpr(omniruntime::expressions::Operator::AND, andLeft, andRight, BooleanType());
-    std::vector<Expr *> exprs = { andExpr };
+    BinaryExpr *andExpr1 = new BinaryExpr(omniruntime::expressions::Operator::AND, andLeft1, andRight1, BooleanType());
+    BinaryExpr *andExpr2 = new BinaryExpr(omniruntime::expressions::Operator::AND, andLeft2, andRight2, BooleanType());
+    auto isNullExpr = new IsNullExpr(andExpr1);
+    auto isNullExpr1 = new IsNullExpr(andExpr2);
+    auto notExpr = new UnaryExpr(omniruntime::expressions::Operator::NOT, isNullExpr1, BooleanType());
+    std::vector<Expr *> exprs = { andExpr, isNullExpr, notExpr };
+
     std::vector<DataTypePtr> vecOfTypes = { BooleanType(), BooleanType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestAndExprWithNull");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -2332,14 +2342,22 @@ TEST(ProjectionTest, TestAndExprWithNull)
     for (int32_t i = 0; i < numRows; i++) {
         bool val = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(i);
         bool isValNull = ((BooleanVector *)ret[0]->GetVector(0))->IsValueNull(i);
+        bool val1 = ((BooleanVector *)ret[0]->GetVector(1))->GetValue(i);
+        bool val2 = ((BooleanVector *)ret[0]->GetVector(2))->GetValue(i);
         if (i == 0) {
             EXPECT_TRUE(val);
             EXPECT_FALSE(isValNull);
+            EXPECT_FALSE(val1);
+            EXPECT_TRUE(val2);
         } else if (i == 2 || i == 6 || i == 8) {
             EXPECT_TRUE(isValNull);
+            EXPECT_TRUE(val1);
+            EXPECT_FALSE(val2);
         } else {
             EXPECT_FALSE(val);
             EXPECT_FALSE(isValNull);
+            EXPECT_FALSE(val1);
+            EXPECT_TRUE(val2);
         }
     }
 
@@ -2402,7 +2420,6 @@ TEST(ProjectionTest, TestOrExprWithNull)
     delete vecAllocator;
     delete overflowConfig;
 }
-
 
 TEST(ProjectionTest, testSubDecimal64)
 {

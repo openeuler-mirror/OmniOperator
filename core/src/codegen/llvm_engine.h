@@ -53,8 +53,8 @@ public:
     void OptimizeModule();
     llvm::CallInst *CreateCall(llvm::Function *func, std::vector<llvm::Value *> argsVals, std::string name);
     llvm::Value *CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
-        const omniruntime::type::DataTypeId &returnType, std::vector<llvm::Value *> args,
-        llvm::Value *executionContextPtr, std::string msg = "");
+        const omniruntime::type::DataTypeId returnType, std::vector<llvm::Value *> args,
+        llvm::Value *executionContextPtr, const std::string msg = "");
     static void InitializeCodegenTargets();
     void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     void MakeThreadSafe(llvm::orc::ResourceTrackerSP *res);
