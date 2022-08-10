@@ -67,5 +67,5 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
 JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_OmniLibs_getVersion(JNIEnv *env, jclass ignore)
 {
     return (*env).NewStringUTF(
-        "Software-Title: boostkit-omnioperatorjit\nSoftware-Version: 1.0.0\nSoftware-Vendor: Kunpeng BoostKit");
+        "Software-Title: boostkit-omnioperatorjit\nSoftware-Version: 1.1.0\nSoftware-Vendor: Kunpeng BoostKit");
 }

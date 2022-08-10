@@ -102,8 +102,8 @@ void LLVMEngine::RegisterFunctions(const std::vector<omniruntime::Function> &fun
         llvm::Type *ret = (retType == OMNI_DECIMAL128) ? llvmTypes->VoidType() : llvmTypes->ToLLVMType(retType);
         llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
         auto linkage = llvm::Function::ExternalLinkage;
-        llvm::Function *fn = llvm::Function::Create(ft, linkage, func.GetId(), *module);
-        FunctionCallee callee = module->getOrInsertFunction(func.GetId(), ft);
+        llvm::Function::Create(ft, linkage, func.GetId(), *module);
+        module->getOrInsertFunction(func.GetId(), ft);
     }
 }
 

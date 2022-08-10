@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.10)
 
 message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 # omniruntime version
-set(OMNI_RUNTIME_VERSION 1.0.0)
+set(OMNI_RUNTIME_VERSION 1.1.0)
 set(OS_ARCHITECTURES aarch64)
 set(OMNI_CODEGEN_SO boostkit-omniop-codegen-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 set(OMNI_OPERATOR_SO boostkit-omniop-operator-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})

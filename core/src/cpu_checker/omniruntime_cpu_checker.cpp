@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <string>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include "../../config.h"
@@ -98,8 +99,7 @@ int DoQingsongCpuCheck(char *file)
 
 int QingsongCpuCheck()
 {
-    if (DoQingsongCpuCheck(I2C_DEV_0) == 0 || DoQingsongCpuCheck(I2C_DEV_1) == 0) {
-        return 0;
-    }
-    return -1;
+    std::string dev0 = I2C_DEV_0;
+    std::string dev1 = I2C_DEV_1;
+    return DoQingsongCpuCheck((char *) dev0.data()) == 0 || DoQingsongCpuCheck((char *) dev1.data()) == 0 ? 0 : -1;
 }

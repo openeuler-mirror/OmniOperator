@@ -269,7 +269,7 @@ void ExprPrinter::Visit(const InExpr &e)
     string output = indent + "In:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
     printf("%s\n", output.c_str());
     this->indentationDepth++;
-    for (int i = 0; i < e.arguments.size(); i++) {
+    for (uint32_t i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
             printf("%s\n", (indent + ")").c_str());
@@ -298,9 +298,9 @@ void ExprPrinter::Visit(const SwitchExpr &e)
     string output = indent + "Switch:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
     printf("%s\n", output.c_str());
     this->indentationDepth++;
-    for (int i = 0; i < e.whenClause.size(); i++) {
-        (e.whenClause[i].first)->Accept(*this);
-        (e.whenClause[i].second)->Accept(*this);
+    for (const auto &i : e.whenClause) {
+        (i.first)->Accept(*this);
+        (i.second)->Accept(*this);
     }
     e.falseExpr->Accept(*this);
     printf("%s\n", (indent + ")").c_str());
@@ -439,7 +439,7 @@ void ExprPrinter::Visit(const FuncExpr &e)
     string output = indent + "Function:" + ":" + e.funcName + ":" + typeStr + "(";
     printf("%s\n", output.c_str());
     this->indentationDepth++;
-    for (int i = 0; i < e.arguments.size(); i++) {
+    for (uint32_t i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
             printf("%s\n", (indent + ")").c_str());

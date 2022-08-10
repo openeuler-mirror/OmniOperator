@@ -4,8 +4,8 @@
 
 set -e
 
-targz_name=boostkit-omniop-operator-1.0.0-aarch64
-zip_name=BoostKit-omniop_1.0.0
+targz_name=boostkit-omniop-operator-1.1.0-aarch64
+zip_name=BoostKit-omniop_1.1.0
 
 if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
   open_source_dir="open_source"

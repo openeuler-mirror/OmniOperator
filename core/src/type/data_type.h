@@ -464,7 +464,7 @@ public:
             return false;
         }
         const auto &rightType = static_cast<const ContainerDataType &>(right);
-        for (int i = 0; i < fieldTypes.size(); i++) {
+        for (uint32_t i = 0; i < fieldTypes.size(); i++) {
             if (*fieldTypes[i] != *rightType.GetFieldType(i)) {
                 return false;
             }
