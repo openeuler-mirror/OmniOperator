@@ -187,12 +187,12 @@ using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 
 class DecimalDataType : public DataType {
 public:
-    uint32_t GetPrecision() const
+    int32_t GetPrecision() const
     {
         return precision;
     }
 
-    uint32_t GetScale() const
+    int32_t GetScale() const
     {
         return scale;
     }
