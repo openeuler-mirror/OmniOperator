@@ -230,6 +230,14 @@ string GetFuncTestJson(int32_t rt, const string &func, const vector<string> &arg
     return ss.str();
 }
 
+string GetIsNullTestJson(const string &expr)
+{
+    ss.str("");
+    ss << R"({ "exprType": "IS_NULL", "returnType": 4, "arguments": [)" << expr;
+    ss << R"(]})";
+    return ss.str();
+}
+
 class TestExpr {
 public:
     omniruntime::type::DataTypePtr dataType = nullptr;
@@ -598,6 +606,36 @@ public:
     }
 };
 
+class TestIsNullExpr : public TestExpr {
+public:
+    TestExpr *value = nullptr;
+
+    explicit TestIsNullExpr(TestExpr *value) : value(value)
+    {
+        dataType = BooleanType();
+    }
+
+    ~TestIsNullExpr() override
+    {
+        delete value;
+    }
+
+    bool operator == (const IsNullExpr &rhs) const
+    {
+        return (*dataType == *rhs.GetReturnType() && value->isEqual(rhs.value));
+    }
+
+    bool isEqual(Expr *that) const override
+    {
+        if (typeid(IsNullExpr) != typeid(*that))
+            return false;
+        auto *rhs = dynamic_cast<IsNullExpr *>(that);
+        bool result = (*this == *rhs);
+        EXPECT_TRUE(result);
+        return result;
+    }
+};
+
 TEST(JSONParserTest, Literal_Bool)
 {
     string unparsedBoolJson = GetBoolTestJson(BOOL_VAL);
@@ -765,9 +803,10 @@ TEST(JSONParserTest, BinaryExpr_ADD_DECIMAL128)
 
 TEST(JSONParserTest, UnaryExpr_NOT)
 {
-    string unparsedUnaryJson = GetUnaryTestJson("NOT", GetBoolTestJson(BOOL_VAL));
+    string unparsedUnaryJson =
+        GetUnaryTestJson("NOT", GetIsNullTestJson(GetDecimalFieldRefTestJson(OMNI_DECIMAL64, COL_NUM, 0, 0)));
     Expr *unaryExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedUnaryJson));
-    TestUnaryExpr expectedExpr(Operator::NOT, new TestLiteralExpr(BOOL_VAL, BooleanType()));
+    TestUnaryExpr expectedExpr(Operator::NOT, new TestIsNullExpr(new TestFieldExpr(OMNI_DECIMAL64, COL_NUM)));
     expectedExpr.isEqual(unaryExpr);
     delete unaryExpr;
 }

@@ -62,8 +62,15 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fiel
     auto isNullGEP = builder->CreateGEP(isNulls, colIdx);
     Value *isNull = builder->CreateLoad(isNullGEP);
 
-    this->value.reset(new CodeGenValue(dataValue, isNull, length));
-    return;
+    if (TypeUtil::IsDecimalType(fieldExpr.GetReturnTypeId())) {
+        Value *precision = llvmTypes->CreateConstantInt(
+            static_cast<DecimalDataType *>(fieldExpr.GetReturnType().get())->GetPrecision());
+        Value *scale =
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fieldExpr.GetReturnType().get())->GetScale());
+        this->value.reset(new DecimalValue(dataValue, isNull, precision, scale));
+    } else {
+        this->value.reset(new CodeGenValue(dataValue, isNull, length));
+    }
 }
 
 bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)

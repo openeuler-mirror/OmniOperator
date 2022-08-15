@@ -141,6 +141,10 @@ Expr *JSONParser::ParseJSONUnary(const Json &jsonExpr)
     if (expr == nullptr) {
         return nullptr;
     }
+    if (expr->GetType() != ExprType::IS_NULL_E) {
+        delete expr;
+        return nullptr;
+    }
     return new UnaryExpr(op, expr, std::make_shared<BooleanDataType>());
 }
 
