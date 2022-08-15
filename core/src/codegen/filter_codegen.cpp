@@ -139,6 +139,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
+    ret = static_cast<CallInst *>(builder->CreateAnd(builder->CreateNot(builder->CreateLoad(isNullPtr)), ret));
     // If true, add row index to selected array, otherwise, process next row.
     builder->CreateCondBr(ret, filterPassed, incrementCounter);
     // Add row index to results array
