@@ -56,7 +56,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *                        */
+             *                         */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64: {
                 return std::make_unique<SumShortDecimalAggregator>(std::move(inputType), std::move(outputType), channel,
@@ -139,6 +139,10 @@ public:
         }
         if (inputTypeId == OMNI_DATE32 && outputTypeId == OMNI_LONG) {
             return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(std::move(inputType),
+                std::move(outputType), channel, inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_DATE32) {
+            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(std::move(inputType),
                 std::move(outputType), channel, inputRaw, outputPartial);
         }
         switch (inputTypeId) {
