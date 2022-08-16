@@ -75,7 +75,7 @@ public:
             case OMNI_DECIMAL128: {
                 LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_decimal(
-                    static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset),
+                    static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<HmppDecimal128 *>(maxVal));
                 break;
             }

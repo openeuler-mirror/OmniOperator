@@ -415,6 +415,7 @@ public abstract class Vec implements Closeable {
      */
     public void setNullsBuf(byte[] buf) {
         nullsBuf.setBytes(0, buf, 0, buf.length);
+        setNullFlagNative(nativeVector, true);
     }
 
     /**

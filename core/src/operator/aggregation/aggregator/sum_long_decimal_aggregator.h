@@ -41,7 +41,7 @@ public:
 
         LogDebug("HMPP-Agg-sum");
         auto result = HMPPS_Sum_decimal128(
-            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset), rowCount,
+            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
             static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, sumVal);
         if (result != HMPP_STS_NO_ERR) {
             throw OmniException("HMPP ERROR", "sum failed for hmpp error");

@@ -569,12 +569,17 @@ template <typename V, typename D>
 void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     int32_t rowSize = vector->GetSize();
-    int64_t tempCombinedHash[rowSize];
+    int64_t *tempCombinedHash = new int64_t[rowSize]();
     LogDebug("HMPP-HASHAGG-hash");
-    HmppHashUtil::ComputeHash(vector, tempCombinedHash);
+    HmppResult result = HmppHashUtil::ComputeHash(vector, tempCombinedHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] tempCombinedHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash failed for hmpp error");
+    }
     for (uint32_t i = 0; i < rowCount; ++i) {
         combinedHash[i] = tempCombinedHash[rowIndexes[i]];
     }
+    delete[] tempCombinedHash;
     return;
 }
 
@@ -583,7 +588,7 @@ void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t 
     int32_t rowSize = vector->GetSize();
     int8_t *nullAddr = nullptr;
     int64_t *resultHash = new int64_t[rowSize]();
-    int64_t tempCombinedHash[rowSize];
+    int64_t *tempCombinedHash = new int64_t[rowSize]();
     uint8_t *varcharVectorAddr = static_cast<uint8_t *>((vector)->GetValues());
     int32_t positionOffset = vector->GetPositionOffset();
     int32_t *offest = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
@@ -594,17 +599,20 @@ void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t 
     HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest, rowSize, nullAddr, resultHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
+        delete[] tempCombinedHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
     }
     result = HMPPS_CombineHash(tempCombinedHash, resultHash, rowSize, tempCombinedHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
+        delete[] tempCombinedHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
     }
     for (uint32_t i = 0; i < rowCount; ++i) {
         combinedHash[i] = tempCombinedHash[rowIndexes[i]];
     }
     delete[] resultHash;
+    delete[] tempCombinedHash;
     return;
 }
 
@@ -612,7 +620,7 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
 {
     int32_t rowSize = vector->GetSize();
     int64_t *resultHash = new int64_t[rowSize]();
-    int64_t tempCombinedHash[rowSize];
+    int64_t *tempCombinedHash = new int64_t[rowSize]();
     int32_t positionOffset = vector->GetPositionOffset();
     int8_t *nullAddr = nullptr;
     HmppDecimal128 *decimalAddr = static_cast<HmppDecimal128 *>((vector)->GetValues()) + positionOffset;
@@ -623,17 +631,20 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
     HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowSize, nullAddr, resultHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
+        delete[] tempCombinedHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
     }
     result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(tempCombinedHash), resultHash, rowSize, tempCombinedHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
+        delete[] tempCombinedHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
     }
     for (uint32_t i = 0; i < rowCount; ++i) {
         combinedHash[i] = tempCombinedHash[rowIndexes[i]];
     }
     delete[] resultHash;
+    delete[] tempCombinedHash;
     return;
 }
 #else
