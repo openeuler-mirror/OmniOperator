@@ -60,33 +60,33 @@ static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateSt
 
 static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUNT] = {
     {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INT, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImplProxy<IntVector, int32_t>,
+    {OMNI_INT, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImpl<IntVector, int32_t>,
      HashFuncVectImplProxy<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
      FillOutputFuncImp<IntVector, int32_t>},
-    {OMNI_LONG, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImplProxy<LongVector, int64_t>,
+    {OMNI_LONG, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImpl<LongVector, int64_t>,
      HashFuncVectImplProxy<LongVector, int64_t>,  IsSameNodeFuncImpl<LongVector, int64_t>,
      FillOutputFuncImp<LongVector, int64_t>
     },
-    {OMNI_DOUBLE, DuplicateKeyValueImpl<DoubleVector, double>, HashFuncImplProxy<DoubleVector, double>,
+    {OMNI_DOUBLE, DuplicateKeyValueImpl<DoubleVector, double>, HashFuncImpl<DoubleVector, double>,
      HashFuncVectImplProxy<DoubleVector, double>, DoubleCheckEqualFuncImp, FillOutputFuncImp<DoubleVector, double>
     },
-    {OMNI_BOOLEAN, DuplicateKeyValueImpl<BooleanVector, bool>, HashFuncImplProxy<BooleanVector, bool>,
+    {OMNI_BOOLEAN, DuplicateKeyValueImpl<BooleanVector, bool>, HashFuncImpl<BooleanVector, bool>,
      HashFuncVectImplProxy<BooleanVector, bool>,  IsSameNodeFuncImpl<BooleanVector, bool>,
      FillOutputFuncImp<BooleanVector, bool>
     },
-    {OMNI_SHORT, DuplicateKeyValueImpl<ShortVector, int16_t>, HashFuncImplProxy<ShortVector, int16_t>,
+    {OMNI_SHORT, DuplicateKeyValueImpl<ShortVector, int16_t>, HashFuncImpl<ShortVector, int16_t>,
      HashFuncVectImplProxy<ShortVector, int16_t>, IsSameNodeFuncImpl<ShortVector, int16_t>,
      FillOutputFuncImp<ShortVector, int16_t>},
     {
-        OMNI_DECIMAL64, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImplProxy<LongVector, int64_t>,
+        OMNI_DECIMAL64, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImpl<LongVector, int64_t>,
         HashFuncVectImplProxy<LongVector, int64_t>,  IsSameNodeFuncImpl<LongVector, int64_t>,
         FillOutputFuncImp<LongVector, int64_t>
     },
-    {OMNI_DECIMAL128, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>, HashDecimalFuncProxy,
+    {OMNI_DECIMAL128, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>, HashDecimalFunc,
      HashDecimalVectFuncProxy, IsSameNodeFuncImpl<Decimal128Vector, Decimal128>,
      FillOutputFuncImp<Decimal128Vector, Decimal128>
     },
-    {OMNI_DATE32, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImplProxy<IntVector, int32_t>,
+    {OMNI_DATE32, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImpl<IntVector, int32_t>,
      HashFuncVectImplProxy<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
      FillOutputFuncImp<IntVector, int32_t>
     },
@@ -96,10 +96,10 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
     {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_MONTHS,   nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VARCHAR, DuplicateVarcharKeyValue, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy,
+    {OMNI_VARCHAR, DuplicateVarcharKeyValue, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy,
      IsSameNodeFuncVarcharImpl, FillVarcharFuncImp
     },
-    {OMNI_CHAR, DuplicateVarcharKeyValue, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy,
+    {OMNI_CHAR, DuplicateVarcharKeyValue, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy,
      IsSameNodeFuncVarcharImpl, FillVarcharFuncImp },
     {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, nullptr},
 };

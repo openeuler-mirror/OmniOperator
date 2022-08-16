@@ -45,11 +45,6 @@ using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactor
 // HMPP function
 #ifdef ENABLE_HMPP
 template <typename V, typename D>
-void HashFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
-void HashVarcharFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    uint64_t *combinedHash);
-void HashDecimalFuncHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
-template <typename V, typename D>
 void HashFuncVectImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashVarcharVectFuncImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashDecimalVectFuncHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
@@ -62,19 +57,12 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
 
 template <typename V, typename D>
 void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
-
 void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 
-template <typename V, typename D>
-void HashFuncImplProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
-void HashVarcharFuncImplProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    uint64_t *combinedHash);
-void HashDecimalFuncProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
 
 template <typename V, typename D>
 void HashFuncVectImplProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
-
 void HashVarcharVectFuncImplProxy(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
 void HashDecimalVectFuncProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
@@ -127,12 +115,6 @@ public:
     void PreLoop(VectorBatch *vecBatch);
     void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
         int32_t aggNum);
-    #ifdef ENABLE_HMPP
-    void InLoopHMPP(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
-                int32_t aggNum);
-    #endif
-    void InLoopProxy(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
-                    int32_t aggNum);
     void PostLoop(VectorBatch *vecBatch) const;
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> &GetStates()
     {

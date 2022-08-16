@@ -8,40 +8,40 @@
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-HmppResult HmppHashUtil::ComputeHash(Vector *vector, int64_t *combinedHash)
+HmppResult HmppHashUtil::ComputeHash(Vector *vector, int64_t *combinedHash, int64_t start, int64_t rowCount)
 {
-    auto rowCount = vector->GetSize();
     int32_t positionOffset = vector->GetPositionOffset();
     int64_t *resultHash = new int64_t[rowCount]();
     int8_t *nullAddr = nullptr;
     if (vector->MayHaveNull()) {
-        nullAddr = (int8_t *)(vector->GetValueNulls()) + positionOffset;
+        nullAddr = (int8_t *)(vector->GetValueNulls()) + positionOffset + start;
     }
     HmppResult result;
     switch (vector->GetTypeId()) {
         case OMNI_SHORT:
-            result = HMPPS_Hash_16s(reinterpret_cast<const int16_t *>(vector->GetValues()) + positionOffset, rowCount,
-                nullAddr, resultHash);
+            result = HMPPS_Hash_16s(reinterpret_cast<const int16_t *>(vector->GetValues()) + positionOffset + start,
+                rowCount, nullAddr, resultHash);
             break;
         case OMNI_LONG:
-            result = HMPPS_Hash_64s(reinterpret_cast<const int64_t *>(vector->GetValues()) + positionOffset, rowCount,
-                nullAddr, resultHash);
+            result = HMPPS_Hash_64s(reinterpret_cast<const int64_t *>(vector->GetValues()) + positionOffset + start,
+                rowCount, nullAddr, resultHash);
             break;
         case OMNI_INT:
         case OMNI_DATE32:
-            result = HMPPS_Hash_32s(reinterpret_cast<const int32_t *>(vector->GetValues()) + positionOffset, rowCount,
-                nullAddr, resultHash);
+            result = HMPPS_Hash_32s(reinterpret_cast<const int32_t *>(vector->GetValues()) + positionOffset + start,
+                rowCount, nullAddr, resultHash);
             break;
         case OMNI_DOUBLE:
-            result = HMPPS_Hash_64f(reinterpret_cast<const double *>(vector->GetValues()) + positionOffset, rowCount,
-                nullAddr, resultHash);
+            result = HMPPS_Hash_64f(reinterpret_cast<const double *>(vector->GetValues()) + positionOffset + start,
+                rowCount, nullAddr, resultHash);
             break;
         case OMNI_BOOLEAN:
-            result = HMPPS_Hash_bool(reinterpret_cast<const bool *>(vector->GetValues()) + positionOffset, rowCount,
-                nullAddr, resultHash);
+            result = HMPPS_Hash_bool(reinterpret_cast<const bool *>(vector->GetValues()) + positionOffset + start,
+                rowCount, nullAddr, resultHash);
             break;
         case OMNI_DECIMAL64:
-            result = HMPPS_Hash_decimal64(reinterpret_cast<const int64_t *>(vector->GetValues()) + positionOffset,
+            result =
+                HMPPS_Hash_decimal64(reinterpret_cast<const int64_t *>(vector->GetValues()) + positionOffset + start,
                 rowCount, nullAddr, resultHash);
             break;
         default:

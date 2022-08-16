@@ -1504,6 +1504,82 @@ TEST(HashAggregationOperatorTest, hmpp_group_by_agg_same_cols)
     ConfigUtil::SetEnableHMPP(false);
 }
 
+TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
+{
+    ConfigUtil::SetEnableHMPP(true);
+    // create 10 pages
+    const int vecBatchNum = 1;
+    const int cardinality = 10;
+    const int rowSize = 2000;
+    // groupby + count + min + max
+    std::string aggNames[] = {"group", "count", "min", "max" };
+    std::vector<DataTypePtr> groupTypes = { VarcharType(10) };
+    std::vector<DataTypePtr> aggTypes = { VarcharType(10), VarcharType(10), VarcharType(10) };
+    VectorBatch **input = buildAggInput(vecBatchNum, rowSize, cardinality, 1, 3, groupTypes, aggTypes);
+    VectorHelper::PrintVecBatch(input[0]);
+    // First stage
+    DataTypePtr type1 = VarcharType(10);
+    DataTypePtr type2 = VarcharType(10);
+    DataTypePtr type3 = VarcharType(10);
+    DataTypePtr type4 = VarcharType(10);
+    ColumnIndex c0 = { 0, type1, type1 };
+    std::vector<int32_t> aggInputCols1 = { 1, 2, 3 };
+    std::vector<DataTypePtr> inputTypes1 { type2, type3, type4 };
+    DataTypes aggInputTypes1(inputTypes1);
+    std::vector<DataTypePtr> outputTypes1 { LongType(), type3, type4 };
+    DataTypes aggOutputTypes1(outputTypes1);
+
+    std::vector<ColumnIndex> groupByColumns1 = { c0 };
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+
+    auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
+    auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
+    auto inputRawWrap1 = AggregatorUtil::WrapWithVector(true, 3);
+    auto outputPartialWrap1 = AggregatorUtil::WrapWithVector(false, 3);
+    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1Wrap, 3,
+        aggInputTypes1Wrap, aggOutputTypes1Wrap, std::move(aggs1), inputRawWrap1, outputPartialWrap1);
+    groupByVarChar->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByVarChar->AddInput(input[i]);
+    }
+
+    std::vector<VectorBatch *> result1;
+    int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
+    EXPECT_EQ(vecBatchCount, 1);
+    VectorHelper::PrintVecBatch(result1[0]);
+    auto resBatch = VectorHelper::ConcatVectorBatches(result1);
+    for (auto res : result1) {
+        VectorHelper::FreeVecBatch(res);
+    }
+
+    Operator::DeleteOperator(groupByVarChar);
+
+    std::vector<DataTypePtr> expectFieldTypes { VarcharType(10), LongType(), VarcharType(10), VarcharType(10) };
+    // construct the output data
+    DataTypes expectTypes(expectFieldTypes);
+    std::string  expectData1[cardinality] = {"9", "8", "7", "6", "5", "4", "3", "2", "1", "0"};
+    int64_t expectData2[cardinality] = {200, 200, 200, 200, 200, 200, 200, 200, 200, 200};
+    std::string  expectData3[cardinality] = {"1009", "1008", "1007", "1006", "1005", "1004", "1003", "1002", "1", "0"};
+    std::string  expectData4[cardinality] = {"999", "998", "997", "996", "995", "994", "993", "992", "991", "990"};
+
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, cardinality, expectData1, expectData2, expectData3, expectData4);
+
+    EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+
+    delete[] input;
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(resBatch);
+}
+
 TEST(AggregationOperatorTest, verify_correctness)
 {
     // create 10 vecBatches
