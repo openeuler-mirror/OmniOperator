@@ -53,7 +53,7 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
         case OMNI_BOOLEAN:
             return BooleanType();
         case OMNI_SHORT:
-            return ShortType() ;
+            return ShortType();
         case OMNI_DECIMAL64:
             return Decimal64Type(dataTypeJson[PRECISION].get<int32_t>(), dataTypeJson[SCALE].get<int32_t>());
         case OMNI_DECIMAL128:

@@ -146,11 +146,12 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
     int rowCount = end - start + 1;
     // this is important to package data into an extra vector and use it to do the aggregation
     // the vector is used for aggregation in window operation
-    auto resultVectorBatch = new VectorBatch(1, rowCount);
+    auto vectorBatchToAggregator = new VectorBatch(1, rowCount);
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-        resultVectorBatch->SetVector(0, new LongVector(vecAllocator, rowCount));
+        vectorBatchToAggregator->SetVector(0, new LongVector(vecAllocator, rowCount));
     } else {
-        resultVectorBatch->SetVector(0, VectorHelper::CreateVector(vecAllocator, vectorEncoding, *inputType, rowCount));
+        vectorBatchToAggregator->SetVector(0,
+            VectorHelper::CreateVector(vecAllocator, vectorEncoding, *inputType, rowCount));
     }
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
@@ -159,10 +160,10 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, VectorEn
         // actually the data to the aggregation function are from the sorted data with SortPagesIndexIfNecessary()
         // function since the implementation of SortPagesIndexIfNecessary will never return dictionary block here we add
         // the ExpandVectorAndIndex to ensure we send the right data to aggregation
-        AccumulateData(resultVectorBatch, resultVectorPosition - start, vectors, sliceAddress);
+        AccumulateData(vectorBatchToAggregator, resultVectorPosition - start, vectors, sliceAddress);
     }
     // after using the vector, we should release it
-    VectorHelper::FreeVecBatch(resultVectorBatch);
+    VectorHelper::FreeVecBatch(vectorBatchToAggregator);
 }
 
 void AggregateWindowFunction::AccumulateData(VectorBatch *resultVectorBatch, int32_t resultVectorPosition,

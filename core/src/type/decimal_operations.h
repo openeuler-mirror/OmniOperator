@@ -797,7 +797,7 @@ public:
     }
 
     static inline void Divide(Decimal128 dividend, Decimal128 divisor, int32_t dividendScaleFactor,
-                              int32_t divisorScaleFactor, Decimal128 &quotient, Decimal128 &remainder)
+        int32_t divisorScaleFactor, Decimal128 &quotient, Decimal128 &remainder)
     {
         if (dividendScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
             ThrowOverflow();
@@ -827,7 +827,7 @@ public:
         }
 
         DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh, divisorScaleFactor,
-                        quotient, remainder);
+            quotient, remainder);
         if (dividendIsNegative) {
             Negate(remainder, 0);
         }
@@ -935,7 +935,7 @@ public:
     }
 
     static inline Decimal128 Remainder(Decimal128 &dividend, int32_t dividendScaleFactor, Decimal128 &divisor,
-       int32_t divisorScaleFactor)
+        int32_t divisorScaleFactor)
     {
         Decimal128 quotient;
         Decimal128 remainder;

@@ -89,7 +89,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                                                      */
+ *                                                                                        */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -135,7 +135,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                                                        */
+ *                                                                                          */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
@@ -261,9 +261,9 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     return reinterpret_cast<int64_t>(windowOperatorFactory);
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(
-    JNIEnv *env, jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc,
-    jintArray jSortNullFirsts)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jclass jObj,
+    jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint sortColCount = env->GetArrayLength(jSortCols);
@@ -397,8 +397,8 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *env,
-    jclass jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength,
-    jint jParseFormat, jboolean jIsSkipVerify)
+    jclass jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jint jParseFormat,
+    jboolean jIsSkipVerify)
 {
     auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
     std::string exprs[jExprsLength];
@@ -746,8 +746,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
-        JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
-        jintArray jAggFuncType, jintArray jMaskCols, jstring jOutputType, jboolean inputRaw, jboolean outputPartial)
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
+    jintArray jAggFuncType, jintArray jMaskCols, jstring jOutputType, jboolean inputRaw, jboolean outputPartial)
 {
     // groupby channel and id
     auto groupByNum = static_cast<int32_t>(env->GetArrayLength(jGroupByChannel));

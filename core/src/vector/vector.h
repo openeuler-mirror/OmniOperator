@@ -152,7 +152,9 @@ public:
 
     virtual int32_t GetNullCount() const
     {
-        return hasNull ? BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) : 0;
+        return hasNull ?
+            BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) :
+            0;
     }
 
 protected:

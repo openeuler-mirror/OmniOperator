@@ -18,8 +18,7 @@ namespace ParserTest {
 void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op, const int projectCount,
     bool isBoolResult = false)
 {
-    std::vector<DataTypeId> dataTypes = {OMNI_INT, OMNI_LONG, OMNI_DOUBLE,
-                                         OMNI_DECIMAL128, OMNI_VARCHAR, OMNI_CHAR };
+    std::vector<DataTypeId> dataTypes = { OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL128, OMNI_VARCHAR, OMNI_CHAR };
     for (int i = 0; i < projectCount; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         if (isBoolResult) {
