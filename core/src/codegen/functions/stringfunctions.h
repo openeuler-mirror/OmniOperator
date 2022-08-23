@@ -34,18 +34,51 @@ const std::string CONCAT_ERR_MSG = "Concat failed";
 }
 
 extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen);
+
 extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen);
+
 extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
     int32_t regexLen);
+
 extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bpLen, int32_t *outLen);
+
 extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
     const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen);
+
 extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
     const char *bp, int32_t bpLen, int32_t *outLen);
+
 extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bWidth, int32_t bpLen, int32_t *outLen);
-extern DLLEXPORT int32_t CastString(int64_t contextPtr, const char *str, int32_t strLen);
+
+extern DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *str, int32_t strLen);
+
+// Cast numeric type to string
+extern DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t value, int32_t *outLen);
+
+extern DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value, int32_t *outLen);
+
+extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value, int32_t *outLen);
+
+extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x, int32_t precision,
+    int32_t scale, int32_t *outLen);
+
+extern DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t high, uint64_t low, int32_t precision,
+    int32_t scale, int32_t *outLen);
+
+// Cast string to numeric type
+extern DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, int32_t strLen);
+
+extern DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, int32_t strLen);
+
+extern DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *str, int32_t strLen);
+
+extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *str, int32_t strLen,
+    int32_t precision, int32_t scale);
+
+extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, int32_t outPrecision,
+    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 template <typename T>
 extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, T startIdx, T length,
@@ -164,33 +197,47 @@ extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char 
     return SubstrWithStart(contextPtr, str, strLen, startIdx, outLen);
 }
 
-extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
+extern DLLEXPORT const char *ToUpper(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
 
 extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
     int32_t *outLen);
 
-extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
+extern DLLEXPORT const char *ConcatStrStrRetNull(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
+    int32_t bpLen, int32_t *outLen, bool *isNull);
 
-extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    int32_t *outLen);
+extern DLLEXPORT const char *ConcatCharCharRetNull(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
+    const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen, bool *isNull);
 
-extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strLen);
+extern DLLEXPORT const char *ConcatCharStrRetNull(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen,
+    const char *bp, int32_t bpLen, int32_t *outLen, bool *isNull);
 
-extern DLLEXPORT int32_t LengthCharReturnInt32(const char *str, int32_t width, int32_t strLen);
+extern DLLEXPORT const char *ConcatStrCharRetNull(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
+    int32_t bWidth, int32_t bpLen, int32_t *outLen, bool *isNull);
 
-extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen);
+extern DLLEXPORT int32_t CastStringToDateRetNull(const char *str, int32_t strLen, bool *isNull);
 
-extern DLLEXPORT int32_t LengthStrReturnInt32(const char *str, int32_t strLen);
+extern DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, int32_t value, int32_t *outLen, bool *isNull);
 
-extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
-    const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, int32_t *outLen);
+extern DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, int64_t value, int32_t *outLen, bool *isNull);
 
-extern DLLEXPORT const char *ReplaceStrStrWithoutRep(int64_t contextPtr, const char *str, int32_t strLen,
-    const char *searchStr, int32_t searchLen, int32_t *outLen);
+extern DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, double value, int32_t *outLen, bool *isNull);
 
-static inline std::wstring ToWideString(std::string &s)
-{
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
-    return convert.from_bytes(s);
-}
+extern DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr, int64_t x, int32_t precision,
+    int32_t scale, int32_t *outLen, bool *isNull);
+
+extern DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPtr, int64_t high, uint64_t low,
+    int32_t precision, int32_t scale, int32_t *outLen, bool *isNull);
+
+extern DLLEXPORT int32_t CastStringToIntRetNull(const char *str, int32_t strLen, bool *isNull);
+
+extern DLLEXPORT int64_t CastStringToLongRetNull(const char *str, int32_t strLen, bool *isNull);
+
+extern DLLEXPORT double CastStringToDoubleRetNull(const char *str, int32_t strLen, bool *isNull);
+
+extern DLLEXPORT int64_t CastStringToDecimal64RetNull(const char *str, int32_t strLen, int32_t outPrecision,
+    int32_t outScale, bool *isNull);
+
+extern DLLEXPORT void CastStringToDecimal128RetNull(const char *str, int32_t strLen, int32_t outPrecision,
+    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr, bool *isNull);
+
 #endif
