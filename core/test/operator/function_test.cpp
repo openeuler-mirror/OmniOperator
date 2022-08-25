@@ -875,6 +875,59 @@ TEST(FunctionTest, Substr)
     delete context;
 }
 
+TEST(FunctionTest, SubstrZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    int32_t strlen = static_cast<int32_t>(str.length());
+    int32_t outlen = 0;
+    const char *result;
+    string actual;
+
+    result = Substr(contextptr, str.c_str(), strlen, 1, 37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    result = Substr(contextptr, str.c_str(), strlen, 1, 5, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "时欧基乌斯");
+    EXPECT_EQ(outlen, 15);
+
+    result = Substr(contextptr, str.c_str(), strlen, 10, 10, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "hello! 回复哦");
+    EXPECT_EQ(outlen, 16);
+
+    result = Substr(contextptr, str.c_str(), strlen, -5, 7, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "色的圣诞袜");
+    EXPECT_EQ(outlen, 15);
+
+    result = Substr(contextptr, str.c_str(), strlen, 0, 0, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = Substr(contextptr, str.c_str(), strlen, 37, strlen + 5, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "袜");
+    EXPECT_EQ(outlen, 3);
+
+    result = Substr(contextptr, str.c_str(), strlen, -38, 10, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = Substr(contextptr, str.c_str(), strlen, -37, 37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    delete context;
+}
+
 TEST(FunctionTest, SubstrChar)
 {
     auto context = new ExecutionContext();
@@ -919,6 +972,60 @@ TEST(FunctionTest, SubstrChar)
     delete context;
 }
 
+TEST(FunctionTest, SubstrCharZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    int32_t width = static_cast<int32_t>(str.length());
+    int32_t strlen = width;
+    int32_t outlen = 0;
+    const char *result;
+    string actual;
+
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, 37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, 5, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "时欧基乌斯");
+    EXPECT_EQ(outlen, 15);
+
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 10, 10, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "hello! 回复哦");
+    EXPECT_EQ(outlen, 16);
+
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, -5, 7, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "色的圣诞袜");
+    EXPECT_EQ(outlen, 15);
+
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 0, 0, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 37, strlen + 5, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "袜");
+    EXPECT_EQ(outlen, 3);
+
+    result = Substr(contextptr, str.c_str(), strlen, -38, 10, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = Substr(contextptr, str.c_str(), strlen, -37, 37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    delete context;
+}
+
 TEST(FunctionTest, SubstrWithStart)
 {
     auto context = new ExecutionContext();
@@ -948,6 +1055,54 @@ TEST(FunctionTest, SubstrWithStart)
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
+
+    delete context;
+}
+
+TEST(FunctionTest, SubstrWithZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    int32_t strlen = static_cast<int32_t>(str.length());
+    int32_t outlen = 0;
+    const char *result;
+    string actual;
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 1, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 9, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
+    EXPECT_EQ(outlen, 53);
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, -3, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "圣诞袜");
+    EXPECT_EQ(outlen, 9);
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 0, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "袜");
+    EXPECT_EQ(outlen, 3);
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, -38, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, -37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
 
     delete context;
 }
@@ -982,6 +1137,55 @@ TEST(FunctionTest, SubstrCharWithStart)
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
+    delete context;
+}
+
+TEST(FunctionTest, SubstrCharWithStartZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    int32_t width = static_cast<int32_t>(str.length());
+    int32_t outlen = 0;
+    int32_t strlen = width;
+    const char *result;
+    string actual;
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 1, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 9, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
+    EXPECT_EQ(outlen, 53);
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, -3, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "圣诞袜");
+    EXPECT_EQ(outlen, 9);
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 0, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "袜");
+    EXPECT_EQ(outlen, 3);
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, -38, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, -37, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
     delete context;
 }
 
