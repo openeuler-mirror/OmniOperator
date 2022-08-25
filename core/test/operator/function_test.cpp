@@ -1333,6 +1333,13 @@ TEST(FunctionTest, LengthStr)
     EXPECT_EQ(len, 4);
 }
 
+TEST(FunctionTest, LengthStrZh)
+{
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    auto len = LengthStr(str.c_str(), str.length());
+    EXPECT_EQ(len, 37);
+}
+
 TEST(FunctionTest, ReplaceStrStrStrWithRep)
 {
     auto context = new ExecutionContext();

@@ -227,7 +227,7 @@ extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strL
 
 extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen)
 {
-    return strLen;
+    return omniruntime::Utf8Util::CountCodePoints(str, strLen);
 }
 
 extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
