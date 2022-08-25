@@ -2970,6 +2970,200 @@ TEST(ProjectionTest, ConcatCharCharTest)
     delete vecAllocator;
 }
 
+Expr *GetStringFuncExpr(std::vector<DataTypePtr> inputTypes, DataTypePtr returnType, string funcStr)
+{
+    std::vector<Expr *> args;
+    for (int32_t i = 0; i < inputTypes.size(); i++) {
+        args.push_back(new FieldExpr(i, std::move(inputTypes.at(i))));
+    }
+
+    auto stringFuncExpr = GetFuncExpr(funcStr, args, std::move(returnType));
+    return stringFuncExpr;
+}
+
+TEST(ProjectionTest, ReplaceStrWithRep)
+{
+    vector<DataTypePtr> vecTypes = { VarcharType(20), VarcharType(10), VarcharType(10) };
+    string replaceFuncStr = "replace";
+    auto replaceFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(100), replaceFuncStr);
+    vector<Expr *> exprs = { replaceFuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    string str[] = { "varchar100", "varchar200", "varchar300" };
+    string search[] = { "char1", "char2", "char3" };
+    string replace[] = { "opera", "*#", "VARCHAR" };
+    auto input = CreateVectorBatch(inputTypes, 3, str, search, replace);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { VarcharType(100) };
+    string expectedDatas[] = { "varopera00", "var*#00", "varVARCHAR00" };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, ReplaceStrWithoutRep)
+{
+    vector<DataTypePtr> vecTypes = { VarcharType(20), VarcharType(10) };
+    string replaceFuncStr = "replace";
+    auto replaceFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(100), replaceFuncStr);
+    vector<Expr *> exprs = { replaceFuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    string str[] = { "varchar100", "varchar200", "varchar300" };
+    string search[] = { "char1", "char2", "char3" };
+    auto input = CreateVectorBatch(inputTypes, 3, str, search);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { VarcharType(100) };
+    string expectedDatas[] = { "var00", "var00", "var00" };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, LowerStr)
+{
+    vector<DataTypePtr> vecTypes = { VarcharType(20) };
+    string lowerFuncStr = "lower";
+    auto lowerFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(20), lowerFuncStr);
+    vector<Expr *> exprs = { lowerFuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    string str[] = { "VARchar100", "Char200", "var**VAR" };
+    auto input = CreateVectorBatch(inputTypes, 3, str);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { VarcharType(20) };
+    string expectedDatas[] = { "varchar100", "char200", "var**var" };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, LowerChar)
+{
+    vector<DataTypePtr> vecTypes = { CharType(20) };
+    string lowerFuncStr = "lower";
+    auto lowerFuncExpr = GetStringFuncExpr(vecTypes, CharType(20), lowerFuncStr);
+    vector<Expr *> exprs = { lowerFuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    string str[] = { "VARchar100", "Char200", "var**VAR" };
+    auto input = CreateVectorBatch(inputTypes, 3, str);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { CharType(20) };
+    string expectedDatas[] = { "varchar100", "char200", "var**var" };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, LengthChar)
+{
+    vector<DataTypePtr> vecTypes = { CharType(20) };
+    string lenFuncStr = "length";
+    auto lenFuncExpr = GetStringFuncExpr(vecTypes, LongType(), lenFuncStr);
+    vector<Expr *> exprs = { lenFuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    string str[] = { "VARchar100", "Char200", "var**VAR" };
+    auto input = CreateVectorBatch(inputTypes, 3, str);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { 20, 20, 20 };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, LengthStr)
+{
+    vector<DataTypePtr> vecTypes = { VarcharType(20) };
+    string lenFuncStr = "length";
+    auto lenFuncExpr = GetStringFuncExpr(vecTypes, LongType(), lenFuncStr);
+    vector<Expr *> exprs = { lenFuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize());
+
+    string str[] = { "VARchar100", "Char200", "var**VAR" };
+    auto input = CreateVectorBatch(inputTypes, 3, str);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { 10, 7, 8 };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete op;
+    delete factory;
+}
+
 TEST(ProjectionTest, testDecimal128NegativeLiteral)
 {
     const int32_t numRows = 1;
