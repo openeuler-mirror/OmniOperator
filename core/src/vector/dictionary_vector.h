@@ -93,7 +93,7 @@ public:
         }
         // when set dictionary, means we slice a dictionary vector, we need set nulls here.
         for (int32_t i = 0; i < size; i++) {
-            if (dictionary->IsValueNull(GetId(i)) ) {
+            if (dictionary->IsValueNull(GetId(i))) {
                 this->SetValueNull(i);
             }
         }

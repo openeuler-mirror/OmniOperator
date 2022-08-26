@@ -16,16 +16,18 @@ using EngineType = enum class EngineType {
 class EngineUtil {
 private:
     EngineUtil() : engineType(EngineType::None) {}
+
 public:
-    EngineUtil(const EngineUtil&) = delete;
-    EngineUtil(const EngineUtil&&) = delete;
-    EngineUtil& operator=(const EngineUtil&) = delete;
-    static EngineUtil& GetInstance() {
+    EngineUtil(const EngineUtil &) = delete;
+    EngineUtil(const EngineUtil &&) = delete;
+    EngineUtil &operator = (const EngineUtil &) = delete;
+    static EngineUtil &GetInstance()
+    {
         static EngineUtil engineUtil;
         return engineUtil;
     }
 
-    void SetEngineType(char* typeStr)
+    void SetEngineType(char *typeStr)
     {
         if (typeStr == nullptr) {
             Log("Did not set engine type", LogType::LOG_INFO);
@@ -44,10 +46,12 @@ public:
         Log(err, LogType::LOG_INFO);
     }
 
-    EngineType GetEngineType() {
+    EngineType GetEngineType()
+    {
         return engineType;
     }
+
 private:
     EngineType engineType;
 };
-#endif //OMNI_RUNTIME_ENGINE_H
+#endif // OMNI_RUNTIME_ENGINE_H

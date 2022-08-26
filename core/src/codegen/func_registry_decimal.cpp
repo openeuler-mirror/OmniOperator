@@ -11,8 +11,8 @@ using namespace omniruntime::codegen;
 
 std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 {
-    std::vector<DataTypeId> paramTypes128 = {OMNI_DECIMAL128, OMNI_DECIMAL128};
-    std::vector<DataTypeId> paramTypes64 = {OMNI_DECIMAL64, OMNI_DECIMAL64};
+    std::vector<DataTypeId> paramTypes128 = { OMNI_DECIMAL128, OMNI_DECIMAL128 };
+    std::vector<DataTypeId> paramTypes64 = { OMNI_DECIMAL64, OMNI_DECIMAL64 };
     DataTypeId retType128 = OMNI_DECIMAL128;
     DataTypeId retType64 = OMNI_DECIMAL64;
     static std::vector<Function> decimalFnRegistry = {

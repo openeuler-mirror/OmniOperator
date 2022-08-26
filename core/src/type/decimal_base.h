@@ -11,7 +11,7 @@ namespace omniruntime {
 namespace type {
 class BasicDecimal {
 public:
-    BasicDecimal() = default;;
+    BasicDecimal() = default;
     ~BasicDecimal() = default;
 
     template <typename SignedInt> SignedInt SafeSignedAdd(SignedInt u, SignedInt v)

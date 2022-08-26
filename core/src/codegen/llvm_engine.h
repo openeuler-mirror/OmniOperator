@@ -29,7 +29,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 #include "expression/expressions.h"
