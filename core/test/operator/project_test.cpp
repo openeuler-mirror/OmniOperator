@@ -2973,7 +2973,7 @@ TEST(ProjectionTest, ConcatCharCharTest)
 Expr *GetStringFuncExpr(std::vector<DataTypePtr> inputTypes, DataTypePtr returnType, string funcStr)
 {
     std::vector<Expr *> args;
-    for (int32_t i = 0; i < inputTypes.size(); i++) {
+    for (int32_t i = 0; i < (int32_t)inputTypes.size(); i++) {
         args.push_back(new FieldExpr(i, std::move(inputTypes.at(i))));
     }
 
