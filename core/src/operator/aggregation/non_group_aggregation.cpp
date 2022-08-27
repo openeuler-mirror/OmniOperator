@@ -64,9 +64,35 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggStates[aggIdx];
+
+        /* *
+         * The current HMPP accelerator library supports only most types of min/max and sum/avg(long and decimal128
+         * types). The following code before the IF branch is for whitelist checking
+         */
+#ifdef ENABLE_HMPP
+        auto aggType = aggregator->GetType();
+        auto inputTypeId = aggregator->GetInputType()->GetId();
+        auto inputChannel = aggregator->GetInputChannel();
+        auto isVecContainsNull =
+            (aggType != OMNI_AGGREGATION_TYPE_COUNT_ALL) && vecBatch->GetVector(inputChannel)->MayHaveNull();
+        bool isSpecialAgg1 = ((aggType == OMNI_AGGREGATION_TYPE_MIN || aggType == OMNI_AGGREGATION_TYPE_MAX) &&
+            inputTypeId != OMNI_BOOLEAN && !isVecContainsNull);
+        bool isSpecialAgg2 = ((aggType == OMNI_AGGREGATION_TYPE_SUM || aggType == OMNI_AGGREGATION_TYPE_AVG) &&
+            (inputTypeId == OMNI_LONG || inputTypeId == OMNI_DECIMAL128));
+
+        if ((isSpecialAgg1 || isSpecialAgg2) &&
+            vecBatch->GetVector(inputChannel)->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY && inputRaw == true) {
+            aggregator->ProcessGroupWithHMPP(state, vecBatch);
+        } else {
+            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                aggregator->ProcessGroup(state, vecBatch, rowIdx);
+            }
+        }
+#else
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
             aggregator->ProcessGroup(state, vecBatch, rowIdx);
         }
+#endif
     }
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;

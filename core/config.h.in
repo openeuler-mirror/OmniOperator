@@ -5,3 +5,4 @@
 #cmakedefine DEBUG_LLVM
 #cmakedefine COVERAGE
 #cmakedefine DISABLE_CPU_CHECKER
+#cmakedefine ENABLE_HMPP

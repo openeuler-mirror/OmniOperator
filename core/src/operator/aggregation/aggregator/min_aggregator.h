@@ -6,6 +6,9 @@
 #define OMNI_RUNTIME_MIN_AGGREGATOR_H
 
 #include "aggregator.h"
+#ifdef ENABLE_HMPP
+#include "HMPP/hmpps.h"
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -20,6 +23,66 @@ public:
     {}
 
     ~MinAggregator() override {}
+
+#ifdef ENABLE_HMPP
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        auto vector = vectorBatch->GetVector(channel);
+
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto inputTypeId = inputType->GetId();
+
+        HmppResult result = HMPP_STS_NO_ERR;
+        auto minVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
+        switch (inputTypeId) {
+            case OMNI_SHORT: {
+                result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
+                    rowCount, reinterpret_cast<int16_t *>(minVal));
+                break;
+            }
+            case OMNI_INT:
+            case OMNI_DATE32: {
+                result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
+                    rowCount, reinterpret_cast<int32_t *>(minVal));
+                break;
+            }
+            case OMNI_LONG:
+            case OMNI_DECIMAL64: {
+                result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
+                    rowCount, reinterpret_cast<int64_t *>(minVal));
+                break;
+            }
+            case OMNI_DOUBLE: {
+                result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
+                    rowCount, reinterpret_cast<double *>(minVal));
+                break;
+            }
+            case OMNI_DECIMAL128: {
+                result = HMPPS_Min_decimal(
+                    static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset),
+                    rowCount, reinterpret_cast<HmppDecimal128 *>(minVal));
+                break;
+            }
+            default: {
+                throw OmniException("NOT SUPPORT", "Unsupported input type for min aggregate");
+                break;
+            }
+        }
+
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "min failed for hmpp error");
+        }
+        if (state.val == nullptr) {
+            state.val = minVal;
+        } else {
+            auto preMinVal = static_cast<ResultType *>(state.val);
+            auto currMinVal = reinterpret_cast<ResultType *>(minVal);
+            *static_cast<ResultType *>(state.val) = (Compare(*preMinVal, *currMinVal) == -1) ? *preMinVal : *currMinVal;
+        }
+    }
+#endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {

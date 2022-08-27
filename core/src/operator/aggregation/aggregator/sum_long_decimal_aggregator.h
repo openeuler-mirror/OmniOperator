@@ -7,6 +7,9 @@
 
 #include "aggregator.h"
 #include "type/decimal_operations.h"
+#ifdef ENABLE_HMPP
+#include "HMPP/hmpps.h"
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -21,6 +24,44 @@ public:
     {}
 
     ~SumLongDecimalAggregator() override {}
+
+#ifdef ENABLE_HMPP
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        auto vector = vectorBatch->GetVector(channel);
+
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto nullAddr = vector->GetValueNulls();
+        bool overflow = false;
+        auto sumVal =
+            reinterpret_cast<HmppDecimal128 *>(executionContext->GetArena()->Allocate(sizeof(HmppDecimal128)));
+
+        auto result = HMPPS_Sum_decimal128(
+            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset), rowCount,
+            static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, sumVal);
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "sum failed for hmpp error");
+        }
+
+        if (state.val == nullptr) {
+            state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
+            int64_t newOverflow = overflow == false ? 0 : 1 << 63;
+            DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val),
+                Decimal128(sumVal->high, sumVal->low), newOverflow);
+        } else {
+            Decimal128 preSumVal;
+            int64_t oldOverflow = 0;
+            DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
+
+            auto currSumVal = Decimal128(sumVal->high, sumVal->low);
+            int64_t newOverflow = DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
+            oldOverflow += newOverflow;
+            DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
+        }
+    }
+#endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
@@ -46,7 +87,6 @@ public:
         // 4. encode to state
         DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
     }
-
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {

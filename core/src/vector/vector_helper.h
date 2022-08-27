@@ -67,7 +67,8 @@ public:
         switch (vector->GetTypeId()) {
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                static_cast<VarcharVector *>(vector)->SetValue(index, static_cast<uint8_t *>(value), length);
+                static_cast<VarcharVector *>(vector)->SetValue(index,
+                    reinterpret_cast<const uint8_t *>(static_cast<std::string *>(value)->c_str()), length);
                 break;
             default:
                 LogError("No such data type %d", vector->GetTypeId());

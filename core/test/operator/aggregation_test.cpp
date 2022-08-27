@@ -17,6 +17,7 @@
 #include "util/perf_util.h"
 #include "../util/test_util.h"
 #include "../../libconfig.h"
+
 namespace omniruntime {
 using namespace omniruntime::vec;
 const int32_t VEC_BATCH_NUM = 10;
@@ -1009,6 +1010,279 @@ TEST(HashAggregationOperatorTest, DISABLED_perf_via_API_multiple_threads)
     DeleteOperatorFactory(reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(factoryObjAddr));
     delete[] rowCount;
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+}
+
+TEST(AggregationOperatorTest, hmpp_min_max)
+{
+    const int32_t dataSize = 5;
+    const int32_t resultDataSize = 1;
+
+    int32_t data0[dataSize] = {2, 1, 5, 3, 1};
+    int64_t data1[dataSize] = {3L, 10L, 2L, 7L, 3L};
+    double data2[dataSize] = {12.3, 7.2, 20.5, 6.1, 12.3};
+    Decimal128 data3[dataSize] = {4000L, 2000L, 1000L, 2000L, 5000L};
+
+    std::string aggNames[] = {"min", "min", "min", "min", "min", "max", "max", "max", "max", "max"};
+    std::vector<DataTypePtr> groupTypes;
+    std::vector<DataTypePtr> aggTypes = { IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5),
+        IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5) };
+    DataTypes sourceTypes(aggTypes);
+    VectorBatch *input =
+        CreateVectorBatch(sourceTypes, dataSize, data0, data0, data1, data2, data3, data0, data0, data1, data2, data3);
+
+    ASSERT(!(input == nullptr));
+
+    // STAGE1:
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(
+        std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 0, true, true));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(IntType(), LongType(), 1, true, true));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 2, true, true));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 3, true, true));
+    aggs1.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
+        Decimal128Type(20, 5), Decimal128Type(20, 5), 4, true, true));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 5, true, true));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(IntType(), LongType(), 6, true, true));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 7, true, true));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 8, true, true));
+    aggs1.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
+        Decimal128Type(20, 5), Decimal128Type(20, 5), 9, true, true));
+    std::vector<DataTypePtr> partialOutputTypes {
+        IntType(), LongType(), LongType(), DoubleType(), Decimal128Type(20, 5),
+        IntType(), LongType(), LongType(), DoubleType(), Decimal128Type(20, 5)
+    };
+    DataTypes aggPartialOutputTypes(partialOutputTypes);
+    auto aggregate1 = new AggregationOperator(std::move(aggs1), aggPartialOutputTypes, true, true);
+
+    aggregate1->AddInput(input);
+
+    std::vector<VectorBatch *> result;
+    int32_t tableCount = aggregate1->GetOutput(result);
+    EXPECT_EQ(tableCount, 1);
+
+    // STAGE2:
+    std::vector<std::unique_ptr<Aggregator>> aggs2;
+    aggs2.push_back(
+        std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 0, false, false));
+    aggs2.push_back(
+        std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(LongType(), IntType(), 1, false, false));
+    aggs2.push_back(
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 2, false, false));
+    aggs2.push_back(std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 3,
+        false, false));
+    aggs2.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
+        Decimal128Type(20, 5), Decimal128Type(20, 5), 4, false, false));
+    aggs2.push_back(
+        std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 5, false, false));
+    aggs2.push_back(
+        std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(LongType(), IntType(), 6, false, false));
+    aggs2.push_back(
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 7, false, false));
+    aggs2.push_back(std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 8,
+        false, false));
+    aggs2.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
+        Decimal128Type(20, 5), Decimal128Type(20, 5), 9, false, false));
+    std::vector<DataTypePtr> finalOutputTypes { IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5),
+        IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5) };
+    DataTypes aggFinalOutputTypes(finalOutputTypes);
+    auto aggregate2 = new AggregationOperator(std::move(aggs2), aggFinalOutputTypes, false, false);
+
+    for (uint32_t i = 0; i < result.size(); i++) {
+        aggregate2->AddInput(result[i]);
+    }
+
+    std::vector<VectorBatch *> finalResult;
+    tableCount = aggregate2->GetOutput(finalResult);
+    EXPECT_EQ(tableCount, 1);
+    EXPECT_EQ(finalResult[0]->GetRowCount(), 1);
+    EXPECT_EQ(finalResult[0]->GetVectorCount(), 10);
+
+    int32_t expData0[resultDataSize] = {1};
+    int64_t expData1[resultDataSize] = {2L};
+    double expData2[resultDataSize] = {6.1};
+    Decimal128 expData3[resultDataSize] = {1000L};
+    int32_t expData4[resultDataSize] = {5};
+    int64_t expData5[resultDataSize] = {10L};
+    double expData6[resultDataSize] = {20.5};
+    Decimal128 expData7[resultDataSize] = {5000L};
+    std::vector<DataTypePtr> resultType = { IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5),
+        IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5) };
+    DataTypes resultTypes(resultType);
+    VectorBatch *expVecBatch = CreateVectorBatch(resultTypes, resultDataSize, expData0, expData0, expData1, expData2,
+        expData3, expData4, expData4, expData5, expData6, expData7);
+
+    EXPECT_TRUE(VecBatchMatch(finalResult[0], expVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(aggregate2);
+    omniruntime::op::Operator::DeleteOperator(aggregate1);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatches(finalResult);
+}
+
+TEST(AggregationOperatorTest, hmpp_min_max_varchar)
+{
+    std::string data0[] = {"Zulma.Carter@MfvjVN43Udd95KeZ.com", "*", "Aaron.Anderson@0CQ4QUkBY2Q.edu",
+                           "Zulema.Ruiz@J2XvbX7.com", "*", "Aaron.Artis@bv.org"};
+    std::string data1[] = {"*", "Zulma.Carter@MfvjVN43Udd95KeZ.com", "Aaron.Anderson@0CQ4QUkBY2Q.edu", "*",
+                           "Zulema.Ruiz@J2XvbX7.com", "Aaron.Artis@bv.org"};
+    std::vector<DataTypePtr> types = std::vector<DataTypePtr> { VarcharType(100), VarcharType(100) };
+    int32_t rowCount = 6;
+    auto vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("min_varchar_test");
+    auto vector1 = new VarcharVector(vectorAllocator,
+        static_cast<VarcharDataType *>(types.at(0).get())->GetWidth() * rowCount, rowCount);
+    auto vector2 = new VarcharVector(vectorAllocator,
+        static_cast<VarcharDataType *>(types.at(1).get())->GetWidth() * rowCount, rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (i == 1 || i == 4) {
+            vector1->SetValueNull(i);
+        } else {
+            vector1->SetValue(i, reinterpret_cast<const uint8_t *>(data0[i].c_str()), data0[i].size());
+        }
+        if (i == 0 || i == 3) {
+            vector2->SetValueNull(i);
+        } else {
+            vector2->SetValue(i, reinterpret_cast<const uint8_t *>(data1[i].c_str()), data1[i].size());
+        }
+    }
+
+    auto input = new VectorBatch(2, 6);
+    input->SetVector(0, vector1);
+    input->SetVector(1, vector2);
+
+    // STAGE1:
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(VarcharType(100), VarcharType(100), 0, true, true));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(VarcharType(100), VarcharType(100), 1, true, true));
+
+    std::vector<DataTypePtr> partialOutputTypes { VarcharType(100), VarcharType(100) };
+    DataTypes aggPartialOutputTypes(partialOutputTypes);
+
+    auto aggOperator1 = new AggregationOperator(std::move(aggs1), aggPartialOutputTypes, true, true);
+    aggOperator1->AddInput(input);
+    std::vector<VectorBatch *> result;
+    int32_t vecBatchCount = aggOperator1->GetOutput(result);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    // STAGE2:
+    std::vector<std::unique_ptr<Aggregator>> aggs2;
+    aggs2.push_back(std::make_unique<MinVarcharAggregator>(VarcharType(100), VarcharType(100), 0, false, false));
+    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(VarcharType(100), VarcharType(100), 1, false, false));
+
+    std::vector<DataTypePtr> finalOutputTypes { VarcharType(100), VarcharType(100) };
+    DataTypes aggFinalOutputTypes(finalOutputTypes);
+
+    auto aggOperator2 = new AggregationOperator(std::move(aggs2), aggFinalOutputTypes, false, false);
+    for (uint32_t i = 0; i < result.size(); i++) {
+        aggOperator2->AddInput(result[i]);
+    }
+
+    std::vector<VectorBatch *> finalResult;
+    vecBatchCount = aggOperator2->GetOutput(finalResult);
+    EXPECT_EQ(vecBatchCount, 1);
+    auto resultVec0 = static_cast<VarcharVector *>(finalResult[0]->GetVector(0));
+    EXPECT_EQ(resultVec0->GetSize(), 1);
+    uint8_t *minVal = nullptr;
+    int32_t minValLen = resultVec0->GetValue(0, &minVal);
+    std::string minStr(minVal, minVal + minValLen);
+    EXPECT_EQ(minValLen, data0[2].size());
+    EXPECT_EQ(data0[2].compare(minStr), 0);
+
+    auto resultVec1 = static_cast<VarcharVector *>(finalResult[0]->GetVector(1));
+    EXPECT_EQ(resultVec1->GetSize(), 1);
+    uint8_t *maxVal = nullptr;
+    int32_t maxValLen = resultVec1->GetValue(0, &maxVal);
+    std::string maxStr(maxVal, maxVal + maxValLen);
+    EXPECT_EQ(maxValLen, data1[1].size());
+    EXPECT_EQ(data1[1].compare(maxStr), 0);
+
+    omniruntime::op::Operator::DeleteOperator(aggOperator2);
+    omniruntime::op::Operator::DeleteOperator(aggOperator1);
+    VectorHelper::FreeVecBatches(finalResult);
+    delete vectorAllocator;
+}
+
+TEST(AggregationOperatorTest, hmpp_sum_avg)
+{
+    const int32_t dataSize = 5;
+    const int32_t resultDataSize = 1;
+
+    int64_t data0[dataSize] = {3L, 10L, 2L, 7L, 3L};
+    Decimal128 data1[dataSize] = {Decimal128(4000L, 0), Decimal128(2000L, 0), Decimal128(1000L, 0),
+                                  Decimal128(3000L, 0), Decimal128(5000L, 0)};
+
+    std::string aggNames[] = {"sum", "sum", "avg", "avg"};
+    std::vector<DataTypePtr> groupTypes;
+    std::vector<DataTypePtr> aggTypes = { LongType(), Decimal128Type(20, 5), LongType(), Decimal128Type(20, 5) };
+    DataTypes sourceTypes(aggTypes);
+    VectorBatch *input = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data0, data1);
+
+    ASSERT(!(input == nullptr));
+
+    // STAGE1:
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(
+        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 0, true, true));
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(Decimal128Type(20, 5), SUM_IMMEDIATE_VARBINARY, 1, true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 2, true, true));
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(Decimal128Type(20, 5), AVG_IMMEDIATE_VARBINARY, 3, true, true));
+    std::vector<DataTypePtr> partialOutputTypes { LongType(), SUM_IMMEDIATE_VARBINARY,
+        ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), AVG_IMMEDIATE_VARBINARY };
+    DataTypes aggPartialOutputTypes(partialOutputTypes);
+    auto aggregate1 = new AggregationOperator(std::move(aggs1), aggPartialOutputTypes, true, true);
+
+    aggregate1->AddInput(input);
+
+    std::vector<VectorBatch *> result;
+    int32_t tableCount = aggregate1->GetOutput(result);
+    EXPECT_EQ(tableCount, 1);
+
+    // STAGE2:
+    std::vector<std::unique_ptr<Aggregator>> aggs2;
+    aggs2.push_back(
+        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 0, false, false));
+    aggs2.push_back(
+        std::make_unique<SumFinalDecimalAggregator>(SUM_IMMEDIATE_VARBINARY, Decimal128Type(20, 5), 1, false, false));
+    aggs2.push_back(std::make_unique<AverageAggregator<IntVector>>(ContainerType(), DoubleType(), 2, false, false));
+    aggs2.push_back(
+        std::make_unique<AverageDecimalAggregator>(AVG_IMMEDIATE_VARBINARY, Decimal128Type(20, 5), 3, false, false));
+    std::vector<DataTypePtr> finalOutputTypes { LongType(), Decimal128Type(20, 5), DoubleType(),
+        Decimal128Type(20, 5) };
+    DataTypes aggFinalOutputTypes(finalOutputTypes);
+    auto aggregate2 = new AggregationOperator(std::move(aggs2), aggFinalOutputTypes, false, false);
+
+    for (uint32_t i = 0; i < result.size(); i++) {
+        aggregate2->AddInput(result[i]);
+    }
+
+    std::vector<VectorBatch *> finalResult;
+    tableCount = aggregate2->GetOutput(finalResult);
+    EXPECT_EQ(tableCount, 1);
+    EXPECT_EQ(finalResult[0]->GetRowCount(), 1);
+    EXPECT_EQ(finalResult[0]->GetVectorCount(), 4);
+
+    int64_t expData0[resultDataSize] = {25L};
+    Decimal128 expData1[resultDataSize] = {Decimal128(15000L, 0)};
+    double expData2[resultDataSize] = {5.0};
+    Decimal128 expData3[resultDataSize] = {Decimal128(3000L, 0)};
+    std::vector<DataTypePtr> resultType = { LongType(), Decimal128Type(20, 5), DoubleType(), Decimal128Type(20, 5) };
+    DataTypes resultTypes(resultType);
+    VectorBatch *expVecBatch = CreateVectorBatch(resultTypes, resultDataSize, expData0, expData1, expData2, expData3);
+
+    EXPECT_TRUE(VecBatchMatch(finalResult[0], expVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(aggregate2);
+    omniruntime::op::Operator::DeleteOperator(aggregate1);
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatches(finalResult);
 }
 
 TEST(AggregationOperatorTest, verify_correctness)

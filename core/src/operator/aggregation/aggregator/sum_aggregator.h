@@ -6,6 +6,9 @@
 #define OMNI_RUNTIME_SUM_AGGREGATOR_H
 
 #include "aggregator.h"
+#ifdef ENABLE_HMPP
+#include "HMPP/hmpps.h"
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -18,6 +21,44 @@ public:
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
     ~SumAggregator() override {}
+
+#ifdef ENABLE_HMPP
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        auto vector = vectorBatch->GetVector(channel);
+
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto nullAddr = vector->GetValueNulls();
+        bool overflow = false;
+        auto sumVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
+
+        auto inputTypeId = inputType->GetId();
+        HmppResult result = HMPP_STS_NO_ERR;
+        switch (inputTypeId) {
+            case OMNI_LONG: {
+                result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
+                    rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
+                    reinterpret_cast<int64_t *>(sumVal));
+                break;
+            }
+            default: {
+                throw OmniException("NOT SUPPORT", "Unsupported input type for sum aggregate");
+                break;
+            }
+        }
+
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "sum failed for hmpp error");
+        }
+        if (state.val == nullptr) {
+            state.val = sumVal;
+        } else {
+            *(static_cast<ResultType *>(state.val)) += *static_cast<ResultType *>(sumVal);
+        }
+    }
+#endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {

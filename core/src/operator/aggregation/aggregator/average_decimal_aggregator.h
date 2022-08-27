@@ -6,6 +6,9 @@
 #define OMNI_RUNTIME_AVERAGE_DECIMAL_AGGREGATOR_H
 
 #include "aggregator.h"
+#ifdef ENABLE_HMPP
+#include "HMPP/hmpps.h"
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -20,6 +23,62 @@ public:
     {}
 
     ~AverageDecimalAggregator() override {}
+
+#ifdef ENABLE_HMPP
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        auto vector = vectorBatch->GetVector(channel);
+
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto nullAddr = vector->GetValueNulls();
+        bool overflow = false;
+        int32_t count = 0;
+
+        auto inputTypeId = inputType->GetId();
+        HmppResult result = HMPP_STS_NO_ERR;
+        auto sumVal =
+            reinterpret_cast<HmppDecimal128 *>(executionContext->GetArena()->Allocate(sizeof(HmppDecimal128)));
+        switch (inputTypeId) {
+            case OMNI_DECIMAL128: {
+                result = HMPPS_Mean_decimal128(
+                    static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset),
+                    rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
+                    reinterpret_cast<HmppDecimal128 *>(sumVal), &count);
+                break;
+            }
+            default: {
+                throw OmniException("NOT SUPPORT", "Unsupported input type for avg aggregate");
+                break;
+            }
+        }
+
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "avg failed for hmpp error");
+        }
+
+        if (state.val == nullptr) {
+            state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
+            int64_t newOverflow = overflow == false ? 0 : 1 << 63;
+            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val),
+                Decimal128(sumVal->high, sumVal->low), newOverflow, static_cast<int64_t>(count));
+        } else {
+            Decimal128 preSumVal;
+            int64_t oldOverflow = 0;
+            int64_t oldCount = 0;
+            DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), preSumVal, oldOverflow,
+                oldCount);
+
+            auto currSumVal = Decimal128(sumVal->high, sumVal->low);
+            int64_t newOverflow = DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
+            oldOverflow += newOverflow;
+            oldCount += static_cast<int64_t>(count);
+            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), preSumVal, oldOverflow,
+                oldCount);
+        }
+    }
+#endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {

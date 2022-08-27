@@ -20,6 +20,16 @@ public:
 
     ~MaskColAggregator() override = default;
 
+#ifdef ENABLE_HMPP
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        auto rowCount = vectorBatch->GetRowCount();
+        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            ProcessGroup(state, vectorBatch, rowIdx);
+        }
+    }
+#endif
+
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;

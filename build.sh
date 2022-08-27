@@ -48,7 +48,7 @@ echo "-- Enter" $(dirname $(readlink -f $0))
 
 if [ "$1" = 'coverage-java' ]; then
     echo "-- Enable coverage for java"
-    sh build.sh release
+    sh build.sh release --enable-hmpp
     ./test/omtest --gtest_output=xml:test_detail.xml
 
     cd ../../bindings/java
@@ -57,7 +57,7 @@ if [ "$1" = 'coverage-java' ]; then
     mvn clean install
 elif [ "$1" = 'coverage-c++' ]; then
     echo "-- Enable coverage for c++"
-    sh build.sh coverage
+    sh build.sh coverage --enable-hmpp
     ./test/omtest --gtest_output=xml:test_detail.xml
     lcov --d ../ --c --output-file test.info --rc lcov_branch_coverage=1
     lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' -o final.info --rc lcov_branch_coverage=1
@@ -69,7 +69,7 @@ elif [ "$1" = 'coverage-c++' ]; then
     mvn clean install
 elif [ "$1" = 'release' ]; then
     echo "-- Only build"
-    sh build.sh release
+    sh build.sh release --enable-hmpp
 
     cd ../../bindings/java
     mvn clean install
@@ -77,7 +77,7 @@ elif [ "$1" = 'release' ]; then
     mvn clean install
 elif [ "$1" = 'test' ]; then
     echo "-- Enable build and test"
-    sh build.sh release
+    sh build.sh release --enable-hmpp
     ./test/omtest --gtest_output=xml:test_detail.xml
 
     cd ../../bindings/java
@@ -86,7 +86,7 @@ elif [ "$1" = 'test' ]; then
     mvn clean install
 else
     echo "-- Enable default options"
-    sh build.sh release
+    sh build.sh release --enable-hmpp
     ./test/omtest --gtest_output=xml:test_detail.xml
 
     cd ../../bindings/java
