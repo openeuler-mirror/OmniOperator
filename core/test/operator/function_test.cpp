@@ -1107,6 +1107,48 @@ TEST(FunctionTest, SubstrWithZh)
     delete context;
 }
 
+TEST(FunctionTest, SubstrWithZhForSpark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    string str = "时欧基乌斯侧后解 h";
+    int32_t strlen = static_cast<int32_t>(str.length());
+    int32_t outlen = 0;
+    const char *result;
+    string actual;
+
+    result = SubstrWithStart(contextPtr, str.c_str(), strlen, -15, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    result = Substr(contextPtr, str.c_str(), strlen, -15, 5, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result = Substr(contextPtr, str.c_str(), strlen, -15, 6, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "时");
+    EXPECT_EQ(outlen, 3);
+
+    result = Substr(contextPtr, str.c_str(), strlen, -15, 14, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "时欧基乌斯侧后解 ");
+    EXPECT_EQ(outlen, 25);
+
+    result = Substr(contextPtr, str.c_str(), strlen, -15, 20, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "时欧基乌斯侧后解 h");
+    EXPECT_EQ(outlen, 26);
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
 TEST(FunctionTest, SubstrCharWithStart)
 {
     auto context = new ExecutionContext();

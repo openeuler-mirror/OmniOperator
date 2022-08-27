@@ -12,6 +12,7 @@
 #include <huawei_secure_c/include/securec.h>
 #include "context_helper.h"
 #include "util/utf8_util.h"
+#include "util/engine.h"
 
 // All extern functions go here temporarily
 #ifdef _WIN32
@@ -72,8 +73,13 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
         startCodePoint += codePoints;
         // before beginning of string
         if (startCodePoint < 0) {
-            *outLen = 0;
-            return "";
+            EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+            if (engineType != EngineType::Spark || startCodePoint + lengthCodePoint <= 0) {
+                *outLen = 0;
+                return "";
+            }
+            lengthCodePoint += startCodePoint;
+            startCodePoint = 0;
         }
         startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint);
         if (startCodePoint + lengthCodePoint < codePoints) {
@@ -123,8 +129,12 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
         int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
         startCodePoint += codePoints;
         if (startCodePoint < 0) {
-            *outLen = 0;
-            return "";
+            EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+            if (engineType != EngineType::Spark) {
+                *outLen = 0;
+                return "";
+            }
+            startCodePoint = 0;
         }
 
         startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint);
