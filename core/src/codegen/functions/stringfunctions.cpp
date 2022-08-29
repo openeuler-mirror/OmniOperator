@@ -273,7 +273,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     string s = string(str, strLen);
     string search = string(searchStr, searchLen);
     string replace = string(replaceStr, replaceLen);
-    int32_t matchIndex = 0;
+    string::size_type matchIndex = 0;
     if (replaceLen == 0) {
         while ((matchIndex = s.find(search, matchIndex)) != string::npos) {
             s = s.substr(0, matchIndex) + s.substr(matchIndex + searchLen);
