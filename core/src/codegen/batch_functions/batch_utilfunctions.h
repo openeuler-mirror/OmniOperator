@@ -9,6 +9,7 @@
 #include <cmath>
 #include <vector>
 #include "type/decimal128.h"
+#include <huawei_secure_c/include/securec.h>
 
 using namespace omniruntime::type;
 
@@ -67,6 +68,27 @@ extern "C" DLLEXPORT void copyDouble(double *dataArray, double *output, int32_t 
 extern "C" DLLEXPORT void copyDecimal128(__int128_t *dataArray, __int128_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void copyString(uint8_t **dataArray, uint8_t **output, int32_t rowCnt);
+
+
+template <typename T>
+extern DLLEXPORT void coalesce(T *lArray, bool *lIsNull, T *rArray, bool *rIsNulll, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        if (lIsNull[i] == true) {
+            lArray[i] = rArray[i];
+            lIsNull[i] = rIsNulll[i];
+        }
+    }
+}
+
+extern "C" DLLEXPORT void coalesceString(uint8_t **lArray, bool *lIsNull, int32_t *lLength, uint8_t **rArray,
+    bool *rIsNull, int32_t *rLength, int32_t rowCnt);
+
+extern "C" DLLEXPORT void coalesceDecimal64(int64_t *lArray, bool *lIsNull, int32_t lPrecision, int32_t lScale,
+                                            int64_t *rArray, bool *rIsNull, int32_t rPrecision, int32_t rScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void coalesceDecimal128(Decimal128 *lArray, bool *lIsNull, int32_t lPrecision, int32_t lScale,
+    Decimal128 *rArray, bool *rIsNull, int32_t rPrecision, int32_t rScale, int32_t rowCnt);
 
 template <typename T>
 extern DLLEXPORT void ifExpr(bool *ifCond, bool *ifNull, T *trueValue, bool *trueNull, T *falseValue, bool *falseNull,

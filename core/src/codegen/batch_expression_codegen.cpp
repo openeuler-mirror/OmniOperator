@@ -1423,9 +1423,53 @@ void BatchExpressionCodeGen::Visit(const IfExpr &ifExpr)
     }
 }
 
-void BatchExpressionCodeGen::Visit(const CoalesceExpr &e)
+void BatchExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
 {
-    this->value = make_shared<CodeGenValue>(nullptr, nullptr);
+    Expr *value1Expr = cExpr.value1;
+    Expr *value2Expr = cExpr.value2;
+    CodeGenValuePtr value1 = VisitExpr(*value1Expr);
+    if (!value1->IsValidValue()) {
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
+    }
+    auto value2 = VisitExpr(*value2Expr);
+    if (!value2->IsValidValue()) {
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
+    }
+    Value *value2Data = value2->data;
+    Value *value1Data = value1->data;
+    if (cExpr.GetReturnTypeId() == OMNI_INT || cExpr.GetReturnTypeId() == OMNI_LONG ||
+        cExpr.GetReturnTypeId() == OMNI_DOUBLE) {
+        Value *res = llvmEngine->CallExternFunction("batch_coalesce",
+            { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() }, cExpr.GetReturnTypeId(),
+            { value1->data, value1->isNull, value2->data, value2->isNull, this->batchCodegenContext->rowCnt }, nullptr,
+            "batchcoalesce_int");
+        this->value = make_shared<CodeGenValue>(value1->data, value1->isNull);
+    } else if (cExpr.GetReturnTypeId() == OMNI_VARCHAR || cExpr.GetReturnTypeId() == OMNI_CHAR) {
+        Value *res = llvmEngine->CallExternFunction("batch_coalesce",
+            { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() }, cExpr.GetReturnTypeId(),
+            { value1->data, value1->isNull, value1->length, value2->data, value2->isNull, value2->length,
+            this->batchCodegenContext->rowCnt },
+            nullptr, "batchcoalesce_string");
+        this->value = make_shared<CodeGenValue>(value1->data, value1->isNull, value1->length);
+    } else if (cExpr.GetReturnTypeId() == OMNI_DECIMAL128 || cExpr.GetReturnTypeId() == OMNI_DECIMAL64) {
+        CodeGenValue &valueDecimal1 = *value1.get();
+        CodeGenValue &valueDecimal2 = *value2.get();
+        auto value1Precision = (Value *)static_cast<DecimalValue &>(valueDecimal1).GetPrecision();
+        auto value2Precision = (Value *)static_cast<DecimalValue &>(valueDecimal2).GetPrecision();
+        auto value1Scale = (Value *)static_cast<DecimalValue &>(valueDecimal1).GetScale();
+        auto value2Scale = (Value *)static_cast<DecimalValue &>(valueDecimal2).GetScale();
+        Value *res =
+            llvmEngine->CallExternFunction("batch_coalesce", { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() }, cExpr.GetReturnTypeId(),
+            { value1->data, value1->isNull, value1Precision, value1Scale, value2->data, value2->isNull, value2Precision,
+            value2Scale, this->batchCodegenContext->rowCnt },
+            nullptr, "batchcoalesce_decimal128");
+        this->value = make_shared<DecimalValue>(value1->data, value1->isNull, value1Precision, value1Scale);
+    }
+    else {
+        this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+    }
 }
 
 void BatchExpressionCodeGen::Visit(const InExpr &inExpr)

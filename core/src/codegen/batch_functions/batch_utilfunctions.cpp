@@ -4,6 +4,7 @@
  */
 
 #include "batch_utilfunctions.h"
+#include "type/decimal_operations.h"
 #include "../functions/context_helper.h"
 
 using namespace omniruntime::codegen;
@@ -241,6 +242,44 @@ extern DLLEXPORT void switchExprString(int32_t whenCnt, int64_t *whenClauses, in
             finalResult[i] = elseValue[i];
             finalNull[i] = elseNull[i];
             finalLength[i] = elseLength[i];
+        }
+    }
+}
+
+extern "C" DLLEXPORT void coalesceString(uint8_t **lArray, bool *lIsNull, int32_t *lLength, uint8_t **rArray,
+    bool *rIsNull, int32_t *rLength, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (lIsNull[i] == true) {
+            lArray[i] = rArray[i];
+            lIsNull[i] = rIsNull[i];
+            lLength[i] = rLength[i];
+        }
+    }
+}
+
+extern "C" DLLEXPORT void coalesceDecimal64(int64_t *lArray, bool *lIsNull, int32_t lPrecision, int32_t lScale,
+                                             int64_t *rArray, bool *rIsNull, int32_t rPrecision, int32_t rScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (lIsNull[i] == true) {
+            lArray[i] = rArray[i];
+            lIsNull[i] = rIsNull[i];
+            lPrecision = rPrecision;
+            lScale = rScale;
+        }
+    }
+}
+
+extern "C" DLLEXPORT void coalesceDecimal128(Decimal128 *lArray, bool *lIsNull, int32_t lPrecision, int32_t lScale,
+    Decimal128 *rArray, bool *rIsNull, int32_t rPrecision, int32_t rScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        if (lIsNull[i] == true) {
+            lArray[i] = rArray[i];
+            lIsNull[i] = rIsNull[i];
+            lPrecision = rPrecision;
+            lScale = rScale;
         }
     }
 }

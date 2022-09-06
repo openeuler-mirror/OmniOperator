@@ -1227,6 +1227,259 @@ TEST(FilterTest, In)
     delete overflowConfig;
 }
 
+TEST(FilterTest, testLongIn)
+{
+    const int32_t numCols = 3;
+    const int32_t numRows = 10000;
+    int64_t *col1 = new int64_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
+    int64_t *col3 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i % 10;
+        col2[i] = i % 5;
+        col3[i] = i % 6 + 12;
+    }
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+                                    reinterpret_cast<int64_t>(col3)};
+    DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_In");
+    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    // filter
+    std::vector<Expr *> args;
+    int64_t target1 = 1;
+    int64_t target2 = 3;
+    int64_t target3 = 5;
+    args.push_back(new FieldExpr(0, LongType()));
+    args.push_back(new LiteralExpr(target1, LongType()));
+    args.push_back(new LiteralExpr(target2, LongType()));
+    args.push_back(new LiteralExpr(target3, LongType()));
+
+    InExpr *filterExpr = new InExpr(args);
+
+    const int32_t projectCount = 3;
+    std::vector<Expr *> projections = { new FieldExpr(0, LongType()), new FieldExpr(1, LongType()),
+        new FieldExpr(2, LongType()) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 3000);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_TRUE(val0 == target1 || val0 == target2 || val0 == target3);
+    }
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+TEST(FilterTest, testDoubleIn)
+{
+    const int32_t numCols = 3;
+    const int32_t numRows = 10000;
+    double *col1 = new double[numRows];
+    double *col2 = new double[numRows];
+    double *col3 = new double[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i % 10;
+        col2[i] = i % 5;
+        col3[i] = i % 6 + 12;
+    }
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+                                    reinterpret_cast<int64_t>(col3)};
+    DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_In");
+    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    // filter
+    std::vector<Expr *> args;
+    double target1 = 1.0;
+    double target2 = 3.0;
+    double target3 = 5.0;
+    args.push_back(new FieldExpr(0, DoubleType()));
+    args.push_back(new LiteralExpr(target1, DoubleType()));
+    args.push_back(new LiteralExpr(target2, DoubleType()));
+    args.push_back(new LiteralExpr(target3, DoubleType()));
+
+    InExpr *filterExpr = new InExpr(args);
+
+    const int32_t projectCount = 3;
+    std::vector<Expr *> projections = { new FieldExpr(0, DoubleType()), new FieldExpr(1, DoubleType()),
+        new FieldExpr(2, DoubleType()) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 3000);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_TRUE(val0 == target1 || val0 == target2 || val0 == target3);
+    }
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+TEST(FilterTest, testStringIn1)
+{
+    const int32_t numCols = 1;
+    const int32_t numRows = 10;
+    vector<string> strings;
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 3 == 0) {
+            strings.emplace_back("hello");
+        } else {
+            strings.emplace_back("hi");
+        }
+    }
+    vector<bool> nulls;
+    for (int32_t i = 0; i < numRows; i++) {
+        nulls.emplace_back(false);
+    }
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(10) }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_StringIn1");
+    std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
+    auto *t = CreateVectorBatch(numRows, cols);
+    // filter
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, VarcharType()));
+    args.push_back(new LiteralExpr(new std::string("hello"), VarcharType()));
+    args.push_back(new LiteralExpr(new std::string("bye"), VarcharType()));
+    args.push_back(new LiteralExpr(new std::string("okay"), VarcharType()));
+
+    InExpr *filterExpr = new InExpr(args);
+
+    const int32_t projectCount = 1;
+    std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 4);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+TEST(FilterTest, testStringIn2)
+{
+    const int32_t numCols = 1;
+    const int32_t numRows = 10000;
+    vector<string> strings;
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            strings.emplace_back("hello");
+        } else {
+            strings.emplace_back("hi");
+        }
+    }
+    vector<bool> nulls;
+    for (int32_t i = 0; i < numRows; i++) {
+        nulls.emplace_back(false);
+    }
+    DataTypes inputTypes(std::vector<DataTypePtr>({ CharType(10) }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_StringIn2");
+    std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
+    auto *t = CreateVectorBatch(numRows, cols);
+    // filter
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, CharType()));
+    args.push_back(new LiteralExpr(new std::string("hello"), CharType()));
+    args.push_back(new LiteralExpr(new std::string("bye"), CharType()));
+    args.push_back(new LiteralExpr(new std::string("okay"), CharType()));
+
+    InExpr *filterExpr = new InExpr(args);
+
+    const int32_t projectCount = 1;
+    std::vector<Expr *> projections = { new FieldExpr(0, CharType()) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 5000);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+TEST(FilterTest, testDecimal128In)
+{
+    const int32_t numCols = 1;
+    const int32_t numRows = 1000;
+    int64_t *data1 = new int64_t[numRows * 2];
+    int64_t *data2 = new int64_t[numRows * 2];
+    for (int64_t i = 0; i < numRows; i++) {
+        data1[2 * i] = (i + 1) * 1000;
+        data1[2 * i + 1] = 0;
+        data2[2 * i] = (i + 1) * 1;
+        data2[2 * i + 1] = 0;
+    }
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_decimal128In");
+    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    // filter
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, Decimal128Type(38, 0)));
+    args.push_back(new LiteralExpr(new std::string("1000"), Decimal128Type(38, 0)));
+    args.push_back(new LiteralExpr(new std::string("2000"), Decimal128Type(38, 0)));
+    args.push_back(new LiteralExpr(new std::string("555555"), Decimal128Type(38, 0)));
+
+
+    InExpr *filterExpr = new InExpr(args);
+
+    const int32_t projectCount = 1;
+    std::vector<Expr *> projections = { new FieldExpr(0, Decimal128Type(38, 0)) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 2);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
 TEST(FilterTest, Between)
 {
     const int32_t numCols = 3;
@@ -1610,6 +1863,211 @@ TEST(FilterTest, Coalesce2)
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
     delete overflowConfig;
+}
+
+TEST(FilterTest, Coalesce3)
+{
+    const int32_t numCols = 1;
+    const int32_t numRows = 1000;
+    int64_t *data1 = new int64_t[numRows * 2];
+    int64_t *data2 = new int64_t[numRows * 2];
+    for (int64_t i = 0; i < numRows; i++) {
+        data1[2 * i] = (i + 1) * 1000;
+        data1[2 * i + 1] = 0;
+        data2[2 * i] = (i + 1) * 1;
+        data2[2 * i + 1] = 0;
+    }
+
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce3");
+    VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    const int32_t projectCount = 1;
+    std::vector<Expr *> projections = { new FieldExpr(0, Decimal128Type(38, 0)) };
+    auto v1 = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 0));
+    v1->isNull = false;
+    auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
+    auto coalesce = new CoalesceExpr(v1, v2);
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE,
+        new FieldExpr(0, Decimal128Type(38, 0)), coalesce, BooleanType());
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter7));
+    EXPECT_EQ(numReturned, 500);
+
+
+    allData[0] = reinterpret_cast<int64_t>(data2);
+    VectorBatch *in2 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(in2);
+    numReturned = op->GetOutput(ret);
+    EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter7));
+    EXPECT_EQ(numReturned, 1000);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] data1;
+    delete[] data2;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+TEST(FilterTest, Coalesce4)
+{
+    const int32_t numCols = 1;
+    const int32_t numRows = 1000;
+    vector<string> strings;
+    for (int32_t i = 0; i < numRows; i++) {
+        strings.emplace_back("hello");
+    }
+    vector<bool> nulls;
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 != 0) {
+            nulls.emplace_back(true);
+        } else {
+            nulls.emplace_back(false);
+        }
+    }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ CharType(5) }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce4");
+    std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
+    auto *t = CreateVectorBatch(numRows, cols);
+
+    CoalesceExpr *coalesceExpr =
+        new CoalesceExpr(new FieldExpr(0, CharType()), new LiteralExpr(new std::string("world"), CharType()));
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr,
+        new LiteralExpr(new std::string("hello"), CharType()), BooleanType());
+    const int32_t projectCount = 1;
+    std::vector<Expr *> projections = { new FieldExpr(0, CharType()) };
+
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 500);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+
+    VectorHelper::FreeVecBatches(ret);
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+
+TEST(FilterTest, Coalesce5)
+{
+    const int32_t numCols = 3;
+    const int32_t numRows = 1000;
+    int32_t *col1 = new int32_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
+    int32_t *col3 = new int32_t[numRows];
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = 100;
+        col2[i] = 21;
+        col3[i] = -1;
+    }
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+                                        reinterpret_cast<int64_t>(col3)};
+    DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce5");
+    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 != 0) {
+            t->GetVector(1)->SetValueNull(i);
+        } else {
+            t->GetVector(1)->SetValueNotNull(i);
+        }
+    }
+    int64_t targetValue = 21;
+    CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, LongType()), new FieldExpr(0, LongType()));
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
+        new LiteralExpr(targetValue, LongType()), coalesceExpr, BooleanType());
+    const int32_t projectCount = 3;
+    std::vector<Expr *> projections = { new FieldExpr(0, LongType()), new FieldExpr(1, LongType()),
+        new FieldExpr(2, LongType()) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 500);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
+}
+
+TEST(FilterTest, Coalesce6)
+{
+    const int32_t numCols = 3;
+    const int32_t numRows = 1000;
+    double *col1 = new double[numRows];
+    double *col2 = new double[numRows];
+    double *col3 = new double[numRows];
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = 100.0;
+        col2[i] = 21.0;
+        col3[i] = -1.0;
+    }
+    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
+                                        reinterpret_cast<int64_t>(col3)};
+    DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce6");
+    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 != 0) {
+            t->GetVector(1)->SetValueNull(i);
+        } else {
+            t->GetVector(1)->SetValueNotNull(i);
+        }
+    }
+    CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, DoubleType()), new FieldExpr(0, DoubleType()));
+    BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(21.0, DoubleType()),
+        coalesceExpr, BooleanType());
+    const int32_t projectCount = 3;
+    std::vector<Expr *> projections = { new FieldExpr(0, DoubleType()), new FieldExpr(1, DoubleType()),
+        new FieldExpr(2, DoubleType()) };
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 500);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vectorAllocator;
 }
 
 

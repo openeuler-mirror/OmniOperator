@@ -94,6 +94,8 @@ std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
                  { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN, NULL_RESULT_IF_ANY_NULL_ARG),
         Function(reinterpret_cast<void *>(BatchEqualStr), equalFnStr, {},
                  { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN, NULL_RESULT_IF_ANY_NULL_ARG),
+        Function(reinterpret_cast<void *>(BatchEqualStr), equalFnStr, {},
+                 { OMNI_CHAR, OMNI_CHAR }, OMNI_BOOLEAN, NULL_RESULT_IF_ANY_NULL_ARG),
         Function(reinterpret_cast<void *>(BatchNotEqualStr), notEqualFnStr, {},
                  { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN, NULL_RESULT_IF_ANY_NULL_ARG),
     };
