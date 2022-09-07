@@ -78,6 +78,28 @@ static std::array<int64_t, 28> POWERS_OF_FIVE_LONG = { 1,
                                                        5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L *
     5L };
 
+static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
+        1,                     // 0 / 10^0
+        10,                    // 1 / 10^1
+        100,                   // 2 / 10^2
+        1000,                  // 3 / 10^3
+        10000,                 // 4 / 10^4
+        100000,                // 5 / 10^5
+        1000000,               // 6 / 10^6
+        10000000,              // 7 / 10^7
+        100000000,             // 8 / 10^8
+        1000000000,            // 9 / 10^9
+        10000000000L,          // 10 / 10^10
+        100000000000L,         // 11 / 10^11
+        1000000000000L,        // 12 / 10^12
+        10000000000000L,       // 13 / 10^13
+        100000000000000L,      // 14 / 10^14
+        1000000000000000L,     // 15 / 10^15
+        10000000000000000L,    // 16 / 10^16
+        100000000000000000L,   // 17 / 10^17
+        1000000000000000000L   // 18 / 10^18
+};
+
 static std::array<__int128_t, MAX_PRECISION> GetPowersOfTen()
 {
     std::array<__int128_t, MAX_PRECISION> powersOfTen;
@@ -1257,6 +1279,31 @@ public:
         return SUCCESS;
     }
 
+    static inline OpStatus Rescale64RoundToZero(int64_t value, int32_t rescaleFactor, int64_t &result)
+    {
+        if (rescaleFactor == 0 || value == 0) {
+            result = value;
+            return SUCCESS;
+        }
+
+        if (rescaleFactor > MAX_DECIMAL64_DIGITS || rescaleFactor < -MAX_DECIMAL64_DIGITS) {
+            return OP_OVERFLOW;
+        }
+
+        if (rescaleFactor < 0) {
+            int64_t p =  INT64_TEN_POWERS_TABLE[-rescaleFactor];
+            result = value / p;
+            return SUCCESS;
+        } else {
+            int64_t p = INT64_TEN_POWERS_TABLE[rescaleFactor];
+            if (LONG_MAX_VALUE / value < p) {
+                return OP_OVERFLOW;
+            }
+            result = value * p;
+            return SUCCESS;
+        }
+    }
+
     // TODO this function is not able to handle scale factor >= 18
     static inline OpStatus Rescale64To128(int64_t value, int32_t rescaleFactor, Decimal128 &result)
     {
@@ -1607,6 +1654,25 @@ public:
         }
         return SUCCESS;
     }
+
+    // check if unscaled value is overflow under the representation of Decimal(precision, scale)
+    static inline bool IsUnscaledLongOverflow(int64_t unscaled, int32_t precision, int32_t scale)
+    {
+        int64_t maxDecimal64 = INT64_TEN_POWERS_TABLE[MAX_DECIMAL64_DIGITS];
+        if (unscaled <= -maxDecimal64 || unscaled >= maxDecimal64) {
+            if (precision <= MAX_DECIMAL64_DIGITS) {
+                return true;
+            }
+            return false;
+        }
+
+        int64_t p = precision <= MAX_DECIMAL64_DIGITS ? INT64_TEN_POWERS_TABLE[precision] : pow(10, precision);
+        if (unscaled <= -p || unscaled >= p) {
+            return true;
+        }
+        return false;
+    }
+
 };
 }
 }

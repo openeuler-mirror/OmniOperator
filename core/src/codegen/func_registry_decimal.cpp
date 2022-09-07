@@ -126,16 +126,6 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(Decimal64Compare), "Decimal64Compare", {}, paramTypes64, OMNI_INT),
         Function(reinterpret_cast<void *>(Decimal128Compare), "Decimal128Compare", {}, paramTypes128, OMNI_INT),
 
-        // Decimal IsOverflowDecimal
-        Function(reinterpret_cast<void *>(IsOverflowDecimal64), "IsOverflowDecimal", {},
-            { OMNI_DECIMAL64, OMNI_INT, OMNI_INT }, OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(IsOverflowDecimal128), "IsOverflowDecimal", {},
-            { OMNI_DECIMAL128, OMNI_INT, OMNI_INT }, OMNI_BOOLEAN, INPUT_DATA),
-
-        // Decimal UnscaledValue
-        Function(reinterpret_cast<void *>(UnscaledValue64), "UnscaledValue", {}, { OMNI_DECIMAL64 }, OMNI_LONG,
-            INPUT_DATA),
-
         // Return Null
         Function(reinterpret_cast<void *>(AddDec64Dec64Dec64RetNull), "Add_decimal64_null", {}, paramTypes64, retType64,
             INPUT_DATA_AND_OVERFLOW_NULL),
@@ -229,7 +219,15 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDecimal128ToIntRetNull), "CAST_null", {}, { OMNI_DECIMAL128 }, OMNI_INT,
             INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastDecimal128ToLongRetNull), "CAST_null", {}, { OMNI_DECIMAL128 }, OMNI_LONG,
-            INPUT_DATA_AND_OVERFLOW_NULL)
+            INPUT_DATA_AND_OVERFLOW_NULL),
+        // UnscaledValue
+        Function(reinterpret_cast<void *>(UnscaledValue64), "UnscaledValue", {}, {OMNI_DECIMAL64}, OMNI_LONG,
+                 INPUT_DATA),
+        // MakeDecimal
+        Function(reinterpret_cast<void *>(MakeDecimal64), "MakeDecimal", {}, {OMNI_LONG}, OMNI_DECIMAL64,
+                 INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(MakeDecimal64RetNull), "MakeDecimal_null", {}, {OMNI_LONG}, OMNI_DECIMAL64,
+                 INPUT_DATA_AND_OVERFLOW_NULL),
     };
 
     return decimalFnRegistry;

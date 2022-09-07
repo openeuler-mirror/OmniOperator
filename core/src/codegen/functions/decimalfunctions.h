@@ -31,14 +31,6 @@ extern "C" DLLEXPORT int32_t Decimal64Compare(int64_t x, int32_t xPrecision, int
 extern "C" DLLEXPORT int64_t AbsDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, bool isNull, int32_t outPrecision,
     int32_t outScale);
 
-extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale, bool isNull);
-
-extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int32_t checkPrecision,
-    int32_t checkScale, bool isNull);
-
-extern "C" DLLEXPORT bool IsOverflowDecimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
-    int32_t checkPrecision, int32_t checkScale);
-
 // Decimal AddOperator
 extern "C" DLLEXPORT int64_t AddDec64Dec64Dec64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale,
     int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale);
@@ -342,6 +334,12 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xH
 
 extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
     int32_t scale);
+
+extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale);
+
+extern "C" DLLEXPORT int64_t MakeDecimal64(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale);
+
+extern "C" DLLEXPORT int64_t MakeDecimal64RetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale);
 }
 }
 #endif // OMNI_RUNTIME_DECIMALFUNCTIONS_H

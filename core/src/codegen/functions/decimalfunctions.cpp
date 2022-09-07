@@ -7,6 +7,7 @@
 #include "decimalfunctions.h"
 #include "context_helper.h"
 #include "type/decimal_operations.h"
+#include "util/engine.h"
 
 using namespace omniruntime::type;
 using namespace std;
@@ -83,34 +84,6 @@ extern "C" DLLEXPORT int64_t AbsDecimal64(int64_t x, int32_t xPrecision, int32_t
     int32_t outScale)
 {
     return std::abs(x);
-}
-
-extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale, bool isNull)
-{
-    return (int64_t)(x);
-}
-
-extern "C" DLLEXPORT bool IsOverflowDecimal64(int64_t x, int32_t precision, int32_t scale, int32_t checkPrecision,
-    int32_t checkScale, bool isNull)
-{
-    int32_t wholeNumerSize = precision - scale;
-    int32_t checkWholeNumerSize = checkPrecision - checkScale;
-    if (checkWholeNumerSize >= wholeNumerSize) {
-        return false;
-    }
-    int32_t left = scale + checkWholeNumerSize;
-    int64_t numverValue = abs(x);
-    while (left > 0) {
-        numverValue = numverValue / 10;
-        left--;
-    }
-    return numverValue > 0;
-}
-
-extern "C" DLLEXPORT bool IsOverflowDecimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
-    int32_t checkPrecision, int32_t checkScale)
-{
-    return false;
 }
 
 // Decimal AddOperator
@@ -1089,6 +1062,12 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, b
 
 extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale, bool isNull)
 {
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        int64_t scaledValue = 0;
+        DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
+        return static_cast<int32_t>(scaledValue);
+    }
+
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     // this rounds the decimal value to the nearest integral value
     long longResult = (x + tenToScale / 2) / tenToScale;
@@ -1109,6 +1088,12 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
 
 extern "C" DLLEXPORT int64_t CastDecimal64ToLong(int64_t x, int32_t precision, int32_t scale, bool isNull)
 {
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        int64_t scaledValue = 0;
+        DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
+        return scaledValue;
+    }
+
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     if (x >= 0) {
         return (x + tenToScale / 2) / tenToScale;
@@ -1127,6 +1112,14 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHi
 {
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
+
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
+        int32_t result = static_cast<int32_t>(outDecimal.LowBits());
+        return outDecimal.HighBits() < 0 ? -result : result;
+    }
+
+
     DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t longValue;
     OpStatus statusDecimal = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, longValue);
@@ -1148,6 +1141,13 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
 {
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
+
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
+        int64_t result = static_cast<int64_t>(outDecimal.LowBits());
+        return outDecimal.HighBits() < 0 ? -result : result;
+    }
+
     DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t result;
     OpStatus status = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, result);
@@ -2065,6 +2065,12 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128RetNull(bool *isNull, double x, 
 
 extern "C" DLLEXPORT int32_t CastDecimal64ToIntRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
 {
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        int64_t scaledValue = 0;
+        DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
+        return static_cast<int32_t>(scaledValue);
+    }
+
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     // this rounds the decimal value to the nearest integral value
     long longResult = (x + tenToScale / 2) / tenToScale;
@@ -2085,6 +2091,13 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xH
 {
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
+
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
+        int32_t result = static_cast<int32_t>(outDecimal.LowBits());
+        return outDecimal.HighBits() < 0 ? -result : result;
+    }
+
     DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t longValue;
     OpStatus statusDecimal = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, longValue);
@@ -2102,6 +2115,13 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t x
 {
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
+
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
+        int64_t result = static_cast<int64_t>(outDecimal.LowBits());
+        return outDecimal.HighBits() < 0 ? -result : result;
+    }
+
     DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t result;
     OpStatus status = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, result);
@@ -2111,5 +2131,33 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t x
     }
     return result;
 }
+
+extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale)
+{
+    return x;
+}
+
+extern "C" DLLEXPORT int64_t MakeDecimal64(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale)
+{
+    if (DecimalOperations::IsUnscaledLongOverflow(x, precision, scale)) {
+        ostringstream errorMessage;
+        errorMessage << "Unscaled value " << x << " out of Decimal(" << precision << ", " << scale << ") range";
+        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
+        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        return 0;
+    }
+    return x;
+}
+
+extern "C" DLLEXPORT int64_t MakeDecimal64RetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
+{
+    if (DecimalOperations::IsUnscaledLongOverflow(x, precision, scale)) {
+        *isNull = true;
+        return 0;
+    }
+    *isNull = false;
+    return x;
+}
+
 }
 }
