@@ -144,7 +144,7 @@ public:
             Decimal128 rescaledDividend;
             // rescale dividend and divisor to output scale
             DecimalOperations::Rescale128(decodedDec, scaleDiff, rescaledDividend);
-            resultDec = DecimalOperations::DivideRoundUp(rescaledDividend, countDec, 0, 0);
+            DecimalOperations::DivideRoundUp(rescaledDividend, countDec, 0, 0, resultDec);
             if (outType == OMNI_DECIMAL64) {
                 // restore sign
                 int64_t low = resultDec.LowBits();

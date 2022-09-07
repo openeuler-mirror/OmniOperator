@@ -276,15 +276,16 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
 TEST(ProjectionTest, MakeDecimal64ToDiffScale)
 {
     const int32_t numRows = 1000;
+
     int64_t *col1 = MakeLongs(numRows);
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 2) };
     auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
     auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
 
-    std::string makeStr = "MakeDecimal";
-    auto makeExpr1 = GetFuncExpr(makeStr, { data1 }, Decimal64Type(7, 4));
-    auto makeExpr2 = GetFuncExpr(makeStr, { data2 }, Decimal64Type(7, 0));
+    std::string castStr = "CAST";
+    auto makeExpr1 = GetFuncExpr(castStr, { data1 }, Decimal64Type(7, 4));
+    auto makeExpr2 = GetFuncExpr(castStr, { data2 }, Decimal64Type(7, 0));
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
@@ -306,6 +307,9 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
         long val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
         long val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, i * 100);
+        if (i % 100 >= 50) {
+            i = i + 50;
+        }
         EXPECT_EQ(val1, i / 100);
     }
 
@@ -327,9 +331,9 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
     auto data1 = new FieldExpr(0, Decimal128Type(38, 2));
     auto data2 = new FieldExpr(0, Decimal128Type(7, 2));
 
-    std::string makeStr = "MakeDecimal";
-    auto makeExpr1 = GetFuncExpr(makeStr, { data1 }, Decimal128Type(38, 4));
-    auto makeExpr2 = GetFuncExpr(makeStr, { data2 }, Decimal128Type(38, 0));
+    std::string castStr = "CAST";
+    auto makeExpr1 = GetFuncExpr(castStr, {data1 }, Decimal128Type(38, 4));
+    auto makeExpr2 = GetFuncExpr(castStr, {data2 }, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2 };
 
     DataTypes inputTypes(vecOfTypes);
@@ -373,10 +377,10 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
     auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
     auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
     auto data3 = new FieldExpr(0, Decimal64Type(7, 2));
-    std::string makeStr = "MakeDecimal";
-    auto makeExpr1 = GetFuncExpr(makeStr, { data1 }, Decimal128Type(38, 2));
-    auto makeExpr2 = GetFuncExpr(makeStr, { data2 }, Decimal128Type(38, 4));
-    auto makeExpr3 = GetFuncExpr(makeStr, { data3 }, Decimal128Type(38, 0));
+    std::string castStr = "CAST";
+    auto makeExpr1 = GetFuncExpr(castStr, {data1 }, Decimal128Type(38, 2));
+    auto makeExpr2 = GetFuncExpr(castStr, {data2 }, Decimal128Type(38, 4));
+    auto makeExpr3 = GetFuncExpr(castStr, {data3 }, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { makeExpr1, makeExpr2, makeExpr3 };
 
     DataTypes inputTypes(vecOfTypes);
@@ -2612,7 +2616,7 @@ TEST(ProjectionTest, testMulDecimal64)
     auto mulRight = new LiteralExpr(100L, Decimal64Type(7, 2));
 
     BinaryExpr *mulExpr =
-        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal64Type(7, 2));
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal64Type(7, 4));
 
     std::vector<Expr *> exprs = { mulExpr };
     const int32_t numCols = 0;
@@ -2629,7 +2633,7 @@ TEST(ProjectionTest, testMulDecimal64)
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
-    EXPECT_EQ(val0, 100L);
+    EXPECT_EQ(val0, 10000L);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
@@ -3123,7 +3127,8 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     auto replaceFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(100), replaceFuncStr);
     vector<Expr *> exprs = { replaceFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "varchar100", "varchar200", "varchar300" };
     string search[] = { "char1", "char2", "char3" };
@@ -3144,6 +3149,7 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
     delete op;
     delete factory;
 }
@@ -3155,7 +3161,8 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     auto replaceFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(100), replaceFuncStr);
     vector<Expr *> exprs = { replaceFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "varchar100", "varchar200", "varchar300" };
     string search[] = { "char1", "char2", "char3" };
@@ -3175,6 +3182,7 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
     delete op;
     delete factory;
 }
@@ -3186,7 +3194,8 @@ TEST(ProjectionTest, LowerStr)
     auto lowerFuncExpr = GetStringFuncExpr(vecTypes, VarcharType(20), lowerFuncStr);
     vector<Expr *> exprs = { lowerFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3205,6 +3214,7 @@ TEST(ProjectionTest, LowerStr)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
     delete op;
     delete factory;
 }
@@ -3216,7 +3226,8 @@ TEST(ProjectionTest, LowerChar)
     auto lowerFuncExpr = GetStringFuncExpr(vecTypes, CharType(20), lowerFuncStr);
     vector<Expr *> exprs = { lowerFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3235,6 +3246,7 @@ TEST(ProjectionTest, LowerChar)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
     delete op;
     delete factory;
 }
@@ -3246,7 +3258,8 @@ TEST(ProjectionTest, LengthChar)
     auto lenFuncExpr = GetStringFuncExpr(vecTypes, LongType(), lenFuncStr);
     vector<Expr *> exprs = { lenFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3265,6 +3278,7 @@ TEST(ProjectionTest, LengthChar)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
     delete op;
     delete factory;
 }
@@ -3276,7 +3290,8 @@ TEST(ProjectionTest, LengthStr)
     auto lenFuncExpr = GetStringFuncExpr(vecTypes, LongType(), lenFuncStr);
     vector<Expr *> exprs = { lenFuncExpr };
     DataTypes inputTypes(vecTypes);
-    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), nullptr);
+    auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
@@ -3295,6 +3310,7 @@ TEST(ProjectionTest, LengthStr)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
     delete op;
     delete factory;
 }
@@ -3333,6 +3349,306 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
     VectorHelper::FreeVecBatches(ret);
     delete op;
     delete factory;
+    delete vecAllocator;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectCastIntToString)
+{
+    const int32_t numRows = 3;
+    auto *col = new int[3]{123, 312, 456};
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+
+    auto data = new FieldExpr(0, IntType());
+    std::string castStr = "CAST";
+    std::vector<Expr *> args;
+    args.push_back(data);
+    auto castExpr = GetFuncExpr(castStr, args, VarcharType(4));
+
+    std::vector<Expr *> exprs = { castExpr };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    VarcharVector *vcVec = ((VarcharVector *) ret[0]->GetVector(0));
+    for (int32_t i = 0; i < numRows; i++) {
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        EXPECT_EQ(actualStr, to_string(col[i]));
+    }
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    delete[] col;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vecAllocator;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectCastDecimal128ToString)
+{
+    const int32_t numRows = 3;
+    auto *col = MakeDecimals(numRows, 10);
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
+
+    auto data = new FieldExpr(0, Decimal128Type(38, 0));
+    std::string castStr = "CAST";
+    std::vector<Expr *> args;
+    args.push_back(data);
+    auto castExpr = GetFuncExpr(castStr, args, VarcharType(5));
+
+    std::vector<Expr *> exprs = { castExpr };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    VarcharVector *vcVec = ((VarcharVector *) ret[0]->GetVector(0));
+    for (int32_t i = 0; i < numRows; i++) {
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        EXPECT_EQ(actualStr, to_string(col[i*2]));
+    }
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    delete[] col;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vecAllocator;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectCastDoubleToString)
+{
+    const int32_t numRows = 3;
+    auto *col = MakeDoubles(numRows, 10);
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
+
+    auto data = new FieldExpr(0, DoubleType());
+    std::string castStr = "CAST";
+    std::vector<Expr *> args;
+    args.push_back(data);
+    auto castExpr = GetFuncExpr(castStr, args, VarcharType(5));
+
+    std::vector<Expr *> exprs = { castExpr };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig(omniruntime::op::OVERFLOW_CONFIG_NULL);
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    string res[] = { "10.0", "11.0", "12.0" };
+    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    for (int32_t i = 0; i < numRows; i++) {
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        EXPECT_EQ(actualStr, res[i]);
+    }
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    delete[] col;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vecAllocator;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectCastIntToDecimal)
+{
+    const int32_t numRows = 10;
+    auto *col1 = MakeInts(numRows);
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+
+    auto data = new FieldExpr(0, IntType());
+    std::string castStr = "CAST";
+    std::vector<Expr *> args;
+    args.push_back(data);
+    auto castExpr = GetFuncExpr(castStr, args, Decimal128Type(38, 0));
+
+    std::vector<Expr *> exprs = { castExpr };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col1) };
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    for (int32_t i = 0; i < numRows; i++) {
+        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i);
+    }
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vecAllocator;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectCastIntToDecimal64)
+{
+    const int32_t numRows = 3;
+    auto *col = new int[3] { 123, 312, 456 };
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+
+    auto data = new FieldExpr(0, IntType());
+    std::string castStr = "CAST";
+    std::vector<Expr *> args;
+    args.push_back(data);
+    auto castExpr = GetFuncExpr(castStr, args, Decimal64Type(18, 2));
+
+    std::vector<Expr *> exprs = { castExpr };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    for (int32_t i = 0; i < numRows; i++) {
+        int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, col[i] * 100);
+    }
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    delete[] col;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vecAllocator;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectSparkConfig)
+{
+    std::string castStr = "CAST";
+    std::vector<Expr *> argLeft { new FieldExpr(0, Decimal64Type(7, 0)) };
+    FuncExpr *subLeft = GetFuncExpr(castStr, argLeft, Decimal64Type(8, 0));
+    int64_t *col=new int64_t[1];
+    col[0]=123;
+    std::vector<Expr *> argRight { new FieldExpr(0, Decimal64Type(7, 0)) };
+    FuncExpr *subRight = GetFuncExpr(castStr, argRight, Decimal64Type(8, 0));
+    auto *addExprs = new BinaryExpr(omniruntime::expressions::Operator::ADD, subLeft, subRight,
+        Decimal64Type(8, 0));
+
+    std::vector<Expr *> exprs = { addExprs };
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type() };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
+    VectorBatch *t = CreateInput(vecAllocator, 1, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    EXPECT_EQ(val0, 246);
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete[] col;
+    delete vecAllocator;
+    delete overflowConfig;
+}
+TEST(ProjectionTest, ProjectMulDecimal64)
+{
+    int64_t *col=new int64_t[1];
+    col[0]=999999;
+    FieldExpr *mulLeft = new FieldExpr(0, Decimal64Type(7, 0));
+    FieldExpr *mulRight = new FieldExpr(0, Decimal64Type(7, 0));
+    auto *mulExprs1 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight,
+        Decimal64Type(7, 0));
+    FieldExpr *mulRight2 = new FieldExpr(0, Decimal64Type(7, 0));
+    auto *mulExprs2 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExprs1, mulRight2,
+        Decimal64Type(7, 0));
+
+    std::vector<Expr *> exprs = { mulExprs2 };
+    const int32_t numCols = 1;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type() };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
+    VectorBatch *t = CreateInput(vecAllocator, 1, numCols, inputTypes.GetIds(), allData);
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    bool isNull = (ret[0]->GetVector(0))->IsValueNull(0);
+    EXPECT_EQ(isNull, true);
+    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete[] col;
     delete vecAllocator;
     delete overflowConfig;
 }

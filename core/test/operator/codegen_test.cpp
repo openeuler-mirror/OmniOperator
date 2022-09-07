@@ -1399,8 +1399,8 @@ TEST(CodeGenTest, DateCast)
     std::vector<Expr *> args;
     args.push_back(col2);
     DataTypePtr retType = IntType();
-    auto cast = GetFuncExpr(funcStr, args, IntType());
-    auto col0 = new FieldExpr(0, IntType());
+    auto cast = GetFuncExpr(funcStr, args, Date32Type());
+    auto col0 = new FieldExpr(0, Date32Type());
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, cast, col0, BooleanType());
 
     ExprPrinter printExprTree;
@@ -3453,6 +3453,7 @@ TEST(CodeGenTest, CombineHash)
     delete expr;
     codegen.reset();
 }
+
 TEST(CodeGenTest, JSONFunc)
 {
     std::string unparsed = R"(
@@ -3500,9 +3501,9 @@ TEST(CodeGenTest, JSONFunc)
     expr->Accept(printer);
     cout << endl;
 
-    int64_t v1[1] = {1};
-    int64_t v2[1] = {234};
-    int64_t v3[1] = {345};
+    int64_t v1[1] = { 1 };
+    int64_t v2[1] = { 234 };
+    int64_t v3[1] = { 345 };
     int64_t *vals = new int64_t[3];
     vals[0] = reinterpret_cast<int64_t>(v1);
     vals[1] = reinterpret_cast<int64_t>(v2);
@@ -3520,7 +3521,8 @@ TEST(CodeGenTest, JSONFunc)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    auto *overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, overflowConfig);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
     auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
@@ -3551,4 +3553,5 @@ TEST(CodeGenTest, JSONFunc)
     delete[] selected;
     delete expr;
     codegen.reset();
+    delete overflowConfig;
 }

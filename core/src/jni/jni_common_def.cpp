@@ -45,7 +45,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     lazyVectorCls = createGlobalClassRef(env, "nova/hetu/omniruntime/vector/LazyVec");
     lazyVectorLoaderMethodId = env->GetStaticMethodID(lazyVectorCls, "load", "(Ljava/lang/Object;)J");
     omniRuntimeExceptionClass = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/OmniRuntimeException");
-    char *engineTypeStr = getenv("OMNI_CONNECTED_ENGINE");
+    char* engineTypeStr = getenv("OMNI_CONNECTED_ENGINE");
     EngineUtil::GetInstance().SetEngineType(engineTypeStr);
     return JNI_VERSION;
 }

@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 #include <type/data_type.h>
+#include "operator/config/operator_config.h"
 
 class FunctionSignature {
 public:
@@ -25,6 +26,7 @@ public:
     void *GetFunctionAddress() const;
     size_t HashCode() const;
     std::string ToString() const;
+    std::string ToString(omniruntime::op::OverflowConfig *overflowConfig) const;
 
 private:
     std::string funcName;

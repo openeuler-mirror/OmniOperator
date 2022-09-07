@@ -17,7 +17,8 @@ bool ExprVerifier::VisitExpr(const Expr &e)
 
 bool ExprVerifier::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
 {
-    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2));
+    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2)) &&
+           !(TypeUtil::IsDecimalType(type1) && TypeUtil::IsDecimalType(type2));
 }
 
 void ExprVerifier::Visit(const LiteralExpr &literalExpr)
@@ -81,6 +82,18 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
     const type::DataType &rightType = *(binaryExpr.right->GetReturnType());
 
     if (AreInvalidDataTypes(leftType.GetId(), rightType.GetId())) {
+        this->supportedFlag = false;
+        return;
+    }
+
+    if ((TypeUtil::IsDecimalType(leftType.GetId()) && TypeUtil::IsDecimalType(rightType.GetId())) &&
+        (leftType.GetId() != rightType.GetId()) &&
+        (binaryExpr.op == omniruntime::expressions::Operator::LT ||
+         binaryExpr.op == omniruntime::expressions::Operator::LTE ||
+         binaryExpr.op == omniruntime::expressions::Operator::GT ||
+         binaryExpr.op == omniruntime::expressions::Operator::GTE ||
+         binaryExpr.op == omniruntime::expressions::Operator::EQ ||
+         binaryExpr.op == omniruntime::expressions::Operator::NEQ)) {
         this->supportedFlag = false;
         return;
     }

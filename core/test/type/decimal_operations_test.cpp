@@ -144,7 +144,8 @@ TEST(DecimalOperations, divide)
 {
     Decimal128 dividend(Decimal128::SIGN_LONG_MASK, 2000000000001635618);
     Decimal128 divisor(0, 4);
-    auto result = DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0, result);
     int64_t low = result.LowBits();
     int64_t shortResult = DecimalOperations::IsNegative(result) ? -low : low;
     int64_t expectedVal = -500000000000408905;
@@ -162,7 +163,8 @@ TEST(DecimalOperations, divide_unsigned)
 TEST(DecimalOperations, rescale_decimal64)
 {
     int64_t val = 10LL;
-    int64_t rescaled = DecimalOperations::Rescale64(val, 2);
+    int64_t rescaled;
+    DecimalOperations::Rescale64(val, 2, rescaled);
     EXPECT_EQ(1000LL, rescaled);
 }
 

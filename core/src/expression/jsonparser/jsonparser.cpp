@@ -313,23 +313,17 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
 
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
     if (funcName == "CAST" && args.size() == 1) {
-        if (TypeUtil::IsDecimalType(args[0]->GetReturnTypeId()) || TypeUtil::IsDecimalType(retTypeId)) {
-            Expr::DeleteExprs(args);
-            return nullptr;
-        } else if (TypeUtil::IsStringType(args[0]->GetReturnTypeId()) || TypeUtil::IsStringType(retTypeId)) {
-            Expr::DeleteExprs(args);
-            return nullptr;
-        } else if (retTypeId == args[0]->GetReturnTypeId()) {
-            if (args[0]->GetType() == ExprType::LITERAL_E) {
-                return static_cast<LiteralExpr *>(args[0]);
-            } else if (args[0]->GetType() == ExprType::FIELD_E) {
-                return static_cast<FieldExpr *>(args[0]);
-            } else {
-                Expr::DeleteExprs(args);
-                return nullptr;
+        if (retTypeId == args[0]->GetReturnTypeId()) {
+            if (!TypeUtil::IsDecimalType(retTypeId) && !TypeUtil::IsStringType(retTypeId)) {
+                if (args[0]->GetType() == ExprType::LITERAL_E) {
+                    return static_cast<LiteralExpr *>(args[0]);
+                } else if (args[0]->GetType() == ExprType::FIELD_E) {
+                    return static_cast<FieldExpr *>(args[0]);
+                }
             }
         }
     }
+
     // Check that the signature matches
     vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
