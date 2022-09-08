@@ -53,7 +53,6 @@ std::vector<Function> FunctionRegistry::Initialize()
             if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL) {
                 functionNullRegistry->insert(std::make_pair(&signature, &function));
             }
-
         }
     }
 
@@ -77,19 +76,17 @@ bool FunctionRegistry::LookupNullFunction(FunctionSignature *signature)
     auto signatureNull = FunctionSignature(signature->GetName() + "_null", signature->GetParams(),
         signature->GetReturnType(), signature->GetFunctionAddress());
     auto result = functionNullRegistry->find(&signatureNull);
-    if (result == functionNullRegistry->end()) {
-        return false;
-    }
-    return true;
+    return result != functionNullRegistry->end();
 }
 
+// Some functions such as CastDecimal128ToStringRetNull(), it needs both contextPtr and overflowConfig as parameters.
+// The purpose of the below function is to find this functions.
 bool FunctionRegistry::IsNullExecutionContextSet(FunctionSignature *signature)
 {
     auto signatureNull = FunctionSignature(signature->GetName() + "_null", signature->GetParams(),
         signature->GetReturnType(), signature->GetFunctionAddress());
     auto result = functionNullRegistry->find(&signatureNull);
     return result->second->IsExecutionContextSet();
-
 }
 
 std::vector<Function> &FunctionRegistry::GetFunctions()

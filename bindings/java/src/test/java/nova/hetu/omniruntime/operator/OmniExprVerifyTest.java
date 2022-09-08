@@ -30,7 +30,7 @@ public class OmniExprVerifyTest {
         DataType[] inputTypes = {new Decimal128DataType(21, 5)};
         List<String> projectionsJSON = ImmutableList
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"precision\":21,\"scale\":5,\"colVal\":0}");
-        String filterJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
+        String filterJSON = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN_THAN\","
                 + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0,"
                 + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":6,"
                 + "\"precision\":10,\"scale\":5,\"isNull\":false,\"value\":2000}}";

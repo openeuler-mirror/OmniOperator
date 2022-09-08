@@ -142,20 +142,20 @@ TEST(DecimalOperations, unscaled_decimal)
 
 TEST(DecimalOperations, divide)
 {
-    Decimal128 dividend(Decimal128::SIGN_LONG_MASK, 2000000000001635618);
+    Decimal128 dividend(Decimal128::SIGN_LONG_MASK, 200'0000'0000'0163'5618);
     Decimal128 divisor(0, 4);
     Decimal128 result;
     DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0, result);
     int64_t low = result.LowBits();
     int64_t shortResult = DecimalOperations::IsNegative(result) ? -low : low;
-    int64_t expectedVal = -500000000000408905;
+    int64_t expectedVal = -50'0000'0000'0040'8905;
     EXPECT_EQ(expectedVal, shortResult);
 }
 
 TEST(DecimalOperations, divide_unsigned)
 {
-    int64_t dividend = 78340625600;
-    int64_t divisor = -1565666771;
+    int64_t dividend = 783'4062'5600;
+    int64_t divisor = -15'6566'6771;
     int64_t quotient = DecimalOperations::DivideUnsignedLong(dividend, divisor);
     EXPECT_EQ(28, quotient);
 }
@@ -189,94 +189,70 @@ TEST(DecimalOperations, rescale_decimal64_to_128)
 TEST(DecimalOperations, rescale_decimal128_round_to_zero_when_rescale_larger_than_0)
 {
     Decimal128 input;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale1, precision1);
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale, precision);
     Decimal128 output;
     int32_t rescale = 5;
     auto status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
     EXPECT_EQ(status, SUCCESS);
     Decimal128 expect;
-    int32_t precision2 = 0;
-    int32_t scale2 = 0;
-    DecimalOperations::StringToDecimal128("123456789123456789123400000", expect, scale2, precision2);
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("123456789123456789123400000", expect, scale, precision);
     EXPECT_EQ(expect, output);
-}
-
-TEST(DecimalOperations, rescale_decimal128_round_to_zero_when_rescale_small_than_0)
-{
-    Decimal128 input;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale1, precision1);
-    Decimal128 output;
-    int32_t rescale = -5;
-    auto status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
-    EXPECT_EQ(status, SUCCESS);
-    Decimal128 expect;
-    int32_t precision2 = 0;
-    int32_t scale2 = 0;
-    DecimalOperations::StringToDecimal128("12345678912345678", expect, scale2, precision2);
-    EXPECT_EQ(expect, output);
-}
-
-TEST(DecimalOperations, rescale_decimal128_round_to_zero_when_rescale_equal_to_0)
-{
-    Decimal128 input;
-    int32_t precision = 0;
-    int32_t scale = 0;
+    precision = 0;
+    scale = 0;
     DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale, precision);
-    Decimal128 output;
-    int32_t rescale = 0;
-    auto status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
+    rescale = -5;
+    status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("12345678912345678", expect, scale, precision);
+    EXPECT_EQ(expect, output);
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale, precision);
+    rescale = 0;
+    status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
     EXPECT_EQ(status, SUCCESS);
     EXPECT_EQ(input, output);
 }
 
 TEST(DecimalOperations, rescale_decimal64_round_to_zero_when_rescale_larger_than_0)
 {
-    int64_t input = 123456789123L;
+    int64_t input = 1234'5678'9123L;
     int64_t output;
     int32_t rescale = 5;
     auto status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
     EXPECT_EQ(status, SUCCESS);
-    int64_t expect = 12345678912300000L;
+    int64_t expect = 1'2345'6789'1230'0000L;
     EXPECT_EQ(expect, output);
-}
-
-TEST(DecimalOperations, rescale_decimal64_round_to_zero_when_rescale_small_than_0)
-{
-    int64_t input = 123456789123L;
-    int64_t output;
-    int32_t rescale = -5;
-    auto status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
+    input = 1234'5678'9123L;
+    rescale = -5;
+    status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
     EXPECT_EQ(status, SUCCESS);
-    int64_t expect = 1234567L;
+    expect = 1234567L;
     EXPECT_EQ(expect, output);
-}
-
-TEST(DecimalOperations, rescale_decimal64_round_to_zero_when_rescale_equal_to_0)
-{
-    int64_t input;
     int32_t precision = 0;
     int32_t scale = 0;
     DecimalOperations::StringToDecimal64("123456789123", input, scale, precision);
-    int64_t output;
-    int32_t rescale = 0;
-    auto status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
+    rescale = 0;
+    status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
     EXPECT_EQ(status, SUCCESS);
     EXPECT_EQ(input, output);
 }
 
 TEST(DecimalOperations, is_unscaled_long_overflow)
 {
-    int64_t deci1 = 1000000000000000000L;
+    int64_t deci1 = 100'0000'0000'0000'0000L;
     EXPECT_TRUE(DecimalOperations::IsUnscaledLongOverflow(deci1, 16, 2));
     EXPECT_TRUE(DecimalOperations::IsUnscaledLongOverflow(-deci1, 16, 2));
     EXPECT_FALSE(DecimalOperations::IsUnscaledLongOverflow(deci1, 19, 2));
     EXPECT_FALSE(DecimalOperations::IsUnscaledLongOverflow(-deci1, 19, 2));
 
-    int64_t deci2 = 100000000000000000L;
+    int64_t deci2 = 10'0000'0000'0000'0000L;
     EXPECT_TRUE(DecimalOperations::IsUnscaledLongOverflow(deci2, 17, 2));
     EXPECT_TRUE(DecimalOperations::IsUnscaledLongOverflow(-deci2, 17, 2));
     EXPECT_FALSE(DecimalOperations::IsUnscaledLongOverflow(deci2, 18, 2));

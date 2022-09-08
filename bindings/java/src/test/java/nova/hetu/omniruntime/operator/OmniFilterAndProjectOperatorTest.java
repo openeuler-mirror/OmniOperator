@@ -1458,7 +1458,7 @@ public class OmniFilterAndProjectOperatorTest {
                 .of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"precision\":21,\"scale\":5,\"colVal\":0}");
 
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\","
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN_THAN\","
                         + "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":0,"
                         + "\"precision\":21,\"scale\":5},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":6,"
                         + "\"precision\":9,\"scale\":5,\"isNull\":false,\"value\":2000}}",

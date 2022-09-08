@@ -187,6 +187,10 @@ std::pair<OperatorConfig, OverflowConfig *> OperatorConfig::DeserializeOperatorA
                 new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes, numElementsForSpillThreshold);
             break;
         }
+        default: {
+            LogWarn("Unsupported spillConfigId %d", spillConfigId);
+            break;
+        }
     }
     auto overflowConfigId = result.at("overflowConfig").at("overflowConfigId").get<OverflowConfigId>();
     return std::make_pair(OperatorConfig { resultSpillConfig }, new OverflowConfig(overflowConfigId));

@@ -38,6 +38,24 @@ Decimal128::Decimal128(__int128_t value)
     }
 }
 
+Decimal128::Decimal128(const std::string& s)
+{
+    __int128_t value = 0;
+    for (char i : s) {
+        if (isdigit(i)) {
+            value *= 10;
+            value += i - '0';
+        }
+    }
+    if (value >= 0) {
+        highBits = static_cast<int64_t>(value >> 64);
+        lowBits = static_cast<uint64_t>(value);
+    } else {
+        value = -value;
+        highBits = static_cast<int64_t>(value >> 64) ^ (1L << 63);
+        lowBits = static_cast<uint64_t>(value);
+    }
+}
 // All comparing operator remains due to template function
 bool Decimal128::operator == (const Decimal128 &right) const
 {

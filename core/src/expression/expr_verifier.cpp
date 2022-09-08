@@ -86,18 +86,6 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         return;
     }
 
-    if ((TypeUtil::IsDecimalType(leftType.GetId()) && TypeUtil::IsDecimalType(rightType.GetId())) &&
-        (leftType.GetId() != rightType.GetId()) &&
-        (binaryExpr.op == omniruntime::expressions::Operator::LT ||
-         binaryExpr.op == omniruntime::expressions::Operator::LTE ||
-         binaryExpr.op == omniruntime::expressions::Operator::GT ||
-         binaryExpr.op == omniruntime::expressions::Operator::GTE ||
-         binaryExpr.op == omniruntime::expressions::Operator::EQ ||
-         binaryExpr.op == omniruntime::expressions::Operator::NEQ)) {
-        this->supportedFlag = false;
-        return;
-    }
-
     if (!VisitExpr(*(binaryExpr.left))) {
         this->supportedFlag = false;
         return;

@@ -21,6 +21,8 @@ public:
 
     Decimal128(__int128_t value);
 
+    Decimal128(const std::string& s);
+
     Decimal128() : Decimal128(0, 0) {}
 
     Decimal128(const Decimal128 &rhs) = default;

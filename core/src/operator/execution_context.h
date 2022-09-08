@@ -36,6 +36,11 @@ public:
         return errorMessage;
     }
 
+    void SetError()
+    {
+        hasError = false;
+    }
+
 private:
     mem::SimpleArenaAllocator arena;
     bool hasError = false;

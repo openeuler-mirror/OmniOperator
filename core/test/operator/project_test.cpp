@@ -3642,7 +3642,6 @@ TEST(ProjectionTest, ProjectMulDecimal64)
     op->GetOutput(ret);
     bool isNull = (ret[0]->GetVector(0))->IsValueNull(0);
     EXPECT_EQ(isNull, true);
-    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);

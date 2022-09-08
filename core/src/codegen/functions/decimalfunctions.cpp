@@ -4,10 +4,10 @@
  */
 #include <cmath>
 #include <iomanip>
-#include "decimalfunctions.h"
 #include "context_helper.h"
 #include "type/decimal_operations.h"
 #include "util/engine.h"
+#include "decimalfunctions.h"
 
 using namespace omniruntime::type;
 using namespace std;
@@ -80,7 +80,8 @@ extern "C" DLLEXPORT int32_t Decimal64Compare(int64_t x, int32_t xPrecision, int
     return 0;
 }
 
-extern "C" DLLEXPORT int64_t AbsDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, bool isNull, int32_t outPrecision,
+extern "C" DLLEXPORT int64_t AbsDecimal64(int64_t x, int32_t xPrecision, int32_t xScale, bool isNull,
+    int32_t outPrecision,
     int32_t outScale)
 {
     return std::abs(x);
@@ -388,16 +389,8 @@ extern "C" DLLEXPORT void MulDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     Decimal128 result;
     Decimal128 left(xHigh, xLow);
     Decimal128 right(yHigh, yLow);
-    OpStatus status = DecimalOperations::Multiply(left, right, result);
     int32_t reScale = xScale + yScale;
-    if (status == SUCCESS && reScale != outScale) {
-        if (DecimalOperations::Rescale128(result, outScale - reScale, result) == SUCCESS) {
-            status = DecimalOperations::IsOverflows(result, outPrecision);
-        } else {
-            status = OP_OVERFLOW;
-        }
-    }
-
+    OpStatus status = DecimalOperations::Multiply256(left, right, result, reScale - outScale);
     if (status != SUCCESS) {
         char message[] = "Decimal overflow";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
@@ -625,7 +618,8 @@ extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     int32_t resultScale;
     OpStatus status =
         DecimalOperations::InternalModDec128(Decimal128(x), xScale, Decimal128(y), yScale, resultScale, resultDecimal);
-    result = static_cast<int64_t>(resultDecimal.LowBits());
+    result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits())
+        : static_cast<int64_t>(resultDecimal.LowBits());
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {
             status = DecimalOperations::IsOverflows(result, outPrecision);
@@ -656,7 +650,8 @@ extern "C" DLLEXPORT int64_t ModDec64Dec128Dec64(int64_t contextPtr, int64_t x, 
     int32_t resultScale;
     OpStatus status = DecimalOperations::InternalModDec128(Decimal128(x), xScale, Decimal128(yHigh, yLow), yScale,
         resultScale, resultDecimal);
-    result = static_cast<int64_t>(resultDecimal.LowBits());
+    result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits())
+        : static_cast<int64_t>(resultDecimal.LowBits());
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {
             status = DecimalOperations::IsOverflows(result, outPrecision);
@@ -686,7 +681,8 @@ extern "C" DLLEXPORT int64_t ModDec128Dec64Dec64(int64_t contextPtr, int64_t xHi
     int32_t resultScale;
     OpStatus status = DecimalOperations::InternalModDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale,
         resultScale, resultDecimal);
-    result = static_cast<int64_t>(resultDecimal.LowBits());
+    result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits())
+        : static_cast<int64_t>(resultDecimal.LowBits());
 
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {
@@ -832,7 +828,8 @@ extern "C" DLLEXPORT void ModDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
 }
 
 // Cast Function
-extern "C" DLLEXPORT int64_t CastDecimal64To64(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale, bool isNull,
+extern "C" DLLEXPORT int64_t CastDecimal64To64(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
+    bool isNull,
     int32_t newPrecision, int32_t newScale)
 {
     int64_t result;
@@ -874,7 +871,8 @@ extern "C" DLLEXPORT void CastDecimal128To128(int64_t contextPtr, int64_t xHigh,
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void CastDecimal64To128(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale, bool isNull,
+extern "C" DLLEXPORT void CastDecimal64To128(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
+    bool isNull,
     int32_t newPrecision, int32_t newScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     int32_t scaleDelta = newScale - scale;
@@ -920,7 +918,8 @@ extern "C" DLLEXPORT int64_t CastDecimal128To64(int64_t contextPtr, int64_t xHig
     return result;
 }
 
-extern "C" DLLEXPORT int64_t CastIntToDecimal64(int64_t contextPtr, int32_t x, bool isNull, int32_t precision, int32_t scale)
+extern "C" DLLEXPORT int64_t CastIntToDecimal64(int64_t contextPtr, int32_t x, bool isNull, int32_t precision,
+    int32_t scale)
 {
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     int64_t result = 0;
@@ -938,7 +937,8 @@ extern "C" DLLEXPORT int64_t CastIntToDecimal64(int64_t contextPtr, int32_t x, b
     return result;
 }
 
-extern "C" DLLEXPORT int64_t CastLongToDecimal64(int64_t contextPtr, int64_t x, bool isNull, int32_t outPrecision, int32_t outScale)
+extern "C" DLLEXPORT int64_t CastLongToDecimal64(int64_t contextPtr, int64_t x, bool isNull, int32_t outPrecision,
+    int32_t outScale)
 {
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(outScale).LowBits());
     int64_t result = 0;
@@ -956,7 +956,8 @@ extern "C" DLLEXPORT int64_t CastLongToDecimal64(int64_t contextPtr, int64_t x, 
     return result;
 }
 
-extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(int64_t contextPtr, double x, bool isNull, int32_t outPrecision, int32_t outScale)
+extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(int64_t contextPtr, double x, bool isNull, int32_t outPrecision,
+    int32_t outScale)
 {
     std::stringstream ss;
     ss << std::setprecision(15) << x;
@@ -983,7 +984,8 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(int64_t contextPtr, double x,
     return result;
 }
 
-extern "C" DLLEXPORT void CastIntToDecimal128(int64_t contextPtr, int32_t x, bool isNull, int32_t outPrecision, int32_t outScale,
+extern "C" DLLEXPORT void CastIntToDecimal128(int64_t contextPtr, int32_t x, bool isNull, int32_t outPrecision,
+    int32_t outScale,
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128 result;
@@ -1004,7 +1006,8 @@ extern "C" DLLEXPORT void CastIntToDecimal128(int64_t contextPtr, int32_t x, boo
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void CastLongToDecimal128(int64_t contextPtr, int64_t x, bool isNull, int32_t outPrecision, int32_t outScale,
+extern "C" DLLEXPORT void CastLongToDecimal128(int64_t contextPtr, int64_t x, bool isNull, int32_t outPrecision,
+    int32_t outScale,
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128 result;
@@ -1028,7 +1031,8 @@ extern "C" DLLEXPORT void CastLongToDecimal128(int64_t contextPtr, int64_t x, bo
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, bool isNull, int32_t outPrecision, int32_t outScale,
+extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, bool isNull, int32_t outPrecision,
+    int32_t outScale,
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     std::stringstream ss;
@@ -1060,7 +1064,8 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, b
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale, bool isNull)
+extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
+    bool isNull)
 {
     if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
         int64_t scaledValue = 0;
@@ -1119,7 +1124,6 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHi
         return outDecimal.HighBits() < 0 ? -result : result;
     }
 
-
     DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t longValue;
     OpStatus statusDecimal = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, longValue);
@@ -1162,7 +1166,8 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
     return result;
 }
 
-extern "C" DLLEXPORT double CastDecimal128ToDouble(int64_t high, uint64_t low, int32_t precision, int32_t scale, bool isNull)
+extern "C" DLLEXPORT double CastDecimal128ToDouble(int64_t high, uint64_t low, int32_t precision, int32_t scale,
+    bool isNull)
 {
     Decimal128 input(high, low);
     string doubleString = DecimalOperations::ScaleOfDecimal(input.ToString(), scale);
@@ -1461,16 +1466,8 @@ extern "C" DLLEXPORT void MulDec128Dec128Dec128RetNull(bool *isNull, int64_t xHi
     Decimal128 result;
     Decimal128 left(xHigh, xLow);
     Decimal128 right(yHigh, yLow);
-    OpStatus status = DecimalOperations::Multiply(left, right, result);
     int32_t reScale = xScale + yScale;
-    if (status == SUCCESS && reScale != outScale) {
-        if (DecimalOperations::Rescale128(result, outScale - reScale, result) == SUCCESS) {
-            status = DecimalOperations::IsOverflows(result, outPrecision);
-        } else {
-            status = OP_OVERFLOW;
-        }
-    }
-
+    OpStatus status = DecimalOperations::Multiply256(left, right, result, reScale - outScale);
     if (status != SUCCESS) {
         *isNull = true;
     }
@@ -1680,7 +1677,8 @@ extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64RetNull(bool *isNull, int64_t x, 
     int32_t resultScale;
     OpStatus status =
         DecimalOperations::InternalModDec128(Decimal128(x), xScale, Decimal128(y), yScale, resultScale, resultDecimal);
-    result = static_cast<int64_t>(resultDecimal.LowBits());
+    result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits())
+        : static_cast<int64_t>(resultDecimal.LowBits());
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {
             status = DecimalOperations::IsOverflows(result, outPrecision);
@@ -1709,7 +1707,8 @@ extern "C" DLLEXPORT int64_t ModDec64Dec128Dec64RetNull(bool *isNull, int64_t x,
     int32_t resultScale;
     OpStatus status = DecimalOperations::InternalModDec128(Decimal128(x), xScale, Decimal128(yHigh, yLow), yScale,
         resultScale, resultDecimal);
-    result = static_cast<int64_t>(resultDecimal.LowBits());
+    result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits())
+        : static_cast<int64_t>(resultDecimal.LowBits());
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {
             status = DecimalOperations::IsOverflows(result, outPrecision);
@@ -1737,7 +1736,8 @@ extern "C" DLLEXPORT int64_t ModDec128Dec64Dec64RetNull(bool *isNull, int64_t xH
     int32_t resultScale;
     OpStatus status = DecimalOperations::InternalModDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale,
         resultScale, resultDecimal);
-    result = static_cast<int64_t>(resultDecimal.LowBits());
+    result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits())
+        : static_cast<int64_t>(resultDecimal.LowBits());
 
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {

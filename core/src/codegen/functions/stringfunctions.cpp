@@ -57,18 +57,23 @@ extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regex
     string s = string(str, strLen);
     string r = string(regexToMatch, regexLen);
 
-    regex re = regex(r);
-    return regex_match(s, re);
+    wregex re(ToWideString(r));
+    return regex_match(ToWideString(s), re);
 }
 
 extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
     int32_t regexLen, bool isNull)
 {
-    string s = string(str, strWidth);
+    int32_t paddingCount = strWidth - omniruntime::Utf8Util::CountCodePoints(str, strLen);
+    string originalStr;
+    originalStr.reserve(strLen + paddingCount);
+    originalStr.append(str, strLen);
+    for (int i = 0; i < paddingCount; i++) {
+        originalStr.append(" ");
+    }
     string r = string(regexToMatch, regexLen);
-
-    regex re = regex(r);
-    return regex_match(s, re);
+    wregex re(ToWideString(r));
+    return regex_match(ToWideString(originalStr), re);
 }
 
 extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
@@ -83,12 +88,13 @@ extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, in
         return "";
     }
 
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
-    errno_t res2 = memcpy_s(ret + apLen, *outLen, bp, bpLen);
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+    errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
     if (res1 != EOK || res2 != EOK) {
-        char message[] = "Concat failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -100,20 +106,21 @@ extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, 
     if (isNull) {
         return nullptr;
     }
-    *outLen = aWidth + bWidth;
+    int32_t aPaddingCount = bpLen > 0 ? aWidth - omniruntime::Utf8Util::CountCodePoints(ap, apLen) : 0;
+    *outLen = apLen + aPaddingCount + bpLen;
     if (*outLen <= 0) {
         *outLen = 0;
         return "";
     }
 
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
-    errno_t res2 = memset_s(ret + apLen, *outLen, ' ', aWidth - apLen);
-    errno_t res3 = memcpy_s(ret + aWidth, *outLen, bp, bpLen);
-    errno_t res4 = memset_s(ret + aWidth + bpLen, *outLen, ' ', bWidth - bpLen);
-    if (res1 != EOK || res2 != EOK || res3 != EOK || res4 != EOK) {
-        char message[] = "Concat failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+    errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
+    errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
+    if (res1 != EOK || res2 != EOK || res3 != EOK) {
+        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -125,19 +132,21 @@ extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, i
     if (isNull) {
         return nullptr;
     }
-    *outLen = aWidth + bpLen;
+    int32_t aPaddingCount = bpLen > 0 ? aWidth - omniruntime::Utf8Util::CountCodePoints(ap, apLen) : 0;
+    *outLen = apLen + aPaddingCount + bpLen;
     if (*outLen <= 0) {
         *outLen = 0;
         return "";
     }
 
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
-    errno_t res2 = memset_s(ret + apLen, *outLen, ' ', aWidth - apLen);
-    errno_t res3 = memcpy_s(ret + aWidth, *outLen, bp, bpLen);
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+    errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
+    errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
     if (res1 != EOK || res2 != EOK || res3 != EOK) {
-        char message[] = "Concat failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -149,19 +158,19 @@ extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, i
     if (isNull) {
         return nullptr;
     }
-    *outLen = apLen + bWidth;
+    *outLen = apLen + bpLen;
     if (*outLen <= 0) {
         *outLen = 0;
         return "";
     }
 
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
-    errno_t res2 = memcpy_s(ret + apLen, *outLen, bp, bpLen);
-    errno_t res3 = memset_s(ret + apLen + bpLen, *outLen, ' ', bWidth - bpLen);
-    if (res1 != EOK || res2 != EOK || res3 != EOK) {
-        char message[] = "Concat failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+    errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
+    if (res1 != EOK || res2 != EOK) {
+        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -199,7 +208,8 @@ extern DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *str, i
     return static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
 }
 
-extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull, int32_t *outLen)
+extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -217,7 +227,8 @@ extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int
     return ret;
 }
 
-extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, bool isNull,
+extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+    bool isNull,
     int32_t *outLen)
 {
     if (isNull) {
@@ -226,7 +237,8 @@ extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, in
     return ToUpperStr(contextPtr, str, strLen, isNull, outLen);
 }
 
-extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull, int32_t *outLen)
+extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -244,7 +256,8 @@ extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int
     return ret;
 }
 
-extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, bool isNull,
+extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+    bool isNull,
     int32_t *outLen)
 {
     if (isNull) {
@@ -261,12 +274,22 @@ extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strL
     return width;
 }
 
+extern DLLEXPORT int32_t LengthCharReturnInt32(const char *str, int32_t width, int32_t strLen, bool isNull)
+{
+    return width;
+}
+
+extern DLLEXPORT int32_t LengthStrReturnInt32(const char *str, int32_t strLen, bool isNull)
+{
+    return omniruntime::Utf8Util::CountCodePoints(str, strLen);
+}
+
 extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen, bool isNull)
 {
     if (isNull) {
         return 0;
     }
-    return strLen;
+    return omniruntime::Utf8Util::CountCodePoints(str, strLen);
 }
 
 extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
@@ -278,30 +301,38 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (searchLen == 0 && engineType == EngineType::Spark) {
         *outLen = strLen;
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         errno_t res = memcpy_s(ret, *outLen + 1, str, strLen);
         if (res != EOK) {
-            char message[] = "Replace failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
             return nullptr;
         }
         return ret;
     } else if (searchLen == 0) {
-        *outLen = strLen + (strLen + 1) * replaceLen;
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-        for (int32_t index = 0; index < strLen; index++) {
-            errno_t res1 = memcpy_s(ret + (replaceLen + 1) * index, *outLen + 1, replaceStr, replaceLen);
-            errno_t res2 = memcpy_s(ret + (replaceLen + 1) * index + replaceLen, *outLen + 1, str + index, 1);
-            if (res1 != EOK || res2 != EOK) {
-                char message[] = "Replace failed";
-                SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        int32_t strCodePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
+        *outLen = strLen + (strCodePoints + 1) * replaceLen;
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        int32_t indexBuffer = 0;
+        errno_t res;
+        for (int32_t index = 0; index < strLen;) {
+            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
+            if (res != EOK) {
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
                 return nullptr;
             }
+            indexBuffer += replaceLen;
+            int32_t codePointLength = omniruntime::Utf8Util::LengthOfCodePoint(*(str + index));
+            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, str + index, codePointLength);
+            if (res != EOK) {
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                return nullptr;
+            }
+            indexBuffer += codePointLength;
+            index += codePointLength;
         }
-        errno_t res = memcpy_s(ret + (replaceLen + 1) * strLen, *outLen + 1, replaceStr, replaceLen);
+        res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
         if (res != EOK) {
-            char message[] = "Replace failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
             return nullptr;
         }
         return ret;
@@ -331,8 +362,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
     if (res != EOK) {
-        char message[] = "Replace failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -346,6 +376,7 @@ extern DLLEXPORT const char *ReplaceStrStrWithoutRep(int64_t contextPtr, const c
     }
     return ReplaceStrStrStrWithRep(contextPtr, str, strLen, searchStr, searchLen, "", 0, isNull, outLen);
 }
+
 // Cast numeric type to string
 extern DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t value, bool isNull, int32_t *outLen)
 {
@@ -353,7 +384,7 @@ extern DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t value, 
         return nullptr;
     }
     string str = to_string(value);
-    *outLen = static_cast<int32_t>(str.size()) + 1;
+    *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
@@ -370,7 +401,7 @@ extern DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value,
         return nullptr;
     }
     string str = to_string(value);
-    *outLen = static_cast<int32_t>(strlen(str.c_str())) + 1;
+    *outLen = static_cast<int32_t>(strlen(str.c_str()));
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
@@ -391,7 +422,7 @@ extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value
     ostringstream oss;
     oss.precision(precision);
     oss << value;
-    *outLen = static_cast<int32_t>(oss.str().size()) + 1;
+    *outLen = static_cast<int32_t>(oss.str().size());
     if (ceil(value) == floor(value)) {
         int appendLength = 2;
         *outLen = *outLen + appendLength;
@@ -408,14 +439,15 @@ extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value
     return ret;
 }
 
-extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale, bool isNull,
+extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
+    bool isNull,
     int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
     }
     string str = DecimalOperations::ScaleOfDecimal(to_string(x), scale);
-    *outLen = static_cast<int32_t>(str.size()) + 1;
+    *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
@@ -434,7 +466,7 @@ extern DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t 
     }
     Decimal128 inputDecimal(high, low);
     string stringDecimal = DecimalOperations::ScaleOfDecimal(inputDecimal.ToString(), scale);
-    *outLen = static_cast<int32_t>(stringDecimal.length() + 1);
+    *outLen = static_cast<int32_t>(stringDecimal.length());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
     if (res != EOK) {
@@ -445,7 +477,8 @@ extern DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t 
     return ret;
 }
 
-extern DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *str, int32_t strLen, bool isNull, int32_t *outLen)
+extern DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -583,11 +616,12 @@ extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *s
     return result;
 }
 
-extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull, int32_t outPrecision,
+extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (isNull) {
-        return ;
+        return;
     }
     string s = string(str, strLen);
     Decimal128 result;
@@ -732,7 +766,7 @@ extern DLLEXPORT int32_t CastStringToDateRetNull(bool *isNull, const char *str, 
 extern DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value, int32_t *outLen)
 {
     string str = to_string(value);
-    *outLen = static_cast<int32_t>(str.size()) + 1;
+    *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
@@ -745,7 +779,7 @@ extern DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *is
 extern DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *isNull, int64_t value, int32_t *outLen)
 {
     string str = to_string(value);
-    *outLen = static_cast<int32_t>(strlen(str.c_str())) + 1;
+    *outLen = static_cast<int32_t>(strlen(str.c_str()));
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
@@ -762,7 +796,7 @@ extern DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool 
     ostringstream oss;
     oss.precision(precision);
     oss << value;
-    *outLen = static_cast<int32_t>(oss.str().size()) + 1;
+    *outLen = static_cast<int32_t>(oss.str().size());
     if (ceil(value) == floor(value)) {
         int appendLength = 2;
         *outLen = *outLen + appendLength;
@@ -778,12 +812,11 @@ extern DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool 
     return ret;
 }
 
-extern DLLEXPORT const char *
-CastDecimal64ToStringRetNull(int64_t contextPtr, bool *isNull, int64_t x, int32_t precision,
-    int32_t scale, int32_t *outLen)
+extern DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr, bool *isNull, int64_t x,
+    int32_t precision, int32_t scale, int32_t *outLen)
 {
     string str = DecimalOperations::ScaleOfDecimal(to_string(x), scale);
-    *outLen = static_cast<int32_t>(str.size()) + 1;
+    *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
@@ -798,7 +831,7 @@ extern DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPtr, b
 {
     Decimal128 inputDecimal(high, low);
     string stringDecimal = DecimalOperations::ScaleOfDecimal(inputDecimal.ToString(), scale);
-    *outLen = static_cast<int32_t>(stringDecimal.length() + 1);
+    *outLen = static_cast<int32_t>(stringDecimal.length());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
     if (res != EOK) {

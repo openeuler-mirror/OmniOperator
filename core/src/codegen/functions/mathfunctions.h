@@ -118,8 +118,4 @@ template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
     return std::round(num * factor) / factor;
 }
 
-extern "C" DLLEXPORT double OverflowThrowException(int64_t contextPtr, int x);
-
-extern "C" DLLEXPORT double OverflowReturnNull(int x, bool *isNull);
-
 #endif

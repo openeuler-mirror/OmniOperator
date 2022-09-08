@@ -1794,7 +1794,7 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
             this->value = make_shared<CodeGenValue>(ret, finalNull, outputLen);
             return;
         } else {
-            LogWarn("Unable to generate function : %s", fExpr.funcName.c_str());
+            LogError("Unable to generate function : %s", fExpr.funcName.c_str());
             this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
             return;
         }

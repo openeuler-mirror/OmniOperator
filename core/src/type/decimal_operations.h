@@ -35,69 +35,69 @@ static constexpr int64_t INT_BASE = 1L << 32;
 static constexpr int MAX_PRECISION = 38;
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 static std::array<int64_t, 14> POWERS_OF_FIVE_INT = { 1,
-                                                      5,
-                                                      5 * 5,
-                                                      5 * 5 * 5,
-                                                      5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 };
+    5,
+    5 * 5,
+    5 * 5 * 5,
+    5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 };
 static std::array<int64_t, 28> POWERS_OF_FIVE_LONG = { 1,
-                                                       5,
-                                                       5 * 5,
-                                                       5 * 5 * 5,
-                                                       5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L *
-    5L };
+    5,
+    5 * 5,
+    5 * 5 * 5,
+    5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L *
+        5L };
 
 static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
-        1,                     // 0 / 10^0
-        10,                    // 1 / 10^1
-        100,                   // 2 / 10^2
-        1000,                  // 3 / 10^3
-        10000,                 // 4 / 10^4
-        100000,                // 5 / 10^5
-        1000000,               // 6 / 10^6
-        10000000,              // 7 / 10^7
-        100000000,             // 8 / 10^8
-        1000000000,            // 9 / 10^9
-        10000000000L,          // 10 / 10^10
-        100000000000L,         // 11 / 10^11
-        1000000000000L,        // 12 / 10^12
-        10000000000000L,       // 13 / 10^13
-        100000000000000L,      // 14 / 10^14
-        1000000000000000L,     // 15 / 10^15
-        10000000000000000L,    // 16 / 10^16
-        100000000000000000L,   // 17 / 10^17
-        1000000000000000000L   // 18 / 10^18
+    1,                     // 0 / 10^0
+    10,                    // 1 / 10^1
+    100,                   // 2 / 10^2
+    1000,                  // 3 / 10^3
+    10000,                 // 4 / 10^4
+    100000,                // 5 / 10^5
+    1000000,               // 6 / 10^6
+    10000000,              // 7 / 10^7
+    100000000,             // 8 / 10^8
+    1000000000,            // 9 / 10^9
+    10000000000L,          // 10 / 10^10
+    100000000000L,         // 11 / 10^11
+    1000000000000L,        // 12 / 10^12
+    10000000000000L,       // 13 / 10^13
+    100000000000000L,      // 14 / 10^14
+    1000000000000000L,     // 15 / 10^15
+    10000000000000000L,    // 16 / 10^16
+    100000000000000000L,   // 17 / 10^17
+    1000000000000000000L   // 18 / 10^18
 };
 
 static std::array<__int128_t, MAX_PRECISION> GetPowersOfTen()
@@ -189,6 +189,22 @@ public:
             }
         }
         return overflow;
+    }
+
+    static inline int64_t Pow64TenToScale(int64_t x, int32_t reScale)
+    {
+        if (reScale > 0) {
+            while (reScale > 0) {
+                reScale--;
+                x *= 10;
+            }
+        } else if (reScale < 0) {
+            while (reScale < 0) {
+                reScale++;
+                x /= 10;
+            }
+        }
+        return x;
     }
 
     static inline int64_t GetLong(Decimal128 &decimal, int32_t index)
@@ -290,80 +306,24 @@ public:
         bool rightNegative = right.HighBits() < 0;
         int64_t leftLow = left.LowBits();
         int64_t leftRight = left.HighBits();
-        int64_t l0 = ToUnsignedLong(leftLow & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
-        int64_t l1 = ToUnsignedLong((leftLow >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
-        int64_t l2 = ToUnsignedLong(leftRight & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
-        int64_t l3 =
-            ToUnsignedLong(((leftRight >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK) & ~Decimal128::SIGN_INT_MASK);
 
-        int64_t rightLow = right.LowBits();
-        int64_t rightHigh = right.HighBits();
-        int64_t r0 = ToUnsignedLong(rightLow & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
-        int64_t r1 = ToUnsignedLong((rightLow >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
-        int64_t r2 = ToUnsignedLong(rightHigh & Decimal128::INT_TO_UNSIGNED_LONG_MASK);
-        int64_t r3 =
-            ToUnsignedLong(((rightHigh >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK) & ~Decimal128::SIGN_INT_MASK);
 
-        int64_t z0 = 0, z1 = 0, z2 = 0, z3 = 0, z4 = 0, z5 = 0, z6 = 0, z7 = 0;
-
-        if (l0 != 0) {
-            int64_t accumulator = r0 * l0;
-            z0 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r1 * l0;
-            z1 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r2 * l0;
-            z2 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r3 * l0;
-
-            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            z4 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-        }
-
-        if (l1 != 0) {
-            int64_t accumulator = r0 * l1 + z1;
-            z1 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r1 * l1 + z2;
-            z2 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r2 * l1 + z3;
-            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r3 * l1 + z4;
-            z4 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            z5 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-        }
-
-        if (l2 != 0) {
-            int64_t accumulator = r0 * l2 + z2;
-            z2 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r1 * l2 + z3;
-            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r2 * l2 + z4;
-            z4 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r3 * l3 + z5;
-            z5 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            z6 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-        }
-
-        if (l3 != 0) {
-            int64_t accumulator = r0 * l3 + z3;
-            z3 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r1 * l3 + z4;
-            z4 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r2 * l3 + z5;
-            z5 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            accumulator = ((uint64_t)accumulator >> 32) + r3 * l3 + z6;
-            z6 = accumulator & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-            z7 = ((uint64_t)accumulator >> 32) & Decimal128::INT_TO_UNSIGNED_LONG_MASK;
-        }
-
-        std::vector<int32_t> resultInts = { (int32_t)z0, (int32_t)z1, (int32_t)z2, (int32_t)z3,
-            (int32_t)z4, (int32_t)z5, (int32_t)z6, (int32_t)z7 };
+        std::vector<int32_t> resultInts = MultiplyUnsignedMultiPrecision(left, right);
         Decimal128 tenToScale = TenToScale(reScale);
+
+        std::vector<int32_t> tenToScaleVector(8);
+        tenToScaleVector[0] = LowInt(tenToScale.LowBits());
+        tenToScaleVector[1] = HighInt(tenToScale.LowBits());
+        tenToScaleVector[2] = LowInt(tenToScale.HighBits());
+        tenToScaleVector[3] = HighInt(tenToScale.HighBits());
+        DivideUnsignedMultiPrecision(tenToScaleVector, static_cast<int32_t>(tenToScaleVector.size()), 2);
+        AddUnsignedMultiPrecision(resultInts, 7, tenToScaleVector, 7);
         Decimal128 remainder(0);
         while (tenToScale.LowBits() != 0) {
             Decimal128 divisor(10000);
             Divide(tenToScale, divisor, 0, 0, tenToScale, remainder);
             if (remainder.LowBits() == 0) {
-                DivideUnsignedMultiPrecision(resultInts, static_cast<int32_t>(resultInts.size()), 1000);
+                DivideUnsignedMultiPrecision(resultInts, static_cast<int32_t>(resultInts.size()), 10000);
             } else {
                 DivideUnsignedMultiPrecision(resultInts, static_cast<int32_t>(resultInts.size()), remainder.LowBits());
             }
@@ -413,7 +373,7 @@ public:
         left[4] = (int32_t)z4;
     }
 
-    static inline OpStatus Multiply256(Decimal128 &left, Decimal128 &right)
+    static inline std::vector<int32_t> MultiplyUnsignedMultiPrecision(Decimal128 &left, Decimal128 &right)
     {
         int64_t leftLow = left.LowBits();
         int64_t leftRight = left.HighBits();
@@ -484,6 +444,12 @@ public:
 
         std::vector<int32_t> resultInts = { (int32_t)z0, (int32_t)z1, (int32_t)z2, (int32_t)z3,
             (int32_t)z4, (int32_t)z5, (int32_t)z6, (int32_t)z7 };
+        return resultInts;
+    }
+
+    static inline OpStatus Multiply256(Decimal128 &left, Decimal128 &right)
+    {
+        std::vector<int32_t> resultInts = MultiplyUnsignedMultiPrecision(left, right);
         return Pack(resultInts, right);
     }
 
@@ -1000,10 +966,9 @@ public:
             if (Pack(dividend, right) != SUCCESS) {
                 return OP_OVERFLOW;
             }
-            if (Multiply256(left, right) != SUCCESS) {
-                return OP_OVERFLOW;
-            }
-            ToIntArray(right, dividend);
+            dividend = MultiplyUnsignedMultiPrecision(left, right);
+            dividend.push_back(0);
+
             ShiftLeftMultiPrecision(dividend, 8, dividendScaleFactor);
         }
 
@@ -1270,7 +1235,7 @@ public:
                 value = value + pow(10, -rescaleFactor) / 2;
             }
         }
-        result = value * pow(10, rescaleFactor);
+        result = Pow64TenToScale(value, rescaleFactor);
         if (((value | static_cast<int64_t>(pow(10, rescaleFactor))) >> 31 != 0)) {
             if ((result / value != static_cast<int64_t>(pow(10, rescaleFactor)))) {
                 return OP_OVERFLOW;
@@ -1291,7 +1256,7 @@ public:
         }
 
         if (rescaleFactor < 0) {
-            int64_t p =  INT64_TEN_POWERS_TABLE[-rescaleFactor];
+            int64_t p = INT64_TEN_POWERS_TABLE[-rescaleFactor];
             result = value / p;
             return SUCCESS;
         } else {
@@ -1313,10 +1278,14 @@ public:
 
     static inline OpStatus Rescale128To64(Decimal128 input, int32_t rescaleFactor, int64_t &result)
     {
+        if (Rescale128(input, rescaleFactor, input) != SUCCESS) {
+            return OP_OVERFLOW;
+        }
         if ((input.HighBits() != 0 && input.HighBits() != 1L << 63) || input.LowBits() > INT64_MAX) {
             return OP_OVERFLOW;
         }
-        return Rescale64(input.HighBits() < 0 ? -input.LowBits() : input.LowBits(), rescaleFactor, result);
+        result = input.HighBits() < 0 ? -input.LowBits() : input.LowBits();
+        return SUCCESS;
     }
 
     static inline OpStatus UnscaledDecimal128ToLong(Decimal128 decimal, int64_t &result)
