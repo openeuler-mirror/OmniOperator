@@ -236,6 +236,10 @@ void ExprVerifier::Visit(const IsNullExpr &isNullExpr)
 
 void ExprVerifier::Visit(const FuncExpr &funcExpr)
 {
+    if (funcExpr.funcName == "LIKE") {
+        this->supportedFlag = false;
+        return;
+    }
     int numArgs = funcExpr.arguments.size();
     for (int i = 0; i < numArgs; i++) {
         if (!VisitExpr(*funcExpr.arguments[i])) {

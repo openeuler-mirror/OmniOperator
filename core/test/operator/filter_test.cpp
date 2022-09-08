@@ -1722,7 +1722,7 @@ TEST(FilterTest, ExternalStringFunc)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ExternalStringFunc");
     VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
 
-    std::string funcStr = "length";
+    std::string funcStr = "stringLength";
     DataTypePtr retType = IntType();
     std::vector<Expr *> args;
     args.push_back(new FieldExpr(0, VarcharType()));

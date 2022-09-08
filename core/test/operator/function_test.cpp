@@ -742,15 +742,15 @@ TEST(FunctionTest, ConcatCharChar)
 
     result = ConcatCharChar(contextptr, "hello", 5, 5, "world", 10, 5, &outlen);
     actual = string(result, outlen);
-    EXPECT_EQ(actual, "helloworld     ");
-    EXPECT_EQ(outlen, 15);
+    EXPECT_EQ(actual, "helloworld");
+    EXPECT_EQ(outlen, 10);
 
     result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 5, 5, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 5, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 10, 5, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
@@ -778,8 +778,8 @@ TEST(FunctionTest, ConcatStrChar)
 
     result = ConcatStrChar(contextptr, "hello", 5, "world", 10, 5, &outlen);
     actual = string(result, outlen);
-    EXPECT_EQ(actual, "helloworld     ");
-    EXPECT_EQ(outlen, 15);
+    EXPECT_EQ(actual, "helloworld");
+    EXPECT_EQ(outlen, 10);
 
     result = ConcatStrChar(contextptr, "hello", 5, "world     ", 10, 10, &outlen);
     actual = string(result, outlen);
@@ -791,7 +791,7 @@ TEST(FunctionTest, ConcatStrChar)
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = ConcatStrChar(contextptr, "hello", 5, "     ", 5, 0, &outlen);
+    result = ConcatStrChar(contextptr, "hello", 5, "     ", 5, 5, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     ");
     EXPECT_EQ(outlen, 10);
@@ -977,8 +977,8 @@ TEST(FunctionTest, SubstrCharZh)
     auto context = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(context);
     string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
-    int32_t width = static_cast<int32_t>(str.length());
-    int32_t strlen = width;
+    int32_t width = 37;
+    int32_t strlen = str.length();
     int32_t outlen = 0;
     const char *result;
     string actual;
@@ -1493,5 +1493,209 @@ TEST(FunctionTest, ReplaceCharCharChar)
         EXPECT_EQ(string(result, outLen), expected[i]);
     }
     delete context;
+}
+
+TEST(FunctionTest, ReplaceStrStrStrZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen = 0;
+
+    std::vector<string> str { "", "粉色的圣诞袜", "apple", "粉色de圣诞袜" };
+    std::vector<string> searchStr { "", "粉色", "pp", "de圣" };
+    std::vector<string> replaceStr { "", "黑色", "*w*", "*的*" };
+
+    auto result1 = ReplaceStrStrStrWithRep(contextPtr, str[2].c_str(), str[2].length(), searchStr[0].c_str(),
+        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), &outLen);
+    string expected = "*w*a*w*p*w*p*w*l*w*e*w*";
+    EXPECT_EQ(outLen, 23);
+    EXPECT_EQ(string(result1, outLen), expected);
+
+    auto result2 = ReplaceStrStrStrWithRep(contextPtr, str[1].c_str(), str[1].length(), searchStr[0].c_str(),
+        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), &outLen);
+    expected = "*w*粉*w*色*w*的*w*圣*w*诞*w*袜*w*";
+    EXPECT_EQ(outLen, 39);
+    EXPECT_EQ(string(result2, outLen), expected);
+
+    auto result3 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
+        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), &outLen);
+    expected = "*w*粉*w*色*w*d*w*e*w*圣*w*诞*w*袜*w*";
+    EXPECT_EQ(outLen, 41);
+    EXPECT_EQ(string(result3, outLen), expected);
+
+    auto result4 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
+        searchStr[0].length(), replaceStr[3].c_str(), replaceStr[3].length(), &outLen);
+    expected = "*的*粉*的*色*的*d*的*e*的*圣*的*诞*的*袜*的*";
+    EXPECT_EQ(outLen, 57);
+    EXPECT_EQ(string(result4, outLen), expected);
+
+    auto result5 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[3].c_str(),
+        searchStr[3].length(), replaceStr[3].c_str(), replaceStr[3].length(), &outLen);
+    expected = "粉色*的*诞袜";
+    EXPECT_EQ(outLen, 17);
+    EXPECT_EQ(string(result5, outLen), expected);
+
+    auto result6 = ReplaceStrStrStrWithRep(contextPtr, str[0].c_str(), str[0].length(), searchStr[0].c_str(),
+        searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), &outLen);
+    expected = "";
+    EXPECT_EQ(outLen, 0);
+    EXPECT_EQ(string(result6, outLen), expected);
+
+    auto result7 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
+        searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), &outLen);
+    expected = "粉色de圣诞袜";
+    EXPECT_EQ(outLen, 17);
+    EXPECT_EQ(string(result7, outLen), expected);
+    delete context;
+}
+
+TEST(FunctionTest, ConcatStrStrZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    int outlen = 0;
+    const char *result;
+    string actual;
+
+    result = ConcatStrStr(contextptr, "你是Chinese?", 14, "Yes我是", 9, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "你是Chinese?Yes我是");
+    EXPECT_EQ(outlen, 23);
+    delete context;
+}
+
+TEST(FunctionTest, ConcatCharCharZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    int outlen = 0;
+    const char *result;
+    string actual;
+
+    result = ConcatCharChar(contextptr, "粉色de圣诞袜", 7, 17, "*黑色*", 4, 8, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "粉色de圣诞袜*黑色*");
+    EXPECT_EQ(outlen, 25);
+
+    result = ConcatCharChar(contextptr, "Hei你好吗", 8, 12, "Oh我很好", 8, 11, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "Hei你好吗  Oh我很好");
+    EXPECT_EQ(outlen, 25);
+
+    result = ConcatCharChar(contextptr, "Hei你好吗   ", 10, 15, "Oh我很好  ", 8, 13, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "Hei你好吗    Oh我很好  ");
+    EXPECT_EQ(outlen, 29);
+
+    result = ConcatCharChar(contextptr, "   Hei你好吗", 12, 15, "   Oh我很好", 12, 14, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "   Hei你好吗      Oh我很好");
+    EXPECT_EQ(outlen, 32);
+
+    result = ConcatCharChar(contextptr, "Hei   你好吗", 12, 15, "Oh   我很好", 8, 14, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "Hei   你好吗   Oh   我很好");
+    EXPECT_EQ(outlen, 32);
+
+    result = ConcatCharChar(contextptr, "   ", 5, 3, "Oh我很好   ", 12, 14, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "     Oh我很好   ");
+    EXPECT_EQ(outlen, 19);
+
+    result = ConcatCharChar(contextptr, "Hei你好吗", 8, 12, "   ", 5, 3, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "Hei你好吗     ");
+    EXPECT_EQ(outlen, 17);
+
+    result = ConcatCharChar(contextptr, "Hei你好吗", 8, 12, "", 5, 0, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "Hei你好吗");
+    EXPECT_EQ(outlen, 12);
+    delete context;
+}
+
+TEST(FunctionTest, ConcatCharStrZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    int outlen = 0;
+    const char *result;
+    string actual;
+
+    result = ConcatCharStr(contextptr, "*你是谁呢*", 6, 14, "我很OK", 8, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "*你是谁呢*我很OK");
+    EXPECT_EQ(outlen, 22);
+
+    result = ConcatCharStr(contextptr, "*你是谁呢*", 10, 14, "我很OK", 8, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "*你是谁呢*    我很OK");
+    EXPECT_EQ(outlen, 26);
+    delete context;
+}
+
+TEST(FunctionTest, ConcatStrCharZh)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+    int outlen = 0;
+    const char *result;
+    string actual;
+
+    result = ConcatStrChar(contextptr, "粉色de圣诞袜", 17, "*黑色*", 4, 8, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "粉色de圣诞袜*黑色*");
+    EXPECT_EQ(outlen, 25);
+
+    result = ConcatStrChar(contextptr, "粉色de圣诞袜", 17, "*黑色*", 6, 8, &outlen);
+    actual = string(result, outlen);
+    EXPECT_EQ(actual, "粉色de圣诞袜*黑色*");
+    EXPECT_EQ(outlen, 25);
+    delete context;
+}
+
+TEST(FunctionTest, LikeStrZh)
+{
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    // like "xxx_"
+    string pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.$";
+    bool isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    EXPECT_TRUE(isMatch);
+    pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞..$";
+    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    EXPECT_FALSE(isMatch);
+
+    // like "xxx%"
+    pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣.*$";
+    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    EXPECT_TRUE(isMatch);
+    pattern = "^欧时基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.*$";
+    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    EXPECT_FALSE(isMatch);
+}
+
+TEST(FunctionTest, LikeCharZh)
+{
+    // like "xxx_"
+    string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    string pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.$";
+    bool isMatch = LikeChar(str.c_str(), 37, str.length(), pattern.c_str(), pattern.length());
+    EXPECT_TRUE(isMatch);
+
+    pattern = "^时欧基乌..$";
+    str = "时欧基乌";
+    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length());
+    EXPECT_TRUE(isMatch);
+
+    pattern = "^时欧基乌.$";
+    str = "时欧基乌";
+    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length());
+    EXPECT_FALSE(isMatch);
+
+    // like "xxx%"
+    pattern = "^时欧基乌.*$";
+    str = "时欧基乌";
+    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length());
+    EXPECT_TRUE(isMatch);
 }
 }

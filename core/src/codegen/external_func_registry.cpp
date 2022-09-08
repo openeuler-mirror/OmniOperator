@@ -14,7 +14,7 @@ using namespace omniruntime::codegen;
 vector<Function> ExternalFunctionRegistry::GetFunctions()
 {
     std::vector<Function> externalFunctionRegistry = {
-        Function(reinterpret_cast<void *>(StringLength), "length", {}, { OMNI_VARCHAR }, OMNI_INT),
+        Function(reinterpret_cast<void *>(StringLength), "stringLength", {}, { OMNI_VARCHAR }, OMNI_INT),
         Function(reinterpret_cast<void *>(Increment<int32_t>), "Increment", {}, { OMNI_INT }, OMNI_INT),
         Function(reinterpret_cast<void *>(Increment<int64_t>), "Increment", {}, { OMNI_LONG }, OMNI_LONG),
     };

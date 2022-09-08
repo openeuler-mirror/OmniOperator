@@ -2086,7 +2086,7 @@ TEST(ProjectionTest, ConcatStrAndChar)
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
 
-    string expected1 = "storeAAAA            ";
+    string expected1 = "storeAAAA";
     string expected2 = "AAAA            store";
     for (int32_t i = 0; i < numRows; i++) {
         VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
@@ -2860,14 +2860,10 @@ TEST(ProjectionTest, ConcatStrCharTest)
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
 
-    std::vector<std::string> expectedDatas = { "NULL",
-        "NULL",
-        "NULL",
-        "                    ",
-        "John                ",
-        "Rebecca                    ",
-        "RebeccaJohn                ",
-        "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
+    std::vector<std::string> expectedDatas = { "NULL",        "NULL",
+        "NULL",        "",
+        "John",        "Rebecca",
+        "RebeccaJohn", "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
@@ -2898,9 +2894,9 @@ TEST(ProjectionTest, ConcatCharStrTest)
     std::vector<std::string> expectedDatas = { "NULL",
         "NULL",
         "NULL",
-        "                              ",
+        "",
         "                              John",
-        "Rebecca                       ",
+        "Rebecca",
         "Rebecca                       John",
         "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
@@ -2964,10 +2960,10 @@ TEST(ProjectionTest, ConcatCharCharTest)
     std::vector<std::string> expectedDatas = { "NULL",
         "NULL",
         "NULL",
-        "                                                  ",
-        "                              John                ",
-        "Rebecca                                           ",
-        "Rebecca                       John                ",
+        "",
+        "                              John",
+        "Rebecca",
+        "Rebecca                       John",
         "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(CharDataType(51), vecAllocator, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));

@@ -10,6 +10,8 @@
 #include <memory>
 #include <algorithm>
 #include <huawei_secure_c/include/securec.h>
+#include <locale>
+#include <codecvt>
 #include "context_helper.h"
 #include "util/utf8_util.h"
 #include "util/engine.h"
@@ -25,6 +27,7 @@ namespace omniruntime {
 namespace codegen {
 // Defining constant of the gap for case conversions
 const int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
+const std::string SUBSTR_ERR_MSG = "Substring failed";
 }
 }
 
@@ -93,8 +96,8 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str + startIndex, *outLen);
     if (res != EOK) {
-        char message[] = "Substring failed";
-        omniruntime::codegen::SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
+                                       omniruntime::codegen::SUBSTR_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -117,7 +120,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     }
 
     int64_t startCodePoint = startIdx;
-    int32_t startIndex;
+    int64_t startIndex;
     if (startCodePoint > 0) {
         startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint - 1);
         if (startIndex < 0) {
@@ -145,8 +148,8 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str + startIndex, *outLen);
     if (res != EOK) {
-        char message[] = "Substring failed";
-        omniruntime::codegen::SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
+                                       omniruntime::codegen::SUBSTR_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -171,11 +174,21 @@ extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, in
 
 extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strLen);
 
+extern DLLEXPORT int32_t LengthCharForSpark(const char *str, int32_t width, int32_t strLen);
+
 extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen);
+
+extern DLLEXPORT int32_t LengthStrForSpark(const char *str, int32_t strLen);
 
 extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
     const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, int32_t *outLen);
 
 extern DLLEXPORT const char *ReplaceStrStrWithoutRep(int64_t contextPtr, const char *str, int32_t strLen,
     const char *searchStr, int32_t searchLen, int32_t *outLen);
+
+static inline std::wstring ToWideString(std::string &s)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+    return convert.from_bytes(s);
+}
 #endif

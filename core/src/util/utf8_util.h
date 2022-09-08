@@ -32,19 +32,19 @@ public:
         int length8 = len & 0x7FFFFFF8;
         while (position < length8 && actualIndex >= position + 8) {
             auto *align = reinterpret_cast<const uint64_t *>(data + position);
-            actualIndex += countContinuationBytes(*align);
+            actualIndex += CountContinuationBytes(*align);
             position += 8;
         }
 
         int32_t length4 = len & 0x7FFFFFFC;
         while (position < length4 && actualIndex >= position + 4) {
             auto *align = reinterpret_cast<const uint32_t *>(data + position);
-            actualIndex += countContinuationBytes(*align);
+            actualIndex += CountContinuationBytes(*align);
             position += 4;
         }
 
         while (position < len) {
-            actualIndex += countContinuationBytes(static_cast<uint8_t>(*(data + position)));
+            actualIndex += CountContinuationBytes(static_cast<uint8_t>(*(data + position)));
             if (position == actualIndex) {
                 break;
             }
@@ -73,19 +73,19 @@ public:
         int length8 = len & 0x7FFFFFF8;
         while (offset < length8) {
             auto *align = reinterpret_cast<const uint64_t *>(data + offset);
-            continuationBytesCount += countContinuationBytes(*align);
+            continuationBytesCount += CountContinuationBytes(*align);
             offset += 8;
         }
 
         int32_t length4 = len & 0x7FFFFFFC;
         if (offset + 4 < length4) {
             auto *align = reinterpret_cast<const uint32_t *>(data + offset);
-            continuationBytesCount += countContinuationBytes(*align);
+            continuationBytesCount += CountContinuationBytes(*align);
             offset += 4;
         }
 
         while (offset < len) {
-            continuationBytesCount += countContinuationBytes(static_cast<uint8_t>(*(data + offset)));
+            continuationBytesCount += CountContinuationBytes(static_cast<uint8_t>(*(data + offset)));
             offset++;
         }
         return len - continuationBytesCount;
@@ -120,19 +120,19 @@ public:
     }
 
 private:
-    static inline int32_t countContinuationBytes(uint8_t value)
+    static inline int32_t CountContinuationBytes(uint8_t value)
     {
         value = value & 0xff;
         return (value >> 7) & (~value >> 6);
     }
 
-    static inline int32_t countContinuationBytes(uint32_t value)
+    static inline int32_t CountContinuationBytes(uint32_t value)
     {
         value = ((value & TOP_MASK32) >> 1) & (~value);
         return BitMap::BitCountInt(value);
     }
 
-    static inline int32_t countContinuationBytes(uint64_t value)
+    static inline int32_t CountContinuationBytes(uint64_t value)
     {
         value = ((value & TOP_MASK64) >> 1) & (~value);
         return BitMap::BitCountLong(value);
