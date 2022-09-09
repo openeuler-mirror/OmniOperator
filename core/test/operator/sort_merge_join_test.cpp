@@ -19,7 +19,7 @@ using namespace TestUtil;
 namespace SortMergeJoinTest {
 TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
 {
-    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
     DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
@@ -29,13 +29,15 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
     // table1
     int32_t data1[dataSize1] = {0, 1, 2, 0, 1, 2};
     double data2[dataSize1] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int16_t data3[dataSize1] = {6, 5, 4, 3, 2, 1};
     // table2
     const int32_t dataSize2 = 7;
-    int32_t data3[dataSize2] = {10, 11, 12, 10, 11, 12, 15};
-    double data4[dataSize2] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1, 11.3};
+    int32_t data4[dataSize2] = {10, 11, 12, 10, 11, 12, 15};
+    double data5[dataSize2] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1, 11.3};
+    int16_t data6[dataSize2] = {16, 15, 14, 13, 12, 11, 10};
 
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1, data2);
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data3, data4);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1, data2, data3);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data4, data5, data6);
 
     std::vector<VectorBatch *> vector1;
     vector1.push_back(vecBatch1);

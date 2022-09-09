@@ -928,6 +928,65 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDate32)
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
 }
 
+TEST(NativeOmniJoinTest, TestLeftEqualityJoinShort)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), ShortType() }));
+    int64_t buildData0[dataSize] = {1, 2, 3, 4};
+    int16_t buildData1[dataSize] = {123, 11, 321, 33};
+    VectorBatch *buildVecBatch = CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1);
+
+    int32_t buildJoinCols[1] = {1};
+    int32_t joinColsCount = 1;
+    int32_t operatorCount = 1;
+    string filterExpression = "";
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+        buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
+    HashBuilderOperator *hashBuilderOperator =
+        dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator->AddInput(buildVecBatch);
+    std::vector<VectorBatch *> hashBuildOutput;
+    hashBuilderOperator->GetOutput(hashBuildOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), ShortType() }));
+    int64_t probeData0[dataSize] = {1, 2, 3, 4};
+    int16_t probeData1[dataSize] = {11, 22, 33, 44};
+    VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
+
+    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputColsCount = 2;
+    int32_t probeHashCols[1] = {1};
+    int32_t probeHashColsCount = 1;
+    int32_t buildOutputCols[2] = {0, 1};
+    int32_t buildOutputColsCount = 2;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), ShortType() }));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    lookupJoinOperator->AddInput(probeVecBatch);
+    std::vector<VectorBatch *> output;
+    lookupJoinOperator->GetOutput(output);
+
+    EXPECT_EQ(output.size(), 1);
+    VectorHelper::PrintVecBatch(output[0]);
+
+    const int32_t expectedDataSize = 4;
+    int64_t expectedData0[expectedDataSize] = {1, 2, 3, 4};
+    int16_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
+    int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
+    int16_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
+    AssertVecBatchEquals(output[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
+
+    VectorHelper::FreeVecBatches(output);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
+
 TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal64)
 {
     // construct input data
@@ -1489,7 +1548,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     auto expectedProbeVec0 = probeVecBatch->GetVector(0)->Slice(0, dataSize);
     auto expectedProbeVec1 = probeVecBatch->GetVector(1)->Slice(0, dataSize);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {0};
     int32_t probeHashColsCount = 1;
@@ -1738,18 +1797,19 @@ VectorBatch *CreateExpectVecBatchForAllTypes(VectorBatch *probeVecBatch, VectorB
 // join on keys like all types with nulls
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
 {
-    // all types: int, long, boolean, double, date32, decimal, decimal128, varchar, char
+    // all types: int, long, boolean, double, date32, decimal, decimal128, varchar, char, short
     int32_t intValue = 20;
     int64_t longValue = 20;
     bool boolValue = true;
     double doubleValue = 20.0;
     Decimal128 decimal128(20, 0);
     std::string stringValue("20");
-    const int32_t dataSize = 10;
+    int16_t shortValue = 20;
+    const int32_t dataSize = 11;
     void *joinDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
-                                 &stringValue, &stringValue};
+                                 &stringValue, &stringValue, &shortValue};
     DataTypes joinTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(), Date32Type(DAY),
-        Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
+        Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2), ShortType() }));
     int32_t joinTypesSize = joinTypes.GetSize();
     int32_t joinColumns[joinTypesSize];
     for (int32_t i = 0; i < joinTypesSize; i++) {
@@ -1791,18 +1851,19 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
 // join on keys like dictionary vector with all types with nulls
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
 {
-    // all types: int, long, boolean, double, date32, decimal, decimal128, varchar, char
+    // all types: int, long, boolean, double, date32, decimal, decimal128, varchar, char, short
     int32_t intValue = 20;
     int64_t longValue = 20;
     bool boolValue = true;
     double doubleValue = 20.0;
     Decimal128 decimal128(20, 0);
     std::string stringValue("20");
-    const int32_t dataSize = 10;
+    int16_t shortValue = 20;
+    const int32_t dataSize = 11;
     void *joinDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
-        &stringValue, &stringValue};
+        &stringValue, &stringValue, &shortValue};
     DataTypes joinTypes(std::vector<DataTypePtr>({ IntType(), LongType(), BooleanType(), DoubleType(), Date32Type(DAY),
-        Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2) }));
+        Decimal64Type(2, 0), Decimal128Type(2, 0), VarcharType(2), CharType(2), ShortType() }));
     int32_t joinTypesSize = joinTypes.GetSize();
     int32_t joinColumns[joinTypesSize];
     for (int32_t i = 0; i < joinTypesSize; i++) {

@@ -790,6 +790,10 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
             ColumnarSort<omniruntime::vec::IntVector, int32_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
                 sortColCount, valueAddresses, columns, from, to, currentCol);
             break;
+        case OMNI_SHORT:
+            ColumnarSort<omniruntime::vec::ShortVector, int16_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
+                sortColCount, valueAddresses, columns, from, to, currentCol);
+            break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
             ColumnarSort<omniruntime::vec::LongVector, int64_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
@@ -841,6 +845,10 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             case OMNI_DATE32:
                 outputVecBatch->SetVector(j,
                     ConstructVector<IntVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
+                break;
+            case OMNI_SHORT:
+                outputVecBatch->SetVector(j,
+                    ConstructVector<ShortVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:

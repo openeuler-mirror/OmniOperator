@@ -390,6 +390,11 @@ static void ProcessColumns(uint32_t offset, uint32_t addressesCount, uint64_t *a
                     nullPositions);
                 break;
             }
+            case omniruntime::type::OMNI_SHORT: {
+                ReadColumnHashes<ShortVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
+                    nullPositions);
+                break;
+            }
             case omniruntime::type::OMNI_LONG: {
                 ReadColumnHashes<LongVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
                     nullPositions);

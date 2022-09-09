@@ -21,18 +21,20 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    int16_t data3[dataSize] = {0, 1, 2, 3, 4};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    int outputCols[2] = {0, 1};
+    int outputCols[3] = {0, 1, 2};
     auto col0 = new FieldExpr(0, IntType());
     auto col1 = new FieldExpr(1, LongType());
-    std::vector<Expr *> sortExprs { col0, col1 };
-    int ascendings[2] = {true, false};
-    int nullFirsts[2] = {true, true};
+    auto col2 = new FieldExpr(2, ShortType());
+    std::vector<Expr *> sortExprs { col0, col1, col2 };
+    int ascendings[3] = {true, false, false};
+    int nullFirsts[3] = {true, true, true};
 
-    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 3,
+        sortExprs, ascendings, nullFirsts, 3);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -41,7 +43,8 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
+    int16_t expectData3[dataSize] = {4, 3, 2, 1, 0};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2, expectData3);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);

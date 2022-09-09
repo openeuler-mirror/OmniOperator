@@ -31,6 +31,7 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     int64_t data7[dataSize] = {10L, 100L, 1000L, 10L};
     bool data8[dataSize] = {true, false, false, true};
     std::string data9[dataSize] = {"123", "456", "789", "012"};
+    int16_t data10[dataSize] = {0, 1, 2, 3};
 
     std::vector<DataTypePtr> types = { IntType(),
         DoubleType(),
@@ -40,10 +41,11 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
         Date32Type(),
         Decimal64DataType::Instance(),
         BooleanType(),
-        CharDataType::Instance() };
+        CharDataType::Instance(),
+        ShortType()};
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 =
-        CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9, data10);
 
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
@@ -60,9 +62,10 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     int64_t expData7[resultDataSize] = {10L, 100L, 1000L};
     bool expData8[resultDataSize] = {true, false, false};
     std::string expData9[resultDataSize] = {"123", "456", "789"};
+    int16_t expData10[resultDataSize] = {0, 1, 2};
 
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3, expData4,
-        expData5, expData6, expData7, expData8, expData9);
+        expData5, expData6, expData7, expData8, expData9, expData10);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 

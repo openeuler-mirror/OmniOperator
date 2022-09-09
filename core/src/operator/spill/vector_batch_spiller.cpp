@@ -101,6 +101,9 @@ VectorBatchUnit *VectorBatchSpiller::Next()
                 case OMNI_DATE32:
                     SetValue<IntVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
                     break;
+                case OMNI_SHORT:
+                    SetValue<ShortVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
+                    break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
                     SetValue<LongVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);

@@ -319,6 +319,9 @@ void PopulateHashes(Vector **hashCols, uint32_t rowCount, int32_t *hashColTypes,
             case omniruntime::type::OMNI_DATE32:
                 CalculateColHashes<omniruntime::vec::IntVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
+            case omniruntime::type::OMNI_SHORT:
+                CalculateColHashes<omniruntime::vec::ShortVector>(hashCols[i], rowCount, hashes, nulls);
+                break;
             case omniruntime::type::OMNI_LONG:
                 CalculateColHashes<omniruntime::vec::LongVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
@@ -566,6 +569,10 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
             case OMNI_INT:
             case OMNI_DATE32:
                 buildColumn = ConstructBuildColumn<IntVector, int32_t>(vecAllocator, hashTables, buildOutputCol,
+                    buildIndex.data(), position, rowCount);
+                break;
+            case OMNI_SHORT:
+                buildColumn = ConstructBuildColumn<ShortVector, int16_t>(vecAllocator, hashTables, buildOutputCol,
                     buildIndex.data(), position, rowCount);
                 break;
             case OMNI_LONG:

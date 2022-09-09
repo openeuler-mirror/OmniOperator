@@ -47,6 +47,8 @@ static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, ui
         case OMNI_INT:
         case OMNI_DATE32:
             return ValueEqualsValueIgnoreNulls<IntVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_SHORT:
+            return ValueEqualsValueIgnoreNulls<ShortVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_LONG:
         case OMNI_DECIMAL64:
             return ValueEqualsValueIgnoreNulls<LongVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);

@@ -65,6 +65,15 @@ Vector *BuildHashInput(const DataTypePtr groupType, int32_t rowPerVecBatch, int3
             }
             return col;
         }
+        case OMNI_SHORT: {
+            ShortVector *col = new ShortVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                if (cardinality != 0) {
+                    col->SetValue(j, j % cardinality);
+                }
+            }
+            return col;
+        }
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
             LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
@@ -126,6 +135,13 @@ Vector *BuildAggregateInput(VectorAllocator *vecAllocator, const DataTypePtr agg
         case OMNI_INT:
         case OMNI_DATE32: {
             IntVector *col = new IntVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j, 1);
+            }
+            return col;
+        }
+        case OMNI_SHORT: {
+            ShortVector *col = new ShortVector(vecAllocator, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }

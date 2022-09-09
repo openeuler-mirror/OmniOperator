@@ -284,7 +284,7 @@ void WindowOperator::InitResultVectors(const std::vector<DataTypePtr> &outputTyp
                 break;
             }
             case OMNI_SHORT: {
-                vecBatchField->SetVector(colIndex, new IntVector(vecAllocator, rowCountField));
+                vecBatchField->SetVector(colIndex, new ShortVector(vecAllocator, rowCountField));
                 break;
             }
             case OMNI_VARCHAR:

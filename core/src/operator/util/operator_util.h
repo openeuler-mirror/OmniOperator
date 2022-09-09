@@ -108,6 +108,8 @@ public:
             case OMNI_INT:
             case OMNI_DATE32:
                 return CompareTemplate<IntVector>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
+            case OMNI_SHORT:
+                return CompareTemplate<ShortVector>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 return CompareTemplate<LongVector>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);

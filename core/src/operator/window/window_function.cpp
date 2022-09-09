@@ -201,6 +201,9 @@ void AggregateWindowFunction::AssignValueForVector(Vector *originalVector, int32
             SetValue<IntVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
             break;
         }
+        case OMNI_SHORT:
+            SetValue<ShortVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);
+            break;
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
             SetValue<LongVector>(originalVector, originalVectorPosition, resultVector, resultVectorPosition);

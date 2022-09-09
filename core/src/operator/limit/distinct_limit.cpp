@@ -76,7 +76,9 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
      HashFuncVectImpl<BooleanVector, bool>,  IsSameNodeFuncImpl<BooleanVector, bool>,
      FillOutputFuncImp<BooleanVector, bool>
     },
-    {OMNI_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_SHORT, DuplicateKeyValueImpl<ShortVector, int16_t>, HashFuncImpl<ShortVector, int16_t>,
+     HashFuncVectImpl<ShortVector, int16_t>, IsSameNodeFuncImpl<ShortVector, int16_t>,
+     FillOutputFuncImp<ShortVector, int16_t>},
     {
         OMNI_DECIMAL64, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImpl<LongVector, int64_t>,
         HashFuncVectImpl<LongVector, int64_t>,  IsSameNodeFuncImpl<LongVector, int64_t>,

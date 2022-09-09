@@ -132,6 +132,9 @@ VectorBatch *VectorBatchReader::ReadVecBatch()
             case OMNI_DATE32:
                 vector = ReadVector<IntVector, int32_t>(rowCount);
                 break;
+            case OMNI_SHORT:
+                vector = ReadVector<ShortVector, int16_t>(rowCount);
+                break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 vector = ReadVector<LongVector, int64_t>(rowCount);
