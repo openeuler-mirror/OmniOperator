@@ -2227,11 +2227,12 @@ TEST(ProjectionTest, testDecimal128Between)
 
 TEST(ProjectionTest, testDecimal128In)
 {
+    // olk will cast every ars to same ps, so i change ut
     const int32_t numRows = 1;
     const int32_t numProject = 1;
-    auto arg0 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
-    auto arg1 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
-    auto arg2 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
+    auto arg0 = new LiteralExpr(new std::string("1234"), Decimal128Type(6, 0));
+    auto arg1 = new LiteralExpr(new std::string("12345"), Decimal128Type(6, 0));
+    auto arg2 = new LiteralExpr(new std::string("123456"), Decimal128Type(6, 0));
     std::vector<Expr *> args = { arg0, arg1, arg2 };
     auto expr = new InExpr(args);
     std::vector<Expr *> exprs = { expr };
@@ -2249,7 +2250,7 @@ TEST(ProjectionTest, testDecimal128In)
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
-    EXPECT_TRUE(val0);
+    EXPECT_FALSE(val0);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
@@ -2264,12 +2265,12 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
     const int32_t numRows = 1;
     const int32_t numProject = 1;
     auto condition = new LiteralExpr(true, BooleanType());
-    auto v1 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 1));
+    auto v1 = new LiteralExpr(new std::string("123400"), Decimal128Type(7, 3));
     v1->isNull = true;
-    auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
+    auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(7, 3));
     auto coalesce = new CoalesceExpr(v1, v2);
 
-    auto falseExpr = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
+    auto falseExpr = new LiteralExpr(new std::string("1234000"), Decimal128Type(7, 3));
     auto ifExpr = new IfExpr(condition, coalesce, falseExpr);
     auto right = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 2));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, ifExpr, right, BooleanType());
@@ -2603,10 +2604,10 @@ TEST(ProjectionTest, testDecimal64In)
 {
     const int32_t numRows = 1;
     const int32_t numProject = 1;
-    auto arg0 = new LiteralExpr(65781L, Decimal64Type(5, 4));
+    auto arg0 = new LiteralExpr(65781L, Decimal64Type(6, 2));
     auto arg1 = new LiteralExpr(120945L, Decimal64Type(6, 2));
-    auto arg2 = new LiteralExpr(65781L, Decimal64Type(5, 3));
-    auto arg3 = new LiteralExpr(65781L, Decimal64Type(5, 4));
+    auto arg2 = new LiteralExpr(65781L, Decimal64Type(6, 2));
+    auto arg3 = new LiteralExpr(65781L, Decimal64Type(6, 2));
     std::vector<Expr *> args = { arg0, arg1, arg2, arg3 };
     auto expr = new InExpr(args);
     std::vector<Expr *> exprs = { expr };
@@ -2669,20 +2670,23 @@ TEST(ProjectionTest, testDecimal64Between)
 
 TEST(ProjectionTest, testDecimal64Comprehensive)
 {
+    // change the exprs to same precision and scale.
+    // because for if/coalesce, olk/spark will cast args to the same p and s.
+    // the scenario in ut will not happen.
     const int32_t numRows = 1;
     const int32_t numProject = 1;
     auto condition = new LiteralExpr(true, BooleanType());
-    auto v1 = new LiteralExpr(1234L, Decimal64Type(4, 1));
+    auto v1 = new LiteralExpr(123400L, Decimal64Type(7, 3));
     v1->isNull = true;
-    auto v2 = new LiteralExpr(1234L, Decimal64Type(4, 3));
+    auto v2 = new LiteralExpr(1234L, Decimal64Type(7, 3));
     auto coalesce = new CoalesceExpr(v1, v2);
 
-    auto falseExpr = new LiteralExpr(1234L, Decimal64Type(4, 0));
+    auto falseExpr = new LiteralExpr(1234000L, Decimal64Type(7, 3));
     auto ifExpr = new IfExpr(condition, coalesce, falseExpr);
 
-    auto subLeft = new LiteralExpr(1234L, Decimal64Type(4, 2));
-    auto subRight = new LiteralExpr(101L, Decimal64Type(3, 2));
-    auto right = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal64Type(4, 2));
+    auto subLeft = new LiteralExpr(12340L, Decimal64Type(7, 3));
+    auto subRight = new LiteralExpr(1010L, Decimal64Type(7, 3));
+    auto right = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal64Type(7, 3));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, ifExpr, right, BooleanType());
 
     std::vector<Expr *> exprs = { expr };

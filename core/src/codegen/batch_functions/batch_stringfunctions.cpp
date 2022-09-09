@@ -13,6 +13,139 @@
 
 using namespace omniruntime::codegen;
 
+namespace {
+const int THOUSANDS = 1000;
+const int HUNDREDS = 100;
+const int TENS = 10;
+const double SECOND_OF_DAY = 86400.0;
+const int BASE_YEAR = 1900;
+
+const int THOU = 0;
+const int HUN = 1;
+const int TEN = 2;
+const int ONE = 3;
+const int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
+}
+
+extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
+    int32_t rowCnt)
+{
+    int min = 0, result = 0;
+    for (int i = 0; i < rowCnt; ++i) {
+        min = bpLen[i];
+        if (apLen[i] < min) {
+            min = apLen[i];
+        }
+
+        result = memcmp(ap[i], bp[i], min);
+        if (result != 0) {
+            res[i] = result;
+        } else {
+            res[i] = apLen[i] - bpLen[i];
+        }
+    }
+}
+
+extern "C" DLLEXPORT void BatchLessThanStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt)
+{
+    int32_t tmp[rowCnt];
+    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
+    for (int i = 0; i < rowCnt; i++) {
+        res[i] = (tmp[i] < 0);
+    }
+}
+
+extern "C" DLLEXPORT void BatchLessThanEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt)
+{
+    int32_t tmp[rowCnt];
+    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
+    for (int i = 0; i < rowCnt; i++) {
+        res[i] = (tmp[i] <= 0);
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreaterThanStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt)
+{
+    int32_t tmp[rowCnt];
+    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
+    for (int i = 0; i < rowCnt; i++) {
+        res[i] = (tmp[i] > 0);
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreaterThanEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen,
+    bool *res, int32_t rowCnt)
+{
+    int32_t tmp[rowCnt];
+    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
+    for (int i = 0; i < rowCnt; i++) {
+        res[i] = (tmp[i] >= 0);
+    }
+}
+
+extern "C" DLLEXPORT void BatchEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt)
+{
+    int32_t tmp[rowCnt];
+    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
+    for (int i = 0; i < rowCnt; i++) {
+        res[i] = (tmp[i] == 0);
+    }
+}
+
+extern "C" DLLEXPORT void BatchNotEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt)
+{
+    int32_t tmp[rowCnt];
+    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
+    for (int i = 0; i < rowCnt; i++) {
+        res[i] = (tmp[i] != 0);
+    }
+}
+
+extern DLLEXPORT void BatchCastString(int64_t contextPtr, uint8_t **str, int32_t *strLen, int32_t *output,
+    int32_t rowCnt)
+{
+    // Date is in the format 1996-02-28
+    // Doesn't account for leap seconds or daylight savings
+    // Should be ok just for dates
+    std::string regexToMatch = "\\d{4}-\\d{2}-\\d{2}$";
+    std::regex re = std::regex(regexToMatch);
+    std::string s;
+    int32_t i1 = 5;
+    int32_t i2 = 8;
+    int yr, mnth, day;
+    int base = static_cast<int32_t>('0');
+    struct std::tm epoch;
+    struct std::tm t;
+    std::time_t epochTime;
+    std::time_t desiredTime;
+
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+        if (!regex_match(s, re)) {
+            char message[] = "Only support cast date\'YYYY-MM-DD\' to integer";
+            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            output[i] = -1;
+            continue;
+        }
+
+        yr = THOUSANDS * (str[i][THOU] - base) + HUNDREDS * (str[i][HUN] - base) + TENS * (str[i][TEN] - base) +
+            (str[i][ONE] - base);
+        mnth = TENS * (str[i][i1] - base) + (str[i][i1 + 1] - base); // compute month
+        day = TENS * (str[i][i2] - base) + (str[i][i2 + 1] - base);  // compute day
+
+        epoch = { 0, 0, 0, 1, 1, 70 };
+        t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
+        epochTime = std::mktime(&epoch);
+        desiredTime = std::mktime(&t);
+        output[i] = static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
+    }
+}
+
 extern "C" DLLEXPORT void BatchLikeStr(uint8_t **str, int32_t *strLen, uint8_t **regexToMatch, int32_t *regexLen,
     bool *isAnyNull, bool *output, int32_t rowCnt)
 {

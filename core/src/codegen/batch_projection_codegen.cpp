@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch projection expression codegen
  */
 
@@ -34,9 +34,10 @@ const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
 
 std::unique_ptr<BatchProjectionCodeGen> BatchProjectionCodeGen::Create(std::string name,
-    const omniruntime::expressions::Expr &expression, bool filter)
+    const omniruntime::expressions::Expr &expression, bool filter, omniruntime::op::OverflowConfig *overflowConfig)
 {
-    std::unique_ptr<BatchProjectionCodeGen> codegen { new BatchProjectionCodeGen(std::move(name), expression, filter) };
+    std::unique_ptr<BatchProjectionCodeGen> codegen { new BatchProjectionCodeGen(std::move(name), expression, filter,
+        overflowConfig) };
     LLVMEngine::Create(&(codegen->llvmEngine));
     codegen->context = codegen->GetContext();
     codegen->builder = codegen->GetIRBuilder();
@@ -64,9 +65,9 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     std::vector<Type *> args;
     /*
      * For filter enabled:
-     *      def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr)
+     * def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr)
      * For filter disabled:
-     *      def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr, i32* selected_array, i32 num_selected)
+     * def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr, i32* selected_array, i32 num_selected)
      */
 
     // vecBatch, rowCnt, outputData, (selectedRows, numSelected), bitmap, offsets, outputNull, outputOffsets, execution
@@ -126,7 +127,6 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     builder->SetInsertPoint(projectionMain);
     Type *outPtrType = nullptr;
-
     switch (this->expr->GetReturnTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:
@@ -157,13 +157,12 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
 
     AllocaInst *rowIdxArray;
-    Value *res;
     if (filter) {
         rowIdxArray = reinterpret_cast<AllocaInst *>(selected);
         numRows = numSelected;
     } else {
         rowIdxArray = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "ROW_IDX_ARRAY");
-        res = llvmEngine->CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, { rowIdxArray, numRows },
+        llvmEngine->CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, { rowIdxArray, numRows },
             nullptr, "fill_rowIdx");
     }
     // generate output array for inner function
@@ -171,41 +170,25 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), numRows, "IS_NULL");
     auto resArray = this->GetResultArray(this->expr->GetReturnTypeId(), numRows);
 
-    std::vector<Value *> projFuncArgs;
-    int32_t argsSize = 10;
-    projFuncArgs.reserve(argsSize);
-    // value*, bitmap*, offset*, rowCnt, rowIdxArray, outputLength*, executionContext, dictionaryVectors, isNullPtr,
-    // resArray
-    projFuncArgs.push_back(input);
-    projFuncArgs.push_back(bitmap);
-    projFuncArgs.push_back(offsets);
-    projFuncArgs.push_back(numRows);
-    projFuncArgs.push_back(rowIdxArray);
-    projFuncArgs.push_back(outputLenPtr);
-    projFuncArgs.push_back(executionContext);
-    projFuncArgs.push_back(dictionaryVectors);
-    projFuncArgs.push_back(isNullPtr);
-    projFuncArgs.push_back(resArray);
-
-    // ret = column value after applying projection
-    CallInst *ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");
+    std::vector<Value *> projFuncArgs { input,        bitmap,           offsets,           numRows,   rowIdxArray,
+        outputLenPtr, executionContext, dictionaryVectors, isNullPtr, resArray };
+    builder->CreateCall(proj, projFuncArgs, "INNER_FUNC");
 
     std::vector<Value *> funcArgs;
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
-        // call wrap_varchar_vector function
         std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_VARCHAR, OMNI_INT, OMNI_INT };
         funcArgs = { outColPtr, resArray, outputLenPtr, numRows };
-        res = llvmEngine->CallExternFunction("batch_WrapVarcharVector", paramTypes, OMNI_INT, funcArgs, nullptr,
+        llvmEngine->CallExternFunction("batch_WrapVarcharVector", paramTypes, OMNI_INT, funcArgs, nullptr,
             "copy_varchar_result");
     } else {
         funcArgs = { outColPtr, resArray, numRows };
-        res = llvmEngine->CallExternFunction("batch_copy", { this->expr->GetReturnTypeId() },
-            this->expr->GetReturnTypeId(), funcArgs, nullptr, "copy_result");
+        llvmEngine->CallExternFunction("batch_copy", { this->expr->GetReturnTypeId() }, this->expr->GetReturnTypeId(),
+            funcArgs, nullptr, "copy_result");
     }
-    // TODO: use llvm.memcpy instead
+
     auto nullColPtr = builder->CreateIntToPtr(nullValuesAddress, llvmTypes->I1PtrType());
     funcArgs = { nullColPtr, isNullPtr, numRows };
-    res = llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
+    llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
     builder->CreateRet(numRows);
 
     llvmEngine->OptimizeFunctionsAndModule();

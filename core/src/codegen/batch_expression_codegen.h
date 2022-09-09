@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch expression codegen
  */
 
@@ -46,13 +46,15 @@
 #include "llvm_types.h"
 #include "decimal_ir_builder.h"
 #include "llvm_engine.h"
+#include "operator/config/operator_config.h"
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
 // Given an expression generates the batch function for it.
 class BatchExpressionCodeGen : public ExprVisitor {
 public:
-    BatchExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
+    BatchExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr,
+        omniruntime::op::OverflowConfig *overflowConfig);
     ~BatchExpressionCodeGen() override
     {
         if (rt) {
@@ -132,6 +134,7 @@ protected:
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<BatchCodegenContext> batchCodegenContext;
     int numGlobalValues = 0;
+    omniruntime::op::OverflowConfig *overflowConfig;
 
     llvm::AllocaInst *GetResultArray(omniruntime::type::DataTypeId dataTypeId, llvm::Value *rowCnt);
 
@@ -158,12 +161,16 @@ private:
     bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
         const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
         std::pair<llvm::AllocaInst **, llvm::AllocaInst **> cmpPair);
-    std::vector<llvm::Value *> GetNullResultIfNullArgFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::AllocaInst *isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetValidNotNullResultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+    std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr, llvm::AllocaInst *isAnyNull,
+        bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::AllocaInst *isAnyNull, bool &isInvalidExpr);
     std::vector<llvm::Value *> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::AllocaInst *isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::AllocaInst *isAnyNull, bool &isInvalidExpr, llvm::AllocaInst *overflowNull);
+
+    void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
 };
 
 #endif // OMNI_RUNTIME_BATCH_EXPRESSION_CODEGEN_H

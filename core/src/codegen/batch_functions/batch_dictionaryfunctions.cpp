@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch dictionary functions implementation
  */
 
@@ -11,7 +11,7 @@ using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace codegen {
-extern DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
+extern "C" DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int32_t *output)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -20,7 +20,7 @@ extern DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAd
     }
 }
 
-extern DLLEXPORT void BatchGetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
+extern "C" DLLEXPORT void BatchGetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int64_t *output)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -29,7 +29,7 @@ extern DLLEXPORT void BatchGetLongFromDictionaryVector(int64_t dictionaryVectorA
     }
 }
 
-extern DLLEXPORT void BatchGetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
+extern "C" DLLEXPORT void BatchGetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, double *output)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -38,7 +38,7 @@ extern DLLEXPORT void BatchGetDoubleFromDictionaryVector(int64_t dictionaryVecto
     }
 }
 
-extern DLLEXPORT void BatchGetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
+extern "C" DLLEXPORT void BatchGetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, bool *output)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -47,7 +47,7 @@ extern DLLEXPORT void BatchGetBooleanFromDictionaryVector(int64_t dictionaryVect
     }
 }
 
-extern DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr, int64_t dictionaryVectorAddr,
+extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr, int64_t dictionaryVectorAddr,
     int32_t *rowIdxArray, int32_t rowCnt, uint8_t **str, int32_t *length)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -58,11 +58,17 @@ extern DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr, in
         length[i] = dictionaryVectorPtr->GetVarchar(rowIdxArray[i], &result);
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
         err = memcpy_s(ret, length[i], result, length[i]);
+        if (length[i] != 0 && err != EOK) {
+            char message[] = "Get string from dictionary vector failed";
+            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            str[i] = (uint8_t *)"";
+            continue;
+        }
         str[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
 
-extern DLLEXPORT void BatchGetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
+extern "C" DLLEXPORT void BatchGetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, Decimal128 *output)
 {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
@@ -71,35 +77,35 @@ extern DLLEXPORT void BatchGetDecimalFromDictionaryVector(int64_t dictionaryVect
     }
 }
 
-extern DLLEXPORT void BatchGetIntFromVector(int32_t *vector, int32_t *rowIdxArray, int32_t rowCnt, int32_t *output)
+extern "C" DLLEXPORT void BatchGetIntFromVector(int32_t *vector, int32_t *rowIdxArray, int32_t rowCnt, int32_t *output)
 {
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = vector[rowIdxArray[i]];
     }
 }
 
-extern DLLEXPORT void BatchGetLongFromVector(int64_t *vector, int32_t *rowIdxArray, int32_t rowCnt, int64_t *output)
+extern "C" DLLEXPORT void BatchGetLongFromVector(int64_t *vector, int32_t *rowIdxArray, int32_t rowCnt, int64_t *output)
 {
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = vector[rowIdxArray[i]];
     }
 }
 
-extern DLLEXPORT void BatchGetDoubleFromVector(double *vector, int32_t *rowIdxArray, int32_t rowCnt, double *output)
+extern "C" DLLEXPORT void BatchGetDoubleFromVector(double *vector, int32_t *rowIdxArray, int32_t rowCnt, double *output)
 {
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = vector[rowIdxArray[i]];
     }
 }
 
-extern DLLEXPORT void BatchGetBooleanFromVector(bool *vector, int32_t *rowIdxArray, int32_t rowCnt, bool *output)
+extern "C" DLLEXPORT void BatchGetBooleanFromVector(bool *vector, int32_t *rowIdxArray, int32_t rowCnt, bool *output)
 {
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = vector[rowIdxArray[i]];
     }
 }
 
-extern DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t *offsetArray, const char *vector,
+extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t *offsetArray, const char *vector,
     int32_t *rowIdxArray, int32_t rowCnt, uint8_t **str, int32_t *length)
 {
     errno_t err;
@@ -108,11 +114,17 @@ extern DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t *off
         length[i] = offsetArray[rowIdxArray[i] + 1] - offsetArray[rowIdxArray[i]];
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
         err = memcpy_s(ret, length[i], vector + offsetArray[rowIdxArray[i]], length[i]);
+        if (length[i] != 0 && err != EOK) {
+            char message[] = "Get string from vector failed";
+            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            str[i] = (uint8_t *)"";
+            continue;
+        }
         str[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
 
-extern DLLEXPORT void BatchGetDecimalFromVector(Decimal128 *vector, int32_t *rowIdxArray, int32_t rowCnt,
+extern "C" DLLEXPORT void BatchGetDecimalFromVector(Decimal128 *vector, int32_t *rowIdxArray, int32_t rowCnt,
     Decimal128 *output)
 {
     for (int i = 0; i < rowCnt; ++i) {

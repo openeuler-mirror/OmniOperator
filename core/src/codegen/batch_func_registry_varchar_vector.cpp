@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: Batch varchar vector Function Registry
  */
 
@@ -12,6 +12,6 @@ std::vector<Function> BatchVarcharVectorFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_VARCHAR, OMNI_INT, OMNI_INT };
     std::vector<Function> batchVarcharVectorFnRegistry = { Function(reinterpret_cast<void *>(BatchWrapVarcharVector),
-                                                               "batch_WrapVarcharVector", {}, paramTypes, OMNI_INT) };
+        "batch_WrapVarcharVector", {}, paramTypes, OMNI_INT) };
     return batchVarcharVectorFnRegistry;
 }

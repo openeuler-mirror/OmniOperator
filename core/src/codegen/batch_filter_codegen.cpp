@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch filter expression codegen
  */
 
@@ -23,9 +23,9 @@ const int DICTIONARY_VECTORS_IDX = 6;
 }
 
 std::unique_ptr<BatchFilterCodeGen> BatchFilterCodeGen::Create(std::string name,
-    const omniruntime::expressions::Expr &expression)
+    const omniruntime::expressions::Expr &expression, omniruntime::op::OverflowConfig *overflowConfig)
 {
-    std::unique_ptr<BatchFilterCodeGen> codegen { new BatchFilterCodeGen(std::move(name), expression) };
+    std::unique_ptr<BatchFilterCodeGen> codegen { new BatchFilterCodeGen(std::move(name), expression, overflowConfig) };
     LLVMEngine::Create(&(codegen->llvmEngine));
     codegen->context = codegen->GetContext();
     codegen->builder = codegen->GetIRBuilder();
@@ -69,50 +69,34 @@ int64_t BatchFilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     data->setName("ARGS_ARRAY");
     Argument *numRows = funcDecl->getArg(ARGUMENT_ONE);
     numRows->setName("NUM_ROWS");
-    Argument *resultsArray = funcDecl->getArg(ARGUMENT_TWO);
-    resultsArray->setName("RESULTS");
+    Argument *selectedRows = funcDecl->getArg(ARGUMENT_TWO);
+    selectedRows->setName("RESULTS");
     Argument *bitmap = funcDecl->getArg(ARGUMENT_THREE);
     bitmap->setName("BITMAP");
     Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
     offsets->setName("OFFSETS");
     Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
-    offsets->setName("EXECUTION_CONTEXT_ADDRESS");
+    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
-    offsets->setName("DICTIONARY_VECTORS");
+    dictionaryVectors->setName("DICTIONARY_VECTORS");
 
     builder->SetInsertPoint(filterMain);
-    AllocaInst *lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "LENGTH_PTR");;
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "LENGTH_PTR");
     AllocaInst *isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), numRows, "IS_NULL_PTR");
-
     AllocaInst *rowIdxArray = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "ROW_INDEX_ARRAY");
     std::vector<Value *> funcArgs { rowIdxArray, numRows };
-    auto res = llvmEngine->CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, funcArgs, nullptr,
-        "fill_rowIdx");
+    llvmEngine->CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, funcArgs, nullptr, "fill_rowIdx");
+    // in the form of {0, 1, 1, ...}. 1 indicates passing the filter, 0 otherwise.
+    auto filterResArray = builder->CreateAlloca(llvmTypes->I1Type(), numRows, "FILTER_RES_PTR");
 
-    auto bitmapResultArray = builder->CreateAlloca(llvmTypes->I1Type(), numRows, "FILTER_RES_PTR");
-
-    std::vector<Value *> filterFuncArgs;
-    int32_t argsSize = 10;
-    filterFuncArgs.reserve(argsSize);
-    // value*, bitmap*, offset*, rowCnt, outputLength, execution_context_ptr, dictionary_vectors*, outputNull,
-    // bitmapResultArray
-    filterFuncArgs.push_back(data);
-    filterFuncArgs.push_back(bitmap);
-    filterFuncArgs.push_back(offsets);
-    filterFuncArgs.push_back(numRows);
-    filterFuncArgs.push_back(rowIdxArray);
-    filterFuncArgs.push_back(lengthAllocaInst);
-    filterFuncArgs.push_back(executionContext);
-    filterFuncArgs.push_back(dictionaryVectors);
-    filterFuncArgs.push_back(isNullPtr);
-    filterFuncArgs.push_back(bitmapResultArray);
-
-    // Get the bool result for this row from the filter function.
-    CallInst *ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
+    std::vector<Value *> filterFuncArgs { data,        bitmap,           offsets,          numRows,
+        rowIdxArray, lengthAllocaInst, executionContext, dictionaryVectors,
+        isNullPtr,   filterResArray };
+    builder->CreateCall(filterFunc, filterFuncArgs, "INNER_FUNC");
 
     std::vector<DataTypeId> paramTypes = { OMNI_BOOLEAN, OMNI_BOOLEAN, OMNI_INT, OMNI_INT };
-    funcArgs = { bitmapResultArray, isNullPtr, resultsArray, numRows };
-    res =
+    funcArgs = { filterResArray, isNullPtr, selectedRows, numRows };
+    auto res =
         llvmEngine->CallExternFunction("batch_and_not", paramTypes, OMNI_INT, funcArgs, nullptr, "fill_filter_result");
     builder->CreateRet(res);
 

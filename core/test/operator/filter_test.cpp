@@ -1260,7 +1260,7 @@ TEST(FilterTest, testLongIn)
     std::vector<Expr *> projections = { new FieldExpr(0, LongType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, LongType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1315,7 +1315,7 @@ TEST(FilterTest, testDoubleIn)
     std::vector<Expr *> projections = { new FieldExpr(0, DoubleType()), new FieldExpr(1, DoubleType()),
         new FieldExpr(2, DoubleType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1369,7 +1369,7 @@ TEST(FilterTest, testStringIn1)
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1417,7 +1417,7 @@ TEST(FilterTest, testStringIn2)
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, CharType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1438,12 +1438,9 @@ TEST(FilterTest, testDecimal128In)
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
-    int64_t *data2 = new int64_t[numRows * 2];
     for (int64_t i = 0; i < numRows; i++) {
         data1[2 * i] = (i + 1) * 1000;
         data1[2 * i + 1] = 0;
-        data2[2 * i] = (i + 1) * 1;
-        data2[2 * i + 1] = 0;
     }
     int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
@@ -1464,7 +1461,7 @@ TEST(FilterTest, testDecimal128In)
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, Decimal128Type(38, 0)) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1474,7 +1471,7 @@ TEST(FilterTest, testDecimal128In)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
     VectorHelper::FreeVecBatches(ret);
-
+    delete[] data1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1769,9 +1766,9 @@ TEST(FilterTest, Coalesce1)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
-    int32_t *col1 = new int32_t[numRows];
-    int64_t *col2 = new int64_t[numRows];
-    int32_t *col3 = new int32_t[numRows];
+    auto *col1 = new int32_t[numRows];
+    auto *col2 = new int32_t[numRows];
+    auto *col3 = new int32_t[numRows];
 
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = 100;
@@ -1893,7 +1890,7 @@ TEST(FilterTest, Coalesce3)
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE,
         new FieldExpr(0, Decimal128Type(38, 0)), coalesce, BooleanType());
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -1950,7 +1947,7 @@ TEST(FilterTest, Coalesce4)
     std::vector<Expr *> projections = { new FieldExpr(0, CharType()) };
 
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -1971,9 +1968,9 @@ TEST(FilterTest, Coalesce5)
 {
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
-    int32_t *col1 = new int32_t[numRows];
-    int64_t *col2 = new int64_t[numRows];
-    int32_t *col3 = new int32_t[numRows];
+    auto *col1 = new int64_t[numRows];
+    auto *col2 = new int64_t[numRows];
+    auto *col3 = new int64_t[numRows];
 
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = 100;
@@ -2001,7 +1998,7 @@ TEST(FilterTest, Coalesce5)
     std::vector<Expr *> projections = { new FieldExpr(0, LongType()), new FieldExpr(1, LongType()),
         new FieldExpr(2, LongType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -2052,7 +2049,7 @@ TEST(FilterTest, Coalesce6)
     std::vector<Expr *> projections = { new FieldExpr(0, DoubleType()), new FieldExpr(1, DoubleType()),
         new FieldExpr(2, DoubleType()) };
     OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -2070,114 +2067,8 @@ TEST(FilterTest, Coalesce6)
     delete vectorAllocator;
 }
 
-
-TEST(FilterTest, ExternalMathFunc)
-{
-    const int32_t numCols = 2;
-    const int32_t numRows = 1000;
-    int32_t *col1 = new int32_t[numRows];
-    int32_t *col2 = new int32_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i;
-        col2[i] = i + 2;
-    }
-
-    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
-    VectorAllocator *vectorAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ExternalMathFunc");
-    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
-    // filter
-    std::string funcStr = "Increment";
-    DataTypePtr retType = IntType();
-    auto col0 = new FieldExpr(0, IntType());
-    auto add1Int1Expr = GetFuncExpr(funcStr, vector<Expr *> { col0 }, IntType());
-    auto eqLeft = GetFuncExpr(funcStr, vector<Expr *> { add1Int1Expr }, IntType());
-    auto eqRight = new FieldExpr(1, IntType());
-
-    auto filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
-
-    std::vector<Expr *> projections = { new FieldExpr(0, IntType()), new FieldExpr(1, IntType()) };
-    auto overflowConfig = new OverflowConfig();
-    OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections,
-        projections.size(), overflowConfig);
-    omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_EQ(numReturned, numRows);
-
-    Expr::DeleteExprs({ filterExpr });
-    Expr::DeleteExprs(projections);
-    VectorHelper::FreeVecBatches(ret);
-    delete[] col1;
-    delete[] col2;
-    omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
-    delete vectorAllocator;
-    delete overflowConfig;
-}
-
-
-TEST(FilterTest, ExternalStringFunc)
-{
-    const int32_t numCols = 1;
-    const int32_t numRows = 1000;
-    vector<string> strings;
-    for (int32_t i = 0; i < numRows; i++) {
-        if (i % 2 == 0) {
-            strings.emplace_back("hello");
-        } else {
-            if (i % 4 == 1) {
-                strings.emplace_back("bye");
-            } else {
-                strings.emplace_back("asdf");
-            }
-        }
-    }
-    vector<bool> nulls;
-    for (int32_t i = 0; i < numRows; i++) {
-        nulls.emplace_back(false);
-    }
-
-    // column looks like:
-    // hello, bye, hello, bye, hello, bye, ...
-    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
-    VectorAllocator *vectorAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_ExternalStringFunc");
-    std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
-    auto *t = CreateVectorBatch(numRows, cols);
-
-    std::string funcStr = "stringLength";
-    DataTypePtr retType = IntType();
-    std::vector<Expr *> args;
-    args.push_back(new FieldExpr(0, VarcharType()));
-    auto eqLeft = GetFuncExpr(funcStr, args, IntType());
-    auto filterExpr =
-        new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
-
-    const int32_t projectCount = 1;
-    std::vector<Expr *> projections = { new FieldExpr(0, VarcharType()) };
-    auto overflowConfig = new OverflowConfig();
-    OperatorFactory *factory =
-        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
-    omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_EQ(numReturned, 500);
-
-    Expr::DeleteExprs({ filterExpr });
-    Expr::DeleteExprs(projections);
-    VectorHelper::FreeVecBatches(ret);
-    omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
-    delete vectorAllocator;
-    delete overflowConfig;
-}
-
 // Testing multithreading
 // Two operators running at once
-
 void process(omniruntime::op::Operator *op, VectorBatch *t, std::vector<VectorBatch *> ret, int32_t *numReturned)
 {
     op->AddInput(t);

@@ -22,6 +22,28 @@
 #define DLLEXPORT
 #endif
 
+// string compare functions
+extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchLessThanStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchLessThanEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreaterThanStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreaterThanEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen,
+    bool *res, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchNotEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
+    int32_t rowCnt);
+
 extern "C" DLLEXPORT void BatchLikeStr(uint8_t **str, int32_t *strLen, uint8_t **regexToMatch, int32_t *regexLen,
     bool *isAnyNull, bool *output, int32_t rowCnt);
 
@@ -258,5 +280,7 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
         output[i] = ret;
     }
 }
+
+
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

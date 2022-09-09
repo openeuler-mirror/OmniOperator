@@ -382,7 +382,7 @@ TEST(ParseTest, parseInOperation)
     delete result;
 }
 
-// Test coalesce expression
+// Test Coalesce expression
 TEST(ParseTest, parseCoalesceOperation)
 {
     int vecTypeCount = 3;

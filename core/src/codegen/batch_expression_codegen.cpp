@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch expression codegen
  */
 #include "batch_expression_codegen.h"
@@ -22,8 +22,9 @@ const int EXPRFUNC_OUT_NULL_INDEX = 8;
 const int EXPRFUNC_OUT_DATA_INDEX = 9;
 }
 
-BatchExpressionCodeGen::BatchExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr)
-    : expr(&cpExpr), funcName(std::move(name))
+BatchExpressionCodeGen::BatchExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr,
+    omniruntime::op::OverflowConfig *overflowConfig)
+    : expr(&cpExpr), overflowConfig(overflowConfig), funcName(std::move(name))
 {}
 
 bool BatchExpressionCodeGen::InitializeCodegenContext(iterator_range<llvm::Function::arg_iterator> args)
@@ -107,20 +108,19 @@ llvm::Function *BatchExpressionCodeGen::CreateBatchFunction()
         return nullptr;
     }
 
-    Value *res;
     // copy length
     if (result->length != nullptr) {
-        res = llvmEngine->CallExternFunction("batch_copy", { OMNI_INT }, OMNI_INT,
+        llvmEngine->CallExternFunction("batch_copy", { OMNI_INT }, OMNI_INT,
             { func->getArg(EXPRFUNC_OUT_LENGTH_ARG_INDEX), result->length, func->getArg(EXPRFUNC_ROWCNT_INDEX) },
             nullptr, "copy_length");
     }
     // copy data
     auto resultArray = func->getArg(EXPRFUNC_OUT_DATA_INDEX);
-    res = llvmEngine->CallExternFunction("batch_copy", { expr->GetReturnTypeId() }, expr->GetReturnTypeId(),
+    llvmEngine->CallExternFunction("batch_copy", { expr->GetReturnTypeId() }, expr->GetReturnTypeId(),
         { resultArray, result->data, func->getArg(EXPRFUNC_ROWCNT_INDEX) }, nullptr, "copy_data");
 
     // copy null
-    res = llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
+    llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
         { func->getArg(EXPRFUNC_OUT_NULL_INDEX), result->isNull, func->getArg(EXPRFUNC_ROWCNT_INDEX) }, nullptr,
         "copy_null");
 
@@ -198,13 +198,12 @@ CodeGenValue *BatchExpressionCodeGen::LiteralExprConstantHelper(const LiteralExp
             break;
         }
         default: {
-            LogWarn("Unsupported data type in Data Expr %d", lExpr.GetReturnTypeId());
+            LogWarn("Unsupported data type in LITERAL Expr %d", lExpr.GetReturnTypeId());
             return new CodeGenValue(nullptr, nullptr);
         }
     }
 
     std::vector<Value *> funcArgs;
-    Value *ret;
 
     if (TypeUtil::IsStringType(lExpr.GetReturnTypeId())) {
         funcArgs = { this->batchCodegenContext->executionContext,
@@ -215,17 +214,17 @@ CodeGenValue *BatchExpressionCodeGen::LiteralExprConstantHelper(const LiteralExp
             isNull,
             length,
             this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_fill_literal", { lExpr.GetReturnTypeId() }, lExpr.GetReturnTypeId(),
+        llvmEngine->CallExternFunction("batch_fill_literal", { lExpr.GetReturnTypeId() }, lExpr.GetReturnTypeId(),
             funcArgs, nullptr, "fill_literal_array");
         return new CodeGenValue(literalArrayPtr, nullArrayPtr, lengthArrayPtr);
     } else if (TypeUtil::IsDecimalType(lExpr.GetReturnTypeId())) {
         funcArgs = { literalArrayPtr, nullArrayPtr, literalValue, isNull, this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_fill_literal", { lExpr.GetReturnTypeId() }, lExpr.GetReturnTypeId(),
+        llvmEngine->CallExternFunction("batch_fill_literal", { lExpr.GetReturnTypeId() }, lExpr.GetReturnTypeId(),
             funcArgs, nullptr, "fill_literal_array");
         return new DecimalValue(literalArrayPtr, nullArrayPtr, precision, scale);
     } else {
         funcArgs = { literalArrayPtr, nullArrayPtr, literalValue, isNull, this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_fill_literal", { lExpr.GetReturnTypeId() }, lExpr.GetReturnTypeId(),
+        llvmEngine->CallExternFunction("batch_fill_literal", { lExpr.GetReturnTypeId() }, lExpr.GetReturnTypeId(),
             funcArgs, nullptr, "fill_literal_array");
         return new CodeGenValue(literalArrayPtr, nullArrayPtr);
     }
@@ -279,7 +278,7 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
 
     builder->SetInsertPoint(trueBlock);
     AllocaInst *dicLengthArray = builder->CreateAlloca(llvmTypes->I32Type(), rowCnt, "dic_varchar_length");
-    ;
+
     auto dicArrayPtr = this->GetDictionaryVectorValue(*(fExpr.GetReturnType()), rowIdxArray, rowCnt,
         dictionaryVectorPtr, dicLengthArray);
 
@@ -290,9 +289,8 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
     builder->SetInsertPoint(falseBlock);
     Value *elementAddr = builder->CreateLoad(gep);
     AllocaInst *lengthArray = builder->CreateAlloca(llvmTypes->I32Type(), rowCnt, "varchar_length");
-    ;
+
     Value *dataArrayPtr = nullptr;
-    Value *ret;
 
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
         auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
@@ -329,19 +327,19 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
     Value *nullArrayPtr = builder->CreateLoad(bitmapGEP);
     nullArrayPtr = builder->CreateIntToPtr(nullArrayPtr, llvmTypes->I1PtrType());
     auto nullArray = GetResultArray(OMNI_BOOLEAN, rowCnt);
-    auto res = llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { nullArray, nullArrayPtr, rowCnt }, nullptr, "copy_null");
+    llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, { nullArray, nullArrayPtr, rowCnt },
+        nullptr, "copy_null");
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
         Value *precision =
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision());
         Value *scale =
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale());
-        this->value.reset(new DecimalValue(phiValue, nullArray, precision, scale));
+        this->value = make_shared<DecimalValue>(phiValue, nullArray, precision, scale);
     } else if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
-        this->value.reset(new CodeGenValue(phiValue, nullArray, phiLength));
+        this->value = make_shared<CodeGenValue>(phiValue, nullArray, phiLength);
     } else {
-        this->value.reset(new CodeGenValue(phiValue, nullArray));
+        this->value = make_shared<CodeGenValue>(phiValue, nullArray);
     }
 }
 
@@ -364,8 +362,7 @@ Value *BatchExpressionCodeGen::GetDictionaryVectorValue(const DataType &dataType
         funcArgs = { dictionaryVectorPtr, rowIdxArray, rowCnt, dataArrayPtr };
     }
 
-    Value *ret = llvmEngine->CallExternFunction("batch_GetDic", { OMNI_LONG }, typeId, funcArgs, nullptr,
-        "get_dictionary_value");
+    llvmEngine->CallExternFunction("batch_GetDic", { OMNI_LONG }, typeId, funcArgs, nullptr, "get_dictionary_value");
     return dataArrayPtr;
 }
 
@@ -389,8 +386,7 @@ Value *BatchExpressionCodeGen::GetVectorValue(const DataType &dataType, Value *r
         funcArgs = { dataVectorPtr, rowIdxArray, rowCnt, dataArrayPtr };
     }
 
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_GetData", { OMNI_LONG }, typeId, funcArgs, nullptr, "get_vector_value");
+    llvmEngine->CallExternFunction("batch_GetData", { OMNI_LONG }, typeId, funcArgs, nullptr, "get_vector_value");
 
     return dataArrayPtr;
 }
@@ -411,8 +407,8 @@ void BatchExpressionCodeGen::Visit(const UnaryExpr &uExpr)
     switch (uExpr.op) {
         case omniruntime::expressions::Operator::NOT: {
             std::vector<Value *> funcArgs { val->data, this->batchCodegenContext->rowCnt };
-            auto ret = llvmEngine->CallExternFunction("batch_not", { uExpr.exp->GetReturnTypeId() },
-                uExpr.GetReturnTypeId(), funcArgs, nullptr, "logical_not");
+            llvmEngine->CallExternFunction("batch_not", { uExpr.exp->GetReturnTypeId() }, uExpr.GetReturnTypeId(),
+                funcArgs, nullptr, "logical_not");
 
             this->value = make_shared<CodeGenValue>(val->data, val->isNull);
             break;
@@ -449,8 +445,7 @@ void BatchExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
         std::vector<omniruntime::type::DataTypeId> boolParams { OMNI_BOOLEAN, OMNI_BOOLEAN };
         vector<Value *> orFuncParams { leftValue, leftNull, rightValue, rightNull, this->batchCodegenContext->rowCnt };
-        Value *eitherTrue = llvmEngine->CallExternFunction("batch_and_expr", boolParams, OMNI_BOOLEAN, orFuncParams,
-            nullptr, "and_expr");
+        llvmEngine->CallExternFunction("batch_and_expr", boolParams, OMNI_BOOLEAN, orFuncParams, nullptr, "and_expr");
         this->value = make_shared<CodeGenValue>(leftValue, leftNull);
         return;
     }
@@ -458,8 +453,7 @@ void BatchExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
         std::vector<omniruntime::type::DataTypeId> boolParams { OMNI_BOOLEAN, OMNI_BOOLEAN };
         vector<Value *> orFuncParams { leftValue, leftNull, rightValue, rightNull, this->batchCodegenContext->rowCnt };
-        Value *eitherTrue =
-            llvmEngine->CallExternFunction("batch_or_expr", boolParams, OMNI_BOOLEAN, orFuncParams, nullptr, "or_expr");
+        llvmEngine->CallExternFunction("batch_or_expr", boolParams, OMNI_BOOLEAN, orFuncParams, nullptr, "or_expr");
         this->value = make_shared<CodeGenValue>(leftValue, leftNull);
         return;
     }
@@ -505,62 +499,61 @@ void BatchExpressionCodeGen::BinaryExprIntHelper(const omniruntime::expressions:
     vector<Value *> arithFuncParams { left, right, this->batchCodegenContext->rowCnt };
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            ret = llvmEngine->CallExternFunction("batch_lessThan", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_lessThan", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_lt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GT:
-            ret = llvmEngine->CallExternFunction("batch_greaterThan", intParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_gt");
+            llvmEngine->CallExternFunction("batch_greaterThan", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_gt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::LTE:
-            ret = llvmEngine->CallExternFunction("batch_lessThanEqual", intParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_le");
+            llvmEngine->CallExternFunction("batch_lessThanEqual", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_le");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GTE:
-            ret = llvmEngine->CallExternFunction("batch_greaterThanEqual", intParams, OMNI_BOOLEAN, logicalFuncParams,
+            llvmEngine->CallExternFunction("batch_greaterThanEqual", intParams, OMNI_BOOLEAN, logicalFuncParams,
                 nullptr, "relational_ge");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::EQ:
-            ret = llvmEngine->CallExternFunction("batch_equal", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_equal", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_eq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::NEQ:
-            ret = llvmEngine->CallExternFunction("batch_notEqual", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_notEqual", intParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_neq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::ADD:
-            ret = llvmEngine->CallExternFunction("batch_add", intParams, OMNI_INT, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_add", intParams, OMNI_INT, arithFuncParams, nullptr,
                 "arithmetic_add");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::SUB:
-            ret = llvmEngine->CallExternFunction("batch_subtract", intParams, OMNI_INT, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_subtract", intParams, OMNI_INT, arithFuncParams, nullptr,
                 "arithmetic_sub");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::MUL:
-            ret = llvmEngine->CallExternFunction("batch_multiply", intParams, OMNI_INT, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_multiply", intParams, OMNI_INT, arithFuncParams, nullptr,
                 "arithmetic_mul");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::DIV:
-            ret = llvmEngine->CallExternFunction("batch_divide", intParams, OMNI_INT, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_divide", intParams, OMNI_INT, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_div");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::MOD:
-            ret = llvmEngine->CallExternFunction("batch_modulus", intParams, OMNI_INT, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_modulus", intParams, OMNI_INT, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_mod");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
@@ -587,62 +580,61 @@ void BatchExpressionCodeGen::BinaryExprLongHelper(const omniruntime::expressions
     vector<Value *> arithFuncParams { left, right, this->batchCodegenContext->rowCnt };
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            ret = llvmEngine->CallExternFunction("batch_lessThan", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_lessThan", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_lt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GT:
-            ret = llvmEngine->CallExternFunction("batch_greaterThan", longParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_gt");
+            llvmEngine->CallExternFunction("batch_greaterThan", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_gt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::LTE:
-            ret = llvmEngine->CallExternFunction("batch_lessThanEqual", longParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_le");
+            llvmEngine->CallExternFunction("batch_lessThanEqual", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_le");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GTE:
-            ret = llvmEngine->CallExternFunction("batch_greaterThanEqual", longParams, OMNI_BOOLEAN, logicalFuncParams,
+            llvmEngine->CallExternFunction("batch_greaterThanEqual", longParams, OMNI_BOOLEAN, logicalFuncParams,
                 nullptr, "relational_ge");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::EQ:
-            ret = llvmEngine->CallExternFunction("batch_equal", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_equal", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_eq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::NEQ:
-            ret = llvmEngine->CallExternFunction("batch_notEqual", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_notEqual", longParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_neq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::ADD:
-            ret = llvmEngine->CallExternFunction("batch_add", longParams, OMNI_LONG, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_add", longParams, OMNI_LONG, arithFuncParams, nullptr,
                 "arithmetic_add");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::SUB:
-            ret = llvmEngine->CallExternFunction("batch_subtract", longParams, OMNI_LONG, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_subtract", longParams, OMNI_LONG, arithFuncParams, nullptr,
                 "arithmetic_sub");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::MUL:
-            ret = llvmEngine->CallExternFunction("batch_multiply", longParams, OMNI_LONG, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_multiply", longParams, OMNI_LONG, arithFuncParams, nullptr,
                 "arithmetic_mul");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::DIV:
-            ret = llvmEngine->CallExternFunction("batch_divide", longParams, OMNI_LONG, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_divide", longParams, OMNI_LONG, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_div");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::MOD:
-            ret = llvmEngine->CallExternFunction("batch_modulus", longParams, OMNI_LONG, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_modulus", longParams, OMNI_LONG, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_mod");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
@@ -669,62 +661,61 @@ void BatchExpressionCodeGen::BinaryExprDoubleHelper(const omniruntime::expressio
     vector<Value *> arithFuncParams { left, right, this->batchCodegenContext->rowCnt };
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            ret = llvmEngine->CallExternFunction("batch_lessThan", doubleParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_lt");
+            llvmEngine->CallExternFunction("batch_lessThan", doubleParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_lt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GT:
-            ret = llvmEngine->CallExternFunction("batch_greaterThan", doubleParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_gt");
+            llvmEngine->CallExternFunction("batch_greaterThan", doubleParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_gt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::LTE:
-            ret = llvmEngine->CallExternFunction("batch_lessThanEqual", doubleParams, OMNI_BOOLEAN, logicalFuncParams,
+            llvmEngine->CallExternFunction("batch_lessThanEqual", doubleParams, OMNI_BOOLEAN, logicalFuncParams,
                 nullptr, "relational_le");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GTE:
-            ret = llvmEngine->CallExternFunction("batch_greaterThanEqual", doubleParams, OMNI_BOOLEAN,
-                logicalFuncParams, nullptr, "relational_ge");
+            llvmEngine->CallExternFunction("batch_greaterThanEqual", doubleParams, OMNI_BOOLEAN, logicalFuncParams,
+                nullptr, "relational_ge");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::EQ:
-            ret = llvmEngine->CallExternFunction("batch_equal", doubleParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_equal", doubleParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_eq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::NEQ:
-            ret = llvmEngine->CallExternFunction("batch_notEqual", doubleParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_neq");
+            llvmEngine->CallExternFunction("batch_notEqual", doubleParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_neq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::ADD:
-            ret = llvmEngine->CallExternFunction("batch_add", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_add", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
                 "arithmetic_add");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::SUB:
-            ret = llvmEngine->CallExternFunction("batch_subtract", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_subtract", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
                 "arithmetic_sub");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::MUL:
-            ret = llvmEngine->CallExternFunction("batch_multiply", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_multiply", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
                 "arithmetic_mul");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::DIV:
-            ret = llvmEngine->CallExternFunction("batch_divide", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_divide", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
                 "arithmetic_div");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
         case omniruntime::expressions::Operator::MOD:
-            ret = llvmEngine->CallExternFunction("batch_modulus", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_modulus", doubleParams, OMNI_DOUBLE, arithFuncParams, nullptr,
                 "arithmetic_mod");
             this->value = make_shared<CodeGenValue>(left, leftIsNull);
             return;
@@ -784,52 +775,51 @@ void BatchExpressionCodeGen::BinaryExprDecimal64Helper(const omniruntime::expres
     }
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            ret = llvmEngine->CallExternFunction("batch_lessThan", decimal64Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_lt");
+            llvmEngine->CallExternFunction("batch_lessThan", decimal64Params, returnTypeId, logicalFuncParams, nullptr,
+                "relational_lt");
             break;
         case omniruntime::expressions::Operator::GT:
-            ret = llvmEngine->CallExternFunction("batch_greaterThan", decimal64Params, returnTypeId, logicalFuncParams,
+            llvmEngine->CallExternFunction("batch_greaterThan", decimal64Params, returnTypeId, logicalFuncParams,
                 nullptr, "relational_gt");
             break;
         case omniruntime::expressions::Operator::LTE:
-            ret = llvmEngine->CallExternFunction("batch_lessThanEqual", decimal64Params, returnTypeId,
-                logicalFuncParams, nullptr, "relational_le");
+            llvmEngine->CallExternFunction("batch_lessThanEqual", decimal64Params, returnTypeId, logicalFuncParams,
+                nullptr, "relational_le");
             break;
         case omniruntime::expressions::Operator::GTE:
-            ret = llvmEngine->CallExternFunction("batch_greaterThanEqual", decimal64Params, returnTypeId,
-                logicalFuncParams, nullptr, "relational_ge");
+            llvmEngine->CallExternFunction("batch_greaterThanEqual", decimal64Params, returnTypeId, logicalFuncParams,
+                nullptr, "relational_ge");
             break;
         case omniruntime::expressions::Operator::EQ:
-            ret = llvmEngine->CallExternFunction("batch_equal", decimal64Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_eq");
+            llvmEngine->CallExternFunction("batch_equal", decimal64Params, returnTypeId, logicalFuncParams, nullptr,
+                "relational_eq");
             break;
         case omniruntime::expressions::Operator::NEQ:
-            ret = llvmEngine->CallExternFunction("batch_notEqual", decimal64Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_neq");
+            llvmEngine->CallExternFunction("batch_notEqual", decimal64Params, returnTypeId, logicalFuncParams, nullptr,
+                "relational_neq");
             break;
         case omniruntime::expressions::Operator::ADD:
-            ret = llvmEngine->CallExternFunction("batch_add", decimal64Params, returnTypeId, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_add", decimal64Params, returnTypeId, arithFuncParams, nullptr,
                 "arithmetic_add");
             break;
         case omniruntime::expressions::Operator::SUB:
-            ret = llvmEngine->CallExternFunction("batch_subtract", decimal64Params, returnTypeId, arithFuncParams,
-                nullptr, "arithmetic_sub");
+            llvmEngine->CallExternFunction("batch_subtract", decimal64Params, returnTypeId, arithFuncParams, nullptr,
+                "arithmetic_sub");
             break;
         case omniruntime::expressions::Operator::MUL:
-            ret = llvmEngine->CallExternFunction("batch_multiply", decimal64Params, returnTypeId, arithFuncParams,
-                nullptr, "arithmetic_mul");
+            llvmEngine->CallExternFunction("batch_multiply", decimal64Params, returnTypeId, arithFuncParams, nullptr,
+                "arithmetic_mul");
             break;
         case omniruntime::expressions::Operator::DIV:
-            ret = llvmEngine->CallExternFunction("batch_divide", decimal64Params, returnTypeId, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_divide", decimal64Params, returnTypeId, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_div");
             break;
         case omniruntime::expressions::Operator::MOD:
-            ret = llvmEngine->CallExternFunction("batch_modulus", decimal64Params, returnTypeId, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_modulus", decimal64Params, returnTypeId, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_mod");
             break;
         default: {
@@ -886,52 +876,51 @@ void BatchExpressionCodeGen::BinaryExprDecimal128Helper(const omniruntime::expre
     }
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            ret = llvmEngine->CallExternFunction("batch_lessThan", decimal128Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_lt");
+            llvmEngine->CallExternFunction("batch_lessThan", decimal128Params, returnTypeId, logicalFuncParams, nullptr,
+                "relational_lt");
             break;
         case omniruntime::expressions::Operator::GT:
-            ret = llvmEngine->CallExternFunction("batch_greaterThan", decimal128Params, returnTypeId, logicalFuncParams,
+            llvmEngine->CallExternFunction("batch_greaterThan", decimal128Params, returnTypeId, logicalFuncParams,
                 nullptr, "relational_gt");
             break;
         case omniruntime::expressions::Operator::LTE:
-            ret = llvmEngine->CallExternFunction("batch_lessThanEqual", decimal128Params, returnTypeId,
-                logicalFuncParams, nullptr, "relational_le");
+            llvmEngine->CallExternFunction("batch_lessThanEqual", decimal128Params, returnTypeId, logicalFuncParams,
+                nullptr, "relational_le");
             break;
         case omniruntime::expressions::Operator::GTE:
-            ret = llvmEngine->CallExternFunction("batch_greaterThanEqual", decimal128Params, returnTypeId,
-                logicalFuncParams, nullptr, "relational_ge");
+            llvmEngine->CallExternFunction("batch_greaterThanEqual", decimal128Params, returnTypeId, logicalFuncParams,
+                nullptr, "relational_ge");
             break;
         case omniruntime::expressions::Operator::EQ:
-            ret = llvmEngine->CallExternFunction("batch_equal", decimal128Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_eq");
+            llvmEngine->CallExternFunction("batch_equal", decimal128Params, returnTypeId, logicalFuncParams, nullptr,
+                "relational_eq");
             break;
         case omniruntime::expressions::Operator::NEQ:
-            ret = llvmEngine->CallExternFunction("batch_notEqual", decimal128Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_neq");
+            llvmEngine->CallExternFunction("batch_notEqual", decimal128Params, returnTypeId, logicalFuncParams, nullptr,
+                "relational_neq");
             break;
         case omniruntime::expressions::Operator::ADD:
-            ret = llvmEngine->CallExternFunction("batch_add", decimal128Params, returnTypeId, arithFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_add", decimal128Params, returnTypeId, arithFuncParams, nullptr,
                 "arithmetic_add");
             break;
         case omniruntime::expressions::Operator::SUB:
-            ret = llvmEngine->CallExternFunction("batch_subtract", decimal128Params, returnTypeId, arithFuncParams,
-                nullptr, "arithmetic_sub");
+            llvmEngine->CallExternFunction("batch_subtract", decimal128Params, returnTypeId, arithFuncParams, nullptr,
+                "arithmetic_sub");
             break;
         case omniruntime::expressions::Operator::MUL:
-            ret = llvmEngine->CallExternFunction("batch_multiply", decimal128Params, returnTypeId, arithFuncParams,
-                nullptr, "arithmetic_mul");
+            llvmEngine->CallExternFunction("batch_multiply", decimal128Params, returnTypeId, arithFuncParams, nullptr,
+                "arithmetic_mul");
             break;
         case omniruntime::expressions::Operator::DIV:
-            ret = llvmEngine->CallExternFunction("batch_divide", decimal128Params, returnTypeId, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_divide", decimal128Params, returnTypeId, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_div");
             break;
         case omniruntime::expressions::Operator::MOD:
-            ret = llvmEngine->CallExternFunction("batch_modulus", decimal128Params, returnTypeId, arithFuncParams,
+            llvmEngine->CallExternFunction("batch_modulus", decimal128Params, returnTypeId, arithFuncParams,
                 batchCodegenContext->executionContext, "arithmetic_mod");
             break;
         default: {
@@ -961,37 +950,36 @@ void BatchExpressionCodeGen::BinaryExprStringHelper(const omniruntime::expressio
         rightLen, logicalArrayPtr, this->batchCodegenContext->rowCnt };
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    Value *ret =
-        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            ret = llvmEngine->CallExternFunction("batch_lessThan", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_lessThan", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_lt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GT:
-            ret = llvmEngine->CallExternFunction("batch_greaterThan", strParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_gt");
+            llvmEngine->CallExternFunction("batch_greaterThan", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_gt");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::LTE:
-            ret = llvmEngine->CallExternFunction("batch_lessThanEqual", strParams, OMNI_BOOLEAN, logicalFuncParams,
-                nullptr, "relational_le");
+            llvmEngine->CallExternFunction("batch_lessThanEqual", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+                "relational_le");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::GTE:
-            ret = llvmEngine->CallExternFunction("batch_greaterThanEqual", strParams, OMNI_BOOLEAN, logicalFuncParams,
+            llvmEngine->CallExternFunction("batch_greaterThanEqual", strParams, OMNI_BOOLEAN, logicalFuncParams,
                 nullptr, "relational_ge");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::EQ:
-            ret = llvmEngine->CallExternFunction("batch_equal", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_equal", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_eq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         case omniruntime::expressions::Operator::NEQ:
-            ret = llvmEngine->CallExternFunction("batch_notEqual", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
+            llvmEngine->CallExternFunction("batch_notEqual", strParams, OMNI_BOOLEAN, logicalFuncParams, nullptr,
                 "relational_neq");
             this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
@@ -1020,38 +1008,33 @@ void BatchExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         this->value = CreateBatchInvalidCodeGenValue();
         return;
     }
-    auto valNull = val->isNull;
 
     auto lowerVal = VisitExpr(*(bExpr->lowerBound));
     if (!lowerVal->IsValidValue()) {
         this->value = CreateBatchInvalidCodeGenValue();
         return;
     }
-    auto lowerValNull = lowerVal->isNull;
 
     auto upperVal = VisitExpr(*(bExpr->upperBound));
     if (!upperVal->IsValidValue()) {
         this->value = CreateBatchInvalidCodeGenValue();
         return;
     }
-    auto upperValNull = upperVal->isNull;
 
     AllocaInst *cmpLeft = builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "cmpLeft");
     AllocaInst *cmpRight = builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "cmpRight");
     std::pair<AllocaInst **, AllocaInst **> cmpPair = std::make_pair(&cmpLeft, &cmpRight);
-    bool supportedType = VisitBetweenExprHelper(*bExpr, val, lowerVal, upperVal, cmpPair);
 
+    bool supportedType = VisitBetweenExprHelper(*bExpr, val, lowerVal, upperVal, cmpPair);
     if (supportedType) {
         std::vector<omniruntime::type::DataTypeId> boolParams { OMNI_BOOLEAN, OMNI_BOOLEAN };
         vector<Value *> nullFuncParams { lowerVal->isNull, val->isNull, this->batchCodegenContext->rowCnt };
-        Value *ret = llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr,
-            "either_null");
+        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
         nullFuncParams = { lowerVal->isNull, upperVal->isNull, this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr,
-            "either_null");
+        llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
         vector<Value *> betweenFuncParams = { cmpLeft, cmpRight, this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_and", boolParams, OMNI_BOOLEAN, betweenFuncParams, nullptr,
+        llvmEngine->CallExternFunction("batch_and", boolParams, OMNI_BOOLEAN, betweenFuncParams, nullptr,
             "between_pass");
         this->value = make_shared<CodeGenValue>(cmpLeft, lowerVal->isNull);
         return;
@@ -1067,22 +1050,22 @@ bool BatchExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, const sh
 {
     auto cmpLeft = cmpPair.first;
     auto cmpRight = cmpPair.second;
-    std::vector<omniruntime::type::DataTypeId> params(2, bExpr.value->GetReturnTypeId());
+    std::vector<omniruntime::type::DataTypeId> params { bExpr.value->GetReturnTypeId(),
+        bExpr.value->GetReturnTypeId() };
     std::vector<Value *> logicalFuncParams1 { lowerVal->data, val->data, *cmpLeft, this->batchCodegenContext->rowCnt };
     std::vector<Value *> logicalFuncParams2 { val->data, upperVal->data, *cmpRight, this->batchCodegenContext->rowCnt };
-    Value *ret;
 
     if (bExpr.value->GetReturnTypeId() == OMNI_INT || bExpr.value->GetReturnTypeId() == OMNI_LONG ||
         bExpr.value->GetReturnTypeId() == OMNI_DATE32 || bExpr.value->GetReturnTypeId() == OMNI_DOUBLE) {
-        ret = llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams1, nullptr,
+        llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams1, nullptr,
             "relational_le");
-        ret = llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams2, nullptr,
+        llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams2, nullptr,
             "relational_le");
         return true;
     } else if (TypeUtil::IsStringType(bExpr.value->GetReturnTypeId())) {
-        ret = llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams1, nullptr,
+        llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams1, nullptr,
             "relational_le");
-        ret = llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams2, nullptr,
+        llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams2, nullptr,
             "relational_le");
         return true;
     } else if (TypeUtil::IsDecimalType(bExpr.value->GetReturnTypeId())) {
@@ -1103,9 +1086,9 @@ bool BatchExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, const sh
             *cmpRight,
             this->batchCodegenContext->rowCnt };
 
-        ret = llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams1, nullptr,
+        llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams1, nullptr,
             "relational_le");
-        ret = llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams2, nullptr,
+        llvmEngine->CallExternFunction("batch_lessThanEqual", params, OMNI_BOOLEAN, logicalFuncParams2, nullptr,
             "relational_le");
         return true;
     }
@@ -1123,14 +1106,14 @@ void BatchExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
 
     std::vector<Value *> funcArgs { isNullValue->isNull, llvmTypes->CreateConstantBool(true),
         this->batchCodegenContext->rowCnt };
-    auto ret = llvmEngine->CallExternFunction("batch_equal", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs,
-        nullptr, "is_null");
+    llvmEngine->CallExternFunction("batch_equal", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
+        "is_null");
 
     AllocaInst *nullArrayPtr =
         builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "IS_NULL_PTR");
     funcArgs = { nullArrayPtr, llvmTypes->CreateConstantBool(false), this->batchCodegenContext->rowCnt };
-    ret = llvmEngine->CallExternFunction("batch_fill_literal", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
-        "batch_fill_literal");
+    llvmEngine->CallExternFunction("batch_fill_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
+        "batch_fill_null");
 
     this->value = make_shared<CodeGenValue>(isNullValue->isNull, nullArrayPtr);
 }
@@ -1143,7 +1126,6 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDefaultFunctionArgValues(c
     CodeGenValuePtr resultPtr;
     int numArgs = fExpr.arguments.size();
     vector<Value *> nullFuncParams;
-    Value *ret;
 
     if (fExpr.function->IsExecutionContextSet()) {
         argVals.push_back(this->batchCodegenContext->executionContext);
@@ -1158,7 +1140,7 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDefaultFunctionArgValues(c
         argVals.push_back(resultPtr->data);
 
         nullFuncParams = { isAnyNull, resultPtr->isNull, this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams,
+        llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams,
             nullptr, "either_null");
 
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
@@ -1178,20 +1160,19 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDefaultFunctionArgValues(c
     return argVals;
 }
 
-std::vector<llvm::Value *> BatchExpressionCodeGen::GetNullResultIfNullArgFunctionArgValues(
-    const omniruntime::expressions::FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr)
+std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr,
+    AllocaInst *isAnyNull, bool &isInvalidExpr)
 {
     return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
 }
 
-std::vector<llvm::Value *> BatchExpressionCodeGen::GetValidNotNullResultFunctionArgValues(const FuncExpr &fExpr,
-    AllocaInst *isAnyNull, bool &isInvalidExpr)
+std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndNullArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+    bool &isInvalidExpr)
 {
     std::vector<Value *> argVals;
     CodeGenValuePtr resultPtr;
     int numArgs = fExpr.arguments.size();
     vector<Value *> nullFuncParams;
-    Value *ret;
 
     if (fExpr.function->IsExecutionContextSet()) {
         argVals.push_back(this->batchCodegenContext->executionContext);
@@ -1206,7 +1187,7 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetValidNotNullResultFunction
         argVals.push_back(resultPtr->data);
 
         nullFuncParams = { isAnyNull, resultPtr->isNull, this->batchCodegenContext->rowCnt };
-        ret = llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams,
+        llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams,
             nullptr, "either_null");
 
         if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
@@ -1231,10 +1212,10 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetFunctionArgValues(const om
     AllocaInst *isAnyNull, bool &isInvalidExpr)
 {
     switch (fExpr.function->GetNullableResultType()) {
-        case NULL_RESULT_IF_ANY_NULL_ARG:
-            return GetNullResultIfNullArgFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
-        case VALID_NOT_NULL_RESULT:
-            return GetValidNotNullResultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+        case INPUT_DATA:
+            return GetDataArgs(fExpr, isAnyNull, isInvalidExpr);
+        case INPUT_DATA_AND_NULL:
+            return GetDataAndNullArgs(fExpr, isAnyNull, isInvalidExpr);
         default:
             return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
     }
@@ -1272,19 +1253,140 @@ llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::Data
             break;
         }
         default: {
-            LogWarn("Unsupported return type in funcExpr %d", dataTypeId);
+            LogWarn("Unsupported return type when creating array %d", dataTypeId);
         }
     }
     return resultArray;
 }
 
-void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
+string BatchChangeFuncNameToNull(string signature)
+{
+    size_t pos = signature.find_first_of('_');
+    return signature.insert(pos, "_null");
+}
+
+std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndOverflowNullArgs(
+    const omniruntime::expressions::FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr,
+    AllocaInst *overflowNull)
+{
+    std::vector<Value *> argVals;
+    argVals.push_back(overflowNull);
+    CodeGenValuePtr resultPtr;
+    int numArgs = fExpr.arguments.size();
+    vector<Value *> nullFuncParams;
+
+    auto signature = fExpr.function->GetSignatures()[0];
+    if (FunctionRegistry::IsNullExecutionContextSet(&signature)) {
+        argVals.push_back(this->batchCodegenContext->executionContext);
+    }
+    for (int i = 0; i < numArgs; i++) {
+        Expr *argN = fExpr.arguments[i];
+        resultPtr = VisitExpr(*argN);
+        if (!resultPtr->IsValidValue()) {
+            isInvalidExpr = true;
+            return argVals;
+        }
+        argVals.push_back(resultPtr->data);
+
+        nullFuncParams = { isAnyNull, resultPtr->isNull, this->batchCodegenContext->rowCnt };
+        llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams,
+            nullptr, "either_null");
+
+        if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
+            if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_CHAR) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
+            }
+            argVals.push_back(this->value->length);
+        }
+        if (TypeUtil::IsDecimalType(argN->GetReturnTypeId())) {
+            argVals.push_back(llvmTypes->CreateConstantInt(
+                static_cast<DecimalDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetPrecision()));
+            argVals.push_back(llvmTypes->CreateConstantInt(
+                static_cast<DecimalDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetScale()));
+        }
+    }
+    return argVals;
+}
+
+void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
 {
     Value *falseValue = llvmTypes->CreateConstantBool(false);
     AllocaInst *isAnyNull =
         builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "IS_NULL_PTR");
     vector<Value *> funcArgs { isAnyNull, falseValue, this->batchCodegenContext->rowCnt };
-    auto ret = llvmEngine->CallExternFunction("batch_fill_literal", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
+    auto ret = llvmEngine->CallExternFunction("batch_fill_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
+        "fill_null_array");
+    AllocaInst *overflowNull =
+        builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "OVERFLOW_NULL_PTR");
+    funcArgs = { overflowNull, falseValue, this->batchCodegenContext->rowCnt };
+    llvmEngine->CallExternFunction("batch_fill_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
+        "fill_overflow_null_array");
+
+    DataTypeId funcRetType = fExpr.GetReturnTypeId();
+    bool isInvalidExpr = false;
+
+    auto argVals = GetDataAndOverflowNullArgs(fExpr, isAnyNull, isInvalidExpr, overflowNull);
+    if (isInvalidExpr) {
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
+    }
+
+    AllocaInst *resultArray = GetResultArray(funcRetType, this->batchCodegenContext->rowCnt);
+    argVals.push_back(isAnyNull);
+    argVals.push_back(resultArray);
+    AllocaInst *outputLenPtr = nullptr;
+
+    if (TypeUtil::IsStringType(funcRetType)) {
+        outputLenPtr = builder->CreateAlloca(llvmTypes->I32Type(), this->batchCodegenContext->rowCnt, "output_len");
+        argVals.push_back(outputLenPtr);
+    } else if (TypeUtil::IsDecimalType(funcRetType)) {
+        argVals.push_back(
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision()));
+        argVals.push_back(
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale()));
+    }
+    argVals.push_back(this->batchCodegenContext->rowCnt);
+
+    auto f = module->getFunction("batch_" + BatchChangeFuncNameToNull(fExpr.function->GetId()));
+    if (f) {
+        ret = llvmEngine->CreateCall(f, argVals, fExpr.function->GetId());
+        InlineFunctionInfo inlineFunctionInfo;
+        llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
+    } else {
+        LogWarn("Unable to generate function : %s", fExpr.funcName.c_str());
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
+    }
+
+    llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN,
+        { isAnyNull, overflowNull, this->batchCodegenContext->rowCnt }, nullptr);
+
+    if (TypeUtil::IsDecimalType(funcRetType)) {
+        this->value = make_shared<DecimalValue>(resultArray, isAnyNull,
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision()),
+            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale()));
+    } else {
+        this->value = make_shared<CodeGenValue>(resultArray, isAnyNull, outputLenPtr);
+    }
+}
+
+void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
+{
+    if (this->overflowConfig != nullptr &&
+        this->overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        auto signature = fExpr.function->GetSignatures()[0];
+        if (FunctionRegistry::LookupNullFunction(&signature)) {
+            FuncExprOverflowNullHelper(fExpr);
+            return;
+        }
+    }
+
+    Value *falseValue = llvmTypes->CreateConstantBool(false);
+    AllocaInst *isAnyNull =
+        builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "IS_NULL_PTR");
+    vector<Value *> funcArgs { isAnyNull, falseValue, this->batchCodegenContext->rowCnt };
+    llvmEngine->CallExternFunction("batch_fill_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
         "fill_null_array");
 
     DataTypeId funcRetType = fExpr.GetReturnTypeId();
@@ -1297,6 +1399,7 @@ void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
     }
 
     AllocaInst *resultArray = GetResultArray(funcRetType, this->batchCodegenContext->rowCnt);
+    argVals.push_back(isAnyNull);
     argVals.push_back(resultArray);
     AllocaInst *outputLenPtr = nullptr;
 
@@ -1313,7 +1416,7 @@ void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
 
     auto f = module->getFunction("batch_" + fExpr.function->GetId());
     if (f) {
-        ret = llvmEngine->CreateCall(f, argVals, fExpr.function->GetId());
+        auto ret = llvmEngine->CreateCall(f, argVals, fExpr.function->GetId());
         InlineFunctionInfo inlineFunctionInfo;
         llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
     } else {
@@ -1368,14 +1471,14 @@ void BatchExpressionCodeGen::Visit(const IfExpr &ifExpr)
     Value *evFalseValue = evFalse->data;
     Value *evFalseLength = evFalse->length;
     Value *evFalseNull = evFalse->isNull;
-    Value *ret;
+
     switch (baseType) {
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
         case OMNI_DOUBLE:
         case OMNI_BOOLEAN: {
-            ret = llvmEngine->CallExternFunction("batch_if", { baseType }, baseType,
+            llvmEngine->CallExternFunction("batch_if", { baseType }, baseType,
                 { evCond->data, evCond->isNull, evTrueValue, evTrueNull, evFalseValue, evFalseNull,
                 this->batchCodegenContext->rowCnt },
                 nullptr);
@@ -1384,31 +1487,25 @@ void BatchExpressionCodeGen::Visit(const IfExpr &ifExpr)
         }
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128: {
-            auto returnDecimalValue = decimalIRBuilder->BuildDecimalValue(nullptr, *ifExpr.GetReturnType(), nullptr);
             DecimalValue &left = static_cast<DecimalValue &>(*evTrue);
             DecimalValue &right = static_cast<DecimalValue &>(*evFalse);
+
             std::vector<Value *> argValsCmp { evCond->data,
                 evCond->isNull,
                 left.data,
                 left.isNull,
-                const_cast<Value *>(left.GetPrecision()),
-                const_cast<Value *>(left.GetScale()),
                 right.data,
                 right.isNull,
-                const_cast<Value *>(right.GetPrecision()),
-                const_cast<Value *>(right.GetScale()),
-                const_cast<Value *>(returnDecimalValue->GetPrecision()),
-                const_cast<Value *>(returnDecimalValue->GetScale()),
                 this->batchCodegenContext->rowCnt };
-            ret = llvmEngine->CallExternFunction("batch_if", { baseType }, baseType, argValsCmp, nullptr);
-            this->value = make_shared<DecimalValue>(left.data, left.isNull,
-                const_cast<Value *>(returnDecimalValue->GetPrecision()),
-                const_cast<Value *>(returnDecimalValue->GetScale()));
+
+            llvmEngine->CallExternFunction("batch_if", { baseType }, baseType, argValsCmp, nullptr);
+            this->value = make_shared<DecimalValue>(left.data, left.isNull, const_cast<Value *>(left.GetPrecision()),
+                const_cast<Value *>(left.GetScale()));
             return;
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
-            ret = llvmEngine->CallExternFunction("batch_if", { baseType }, baseType,
+            llvmEngine->CallExternFunction("batch_if", { baseType }, baseType,
                 { evCond->data, evCond->isNull, evTrueValue, evTrueNull, evTrueLength, evFalseValue, evFalseNull,
                 evFalseLength, this->batchCodegenContext->rowCnt },
                 nullptr);
@@ -1437,38 +1534,33 @@ void BatchExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
         this->value = CreateBatchInvalidCodeGenValue();
         return;
     }
-    Value *value2Data = value2->data;
-    Value *value1Data = value1->data;
+
     if (cExpr.GetReturnTypeId() == OMNI_INT || cExpr.GetReturnTypeId() == OMNI_LONG ||
-        cExpr.GetReturnTypeId() == OMNI_DOUBLE) {
-        Value *res = llvmEngine->CallExternFunction("batch_coalesce",
-            { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() }, cExpr.GetReturnTypeId(),
-            { value1->data, value1->isNull, value2->data, value2->isNull, this->batchCodegenContext->rowCnt }, nullptr,
-            "batchcoalesce_int");
+        cExpr.GetReturnTypeId() == OMNI_DOUBLE || cExpr.GetReturnTypeId() == OMNI_DATE32) {
+        llvmEngine->CallExternFunction("batch_coalesce", { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() },
+            cExpr.GetReturnTypeId(),
+            { value1->data, value1->isNull, value2->data, value2->isNull, this->batchCodegenContext->rowCnt }, nullptr);
         this->value = make_shared<CodeGenValue>(value1->data, value1->isNull);
-    } else if (cExpr.GetReturnTypeId() == OMNI_VARCHAR || cExpr.GetReturnTypeId() == OMNI_CHAR) {
-        Value *res = llvmEngine->CallExternFunction("batch_coalesce",
-            { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() }, cExpr.GetReturnTypeId(),
+    } else if (TypeUtil::IsStringType(cExpr.GetReturnTypeId())) {
+        llvmEngine->CallExternFunction("batch_coalesce", { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() },
+            cExpr.GetReturnTypeId(),
             { value1->data, value1->isNull, value1->length, value2->data, value2->isNull, value2->length,
             this->batchCodegenContext->rowCnt },
-            nullptr, "batchcoalesce_string");
+            nullptr);
         this->value = make_shared<CodeGenValue>(value1->data, value1->isNull, value1->length);
-    } else if (cExpr.GetReturnTypeId() == OMNI_DECIMAL128 || cExpr.GetReturnTypeId() == OMNI_DECIMAL64) {
+    } else if (TypeUtil::IsDecimalType(cExpr.GetReturnTypeId())) {
         CodeGenValue &valueDecimal1 = *value1.get();
-        CodeGenValue &valueDecimal2 = *value2.get();
         auto value1Precision = (Value *)static_cast<DecimalValue &>(valueDecimal1).GetPrecision();
-        auto value2Precision = (Value *)static_cast<DecimalValue &>(valueDecimal2).GetPrecision();
         auto value1Scale = (Value *)static_cast<DecimalValue &>(valueDecimal1).GetScale();
-        auto value2Scale = (Value *)static_cast<DecimalValue &>(valueDecimal2).GetScale();
-        Value *res =
-            llvmEngine->CallExternFunction("batch_coalesce", { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() }, cExpr.GetReturnTypeId(),
-            { value1->data, value1->isNull, value1Precision, value1Scale, value2->data, value2->isNull, value2Precision,
-            value2Scale, this->batchCodegenContext->rowCnt },
-            nullptr, "batchcoalesce_decimal128");
+
+        llvmEngine->CallExternFunction("batch_coalesce", { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() },
+            cExpr.GetReturnTypeId(),
+            { value1->data, value1->isNull, value2->data, value2->isNull, this->batchCodegenContext->rowCnt }, nullptr);
         this->value = make_shared<DecimalValue>(value1->data, value1->isNull, value1Precision, value1Scale);
-    }
-    else {
-        this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+    } else {
+        LogWarn("Unsupported data type in COALESCE expr %d", cExpr.GetReturnTypeId());
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
     }
 }
 
@@ -1476,97 +1568,86 @@ void BatchExpressionCodeGen::Visit(const InExpr &inExpr)
 {
     auto iExpr = const_cast<InExpr *>(&inExpr);
     Expr *toCompare = iExpr->arguments[0];
-    CodeGenValuePtr argiValue;
+    auto baseType = iExpr->arguments[0]->GetReturnTypeId();
+    int32_t size = iExpr->arguments.size();
 
-    Type *retType = llvmTypes->ToLLVMType(iExpr->GetReturnTypeId());
     auto valueToCompare = VisitExpr(*toCompare);
     if (!valueToCompare->IsValidValue()) {
         this->value = CreateBatchInvalidCodeGenValue();
         return;
     }
-    auto falseCons = llvmTypes->CreateConstantBool(false);
 
     Value *inArray = GetResultArray(OMNI_BOOLEAN, this->batchCodegenContext->rowCnt);
-    auto ret = llvmEngine->CallExternFunction("batch_fill_literal", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { inArray, falseCons, this->batchCodegenContext->rowCnt }, nullptr);
-
     Value *isNull = GetResultArray(OMNI_BOOLEAN, this->batchCodegenContext->rowCnt);
-    ret = llvmEngine->CallExternFunction("batch_fill_literal", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { isNull, falseCons, this->batchCodegenContext->rowCnt }, nullptr);
 
-    Value *tmpCmpData = GetResultArray(OMNI_BOOLEAN, this->batchCodegenContext->rowCnt);
-
-    ret = llvmEngine->CallExternFunction("batch_fill_literal", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { tmpCmpData, falseCons, this->batchCodegenContext->rowCnt }, nullptr);
-
-    Value *tmpCmpNull = GetResultArray(OMNI_BOOLEAN, this->batchCodegenContext->rowCnt);
-    ret = llvmEngine->CallExternFunction("batch_fill_literal", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { tmpCmpNull, falseCons, this->batchCodegenContext->rowCnt }, nullptr);
-
-    auto basicType = iExpr->arguments[0]->GetReturnTypeId();
-
-    for (size_t i = 1; i < iExpr->arguments.size(); i++) {
-        if (AreInvalidDataTypes(toCompare->GetReturnTypeId(), iExpr->arguments[i]->GetReturnTypeId())) {
-            LogError("Arg 1 and arg %d have different data types", i + 1);
+    vector<CodeGenValuePtr> cmps(size - 1);
+    for (int i = 1; i < size; ++i) {
+        Expr *cmp = iExpr->arguments[i];
+        cmps[i - 1] = VisitExpr(*cmp);
+        if (!cmps[i - 1]->IsValidValue()) {
             this->value = CreateBatchInvalidCodeGenValue();
             return;
         }
-
-        argiValue = VisitExpr(*(iExpr->arguments[i]));
-        if (!argiValue->IsValidValue()) {
-            this->value = CreateBatchInvalidCodeGenValue();
-            return;
-        }
-
-        switch (basicType) {
-            case OMNI_INT:
-            case OMNI_DATE32:
-            case OMNI_LONG:
-            case OMNI_DOUBLE: {
-                ret = llvmEngine->CallExternFunction("batch_equal", { basicType, basicType }, OMNI_BOOLEAN,
-                    { valueToCompare->data, argiValue->data, tmpCmpData, this->batchCodegenContext->rowCnt }, nullptr);
-
-                break;
-            }
-            case OMNI_DECIMAL64:
-            case OMNI_DECIMAL128: {
-                DecimalValue &left = static_cast<DecimalValue &>(*valueToCompare);
-                DecimalValue &right = static_cast<DecimalValue &>(*argiValue);
-                std::vector<Value *> argValsCmp {
-                    left.data,  const_cast<Value *>(left.GetPrecision()),  const_cast<Value *>(left.GetScale()),
-                    right.data, const_cast<Value *>(right.GetPrecision()), const_cast<Value *>(right.GetScale()),
-                    tmpCmpData, this->batchCodegenContext->rowCnt
-                };
-                ret = llvmEngine->CallExternFunction("batch_equal", { basicType, basicType }, OMNI_BOOLEAN, argValsCmp,
-                    nullptr);
-                break;
-            }
-            case OMNI_CHAR:
-            case OMNI_VARCHAR: {
-                ret = llvmEngine->CallExternFunction("batch_equal", { basicType, basicType }, OMNI_BOOLEAN,
-                    { valueToCompare->data, valueToCompare->length, argiValue->data, argiValue->length, tmpCmpData,
-                    this->batchCodegenContext->rowCnt },
-                    nullptr, "relational_eq");
-                break;
-            }
-            default: {
-                LogWarn("Unsupported data type in IN expr %d", iExpr->arguments[0]->GetReturnTypeId());
-                this->value = CreateBatchInvalidCodeGenValue();
-                return;
-            }
-        }
-        ret = llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN,
-            { argiValue->isNull, valueToCompare->isNull, this->batchCodegenContext->rowCnt }, nullptr);
-
-        ret = llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN,
-            { inArray, tmpCmpData, this->batchCodegenContext->rowCnt }, nullptr);
-
-        ret = llvmEngine->CallExternFunction("batch_and_not", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN,
-            { inArray, argiValue->isNull, this->batchCodegenContext->rowCnt }, nullptr);
-
-        ret = llvmEngine->CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN,
-            { isNull, argiValue->isNull, this->batchCodegenContext->rowCnt }, nullptr);
     }
+
+    auto cmpValues = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size - 1));
+    auto cmpBools = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size - 1));
+
+    for (int i = 0; i < size - 1; ++i) {
+        Value *gep = builder->CreateGEP(cmpValues, llvmTypes->CreateConstantInt(i), "cmp_value_address");
+        builder->CreateStore(cmps[i]->data, gep);
+
+        gep = builder->CreateGEP(cmpBools, llvmTypes->CreateConstantInt(i), "cmp_null_address");
+        builder->CreateStore(cmps[i]->isNull, gep);
+    }
+
+    vector<Value *> args;
+    switch (baseType) {
+        case OMNI_BOOLEAN:
+        case OMNI_INT:
+        case OMNI_DATE32:
+        case OMNI_LONG:
+        case OMNI_DOUBLE:
+        case OMNI_DECIMAL64:
+        case OMNI_DECIMAL128: {
+            args = { llvmTypes->CreateConstantInt(size - 1),
+                cmpValues,
+                cmpBools,
+                valueToCompare->data,
+                valueToCompare->isNull,
+                inArray,
+                isNull,
+                this->batchCodegenContext->rowCnt };
+            llvmEngine->CallExternFunction("batch_in", { baseType }, OMNI_BOOLEAN, args, nullptr);
+            break;
+        }
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
+            auto cmpLengths = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size - 1));
+            for (int i = 0; i < size - 1; ++i) {
+                Value *gep = builder->CreateGEP(cmpLengths, llvmTypes->CreateConstantInt(i), "cmp_length_address");
+                builder->CreateStore(cmps[i]->length, gep);
+            }
+            args = { llvmTypes->CreateConstantInt(size - 1),
+                cmpValues,
+                cmpBools,
+                cmpLengths,
+                valueToCompare->data,
+                valueToCompare->isNull,
+                valueToCompare->length,
+                inArray,
+                isNull,
+                this->batchCodegenContext->rowCnt };
+            llvmEngine->CallExternFunction("batch_in", { baseType }, OMNI_BOOLEAN, args, nullptr);
+            break;
+        }
+        default: {
+            LogWarn("Unsupported data type in IN expr %d", baseType);
+            this->value = CreateBatchInvalidCodeGenValue();
+            return;
+        }
+    }
+
     this->value = make_shared<CodeGenValue>(inArray, isNull);
 }
 
@@ -1580,8 +1661,8 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     AllocaInst *finalValue = GetResultArray(switchDataType, this->batchCodegenContext->rowCnt);
     AllocaInst *finalNull = GetResultArray(OMNI_BOOLEAN, this->batchCodegenContext->rowCnt);
 
-    vector<CodeGenValuePtr> conditions;
-    vector<CodeGenValuePtr> results;
+    vector<CodeGenValuePtr> conditions(size);
+    vector<CodeGenValuePtr> results(size);
 
     for (int i = 0; i < size; ++i) {
         Expr *cond = whenClause[i].first;
@@ -1626,10 +1707,10 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         return;
     }
 
-    Value *ret;
     vector<Value *> args;
     switch (switchDataType) {
         case OMNI_INT:
+        case OMNI_BOOLEAN:
         case OMNI_DATE32:
         case OMNI_LONG:
         case OMNI_DOUBLE: {
@@ -1643,7 +1724,7 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
                 finalValue,
                 finalNull,
                 this->batchCodegenContext->rowCnt };
-            ret = llvmEngine->CallExternFunction("batch_switch", { switchDataType }, switchDataType, args, nullptr);
+            llvmEngine->CallExternFunction("batch_switch", { switchDataType }, switchDataType, args, nullptr);
             this->value = make_shared<CodeGenValue>(finalValue, finalNull);
             return;
         }
@@ -1661,7 +1742,7 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
                 finalValue,
                 finalNull,
                 this->batchCodegenContext->rowCnt };
-            ret = llvmEngine->CallExternFunction("batch_switch", { switchDataType }, switchDataType, args, nullptr);
+            llvmEngine->CallExternFunction("batch_switch", { switchDataType }, switchDataType, args, nullptr);
             this->value = make_shared<DecimalValue>(finalValue, finalNull,
                 const_cast<Value *>(returnDecimalValue->GetPrecision()),
                 const_cast<Value *>(returnDecimalValue->GetScale()));
@@ -1683,12 +1764,12 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
                 finalNull,
                 finalLength,
                 this->batchCodegenContext->rowCnt };
-            ret = llvmEngine->CallExternFunction("batch_switch", { switchDataType }, switchDataType, args, nullptr);
+            llvmEngine->CallExternFunction("batch_switch", { switchDataType }, switchDataType, args, nullptr);
             this->value = make_shared<CodeGenValue>(finalValue, finalNull, finalLength);
             return;
         }
         default: {
-            LogWarn("Unsupported data type in switch expr %d", switchDataType);
+            LogWarn("Unsupported data type in SWITCH expr %d", switchDataType);
             this->value = CreateBatchInvalidCodeGenValue();
             return;
         }

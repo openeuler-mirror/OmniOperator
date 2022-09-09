@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: Batch util Function Registry
  */
 #ifndef OMNI_RUNTIME_BATCH_FUNC_REGISTRY_UTIL_H
