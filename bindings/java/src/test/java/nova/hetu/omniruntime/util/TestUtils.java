@@ -22,6 +22,7 @@ import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -83,6 +84,8 @@ public class TestUtils {
             case OMNI_INT:
             case OMNI_DATE32:
                 return createIntVec(data);
+            case OMNI_SHORT:
+                return createShortVec(data);
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 return createLongVec(data);
@@ -112,6 +115,24 @@ public class TestUtils {
             default:
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
         }
+    }
+
+    /**
+     * Create short vec
+     *
+     * @param data data
+     * @return ShortVec
+     */
+    public static ShortVec createShortVec(Object[] data) {
+        ShortVec result = new ShortVec(data.length);
+        for (int j = 0; j < data.length; j++) {
+            if (data[j] == null) {
+                result.setNull(j);
+            } else {
+                result.set(j, (short) data[j]);
+            }
+        }
+        return result;
     }
 
     /**
@@ -302,6 +323,9 @@ public class TestUtils {
                 case OMNI_DATE32:
                     assertEquals(((IntVec) vec).get(i), expectedData[i]);
                     break;
+                case OMNI_SHORT:
+                    assertEquals(((ShortVec) vec).get(i), expectedData[i]);
+                    break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
                     assertEquals(((LongVec) vec).get(i), expectedData[i]);
@@ -337,6 +361,9 @@ public class TestUtils {
                 case OMNI_INT:
                 case OMNI_DATE32:
                     assertEquals(((IntVec) vec).get(i), ((IntVec) expectedVec).get(i));
+                    break;
+                case OMNI_SHORT:
+                    assertEquals(((ShortVec) vec).get(i), ((ShortVec) expectedVec).get(i));
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
@@ -407,6 +434,9 @@ public class TestUtils {
                 case OMNI_DATE32:
                     assertEquals(vec.getInt(i), expectedData[i]);
                     break;
+                case OMNI_SHORT:
+                    assertEquals(vec.getShort(i), expectedData[i]);
+                    break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
                     assertEquals(vec.getLong(i), expectedData[i]);
@@ -452,6 +482,9 @@ public class TestUtils {
                 case OMNI_INT:
                 case OMNI_DATE32:
                     assertEquals(vec.getInt(i), expectedVec.getInt(i));
+                    break;
+                case OMNI_SHORT:
+                    assertEquals(vec.getShort(i), expectedVec.getShort(i));
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:

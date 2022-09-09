@@ -77,6 +77,35 @@ public class MergeVectorsTest {
     }
 
     /**
+     * test short vector merge
+     */
+    @Test
+    public void testShortVectorsMerge() {
+        ShortVec vec1 = new ShortVec(10000);
+        ShortVec vec2 = new ShortVec(10000);
+        ShortVec vec3 = new ShortVec(10000);
+        ShortVec vec = new ShortVec(30000);
+        for (int i = 0; i < vec1.getSize(); i++) {
+            vec1.set(i, (short) i);
+        }
+        for (int i = vec1.getSize(), j = 0; i < vec2.getSize() + vec1.getSize(); i++, j++) {
+            vec2.set(j, (short) i);
+        }
+        for (int i = vec1.getSize() + vec2.getSize(),
+                j = 0; i < vec3.getSize() + vec2.getSize() + vec1.getSize(); i++, j++) {
+            vec3.set(j, (short) i);
+        }
+        vec.append(vec1, 0, vec1.getSize());
+        vec.append(vec2, vec1.getSize(), vec2.getSize());
+        vec.append(vec3, vec1.getSize() + vec2.getSize(), vec3.getSize());
+        for (int i = 0; i < vec1.getSize() + vec2.getSize() + vec3.getSize(); i++) {
+            assertEquals(vec.get(i), i);
+        }
+
+        closeVecs(new Vec[]{vec1, vec2, vec3, vec});
+    }
+
+    /**
      * test long vector merge
      */
     @Test

@@ -96,6 +96,15 @@ TEST(VectorHelper, setAndGetValue)
     delete dictionaryVarchar;
     delete dictionaryVarcharVec;
 
+    // int16 test
+    auto *vector9 = new ShortVector(allocator, 10);
+    int16_t value9 = 100;
+    VectorHelper::SetValue(vector9, 5, &value9);
+    int32_t result9 = 0;
+    VectorHelper::GetValue(vector9, 5, &result9);
+    EXPECT_EQ(result9, value9);
+    delete vector9;
+
     delete allocator;
 }
 
@@ -128,15 +137,17 @@ TEST(VectorHelper, ConcatVectorBatches)
     auto *col0 = new IntVector(allocator, row);
     auto *col1 = new DoubleVector(allocator, row);
     auto *col2 = new BooleanVector(allocator, row);
+    auto *col3 = new ShortVector(allocator, row);
     for (int32_t i = 0; i < 10; i++) {
         col0->SetValue(i, i);
         col1->SetValue(i, 1.1);
         col2->SetValue(i, i % 2 == 0);
     }
-    auto *batch = new VectorBatch(3, row);
+    auto *batch = new VectorBatch(4, row);
     batch->SetVector(0, col0);
     batch->SetVector(1, col1);
     batch->SetVector(2, col2);
+    batch->SetVector(3, col3);
     std::vector<VectorBatch *> batchs;
     batchs.push_back(batch);
     VectorBatch *merged = VectorHelper::ConcatVectorBatches(batchs);
@@ -153,46 +164,24 @@ TEST(VectorHelper, createVector)
     EXPECT_TRUE(allocator != nullptr);
     int32_t rowCount = 10;
     Vector *tmp;
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_INT, 1024, rowCount);
-    auto *intVector = reinterpret_cast<IntVector *>(tmp);
-    EXPECT_EQ(intVector->GetSize(), rowCount);
-    EXPECT_EQ(intVector->GetTypeId(), OMNI_INT);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_DATE32, 1024, rowCount);
-    auto *data32Vector = reinterpret_cast<IntVector *>(tmp);
-    EXPECT_EQ(data32Vector->GetSize(), rowCount);
-    EXPECT_EQ(data32Vector->GetTypeId(), OMNI_INT);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_LONG, 1024, rowCount);
-    auto *longVector = reinterpret_cast<LongVector *>(tmp);
-    EXPECT_EQ(longVector->GetSize(), rowCount);
-    EXPECT_EQ(longVector->GetTypeId(), OMNI_LONG);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_DECIMAL64, 1024, rowCount);
-    auto *decimal64Vector = reinterpret_cast<LongVector *>(tmp);
-    EXPECT_EQ(decimal64Vector->GetSize(), rowCount);
-    EXPECT_EQ(decimal64Vector->GetTypeId(), OMNI_LONG);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_DOUBLE, 1024, rowCount);
-    auto *doubleVector = reinterpret_cast<DoubleVector *>(tmp);
-    EXPECT_EQ(doubleVector->GetSize(), rowCount);
-    EXPECT_EQ(doubleVector->GetTypeId(), OMNI_DOUBLE);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_BOOLEAN, 1024, rowCount);
-    auto *booleanVector = reinterpret_cast<BooleanVector *>(tmp);
-    EXPECT_EQ(booleanVector->GetSize(), rowCount);
-    EXPECT_EQ(booleanVector->GetTypeId(), OMNI_BOOLEAN);
+    std::vector<DataTypeId> dataTypeId = { OMNI_SHORT,  OMNI_INT,     OMNI_DATE32,  OMNI_LONG,      OMNI_DECIMAL64,
+        OMNI_DOUBLE, OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_DECIMAL128 };
+    for (int32_t i = 0; i < dataTypeId.size(); i++) {
+        tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, dataTypeId[i], 1024, rowCount);
+        EXPECT_EQ(tmp->GetSize(), rowCount);
+        if (dataTypeId[i] == OMNI_DATE32) {
+            EXPECT_EQ(tmp->GetTypeId(), OMNI_INT);
+        } else if (dataTypeId[i] == OMNI_DECIMAL64) {
+            EXPECT_EQ(tmp->GetTypeId(), OMNI_LONG);
+        } else {
+            EXPECT_EQ(tmp->GetTypeId(), dataTypeId[i]);
+        }
+        delete tmp;
+    }
     tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_CONTAINER, OMNI_CONTAINER, 1024, rowCount);
     auto *containerVector = reinterpret_cast<ContainerVector *>(tmp);
     EXPECT_EQ(containerVector->GetSize(), rowCount);
     EXPECT_EQ(containerVector->GetTypeId(), OMNI_CONTAINER);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_VARCHAR, 1024, rowCount);
-    auto *varcharVector = reinterpret_cast<VarcharVector *>(tmp);
-    EXPECT_EQ(varcharVector->GetSize(), rowCount);
-    EXPECT_EQ(varcharVector->GetTypeId(), OMNI_VARCHAR);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_CHAR, 1024, rowCount);
-    auto *charVector = reinterpret_cast<VarcharVector *>(tmp);
-    EXPECT_EQ(charVector->GetSize(), rowCount);
-    EXPECT_EQ(charVector->GetTypeId(), OMNI_VARCHAR);
-    tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, OMNI_DECIMAL128, 1024, rowCount);
-    auto *decimal128Vector = reinterpret_cast<Decimal128Vector *>(tmp);
-    EXPECT_EQ(decimal128Vector->GetSize(), rowCount);
-    EXPECT_EQ(decimal128Vector->GetTypeId(), OMNI_DECIMAL128);
     tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_DICTIONARY, OMNI_INT, 1024, rowCount);
     auto *dictionaryVector = reinterpret_cast<DictionaryVector *>(tmp);
     EXPECT_EQ(dictionaryVector->GetSize(), rowCount);
@@ -202,19 +191,9 @@ TEST(VectorHelper, createVector)
     EXPECT_EQ(lazyVector->GetSize(), rowCount);
     EXPECT_EQ(lazyVector->GetTypeId(), OMNI_NONE);
 
-    delete intVector;
-    delete data32Vector;
-    delete longVector;
-    delete decimal64Vector;
-    delete doubleVector;
-    delete booleanVector;
     delete containerVector;
-    delete varcharVector;
-    delete charVector;
-    delete decimal128Vector;
     delete dictionaryVector;
     delete lazyVector;
-
     delete allocator;
 }
 }

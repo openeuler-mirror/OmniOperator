@@ -76,6 +76,10 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
             continue;
         } else {
             switch (actualCol->GetTypeId()) {
+                case OMNI_SHORT:
+                    result = (static_cast<ShortVector *>(actualCol)->GetValue(actualIndex) ==
+                        static_cast<ShortVector *>(expectCol)->GetValue(expectIndex));
+                    break;
                 case OMNI_INT:
                 case OMNI_DATE32:
                     result = (static_cast<IntVector *>(actualCol)->GetValue(actualIndex) ==
@@ -178,6 +182,8 @@ ContainerVector *CreateContainerVector(std::vector<DataTypePtr> &fieldTypes, int
 Vector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
     switch (dataType.GetId()) {
+        case OMNI_SHORT:
+            return CreateVector<ShortVector>(va_arg(args, int16_t *), rowCount);
         case OMNI_INT:
         case OMNI_DATE32:
             return CreateVector<IntVector>(va_arg(args, int32_t *), rowCount);
@@ -255,6 +261,18 @@ void AssertVarcharVectorEquals(VarcharVector *vector, std::string *expectedValue
         int32_t len = vector->GetValue(i, &value);
         EXPECT_EQ(len, expectedValues[i].length());
         EXPECT_TRUE(memcmp(value, expectedValues[i].c_str(), len) == 0);
+    }
+}
+
+void AssertDictionaryVectorShortEquals(DictionaryVector *vector, int16_t *values)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
+            continue;
+        }
+        ASSERT_EQ(vector->GetShort(i), values[i]);
     }
 }
 
@@ -343,6 +361,9 @@ void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
     }
     dataTypeId = dictionary->GetTypeId();
     switch (dataTypeId) {
+        case omniruntime::type::OMNI_SHORT:
+            AssertDictionaryVectorShortEquals(vector, va_arg(args, int16_t *));
+            break;
         case omniruntime::type::OMNI_INT:
         case omniruntime::type::OMNI_DATE32:
             AssertDictionaryVectorIntEquals(vector, va_arg(args, int32_t *));
@@ -390,6 +411,9 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
             case omniruntime::type::OMNI_INT:
             case omniruntime::type::OMNI_DATE32:
                 AssertVectorEquals(dynamic_cast<IntVector *>(vector), va_arg(args, int32_t *));
+                break;
+            case omniruntime::type::OMNI_SHORT:
+                AssertVectorEquals(dynamic_cast<ShortVector *>(vector), va_arg(args, int16_t *));
                 break;
             case omniruntime::type::OMNI_LONG:
             case omniruntime::type::OMNI_DECIMAL64:

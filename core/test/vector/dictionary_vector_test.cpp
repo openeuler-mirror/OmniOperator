@@ -134,6 +134,31 @@ TEST(DictionaryVector, LongType)
     delete allocator;
 }
 
+TEST(DictionaryVector, ShortType)
+{
+    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_ShortType");
+    EXPECT_TRUE(allocator != nullptr);
+    auto *dictionary = new ShortVector(allocator, 10);
+    for (int16_t i = 0; i < 10; i++) {
+        dictionary->SetValue(i, i);
+    }
+
+    int32_t ids[] = {6, 8, 9};
+    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
+    EXPECT_EQ(dictionaryVector->GetShort(0), dictionary->GetValue(6));
+    EXPECT_EQ(dictionaryVector->GetShort(1), dictionary->GetValue(8));
+    EXPECT_EQ(dictionaryVector->GetShort(2), dictionary->GetValue(9));
+    int32_t nestedIds[] = {1, 2};
+    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
+    EXPECT_EQ(nested->GetShort(0), dictionary->GetValue(8));
+    EXPECT_EQ(nested->GetShort(1), dictionary->GetValue(9));
+
+    delete dictionary;
+    delete dictionaryVector;
+    delete nested;
+    delete allocator;
+}
+
 TEST(DictionaryVector, IntType)
 {
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_IntType");

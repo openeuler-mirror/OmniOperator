@@ -64,6 +64,12 @@ public class OmniBufUnsafeV8 implements OmniBuf {
     }
 
     @Override
+    public void getShortArray(int index, short[] target, int targetIndex, int length) {
+        JvmUtils.UNSAFE.copyMemory(null, addr(index), target, Unsafe.ARRAY_SHORT_BASE_OFFSET + targetIndex,
+                length);
+    }
+
+    @Override
     public void setInt(int index, int value) {
         JvmUtils.UNSAFE.putInt(addr(index), value);
     }

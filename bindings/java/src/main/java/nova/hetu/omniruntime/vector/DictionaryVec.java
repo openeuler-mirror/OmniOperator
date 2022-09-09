@@ -125,6 +125,20 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     /**
+     * get the specified short at the specified absolute.
+     *
+     * @param index the element offset in vec
+     * @return short value
+     */
+    public short getShort(int index) {
+        if (dictionary.getEncoding() != VecEncoding.OMNI_VEC_ENCODING_DICTIONARY) {
+            return ((ShortVec) dictionary).get(getId(index));
+        } else {
+            return ((DictionaryVec) dictionary).getShort(getId(index));
+        }
+    }
+
+    /**
      * get the specified integer at the specified absolute.
      *
      * @param index the element offset in vec

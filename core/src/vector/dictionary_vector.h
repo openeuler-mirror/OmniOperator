@@ -64,6 +64,8 @@ public:
         ((int32_t *)valuesAddress)[index] = id;
     }
 
+    int16_t GetShort(int32_t position) const;
+
     int32_t GetInt(int32_t position) const;
 
     int64_t GetLong(int32_t position) const;
