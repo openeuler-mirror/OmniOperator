@@ -166,7 +166,7 @@ TEST(VectorHelper, createVector)
     Vector *tmp;
     std::vector<DataTypeId> dataTypeId = { OMNI_SHORT,  OMNI_INT,     OMNI_DATE32,  OMNI_LONG,      OMNI_DECIMAL64,
         OMNI_DOUBLE, OMNI_BOOLEAN, OMNI_VARCHAR, OMNI_DECIMAL128 };
-    for (int32_t i = 0; i < dataTypeId.size(); i++) {
+    for (std::size_t i = 0; i < dataTypeId.size(); i++) {
         tmp = VectorHelper::CreateVector(allocator, OMNI_VEC_ENCODING_FLAT, dataTypeId[i], 1024, rowCount);
         EXPECT_EQ(tmp->GetSize(), rowCount);
         if (dataTypeId[i] == OMNI_DATE32) {

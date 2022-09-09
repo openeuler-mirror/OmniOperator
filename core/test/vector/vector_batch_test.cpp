@@ -50,8 +50,8 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_constructVectorBatchWithTypes");
     vectorBatch->NewVectors(allocator, types);
 
-    for (int i = 0; i < types.size(); ++i) {
-        EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
+    for (std::size_t i = 0; i < types.size(); ++i) {
+        EXPECT_EQ(vectorBatch->GetVector(i)->GetSize(), 1024);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     delete allocator;
@@ -81,7 +81,7 @@ TEST(VectorBatch, getVectorTypes)
     vectorBatch->NewVectors(allocator, types);
 
     const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
-    for (int i = 0; i < types.size(); ++i) {
+    for (std::size_t i = 0; i < types.size(); ++i) {
         EXPECT_EQ(types[i]->GetId(), vectorTypeIds[i]);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
