@@ -22,9 +22,10 @@ TEST(SpillTest, TestWriteRead)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {3, 5, 7, 9, 1};
     int64_t data2[dataSize] = {8, 4, 0, 2, 6};
+    int16_t data3[dataSize] = {5, 4, 3, 2, 1};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
-    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType() }));
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
@@ -40,7 +41,7 @@ TEST(SpillTest, TestWriteRead)
         auto result = reader.Next();
         auto resultVecBatch = result->GetVectorBatch();
         VectorHelper::PrintVecBatch(resultVecBatch);
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), dataSize, data1, data2);
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), dataSize, data1, data2, data3);
         VectorHelper::FreeVecBatch(resultVecBatch);
     }
     rmdir(path.c_str());
@@ -53,13 +54,14 @@ TEST(SpillTest, TestSpiller)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {-7, -3, 1, 5, 9};
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
+    int16_t data3[dataSize] = {-5, -3, 0, 2, 4};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
-    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType() }));
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::vector<int32_t> sortCols = { 0, 1 };
-    std::vector<int32_t> sortAscendings = { 1, 1 };
-    std::vector<int32_t> sortNullFirsts = { 0, 0 };
+    std::vector<int32_t> sortCols = { 0, 1, 2 };
+    std::vector<int32_t> sortAscendings = { 1, 1, 1 };
+    std::vector<int32_t> sortNullFirsts = { 0, 0, 0 };
     VecBatchWithPositionComparator comparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts);
 
     auto spillTracker = dynamic_cast<ChildSpillTracker *>(GetRootSpillTracker().CreateSpillTracker());
@@ -71,20 +73,22 @@ TEST(SpillTest, TestSpiller)
     spiller.Spill(diskVectorBatch);
     ASSERT_TRUE(spillTracker->GetSpilledBytes() != 0);
 
-    int32_t data3[dataSize] = {-9, -5, -1, 3, 7};
-    int64_t data4[dataSize] = {-2, 0, -4, -8, -6};
+    int32_t data4[dataSize] = {-9, -5, -1, 3, 7};
+    int64_t data5[dataSize] = {-2, 0, -4, -8, -6};
+    int16_t data6[dataSize] = {-6, -4, -2, 1, 3};
 
-    VectorBatchUnitIter memoryIter(TestUtil::CreateVectorBatch(sourceTypes, dataSize, data3, data4));
+    VectorBatchUnitIter memoryIter(TestUtil::CreateVectorBatch(sourceTypes, dataSize, data4, data5, data6));
     spiller.MergeFromDiskAndMemory(memoryIter);
     if (spiller.HasNext()) {
         int32_t expectedDataSize = 2 * dataSize;
         int32_t expectedData1[] = {-9, -7, -5, -3, -1, 1, 3, 5, 7, 9};
         int64_t expectedData2[] = {-2, 6, 0, 8, -4, 4, -8, 0, -6, 2};
+        int16_t expectedData3[] = {-6, -5, -4, -3, -2, 0, 1, 2, 3, 4};
         auto result = spiller.Next();
         auto resultVecBatch = result->GetVectorBatch();
         delete result;
         TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), expectedDataSize, expectedData1,
-            expectedData2);
+            expectedData2, expectedData3);
         VectorHelper::PrintVecBatch(resultVecBatch);
         VectorHelper::FreeVecBatch(resultVecBatch);
     }
@@ -97,13 +101,14 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {-7, -3, 1, 5, 9};
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
+    int16_t data3[dataSize] = {-5, -3, 0, 2, 4};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
-    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType()}));
+    VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::vector<int32_t> sortCols = { 0, 1 };
-    std::vector<int32_t> sortAscendings = { 1, 1 };
-    std::vector<int32_t> sortNullFirsts = { 0, 0 };
+    std::vector<int32_t> sortCols = { 0, 1, 2 };
+    std::vector<int32_t> sortAscendings = { 1, 1, 1 };
+    std::vector<int32_t> sortNullFirsts = { 0, 0, 0 };
     VecBatchWithPositionComparator comparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts);
 
     std::string path = TestUtil::GenerateSpillPath();

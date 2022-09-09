@@ -149,6 +149,9 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
             case OMNI_DATE32:
                 SetValueForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
+            case OMNI_SHORT:
+                SetValueForSingleRowVecBatch<ShortVector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 SetValueForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
@@ -191,6 +194,9 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
             case OMNI_INT:
             case OMNI_DATE32:
                 SetVectorForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            case OMNI_SHORT:
+                SetVectorForSingleRowVecBatch<ShortVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
@@ -263,6 +269,9 @@ void TopNOperator::SetValueForVectorBatch(int32_t typeId, int64_t index, Vector 
         case OMNI_INT:
         case OMNI_DATE32:
             SetValueForVector<IntVector>(pqVector, tmpVector, index);
+            break;
+        case OMNI_SHORT:
+            SetValueForVector<ShortVector>(pqVector, tmpVector, index);
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:

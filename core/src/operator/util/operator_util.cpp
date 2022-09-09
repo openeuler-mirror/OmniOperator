@@ -139,6 +139,10 @@ void OperatorUtil::ProjectVectors(const DataTypes &newInputTypes, const std::vec
                 newVecBatch->SetVector(projectCol, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex],
                     values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
+            case OMNI_SHORT:
+                newVecBatch->SetVector(projectCol, ProjectVector<ShortVector, int16_t>(projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
+                break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 newVecBatch->SetVector(projectCol, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex],
@@ -189,6 +193,10 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
             case OMNI_INT:
             case OMNI_DATE32:
                 newVecBatch->SetVector(i, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex], values,
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
+                break;
+            case OMNI_SHORT:
+                newVecBatch->SetVector(i, ProjectVector<ShortVector, int16_t>(projectFuncs[projectFuncsIndex], values,
                     valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_LONG:

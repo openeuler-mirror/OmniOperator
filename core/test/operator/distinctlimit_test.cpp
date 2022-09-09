@@ -31,15 +31,16 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitBasic)
     int64_t data7[dataSize] = {10L, 100L, 1000L, 10L};
     bool data8[dataSize] = {true, false, false, true};
     std::string data9[dataSize] = {"123", "456", "789", "123"};
+    int16_t data10[dataSize] = {0, 1, 2, 0};
 
     std::vector<DataTypePtr> types = { IntType(),       DoubleType(),          VarcharType(10),
         LongType(),      Decimal128Type(10, 2), Date32Type(),
-        Decimal64Type(), BooleanType(),         CharType() };
+        Decimal64Type(), BooleanType(),         CharType(), ShortType() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 =
-        CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+        CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9, data10);
 
-    int32_t distinctCols[] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+    int32_t distinctCols[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
@@ -61,9 +62,10 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitBasic)
     int64_t expData7[resultDataSize] = {10L, 100L, 1000L};
     bool expData8[resultDataSize] = {true, false, false};
     std::string expData9[resultDataSize] = {"123", "456", "789"};
+    int16_t expData10[resultDataSize] = {0, 1, 2};
 
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3, expData4,
-        expData5, expData6, expData7, expData8, expData9);
+        expData5, expData6, expData7, expData8, expData9, expData10);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 
@@ -101,7 +103,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypeCheck)
         LongType(),
         DoubleType(),
         BooleanType(),
-        ShortDataType::Instance(),
+        ShortType(),
         Decimal64Type(),
         Decimal128Type(20, 2),
         Date32Type(),
@@ -121,7 +123,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypeCheck)
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_LONG, true);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_DOUBLE, true);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_BOOLEAN, true);
-    TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_SHORT, false);
+    TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_SHORT, true);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_DECIMAL64, true);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_DECIMAL128, true);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_DATE32, true);
@@ -145,22 +147,25 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithNull)
     const int32_t resultDataSize = dataSize - 1;
     const int32_t nullColIndex0 = 0;
     const int32_t nullColIndex1 = 1;
+    const int32_t nullColIndex2 = 2;
     const int32_t nullRowIndex = 1;
 
     // table1
     int32_t data1[dataSize] = {0, 1, 2, 0, 1, 2};
     double data2[dataSize] = {6.6, 5.5, 4.4, 6.6, 2.2, 1.1};
+    int16_t data3[dataSize] = {6, 5, 4, 6, 2, 1};
 
-    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
     Vector **vectors1 = vecBatch1->GetVectors();
 
     // set data to NULL
     vectors1[nullColIndex0]->SetValueNull(nullRowIndex);
     vectors1[nullColIndex1]->SetValueNull(nullRowIndex);
+    vectors1[nullColIndex2]->SetValueNull(nullRowIndex);
 
-    int32_t distinctCols[] = {0, 1};
+    int32_t distinctCols[] = {0, 1, 2};
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
@@ -177,13 +182,16 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithNull)
     int32_t expData1[resultDataSize] = {0, 1000, 2, 1, 2};
     // expData2[nullRowIndex] simulates as null value
     double expData2[resultDataSize] = {6.6, 555.555, 4.4, 2.2, 1.1};
-    VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2);
+    int16_t expData3[resultDataSize] = {6, 5000, 4, 2, 1};
+    VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3);
 
     // set data to NULL
     Vector **vectors2 = expVecBatch1->GetVectors();
     vectors2[nullColIndex0]->SetValueNull(nullRowIndex);
     vectors2[nullColIndex1]->SetValueNull(nullRowIndex);
+    vectors2[nullColIndex2]->SetValueNull(nullRowIndex);
 
+    VectorHelper::PrintVecBatch(outputVecBatches[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
@@ -247,14 +255,15 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
     Decimal128 data5[dataSize] = {Decimal128(1, 2), Decimal128(3, 4),
                                   Decimal128(-1, -2), Decimal128(-1, 2),
                                   Decimal128(0, -2)};
+    int16_t data6[dataSize] = {0, 1, 2, 3, 4, 5};
 
     std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), VarcharType(10),
-        Decimal128DataType::Instance() };
+        Decimal128Type(), ShortType() };
     DataTypes sourceTypes(types);
 
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6);
 
-    int32_t distinctCols[] = {0, 2, 3, 4};
+    int32_t distinctCols[] = {0, 2, 3, 4, 5};
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
@@ -265,9 +274,9 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
     std::vector<VectorBatch *> outputVecBatches;
     distinctLimitOperator->GetOutput(outputVecBatches);
 
-    std::vector<DataTypePtr> outTypes = { IntType(), DoubleType(), VarcharType(10), Decimal128DataType::Instance() };
+    std::vector<DataTypePtr> outTypes = { IntType(), DoubleType(), VarcharType(10), Decimal128Type(), ShortType()};
     DataTypes expectedTypes(outTypes);
-    VectorBatch *expVecBatch1 = CreateVectorBatch(expectedTypes, resultDataSize, data1, data3, data4, data5);
+    VectorBatch *expVecBatch1 = CreateVectorBatch(expectedTypes, resultDataSize, data1, data3, data4, data5, data6);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 
@@ -338,12 +347,13 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitHashCol)
      * for data4[4]: hash value conflict but data2[4] is not same as before record, tread as a new record
      */
     int64_t data3[dataSize] = {100000, 110000, 120000, 100000, 110000};
+    int16_t data4[dataSize] = {6, 5, 4, 6, 2};
 
-    std::vector<DataTypePtr> types = { IntType(), DoubleType(), LongType() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType(), LongType(), ShortType() };
     DataTypes sourceTypes(types);
-    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    int32_t distinctCols[] = {0, 1};
+    int32_t distinctCols[] = {0, 1, 3};
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), hashChannelIndex, limitSize);
@@ -356,8 +366,11 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitHashCol)
 
     int32_t expData1[resultDataSize] = {0, 1, 2, 1};
     double expData2[resultDataSize] = {6.6, 5.5, 4.4, 2.2};
-    int64_t expData3[dataSize] = {100000, 110000, 120000, 110000};
-    VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3);
+    int16_t expData3[dataSize] = {6, 5, 4, 2};
+    int64_t expData4[dataSize] = {100000, 110000, 120000, 110000};
+
+    DataTypes expTypes(std::vector<DataTypePtr> { IntType(), DoubleType(), ShortType(), LongType() });
+    VectorBatch *expVecBatch1 = CreateVectorBatch(expTypes, resultDataSize, expData1, expData2, expData3, expData4);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 

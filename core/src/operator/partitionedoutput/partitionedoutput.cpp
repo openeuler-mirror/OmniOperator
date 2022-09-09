@@ -117,6 +117,11 @@ void PartitionedOutputOperator::Insert(Vector *originVector, int32_t originRowIn
             static_cast<IntVector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
+        case OMNI_SHORT: {
+            int16_t value = static_cast<ShortVector *>(originVector)->GetValue(originRowIndex);
+            static_cast<ShortVector *>(currentVector)->SetValue(currentRowIndex, value);
+            break;
+        }
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
             int64_t value = static_cast<LongVector *>(originVector)->GetValue(originRowIndex);
@@ -228,8 +233,9 @@ long PartitionedOutputOperator::GetHash(int32_t rowIndex, Vector *vector)
         case OMNI_DATE32:
             return HashUtil::HashValue(static_cast<IntVector *>(vector)->GetValue(rowIndex));
         case OMNI_LONG:
-        case OMNI_SHORT:
             return HashUtil::HashValue(static_cast<LongVector *>(vector)->GetValue(rowIndex));
+        case OMNI_SHORT:
+            return HashUtil::HashValue(static_cast<ShortVector *>(vector)->GetValue(rowIndex));
         case OMNI_DOUBLE:
             return HashUtil::HashValue(static_cast<DoubleVector *>(vector)->GetValue(rowIndex));
         case OMNI_BOOLEAN:

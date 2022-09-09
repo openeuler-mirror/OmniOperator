@@ -223,7 +223,9 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
         case OMNI_DATE32:
             value = static_cast<int64_t>((static_cast<IntVector *>(originalVector))->GetValue(originalRowIndex));
             break;
-
+        case OMNI_SHORT:
+            value = static_cast<int64_t>((static_cast<ShortVector *>(originalVector))->GetValue(originalRowIndex));
+            break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
             value = static_cast<int64_t>((static_cast<LongVector *>(originalVector))->GetValue(originalRowIndex));

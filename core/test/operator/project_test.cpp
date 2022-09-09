@@ -41,7 +41,7 @@ VectorBatch *CreateInput(VectorAllocator *vectorAllocator, const int32_t numRows
                 ((DoubleVector *)vecBatch->GetVector(i))->SetValues(0, (double *)allData[i], numRows);
                 break;
             case OMNI_SHORT:
-                ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
+                ((ShortVector *)vecBatch->GetVector(i))->SetValues(0, (int16_t *)allData[i], numRows);
                 break;
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
@@ -107,6 +107,16 @@ double *MakeDoubles(const int32_t size, const double start = 0)
     auto *arr = new double[size];
     int32_t idx = 0;
     for (double i = start; i < start + size; i++) {
+        arr[idx++] = i;
+    }
+    return arr;
+}
+
+int16_t *MakeShorts(const int32_t size, const int16_t start = 0)
+{
+    auto *arr = new int16_t[size];
+    int32_t idx = 0;
+    for (int16_t i = start; i < start + size; i++) {
         arr[idx++] = i;
     }
     return arr;

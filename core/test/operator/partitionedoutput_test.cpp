@@ -359,6 +359,48 @@ TEST(PartitionedOutputOperatorTest, TestDoublePartitionedOutput)
     DeleteOperatorFactory(partitionedOutputOperatorFactory);
 }
 
+TEST(PartitionedOutputOperatorTest, TestShortPartitionedOutput)
+{
+    const int32_t dataSize = 3;
+    DataTypes buildTypes(std::vector<DataTypePtr>({ ShortType(), ShortType() }));
+    int16_t buildData1[dataSize] = { 11, 22, 33 };
+    int16_t buildData2[dataSize] = { 33, 22, 111 };
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, dataSize, buildData1, buildData2);
+
+    bool isHashPrecomputed = false;
+
+    DataTypes sourceTypes(std::vector<DataTypePtr> { ShortType() });
+    bool replicatesAnyRow = false;
+    int32_t nullChannel = -1;
+    int32_t partitionChannels[1] = { 0 };
+    int32_t partitionCount = 1;
+    int32_t bucketToPartition[1] = { 0 };
+    DataTypes hashChannelTypes(std::vector<DataTypePtr> { Decimal64Type() });
+    int32_t hashChannels[1] = { 0 };
+    int32_t hashChannelsCount = 1;
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+        PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 3, replicatesAnyRow,
+        nullChannel, partitionChannels, 1, partitionCount, bucketToPartition, 1, isHashPrecomputed, hashChannelTypes,
+        hashChannels, hashChannelsCount);
+    PartitionedOutputOperator *partitionedOperator =
+        dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
+    partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
+    int16_t expectData0[3] = { 11, 22, 33 };
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ ShortType() }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    Operator::DeleteOperator(partitionedOperator);
+    DeleteOperatorFactory(partitionedOutputOperatorFactory);
+}
+
 TEST(PartitionedOutputOperatorTest, TestBoolPartitionedOutput)
 {
     const int32_t dataSize = 3;

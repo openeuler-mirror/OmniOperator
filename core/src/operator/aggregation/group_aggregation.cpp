@@ -53,7 +53,9 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
         IsSameNodeFuncImpl<BooleanVector, bool>, DuplicateKeyValueImpl<BooleanVector, bool>,
         SetVectorImpl<BooleanVector>, FillValueImpl<BooleanVector, bool>
     },
-    {OMNI_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_SHORT, HashFuncImpl<ShortVector, int16_t>, HashFuncVectImpl<ShortVector, int16_t>,
+     IsSameNodeFuncImpl<ShortVector, int16_t>, DuplicateKeyValueImpl<ShortVector, int16_t>,
+     SetVectorImpl<ShortVector>, FillValueImpl<ShortVector, int16_t>},
     {OMNI_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>,
      IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
      SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>

@@ -20,13 +20,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     using namespace omniruntime::expressions;
 
     // construct input data
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
+    int16_t data3[DATA_SIZE] = {6, 5, 4, 3, 2, 1};
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
 
-    int32_t outputCols[3] = {0, 1, 2};
+    int32_t outputCols[4] = {0, 1, 2, 3};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
@@ -42,7 +43,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), DoubleType() }));
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
     DataTypes outputTypes(std::vector<DataTypePtr>({ DoubleType() }));
 
     std::string argumentChannels[1] = { "ADD:3(#2, 50:3)" };
@@ -53,7 +54,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
-        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        sourceTypes, outputCols, 4, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
         nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1,
         windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
 
@@ -66,14 +67,15 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), DoubleType(), DoubleType() }));
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType(), DoubleType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
-    double expectData4[DATA_SIZE] = {56.6, 53.3, 52.2, 55.5, 51.1, 54.4};
-    double expectData5[DATA_SIZE] = {56.6, 56.6, 52.2, 55.5, 51.1, 54.4};
-    VectorBatch *expectVecBatch =
-        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
+    int16_t expectData4[DATA_SIZE] = {6, 3, 2, 5, 1, 4};
+    double expectData5[DATA_SIZE] = {56.6, 53.3, 52.2, 55.5, 51.1, 54.4};
+    double expectData6[DATA_SIZE] = {56.6, 56.6, 52.2, 55.5, 51.1, 54.4};
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
+        expectData4, expectData5, expectData6);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 

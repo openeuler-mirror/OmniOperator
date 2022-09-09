@@ -160,6 +160,9 @@ ErrorCode VectorBatchWriter::WriteVecBatch(VectorBatch *vectorBatch)
             case OMNI_DATE32:
                 result = WriteVector<int32_t>(vector, rowCount);
                 break;
+            case OMNI_SHORT:
+                result = WriteVector<int16_t>(vector, rowCount);
+                break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 result = WriteVector<int64_t>(vector, rowCount);
@@ -203,6 +206,9 @@ uint64_t VectorBatchWriter::GetVecBatchSize(VectorBatch *vectorBatch)
             case type::OMNI_INT:
             case type::OMNI_DATE32:
                 size += rowCount * OperatorUtil::SIZE_OF_INT;
+                break;
+            case type::OMNI_SHORT:
+                size += rowCount * OperatorUtil::SIZE_OF_SHORT;
                 break;
             case type::OMNI_LONG:
             case type::OMNI_DECIMAL64:

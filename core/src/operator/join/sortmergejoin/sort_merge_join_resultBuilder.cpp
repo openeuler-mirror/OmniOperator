@@ -101,6 +101,9 @@ void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outp
         case OMNI_DATE32:
             AddFixWidthValueToVector<IntVector, int32_t>(originalVector, originalId, outputVector, outputRowId);
             break;
+        case OMNI_SHORT:
+            AddFixWidthValueToVector<ShortVector, int16_t>(originalVector, originalId, outputVector, outputRowId);
+            break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
             AddFixWidthValueToVector<LongVector, int64_t>(originalVector, originalId, outputVector, outputRowId);

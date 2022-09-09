@@ -41,6 +41,10 @@ public:
                 return std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(std::move(inputType),
                     std::move(outputType), channel, inputRaw, outputPartial);
             }
+            case OMNI_SHORT: {
+                return std::make_unique<SumAggregator<ShortVector, int16_t, int32_t>>(std::move(inputType),
+                    std::move(outputType), channel, inputRaw, outputPartial);
+            }
             case OMNI_LONG: {
                 return std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(std::move(inputType),
                     std::move(outputType), channel, inputRaw, outputPartial);
@@ -97,6 +101,10 @@ public:
                 return std::make_unique<AverageAggregator<IntVector>>(std::move(inputType), std::move(outputType),
                     channel, inputRaw, outputPartial);
             }
+            case OMNI_SHORT: {
+                return std::make_unique<AverageAggregator<ShortVector>>(std::move(inputType), std::move(outputType),
+                    channel, inputRaw, outputPartial);
+            }
             case OMNI_LONG: {
                 return std::make_unique<AverageAggregator<LongVector>>(std::move(inputType), std::move(outputType),
                     channel, inputRaw, outputPartial);
@@ -128,7 +136,8 @@ public:
     {
         auto inputTypeId = inputType->GetId();
         auto outputTypeId = outputType->GetId();
-        // Adapt to openLooKeng
+        // Adapt to openLooKeng, openLooKeng converts the output type to bigint in the partial stage,
+        // and reverts it to the original input type in the final stage.
         if (inputTypeId == OMNI_INT && outputTypeId == OMNI_LONG) {
             return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(std::move(inputType),
                 std::move(outputType), channel, inputRaw, outputPartial);
@@ -145,10 +154,23 @@ public:
             return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(std::move(inputType),
                 std::move(outputType), channel, inputRaw, outputPartial);
         }
+        //adapt to SQL of min(short) + group by(short)
+        if (inputTypeId == OMNI_SHORT && outputTypeId == OMNI_LONG) {
+            return std::make_unique<MinAggregator<ShortVector, LongVector, int64_t>>(std::move(inputType),
+                std::move(outputType), channel, inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_SHORT) {
+            return std::make_unique<MinAggregator<LongVector, ShortVector, int16_t>>(std::move(inputType),
+                std::move(outputType), channel, inputRaw, outputPartial);
+        }
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32: {
                 return std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(std::move(inputType),
+                    std::move(outputType), channel, inputRaw, outputPartial);
+            }
+            case OMNI_SHORT: {
+                return std::make_unique<MinAggregator<ShortVector, ShortVector, int16_t>>(std::move(inputType),
                     std::move(outputType), channel, inputRaw, outputPartial);
             }
             case OMNI_LONG:
@@ -190,7 +212,8 @@ public:
     {
         auto inputTypeId = inputType->GetId();
         auto outputTypeId = outputType->GetId();
-        // Adapt to openLooKeng
+        // Adapt to openLooKeng, openLooKeng converts the output type to bigint in the partial stage,
+        // and reverts it to the original input type in the final stage.
         if (inputTypeId == OMNI_INT && outputTypeId == OMNI_LONG) {
             return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(std::move(inputType),
                 std::move(outputType), channel, inputRaw, outputPartial);
@@ -207,10 +230,23 @@ public:
             return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(std::move(inputType),
                 std::move(outputType), channel, inputRaw, outputPartial);
         }
+        //adapt to SQL of max(short) + group by(short)
+        if (inputTypeId == OMNI_SHORT && outputTypeId == OMNI_LONG) {
+            return std::make_unique<MaxAggregator<ShortVector, LongVector, int64_t>>(std::move(inputType),
+                std::move(outputType), channel, inputRaw, outputPartial);
+        }
+        if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_SHORT) {
+            return std::make_unique<MaxAggregator<LongVector, ShortVector, int16_t>>(std::move(inputType),
+                std::move(outputType), channel, inputRaw, outputPartial);
+        }
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32: {
                 return std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(std::move(inputType),
+                    std::move(outputType), channel, inputRaw, outputPartial);
+            }
+            case OMNI_SHORT: {
+                return std::make_unique<MaxAggregator<ShortVector, ShortVector, int16_t>>(std::move(inputType),
                     std::move(outputType), channel, inputRaw, outputPartial);
             }
             case OMNI_LONG:

@@ -48,6 +48,9 @@ VecBatchWithPositionComparator::VecBatchWithPositionComparator(omniruntime::type
             case OMNI_DATE32:
                 sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<IntVector>);
                 break;
+            case OMNI_SHORT:
+                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<ShortVector>);
+                break;
             case OMNI_DECIMAL64:
             case OMNI_LONG:
                 sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<LongVector>);
