@@ -17,6 +17,9 @@ public:
             case omniruntime::type::OMNI_INT: {
                 return sizeof(int32_t);
             }
+            case omniruntime::type::OMNI_SHORT: {
+                return sizeof(int16_t);
+            }
             case omniruntime::type::OMNI_LONG: {
                 return sizeof(int64_t);
             }

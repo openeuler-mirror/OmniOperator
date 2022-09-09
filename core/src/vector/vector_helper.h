@@ -34,6 +34,9 @@ public:
             case OMNI_DATE32:
                 static_cast<IntVector *>(vector)->SetValue(index, *static_cast<int32_t *>(value));
                 break;
+            case OMNI_SHORT:
+                static_cast<ShortVector *>(vector)->SetValue(index, *static_cast<int16_t *>(value));
+                break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 static_cast<LongVector *>(vector)->SetValue(index, *static_cast<int64_t *>(value));
@@ -81,6 +84,10 @@ public:
             case OMNI_INT:
             case OMNI_DATE32: {
                 *static_cast<int32_t *>(value) = static_cast<IntVector *>(originVector)->GetValue(originIndex);
+                break;
+            }
+            case OMNI_SHORT: {
+                *static_cast<int16_t *>(value) = static_cast<ShortVector *>(originVector)->GetValue(originIndex);
                 break;
             }
             case OMNI_LONG:
@@ -165,6 +172,9 @@ public:
                 vector = new IntVector(allocator, size);
                 break;
             }
+            case OMNI_SHORT:
+                vector = new ShortVector(allocator, size);
+                break;
             case OMNI_LONG:
             case OMNI_DATE64:
             case OMNI_DECIMAL64: {
@@ -244,6 +254,8 @@ public:
             case OMNI_INT:
             case OMNI_DATE32:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + positionOffset);
+            case OMNI_SHORT:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int16_t *>(values) + positionOffset);
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + positionOffset);
@@ -277,6 +289,8 @@ public:
             case OMNI_INT:
             case OMNI_DATE32:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + finalIndex);
+            case OMNI_SHORT:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int16_t *>(values) + finalIndex);
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + finalIndex);
@@ -321,6 +335,8 @@ public:
     static void PrintVectorValue(Vector *vector, int32_t rowIndex);
 
     static VectorBatch *ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches);
+
+    static VectorBatch *SetVectorBatchVector(VectorBatch *result, std::vector<VectorBatch *> &vecBatches);
 };
 } // namespace vec
 } // namespace omniruntime

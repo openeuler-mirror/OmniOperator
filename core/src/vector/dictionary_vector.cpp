@@ -37,6 +37,16 @@ DictionaryVector::~DictionaryVector()
     }
 }
 
+int16_t DictionaryVector::GetShort(int32_t position) const
+{
+    VectorEncoding dictionaryEncoding = dictionary->GetEncoding();
+    if (dictionaryEncoding == OMNI_VEC_ENCODING_DICTIONARY) {
+        return static_cast<DictionaryVector *>(dictionary)->GetShort(GetId(position));
+    } else {
+        return static_cast<ShortVector *>(dictionary)->GetValue(GetId(position));
+    }
+}
+
 int32_t DictionaryVector::GetInt(int32_t position) const
 {
     VectorEncoding dictionaryEncoding = dictionary->GetEncoding();

@@ -122,6 +122,29 @@ public class TestDictionaryVec {
     }
 
     @Test
+    public void testGetShort() {
+        ShortVec originalVec = new ShortVec(10);
+        for (int i = 0; i < 10; i++) {
+            originalVec.set(i, (short) i);
+        }
+
+        int[] ids = {6, 8, 9};
+        DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
+        assertEquals(dictionaryVec.getShort(0), originalVec.get(6));
+        assertEquals(dictionaryVec.getShort(1), originalVec.get(8));
+        assertEquals(dictionaryVec.getShort(2), originalVec.get(9));
+
+        int[] nestedIds = {1, 2};
+        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
+        assertEquals(nested.getShort(0), originalVec.get(8));
+        assertEquals(nested.getShort(1), originalVec.get(9));
+
+        originalVec.close();
+        dictionaryVec.close();
+        nested.close();
+    }
+
+    @Test
     public void testGetInt() {
         IntVec originalVec = new IntVec(10);
         for (int i = 0; i < 10; i++) {

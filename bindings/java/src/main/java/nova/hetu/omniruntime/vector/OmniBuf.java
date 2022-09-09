@@ -82,6 +82,16 @@ public interface OmniBuf {
     short getShort(int index);
 
     /**
+     * get short array.
+     *
+     * @param index the byte offset of the element
+     * @param target target short array
+     * @param targetIndex the starting byte offset of the array
+     * @param length byte size
+     */
+    void getShortArray(int index, short[] target, int targetIndex, int length);
+
+    /**
      * set int value.
      *
      * @param index the byte offset of the element

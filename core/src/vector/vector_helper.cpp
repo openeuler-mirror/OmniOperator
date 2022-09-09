@@ -46,6 +46,10 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             std::cout << std::dec << static_cast<IntVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
+        case OMNI_SHORT: {
+            std::cout << std::dec << static_cast<ShortVector *>(vector)->GetValue(originalRowIndex) << "\t";
+            break;
+        }
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
             std::cout << std::dec << static_cast<LongVector *>(vector)->GetValue(originalRowIndex) << "\t";
@@ -121,6 +125,11 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
                 result->SetVector(i, vector);
                 break;
             }
+            case OMNI_SHORT: {
+                auto *vector = new ShortVector(allocator, rowCount);
+                result->SetVector(i, vector);
+                break;
+            }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
                 auto *vector = new LongVector(allocator, rowCount);
@@ -153,8 +162,15 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
                 LogError("Error vector type %d", types[i]);
         }
     }
+    SetVectorBatchVector(result, vecBatches);
+    return result;
+}
 
+VectorBatch *VectorHelper::SetVectorBatchVector(VectorBatch *result, std::vector<VectorBatch *> &vecBatches)
+{
     int32_t offset = 0;
+    int32_t vectorCount = vecBatches[0]->GetVectorCount();
+    auto types = vecBatches[0]->GetVectorTypeIds();
     for (auto pV : vecBatches) {
         int32_t rc = pV->GetRowCount();
         for (int32_t i = 0; i < vectorCount; ++i) {
@@ -165,6 +181,11 @@ VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
                 case OMNI_DATE32: {
                     auto rValues = static_cast<int32_t *>(static_cast<IntVector *>(vector)->GetValues());
                     static_cast<IntVector *>(resVec)->SetValues(offset, rValues, rc);
+                    break;
+                }
+                case OMNI_SHORT: {
+                    auto rValues = static_cast<int16_t *>(static_cast<ShortVector *>(vector)->GetValues());
+                    static_cast<ShortVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
                 case OMNI_LONG:

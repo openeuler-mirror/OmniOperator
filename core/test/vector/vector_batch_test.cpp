@@ -11,6 +11,7 @@ using namespace omniruntime::vec;
 namespace VectorBatchTest {
 void VectorBatchTestInitDataTypes(std::vector<DataTypePtr> &types)
 {
+    types.push_back(ShortType());
     types.push_back(IntType());
     types.push_back(DoubleType());
     types.push_back(LongType());
@@ -44,12 +45,12 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
 {
     std::vector<DataTypePtr> types;
     VectorBatchTestInitDataTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(4, 1024);
+    VectorBatch *vectorBatch = new VectorBatch(types.size(), 1024);
     VectorAllocator *allocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_constructVectorBatchWithTypes");
     vectorBatch->NewVectors(allocator, types);
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < types.size(); ++i) {
         EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
@@ -60,11 +61,11 @@ TEST(VectorBatch, getVectorCount)
 {
     std::vector<DataTypePtr> types;
     VectorBatchTestInitDataTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(4, 1024);
+    VectorBatch *vectorBatch = new VectorBatch(types.size(), 1024);
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorCount");
     vectorBatch->NewVectors(allocator, types);
 
-    EXPECT_EQ(4, vectorBatch->GetVectorCount());
+    EXPECT_EQ(types.size(), vectorBatch->GetVectorCount());
     EXPECT_EQ(1024, vectorBatch->GetRowCount());
 
     VectorHelper::FreeVecBatch(vectorBatch);
@@ -75,12 +76,12 @@ TEST(VectorBatch, getVectorTypes)
 {
     std::vector<DataTypePtr> types;
     VectorBatchTestInitDataTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(5, 1024);
+    VectorBatch *vectorBatch = new VectorBatch(types.size(), 1024);
     VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorTypes");
     vectorBatch->NewVectors(allocator, types);
 
     const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < types.size(); ++i) {
         EXPECT_EQ(types[i]->GetId(), vectorTypeIds[i]);
     }
     VectorHelper::FreeVecBatch(vectorBatch);

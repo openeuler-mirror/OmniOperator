@@ -36,14 +36,31 @@ public class ShortVec extends FixedWidthVec {
         super(vector, offset, length, isSlice);
     }
 
+    private ShortVec(ShortVec vector, int[] positions, int offset, int length) {
+        super(vector, positions, offset, length);
+    }
+
     /**
      * get the specified short at the specified absolute.
      *
      * @param index the element offset in vec
-     * @return int value
+     * @return short value
      */
     public short get(int index) {
         return valuesBuf.getShort((index + offset) * BYTES);
+    }
+
+    /**
+     * get short values from the specified position.
+     *
+     * @param index the position of element
+     * @param length the number of element
+     * @return short value array
+     */
+    public short[] get(int index, int length) {
+        short[] target = new short[length];
+        valuesBuf.getShortArray((index + offset) * BYTES, target, 0, length * BYTES);
+        return target;
     }
 
     /**
@@ -80,12 +97,12 @@ public class ShortVec extends FixedWidthVec {
 
     @Override
     public ShortVec copyPositions(int[] positions, int offset, int length) {
-        return null;
+        return new ShortVec(this, positions, offset, length);
     }
 
     @Override
     public ShortVec copyRegion(int positionOffset, int length) {
-        return null;
+        return new ShortVec(this, positionOffset, length, false);
     }
 
     @Override
