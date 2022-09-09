@@ -36,7 +36,12 @@ public enum OmniErrorType {
     /**
      * Omni vec or vectbatch double free
      */
-    OMNI_DOUBLE_FREE(6);
+    OMNI_DOUBLE_FREE(6),
+
+    /**
+     * Omni java udf error
+     */
+    OMNI_JAVA_UDF_ERROR(7);
 
     private final int value;
 
