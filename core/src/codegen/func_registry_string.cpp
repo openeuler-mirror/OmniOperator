@@ -73,6 +73,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         NULL_RESULT_IF_ANY_NULL_ARG),
         Function(reinterpret_cast<void *>(LengthStr), lengthFnStr, {}, { OMNI_VARCHAR }, OMNI_LONG,
         NULL_RESULT_IF_ANY_NULL_ARG),
+        Function(reinterpret_cast<void *>(LengthCharReturnInt32), lengthFnStr, {}, { OMNI_CHAR }, OMNI_INT,
+        NULL_RESULT_IF_ANY_NULL_ARG),
+        Function(reinterpret_cast<void *>(LengthStrReturnInt32), lengthFnStr, {}, { OMNI_VARCHAR }, OMNI_INT,
+        NULL_RESULT_IF_ANY_NULL_ARG),
 
         // replace functions
         Function(reinterpret_cast<void *>(ReplaceStrStrStrWithRep), replaceFnStr, {},

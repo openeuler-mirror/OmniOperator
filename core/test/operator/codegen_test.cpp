@@ -1716,8 +1716,7 @@ TEST(CodeGenTest, ConcatChars)
     outerArgs.push_back(col2);
     auto outerConcat = GetFuncExpr(funcStr, outerArgs, CharType(52));
 
-    auto helloExpr =
-        new LiteralExpr(new std::string("hello                         , world               "), CharType(52));
+    auto helloExpr = new LiteralExpr(new std::string("hello                         , world"), CharType(52));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, outerConcat, helloExpr, BooleanType());
 
     Parser parser {};
@@ -1762,7 +1761,7 @@ TEST(CodeGenTest, ConcatChars)
 
     v1[0] = {8766};
     s1[0] = "hello";
-    s2[0] = "world ";
+    s2[0] = "world";
     vals[0] = reinterpret_cast<int64_t>(v1);
     vals[1] = reinterpret_cast<int64_t>(s1[0].c_str());
     vals[2] = reinterpret_cast<int64_t>(s2[0].c_str());
