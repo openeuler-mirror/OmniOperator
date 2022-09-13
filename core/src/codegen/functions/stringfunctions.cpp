@@ -29,9 +29,6 @@ const int THOU = 0;
 const int HUN = 1;
 const int TEN = 2;
 const int ONE = 3;
-
-const string REPLACE_ERR_MSG = "Replace failed";
-const string CONCAT_ERR_MSG = "Concat failed";
 }
 
 extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
@@ -82,6 +79,8 @@ extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, in
         return "";
     }
 
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
     errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
     errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
@@ -102,6 +101,8 @@ extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, 
         return "";
     }
 
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
     errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
     errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
@@ -123,6 +124,8 @@ extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, i
         return "";
     }
 
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
     errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
     errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
@@ -143,7 +146,9 @@ extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, i
         return "";
     }
 
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
+    // both empty strings, the security function will not return an error.
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
     errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
     errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
     if (res1 != EOK || res2 != EOK) {
@@ -229,9 +234,9 @@ extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strL
     return width;
 }
 
-extern DLLEXPORT int32_t LengthCharForSpark(const char *str, int32_t width, int32_t strLen)
+extern DLLEXPORT int32_t LengthCharReturnInt32(const char *str, int32_t width, int32_t strLen)
 {
-    return LengthChar(str, width, strLen);
+    return width;
 }
 
 extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen)
@@ -239,9 +244,9 @@ extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen)
     return omniruntime::Utf8Util::CountCodePoints(str, strLen);
 }
 
-extern DLLEXPORT int32_t LengthStrForSpark(const char *str, int32_t strLen)
+extern DLLEXPORT int32_t LengthStrReturnInt32(const char *str, int32_t strLen)
 {
-    return LengthStr(str, strLen);
+    return omniruntime::Utf8Util::CountCodePoints(str, strLen);
 }
 
 extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
@@ -250,7 +255,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (searchLen == 0 && engineType == EngineType::Spark) {
         *outLen = strLen;
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         errno_t res = memcpy_s(ret, *outLen + 1, str, strLen);
         if (res != EOK) {
             SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());

@@ -28,6 +28,8 @@ namespace codegen {
 // Defining constant of the gap for case conversions
 const int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
 const std::string SUBSTR_ERR_MSG = "Substring failed";
+const std::string REPLACE_ERR_MSG = "Replace failed";
+const std::string CONCAT_ERR_MSG = "Concat failed";
 }
 }
 
@@ -174,11 +176,11 @@ extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, in
 
 extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strLen);
 
-extern DLLEXPORT int32_t LengthCharForSpark(const char *str, int32_t width, int32_t strLen);
+extern DLLEXPORT int32_t LengthCharReturnInt32(const char *str, int32_t width, int32_t strLen);
 
 extern DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen);
 
-extern DLLEXPORT int32_t LengthStrForSpark(const char *str, int32_t strLen);
+extern DLLEXPORT int32_t LengthStrReturnInt32(const char *str, int32_t strLen);
 
 extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
     const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, int32_t *outLen);
