@@ -109,6 +109,18 @@ public:
         return positionLinks;
     }
 
+    void Visit(uint32_t joinPosition) {
+        visitedPositions[joinPosition] = true;
+    }
+
+    bool HasVisited(uint32_t joinPosition) {
+        return visitedPositions[joinPosition];
+    }
+
+    uint32_t GetVisitedPositionsSize() const {
+        return visitedPositionsSize;
+    }
+
     uint32_t GetNextJoinPosition(uint32_t currentJoinPosition) const;
     uint32_t GetJoinPosition(uint32_t position, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
     void PrintHashTable(uint32_t partitionIndex) const;
@@ -118,6 +130,8 @@ private:
 
     ArrayPositionLinks *positionLinks;
     PagesHash *pagesHash;
+    std::vector<bool> visitedPositions;
+    uint32_t visitedPositionsSize;
 };
 
 class JoinHashTables {
@@ -191,12 +205,18 @@ public:
         this->filterExpr = filterExpr;
     }
 
+    uint32_t getVisitedCounts() const {
+        return visitedCounts;
+    }
+
     void AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTable);
     JoinHashTable *GetHashTable(uint32_t partitionIndex) const;
     bool IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
         omniruntime::vec::Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const;
     uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
     uint64_t GetJoinPosition(uint32_t position, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
+    void PositionVisited(uint64_t currentJoinPosition);
+    uint32_t GetTotalVisitedCounts() const;
 
 private:
     uint32_t hashTableCount;
@@ -210,6 +230,8 @@ private:
     omniruntime::expressions::Expr *filterExpr = nullptr;
     SimpleFilter *simpleFilter = nullptr;
     std::set<int32_t> usedVectors;
+    uint32_t visitedCounts = 0;
+    uint32_t totalVisitedCounts = 0;
 };
 } // end of op
 } // end of omniruntime

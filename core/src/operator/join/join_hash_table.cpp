@@ -99,6 +99,7 @@ void JoinHashTables::AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTa
 {
     hashTables[partitionIndex] = hashTable;
     hashTableSize++;
+    totalVisitedCounts += hashTable->GetVisitedPositionsSize();
 }
 
 JoinHashTable *JoinHashTables::GetHashTable(uint32_t partitionIndex) const
@@ -171,10 +172,30 @@ uint64_t JoinHashTables::GetJoinPosition(uint32_t position, Vector **joinColumns
     return EncodePartitionedJoinPosition(partition, joinPosition);
 }
 
+void JoinHashTables::PositionVisited(uint64_t currentJoinPosition)
+{
+    auto partition = DecodePartition(currentJoinPosition);
+    auto joinPosition = DecodeJoinPosition(currentJoinPosition);
+    auto hashTable = hashTables[partition];
+    if (!hashTable->HasVisited(joinPosition)) {
+        hashTable->Visit(joinPosition);
+        visitedCounts++;
+    }
+}
+
+uint32_t JoinHashTables::GetTotalVisitedCounts() const
+{
+    return totalVisitedCounts;
+}
+
 JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, uint64_t *addresses, uint32_t addressesCount)
     : positionLinks(new ArrayPositionLinks(addressesCount)),
-      pagesHash(new PagesHash(addresses, addressesCount, pagesHashStrategy, positionLinks))
-{}
+      pagesHash(new PagesHash(addresses, addressesCount, pagesHashStrategy, positionLinks)),
+      visitedPositionsSize(pagesHash->GetAddressesCount())
+{
+    visitedPositions.resize(visitedPositionsSize);
+    std::fill(visitedPositions.begin(), visitedPositions.end(), false);
+}
 
 JoinHashTable::~JoinHashTable()
 {
@@ -537,7 +558,6 @@ bool PagesHash::PositionEqualsCurrentRowIgnoreNulls(uint32_t buildPosition, int8
     auto address = addresses[buildPosition];
     auto vecBatchIndex = DecodeSliceIndex(address);
     auto rowIndex = DecodePosition(address);
-
     return omniruntime::op::PositionEqualsRowIgnoreNulls(vecBatchIndex, rowIndex, probePosition, joinColumns,
         pagesHashStrategy->GetBuildHashColumns(), pagesHashStrategy->GetBuildHashColTypes(),
         pagesHashStrategy->GetBuildHashColsCount());

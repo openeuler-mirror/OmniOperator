@@ -14,7 +14,6 @@
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
 
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
@@ -67,6 +66,7 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
       buildOutputCols(buildOutputCols),
       buildOutputTypes(buildOutputTypes),
       probeOnOuterSide(joinType == JoinType::OMNI_JOIN_TYPE_LEFT || joinType == JoinType::OMNI_JOIN_TYPE_FULL),
+      needTrackPosition(joinType == JoinType::OMNI_JOIN_TYPE_FULL || joinType == JoinType::OMNI_JOIN_TYPE_RIGHT),
       currentProbePositionProducedRow(false),
       hashTables(hashTables),
       joinProbe(nullptr),
@@ -140,11 +140,21 @@ void LookupJoinOperator::ProcessProbe()
 void LookupJoinOperator::JoinCurrentPosition()
 {
     // match in hash table
-    while (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
-        // handle data of build
-        currentProbePositionProducedRow = true;
-        outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
-        partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition);
+    if (needTrackPosition) {
+        while (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
+            // handle data of build
+            currentProbePositionProducedRow = true;
+            outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            hashTables->PositionVisited(partitionedJoinPosition);
+            partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition);
+        }
+    } else {
+        while (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
+            // handle data of build
+            currentProbePositionProducedRow = true;
+            outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition);
+        }
     }
 
     // do not match in hash table
@@ -163,6 +173,9 @@ void LookupJoinOperator::JoinCurrentPositionWithFilter()
             // handle data of build
             currentProbePositionProducedRow = true;
             outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            if (needTrackPosition) {
+                hashTables->PositionVisited(partitionedJoinPosition);
+            }
         }
         partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition);
     }

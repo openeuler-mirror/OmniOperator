@@ -1,6 +1,6 @@
 /*
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * @Description: sort implementations
+ * @Description: lookup join implementations
  */
 
 #include "lookup_join_expr.h"
