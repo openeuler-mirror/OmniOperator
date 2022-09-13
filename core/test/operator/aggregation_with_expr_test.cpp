@@ -49,8 +49,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
+    auto overflowConfig = new OverflowConfig();
     auto *hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
-        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false, overflowConfig);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -75,6 +76,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
@@ -117,8 +119,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)};
 
+    auto overflowConfig = new OverflowConfig();
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
-        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false, overflowConfig);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -143,6 +146,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
@@ -170,9 +174,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                                    OMNI_AGGREGATION_TYPE_COUNT_ALL};
     uint32_t maskCols[] = {static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
-
+    auto overflowConfig = new OverflowConfig();
     auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
-        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false);
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, maskCols, true, false, overflowConfig);
     auto hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -198,5 +202,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
 }
 }

@@ -13,11 +13,11 @@ using namespace std;
 
 TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
-    int32_t sortKeyCount)
+    int32_t sortKeyCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
-        this->sortCols, this->projectFuncs);
+        this->sortCols, this->projectFuncs, overflowConfig);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*sourceTypes, n, this->sortCols.data(), sortAsc,

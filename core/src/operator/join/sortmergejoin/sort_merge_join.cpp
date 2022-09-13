@@ -43,7 +43,7 @@ void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &buffere
     this->bufferedOutputCols = bufferedOutputCols;
 }
 
-void SortMergeJoinOperator::InitScannerAndResultBuilder()
+void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflowConfig)
 {
     streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes);
     bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes);
@@ -53,7 +53,7 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder()
 
     joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
         streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
-        bufferedTblPagesIndex, filter, vecAllocator);
+        bufferedTblPagesIndex, filter, vecAllocator, overflowConfig);
 }
 
 int32_t SortMergeJoinOperator::GetJoinResult()

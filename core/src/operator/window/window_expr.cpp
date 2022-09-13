@@ -30,12 +30,12 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
     OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
-        this->argumentChannels, this->projectFuncs);
+        this->argumentChannels, this->projectFuncs, overflowConfig);
     this->sourceTypes = std::make_unique<DataTypes>(newTypes);
 
     int position = 0;
@@ -83,13 +83,13 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, OverflowConfig *overflowConfig)
 {
     auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
         argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField);
+        windowFrameEndTypesField, windowFrameEndChannelsField, overflowConfig);
     return factory;
 }
 

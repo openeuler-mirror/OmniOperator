@@ -16,31 +16,32 @@ using namespace omniruntime::vec;
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
     const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
-    int32_t sortKeysCount)
+    int32_t sortKeysCount, OverflowConfig *overflowConfig)
 {
     OperatorConfig defaultConfig;
     auto pOperatorFactory = new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys,
-        sortAscendings, sortNullFirsts, sortKeysCount, defaultConfig);
+        sortAscendings, sortNullFirsts, sortKeysCount, defaultConfig, overflowConfig);
     return pOperatorFactory;
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
     const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
-    int32_t sortKeysCount, const OperatorConfig &operatorConfig)
+    int32_t sortKeysCount, const OperatorConfig &operatorConfig, OverflowConfig *overflowConfig)
 {
     auto pOperatorFactory = new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys,
-        sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
+        sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig, overflowConfig);
     return pOperatorFactory;
 }
 
 SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
+    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig,
+    OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,
-        this->sortCols, this->projectFuncs);
+        this->sortCols, this->projectFuncs, overflowConfig);
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);

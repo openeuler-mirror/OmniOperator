@@ -28,13 +28,15 @@ public class OperatorConfig {
 
     private SpillConfig spillConfig;
 
+    private OverflowConfig overflowConfig;
+
     private boolean isSkipExpressionVerify;
 
     /**
      * Operator config default constructor.
      */
     public OperatorConfig() {
-        this(SpillConfig.NONE, false);
+        this(SpillConfig.NONE, new OverflowConfig(), false);
     }
 
     /**
@@ -43,17 +45,38 @@ public class OperatorConfig {
      * @param spillConfig the spill config
      */
     public OperatorConfig(SpillConfig spillConfig) {
-        this(spillConfig, false);
+        this(spillConfig, new OverflowConfig(), false);
+    }
+
+    /**
+     * Operator config constructor.
+     *
+     * @param overflowConfig overflowConfig
+     */
+    public OperatorConfig(OverflowConfig overflowConfig) {
+        this(SpillConfig.NONE, overflowConfig, false);
+    }
+
+    /**
+     * Operator config constructor.
+     *
+     * @param spillConfig spillConfig
+     * @param overflowConfig overflowConfig
+     */
+    public OperatorConfig(SpillConfig spillConfig, OverflowConfig overflowConfig) {
+        this(spillConfig, overflowConfig, false);
     }
 
     /**
      * Operator config constructor.
      *
      * @param spillConfig the spill config
+     * @param overflowConfig the overflow config
      * @param isSkipExpressionVerify whether to skip exprVerify
      */
-    public OperatorConfig(SpillConfig spillConfig, boolean isSkipExpressionVerify) {
+    public OperatorConfig(SpillConfig spillConfig, OverflowConfig overflowConfig, boolean isSkipExpressionVerify) {
         this.spillConfig = spillConfig;
+        this.overflowConfig = overflowConfig;
         this.isSkipExpressionVerify = isSkipExpressionVerify;
     }
 
@@ -67,12 +90,30 @@ public class OperatorConfig {
     }
 
     /**
+     * Get overflow config.
+     *
+     * @return the overflow config
+     */
+    public OverflowConfig getOverflowConfig() {
+        return overflowConfig;
+    }
+
+    /**
      * Set spill config.
      *
      * @param spillConfig the spill config
      */
     public void setSpillConfig(SpillConfig spillConfig) {
         this.spillConfig = spillConfig;
+    }
+
+    /**
+     * Set overflow config.
+     *
+     * @param overflowConfig overflowConfig
+     */
+    public void setOverflowConfig(OverflowConfig overflowConfig) {
+        this.overflowConfig = overflowConfig;
     }
 
     /**
@@ -129,12 +170,13 @@ public class OperatorConfig {
         if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        OperatorConfig operatorConfig = (OperatorConfig) obj;
-        return spillConfig.equals(operatorConfig.getSpillConfig());
+        OperatorConfig that = (OperatorConfig) obj;
+        return isSkipExpressionVerify == that.isSkipExpressionVerify && Objects.equals(spillConfig, that.spillConfig)
+                && Objects.equals(overflowConfig, that.overflowConfig);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(spillConfig);
+        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify);
     }
 }

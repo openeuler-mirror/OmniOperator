@@ -152,7 +152,7 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
     std::vector<int32_t> bufferedOutputCols;
     bufferedOutputCols.push_back(0);
     smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols);
-    smjOp->InitScannerAndResultBuilder();
+    smjOp->InitScannerAndResultBuilder(nullptr);
 
     // construct data
     const int32_t streamedTblDataSize = 6;
@@ -1358,9 +1358,9 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
 
-    auto *resultBuilder =
-        new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount, leftPagesIndex,
-        rightSourceTypes, rightTableOutputCols, rightTableOutputColsCount, rightPagesIndex, filter, vecAllocator);
+    auto *resultBuilder = new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount,
+        leftPagesIndex, rightSourceTypes, rightTableOutputCols, rightTableOutputColsCount, rightPagesIndex, filter,
+        vecAllocator, nullptr);
 
     std::vector<bool> isPreMatched;
     isPreMatched.insert(isPreMatched.end(), 6, false);
@@ -1436,9 +1436,9 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("TestSortMergeJoinResultBuilderWithFilter");
 
-    auto *resultBuilder =
-        new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount, leftPagesIndex,
-        rightSourceTypes, rightTableOutputCols, rightTableOutputColsCount, rightPagesIndex, filter, vecAllocator);
+    auto *resultBuilder = new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount,
+        leftPagesIndex, rightSourceTypes, rightTableOutputCols, rightTableOutputColsCount, rightPagesIndex, filter,
+        vecAllocator, nullptr);
 
     std::vector<bool> isPreMatched;
     isPreMatched.insert(isPreMatched.end(), 3, false);

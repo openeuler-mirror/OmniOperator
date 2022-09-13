@@ -20,7 +20,7 @@ public:
      * @return unique_ptr to the ProjectionCodeGen instance
      */
     static std::unique_ptr<ProjectionCodeGen> Create(std::string name, const omniruntime::expressions::Expr &expression,
-        bool filter);
+        bool filter, omniruntime::op::OverflowConfig *overflowConfig);
 
     ~ProjectionCodeGen() override = default;
 
@@ -29,8 +29,9 @@ public:
     int64_t GetExpressionEvaluator();
 
 private:
-    ProjectionCodeGen(std::string name, const omniruntime::expressions::Expr &expr, bool filter)
-        : ExpressionCodeGen(std::move(name), expr), filter(filter)
+    ProjectionCodeGen(std::string name, const omniruntime::expressions::Expr &expr, bool filter,
+        omniruntime::op::OverflowConfig *overflowConfig)
+        : ExpressionCodeGen(std::move(name), expr, overflowConfig), filter(filter)
     {}
     int64_t CreateWrapper(llvm::Function &proj);
     bool filter;

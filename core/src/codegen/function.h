@@ -10,9 +10,9 @@
 
 namespace omniruntime {
 enum NullableResultType {
-    NULL_RESULT_IF_ANY_NULL_ARG,
-    VALID_NOT_NULL_RESULT,
-    NOT_NULL_RESULT,
+    INPUT_DATA,
+    INPUT_DATA_AND_NULL,
+    INPUT_DATA_AND_OVERFLOW_NULL,
     DEFAULT
 };
 

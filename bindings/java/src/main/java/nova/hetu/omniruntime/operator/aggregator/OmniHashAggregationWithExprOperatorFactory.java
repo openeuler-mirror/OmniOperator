@@ -84,14 +84,14 @@ public class OmniHashAggregationWithExprOperatorFactory
 
     private static native long createHashAggregationWithExprOperatorFactory(String[] groupByChanel,
             String[] aggChannels, String sourceTypes, int[] aggFunctionTypes, int[] maskChannels, String aggOutputTypes,
-            boolean isInputRaw, boolean isOutputPartial);
+            boolean isInputRaw, boolean isOutputPartial, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createHashAggregationWithExprOperatorFactory(context.groupByChanel, context.aggChannels,
                 DataTypeSerializer.serialize(context.sourceTypes), toNativeConstants(context.aggFunctionTypes),
                 context.maskChannels, DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw,
-                context.isOutputPartial);
+                context.isOutputPartial, OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

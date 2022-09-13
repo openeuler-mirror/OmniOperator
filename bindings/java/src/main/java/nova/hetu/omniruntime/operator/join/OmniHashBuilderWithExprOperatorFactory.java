@@ -52,12 +52,13 @@ public class OmniHashBuilderWithExprOperatorFactory
     }
 
     private static native long createHashBuilderWithExprOperatorFactory(String buildTypes, String[] buildHashKeys,
-            String filterExpression, int operatorCount);
+            String filterExpression, int operatorCount, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createHashBuilderWithExprOperatorFactory(DataTypeSerializer.serialize(context.buildTypes),
-                context.buildHashKeys, context.filterExpression, context.operatorCount);
+                context.buildHashKeys, context.filterExpression, context.operatorCount,
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

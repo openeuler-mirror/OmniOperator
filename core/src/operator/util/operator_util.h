@@ -205,15 +205,15 @@ public:
         }
     }
 
-    static void CreateProjectFuncs(const DataTypes &intputTypes,
+    static void CreateProjectFuncs(const DataTypes &inputTypes,
         std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-        std::vector<DataTypePtr> &newIntputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
-        std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs);
+        std::vector<DataTypePtr> &newInputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
+        std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig);
 
-    static void CreateRequiredProjectFuncs(const DataTypes &intputTypes, omniruntime::expressions::Expr *projectKeys[],
-        int32_t projectKeysCount, std::vector<DataTypePtr> &newIntputTypes,
+    static void CreateRequiredProjectFuncs(const DataTypes &inputTypes, expressions::Expr *projectKeys[],
+        int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-        std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
+        std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig);
 
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,

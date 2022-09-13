@@ -55,13 +55,14 @@ public class OmniSmjStreamedTableWithExprOperatorFactory
     }
 
     private static native long createSmjStreamedTableWithExprOperatorFactory(String sourceTypes, String[] equalKeyExprs,
-            int[] outputChannels, int joinType, String filter);
+            int[] outputChannels, int joinType, String filter, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         String filter = context.filter.isPresent() ? context.filter.get() : null;
         return createSmjStreamedTableWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
-                context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter);
+                context.equalKeyExprs, context.outputChannels, context.joinType.getValue(), filter,
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

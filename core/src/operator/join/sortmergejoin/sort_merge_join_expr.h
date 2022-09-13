@@ -23,11 +23,12 @@ public:
     static StreamedTableWithExprOperatorFactory *CreateStreamedTableWithExprOperatorFactory(
         const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
         int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt,
-        JoinType inputJoinType, std::string &filterExpression);
+        JoinType inputJoinType, std::string &filterExpression, OverflowConfig *overflowConfig);
 
     StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
-        int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter);
+        int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter,
+        OverflowConfig *overflowConfig);
 
     ~StreamedTableWithExprOperatorFactory() override;
 
@@ -72,11 +73,12 @@ public:
     static BufferedTableWithExprOperatorFactory *CreateBufferedTableWithExprOperatorFactory(
         const DataTypes &bufferedTypes, const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols,
         int32_t bufferedKeyExprCnt, int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
-        int64_t streamedTableFactoryAddr);
+        int64_t streamedTableFactoryAddr, OverflowConfig *overflowConfig);
 
-    BufferedTableWithExprOperatorFactory(const DataTypes &bufferedTypes,
+    BufferedTableWithExprOperatorFactory(const type::DataTypes &bufferedTypes,
         const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
-        int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr);
+        int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr,
+        OverflowConfig *overflowConfig);
 
     ~BufferedTableWithExprOperatorFactory() override;
 

@@ -31,7 +31,7 @@ LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(c
 {
     std::vector<DataTypePtr> newProbeTypes;
     OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes,
-        this->rowProjections, this->probeHashCols, this->projectFuncs);
+        this->rowProjections, this->probeHashCols, this->projectFuncs, nullptr);
     this->probeTypes = std::make_unique<DataTypes>(DataTypes(newProbeTypes));
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);

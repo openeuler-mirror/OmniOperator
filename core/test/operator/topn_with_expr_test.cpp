@@ -39,9 +39,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     LiteralExpr *modRight = new LiteralExpr(3L, LongType());
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
-
-    auto topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
+    auto overflowConfig = new OverflowConfig();
+    auto topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs,
+        ascendings, nullFirsts, sortKeyCnt, overflowConfig);
     auto topNWithExprOperator = static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
     topNWithExprOperator->AddInput(vecBatch);
@@ -65,6 +65,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     DeleteOperatorFactory(topNWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
 }
 
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
@@ -90,9 +91,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     LiteralExpr *modRight = new LiteralExpr(3L, LongType());
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
-
-    TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts, sortKeyCnt);
+    auto overflowConfig = new OverflowConfig();
+    TopNWithExprOperatorFactory *topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceTypes,
+        expectedDataSize, sortKeys, ascendings, nullFirsts, sortKeyCnt, overflowConfig);
     TopNWithExprOperator *topNWithExprOperator =
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
@@ -116,6 +117,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     DeleteOperatorFactory(topNWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
 }
 
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
@@ -139,9 +141,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     FieldExpr *col0 = new FieldExpr(0, IntType());
     FieldExpr *col2 = new FieldExpr(2, LongType());
     std::vector<Expr *> sortExprs = { col0, col2 };
-
-    TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt);
+    auto overflowConfig = new OverflowConfig();
+    TopNWithExprOperatorFactory *topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceTypes,
+        expectedDataSize, sortExprs, ascendings, nullFirsts, sortKeyCnt, overflowConfig);
     TopNWithExprOperator *topNWithExprOperator =
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
@@ -163,5 +165,6 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     DeleteOperatorFactory(topNWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
 }
 }

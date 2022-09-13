@@ -20,7 +20,7 @@ RowProjection::~RowProjection()
 }
 
 // Return nullptr if expression is unsupported
-RowProjFunc RowProjection::Create()
+RowProjFunc RowProjection::Create(OverflowConfig *overflowConfig)
 {
     if (this->expression == nullptr) {
         return nullptr;
@@ -31,7 +31,7 @@ RowProjFunc RowProjection::Create()
     this->expression->Accept(p);
     std::cout << std::endl;
 #endif
-    this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false);
+    this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false, overflowConfig);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
     if (fPtr == 0) {
         return nullptr;
@@ -64,7 +64,7 @@ int RowProjection::GetIndexIfColumnProjection()
     return static_cast<const FieldExpr *>(this->expression)->colVal;
 }
 
-bool Projection::Initialize(bool filter)
+bool Projection::Initialize(bool filter, OverflowConfig *overflowConfig)
 {
     // short-circuit logic for column projections
     // no need to go through codegen
@@ -75,7 +75,7 @@ bool Projection::Initialize(bool filter)
         return true;
     }
 
-    this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter);
+    this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
     auto f = this->codegen->GetFunction();
     if (f == 0) {
         return false;
@@ -92,7 +92,7 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType)
+Projection::Projection(const expressions::Expr &expr, bool filter, DataTypePtr outType, OverflowConfig *overflowConfig)
     : expr(&expr), outType(std::move(outType)), projector(nullptr)
 {
 #ifdef DEBUG
@@ -101,7 +101,7 @@ Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType)
     expr.Accept(printExprTree);
     std::cout << std::endl;
 #endif
-    bool initialized = this->Initialize(filter);
+    bool initialized = this->Initialize(filter, overflowConfig);
     if (!initialized) {
         this->isSupported = false;
     }
@@ -262,6 +262,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
             proj[i]->Project(vecAllocator, vecBatch, valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         if (context->HasError()) {
             // resource cleanup
+            delete outCol;
             for (int32_t j = 0; j < i; j++) {
                 delete outBatch->GetVector(j);
             }
@@ -298,12 +299,12 @@ OmniStatus ProjectionOperator::Close()
     return OMNI_STATUS_NORMAL;
 }
 
-ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
-    const DataTypes &inputTypes, int32_t nCols)
+ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs,
+    int32_t nProj, const DataTypes &inputTypes, int32_t nCols, OverflowConfig *overflowConfig)
     : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
 {
     for (auto expr : exprs) {
-        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnType());
+        auto projection = std::make_unique<Projection>(*expr, false, expr->GetReturnType(), overflowConfig);
         if (!projection->IsSupported()) {
             this->isSupported = false;
             break;

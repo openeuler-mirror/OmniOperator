@@ -15,13 +15,13 @@ namespace omniruntime {
 namespace op {
 class HashBuilderWithExprOperatorFactory : public OperatorFactory {
 public:
-    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
-        const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
-        std::string &filter, int32_t hashTableCount);
+    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(
+        const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+        int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount, OverflowConfig *overflowConfig);
 
     HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
-        std::string &filter, int32_t hashTableCount);
+        std::string &filter, int32_t hashTableCount, OverflowConfig *overflowConfig);
 
     ~HashBuilderWithExprOperatorFactory() override;
 

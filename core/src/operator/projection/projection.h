@@ -52,7 +52,7 @@ class RowProjection {
 public:
     explicit RowProjection(const omniruntime::expressions::Expr &expression);
     ~RowProjection();
-    RowProjFunc Create();
+    RowProjFunc Create(OverflowConfig *overflowConfig);
     DataTypePtr GetReturnType();
     bool IsColumnProjection();
     int GetIndexIfColumnProjection();
@@ -64,7 +64,7 @@ private:
 
 class Projection {
 public:
-    Projection(const expressions::Expr &expr, bool filter, DataTypePtr outType);
+    Projection(const expressions::Expr &expr, bool filter, DataTypePtr outType, OverflowConfig *overflowConfig);
     ~Projection()
     {
         this->codegen.reset();
@@ -99,7 +99,7 @@ private:
     int columnProjectionIndex = -1;
     DataTypePtr outType;
     ProjFunc projector;
-    bool Initialize(bool filter);
+    bool Initialize(bool filter, OverflowConfig *overflowConfig);
 };
 
 class ProjectionOperator : public Operator {
@@ -128,7 +128,7 @@ private:
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
     ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs, int32_t nProj,
-        const DataTypes &inputTypes, int32_t nCols);
+                              const DataTypes &inputTypes, int32_t nCols, OverflowConfig *overflowConfig);
 
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;

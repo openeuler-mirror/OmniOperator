@@ -17,7 +17,8 @@ namespace op {
 
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables)
+    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
+    OverflowConfig *overflowConfig)
     : probeTypes(probeTypes), buildOutputTypes(buildOutputTypes), joinType(joinType), hashTables(hashTables)
 {
     int32_t probeHashColTypes[probeHashColsCount];
@@ -33,19 +34,20 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
     this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
     this->rowSize += OperatorUtil::GetRowSize(buildOutputTypes.Get());
     this->hashTables->SetProbeTypes(&(this->probeTypes));
-    this->hashTables->JoinFilterCodeGen();
+    this->hashTables->JoinFilterCodeGen(overflowConfig);
 }
 
 LookupJoinOperatorFactory::~LookupJoinOperatorFactory() = default;
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType inputJoinType, int64_t hashBuilderFactoryAddr)
+    int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType inputJoinType,
+    int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
-    auto pOperatorFactory =
-        new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols,
-        probeHashColsCount, buildOutputCols, buildOutputTypes, inputJoinType, hashBuilderFactory->GetHashTables());
+    auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, inputJoinType,
+        hashBuilderFactory->GetHashTables(), overflowConfig);
     return pOperatorFactory;
 }
 

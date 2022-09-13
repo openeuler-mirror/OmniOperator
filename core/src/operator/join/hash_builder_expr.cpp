@@ -14,20 +14,20 @@ namespace op {
 using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
-    const DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-    int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
+    const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+    int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
-    return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, filter,
-        hashTableCount);
+    return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, filter, hashTableCount,
+        overflowConfig);
 }
 
-HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const type::DataTypes &buildTypes,
     const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
-    int32_t hashTableCount)
+    int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
-        this->buildHashCols, this->projectFuncs);
+        this->buildHashCols, this->projectFuncs, overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes),
         this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);

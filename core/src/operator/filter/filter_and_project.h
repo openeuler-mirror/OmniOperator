@@ -18,6 +18,7 @@
 #include "expression/expressions.h"
 #include "codegen/row_expression_codegen.h"
 #include "operator/execution_context.h"
+#include "operator/config/operator_config.h"
 
 /*
  * FilterFunc is retrieved from FilterCodeGen
@@ -56,7 +57,7 @@ public:
      *
      * @return if the expression and types can be supported or not
      */
-    bool Initialize();
+    bool Initialize(OverflowConfig *overflowConfig);
 
     /* *
      * Get all the vector indexes used in the expression
@@ -99,7 +100,7 @@ private:
 
 class Filter {
 public:
-    explicit Filter(const expressions::Expr &expression);
+    explicit Filter(const expressions::Expr &expression, OverflowConfig *overflowConfig);
     ~Filter()
     {
         this->codeGen.reset();
@@ -155,7 +156,7 @@ class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
     FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, const DataTypes &inputDataTypes,
         int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
-        int32_t projectVecCount);
+        int32_t projectVecCount, OverflowConfig *overflowConfig);
 
     ~FilterAndProjectOperatorFactory() override;
 

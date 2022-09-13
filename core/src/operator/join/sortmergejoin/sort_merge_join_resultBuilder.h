@@ -21,7 +21,8 @@ public:
     JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
         int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
         const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
-        DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator);
+        DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator,
+        OverflowConfig *overflowConfig);
 
     int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
         std::vector<int64_t> &bufferedTableValueAddresses);
@@ -33,7 +34,7 @@ public:
     ~JoinResultBuilder();
 
 private:
-    void JoinFilterCodeGen();
+    void JoinFilterCodeGen(OverflowConfig *overflowConfig);
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     VectorBatch *NewEmptyVectorBatch() const;

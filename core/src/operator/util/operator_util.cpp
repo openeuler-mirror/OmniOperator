@@ -15,7 +15,7 @@ void OperatorUtil::CreateProjectFuncs(const DataTypes &inputTypes,
     std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
     std::vector<omniruntime::type::DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-    std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
+    std::vector<omniruntime::op::RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig)
 {
     newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
     int32_t inputTypesCount = inputTypes.GetSize();
@@ -26,7 +26,7 @@ void OperatorUtil::CreateProjectFuncs(const DataTypes &inputTypes,
             projectCols.push_back(projectCol);
         } else {
             projectCols.push_back(inputTypesCount + projectFuncs.size());
-            RowProjFunc func = rowProjection->Create();
+            RowProjFunc func = rowProjection->Create(overflowConfig);
             projectFuncs.push_back(func);
             DataTypePtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
@@ -38,7 +38,7 @@ void OperatorUtil::CreateProjectFuncs(const DataTypes &inputTypes,
 void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
     omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-    std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs)
+    std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig)
 {
     auto &inputTypeVec = inputTypes.Get();
     int32_t newProjectCol = 0;
@@ -60,7 +60,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
             // expr col
             projectCols.push_back(projectCol);
             allCols.push_back(newProjectCol++);
-            RowProjFunc func = rowProjection->Create();
+            RowProjFunc func = rowProjection->Create(overflowConfig);
             projectFuncs.push_back(func);
             DataTypePtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);

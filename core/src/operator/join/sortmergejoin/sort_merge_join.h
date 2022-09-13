@@ -41,7 +41,7 @@ public:
 
     OmniStatus Close() override;
 
-    void InitScannerAndResultBuilder();
+    void InitScannerAndResultBuilder(OverflowConfig *overflowConfig);
 
 private:
     int32_t GetJoinResult();

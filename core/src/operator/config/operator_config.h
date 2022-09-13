@@ -123,6 +123,29 @@ private:
     int32_t numElementsForSpillThreshold;
 };
 
+
+enum OverflowConfigId {
+    OVERFLOW_CONFIG_EXCEPTION = 0,
+    OVERFLOW_CONFIG_NULL = 1
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(OverflowConfigId, { { OVERFLOW_CONFIG_EXCEPTION, "OVERFLOW_CONFIG_EXCEPTION" },
+                                                 { OVERFLOW_CONFIG_NULL, "OVERFLOW_CONFIG_NULL" } })
+class OverflowConfig {
+public:
+    OverflowConfig() : OverflowConfig(OVERFLOW_CONFIG_EXCEPTION) {}
+
+    OverflowConfig(OverflowConfigId overflowConfigId) : overflowConfigId(overflowConfigId) {}
+
+    OverflowConfigId getOverflowConfigId() const
+    {
+        return overflowConfigId;
+    }
+
+private:
+    OverflowConfigId overflowConfigId;
+};
+
 class OperatorConfig {
 public:
     OperatorConfig() : spillConfig(new SpillConfig()) {}
@@ -155,6 +178,13 @@ public:
     }
 
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);
+
+    static std::pair<OperatorConfig, OverflowConfig *> DeserializeOperatorAndOverflowConfig(
+        const std::string &configString);
+
+    static OverflowConfig *DeserializeOverflowConfig(const std::string &configString);
+
+    static std::pair<bool, OverflowConfig *> DeserializeIsSkipVerifyAndOverflowConfig(const std::string &configString);
 
     static void CheckOperatorConfig(const OperatorConfig &operatorConfig);
 

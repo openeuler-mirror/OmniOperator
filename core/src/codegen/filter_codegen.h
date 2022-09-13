@@ -17,15 +17,17 @@ public:
      * @param expression the filter expression
      * @return unique_ptr to the FilterCodeGen instance
      */
-    static std::unique_ptr<FilterCodeGen> Create(std::string name, const omniruntime::expressions::Expr &expression);
+    static std::unique_ptr<FilterCodeGen> Create(std::string name, const omniruntime::expressions::Expr &expression,
+        omniruntime::op::OverflowConfig *overflowConfig);
 
     ~FilterCodeGen() override = default;
 
     int64_t GetFunction() override;
 
 private:
-    FilterCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
-        : ExpressionCodeGen(std::move(name), expression)
+    FilterCodeGen(std::string name, const omniruntime::expressions::Expr &expression,
+        omniruntime::op::OverflowConfig *overflowConfig)
+        : ExpressionCodeGen(std::move(name), expression, overflowConfig)
     {}
     int64_t CreateWrapper(llvm::Function &filter);
 };

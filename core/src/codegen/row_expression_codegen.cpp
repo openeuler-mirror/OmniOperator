@@ -14,9 +14,10 @@ const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
 }
 
 std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(std::string name,
-    const omniruntime::expressions::Expr &expression)
+    const omniruntime::expressions::Expr &expression, omniruntime::op::OverflowConfig *overflowConfig)
 {
-    std::unique_ptr<RowExpressionCodeGen> codegen { new RowExpressionCodeGen(std::move(name), expression) };
+    std::unique_ptr<RowExpressionCodeGen> codegen { new RowExpressionCodeGen(std::move(name), expression,
+        overflowConfig) };
     LLVMEngine::Create(&(codegen->llvmEngine));
     codegen->context = codegen->GetContext();
     codegen->builder = codegen->GetIRBuilder();

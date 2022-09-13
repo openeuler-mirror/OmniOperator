@@ -55,12 +55,13 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
     }
 
     private static native long createSmjBufferedTableWithExprOperatorFactory(String soruceTypes, String[] equalKeyExprs,
-            int[] outputChannels, long smjStreamedTableOperatorFactory);
+            int[] outputChannels, long smjStreamedTableOperatorFactory, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createSmjBufferedTableWithExprOperatorFactory(DataTypeSerializer.serialize(context.soruceTypes),
-                context.equalKeyExprs, context.outputChannels, context.getStreamedTableOperatorFactory());
+                context.equalKeyExprs, context.outputChannels, context.getStreamedTableOperatorFactory(),
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

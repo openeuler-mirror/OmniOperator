@@ -32,7 +32,7 @@ public class OmniSortWithExprOperatorFactory
     public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
             int[] sortAscendings, int[] sortNullFirsts) {
         super(new FactoryContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts,
-                OperatorConfig.NONE));
+                new OperatorConfig()));
     }
 
     /**
