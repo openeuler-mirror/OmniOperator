@@ -6,15 +6,18 @@
 #ifndef __COMMON_JOIN_H__
 #define __COMMON_JOIN_H__
 
+#include <cstdint>
+
 namespace omniruntime {
 namespace op {
+constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
+
 enum JoinType {
     OMNI_JOIN_TYPE_INNER = 0,
     OMNI_JOIN_TYPE_LEFT,
     OMNI_JOIN_TYPE_RIGHT,
     OMNI_JOIN_TYPE_FULL,
 };
-
 
 enum class SortMergeJoinAddInputCode {
     SMJ_NEED_STREAM_TBL_INFO = 0,

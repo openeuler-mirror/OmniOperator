@@ -66,6 +66,7 @@ private:
     std::vector<int32_t> buildOutputCols;
     DataTypes buildOutputTypes;
     bool probeOnOuterSide;
+    bool needTrackPosition;
     bool currentProbePositionProducedRow;
     JoinHashTables *hashTables;
     JoinProbe *joinProbe;

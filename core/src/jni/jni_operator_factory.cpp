@@ -16,6 +16,8 @@
 #include "operator/join/lookup_join.h"
 #include "operator/join/hash_builder_expr.h"
 #include "operator/join/lookup_join_expr.h"
+#include "operator/join/lookup_outer_join.h"
+#include "operator/join/lookup_outer_join_expr.h"
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include "operator/topn/topn.h"
 #include "operator/topn/topn_expr.h"
@@ -682,6 +684,71 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, probeHashKeysArrExprs)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(probeHashKeysArrExprs);
+
+    return reinterpret_cast<int64_t>(operatorFactory);
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFactory_createLookupOuterJoinWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
+    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
+{
+    auto probeTypesChars = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
+    auto probeOutputCols = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
+    auto probeHashKeysCount = env->GetArrayLength(jProbeHashKeys);
+    std::string probeHashKeysArr[probeHashKeysCount];
+    GetExpressions(env, jProbeHashKeys, probeHashKeysArr, probeHashKeysCount);
+    auto buildOutputCols = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+    auto buildOutputTypesChars = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
+    jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
+
+    auto probeDataTypes = Deserialize(probeTypesChars);
+    auto buildOutputDataTypes = Deserialize(buildOutputTypesChars);
+    env->ReleaseStringUTFChars(jProbeTypes, probeTypesChars);
+    env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
+
+    vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(probeHashKeysArr, probeHashKeysCount, probeHashKeysArrExprs);
+    JNI_METHOD_END(0L)
+
+    LookupOuterJoinWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFactory(
+        probeDataTypes,
+        probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
+        buildOutputDataTypes, jHashBuilderOperatorFactory);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, probeHashKeysArrExprs)
+    Expr::DeleteExprs(probeHashKeysArrExprs);
+
+    return reinterpret_cast<int64_t>(operatorFactory);
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinOperatorFactory_createLookupOuterJoinOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashKeys,
+    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
+{
+    auto probeTypesChars = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
+    auto probeOutputCols = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
+    auto probeHashKeys = env->GetIntArrayElements(jProbeHashKeys, JNI_FALSE);
+    auto probeHashKeyCount = env->GetArrayLength(jProbeHashKeys);
+    auto buildOutputCols = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+    auto buildOutputTypesChars = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
+    jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
+
+    auto probeDataTypes = Deserialize(probeTypesChars);
+    auto buildOutputDataTypes = Deserialize(buildOutputTypesChars);
+    env->ReleaseStringUTFChars(jProbeTypes, probeTypesChars);
+    env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
+
+    LookupOuterJoinOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+        operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
+            probeDataTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeyCount, buildOutputCols,
+            buildOutputDataTypes, jHashBuilderOperatorFactory);
+    JNI_METHOD_END(0L)
 
     return reinterpret_cast<int64_t>(operatorFactory);
 }
