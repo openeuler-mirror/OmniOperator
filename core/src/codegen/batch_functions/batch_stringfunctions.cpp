@@ -79,19 +79,19 @@ extern DLLEXPORT void BatchConcatStrStr(int64_t contextPtr, uint8_t **ap, int32_
 {
     char *ret;
     errno_t res1, res2;
-    for (int i = 0; i < rowCnt; ++i) {
+    for (int i = 0; i < rowCnt; i++) {
         outLen[i] = apLen[i] + bpLen[i];
         if (outLen[i] <= 0) {
             outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
-        ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        res1 = memcpy_s(ret, outLen[i], ap[i], apLen[i]);
-        res2 = memcpy_s(ret + apLen[i], outLen[i], bp[i], bpLen[i]);
-        if (apLen[i] != 0 && bpLen[i] != 0 && (res1 != EOK || res2 != EOK)) {
-            char message[] = "Concat failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
+        res1 = memcpy_s(ret, outLen[i] + 1, ap[i], apLen[i]);
+        res2 = memcpy_s(ret + apLen[i], outLen[i] - apLen[i] + 1, bp[i], bpLen[i]);
+        if (res1 != EOK || res2 != EOK) {
+            SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+            outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
@@ -104,9 +104,10 @@ extern DLLEXPORT void BatchConcatCharChar(int64_t contextPtr, uint8_t **ap, int3
 {
     char *ret;
     errno_t res1, res2, res3;
-    int aPaddingCount;
-    for (int i = 0; i < rowCnt; ++i) {
-        aPaddingCount = bpLen[i] > 0 ? aWidth - apLen[i] : 0;
+    for (int i = 0; i < rowCnt; i++) {
+        int32_t aPaddingCount = bpLen[i] > 0 ?
+            aWidth - omniruntime::Utf8Util::CountCodePoints(reinterpret_cast<const char *>(ap[i]), apLen[i]) :
+            0;
         outLen[i] = apLen[i] + aPaddingCount + bpLen[i];
         if (outLen[i] <= 0) {
             outLen[i] = 0;
@@ -114,13 +115,13 @@ extern DLLEXPORT void BatchConcatCharChar(int64_t contextPtr, uint8_t **ap, int3
             continue;
         }
 
-        ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        res1 = memcpy_s(ret, outLen[i], ap[i], apLen[i]);
-        res2 = memset_s(ret + apLen[i], outLen[i] - apLen[i], ' ', aPaddingCount);
-        res3 = memcpy_s(ret + apLen[i] + aPaddingCount, outLen[i] - (apLen[i] + aPaddingCount), bp[i], bpLen[i]);
-        if (apLen[i] != 0 && aPaddingCount != 0 && bpLen[i] != 0 && (res1 != EOK || res2 != EOK || res3 != EOK)) {
-            char message[] = "Concat failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
+        res1 = memcpy_s(ret, outLen[i] + 1, ap[i], apLen[i]);
+        res2 = memset_s(ret + apLen[i], outLen[i] - apLen[i] + 1, ' ', aPaddingCount);
+        res3 = memcpy_s(ret + apLen[i] + aPaddingCount, outLen[i] - (apLen[i] + aPaddingCount) + 1, bp[i], bpLen[i]);
+        if (res1 != EOK || res2 != EOK || res3 != EOK) {
+            SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+            outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
@@ -133,9 +134,10 @@ extern DLLEXPORT void BatchConcatCharStr(int64_t contextPtr, uint8_t **ap, int32
 {
     char *ret;
     errno_t res1, res2, res3;
-    int32_t aPaddingCount;
-    for (int i = 0; i < rowCnt; ++i) {
-        aPaddingCount = bpLen[i] > 0 ? aWidth - apLen[i] : 0;
+    for (int i = 0; i < rowCnt; i++) {
+        int32_t aPaddingCount = bpLen[i] > 0 ?
+            aWidth - omniruntime::Utf8Util::CountCodePoints(reinterpret_cast<const char *>(ap[i]), apLen[i]) :
+            0;
         outLen[i] = apLen[i] + aPaddingCount + bpLen[i];
         if (outLen[i] <= 0) {
             outLen[i] = 0;
@@ -143,13 +145,13 @@ extern DLLEXPORT void BatchConcatCharStr(int64_t contextPtr, uint8_t **ap, int32
             continue;
         }
 
-        ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        res1 = memcpy_s(ret, outLen[i], ap[i], apLen[i]);
-        res2 = memset_s(ret + apLen[i], outLen[i] - apLen[i], ' ', aPaddingCount);
-        res3 = memcpy_s(ret + apLen[i] + aPaddingCount, outLen[i] - (apLen[i] + aPaddingCount), bp[i], bpLen[i]);
-        if (apLen[i] != 0 && aPaddingCount != 0 && bpLen[i] != 0 && (res1 != EOK || res2 != EOK || res3 != EOK)) {
-            char message[] = "Concat failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
+        res1 = memcpy_s(ret, outLen[i] + 1, ap[i], apLen[i]);
+        res2 = memset_s(ret + apLen[i], outLen[i] - apLen[i] + 1, ' ', aPaddingCount);
+        res3 = memcpy_s(ret + apLen[i] + aPaddingCount, outLen[i] - (apLen[i] + aPaddingCount) + 1, bp[i], bpLen[i]);
+        if (res1 != EOK || res2 != EOK || res3 != EOK) {
+            SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+            outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
@@ -162,7 +164,7 @@ extern DLLEXPORT void BatchConcatStrChar(int64_t contextPtr, uint8_t **ap, int32
 {
     char *ret;
     errno_t res1, res2;
-    for (int i = 0; i < rowCnt; ++i) {
+    for (int i = 0; i < rowCnt; i++) {
         outLen[i] = apLen[i] + bpLen[i];
         if (outLen[i] <= 0) {
             outLen[i] = 0;
@@ -170,12 +172,12 @@ extern DLLEXPORT void BatchConcatStrChar(int64_t contextPtr, uint8_t **ap, int32
             continue;
         }
 
-        ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        res1 = memcpy_s(ret, outLen[i], ap[i], apLen[i]);
-        res2 = memcpy_s(ret + apLen[i], outLen[i] - apLen[i], bp[i], bpLen[i]);
-        if (apLen[i] != 0 && bpLen[i] != 0 && (res1 != EOK || res2 != EOK)) {
-            char message[] = "Concat failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
+        res1 = memcpy_s(ret, outLen[i] + 1, ap[i], apLen[i]);
+        res2 = memcpy_s(ret + apLen[i], outLen[i] - apLen[i] + 1, bp[i], bpLen[i]);
+        if (res1 != EOK || res2 != EOK) {
+            SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+            outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
@@ -251,54 +253,64 @@ extern DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8_t *
     uint8_t **searchStr, int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (searchLen[0] == 0 && engineType == EngineType::Spark) {
-        for (int i = 0; i < rowCnt; ++i) {
+    for (int i = 0; i < rowCnt; i++) {
+        EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+        if (searchLen[i] == 0 && engineType == EngineType::Spark) {
             outLen[i] = strLen[i];
-            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
+            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
             errno_t res = memcpy_s(ret, outLen[i] + 1, str[i], strLen[i]);
             if (res != EOK) {
-                char message[] = "Replace failed";
-                SetError(contextPtr, message, sizeof(message) / sizeof(char));
-                return;
-            }
-            output[i] = reinterpret_cast<uint8_t *>(ret);
-        }
-        return;
-    } else if (searchLen[0] == 0) {
-        for (int i = 0; i < rowCnt; ++i) {
-            outLen[i] = strLen[i] + (strLen[i] + 1) * replaceLen[i];
-            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-            for (int32_t index = 0; index < strLen[i]; index++) {
-                errno_t res1 = memcpy_s(ret + (replaceLen[i] + 1) * index, outLen[i] + 1, replaceStr[i], replaceLen[i]);
-                errno_t res2 =
-                    memcpy_s(ret + (replaceLen[i] + 1) * index + replaceLen[i], outLen[i] + 1, str[i] + index, 1);
-                if (res1 != EOK || res2 != EOK) {
-                    char message[] = "Replace failed";
-                    SetError(contextPtr, message, sizeof(message) / sizeof(char));
-                    output[i] = (uint8_t *)"";
-                    continue;
-                }
-            }
-            errno_t res = memcpy_s(ret + (replaceLen[i] + 1) * strLen[i], outLen[i] + 1, replaceStr[i], replaceLen[i]);
-            if (res != EOK) {
-                char message[] = "Replace failed";
-                SetError(contextPtr, message, sizeof(message) / sizeof(char));
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                outLen[i] = 0;
                 output[i] = (uint8_t *)"";
                 continue;
             }
             output[i] = reinterpret_cast<uint8_t *>(ret);
+            continue;
+        } else if (searchLen[i] == 0) {
+            int32_t strCodePoints =
+                omniruntime::Utf8Util::CountCodePoints(reinterpret_cast<const char *>(str[i]), strLen[i]);
+            outLen[i] = strLen[i] + (strCodePoints + 1) * replaceLen[i];
+            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
+            int32_t indexBuffer = 0;
+            errno_t res;
+            for (int32_t index = 0; index < strLen[i];) {
+                res = memcpy_s(ret + indexBuffer, outLen[i] - indexBuffer + 1, replaceStr[i], replaceLen[i]);
+                if (res != EOK) {
+                    SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                    outLen[i] = 0;
+                    output[i] = (uint8_t *)"";
+                    continue;
+                }
+                indexBuffer += replaceLen[i];
+                int32_t codePointLength =
+                    omniruntime::Utf8Util::LengthOfCodePoint(static_cast<char>(*(str[i] + index)));
+                res = memcpy_s(ret + indexBuffer, outLen[i] - indexBuffer + 1, str[i] + index, codePointLength);
+                if (res != EOK) {
+                    SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                    outLen[i] = 0;
+                    output[i] = (uint8_t *)"";
+                    continue;
+                }
+                indexBuffer += codePointLength;
+                index += codePointLength;
+            }
+            res = memcpy_s(ret + indexBuffer, outLen[i] - indexBuffer + 1, replaceStr[i], replaceLen[i]);
+            if (res != EOK) {
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                outLen[i] = 0;
+                output[i] = (uint8_t *)"";
+                continue;
+            }
+            output[i] = reinterpret_cast<uint8_t *>(ret);
+            continue;
         }
-        return;
-    }
 
-    for (int i = 0; i < rowCnt; ++i) {
         if (strLen[i] == 0) {
             outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
-
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         std::string search = std::string(reinterpret_cast<char *>(searchStr[i]), searchLen[i]);
         std::string replace = std::string(reinterpret_cast<char *>(replaceStr[i]), replaceLen[i]);
@@ -315,11 +327,11 @@ extern DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8_t *
         }
 
         outLen[i] = s.length();
-        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
+        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
         error_t res = memcpy_s(ret, outLen[i] + 1, s.c_str(), s.length());
         if (res != EOK) {
-            char message[] = "Replace failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
@@ -333,56 +345,66 @@ extern DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8_t *
     uint8_t *replaceStr[1] = { (uint8_t *)"" };
     int32_t replaceLen[1] = { 0 };
 
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (searchLen[0] == 0 && engineType == EngineType::Spark) {
-        for (int i = 0; i < rowCnt; ++i) {
+    for (int i = 0; i < rowCnt; i++) {
+        EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+        if (searchLen[i] == 0 && engineType == EngineType::Spark) {
             outLen[i] = strLen[i];
-            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
+            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
             errno_t res = memcpy_s(ret, outLen[i] + 1, str[i], strLen[i]);
             if (res != EOK) {
-                char message[] = "Replace failed";
-                SetError(contextPtr, message, sizeof(message) / sizeof(char));
-                return;
-            }
-            output[i] = reinterpret_cast<uint8_t *>(ret);
-        }
-        return;
-    } else if (searchLen[0] == 0) {
-        for (int i = 0; i < rowCnt; ++i) {
-            outLen[i] = strLen[i] + (strLen[i] + 1) * replaceLen[0];
-            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-            for (int32_t index = 0; index < strLen[i]; index++) {
-                errno_t res1 = memcpy_s(ret + (replaceLen[0] + 1) * index, outLen[i] + 1, replaceStr[0], replaceLen[0]);
-                errno_t res2 =
-                    memcpy_s(ret + (replaceLen[0] + 1) * index + replaceLen[0], outLen[i] + 1, str[i] + index, 1);
-                if (res1 != EOK || res2 != EOK) {
-                    char message[] = "Replace failed";
-                    SetError(contextPtr, message, sizeof(message) / sizeof(char));
-                    output[i] = (uint8_t *)"";
-                    continue;
-                }
-            }
-            errno_t res = memcpy_s(ret + (replaceLen[0] + 1) * strLen[i], outLen[i] + 1, replaceStr[0], replaceLen[0]);
-            if (res != EOK) {
-                char message[] = "Replace failed";
-                SetError(contextPtr, message, sizeof(message) / sizeof(char));
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                outLen[i] = 0;
                 output[i] = (uint8_t *)"";
                 continue;
             }
             output[i] = reinterpret_cast<uint8_t *>(ret);
+            continue;
+        } else if (searchLen[i] == 0) {
+            int32_t strCodePoints =
+                omniruntime::Utf8Util::CountCodePoints(reinterpret_cast<const char *>(str[i]), strLen[i]);
+            outLen[i] = strLen[i] + (strCodePoints + 1) * replaceLen[0];
+            auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
+            int32_t indexBuffer = 0;
+            errno_t res;
+            for (int32_t index = 0; index < strLen[i];) {
+                res = memcpy_s(ret + indexBuffer, outLen[i] - indexBuffer + 1, replaceStr[0], replaceLen[0]);
+                if (res != EOK) {
+                    SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                    outLen[i] = 0;
+                    output[i] = (uint8_t *)"";
+                    continue;
+                }
+                indexBuffer += replaceLen[i];
+                int32_t codePointLength =
+                    omniruntime::Utf8Util::LengthOfCodePoint(static_cast<char>(*(str[i] + index)));
+                res = memcpy_s(ret + indexBuffer, outLen[i] - indexBuffer + 1, str[i] + index, codePointLength);
+                if (res != EOK) {
+                    SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                    outLen[i] = 0;
+                    output[i] = (uint8_t *)"";
+                    continue;
+                }
+                indexBuffer += codePointLength;
+                index += codePointLength;
+            }
+            res = memcpy_s(ret + indexBuffer, outLen[i] - indexBuffer + 1, replaceStr[0], replaceLen[0]);
+            if (res != EOK) {
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                outLen[i] = 0;
+                output[i] = (uint8_t *)"";
+                continue;
+            }
+            output[i] = reinterpret_cast<uint8_t *>(ret);
+            continue;
         }
-        return;
-    }
 
-    for (int i = 0; i < rowCnt; ++i) {
         if (strLen[i] == 0) {
             outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
-
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
-        std::string search = std::string(reinterpret_cast<char *>(searchStr[i]), searchLen[0]);
+        std::string search = std::string(reinterpret_cast<char *>(searchStr[i]), searchLen[i]);
         std::string replace = std::string(reinterpret_cast<char *>(replaceStr[0]), replaceLen[0]);
         std::string::size_type matchIndex = 0;
         if (replaceLen[0] == 0) {
@@ -397,11 +419,11 @@ extern DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8_t *
         }
 
         outLen[i] = s.length();
-        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
+        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i] + 1);
         error_t res = memcpy_s(ret, outLen[i] + 1, s.c_str(), s.length());
         if (res != EOK) {
-            char message[] = "Replace failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            outLen[i] = 0;
             output[i] = (uint8_t *)"";
             continue;
         }
