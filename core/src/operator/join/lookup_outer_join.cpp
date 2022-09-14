@@ -89,7 +89,7 @@ int32_t LookupOuterJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPag
     uint32_t outputRowCount = hashTables->GetTotalVisitedCounts() - hashTables->getVisitedCounts();
     int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(outputRowCount, maxRowCount);
     int32_t offset = 0;
-    for (uint32_t j = 0; j < vecBatchCount; j++) {
+    for (int32_t j = 0; j < vecBatchCount; j++) {
         int32_t rowCount = std::min(maxRowCount, static_cast<int32_t>(outputRowCount) - offset);
         auto result = new VectorBatch(outputColsCount, rowCount);
         BuildVecBatch(result);
@@ -103,26 +103,27 @@ int32_t LookupOuterJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPag
 
 void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
 {
+    auto rowCount = vectorBatch->GetRowCount();
     int32_t col;
     for (col = 0; col < probeOutputTypes.GetSize(); col++) {
         auto vector = VectorHelper::CreateVector(vecAllocator, OMNI_VEC_ENCODING_FLAT,
-            *probeOutputTypes.GetType(col), vectorBatch->GetRowCount());
+            *probeOutputTypes.GetType(col), rowCount);
         vectorBatch->SetVector(col, vector);
-        for (uint32_t row = 0; row < vectorBatch->GetRowCount(); row++) {
+        for (int32_t row = 0; row < rowCount; row++) {
             vectorBatch->GetVector(col)->SetValueNull(row);
         }
     }
     for (int32_t buildCol = 0; buildCol < buildOutputTypes.GetSize(); buildCol++) {
         auto vector = VectorHelper::CreateVector(vecAllocator, OMNI_VEC_ENCODING_FLAT,
-            *buildOutputTypes.GetType(buildCol), vectorBatch->GetRowCount());
+            *buildOutputTypes.GetType(buildCol), rowCount);
         vectorBatch->SetVector(col, vector);
         col++;
     }
-    uint32_t rows = 0;
+    int32_t rows = 0;
     auto outputIds = buildOutputTypes.GetIds();
     auto buildOutputSize = buildOutputTypes.GetSize();
     auto probeOutputSize = probeOutputTypes.GetSize();
-    while (rows < vectorBatch->GetRowCount()) {
+    while (rows < rowCount) {
         AppendToNext(vectorBatch, outputIds, buildOutputSize, probeOutputSize, rows);
         rows++;
     }
@@ -172,7 +173,6 @@ void LookupOuterJoinOperator::AppendToNext(VectorBatch *vectorBatch, const int32
         auto destCol = col + probeOutputColsCount;
         auto src = hashTable->GetPagesHash()->GetPagesHashStrategy()->GetBuildColumns()[buildOutputCol][vecBatchIndex];
         switch (buildOutputIds[col]) {
-            // todo check short type
             case OMNI_SHORT:
                 AppendTo<ShortVector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
                 break;

@@ -812,7 +812,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoin)
     int64_t probeData1[] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -872,7 +872,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinChar)
     std::string probeData1[dataSize] = {"11", "22", "33", "44"};
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -931,7 +931,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDate32)
     int32_t probeData1[dataSize] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -990,7 +990,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinShort)
     int16_t probeData1[dataSize] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -1049,7 +1049,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal64)
     int64_t probeData1[dataSize] = {11, 22, 33, 44};
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -1108,7 +1108,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal128)
     Decimal128 probeData1[dataSize] = {Decimal128(11, 0), Decimal128(22, 0), Decimal128(33, 0), Decimal128(44, 0)};
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -1176,7 +1176,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     DataTypePtr probeDataType = probeTypes.GetType(1);
     probeVecBatch->SetVector(1, CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1));
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -1242,7 +1242,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNulls)
     auto expectedProbeVec0 = probeVecBatch->GetVector(0)->Slice(0, dataSize);
     auto expectedProbeVec1 = probeVecBatch->GetVector(1)->Slice(0, dataSize);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -1317,7 +1317,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
     auto expectedProbeVec0 = probeVecBatch->GetVector(0)->Slice(0, dataSize);
     auto expectedProbeVec1 = probeVecBatch->GetVector(1)->Slice(0, dataSize);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
@@ -1401,7 +1401,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     auto expectedProbeVec0 = probeVecBatch->GetVector(0)->Slice(0, dataSize);
     auto expectedProbeVec1 = probeVecBatch->GetVector(1)->Slice(0, dataSize);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {0};
     int32_t probeHashColsCount = 1;
@@ -1507,7 +1507,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     auto expectedProbeVec0 = probeVecBatch->GetVector(0)->Slice(0, dataSize);
     auto expectedProbeVec1 = probeVecBatch->GetVector(1)->Slice(0, dataSize);
 
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {0};
     int32_t probeHashColsCount = 1;
@@ -2473,6 +2473,93 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal128)
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory, lookupOuterJoinOperatorFactory);
 }
 
+TEST(NativeOmniJoinTest, TestFullEqualityJoinShort)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), ShortType() }));
+    int64_t buildData0[dataSize] = {1, 2, 3, 4};
+    int16_t buildData1[dataSize] = {123, 11, 321, 33};
+    VectorBatch *buildVecBatch = CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1);
+
+    int32_t buildJoinCols[1] = {1};
+    int32_t joinColsCount = 1;
+    int32_t operatorCount = 1;
+    string filterExpression = "";
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+        buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
+    HashBuilderOperator *hashBuilderOperator =
+        dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator->AddInput(buildVecBatch);
+    std::vector<VectorBatch *> hashBuildOutput;
+    hashBuilderOperator->GetOutput(hashBuildOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), ShortType() }));
+    int64_t probeData0[dataSize] = {1, 2, 3, 4};
+    int16_t probeData1[dataSize] = {11, 22, 33, 44};
+    VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
+
+    int32_t probeOutputCols[2] = {0, 1};
+    int32_t probeOutputColsCount = 2;
+    int32_t probeHashCols[1] = {1};
+    int32_t probeHashColsCount = 1;
+    int32_t buildOutputCols[2] = {0, 1};
+    int32_t buildOutputColsCount = 2;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), ShortType() }));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr);
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupOuterJoinOperatorFactory =
+        LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes, probeOutputCols,
+            probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+            hashBuilderFactoryAddr);
+    auto lookupOuterJoinOperator = lookupOuterJoinOperatorFactory->CreateOperator();
+    lookupJoinOperator->AddInput(probeVecBatch);
+    std::vector<VectorBatch *> output;
+    lookupJoinOperator->GetOutput(output);
+
+    EXPECT_EQ(output.size(), 1);
+    const int32_t expectedDataSize = 4;
+    int64_t expectedData0[expectedDataSize] = {1, 2, 3, 4};
+    int16_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
+    int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
+    int16_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
+    AssertVecBatchEquals(output[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
+
+    std::vector<VectorBatch *> appendOutput;
+    lookupOuterJoinOperator->GetOutput(appendOutput);
+    const int32_t expectedDatasSize = 2;
+    int64_t expectedDatas0[expectedDatasSize] = {0, 0};
+    int16_t expectedDatas1[expectedDatasSize] = {0, 0};
+    int64_t expectedDatas2[expectedDatasSize] = {1, 3};
+    int16_t expectedDatas3[expectedDatasSize] = {123, 321};
+    Vector *expectedVec0 = CreateVector<LongVector, int64_t>(expectedDatas0, expectedDatasSize);
+    Vector *expectedVec1 = CreateVector<ShortVector, int16_t>(expectedDatas1, expectedDatasSize);
+    Vector *expectedVec2 = CreateVector<LongVector, int64_t>(expectedDatas2, expectedDatasSize);
+    Vector *expectedVec3 = CreateVector<ShortVector, int16_t>(expectedDatas3, expectedDatasSize);
+    auto vectorBatch = new VectorBatch(4, expectedDatasSize);
+    vectorBatch->SetVector(0, expectedVec0);
+    vectorBatch->SetVector(1, expectedVec1);
+    vectorBatch->SetVector(2, expectedVec2);
+    vectorBatch->SetVector(3, expectedVec3);
+    vectorBatch->GetVector(0)->SetValueNull(0);
+    vectorBatch->GetVector(0)->SetValueNull(1);
+    vectorBatch->GetVector(1)->SetValueNull(0);
+    vectorBatch->GetVector(1)->SetValueNull(1);
+    EXPECT_TRUE(VecBatchMatch(appendOutput[0], vectorBatch));
+
+    VectorHelper::FreeVecBatches(output);
+    VectorHelper::FreeVecBatch(vectorBatch);
+    VectorHelper::FreeVecBatches(appendOutput);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory, lookupOuterJoinOperatorFactory);
+}
+
 TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
 {
     // construct input data
@@ -2595,7 +2682,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinHasOutputNulls)
     VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, dataSize, probeData0, probeData1);
     probeVecBatch->GetVector(0)->SetValueNull(0);
     probeVecBatch->GetVector(0)->SetValueNull(2);
-    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
     int32_t probeHashCols[1] = {1};
     int32_t probeHashColsCount = 1;
