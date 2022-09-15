@@ -8,26 +8,26 @@
 #include <cstdint>
 #include <iostream>
 #include <array>
+#include <cstring>
 
 #include "decimal_base.h"
 
 namespace omniruntime {
 namespace type {
-enum class OpStatus {
-    SUCCESS = 0,
-    OP_OVERFLOW = 1,
-    DIVIDE_BY_ZERO = 2,
-    FAIL = 3
-};
-
 // The highest bit of Decimal128 is sign flag.
 class Decimal128 : public BasicDecimal {
 public:
     Decimal128(int64_t highBits, uint64_t lowBits);
 
+    Decimal128(__int128_t value);
+
+    Decimal128(const std::string& s);
+
     Decimal128() : Decimal128(0, 0) {}
 
     Decimal128(const Decimal128 &rhs) = default;
+
+    explicit Decimal128(int64_t unscaledValue);
 
     Decimal128 &operator = (const Decimal128 &rhs) = default;
 
@@ -98,6 +98,27 @@ public:
             }
             return isLeftNegative ? -absoluteComparison : absoluteComparison;
         }
+    }
+
+    std::string ToString()
+    {
+        std::string s;
+        bool negative = false;
+        if (highBits < 0) {
+            negative = true;
+        }
+        __int128_t decimal = highBits < 0 ? highBits ^ (1L << 63) : highBits;
+        decimal = decimal << 64;
+        decimal = decimal + lowBits;
+        while (decimal > 9) {
+            s.insert(0, std::to_string(static_cast<int>(decimal % 10)));
+            decimal = decimal / 10;
+        }
+        s.insert(0, std::to_string(static_cast<int>(decimal)));
+        if (negative) {
+            s.insert(0, "-");
+        }
+        return s;
     }
 
     static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;

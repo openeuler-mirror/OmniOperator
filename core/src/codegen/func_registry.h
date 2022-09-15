@@ -40,6 +40,10 @@ public:
 
     static const Function *LookupFunction(FunctionSignature *signature);
 
+    static bool LookupNullFunction(FunctionSignature *signature);
+
+    static bool IsNullExecutionContextSet(FunctionSignature *signature);
+
     static std::vector<std::unique_ptr<BaseFunctionRegistry>> GetFunctionRegistries();
 
     static std::vector<Function> &GetFunctions();
@@ -47,6 +51,7 @@ public:
 private:
     static std::vector<Function> registeredFunctions;
     static FunctionMapPtr functionRegistry;
+    static FunctionMapPtr functionNullRegistry;
 
     static std::vector<Function> Initialize();
 };

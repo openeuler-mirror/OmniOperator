@@ -499,15 +499,16 @@ TEST(FunctionTest, Decimal128Compare)
 
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
-    EXPECT_EQ(0, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0));
+    EXPECT_EQ(0, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, false));
 
     op1 = DecimalOperations::UnscaledDecimal(1);
     op2 = DecimalOperations::UnscaledDecimal(5);
-    EXPECT_EQ(-1, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0));
+    EXPECT_EQ(-1, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 4, op2.HighBits(), op2.LowBits(), 38, 4, false));
 
     op1 = DecimalOperations::UnscaledDecimal(6);
     op2 = DecimalOperations::UnscaledDecimal(-8);
-    EXPECT_EQ(1, Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0));
+    EXPECT_EQ(1,
+        Decimal128Compare(op1.HighBits(), op1.LowBits(), 38, 17, op2.HighBits(), op2.LowBits(), 38, 17, false));
 }
 
 TEST(FunctionTest, AddDec128)
@@ -517,34 +518,42 @@ TEST(FunctionTest, AddDec128)
     Decimal128 expected;
     int64_t zHigh = 0;
     uint64_t zLow = 0;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
 
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 9, op2.HighBits(), op2.LowBits(),
+        38, 9, 38, 9, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(5);
     op2 = DecimalOperations::UnscaledDecimal(10);
     expected = DecimalOperations::UnscaledDecimal(15);
-    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 12, op2.HighBits(), op2.LowBits(),
+        38, 12, 38, 12, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-1);
     op2 = DecimalOperations::UnscaledDecimal(1);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(),
+        38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(-7);
-    AddDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(),
+        38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
+
+    delete context;
 }
 
 TEST(FunctionTest, SubDec128)
@@ -555,33 +564,42 @@ TEST(FunctionTest, SubDec128)
     int64_t zHigh = 0;
     uint64_t zLow = 0;
 
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
+        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(10);
     op2 = DecimalOperations::UnscaledDecimal(5);
     expected = DecimalOperations::UnscaledDecimal(5);
-    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
+        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(5);
     op2 = DecimalOperations::UnscaledDecimal(10);
     expected = DecimalOperations::UnscaledDecimal(-5);
-    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
+        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(1);
-    SubDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
+        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
+
+    delete context;
 }
 
 TEST(FunctionTest, MulDec128)
@@ -592,40 +610,49 @@ TEST(FunctionTest, MulDec128)
     int64_t zHigh = 0;
     uint64_t zLow = 0;
 
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(500);
     expected = DecimalOperations::UnscaledDecimal(0);
-    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 7,
+        op2.HighBits(), op2.LowBits(), 38, 7, 38, 14, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(1);
     op2 = DecimalOperations::UnscaledDecimal(500);
     expected = DecimalOperations::UnscaledDecimal(500);
-    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 1,
+        op2.HighBits(), op2.LowBits(), 38, 1, 38, 2, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(3);
     op2 = DecimalOperations::UnscaledDecimal(5);
     expected = DecimalOperations::UnscaledDecimal(15);
-    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
+        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(12);
-    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
+        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(4);
     expected = DecimalOperations::UnscaledDecimal(-12);
-    MulDec128(op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 3,
+        op2.HighBits(), op2.LowBits(), 38, 3, 38, 6, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
+
+    delete context;
 }
 
 TEST(FunctionTest, DivDec128)
@@ -645,81 +672,68 @@ TEST(FunctionTest, DivDec128)
     op1 = DecimalOperations::UnscaledDecimal(10);
     op2 = DecimalOperations::UnscaledDecimal(2);
     expected = DecimalOperations::UnscaledDecimal(5);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
-        scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-10);
     op2 = DecimalOperations::UnscaledDecimal(2);
     expected = DecimalOperations::UnscaledDecimal(-5);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
-        scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-10);
     op2 = DecimalOperations::UnscaledDecimal(-2);
     expected = DecimalOperations::UnscaledDecimal(5);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
-        scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(7);
     op2 = DecimalOperations::UnscaledDecimal(3);
     expected = DecimalOperations::UnscaledDecimal(2);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
-        scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(8);
     op2 = DecimalOperations::UnscaledDecimal(3);
     expected = DecimalOperations::UnscaledDecimal(3);
-    DivDec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(), precision,
-        scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     delete context;
 }
 
-TEST(FunctionTest, CastInt64ToDecimal128)
-{
-    int64_t outHigh = 0;
-    uint64_t outLow = 0;
-    Decimal128 expected;
-
-    for (int64_t x = -500; x <= 550; ++x) {
-        expected = DecimalOperations::UnscaledDecimal(x);
-        CastInt64ToDecimal128(x, 38, 0, &outHigh, &outLow);
-        EXPECT_EQ(outHigh, expected.HighBits());
-        EXPECT_EQ(outLow, expected.LowBits());
-    }
-}
-
 TEST(FunctionTest, AbsDecimal128)
 {
     int64_t outHigh = 0;
     uint64_t outLow = 0;
+
     Decimal128 test;
     Decimal128 expected;
 
     test = DecimalOperations::UnscaledDecimal(3);
-    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, 38, 0, &outHigh, &outLow);
+    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 9, false, 38, 9, &outHigh, &outLow);
     EXPECT_EQ(outHigh, test.HighBits());
     EXPECT_EQ(outLow, test.LowBits());
 
     test = DecimalOperations::UnscaledDecimal(-1);
     expected = DecimalOperations::UnscaledDecimal(1);
-    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, 38, 0, &outHigh, &outLow);
+    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, false, 38, 0, &outHigh, &outLow);
     EXPECT_EQ(outHigh, expected.HighBits());
     EXPECT_EQ(outLow, expected.LowBits());
 
     test = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, 38, 0, &outHigh, &outLow);
+    AbsDecimal128(test.HighBits(), test.LowBits(), 38, 0, false, 38, 0, &outHigh, &outLow);
     EXPECT_EQ(outHigh, expected.HighBits());
     EXPECT_EQ(outLow, expected.LowBits());
 }
@@ -735,27 +749,27 @@ TEST(FunctionTest, ConcatCharChar)
     const char *result;
     string actual;
 
-    result = ConcatCharChar(contextptr, "hello", 5, 5, "world", 5, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 5, 5, "world", 5, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
 
-    result = ConcatCharChar(contextptr, "hello", 5, 5, "world", 10, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 5, 5, "world", 10, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
 
-    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 5, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 5, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 10, 5, &outlen);
+    result = ConcatCharChar(contextptr, "hello", 10, 5, "world", 5, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatCharChar(contextptr, "", 0, 0, "", 0, 0, &outlen);
+    result = ConcatCharChar(contextptr, "", 0, 0, "", 0, 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -771,27 +785,27 @@ TEST(FunctionTest, ConcatStrChar)
     const char *result;
     string actual;
 
-    result = ConcatStrChar(contextptr, "hello", 5, "world", 5, 5, &outlen);
+    result = ConcatStrChar(contextptr, "hello", 5, "world", 5, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
 
-    result = ConcatStrChar(contextptr, "hello", 5, "world", 10, 5, &outlen);
+    result = ConcatStrChar(contextptr, "hello", 5, "world", 10, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
 
-    result = ConcatStrChar(contextptr, "hello", 5, "world     ", 10, 10, &outlen);
+    result = ConcatStrChar(contextptr, "hello", 5, "world     ", 10, 10, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld     ");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatStrChar(contextptr, "", 0, "", 0, 0, &outlen);
+    result = ConcatStrChar(contextptr, "", 0, "", 0, 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = ConcatStrChar(contextptr, "hello", 5, "     ", 5, 5, &outlen);
+    result = ConcatStrChar(contextptr, "hello", 5, "     ", 5, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     ");
     EXPECT_EQ(outlen, 10);
@@ -806,27 +820,27 @@ TEST(FunctionTest, ConcatCharStr)
     const char *result;
     string actual;
 
-    result = ConcatCharStr(contextptr, "hello", 5, 5, "world", 5, &outlen);
+    result = ConcatCharStr(contextptr, "hello", 5, 5, "world", 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "helloworld");
     EXPECT_EQ(outlen, 10);
 
-    result = ConcatCharStr(contextptr, "hello", 10, 5, "world", 5, &outlen);
+    result = ConcatCharStr(contextptr, "hello", 10, 5, "world", 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatCharStr(contextptr, "hello     ", 10, 10, "world", 5, &outlen);
+    result = ConcatCharStr(contextptr, "hello     ", 10, 10, "world", 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello     world");
     EXPECT_EQ(outlen, 15);
 
-    result = ConcatCharStr(contextptr, "", 0, 0, "", 0, &outlen);
+    result = ConcatCharStr(contextptr, "", 0, 0, "", 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = ConcatCharStr(contextptr, "", 5, 0, "world", 5, &outlen);
+    result = ConcatCharStr(contextptr, "", 5, 0, "world", 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "     world");
     EXPECT_EQ(outlen, 10);
@@ -843,32 +857,32 @@ TEST(FunctionTest, Substr)
     const char *result;
     string actual;
 
-    result = Substr(contextptr, str.c_str(), strlen, 1, strlen, &outlen);
+    result = Substr(contextptr, str.c_str(), strlen, 1, strlen, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outlen, strlen);
 
-    result = Substr(contextptr, str.c_str(), strlen, 1, 5, &outlen);
+    result = Substr(contextptr, str.c_str(), strlen, 1, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "Magic");
     EXPECT_EQ(outlen, 5);
 
-    result = Substr(contextptr, str.c_str(), strlen, 10, 10, &outlen);
+    result = Substr(contextptr, str.c_str(), strlen, 10, 10, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "nson 123@#");
     EXPECT_EQ(outlen, 10);
 
-    result = Substr(contextptr, str.c_str(), strlen, -5, 7, &outlen);
+    result = Substr(contextptr, str.c_str(), strlen, -5, 7, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "23@#$");
     EXPECT_EQ(outlen, 5);
 
-    result = Substr(contextptr, str.c_str(), strlen, 0, 0, &outlen);
+    result = Substr(contextptr, str.c_str(), strlen, 0, 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = Substr(contextptr, str.c_str(), strlen, strlen, strlen + 5, &outlen);
+    result = Substr(contextptr, str.c_str(), strlen, strlen, strlen + 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "$");
     EXPECT_EQ(outlen, 1);
@@ -885,42 +899,42 @@ TEST(FunctionTest, SubstrZh)
     const char *result;
     string actual;
 
-    result = Substr(contextPtr, str.c_str(), strLen, 1, 37, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, 1, 37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 1, 5, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, 1, 5, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯");
     EXPECT_EQ(outLen, 15);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 10, 10, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, 10, 10, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "hello! 回复哦");
     EXPECT_EQ(outLen, 16);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -5, 7, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -5, 7, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "色的圣诞袜");
     EXPECT_EQ(outLen, 15);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 0, 0, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, 0, 0, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 37, strLen + 5, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, 37, strLen + 5, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -38, 10, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -38, 10, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -37, 37, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -37, 37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -939,32 +953,32 @@ TEST(FunctionTest, SubstrChar)
     const char *result;
     string actual;
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, strlen, &outlen);
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, strlen, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "Magic Johnson 123@#$");
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, 5, &outlen);
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "Magic");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 10, 10, &outlen);
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 10, 10, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "nson 123@#");
     EXPECT_EQ(outlen, 10);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, -5, 7, &outlen);
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, -5, 7, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "23@#$");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 0, 0, &outlen);
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, 0, 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, strlen, strlen + 5, &outlen);
+    result = SubstrChar(contextptr, str.c_str(), width, strlen, strlen, strlen + 5, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "$");
     EXPECT_EQ(outlen, 1);
@@ -983,42 +997,42 @@ TEST(FunctionTest, SubstrCharZh)
     const char *result;
     string actual;
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 1, 37, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 1, 37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 1, 5, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 1, 5, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 10, 10, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 10, 10, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "hello! 回复哦");
     EXPECT_EQ(outLen, 16);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -5, 7, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -5, 7, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "色的圣诞袜");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 0, 0, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 0, 0, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 37, strLen + 5, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 37, strLen + 5, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -38, 10, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -38, 10, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -37, 37, &outLen);
+    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -37, 37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -1029,29 +1043,29 @@ TEST(FunctionTest, SubstrCharZh)
 TEST(FunctionTest, SubstrWithStart)
 {
     auto context = new ExecutionContext();
-    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
     string str = "ABC efg 123 $%^";
-    int32_t strLen = static_cast<int32_t>(str.length());
+    int32_t strlen = static_cast<int32_t>(str.length());
     int32_t outlen = 0;
     const char *result;
     string actual;
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 1, &outlen);
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 1, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, str);
-    EXPECT_EQ(outlen, strLen);
+    EXPECT_EQ(outlen, strlen);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 9, &outlen);
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 9, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "123 $%^");
     EXPECT_EQ(outlen, 7);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -3, &outlen);
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, -3, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "$%^");
     EXPECT_EQ(outlen, 3);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 0, &outlen);
+    result = SubstrWithStart(contextptr, str.c_str(), strlen, 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -1069,37 +1083,37 @@ TEST(FunctionTest, SubstrWithZh)
     const char *result;
     string actual;
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 1, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 1, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 9, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 9, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
     EXPECT_EQ(outLen, 53);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -3, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -3, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "圣诞袜");
     EXPECT_EQ(outLen, 9);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 0, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 0, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 37, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -38, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -38, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -37, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -1119,27 +1133,27 @@ TEST(FunctionTest, SubstrWithZhForSpark)
     const char *result;
     string actual;
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -15, &outLen);
+    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -15, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 5, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -15, 5, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 6, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -15, 6, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "时");
     EXPECT_EQ(outLen, 3);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 14, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -15, 14, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯侧后解 ");
     EXPECT_EQ(outLen, 25);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 20, &outLen);
+    result = Substr(contextPtr, str.c_str(), strLen, -15, 20, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯侧后解 h");
     EXPECT_EQ(outLen, 26);
@@ -1152,7 +1166,7 @@ TEST(FunctionTest, SubstrWithZhForSpark)
 TEST(FunctionTest, SubstrCharWithStart)
 {
     auto context = new ExecutionContext();
-    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
     string str = "ABC efg 123 $%^        ";
     int32_t width = static_cast<int32_t>(str.length());
     int32_t outlen = 0;
@@ -1160,22 +1174,22 @@ TEST(FunctionTest, SubstrCharWithStart)
     const char *result;
     string actual;
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strlen, 1, &outlen);
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 1, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "ABC efg 123 $%^");
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strlen, 9, &outlen);
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 9, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "123 $%^");
     EXPECT_EQ(outlen, 7);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strlen, -3, &outlen);
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, -3, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "$%^");
     EXPECT_EQ(outlen, 3);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strlen, 0, &outlen);
+    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -1193,37 +1207,37 @@ TEST(FunctionTest, SubstrCharWithStartZh)
     const char *result;
     string actual;
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 1, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 1, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 9, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 9, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
     EXPECT_EQ(outLen, 53);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -3, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -3, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "圣诞袜");
     EXPECT_EQ(outLen, 9);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 0, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 0, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 37, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -38, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -38, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -37, &outLen);
+    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -37, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -1238,7 +1252,7 @@ TEST(FunctionTest, ToUpperStr)
     string test = "[\\]^_abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     string expected = "[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     int32_t outLen = 0;
-    const char *result = ToUpperStr(contextptr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToUpperStr(contextptr, test.c_str(), static_cast<int32_t>(test.length()), false, &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1253,7 +1267,8 @@ TEST(FunctionTest, ToUpperChar)
     string expected = "[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     int32_t width = 100;
     int32_t outLen = 0;
-    const char *result = ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), false,
+        &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1267,7 +1282,7 @@ TEST(FunctionTest, ToLowerStr)
     string test = "[\\]^_abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     string expected = "[\\]^_abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz{|}.";
     int32_t outLen = 0;
-    const char *result = ToLowerStr(contextPtr, test.c_str(), static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToLowerStr(contextPtr, test.c_str(), static_cast<int32_t>(test.length()), false, &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1282,7 +1297,8 @@ TEST(FunctionTest, ToLowerChar)
     string expected = "[\\]^_abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz{|}.";
     int32_t width = 100;
     int32_t outLen = 0;
-    const char *result = ToLowerChar(contextPtr, test.c_str(), width, static_cast<int32_t>(test.length()), &outLen);
+    const char *result = ToLowerChar(contextPtr, test.c_str(), width, static_cast<int32_t>(test.length()), false,
+        &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1309,13 +1325,13 @@ TEST(FunctionTest, StrCompare)
 
 TEST(FunctionTest, LikeStr)
 {
-    bool result = LikeStr("hello", 5, "hello", 5);
+    bool result = LikeStr("hello", 5, "hello", 5, false);
     EXPECT_TRUE(result);
 
-    result = LikeStr("regex", 5, "rege(x(es)?|xps?)", 17);
+    result = LikeStr("regex", 5, "rege(x(es)?|xps?)", 17, false);
     EXPECT_TRUE(result);
 
-    result = LikeStr("20500", 5, "\\d{5}(-\\d{4})?", 14);
+    result = LikeStr("20500", 5, "\\d{5}(-\\d{4})?", 14, false);
     EXPECT_TRUE(result);
 }
 
@@ -1327,35 +1343,36 @@ TEST(FunctionTest, ConcatStrStr)
     const char *result;
     string actual;
 
-    result = ConcatStrStr(contextptr, "abc", 3, "defghi", 6, &outlen);
+    result = ConcatStrStr(contextptr, "abc", 3, "defghi", 6, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "abcdefghi");
     EXPECT_EQ(outlen, 9);
 
-    result = ConcatStrStr(contextptr, "hello", 5, "", 0, &outlen);
+    result = ConcatStrStr(contextptr, "hello", 5, "", 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "hello");
     EXPECT_EQ(outlen, 5);
 
-    result = ConcatStrStr(contextptr, "", 0, "", 0, &outlen);
+    result = ConcatStrStr(contextptr, "", 0, "", 0, false, &outlen);
     actual = string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
     delete context;
 }
 
-TEST(FunctionTest, CastString)
+// Cast
+TEST(FunctionTest, CastStringToDate)
 {
     // year-month-day
     auto context = new ExecutionContext();
-    int64_t contextptr = reinterpret_cast<int64_t>(context);
-    int32_t result = CastString(contextptr, "1970-01-03", 10);
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t result = CastStringToDate(contextPtr, "1970-01-03", 10, false);
     EXPECT_EQ(result, 2);
-    result = CastString(contextptr, "1969-12-31", 10);
+    result = CastStringToDate(contextPtr, "1969-12-31", 10, false);
     EXPECT_EQ(result, -1);
-    result = CastString(contextptr, "1980-01-01", 10);
+    result = CastStringToDate(contextPtr, "1980-01-01", 10, false);
     EXPECT_EQ(result, 3652);
-    result = CastString(contextptr, "1453-05-29", 10);
+    result = CastStringToDate(contextPtr, "1453-05-29", 10, false);
     EXPECT_EQ(result, -188682);
     delete context;
 }
@@ -1364,21 +1381,21 @@ TEST(FunctionTest, LengthChar)
 {
     string test = "abcd";
     int32_t width = 10;
-    auto len = LengthChar(test.c_str(), width, test.length());
+    auto len = LengthChar(test.c_str(), width, test.length(), false);
     EXPECT_EQ(len, 10);
 }
 
 TEST(FunctionTest, LengthStr)
 {
     string test = "abcd";
-    auto len = LengthStr(test.c_str(), test.length());
+    auto len = LengthStr(test.c_str(), test.length(), false);
     EXPECT_EQ(len, 4);
 }
 
 TEST(FunctionTest, LengthStrZh)
 {
     string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
-    auto len = LengthStr(str.c_str(), str.length());
+    auto len = LengthStr(str.c_str(), str.length(), false);
     EXPECT_EQ(len, 37);
 }
 
@@ -1392,7 +1409,7 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     string searchStr = "o";
     string replaceStr = "**";
     auto result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
-        replaceStr.c_str(), replaceStr.length(), &outLen);
+        replaceStr.c_str(), replaceStr.length(), false, &outLen);
     string expected = "**perat**r1";
     EXPECT_EQ(outLen, 11);
     EXPECT_EQ(string(result, outLen), expected);
@@ -1401,7 +1418,7 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     searchStr = "";
     replaceStr = "*";
     result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
-        replaceStr.c_str(), replaceStr.length(), &outLen);
+        replaceStr.c_str(), replaceStr.length(), false, &outLen);
     expected = "*o*p*e*r*a*t*o*r*2*";
     EXPECT_EQ(outLen, 19);
     EXPECT_EQ(string(result, outLen), expected);
@@ -1410,7 +1427,7 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     searchStr = "era";
     replaceStr = "ER";
     result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
-        replaceStr.c_str(), replaceStr.length(), &outLen);
+        replaceStr.c_str(), replaceStr.length(), false, &outLen);
     expected = "opERtor3";
     EXPECT_EQ(outLen, 8);
     EXPECT_EQ(string(result, outLen), expected);
@@ -1425,24 +1442,24 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
 
     string str = "operator1";
     string searchStr = "o";
-    auto result =
-        ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(), &outLen);
+    auto result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(), false, &outLen);
     string expected = "peratr1";
     EXPECT_EQ(outLen, 7);
     EXPECT_EQ(string(result, outLen), expected);
 
     str = "operator2";
     searchStr = "";
-    result =
-        ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(), &outLen);
+    result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+        false, &outLen);
     expected = "operator2";
     EXPECT_EQ(outLen, 9);
     EXPECT_EQ(string(result, outLen), expected);
 
     str = "operator3";
     searchStr = "era";
-    result =
-        ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(), &outLen);
+    result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+        false, &outLen);
     expected = "optor3";
     EXPECT_EQ(outLen, 6);
     EXPECT_EQ(string(result, outLen), expected);
@@ -1464,7 +1481,7 @@ TEST(FunctionTest, ReplaceStrCharStr)
 
     for (int32_t i = 0; i < 7; i++) {
         auto result = ReplaceStrStrStrWithRep(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
-            searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), &outLen);
+            searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), false, &outLen);
         EXPECT_EQ(outLen, resultLen[i]);
         EXPECT_EQ(string(result, outLen), expected[i]);
     }
@@ -1488,7 +1505,7 @@ TEST(FunctionTest, ReplaceCharCharChar)
 
     for (int32_t i = 0; i < 7; i++) {
         auto result = ReplaceStrStrStrWithRep(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
-            searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), &outLen);
+            searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), false, &outLen);
         EXPECT_EQ(outLen, resultLen[i]);
         EXPECT_EQ(string(result, outLen), expected[i]);
     }
@@ -1506,43 +1523,43 @@ TEST(FunctionTest, ReplaceStrStrStrZh)
     std::vector<string> replaceStr { "", "黑色", "*w*", "*的*" };
 
     auto result1 = ReplaceStrStrStrWithRep(contextPtr, str[2].c_str(), str[2].length(), searchStr[0].c_str(),
-        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), &outLen);
+        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
     string expected = "*w*a*w*p*w*p*w*l*w*e*w*";
     EXPECT_EQ(outLen, 23);
     EXPECT_EQ(string(result1, outLen), expected);
 
     auto result2 = ReplaceStrStrStrWithRep(contextPtr, str[1].c_str(), str[1].length(), searchStr[0].c_str(),
-        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), &outLen);
+        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
     expected = "*w*粉*w*色*w*的*w*圣*w*诞*w*袜*w*";
     EXPECT_EQ(outLen, 39);
     EXPECT_EQ(string(result2, outLen), expected);
 
     auto result3 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
-        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), &outLen);
+        searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
     expected = "*w*粉*w*色*w*d*w*e*w*圣*w*诞*w*袜*w*";
     EXPECT_EQ(outLen, 41);
     EXPECT_EQ(string(result3, outLen), expected);
 
     auto result4 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
-        searchStr[0].length(), replaceStr[3].c_str(), replaceStr[3].length(), &outLen);
+        searchStr[0].length(), replaceStr[3].c_str(), replaceStr[3].length(), false, &outLen);
     expected = "*的*粉*的*色*的*d*的*e*的*圣*的*诞*的*袜*的*";
     EXPECT_EQ(outLen, 57);
     EXPECT_EQ(string(result4, outLen), expected);
 
     auto result5 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[3].c_str(),
-        searchStr[3].length(), replaceStr[3].c_str(), replaceStr[3].length(), &outLen);
+        searchStr[3].length(), replaceStr[3].c_str(), replaceStr[3].length(), false, &outLen);
     expected = "粉色*的*诞袜";
     EXPECT_EQ(outLen, 17);
     EXPECT_EQ(string(result5, outLen), expected);
 
     auto result6 = ReplaceStrStrStrWithRep(contextPtr, str[0].c_str(), str[0].length(), searchStr[0].c_str(),
-        searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), &outLen);
+        searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), false, &outLen);
     expected = "";
     EXPECT_EQ(outLen, 0);
     EXPECT_EQ(string(result6, outLen), expected);
 
     auto result7 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
-        searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), &outLen);
+        searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), false, &outLen);
     expected = "粉色de圣诞袜";
     EXPECT_EQ(outLen, 17);
     EXPECT_EQ(string(result7, outLen), expected);
@@ -1557,7 +1574,7 @@ TEST(FunctionTest, ConcatStrStrZh)
     const char *result;
     string actual;
 
-    result = ConcatStrStr(contextPtr, "你是Chinese?", 14, "Yes我是", 9, &outLen);
+    result = ConcatStrStr(contextPtr, "你是Chinese?", 14, "Yes我是", 9, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "你是Chinese?Yes我是");
     EXPECT_EQ(outLen, 23);
@@ -1572,42 +1589,42 @@ TEST(FunctionTest, ConcatCharCharZh)
     const char *result;
     string actual;
 
-    result = ConcatCharChar(contextPtr, "粉色de圣诞袜", 7, 17, "*黑色*", 4, 8, &outLen);
+    result = ConcatCharChar(contextPtr, "粉色de圣诞袜", 7, 17, "*黑色*", 4, 8, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "粉色de圣诞袜*黑色*");
     EXPECT_EQ(outLen, 25);
 
-    result = ConcatCharChar(contextPtr, "Hei你好吗", 8, 12, "Oh我很好", 8, 11, &outLen);
+    result = ConcatCharChar(contextPtr, "Hei你好吗", 8, 12, "Oh我很好", 8, 11, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "Hei你好吗  Oh我很好");
     EXPECT_EQ(outLen, 25);
 
-    result = ConcatCharChar(contextPtr, "Hei你好吗   ", 10, 15, "Oh我很好  ", 8, 13, &outLen);
+    result = ConcatCharChar(contextPtr, "Hei你好吗   ", 10, 15, "Oh我很好  ", 8, 13, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "Hei你好吗    Oh我很好  ");
     EXPECT_EQ(outLen, 29);
 
-    result = ConcatCharChar(contextPtr, "   Hei你好吗", 12, 15, "   Oh我很好", 12, 14, &outLen);
+    result = ConcatCharChar(contextPtr, "   Hei你好吗", 12, 15, "   Oh我很好", 12, 14, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "   Hei你好吗      Oh我很好");
     EXPECT_EQ(outLen, 32);
 
-    result = ConcatCharChar(contextPtr, "Hei   你好吗", 12, 15, "Oh   我很好", 8, 14, &outLen);
+    result = ConcatCharChar(contextPtr, "Hei   你好吗", 12, 15, "Oh   我很好", 8, 14, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "Hei   你好吗   Oh   我很好");
     EXPECT_EQ(outLen, 32);
 
-    result = ConcatCharChar(contextPtr, "   ", 5, 3, "Oh我很好   ", 12, 14, &outLen);
+    result = ConcatCharChar(contextPtr, "   ", 5, 3, "Oh我很好   ", 12, 14, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "     Oh我很好   ");
     EXPECT_EQ(outLen, 19);
 
-    result = ConcatCharChar(contextPtr, "Hei你好吗", 8, 12, "   ", 5, 3, &outLen);
+    result = ConcatCharChar(contextPtr, "Hei你好吗", 8, 12, "   ", 5, 3, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "Hei你好吗     ");
     EXPECT_EQ(outLen, 17);
 
-    result = ConcatCharChar(contextPtr, "Hei你好吗", 8, 12, "", 5, 0, &outLen);
+    result = ConcatCharChar(contextPtr, "Hei你好吗", 8, 12, "", 5, 0, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "Hei你好吗");
     EXPECT_EQ(outLen, 12);
@@ -1622,12 +1639,12 @@ TEST(FunctionTest, ConcatCharStrZh)
     const char *result;
     string actual;
 
-    result = ConcatCharStr(contextPtr, "*你是谁呢*", 6, 14, "我很OK", 8, &outLen);
+    result = ConcatCharStr(contextPtr, "*你是谁呢*", 6, 14, "我很OK", 8, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "*你是谁呢*我很OK");
     EXPECT_EQ(outLen, 22);
 
-    result = ConcatCharStr(contextPtr, "*你是谁呢*", 10, 14, "我很OK", 8, &outLen);
+    result = ConcatCharStr(contextPtr, "*你是谁呢*", 10, 14, "我很OK", 8, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "*你是谁呢*    我很OK");
     EXPECT_EQ(outLen, 26);
@@ -1642,12 +1659,12 @@ TEST(FunctionTest, ConcatStrCharZh)
     const char *result;
     string actual;
 
-    result = ConcatStrChar(contextPtr, "粉色de圣诞袜", 17, "*黑色*", 4, 8, &outLen);
+    result = ConcatStrChar(contextPtr, "粉色de圣诞袜", 17, "*黑色*", 4, 8, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "粉色de圣诞袜*黑色*");
     EXPECT_EQ(outLen, 25);
 
-    result = ConcatStrChar(contextPtr, "粉色de圣诞袜", 17, "*黑色*", 6, 8, &outLen);
+    result = ConcatStrChar(contextPtr, "粉色de圣诞袜", 17, "*黑色*", 6, 8, false, &outLen);
     actual = string(result, outLen);
     EXPECT_EQ(actual, "粉色de圣诞袜*黑色*");
     EXPECT_EQ(outLen, 25);
@@ -1659,18 +1676,18 @@ TEST(FunctionTest, LikeStrZh)
     string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
     // like "xxx_"
     string pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.$";
-    bool isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    bool isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_TRUE(isMatch);
     pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞..$";
-    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_FALSE(isMatch);
 
     // like "xxx%"
     pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣.*$";
-    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_TRUE(isMatch);
     pattern = "^欧时基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.*$";
-    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length());
+    isMatch = LikeStr(str.c_str(), str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_FALSE(isMatch);
 }
 
@@ -1679,23 +1696,662 @@ TEST(FunctionTest, LikeCharZh)
     // like "xxx_"
     string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
     string pattern = "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.$";
-    bool isMatch = LikeChar(str.c_str(), 37, str.length(), pattern.c_str(), pattern.length());
+    bool isMatch = LikeChar(str.c_str(), 37, str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_TRUE(isMatch);
 
     pattern = "^时欧基乌..$";
     str = "时欧基乌";
-    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length());
+    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_TRUE(isMatch);
 
     pattern = "^时欧基乌.$";
     str = "时欧基乌";
-    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length());
+    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_FALSE(isMatch);
 
     // like "xxx%"
     pattern = "^时欧基乌.*$";
     str = "时欧基乌";
-    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length());
+    isMatch = LikeChar(str.c_str(), 6, str.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_TRUE(isMatch);
+}
+
+TEST(FunctionTest, CastDecimal64To64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t input = 12345;
+    int64_t result = CastDecimal64To64(contextPtr, input, 18, 0, false, 18, 3);
+    EXPECT_EQ(result, 12345000);
+    input = -19501040780019L;
+    result = CastDecimal64To64(contextPtr, input, 17, 2, false, 18, 6);
+    EXPECT_EQ(result, -195010407800190000L);
+    input = 12395;
+    result = CastDecimal64To64(contextPtr, input, 18, 2, false, 18, 0);
+    EXPECT_EQ(result, 124);
+    input = 12395;
+    result = CastDecimal64To64(contextPtr, input, 18, 2, false, 5, 4);
+    string message = context->GetError();
+    message.pop_back();
+    EXPECT_EQ(message, "Cannot cast DECIMAL(18, 2) '123.95' to DECIMAL(5, 4)");
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128To128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    CastDecimal128To128(contextPtr, 0, 123, 38, 0, false, 20, 0, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 123);
+    CastDecimal128To128(contextPtr, 0, 129, 38, 2, false, 20, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 13);
+    CastDecimal128To128(contextPtr, 0, 129234454, 38, 0, false, 38, 30, &high, &low);
+    string message = context->GetError();
+    message.pop_back();
+    EXPECT_EQ(message, "Cannot cast DECIMAL(38, 0) '129234454' to DECIMAL(38, 30)");
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64To128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    CastDecimal64To128(contextPtr, 123123, 17, 3, false, 38, 4, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 1231230);
+    CastDecimal64To128(contextPtr, -123123, 17, 3, false, 38, 4, &high, &low);
+    EXPECT_EQ(high, 1L << 63);
+    EXPECT_EQ(low, 1231230);
+    CastDecimal64To128(contextPtr, 123123, 17, 3, false, 38, 37, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 0);
+    CastDecimal64To128(contextPtr, 123125, 17, 3, false, 38, 2, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 12313);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128To64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t result = CastDecimal128To64(contextPtr, 0, 123, 38, 1, false, 18, 3);
+    EXPECT_EQ(result, 12300);
+    result = CastDecimal128To64(contextPtr, 1, 123, 38, 1, false, 18, 3);
+    EXPECT_EQ(result, 0);
+    result = CastDecimal128To64(contextPtr, 0, 123, 38, 1, false, 4, 3);
+    EXPECT_EQ(result, 0);
+    result = CastDecimal128To64(contextPtr, 1L << 63, 123, 38, 1, false, 18, 3);
+    EXPECT_EQ(result, -12300);
+    result = CastDecimal128To64(contextPtr, 0, 12366, 38, 2, false, 18, 1);
+    EXPECT_EQ(result, 1237);
+    Decimal128 x("12345120000000000000000");
+    result = CastDecimal128To64(contextPtr, x.HighBits(), x.LowBits(), 38, 18, false, 7, 2);
+    EXPECT_EQ(result, 1234512);
+    delete context;
+}
+
+TEST(FunctionTest, CastIntToDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t s = 9123;
+    int64_t result = CastIntToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 9123);
+    s = -45594;
+    result = CastIntToDecimal64(contextPtr, s, false, 17, 3);
+    EXPECT_EQ(result, -45594000);
+    s = 0;
+    result = CastIntToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 0);
+    s = 21'4748'3647;
+    result = CastIntToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 21'4748'3647);
+    s = 21'4748'3647;
+    result = CastIntToDecimal64(contextPtr, s, false, 5, 4);
+    EXPECT_EQ(result, 0);
+    s = 123;
+    result = CastIntToDecimal64(contextPtr, s, false, 18, 19);
+    EXPECT_EQ(result, 0);
+    delete context;
+}
+
+TEST(FunctionTest, CastLongToDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t s = 9123;
+    int64_t result = CastLongToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 9123);
+    s = -45594;
+    result = CastLongToDecimal64(contextPtr, s, false, 17, 3);
+    EXPECT_EQ(result, -45594000);
+    s = 0;
+    result = CastLongToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 0);
+    s = 123;
+    result = CastLongToDecimal64(contextPtr, s, false, 18, 3);
+    EXPECT_EQ(result, 123000);
+    s = 922'3372'0368'5477'5807;
+    result = CastLongToDecimal64(contextPtr, s, false, 18, 3);
+    EXPECT_EQ(result, 0);
+    delete context;
+}
+
+TEST(FunctionTest, CastDoubleToDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    double s = 9123;
+    int64_t result = CastDoubleToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 9123);
+    s = -9123.973;
+    result = CastDoubleToDecimal64(contextPtr, s, false, 18, 3);
+    EXPECT_EQ(result, -9123973);
+    s = 0;
+    result = CastDoubleToDecimal64(contextPtr, s, false, 18, 3);
+    EXPECT_EQ(result, 0);
+    s = 1.11E100;
+    result = CastDoubleToDecimal64(contextPtr, s, false, 18, 3);
+    EXPECT_EQ(result, 0);
+    s = -45.7;
+    result = CastDoubleToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, -46);
+    s = 1.17549E-38;
+    result = CastDoubleToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 0.00);
+    delete context;
+}
+
+TEST(FunctionTest, CastIntToDecimal128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t s = 9123;
+    CastIntToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 9123);
+    s = -45594;
+    CastIntToDecimal128(contextPtr, s, false, 38, 3, &high, &low);
+    EXPECT_EQ(low, 4559'4000);
+    s = 0;
+    CastIntToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 0);
+    s = 21'4748'3647;
+    CastIntToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 21'4748'3647);
+    delete context;
+}
+
+TEST(FunctionTest, CastLongToDecimal128)
+{
+    int64_t outHigh = 0;
+    uint64_t outLow = 0;
+    Decimal128 expected;
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    int64_t x = 999;
+    CastLongToDecimal128(contextPtr, x, false, 2, 0, &outHigh, &outLow);
+    EXPECT_TRUE(context->HasError());
+    x = 10;
+    CastLongToDecimal128(contextPtr, x, false, 2, 0, &outHigh, &outLow);
+    EXPECT_EQ(outLow, 10);
+
+    delete context;
+}
+
+TEST(FunctionTest, CastDoubleToDecimal128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    double s = 9123;
+    CastDoubleToDecimal128(contextPtr, s, false, 18, 0, &high, &low);
+    EXPECT_EQ(low, 9123);
+    s = -9123.973;
+    CastDoubleToDecimal128(contextPtr, s, false, 18, 3, &high, &low);
+    EXPECT_EQ(low, 9123973);
+    s = 0;
+    CastDoubleToDecimal128(contextPtr, s, false, 18, 0, &high, &low);
+    EXPECT_EQ(low, 0);
+    s = 123.1119;
+    CastDoubleToDecimal128(contextPtr, s, false, 18, 3, &high, &low);
+    EXPECT_EQ(low, 123112);
+    s = 1.11E100;
+    CastDoubleToDecimal128(contextPtr, s, false, 18, 0, &high, &low);
+    EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToInt)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t result = CastDecimal64ToInt(contextPtr, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToInt(contextPtr, 99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal64ToInt(contextPtr, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToInt(contextPtr, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
+    result = CastDecimal64ToInt(contextPtr, -1736879480, 15, 0, false);
+    EXPECT_EQ(result, -1736879480);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToLong)
+{
+    int64_t result = CastDecimal64ToLong(100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToLong(99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal64ToLong(100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToLong(-8888, 38, 2, false);
+    EXPECT_EQ(result, -89);
+}
+
+TEST(FunctionTest, CastDecimal64ToDouble)
+{
+    double result = CastDecimal64ToDouble(100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToDouble(99, 38, 1, false);
+    EXPECT_EQ(result, 9.9);
+    result = CastDecimal64ToDouble(100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToDouble(-8888, 38, 2, false);
+    EXPECT_EQ(result, -88.88);
+}
+
+TEST(FunctionTest, CastDecimal128ToInt)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t result = CastDecimal128ToInt(contextPtr, 0, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal128ToInt(contextPtr, 0, 99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal128ToInt(contextPtr, 1, 100, 38, 0, false);
+    EXPECT_EQ(result, 0);
+    result = CastDecimal128ToInt(contextPtr, 0, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToLong)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t result = CastDecimal128ToLong(contextPtr, 0, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal128ToLong(contextPtr, 0, 99, 38, 0, false);
+    EXPECT_EQ(result, 99);
+    result = CastDecimal128ToLong(contextPtr, 1, 100, 38, 0, false);
+    EXPECT_EQ(result, 0);
+    result = CastDecimal128ToLong(contextPtr, 0, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
+    result = CastDecimal128ToLong(contextPtr, 1, 1, 38, 20, false);
+    EXPECT_EQ(result, 0);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToDouble)
+{
+    double result = CastDecimal128ToDouble(0, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal128ToDouble(0, 534, 38, 3, false);
+    EXPECT_EQ(result, 0.534);
+    result = CastDecimal128ToDouble(0, 123, 38, 5, false);
+    EXPECT_EQ(result, 0.00123);
+    result = CastDecimal128ToDouble(0, 1234, 38, 2, false);
+    EXPECT_EQ(result, 12.34);
+    result = CastDecimal128ToDouble(0, 1234, 38, 2, false);
+    EXPECT_EQ(result, 12.34);
+}
+
+TEST(FunctionTest, CastStringToLong)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    string s = "23423";
+    int64_t result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+
+    EXPECT_EQ(result, 23423);
+    s = "100123";
+    result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 100123);
+    s = "-10078";
+    result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -10078);
+    s = "123.123";
+    result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+    s = "9223372036854775807";
+    result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 922'3372'0368'5477'5807);
+    s = "9223372036854775808";
+    result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+    delete context;
+}
+
+TEST(FunctionTest, CastStringToInt)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    string s = "23423";
+    int64_t result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 23423);
+    s = "100123";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 100123);
+    s = "123.123";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+    s = "2147483648";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+    s = "2a147483648";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->SetError();
+    s = "-10078";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -10078);
+    EXPECT_FALSE(context->HasError());
+    s = "2123123123147483648";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->SetError();
+    s = "-2123123123147483648";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->SetError();
+    s = "-2123123123147-483648";
+    result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
+TEST(FunctionTest, CastStringToDouble)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    string s = "23423";
+    double result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 23423);
+    s = "100123";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 100123);
+    s = "-10078";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -10078);
+    s = "123.123";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 123.123);
+    s = "-10.11";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -10.11);
+    s = "999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 1e+108);
+    s = "1.111e202";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 1.111e202);
+    s = "1.111e-202";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 1.111e-202);
+    delete context;
+}
+
+TEST(FunctionTest, CastStringToDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    string s = "23423";
+    int64_t result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0);
+    EXPECT_EQ(result, 23423);
+    s = "9223372036854775807";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 2);
+    EXPECT_EQ(result, 0);
+    s = "-10078";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 3);
+    EXPECT_EQ(result, -10078000);
+    s = "123.129";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 2);
+    EXPECT_EQ(result, 12313);
+    s = "-10.11";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 16, 2);
+    EXPECT_EQ(result, -1011);
+    s = "123";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 5, 4);
+    EXPECT_EQ(result, 0);
+    s = "999999999999999999";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 18, 0);
+    EXPECT_EQ(result, 99'9999'9999'9999'9999);
+    s = "9999999999999999999";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 18, 0);
+    EXPECT_TRUE(context->HasError());
+    context->SetError();
+    s = "123a";
+    result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 18, 0);
+    EXPECT_TRUE(context->HasError());
+    context->SetError();
+    delete context;
+}
+
+TEST(FunctionTest, CastStringToDecimal128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    bool *isNull = new bool(false);
+    string s = "23423";
+    CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
+    EXPECT_EQ(low, 23423);
+    EXPECT_EQ(high, 0);
+    s = "-36893488147419103230";
+    CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 37, 0, &high, &low);
+    EXPECT_EQ(low, 1844'6744'0737'0955'1614UL);
+    EXPECT_EQ(high, -922'3372'0368'5477'5807L);
+    s = "-10078";
+    CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
+    EXPECT_EQ(low, 10078);
+    EXPECT_EQ(high, 1L << 63);
+    s = "123.999";
+    CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
+    EXPECT_EQ(low, 124);
+    EXPECT_EQ(high, 0);
+    s = "-10.11";
+    CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
+    EXPECT_EQ(low, 10);
+    EXPECT_EQ(high, 1L << 63);
+    s = "-10.1a1";
+    CastStringToDecimal128RetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 17, 0, &high, &low);
+    EXPECT_TRUE(isNull);
+    s = "9999999999999999999999999999999999999999";
+    CastStringToDecimal128RetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 17, 0, &high, &low);
+    EXPECT_TRUE(isNull);
+    delete context;
+    delete isNull;
+}
+
+TEST(FunctionTest, CastDecimal64ToString)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t input = 123;
+    int32_t outLen = 0;
+    const char *s = CastDecimal64ToString(contextPtr, input, 3, 0, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "123");
+    input = 123423;
+    s = CastDecimal64ToString(contextPtr, input, 6, 3, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "123.423");
+    input = 1;
+    s = CastDecimal64ToString(contextPtr, input, 10, 6, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "0.000001");
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToString)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    int32_t outLen = 0;
+    const char *s = CastDecimal128ToString(contextPtr, 0, 123, 3, 0, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "123");
+    s = CastDecimal128ToString(contextPtr, 0, 123423, 6, 3, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "123.423");
+    s = CastDecimal128ToString(contextPtr, 0, 1, 10, 6, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "0.000001");
+    s = CastDecimal128ToString(contextPtr, 1, 0, 38, 0, false, &outLen);
+    EXPECT_EQ(string(s, outLen), "18446744073709551616");
+    delete context;
+}
+
+// Decimal Operation
+TEST(FunctionTest, DecimalAddOpeartion)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t high;
+    uint64_t low;
+
+    // dec64 add dec64 return dec64
+    int64_t result = AddDec64Dec64Dec64(contextPtr, 123, 3, 2, 321, 3, 1, 4, 2);
+    EXPECT_EQ(result, 3333);
+    result = AddDec64Dec64Dec64(contextPtr, 123, 3, 2, 321, 3, 1, 5, 3);
+    EXPECT_EQ(result, 33330);
+    // dec64 add dec128 return dec128
+    AddDec64Dec128Dec128(contextPtr, 123, 3, 2, 0, 321, 3, 1, 4, 2, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 3333);
+    AddDec64Dec128Dec128(contextPtr, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 33330);
+    // dec128 add dec64 return dec128
+    AddDec128Dec64Dec128(contextPtr, 0, 123, 3, 2, 321, 3, 1, 4, 2, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 3333);
+    AddDec128Dec64Dec128(contextPtr, 0, 123, 3, 2, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 33330);
+    // dec64 add dec64 return dec128
+    AddDec64Dec128Dec128(contextPtr, 123, 3, 2, 0, 321, 3, 1, 4, 2, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 3333);
+    AddDec64Dec128Dec128(contextPtr, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 33330);
+    // dec128 add dec128 return dec128
+    AddDec128Dec128Dec128(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 4, 2, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 3333);
+    AddDec128Dec128Dec128(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 33330);
+    delete context;
+}
+
+TEST(FunctionTest, DecimalMulOpeartion)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t high;
+    uint64_t low;
+
+    // dec64 mul dec64 return dec64
+    int64_t result = MulDec64Dec64Dec64(contextPtr, 123, 3, 2, 321, 3, 1, 5, 3);
+    EXPECT_EQ(result, 39483);
+    result = MulDec64Dec64Dec64(contextPtr, 123, 3, 2, 321, 3, 1, 6, 4);
+    EXPECT_EQ(result, 394830);
+    // dec64 mul dec64 return dec128
+    MulDec64Dec64Dec128(contextPtr, 123, 3, 2, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 39483);
+    MulDec64Dec64Dec128(contextPtr, 123, 3, 2, 321, 3, 1, 6, 4, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 394830);
+    // dec128 mul dec128 return dec128
+    Decimal128 l = Decimal128("123456789123456456789");
+    Decimal128 r = Decimal128("1234567891234567567891");
+    MulDec128Dec128Dec128(contextPtr, l.HighBits(), l.LowBits(), 22, 6, r.HighBits(), r.LowBits(), 22, 6, 38, 6, &high,
+        &low);
+    EXPECT_EQ(Decimal128(high, low).ToString(), "152415787806736335252649604807436065");
+
+    l = Decimal128("12345678912345623");
+    r = Decimal128("1234567891234567567891");
+    MulDec128Dec128Dec128(contextPtr, l.HighBits(), l.LowBits(), 17, 2, r.HighBits(), r.LowBits(), 22, 6, 38, 6, &high,
+        &low);
+    EXPECT_EQ(Decimal128(high, low).ToString(), "152415787806736055266232119611091911");
+
+    MulDec128Dec128Dec128(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 39483);
+    // dec64 mul dec128 return dec128
+    MulDec64Dec128Dec128(contextPtr, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 39483);
+    MulDec64Dec128Dec128(contextPtr, 123, 3, 2, 0, 321, 3, 1, 6, 4, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 394830);
+    // dec128 mul dec64 return dec128
+    MulDec128Dec64Dec128(contextPtr, 0, 123, 3, 2, 321, 3, 1, 5, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 39483);
+    MulDec128Dec64Dec128(contextPtr, 0, 123, 3, 2, 321, 3, 1, 6, 4, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 394830);
+    delete context;
+}
+
+
+TEST(FunctionTest, DecimalModOpeartion)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    // dec64 mod dec64 return dec64
+    int64_t result = ModDec64Dec64Dec64(contextPtr, -1234500, 7, 2, 1234512, 7, 2, 7, 2);
+    EXPECT_EQ(result, -1234500);
+    int64_t high;
+    uint64_t low;
+    ModDec64Dec128Dec128(contextPtr, -1234500, 7, 2, 0, 1234512, 7, 2, 7, 2, &high, &low);
+    EXPECT_EQ(high, 1L << 63);
+    EXPECT_EQ(low, 1234500);
+    delete context;
+}
+
+TEST(FunctionTest, DecimalDivOpeartion)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    Decimal128 l = Decimal128("9999999999999999999999");
+    Decimal128 r = Decimal128("99999999999999999999999999999999999999");
+    int64_t high = 0;
+    uint64_t low = 0;
+    // dec128 mul dec128 return dec128
+    DivDec128Dec128Dec128(contextPtr, r.HighBits(), r.LowBits(), 38, 16, l.HighBits(), l.LowBits(), 22, 6, 38, 16,
+        &high, &low);
+    EXPECT_EQ(Decimal128(high, low).ToString(), "10000000000000000000001");
+    DivDec128Dec128Dec128(contextPtr, 0, 100, 38, 0, 0, 3, 38, 0, 38, 3, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 33333);
+    delete context;
 }
 }

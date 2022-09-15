@@ -907,13 +907,4 @@ TEST(JSONParserTest, UnsupportedFunctionExprs)
     vector<Expr *> res = JSONParser::ParseJSON(exprs, 2);
     EXPECT_EQ(res.size(), 0);
 }
-
-TEST(JSONParserTest, UnsupportedDecimal128FunctionExprs)
-{
-    vector<string> argsJson = { GetDecimalFieldRefTestJson(OMNI_DECIMAL128, 1, 0, 0) };
-    string castJson = GetFuncTestJson(OMNI_LONG, "CAST", argsJson);
-
-    auto parsedExpr = JSONParser::ParseJSON(nlohmann::json::parse(castJson));
-    EXPECT_EQ(parsedExpr, nullptr);
-}
 }

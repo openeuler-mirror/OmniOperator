@@ -17,7 +17,8 @@ bool ExprVerifier::VisitExpr(const Expr &e)
 
 bool ExprVerifier::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
 {
-    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2));
+    return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2)) &&
+           !(TypeUtil::IsDecimalType(type1) && TypeUtil::IsDecimalType(type2));
 }
 
 void ExprVerifier::Visit(const LiteralExpr &literalExpr)

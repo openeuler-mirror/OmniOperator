@@ -48,8 +48,11 @@ bool AssertDivide(Decimal128 &dividend, Decimal128 &divisor, int32_t dividendSca
 
     Decimal128 actualQuotient;
     Decimal128 actualRemainder;
-    DecimalOperations::DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh,
-        divisorScaleFactor, actualQuotient, actualRemainder);
+    OpStatus status = DecimalOperations::DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow,
+        divisorHigh, divisorScaleFactor, actualQuotient, actualRemainder);
+    if (status != SUCCESS) {
+        throw omniruntime::OmniException("OVERFLOW", "Decimal exceeds maximum value.");
+    }
     omniruntime::type::DecimalOperations::ThrowIfOverflows(actualQuotient);
     if (quotientIsNegative) {
         actualQuotient = Negate(actualQuotient);
@@ -255,7 +258,8 @@ TEST(Decimal128, divide_positive1)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(2);
     Decimal128 right = DecimalOperations::UnscaledDecimal(2);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     EXPECT_EQ(result.HighBits(), 0);
     EXPECT_EQ(result.LowBits(), 1);
 }
@@ -264,7 +268,8 @@ TEST(Decimal128, divide_positive2)
 {
     Decimal128 left(12, 2);
     Decimal128 right(0, 2);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     EXPECT_EQ(result.HighBits(), 6);
     EXPECT_EQ(result.LowBits(), 1);
 }
@@ -273,7 +278,8 @@ TEST(Decimal128, divide_positive3)
 {
     Decimal128 left(12, 3);
     Decimal128 right(0, 2);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     EXPECT_EQ(result.HighBits(), 6);
     EXPECT_EQ(result.LowBits(), 2);
 }
@@ -282,7 +288,8 @@ TEST(Decimal128, divide_dividend_smaller_than_divisor)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(78340625600);
     Decimal128 right = DecimalOperations::UnscaledDecimal(2729300525);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     Decimal128 expected(0, 29);
     EXPECT_EQ(result, expected);
 }
@@ -291,7 +298,8 @@ TEST(Decimal128, divide_positive_round_up)
 {
     Decimal128 left(12, 4);
     Decimal128 right(0, 3);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     EXPECT_EQ(result.HighBits(), 4);
     EXPECT_EQ(result.LowBits(), 1);
 }
@@ -300,7 +308,8 @@ TEST(Decimal128, divide_negative)
 {
     Decimal128 left(Decimal128::SIGN_LONG_MASK, 4);
     Decimal128 right(0, 2);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     Decimal128 expected(Decimal128::SIGN_LONG_MASK, 2);
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
@@ -310,7 +319,8 @@ TEST(Decimal128, divide_negative1)
 {
     Decimal128 left(Decimal128::SIGN_LONG_MASK, 4);
     Decimal128 right(Decimal128::SIGN_LONG_MASK, 2);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     Decimal128 expected(0, 2);
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
@@ -320,7 +330,8 @@ TEST(Decimal128, divide_negative2)
 {
     Decimal128 left(0, 4);
     Decimal128 right(Decimal128::SIGN_LONG_MASK, 2);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     Decimal128 expected(Decimal128::SIGN_LONG_MASK, 2);
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
@@ -330,7 +341,8 @@ TEST(Decimal128, divide_negative_round_up)
 {
     Decimal128 left(0, 4);
     Decimal128 right(Decimal128::SIGN_LONG_MASK, 3);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 0, 0, result);
     Decimal128 expected(Decimal128::SIGN_LONG_MASK, 1);
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
@@ -340,7 +352,8 @@ TEST(Decimal128, positive_dividend_positive_divisor_and_with_scale_factor)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(124861912500);
     Decimal128 right = DecimalOperations::UnscaledDecimal(1652201977500);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 16, 0, result);
     Decimal128 expected(0, 755730317481720);
     EXPECT_EQ(result, expected);
 }
@@ -349,7 +362,8 @@ TEST(Decimal128, negative_dividend_positive_divisor_and_with_scale_factor)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(-124861912500);
     Decimal128 right = DecimalOperations::UnscaledDecimal(1652201977500);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 16, 0, result);
     Decimal128 expected((int64_t)9223372036854775808U, 755730317481720);
     EXPECT_EQ(result, expected);
 }
@@ -358,7 +372,8 @@ TEST(Decimal128, negative_dividend_negative_divisor_and_with_scale_factor)
 {
     Decimal128 left = DecimalOperations::UnscaledDecimal(-124861912500);
     Decimal128 right = DecimalOperations::UnscaledDecimal(-1652201977500);
-    auto result = DecimalOperations::DivideRoundUp(left, right, 16, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(left, right, 16, 0, result);
     Decimal128 expected(0, 755730317481720);
     EXPECT_EQ(result, expected);
 }
@@ -457,7 +472,8 @@ TEST(Decimal128, div_roundup)
     Decimal128 rValue(0x0, 0x13ba38720);
 
     Decimal128 expectValue(0x0, 4453370194541067);
-    Decimal128 result = DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0, result);
     EXPECT_EQ(result, expectValue);
 }
 
@@ -467,7 +483,8 @@ TEST(Decimal128, div_roundup_2)
     Decimal128 rValue(0x0000000000000000, 0x0000010473b0c563);
 
     Decimal128 expectValue(0x0, 3397145127548828);
-    Decimal128 result = DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(lValue, rValue, 0, 0, result);
     EXPECT_EQ(result, expectValue);
 }
 
@@ -939,13 +956,15 @@ TEST(Decimal128, multiplyOverflow)
     Decimal128 lValue1(0x0, 0x5AF3107A3FFF);
     Decimal128 rValue1(0x8000000000108B2A, 0x161401484A000000);
     Decimal128 result1;
-    EXPECT_THROW(DecimalOperations::Multiply(lValue1, rValue1, result1), std::exception);
+    OpStatus status = DecimalOperations::Multiply(lValue1, rValue1, result1);
+    EXPECT_EQ(status, OP_OVERFLOW);
 
     // MAX_DECIMAL * 10
     Decimal128 lValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
     Decimal128 rValue2(0x0, 0xA);
     Decimal128 result2;
-    EXPECT_THROW(DecimalOperations::Multiply(lValue2, rValue2, result2), std::exception);
+    status = DecimalOperations::Multiply(lValue1, rValue1, result1);
+    EXPECT_EQ(status, OP_OVERFLOW);
 }
 
 TEST(Decimal128, shiftLeftMultiPrecision)

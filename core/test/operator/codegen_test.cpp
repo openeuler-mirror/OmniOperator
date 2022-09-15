@@ -1399,8 +1399,8 @@ TEST(CodeGenTest, DateCast)
     std::vector<Expr *> args;
     args.push_back(col2);
     DataTypePtr retType = IntType();
-    auto cast = GetFuncExpr(funcStr, args, IntType());
-    auto col0 = new FieldExpr(0, IntType());
+    auto cast = GetFuncExpr(funcStr, args, Date32Type());
+    auto col0 = new FieldExpr(0, Date32Type());
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, cast, col0, BooleanType());
 
     ExprPrinter printExprTree;

@@ -8,6 +8,7 @@
 
 
 #include <cstdint>
+#include <regex>
 #include <iostream>
 #include <climits>
 #include <huawei_secure_c/include/securec.h>
@@ -18,55 +19,98 @@
 
 namespace omniruntime {
 namespace type {
+enum OpStatus {
+    SUCCESS = 0,
+    OP_OVERFLOW = 1,
+    DIVIDE_BY_ZERO = 2,
+    FAIL = 3
+};
+
 static constexpr int64_t LONG_MIN_VALUE = 0x8000'0000'0000'0000;
 static constexpr int64_t LONG_MAX_VALUE = 0x7FFF'FFFF'FFFF'FFFF;
 static constexpr int64_t ALL_BITS_SET_64 = 0xFFFF'FFFF'FFFF'FFFFLL;
 static const Decimal128 MIN_VALUE = { LLONG_MAX + 1, 0x0000'0000'0000'0000L };
 static const Decimal128 MAX_VALUE = { 0x7FFF'FFFF'FFFF'FFFFL, 0xFFFF'FFFF'FFFF'FFFFLL };
 static constexpr int64_t INT_BASE = 1L << 32;
+static constexpr int MAX_PRECISION = 38;
+static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 static std::array<int64_t, 14> POWERS_OF_FIVE_INT = { 1,
-                                                      5,
-                                                      5 * 5,
-                                                      5 * 5 * 5,
-                                                      5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                      5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 };
+    5,
+    5 * 5,
+    5 * 5 * 5,
+    5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 };
 static std::array<int64_t, 28> POWERS_OF_FIVE_LONG = { 1,
-                                                       5,
-                                                       5 * 5,
-                                                       5 * 5 * 5,
-                                                       5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-                                                       5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L *
-    5L };
+    5,
+    5 * 5,
+    5 * 5 * 5,
+    5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
+    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L *
+        5L };
+
+static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
+    1,                     // 0 / 10^0
+    10,                    // 1 / 10^1
+    100,                   // 2 / 10^2
+    1000,                  // 3 / 10^3
+    10000,                 // 4 / 10^4
+    100000,                // 5 / 10^5
+    1000000,               // 6 / 10^6
+    10000000,              // 7 / 10^7
+    100000000,             // 8 / 10^8
+    1000000000,            // 9 / 10^9
+    10000000000L,          // 10 / 10^10
+    100000000000L,         // 11 / 10^11
+    1000000000000L,        // 12 / 10^12
+    10000000000000L,       // 13 / 10^13
+    100000000000000L,      // 14 / 10^14
+    1000000000000000L,     // 15 / 10^15
+    10000000000000000L,    // 16 / 10^16
+    100000000000000000L,   // 17 / 10^17
+    1000000000000000000L   // 18 / 10^18
+};
+
+static std::array<__int128_t, MAX_PRECISION> GetPowersOfTen()
+{
+    std::array<__int128_t, MAX_PRECISION> powersOfTen;
+    powersOfTen[0] = 1;
+    for (int i = 1; i < MAX_PRECISION; ++i) {
+        powersOfTen[i] = powersOfTen[i - 1] * 10;
+    }
+    return powersOfTen;
+}
+
+static std::array<__int128_t, MAX_PRECISION> POWERS_OF_TEN = GetPowersOfTen();
 
 class DecimalOperations {
 public:
@@ -111,11 +155,6 @@ public:
         throw OmniException("DIVIDE ZERO", "Decimal divide zero");
     }
 
-    static inline void ThrowOverflow()
-    {
-        throw OmniException("OVERFLOW", "Decimal overflow");
-    }
-
     static inline void ThrowIllegalState()
     {
         throw OmniException("ILLEGAL STATE", "Decimal illegal state");
@@ -152,6 +191,22 @@ public:
         return overflow;
     }
 
+    static inline int64_t Pow64TenToScale(int64_t x, int32_t reScale)
+    {
+        if (reScale > 0) {
+            while (reScale > 0) {
+                reScale--;
+                x *= 10;
+            }
+        } else if (reScale < 0) {
+            while (reScale < 0) {
+                reScale++;
+                x /= 10;
+            }
+        }
+        return x;
+    }
+
     static inline int64_t GetLong(Decimal128 &decimal, int32_t index)
     {
         return index ? UnpackUnsignedLong(decimal.HighBits()) : decimal.LowBits();
@@ -170,12 +225,14 @@ public:
         int32_t overflow = UnsignedIsSmaller(z0, l0) ? 1 : 0;
         int64_t intermediateResult = l1 + r1 + overflow;
         int64_t z1 = intermediateResult & (~Decimal128::SIGN_LONG_MASK);
-        Pack(result, z0, z1, resultNegative);
-
+        if (Pack(result, z0, z1, resultNegative) != SUCCESS) {
+            return OP_OVERFLOW;
+        }
         return (uint64_t)intermediateResult >> 63;
     }
 
-    static inline void SubtractUnsigned(Decimal128 &left, Decimal128 &right, Decimal128 &result, bool resultNegative)
+    static inline OpStatus SubtractUnsigned(Decimal128 &left, Decimal128 &right,
+        Decimal128 &result, bool resultNegative)
     {
         int64_t l0 = left.LowBits();
         int64_t l1 = UnpackUnsignedLong(left.HighBits());
@@ -186,14 +243,14 @@ public:
         int64_t z0 = l0 - r0;
         int32_t underflow = UnsignedIsSmaller(l0, z0) ? 1 : 0;
         int64_t z1 = l1 - r1 - underflow;
-        Pack(result, z0, z1, resultNegative);
+        return Pack(result, z0, z1, resultNegative);
     }
 
-    static inline void Subtract(Decimal128 &left, Decimal128 &right, Decimal128 &result)
+    static inline OpStatus Subtract(Decimal128 &left, Decimal128 &right, Decimal128 &result)
     {
         if (IsNegative(left) != IsNegative(right)) {
             if (AddUnsignedReturnOverflow(left, right, result, IsNegative(left)) != 0) {
-                ThrowOverflow();
+                return OP_OVERFLOW;
             }
         } else {
             int compare = CompareAbsolute(left, right);
@@ -205,9 +262,10 @@ public:
                 SetToZero(result);
             }
         }
+        return SUCCESS;
     }
 
-    static inline void Multiply(Decimal128 &left, Decimal128 &right, Decimal128 &result)
+    static inline OpStatus Multiply(Decimal128 &left, Decimal128 &right, Decimal128 &result)
     {
         __int128_t l0 = left.LowBits();
         __int128_t l1 = UnpackUnsignedLong(left.HighBits());
@@ -226,7 +284,7 @@ public:
             z1 = accumulator & Decimal128::LOW_64_BITS;
 
             if (((__uint128_t)accumulator >> 64) != 0) {
-                ThrowOverflow();
+                return OP_OVERFLOW;
             }
         }
 
@@ -235,10 +293,45 @@ public:
             z1 = accumulator & Decimal128::LOW_64_BITS;
 
             if (((__uint128_t)accumulator >> 64) != 0) {
-                ThrowOverflow();
+                return OP_OVERFLOW;
             }
         }
-        Pack(result, (int64_t)z0, (int64_t)z1, IsNegative(left) != IsNegative(right));
+        return Pack(result, (int64_t)z0, (int64_t)z1, IsNegative(left) != IsNegative(right));
+    }
+
+    static inline OpStatus Multiply256(Decimal128 &left, Decimal128 &right, Decimal128 &result,
+        int32_t reScale)
+    {
+        bool leftNegative = left.HighBits() < 0;
+        bool rightNegative = right.HighBits() < 0;
+        int64_t leftLow = left.LowBits();
+        int64_t leftRight = left.HighBits();
+
+
+        std::vector<int32_t> resultInts = MultiplyUnsignedMultiPrecision(left, right);
+        Decimal128 tenToScale = TenToScale(reScale);
+
+        std::vector<int32_t> tenToScaleVector(8);
+        tenToScaleVector[0] = LowInt(tenToScale.LowBits());
+        tenToScaleVector[1] = HighInt(tenToScale.LowBits());
+        tenToScaleVector[2] = LowInt(tenToScale.HighBits());
+        tenToScaleVector[3] = HighInt(tenToScale.HighBits());
+        DivideUnsignedMultiPrecision(tenToScaleVector, static_cast<int32_t>(tenToScaleVector.size()), 2);
+        AddUnsignedMultiPrecision(resultInts, 7, tenToScaleVector, 7);
+        Decimal128 remainder(0);
+        while (tenToScale.LowBits() != 0) {
+            Decimal128 divisor(10000);
+            Divide(tenToScale, divisor, 0, 0, tenToScale, remainder);
+            if (remainder.LowBits() == 0) {
+                DivideUnsignedMultiPrecision(resultInts, static_cast<int32_t>(resultInts.size()), 10000);
+            } else {
+                DivideUnsignedMultiPrecision(resultInts, static_cast<int32_t>(resultInts.size()), remainder.LowBits());
+            }
+        }
+        OpStatus status = Pack(resultInts, result);
+        result.SetValue(leftNegative ^ rightNegative ? result.HighBits() ^ 1L << 63 : result.HighBits(),
+            result.LowBits());
+        return status;
     }
 
     /* *
@@ -280,7 +373,7 @@ public:
         left[4] = (int32_t)z4;
     }
 
-    static inline void Multiply256(Decimal128 &left, Decimal128 &right)
+    static inline std::vector<int32_t> MultiplyUnsignedMultiPrecision(Decimal128 &left, Decimal128 &right)
     {
         int64_t leftLow = left.LowBits();
         int64_t leftRight = left.HighBits();
@@ -351,7 +444,13 @@ public:
 
         std::vector<int32_t> resultInts = { (int32_t)z0, (int32_t)z1, (int32_t)z2, (int32_t)z3,
             (int32_t)z4, (int32_t)z5, (int32_t)z6, (int32_t)z7 };
-        Pack(resultInts, right);
+        return resultInts;
+    }
+
+    static inline OpStatus Multiply256(Decimal128 &left, Decimal128 &right)
+    {
+        std::vector<int32_t> resultInts = MultiplyUnsignedMultiPrecision(left, right);
+        return Pack(resultInts, right);
     }
 
     static inline void SetToZero(Decimal128 &decimal128)
@@ -395,26 +494,30 @@ public:
         array[3] = HighInt(highBits);
     }
 
-    static inline void Pack(Decimal128 &decimal128, int64_t low, int64_t high, bool negative)
+    static inline OpStatus Pack(Decimal128 &decimal128, int64_t low, int64_t high, bool negative)
     {
         decimal128.SetValue(high | (negative ? Decimal128::SIGN_LONG_MASK : 0), low);
-        ThrowIfOverflows(decimal128);
+        if (ExceedsOrEqualTenToThirtyEight(decimal128)) {
+            return OP_OVERFLOW;
+        }
+        return SUCCESS;
     }
 
-    static inline void Pack(std::vector<int32_t> &parts, Decimal128 &result)
+    static inline OpStatus Pack(std::vector<int32_t> &parts, Decimal128 &result)
     {
         if (parts[4] != 0 || parts[5] != 0 || parts[6] != 0 || parts[7] != 0) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
 
         if (parts[3] < 0) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
 
         int64_t high = (((int64_t)parts[3]) << 32 | (parts[2] & 0xFFFF'FFFFL));
         int64_t low = (((int64_t)parts[1]) << 32 | (parts[0] & 0xFFFF'FFFFL));
 
         result.SetValue(high, low);
+        return SUCCESS;
     }
 
     static inline bool UnsignedIsSmaller(int64_t first, int64_t second)
@@ -462,7 +565,7 @@ public:
     static inline int64_t NegateHigh(int64_t high, int64_t low)
     {
         return high < 0 ? (high & ~Decimal128::SIGN_LONG_MASK) :
-                          high == 0 ? Decimal128::SIGN_LONG_MASK : high | Decimal128::SIGN_LONG_MASK;
+            high == 0 ? Decimal128::SIGN_LONG_MASK : high | Decimal128::SIGN_LONG_MASK;
     }
 
     static inline int64_t NegateLow(int64_t high, int64_t low)
@@ -470,12 +573,13 @@ public:
         return -low;
     }
 
-    static inline int64_t NegateHighExact(int64_t high, int64_t low)
+    static inline int64_t NegateHighExact(int64_t high, int64_t low, int64_t &result)
     {
         if (high == MIN_VALUE.HighBits() && low == MIN_VALUE.LowBits()) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
-        return NegateHigh(high, low);
+        result = NegateHigh(high, low);
+        return SUCCESS;
     }
 
     static inline int64_t NegateLowExact(int64_t high, int64_t low)
@@ -492,8 +596,9 @@ public:
 
     static inline Decimal128 NegateExact(Decimal128 &value)
     {
-        Decimal128 result(NegateHighExact(value.HighBits(), value.LowBits()), value.LowBits());
-        return result;
+        int64_t negateHigh;
+        NegateHighExact(value.HighBits(), value.LowBits(), negateHigh);
+        return Decimal128(negateHigh, value.LowBits());
     }
 
     static inline int32_t LowInt(int64_t val)
@@ -770,7 +875,6 @@ public:
     {
         int32_t divisorLength = DigitsIntegerBase(divisor);
         int32_t dividendLength = DigitsIntegerBase(dividend);
-
         if (dividendLength < divisorLength) {
             return;
         }
@@ -796,15 +900,15 @@ public:
         ShiftRightMultiPrecision(dividend, normalizedDividendLength, nlz);
     }
 
-    static inline void Divide(Decimal128 dividend, Decimal128 divisor, int32_t dividendScaleFactor,
+    static inline OpStatus Divide(Decimal128 dividend, Decimal128 divisor, int32_t dividendScaleFactor,
         int32_t divisorScaleFactor, Decimal128 &quotient, Decimal128 &remainder)
     {
         if (dividendScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
 
         if (divisorScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
 
         int64_t dividendHigh = dividend.HighBits();
@@ -826,23 +930,27 @@ public:
             divisorHigh = tmpHigh;
         }
 
-        DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh, divisorScaleFactor,
-            quotient, remainder);
+        OpStatus status = DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh,
+            divisorScaleFactor, quotient, remainder);
+        if (status != SUCCESS) {
+            return status;
+        }
         if (dividendIsNegative) {
             Negate(remainder, 0);
         }
         if (quotientIsNegative) {
             Negate(quotient, 0);
         }
+        return SUCCESS;
     }
 
     // not support dividend's precision is greater than 27. All input long should be positive.
-    static inline void DividePositives(int64_t dividendLow, int64_t dividendHigh, int32_t dividendScaleFactor,
+    static inline OpStatus DividePositives(int64_t dividendLow, int64_t dividendHigh, int32_t dividendScaleFactor,
         int64_t divisorLow, int64_t divisorHigh, int32_t divisorScaleFactor, Decimal128 &quotient,
         Decimal128 &remainder)
     {
         if (divisorHigh == 0 && divisorLow == 0) {
-            ThrowDivideZero();
+            return DIVIDE_BY_ZERO;
         }
 
         // to fit 128b * 128b * 32b unsigned multiplication
@@ -855,9 +963,12 @@ public:
         if (dividendScaleFactor > 0) {
             Decimal128 left = UnscaledDecimal(POWERS_OF_FIVE_LONG[dividendScaleFactor]);
             Decimal128 right;
-            Pack(dividend, right);
-            Multiply256(left, right);
-            ToIntArray(right, dividend);
+            if (Pack(dividend, right) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            dividend = MultiplyUnsignedMultiPrecision(left, right);
+            dividend.push_back(0);
+
             ShiftLeftMultiPrecision(dividend, 8, dividendScaleFactor);
         }
 
@@ -870,8 +981,12 @@ public:
         if (divisorScaleFactor > 0) {
             Decimal128 left = UnscaledDecimal(POWERS_OF_FIVE_LONG[divisorScaleFactor]);
             Decimal128 right;
-            Pack(divisor, right);
-            Multiply256(left, right);
+            if (Pack(divisor, right) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            if (Multiply256(left, right) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
             ToIntArray(right, divisor);
             ShiftLeftMultiPrecision(divisor, 8, divisorScaleFactor);
         }
@@ -879,19 +994,24 @@ public:
         std::vector<int32_t> multiPrecisionQuotient(8);
         DivideUnsignedMultiPrecision(dividend, divisor, multiPrecisionQuotient);
         // two positive do division if quotient is negative throw exception
-        Pack(multiPrecisionQuotient, quotient);
-        Pack(dividend, remainder);
+        if (Pack(multiPrecisionQuotient, quotient) != SUCCESS) {
+            return OP_OVERFLOW;
+        }
+        if (Pack(dividend, remainder) != SUCCESS) {
+            return OP_OVERFLOW;
+        }
+        return SUCCESS;
     }
 
-    static inline Decimal128 DivideRoundUp(Decimal128 &dividend, Decimal128 &divisor, int32_t dividendScaleFactor,
-        int32_t divisorScaleFactor)
+    static inline OpStatus DivideRoundUp(Decimal128 &dividend, Decimal128 &divisor, int32_t dividendScaleFactor,
+        int32_t divisorScaleFactor, Decimal128 &quotient)
     {
         if (dividendScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
 
         if (divisorScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
-            ThrowOverflow();
+            return OP_OVERFLOW;
         }
 
         int64_t dividendHigh = dividend.HighBits();
@@ -913,40 +1033,46 @@ public:
             divisorHigh = tmpHigh;
         }
 
-        Decimal128 quotient;
         Decimal128 remainder;
-        DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh, divisorScaleFactor,
-            quotient, remainder);
+        OpStatus status = DividePositives(dividendLow, dividendHigh, dividendScaleFactor, divisorLow, divisorHigh,
+            divisorScaleFactor, quotient, remainder);
+        if (status != SUCCESS) {
+            return status;
+        }
 
         // Round up. If (2 * remainder >= divisor) increment quotient by one
-        ShiftLeftDestructive(remainder, 1);
+        status = ShiftLeftDestructive(remainder, 1);
+        if (status != SUCCESS) {
+            return status;
+        }
         int64_t remainderLow = remainder.LowBits();
         int64_t remainderHigh = remainder.HighBits();
         if (CompareUnsigned(remainderLow, remainderHigh, divisorLow, divisorHigh) >= 0) {
             IncrementUnsafe(quotient, 0);
-            ThrowIfOverflows(quotient);
+            if (ExceedsOrEqualTenToThirtyEight(quotient)) {
+                return OP_OVERFLOW;
+            }
         }
 
         if (quotientIsNegative) {
             Negate(quotient, 0);
         }
 
-        return quotient;
+        return SUCCESS;
     }
 
-    static inline Decimal128 Remainder(Decimal128 &dividend, int32_t dividendScaleFactor, Decimal128 &divisor,
-        int32_t divisorScaleFactor)
+    static inline OpStatus Remainder(Decimal128 &dividend, int32_t dividendScaleFactor, Decimal128 &divisor,
+        int32_t divisorScaleFactor, Decimal128 &remainder)
     {
         Decimal128 quotient;
-        Decimal128 remainder;
-        Divide(dividend, divisor, dividendScaleFactor, divisorScaleFactor, quotient, remainder);
-        return remainder;
+        OpStatus status = Divide(dividend, divisor, dividendScaleFactor, divisorScaleFactor, quotient, remainder);
+        return status;
     }
 
-    static inline void ShiftLeftDestructive(Decimal128 &decimal, int32_t shift)
+    static inline OpStatus ShiftLeftDestructive(Decimal128 &decimal, int32_t shift)
     {
         if (shift == 0) {
-            return;
+            return SUCCESS;
         }
 
         int32_t wordShifts = shift / 64;
@@ -955,12 +1081,12 @@ public:
 
         if (bitShiftsInWord != 0) {
             if ((GetLong(decimal, 1 - wordShifts) & (-1LL << shiftRestore)) != 0) {
-                ThrowOverflow();
+                return OP_OVERFLOW;
             }
         }
         if (wordShifts == 1) {
             if (GetLong(decimal, 1) != 0) {
-                ThrowOverflow();
+                return OP_OVERFLOW;
             }
         }
 
@@ -987,7 +1113,7 @@ public:
             high = (high << bitShiftsInWord) | ((uint64_t)low >> shiftRestore);
             low = low << bitShiftsInWord;
         }
-        Pack(decimal, low, high, negative);
+        return Pack(decimal, low, high, negative);
     }
 
     static inline void IncrementUnsafe(Decimal128 &value, int32_t offset)
@@ -1030,46 +1156,492 @@ public:
         return resultScale - dividendScale + divisorScale;
     }
 
-    static inline void Rescale128(Decimal128 &decimal, int32_t rescaleFactor, Decimal128 &result)
+    static inline OpStatus IsOverflows(Decimal128 value, int precision)
+    {
+        if (precision == MAX_PRECISION) {
+            if (ExceedsOrEqualTenToThirtyEight(value)) {
+                return OP_OVERFLOW;
+            }
+            return SUCCESS;
+        }
+        int64_t high = value.HighBits();
+        __int128_t t = high < 0 ? high ^ (1L << 63) : high;
+        t = t << 64;
+        t = t + value.LowBits();
+        if (precision > MAX_PRECISION || t >= POWERS_OF_TEN[precision]) {
+            return OP_OVERFLOW;
+        }
+        return SUCCESS;
+    }
+
+    static inline OpStatus IsOverflows(int64_t value, int precision)
+    {
+        if (precision > 19 || abs(value) >= POWERS_OF_TEN[precision]) {
+            return OP_OVERFLOW;
+        }
+        return SUCCESS;
+    }
+
+    static inline OpStatus Rescale128(Decimal128 &decimal, int32_t rescaleFactor, Decimal128 &result)
     {
         if (rescaleFactor == 0) {
             result = decimal;
-            return;
+            return SUCCESS;
         }
-        Decimal128 scaleValue;
-        scaleValue.SetValue(0, int64_t(pow(10, abs(rescaleFactor))));
+        Decimal128 scaleValue = TenToScale(abs(rescaleFactor));
+        OpStatus status;
         if (rescaleFactor >= 0) {
-            DecimalOperations::Multiply(decimal, scaleValue, result);
+            status = DecimalOperations::Multiply(decimal, scaleValue, result);
         } else {
-            result = DecimalOperations::DivideRoundUp(decimal, scaleValue, 0, 0);
+            status = DecimalOperations::DivideRoundUp(decimal, scaleValue, 0, 0, result);
         }
+
+        if (status != SUCCESS) {
+            return OP_OVERFLOW;
+        }
+        return SUCCESS;
     }
 
-    static inline int64_t Rescale64(int64_t value, int32_t rescaleFactor)
+    static inline OpStatus Rescale128RoundToZero(Decimal128 &decimal, int32_t rescaleFactor, Decimal128 &result)
     {
         if (rescaleFactor == 0) {
-            return value;
+            result = decimal;
+            return SUCCESS;
         }
-        return value * pow(10, rescaleFactor);
+        Decimal128 scaleValue = TenToScale(abs(rescaleFactor));
+        OpStatus status;
+        if (rescaleFactor > 0) {
+            status = DecimalOperations::Multiply(decimal, scaleValue, result);
+        } else {
+            Decimal128 remainder;
+            status = DecimalOperations::Divide(decimal, scaleValue, 0, 0, result, remainder);
+        }
+        if (status != SUCCESS) {
+            return OP_OVERFLOW;
+        }
+        return SUCCESS;
+    }
+
+    static inline OpStatus Rescale64(int64_t value, int32_t rescaleFactor, int64_t &result)
+    {
+        if (rescaleFactor == 0) {
+            result = value;
+            return SUCCESS;
+        }
+        if (rescaleFactor < 0) {
+            if (value < 0) {
+                value = value - pow(10, -rescaleFactor) / 2;
+            } else {
+                value = value + pow(10, -rescaleFactor) / 2;
+            }
+        }
+        result = Pow64TenToScale(value, rescaleFactor);
+        if (((value | static_cast<int64_t>(pow(10, rescaleFactor))) >> 31 != 0)) {
+            if ((result / value != static_cast<int64_t>(pow(10, rescaleFactor)))) {
+                return OP_OVERFLOW;
+            }
+        }
+        return SUCCESS;
+    }
+
+    static inline OpStatus Rescale64RoundToZero(int64_t value, int32_t rescaleFactor, int64_t &result)
+    {
+        if (rescaleFactor == 0 || value == 0) {
+            result = value;
+            return SUCCESS;
+        }
+
+        if (rescaleFactor > MAX_DECIMAL64_DIGITS || rescaleFactor < -MAX_DECIMAL64_DIGITS) {
+            return OP_OVERFLOW;
+        }
+
+        if (rescaleFactor < 0) {
+            int64_t p = INT64_TEN_POWERS_TABLE[-rescaleFactor];
+            result = value / p;
+            return SUCCESS;
+        } else {
+            int64_t p = INT64_TEN_POWERS_TABLE[rescaleFactor];
+            if (LONG_MAX_VALUE / value < p) {
+                return OP_OVERFLOW;
+            }
+            result = value * p;
+            return SUCCESS;
+        }
     }
 
     // TODO this function is not able to handle scale factor >= 18
-    static inline void Rescale64To128(int64_t value, int32_t rescaleFactor, Decimal128 &result)
+    static inline OpStatus Rescale64To128(int64_t value, int32_t rescaleFactor, Decimal128 &result)
     {
-        Decimal128 decimal;
-        Decimal128 scaleValue;
-        scaleValue.SetValue(0, int64_t(pow(10, abs(rescaleFactor))));
-        if (value >= 0) {
-            decimal.SetValue(0, value);
-        } else {
-            decimal.SetValue(1L << 63, -value);
-        }
-        if (rescaleFactor >= 0) {
-            DecimalOperations::Multiply(decimal, scaleValue, result);
-        } else {
-            result = DecimalOperations::DivideRoundUp(decimal, scaleValue, 0, 0);
-        }
+        Decimal128 input(value);
+        return Rescale128(input, rescaleFactor, result);
     }
+
+    static inline OpStatus Rescale128To64(Decimal128 input, int32_t rescaleFactor, int64_t &result)
+    {
+        if (Rescale128(input, rescaleFactor, input) != SUCCESS) {
+            return OP_OVERFLOW;
+        }
+        if ((input.HighBits() != 0 && input.HighBits() != 1L << 63) || input.LowBits() > INT64_MAX) {
+            return OP_OVERFLOW;
+        }
+        result = input.HighBits() < 0 ? -input.LowBits() : input.LowBits();
+        return SUCCESS;
+    }
+
+    static inline OpStatus UnscaledDecimal128ToLong(Decimal128 decimal, int64_t &result)
+    {
+        uint64_t low = decimal.LowBits();
+        int64_t high = decimal.HighBits();
+        bool negative = false;
+        if (high < 0) {
+            negative = true;
+        }
+        if ((high != 0 && high != 1L << 63) || low > INT64_MAX) {
+            return OP_OVERFLOW;
+        }
+        result = negative ? -low : low;
+        return SUCCESS;
+    }
+
+    static inline OpStatus ToIntExact(long value, int &result)
+    {
+        if ((int)value != value) {
+            return OP_OVERFLOW;
+        }
+        result = (int)value;
+        return SUCCESS;
+    }
+
+    static inline OpStatus StringToDecimal64(const std::string &s, int64_t &rs, int32_t &scale, int32_t &precision)
+    {
+
+        bool isDot = false;
+        bool isNeg = false;
+        bool isExp = false;
+        bool isSpace = false;
+        int32_t exponent = 0;
+        uint64_t len = s.size();
+        int offset = 0;
+        while (s[offset] == ' ') {
+            offset += 1;
+        }
+        if (s[0] == '-') {
+            isNeg = true;
+            offset++;
+        } else if (s[0] == '+') {
+            offset++;
+        }
+        if (!isdigit(s[offset])) {
+            return FAIL;
+        }
+        for (; offset < len; offset++) {
+            if (isdigit(s[offset])) {
+                long tmpValue = 0;
+                bool status = __builtin_smull_overflow(rs, 10, &tmpValue);
+                if (status) {
+                    return OP_OVERFLOW;
+                }
+                status = __builtin_saddl_overflow(tmpValue, int(s[offset]) - 48, &rs);
+                if (status) {
+                    return OP_OVERFLOW;
+                }
+                precision++;
+                if (precision > 18) {
+                    return OP_OVERFLOW;
+                }
+                if (isDot) {
+                    scale++;
+                }
+            } else if (s[offset] == '.' && !isDot) {
+                isDot = true;
+            } else if (s[offset] == 'e' || s[offset] == 'E') {
+                offset++;
+                isExp = true;
+                break;
+            } else if (s[offset] == ' ') {
+                offset++;
+                isSpace = true;
+                break;
+            } else {
+                return FAIL;
+            }
+        }
+
+        if (isExp) {
+            for (; offset < len; offset++) {
+                if (isdigit(s[offset])) {
+                    exponent *= 10;
+                    exponent += int(s[offset]) - 48;
+                    if (exponent + precision - scale > 18) {
+                        return OP_OVERFLOW;
+                    }
+                } else if (s[offset] == ' ') {
+                    isSpace = true;
+                    offset++;
+                    break;
+                } else {
+                    return FAIL;
+                }
+            }
+            if (exponent == 0) {
+                return FAIL;
+            }
+        }
+
+        if (isSpace) {
+            for (; offset < len; offset++) {
+                if (s[offset] != ' ') {
+                    return FAIL;
+                }
+            }
+        }
+
+        scale -= exponent;
+        while (scale < 0) {
+            rs *= 10;
+            scale++;
+            precision++;
+        }
+
+        if (isNeg) {
+            rs = -rs;
+        }
+        return SUCCESS;
+    }
+
+    static inline OpStatus StringToDecimal128(const std::string &s, Decimal128 &rs, int32_t &scale, int32_t &precision)
+    {
+        __int128_t result = 0;
+        bool isDot = false;
+        bool isNeg = false;
+        bool isExp = false;
+        bool isSpace = false;
+        int32_t exponent = 0;
+        uint64_t len = s.size();
+        int32_t offset = 0;
+        while (s[offset] == ' ') {
+            offset += 1;
+        }
+        if (s[0] == '-') {
+            isNeg = true;
+            offset++;
+        } else if (s[0] == '+') {
+            offset++;
+        }
+        if (!isdigit(s[offset])) {
+            return FAIL;
+        }
+        for (; offset < len; offset++) {
+            if (isdigit(s[offset])) {
+                precision++;
+                if (precision > 38) {
+                    return OP_OVERFLOW;
+                }
+                result *= 10;
+                result += int(s[offset]) - 48;
+                if (isDot) {
+                    scale++;
+                }
+            } else if (s[offset] == '.' && !isDot) {
+                isDot = true;
+            } else if (s[offset] == 'e' || s[offset] == 'E') {
+                offset++;
+                isExp = true;
+                break;
+            } else if (s[offset] == ' ') {
+                offset++;
+                isSpace = true;
+                break;
+            } else {
+                return FAIL;
+            }
+        }
+
+        if (isExp) {
+            for (; offset < len; offset++) {
+                if (isdigit(s[offset])) {
+                    exponent *= 10;
+                    exponent += int(s[offset]) - 48;
+                    if (exponent + precision - scale > 38) {
+                        return OP_OVERFLOW;
+                    }
+                } else if (s[offset] == ' ') {
+                    isSpace = true;
+                    offset++;
+                    break;
+                } else {
+                    return FAIL;
+                }
+            }
+            if (exponent == 0) {
+                return FAIL;
+            }
+        }
+
+        if (isSpace) {
+            for (; offset < len; offset++) {
+                if (s[offset] != ' ') {
+                    return FAIL;
+                }
+            }
+        }
+
+        scale -= exponent;
+        while (scale < 0) {
+            result *= 10;
+            scale++;
+            precision++;
+        }
+
+        if (isNeg) {
+            result = -result;
+        }
+        rs = Decimal128(result);
+        return SUCCESS;
+    }
+
+    static inline std::string ScaleOfDecimal(std::string inputString, int scale)
+    {
+        std::string unscaledValueString = std::move(inputString);
+        std::string resultBuilder;
+        if (unscaledValueString[0] == '-') {
+            resultBuilder.append("-");
+            unscaledValueString = unscaledValueString.substr(1);
+        }
+
+        if (unscaledValueString.length() <= scale) {
+            resultBuilder.append("0");
+        } else {
+            resultBuilder.append(unscaledValueString.substr(0, unscaledValueString.length() - scale));
+        }
+
+        if (scale > 0) {
+            resultBuilder.append(".");
+            if (unscaledValueString.length() < scale) {
+                for (int i = 0; i < scale - unscaledValueString.length(); ++i) {
+                    resultBuilder.append("0");
+                }
+                resultBuilder.append(unscaledValueString);
+            } else {
+                resultBuilder.append(unscaledValueString.substr(unscaledValueString.length() - scale));
+            }
+        }
+        return resultBuilder;
+    }
+
+    static inline Decimal128 TenToScale(int32_t scale)
+    {
+        Decimal128 x = DecimalOperations::UnscaledDecimal(10);
+        Decimal128 r = DecimalOperations::UnscaledDecimal(1);
+        while (scale > 0) {
+            scale--;
+            DecimalOperations::Multiply(x, r, r);
+        }
+        return r;
+    }
+
+    // Decimal Internal Operation
+    static inline OpStatus InternalAddDec128(Decimal128 x, int32_t xScale, Decimal128 y, int32_t yScale,
+        int32_t &resultScale, Decimal128 &r)
+    {
+        int32_t xRescaleFactor = RescaleFactor(xScale, yScale);
+        int32_t yRescaleFactor = RescaleFactor(yScale, xScale);
+
+        Decimal128 left;
+        Decimal128 right;
+        if (xRescaleFactor > 0) {
+            if (Rescale128(x, xRescaleFactor, left) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            right = y;
+            resultScale = yScale;
+        } else {
+            if (Rescale128(y, yRescaleFactor, left) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            right = x;
+            resultScale = xScale;
+        }
+        if (AddWithOverflow(left, right, left) != 0) {
+            return OP_OVERFLOW;
+        }
+        r = left;
+        return SUCCESS;
+    }
+
+    static inline OpStatus InternalSubDec128(Decimal128 x, int32_t xScale, Decimal128 y, int32_t yScale,
+        int32_t &resultScale, Decimal128 &r)
+    {
+        r.SetValue(0, 0);
+        int32_t xRescaleFactor = RescaleFactor(xScale, yScale);
+        int32_t yRescaleFactor = RescaleFactor(yScale, xScale);
+        if (xRescaleFactor > 0) {
+            if (Rescale128(x, xRescaleFactor, r) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            if (Subtract(r, y, r) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            resultScale = yScale;
+        } else {
+            if (Rescale128(y, yRescaleFactor, r) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            if (Subtract(x, r, r) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            resultScale = xScale;
+        }
+        return SUCCESS;
+    }
+
+    static inline OpStatus InternalDivDec128(Decimal128 x, int32_t xScale, Decimal128 y, int32_t yScale, Decimal128 &r,
+        int32_t outScale)
+    {
+        int32_t scaleFactor = DivideRescaleFactor(xScale, yScale, outScale);
+        OpStatus status = DivideRoundUp(x, y, scaleFactor, 0, r);
+        return status;
+    }
+
+    static inline OpStatus InternalModDec128(const Decimal128 &x, int32_t xScale, const Decimal128 &y, int32_t yScale,
+        int32_t &resultScale, Decimal128 &r)
+    {
+        int32_t xRescaleFactor = RescaleFactor(xScale, yScale);
+        int32_t yRescaleFactor = RescaleFactor(yScale, xScale);
+        Decimal128 dividend(x.HighBits(), x.LowBits());
+        Decimal128 divisor(y.HighBits(), y.LowBits());
+        if (xRescaleFactor > 0) {
+            if (Remainder(dividend, xRescaleFactor, divisor, 0, r) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            resultScale = yScale;
+        } else {
+            if (Remainder(dividend, 0, divisor, yRescaleFactor, r) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            resultScale = xScale;
+        }
+        return SUCCESS;
+    }
+
+    // check if unscaled value is overflow under the representation of Decimal(precision, scale)
+    static inline bool IsUnscaledLongOverflow(int64_t unscaled, int32_t precision, int32_t scale)
+    {
+        int64_t maxDecimal64 = INT64_TEN_POWERS_TABLE[MAX_DECIMAL64_DIGITS];
+        if (unscaled <= -maxDecimal64 || unscaled >= maxDecimal64) {
+            if (precision <= MAX_DECIMAL64_DIGITS) {
+                return true;
+            }
+            return false;
+        }
+
+        int64_t p = precision <= MAX_DECIMAL64_DIGITS ? INT64_TEN_POWERS_TABLE[precision] : pow(10, precision);
+        if (unscaled <= -p || unscaled >= p) {
+            return true;
+        }
+        return false;
+    }
+
 };
 }
 }

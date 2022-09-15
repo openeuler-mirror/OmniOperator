@@ -88,3 +88,18 @@ std::string FunctionSignature::ToString() const
     result = result + "_" + TypeUtil::TypeToString(this->retType);
     return result;
 }
+
+std::string FunctionSignature::ToString(omniruntime::op::OverflowConfig *overflowConfig) const
+{
+    auto result = this->funcName;
+    if (overflowConfig != nullptr &&
+        overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        result += "_null";
+    }
+    for (auto const &param: this->paramTypes) {
+        result += "_";
+        result += TypeUtil::TypeToString(param);
+    }
+    result = result + "_" + TypeUtil::TypeToString(this->retType);
+    return result;
+}

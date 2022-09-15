@@ -7,6 +7,7 @@
 #include "llvm_types.h"
 
 using namespace omniruntime::type;
+using namespace llvm;
 
 DecimalSplitValue DecimalIRBuilder::Split(llvm::Value *fullValue)
 {
@@ -29,15 +30,20 @@ llvm::Value *DecimalIRBuilder::ToInt128(llvm::Value *high, llvm::Value *low) con
 }
 
 llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, llvm::Type *retType,
-    const std::vector<llvm::Value *> &args, llvm::Value *executionContextPtr)
+    const std::vector<llvm::Value *> &args, llvm::Value *executionContextPtr,
+    omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
 {
     LLVMTypes llvmTypes(*context);
     std::vector<llvm::Value *> disassembledArgs;
 
     if (executionContextPtr != nullptr) {
-        disassembledArgs.push_back(executionContextPtr);
+        if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() ==
+            omniruntime::op::OVERFLOW_CONFIG_NULL) {
+            disassembledArgs.push_back(overflowNull);
+        } else {
+            disassembledArgs.push_back(executionContextPtr);
+        }
     }
-
     for (auto &arg : args) {
         if (arg->getType() == llvmTypes.I128Type()) {
             // split i128 arg into two int64s.

@@ -15,6 +15,7 @@ const std::string addDec128Str = "Add_decimal128";
 const std::string subDec128Str = "Sub_decimal128";
 const std::string mulDec128Str = "Mul_decimal128";
 const std::string divDec128Str = "Div_decimal128";
+const std::string modDec128Str = "Mod_decimal128";
 
 const std::string addDec64Str = "Add_decimal64";
 const std::string subDec64Str = "Sub_decimal64";

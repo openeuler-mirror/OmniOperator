@@ -12,6 +12,7 @@ using omniruntime::Function;
 
 vector<Function> FunctionRegistry::registeredFunctions = Initialize();
 FunctionMapPtr FunctionRegistry::functionRegistry;
+FunctionMapPtr FunctionRegistry::functionNullRegistry;
 
 vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries()
 {
@@ -35,6 +36,8 @@ std::vector<Function> FunctionRegistry::Initialize()
     std::vector<Function> allFunctions;
     functionRegistry =
         std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
+    functionNullRegistry =
+            std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
 
     auto registries = GetFunctionRegistries();
     for (auto const & registry : registries) {
@@ -47,6 +50,9 @@ std::vector<Function> FunctionRegistry::Initialize()
                 LogWarn("Trying to register functions with same signature: %s", signature.ToString().c_str());
             }
             functionRegistry->insert(std::make_pair(&signature, &function));
+            if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL) {
+                functionNullRegistry->insert(std::make_pair(&signature, &function));
+            }
         }
     }
 
@@ -63,6 +69,24 @@ const Function *FunctionRegistry::LookupFunction(FunctionSignature *signature)
         return nullptr;
     }
     return result->second;
+}
+
+bool FunctionRegistry::LookupNullFunction(FunctionSignature *signature)
+{
+    auto signatureNull = FunctionSignature(signature->GetName() + "_null", signature->GetParams(),
+        signature->GetReturnType(), signature->GetFunctionAddress());
+    auto result = functionNullRegistry->find(&signatureNull);
+    return result != functionNullRegistry->end();
+}
+
+// Some functions such as CastDecimal128ToStringRetNull(), it needs both contextPtr and overflowConfig as parameters.
+// The purpose of the below function is to find this functions.
+bool FunctionRegistry::IsNullExecutionContextSet(FunctionSignature *signature)
+{
+    auto signatureNull = FunctionSignature(signature->GetName() + "_null", signature->GetParams(),
+        signature->GetReturnType(), signature->GetFunctionAddress());
+    auto result = functionNullRegistry->find(&signatureNull);
+    return result->second->IsExecutionContextSet();
 }
 
 std::vector<Function> &FunctionRegistry::GetFunctions()
