@@ -79,17 +79,6 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDecimal128ToString), castFnStr, {},
             { OMNI_DECIMAL128 }, OMNI_VARCHAR, INPUT_DATA, true),
 
-        Function(reinterpret_cast<void *>(CastStringToInt), castFnStr, {},
-            { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastStringToLong), castFnStr, {},
-            { OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastStringToDouble), castFnStr, {},
-            { OMNI_VARCHAR }, OMNI_DOUBLE, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastStringToDecimal64), castFnStr, {},
-            { OMNI_VARCHAR }, OMNI_DECIMAL64, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastStringToDecimal128), castFnStr, {},
-            { OMNI_VARCHAR }, OMNI_DECIMAL128, INPUT_DATA, true),
-
         Function(reinterpret_cast<void *>(CastStringToDate), castFnStr, {},
             { OMNI_VARCHAR }, OMNI_DATE32, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStrWithDiffWidths), castFnStr, {},
