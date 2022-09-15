@@ -56,6 +56,35 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
         bufferedTblPagesIndex, filter, vecAllocator, overflowConfig);
 }
 
+int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPagesIndex,
+    DynamicPagesIndex *bufferedTblPagesIndex, JoinType joinType)
+{
+    switch (joinType) {
+        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_INNER: {
+            if (streamedTblPagesIndex->IsEmptyBatch() || bufferedTblPagesIndex->IsEmptyBatch()) {
+                return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+            }
+            break;
+        }
+        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_LEFT: {
+            if (streamedTblPagesIndex->IsEmptyBatch()) {
+                return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+            }
+            break;
+        }
+        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_FULL: {
+            if (streamedTblPagesIndex->IsEmptyBatch() && bufferedTblPagesIndex->IsEmptyBatch()) {
+                return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+            }
+            break;
+        }
+        default: {
+            LogError("Unsupported join type: %u.", joinType);
+        }
+    }
+    return -1;
+}
+
 int32_t SortMergeJoinOperator::GetJoinResult()
 {
     if (streamedTypes == nullptr) {
@@ -76,10 +105,10 @@ int32_t SortMergeJoinOperator::GetJoinResult()
         return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA);
     }
 
-    // one of join side no data
-    if ((streamedTblPagesIndex->GetPositionCount() == 0 && streamedTblPagesIndex->IsDataFinish()) ||
-        (bufferedTblPagesIndex->GetPositionCount() == 0 && bufferedTblPagesIndex->IsDataFinish())) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+    // check  SMJ_NO_RESULT situation
+    int32_t handResult = HandleSortMergeJoinNoResultSituation(streamedTblPagesIndex, bufferedTblPagesIndex, joinType);
+    if (handResult != -1) {
+        return handResult;
     }
 
     auto joinScannerRet = smjScanner->FindNextJoinRows();

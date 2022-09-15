@@ -12,11 +12,13 @@
 
 namespace omniruntime {
 namespace op {
+const int JOIN_NULL_FLAG = -1;
+
 enum class JoinTableCode {
-    NEED_SCAN = 0,
-    NEED_DATA = 1,
-    SCAN_FINISHED = 2,
-    INVALID = 3
+    NEED_SCAN = 0,     // Traversing status
+    NEED_DATA = 1,     // Adding data status
+    SCAN_FINISHED = 2, // Finished status
+    INVALID = 3        // Init status
 };
 
 enum class JoinResultCode {
@@ -72,6 +74,10 @@ public:
 private:
     void InnerJoin();
 
+    void LeftOuterJoin();
+
+    void FullOuterJoin();
+
     bool IsValidAddedStreamedData();
 
     bool IsValidAddedBufferedData();
@@ -82,21 +88,61 @@ private:
 
     bool AdvancedStreamedWithNullFreeJoinKey();
 
+    bool AdvancedStreamedJoinKey();
+
     bool AdvancedBufferedToRowWithNullFreeJoinKey();
 
+    bool AdvancedBufferedJoinKey();
+
     bool CurStreamedHasNull();
+
+    bool StreamedRowHasNull(int64_t valueAddress);
 
     bool CurBufferedHasNull();
 
     void RunInnerJoin();
 
+    void RunLeftOuterJoin();
+
+    void RunFullOuterJoin();
+
     bool FindMatchingRows();
+
+    bool LeftOuterFindJoinRows();
+
+    bool FullOuterFindJoinRows();
 
     void BufferMatchingRows();
 
+    void BufferMatchingRowsForFullOuter();
+
+    bool HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation();
+
+    void BufferMissingRows();
+
+    void StreamMissingRowsForCompareValue();
+
+    bool HandleFullOuterStreamedIsFinishedSituation();
+
+    bool HandleFullOuterBufferedIsFinishedSituation();
+
+    bool HandleFullOuterStreamedNullValue();
+
+    bool HandleFullOuterBufferedNullValue();
+
+    bool HandleFullOuterNeedBufferedData();
+
+    void StreamMissingRowsForStreamIsFinished();
+
+    void StreamMissingRowsForNullBuffered();
+
     void SavePrevMatchingRows(bool isMatched);
 
+    void FullOuterJoinSavePrevMatchingRows(bool isMatched);
+
     bool PreKeyMatched();
+
+    bool PreKeyMatchedWithNullValue();
 
     bool HasResult();
 
@@ -115,6 +161,11 @@ private:
 
     // for non-inner-join
     bool firstMatch;
+    bool curStreamRowMatchFlag = false;
+    bool curBufferRowMatchFlag = false;
+
+    int32_t latestCompareStat = -1;
+    int32_t preBufferedPagesIndexPosition = 0;
 
     int32_t streamedPagesIndexPosition;
     int32_t bufferedPagesIndexPosition;
