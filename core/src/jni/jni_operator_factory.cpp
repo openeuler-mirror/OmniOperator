@@ -992,8 +992,13 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
     jint jJoinType, jstring jFilter, jstring jOperatorConfig)
 {
-    if ((JoinType)jJoinType != JoinType::OMNI_JOIN_TYPE_INNER) {
-        return 0L;
+    switch ((JoinType)jJoinType) {
+        case JoinType::OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_LEFT:
+        case JoinType::OMNI_JOIN_TYPE_FULL:
+            break;
+        default:
+            return 0L;
     }
 
     auto streamedTypesChars = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);

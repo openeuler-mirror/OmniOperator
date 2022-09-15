@@ -24,6 +24,12 @@ public:
         DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator,
         OverflowConfig *overflowConfig);
 
+    void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
+        vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+
+    void ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId,
+        vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+
     int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
         std::vector<int64_t> &bufferedTableValueAddresses);
 

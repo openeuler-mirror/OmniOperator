@@ -110,8 +110,8 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
     this->bufferedOutputCols.insert(this->bufferedOutputCols.end(), bufferedOutputCols,
         bufferedOutputCols + bufferedOutputColsCnt);
 
-    streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes),
-        bufferedKeyCols, this->bufferedOutputCols);
+    streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes), bufferedKeyCols,
+        this->bufferedOutputCols);
     streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder(overflowConfig);
 }
 

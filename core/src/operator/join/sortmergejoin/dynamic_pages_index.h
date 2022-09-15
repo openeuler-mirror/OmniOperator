@@ -40,6 +40,11 @@ public:
         return this->finishAddData && (rowIndex >= this->positionCount - 1);
     }
 
+    bool IsEmptyBatch() const
+    {
+        return this->finishAddData && this->positionCount == 0;
+    }
+
     int64_t GetValueAddresses(int32_t rowIndex) const
     {
         if (rowIndex >= this->positionCount) {

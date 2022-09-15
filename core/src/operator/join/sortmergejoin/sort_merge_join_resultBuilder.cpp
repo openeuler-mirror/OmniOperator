@@ -6,6 +6,7 @@
 #include <memory>
 #include "expression/jsonparser/jsonparser.h"
 #include "operator/pages_index.h"
+#include "sort_merge_join_scanner.h"
 
 namespace omniruntime {
 namespace op {
@@ -128,6 +129,38 @@ void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outp
     }
 }
 
+bool IsNullFlagBatchAndRow(int32_t batchId, int32_t rowId)
+{
+    return batchId == JOIN_NULL_FLAG && rowId == JOIN_NULL_FLAG;
+}
+
+void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
+    vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount)
+{
+    for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+        if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
+            buildVectorBatch->GetVector(columnIdx)->SetValueNull(buildRowCount);
+        } else {
+            AddValueToBuildVector(leftTablePagesIndex->GetColumns(leftBatchId, leftTableOutputCols[columnIdx]),
+                leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+        }
+    }
+}
+
+void JoinResultBuilder::ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId,
+    vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount)
+{
+    for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+        int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+        if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
+            buildVectorBatch->GetVector(buildColumnIdx)->SetValueNull(buildRowCount);
+        } else {
+            AddValueToBuildVector(rightTablePagesIndex->GetColumns(rightBatchId, rightTableOutputCols[columnIdx]),
+                rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
+        }
+    }
+}
+
 int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
     std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses)
 {
@@ -155,18 +188,13 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatc
         int32_t rightBatchId = DecodeSliceIndex(rightAddress);
         int32_t rightRowId = DecodePosition(rightAddress);
 
-        FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+        if (!(leftBatchId == JOIN_NULL_FLAG || rightBatchId == JOIN_NULL_FLAG)) {
+            FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+        }
 
         if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-            for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-                AddValueToBuildVector(leftTablePagesIndex->GetColumns(leftBatchId, leftTableOutputCols[columnIdx]),
-                    leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
-            }
-            for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
-                int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-                AddValueToBuildVector(rightTablePagesIndex->GetColumns(rightBatchId, rightTableOutputCols[columnIdx]),
-                    rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
-            }
+            ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+            ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
             buildRowCount++;
             if (buildRowCount >= maxRowCount) {
                 isFillOneBatch = true;
@@ -241,16 +269,28 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
     int32_t lengths[allColsCount];
 
     for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes.GetSize(); leftColIdx++) {
-        auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
-        nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
-        values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
+        if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
+            nulls[leftColIdx] = true;
+            values[leftColIdx] = 0;
+            lengths[leftColIdx] = 0;
+        } else {
+            auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
+            nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
+            values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
+        }
     }
 
     for (int32_t rightColIdx = 0; rightColIdx < rightTableOutputTypes.GetSize(); rightColIdx++) {
         int32_t colIdx = leftTableOutputTypes.GetSize() + rightColIdx;
-        auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
-        nulls[colIdx] = rightVector->IsValueNull(rightRowId);
-        values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
+        if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
+            nulls[colIdx] = true;
+            values[colIdx] = 0;
+            lengths[colIdx] = 0;
+        } else {
+            auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
+            nulls[colIdx] = rightVector->IsValueNull(rightRowId);
+            values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
+        }
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
