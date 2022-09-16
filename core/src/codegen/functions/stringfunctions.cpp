@@ -228,8 +228,7 @@ extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int
 }
 
 extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    bool isNull,
-    int32_t *outLen)
+    bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -257,8 +256,7 @@ extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int
 }
 
 extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    bool isNull,
-    int32_t *outLen)
+    bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -440,8 +438,7 @@ extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value
 }
 
 extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
-    bool isNull,
-    int32_t *outLen)
+    bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
@@ -483,14 +480,8 @@ extern DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const cha
     if (isNull) {
         return nullptr;
     }
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    error_t res = memcpy_s(ret, *outLen, str, *outLen);
-    if (res != EOK) {
-        char message[] = "Replace failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
-        return nullptr;
-    }
-    return ret;
+    *outLen = std::min(strLen, *outLen);
+    return str;
 }
 
 // Cast string to numeric type
@@ -617,8 +608,7 @@ extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *s
 }
 
 extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t outPrecision,
-    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (isNull) {
         return;
@@ -950,11 +940,6 @@ extern DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *st
 extern DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *str,
     int32_t strLen, int32_t *outLen)
 {
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    error_t res = memcpy_s(ret, *outLen, str, *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        return nullptr;
-    }
-    return ret;
+    *outLen = std::min(strLen, *outLen);
+    return str;
 }

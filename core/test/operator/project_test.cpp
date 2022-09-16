@@ -3427,7 +3427,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
     op->AddInput(copy);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
-    VarcharVector *vcVec = ((VarcharVector *) ret[0]->GetVector(0));
+    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
@@ -3488,6 +3488,66 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
     DeleteOperatorFactory(factory);
     delete vecAllocator;
     delete overflowConfig;
+}
+
+TEST(ProjectionTest, ProjectCastStringToString)
+{
+    const int32_t numRows = 1;
+    const int32_t numCols = 1;
+
+    auto *col = new int64_t[numRows];
+    auto *s = new std::string("CastStringToString");
+    col[0] = reinterpret_cast<int64_t>(s->c_str());
+
+    std::string castStr = "CAST";
+    auto data1 = new FieldExpr(0, VarcharType(18));
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    auto castExpr1 = GetFuncExpr(castStr, args1, VarcharType(1024));
+
+    auto data2 = new FieldExpr(0, VarcharType(18));
+    std::vector<Expr *> args2;
+    args2.push_back(data2);
+    auto castExpr2 = GetFuncExpr(castStr, args2, VarcharType(10));
+    std::vector<Expr *> exprs = { castExpr1, castExpr2 };
+
+    std::vector<DataTypePtr> vecOfTypes = { VarcharType(18) };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, nullptr);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
+    VectorAllocator *vecAllocator =
+        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastStringToString");
+    VectorBatch *t = CreateInput(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+    string expected1 = "CastStringToString";
+    string expected2 = "CastString";
+
+    VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
+    uint8_t *actualChar1 = nullptr;
+    int len1 = vcVec1->GetValue(0, &actualChar1);
+    string actualStr1(reinterpret_cast<char *>(actualChar1), 0, len1);
+    EXPECT_EQ(len1, 18);
+    EXPECT_EQ(actualStr1, expected1);
+
+    VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
+    uint8_t *actualChar2 = nullptr;
+    int len2 = vcVec2->GetValue(0, &actualChar2);
+    string actualStr2(reinterpret_cast<char *>(actualChar2), 0, len2);
+    EXPECT_EQ(len2, 10);
+    EXPECT_EQ(actualStr2, expected2);
+
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatches(ret);
+    delete s;
+    delete[] col;
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete vecAllocator;
 }
 
 TEST(ProjectionTest, ProjectCastIntToDecimal)
