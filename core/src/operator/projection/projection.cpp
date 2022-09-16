@@ -268,7 +268,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
             }
             delete outBatch;
             VectorHelper::FreeVecBatch(vecBatch);
-
+            context->GetArena()->Reset();
             string errorMessage = context->GetError();
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
         }
@@ -276,6 +276,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     }
     this->mutated = outBatch;
     VectorHelper::FreeVecBatch(vecBatch);
+    context->GetArena()->Reset();
     return resultRowCount;
 }
 

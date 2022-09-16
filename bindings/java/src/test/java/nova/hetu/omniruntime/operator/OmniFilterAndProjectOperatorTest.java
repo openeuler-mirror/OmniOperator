@@ -20,6 +20,7 @@ import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.Decimal64DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -1429,6 +1430,47 @@ public class OmniFilterAndProjectOperatorTest {
         op.close();
         opJSON.close();
         factory.close();
+        factoryJSON.close();
+    }
+
+    /**
+     * decimal InExpr WithNull
+     */
+    @Test
+    public void decimalInExprWithNull() {
+        DataType[] sourceTypes = {new Decimal64DataType(7, 2), new Decimal64DataType(7, 5),
+                new Decimal64DataType(18, 9)};
+        Object[][] sourceDatas = {{4570289L, -9999999L, null}, {9999999L, null, -234527L},
+                {null, -999999999999999999L, -234527000012L}};
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
+        List<String> projectionsJSON = ImmutableList.of(
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0, \"precision\":7,\"scale\":2}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1, \"precision\":7,\"scale\":5}",
+                "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":2, \"precision\":18,\"scale\":9}");
+        // deci7_5 in (deci7_2, deci7_5, deci18_9)
+        String filterJSON = "{\"exprType\":\"IN\",\"returnType\":4,\"arguments\":[{\"exprType\":\"FUNCTION\","
+                + "\"returnType\":6,\"function_name\":\"CAST\",\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\","
+                + "\"dataType\":6,\"colVal\":1,\"precision\":7,\"scale\":5}],\"precision\":18,\"scale\":9},"
+                + "{\"exprType\":\"FUNCTION\",\"returnType\":6,\"function_name\":\"CAST\",\"arguments\":[{\"exprType"
+                + "\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":7,\"scale\":2}],\"precision\":18,"
+                + "\"scale\":9},{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":2,\"precision\":18,"
+                + "\"scale\":9},{\"exprType\":\"FUNCTION\",\"returnType\":6,\"function_name\":\"CAST\",\"arguments"
+                + "\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":7,\"scale\":5}],"
+                + "\"precision\":18,\"scale\":9}]}";
+        OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(filterJSON,
+                sourceTypes, projectionsJSON, 1);
+
+        OmniOperator opJSON = factoryJSON.createOperator();
+        opJSON.addInput(vecBatch);
+
+        Iterator<VecBatch> results = opJSON.getOutput();
+        VecBatch resultVecBatch = results.next();
+        Object[][] expectedDatas = {{4570289L, null}, {9999999L, -234527L}, {null, -234527000012L}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+
+        freeVecBatch(resultVecBatch);
+        opJSON.close();
         factoryJSON.close();
     }
 
