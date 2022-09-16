@@ -1847,6 +1847,7 @@ TEST(FilterTest, Coalesce2)
     OperatorFactory *factory =
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
+
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);

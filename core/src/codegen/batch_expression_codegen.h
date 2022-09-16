@@ -154,9 +154,7 @@ private:
     void BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *leftLen, llvm::Value *right, llvm::Value *rightLen, llvm::Value *leftIsNull,
         llvm::Value *rightIsNull);
-    void BinaryExprDecimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
-        DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    void BinaryExprDecimal128Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
+    void BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
         DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
         const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,

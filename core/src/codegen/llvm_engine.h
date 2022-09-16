@@ -54,7 +54,7 @@ public:
     llvm::CallInst *CreateCall(llvm::Function *func, std::vector<llvm::Value *> argsVals, std::string name);
     llvm::Value *CallExternFunction(const std::string fn_name, std::vector<omniruntime::type::DataTypeId> params,
         const omniruntime::type::DataTypeId returnType, std::vector<llvm::Value *> args,
-        llvm::Value *executionContextPtr, const std::string msg = "");
+        llvm::Value *executionContextPtr, const std::string msg = "",omniruntime::op::OverflowConfig *overflowConfig = nullptr, llvm::Value *overflowNull = nullptr);
     static void InitializeCodegenTargets();
     void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     void MakeThreadSafe(llvm::orc::ResourceTrackerSP *res);

@@ -188,12 +188,19 @@ CallInst *LLVMEngine::CreateCall(llvm::Function *func, std::vector<llvm::Value *
 }
 
 llvm::Value *LLVMEngine::CallExternFunction(const string fn_name, vector<DataTypeId> params,
-    const DataTypeId returnType, vector<Value *> args, llvm::Value *executionContextPtr, const string msg)
+    const DataTypeId returnType, vector<Value *> args, llvm::Value *executionContextPtr, const string msg,
+    omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
 {
     if (executionContextPtr != nullptr) {
-        args.insert(args.begin(), executionContextPtr);
+        if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() ==
+            omniruntime::op::OVERFLOW_CONFIG_NULL) {
+            args.insert(args.begin(), overflowNull);
+        } else {
+            args.insert(args.begin(), executionContextPtr);
+        }
     }
-    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString();
+
+    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString(overflowConfig);
     auto f = module->getFunction(funcId);
     auto ret = CreateCall(f, args, msg);
     return ret;

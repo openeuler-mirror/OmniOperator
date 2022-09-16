@@ -470,12 +470,8 @@ void BatchExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     } else if (TypeUtil::IsStringType(bExpr->left->GetReturnTypeId())) {
         this->BinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull);
         return;
-    } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        this->BinaryExprDecimal64Helper(bExpr, static_cast<DecimalValue &>(*left.get()),
-            static_cast<DecimalValue &>(*right.get()), leftNull, rightNull);
-        return;
-    } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL128) {
-        this->BinaryExprDecimal128Helper(bExpr, static_cast<DecimalValue &>(*left.get()),
+    } else if (TypeUtil::IsDecimalType(bExpr->left->GetReturnTypeId())) {
+        this->BinaryExprDecimalHelper(bExpr, static_cast<DecimalValue &>(*left.get()),
             static_cast<DecimalValue &>(*right.get()), leftNull, rightNull);
         return;
     }
@@ -727,7 +723,7 @@ void BatchExpressionCodeGen::BinaryExprDoubleHelper(const omniruntime::expressio
     }
 }
 
-void BatchExpressionCodeGen::BinaryExprDecimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr,
+void BatchExpressionCodeGen::BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr,
     DecimalValue &left, DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull)
 {
     //  inputType can be 64 + 128, returnType can be 64 or 128
@@ -748,20 +744,7 @@ void BatchExpressionCodeGen::BinaryExprDecimal64Helper(const omniruntime::expres
             right.data,      const_cast<Value *>(right.GetPrecision()), const_cast<Value *>(right.GetScale()),
             logicalArrayPtr, this->batchCodegenContext->rowCnt
         };
-    } else if (returnTypeId == omniruntime::type::OMNI_DECIMAL128) {
-        returnDecimalValue = decimalIRBuilder->BuildDecimalValue(nullptr, *binaryExpr->GetReturnType(), nullptr);
-        arithArrayPtr = builder->CreateAlloca(llvmTypes->I128Type(), this->batchCodegenContext->rowCnt, "ARITH_PTR");
-        arithFuncParams = { left.data,
-            const_cast<Value *>(left.GetPrecision()),
-            const_cast<Value *>(left.GetScale()),
-            right.data,
-            const_cast<Value *>(right.GetPrecision()),
-            const_cast<Value *>(right.GetScale()),
-            arithArrayPtr,
-            const_cast<Value *>(returnDecimalValue->GetPrecision()),
-            const_cast<Value *>(returnDecimalValue->GetScale()),
-            this->batchCodegenContext->rowCnt };
-    } else {
+    } else if (TypeUtil::IsDecimalType(returnTypeId)) {
         returnDecimalValue = decimalIRBuilder->BuildDecimalValue(nullptr, *binaryExpr->GetReturnType(), nullptr);
         arithFuncParams = { left.data,
             const_cast<Value *>(left.GetPrecision()),
@@ -772,11 +755,27 @@ void BatchExpressionCodeGen::BinaryExprDecimal64Helper(const omniruntime::expres
             const_cast<Value *>(returnDecimalValue->GetPrecision()),
             const_cast<Value *>(returnDecimalValue->GetScale()),
             this->batchCodegenContext->rowCnt };
+        if (decimal64Params == std::vector<DataTypeId> { OMNI_DECIMAL128, OMNI_DECIMAL128 } and
+            returnTypeId == OMNI_DECIMAL64) {
+            arithArrayPtr = builder->CreateAlloca(llvmTypes->I64Type(), this->batchCodegenContext->rowCnt, "ARITH_PTR");
+            arithFuncParams.insert(std::begin(arithFuncParams) + 6, arithArrayPtr);
+        } else if (decimal64Params == std::vector<DataTypeId> { OMNI_DECIMAL64, OMNI_DECIMAL64 } and
+            returnTypeId == OMNI_DECIMAL128) {
+            arithArrayPtr =
+                builder->CreateAlloca(llvmTypes->I128Type(), this->batchCodegenContext->rowCnt, "ARITH_PTR");
+            arithFuncParams.insert(std::begin(arithFuncParams) + 6, arithArrayPtr);
+        }
     }
 
     vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
     llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
 
+    Value *falseValue = llvmTypes->CreateConstantBool(false);
+    AllocaInst *overflowNull =
+        builder->CreateAlloca(Type::getInt1Ty(*context), this->batchCodegenContext->rowCnt, "OVERFLOW_NULL_PTR");
+    vector<Value *> funcArgs { overflowNull, falseValue, this->batchCodegenContext->rowCnt };
+    auto ret = llvmEngine->CallExternFunction("batch_fill_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr,
+        "fill_null_array");
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
             llvmEngine->CallExternFunction("batch_lessThan", decimal64Params, returnTypeId, logicalFuncParams, nullptr,
@@ -803,24 +802,24 @@ void BatchExpressionCodeGen::BinaryExprDecimal64Helper(const omniruntime::expres
                 "relational_neq");
             break;
         case omniruntime::expressions::Operator::ADD:
-            llvmEngine->CallExternFunction("batch_add", decimal64Params, returnTypeId, arithFuncParams, nullptr,
-                "arithmetic_add");
+            llvmEngine->CallExternFunction("batch_add", decimal64Params, returnTypeId, arithFuncParams,
+                batchCodegenContext->executionContext, "arithmetic_add", this->overflowConfig, overflowNull);
             break;
         case omniruntime::expressions::Operator::SUB:
-            llvmEngine->CallExternFunction("batch_subtract", decimal64Params, returnTypeId, arithFuncParams, nullptr,
-                "arithmetic_sub");
+            llvmEngine->CallExternFunction("batch_subtract", decimal64Params, returnTypeId, arithFuncParams,
+                batchCodegenContext->executionContext, "arithmetic_sub", this->overflowConfig, overflowNull);
             break;
         case omniruntime::expressions::Operator::MUL:
-            llvmEngine->CallExternFunction("batch_multiply", decimal64Params, returnTypeId, arithFuncParams, nullptr,
-                "arithmetic_mul");
+            llvmEngine->CallExternFunction("batch_multiply", decimal64Params, returnTypeId, arithFuncParams,
+                batchCodegenContext->executionContext, "arithmetic_mul", this->overflowConfig, overflowNull);
             break;
         case omniruntime::expressions::Operator::DIV:
             llvmEngine->CallExternFunction("batch_divide", decimal64Params, returnTypeId, arithFuncParams,
-                batchCodegenContext->executionContext, "arithmetic_div");
+                batchCodegenContext->executionContext, "arithmetic_div", this->overflowConfig, overflowNull);
             break;
         case omniruntime::expressions::Operator::MOD:
             llvmEngine->CallExternFunction("batch_modulus", decimal64Params, returnTypeId, arithFuncParams,
-                batchCodegenContext->executionContext, "arithmetic_mod");
+                batchCodegenContext->executionContext, "arithmetic_mod", this->overflowConfig, overflowNull);
             break;
         default: {
             LogError("Unsupported decimal64 binary operator %d", static_cast<uint32_t>(binaryExpr->op));
@@ -829,113 +828,37 @@ void BatchExpressionCodeGen::BinaryExprDecimal64Helper(const omniruntime::expres
         }
     }
 
-    if (returnTypeId == omniruntime::type::OMNI_DECIMAL128) {
-        this->value = make_shared<DecimalValue>(arithArrayPtr, leftIsNull,
-            const_cast<Value *>(returnDecimalValue->GetPrecision()),
-            const_cast<Value *>(returnDecimalValue->GetScale()));
-    } else if (returnTypeId == omniruntime::type::OMNI_DECIMAL64) {
-        this->value =
-            make_shared<DecimalValue>(left.data, leftIsNull, const_cast<Value *>(returnDecimalValue->GetPrecision()),
-            const_cast<Value *>(returnDecimalValue->GetScale()));
-    } else {
-        this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
-    }
-}
-
-void BatchExpressionCodeGen::BinaryExprDecimal128Helper(const omniruntime::expressions::BinaryExpr *binaryExpr,
-    DecimalValue &left, DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull)
-{
-    //  inputType can be 128 + 64
-    std::vector<DataTypeId> decimal128Params { binaryExpr->left->GetReturnTypeId(),
-        binaryExpr->right->GetReturnTypeId() };
-    std::vector<DataTypeId> boolParams { OMNI_BOOLEAN, OMNI_BOOLEAN };
-    DataTypeId returnTypeId = binaryExpr->GetReturnTypeId();
-    std::shared_ptr<DecimalValue> returnDecimalValue = nullptr;
-    AllocaInst *logicalArrayPtr = nullptr;
-    vector<Value *> logicalFuncParams;
-    vector<Value *> arithFuncParams;
-
-    if (returnTypeId == OMNI_BOOLEAN) {
-        logicalArrayPtr = builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "LOGICAL_PTR");
-        logicalFuncParams = {
-            left.data,       const_cast<Value *>(left.GetPrecision()),  const_cast<Value *>(left.GetScale()),
-            right.data,      const_cast<Value *>(right.GetPrecision()), const_cast<Value *>(right.GetScale()),
-            logicalArrayPtr, this->batchCodegenContext->rowCnt
-        };
-    } else {
-        returnDecimalValue = decimalIRBuilder->BuildDecimalValue(nullptr, *binaryExpr->GetReturnType(), nullptr);
-        arithFuncParams = { left.data,
-            const_cast<Value *>(left.GetPrecision()),
-            const_cast<Value *>(left.GetScale()),
-            right.data,
-            const_cast<Value *>(right.GetPrecision()),
-            const_cast<Value *>(right.GetScale()),
-            const_cast<Value *>(returnDecimalValue->GetPrecision()),
-            const_cast<Value *>(returnDecimalValue->GetScale()),
-            this->batchCodegenContext->rowCnt };
-    }
-
-    vector<Value *> nullFuncParams { leftIsNull, rightIsNull, this->batchCodegenContext->rowCnt };
-    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, nullFuncParams, nullptr, "either_null");
-
-    switch (binaryExpr->op) {
-        case omniruntime::expressions::Operator::LT:
-            llvmEngine->CallExternFunction("batch_lessThan", decimal128Params, returnTypeId, logicalFuncParams, nullptr,
-                "relational_lt");
-            break;
-        case omniruntime::expressions::Operator::GT:
-            llvmEngine->CallExternFunction("batch_greaterThan", decimal128Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_gt");
-            break;
-        case omniruntime::expressions::Operator::LTE:
-            llvmEngine->CallExternFunction("batch_lessThanEqual", decimal128Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_le");
-            break;
-        case omniruntime::expressions::Operator::GTE:
-            llvmEngine->CallExternFunction("batch_greaterThanEqual", decimal128Params, returnTypeId, logicalFuncParams,
-                nullptr, "relational_ge");
-            break;
-        case omniruntime::expressions::Operator::EQ:
-            llvmEngine->CallExternFunction("batch_equal", decimal128Params, returnTypeId, logicalFuncParams, nullptr,
-                "relational_eq");
-            break;
-        case omniruntime::expressions::Operator::NEQ:
-            llvmEngine->CallExternFunction("batch_notEqual", decimal128Params, returnTypeId, logicalFuncParams, nullptr,
-                "relational_neq");
-            break;
-        case omniruntime::expressions::Operator::ADD:
-            llvmEngine->CallExternFunction("batch_add", decimal128Params, returnTypeId, arithFuncParams, nullptr,
-                "arithmetic_add");
-            break;
-        case omniruntime::expressions::Operator::SUB:
-            llvmEngine->CallExternFunction("batch_subtract", decimal128Params, returnTypeId, arithFuncParams, nullptr,
-                "arithmetic_sub");
-            break;
-        case omniruntime::expressions::Operator::MUL:
-            llvmEngine->CallExternFunction("batch_multiply", decimal128Params, returnTypeId, arithFuncParams, nullptr,
-                "arithmetic_mul");
-            break;
-        case omniruntime::expressions::Operator::DIV:
-            llvmEngine->CallExternFunction("batch_divide", decimal128Params, returnTypeId, arithFuncParams,
-                batchCodegenContext->executionContext, "arithmetic_div");
-            break;
-        case omniruntime::expressions::Operator::MOD:
-            llvmEngine->CallExternFunction("batch_modulus", decimal128Params, returnTypeId, arithFuncParams,
-                batchCodegenContext->executionContext, "arithmetic_mod");
-            break;
-        default: {
-            LogError("Unsupported decimal64 binary operator %d", static_cast<uint32_t>(binaryExpr->op));
-            this->value = CreateBatchInvalidCodeGenValue();
-            return;
-        }
-    }
+    vector<Value *> isAnyNullFuncParams { overflowNull, leftIsNull, this->batchCodegenContext->rowCnt };
+    llvmEngine->CallExternFunction("batch_or", boolParams, OMNI_BOOLEAN, isAnyNullFuncParams, nullptr, "either_null");
 
     if (TypeUtil::IsDecimalType(returnTypeId)) {
-        this->value =
-            make_shared<DecimalValue>(left.data, leftIsNull, const_cast<Value *>(returnDecimalValue->GetPrecision()),
-            const_cast<Value *>(returnDecimalValue->GetScale()));
-    } else {
-        this->value = make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
+        if (returnTypeId == omniruntime::type::OMNI_DECIMAL128) {
+            llvm::Value *dataValue = nullptr;
+            if (decimal64Params[0] == OMNI_DECIMAL128) {
+                dataValue = left.data;
+            } else if (decimal64Params[1] == OMNI_DECIMAL128) {
+                dataValue = right.data;
+            } else {
+                dataValue = arithArrayPtr;
+            }
+            this->value = make_shared<DecimalValue>(dataValue, overflowNull,
+                const_cast<Value *>(returnDecimalValue->GetPrecision()),
+                const_cast<Value *>(returnDecimalValue->GetScale()));
+        } else if (returnTypeId == omniruntime::type::OMNI_DECIMAL64) {
+            llvm::Value *dataValue = nullptr;
+            if (decimal64Params[0] == OMNI_DECIMAL64) {
+                dataValue = left.data;
+            } else if (decimal64Params[1] == OMNI_DECIMAL64) {
+                dataValue = right.data;
+            } else {
+                dataValue = arithArrayPtr;
+            }
+            this->value = make_shared<DecimalValue>(dataValue, overflowNull,
+                const_cast<Value *>(returnDecimalValue->GetPrecision()),
+                const_cast<Value *>(returnDecimalValue->GetScale()));
+        } else {
+            this->value = make_shared<CodeGenValue>(logicalArrayPtr, overflowNull);
+        }
     }
 }
 
@@ -1333,7 +1256,6 @@ void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     }
 
     AllocaInst *resultArray = GetResultArray(funcRetType, this->batchCodegenContext->rowCnt);
-    argVals.push_back(isAnyNull);
     argVals.push_back(resultArray);
     AllocaInst *outputLenPtr = nullptr;
 
