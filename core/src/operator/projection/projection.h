@@ -69,6 +69,7 @@ public:
     ~Projection()
     {
         this->codegen.reset();
+        this->batchCodegen.reset();
     }
     bool IsSupported();
 
@@ -94,7 +95,8 @@ public:
 
 private:
     const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<BatchProjectionCodeGen> codegen { nullptr };
+    std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
+    std::unique_ptr<BatchProjectionCodeGen> batchCodegen { nullptr };
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;

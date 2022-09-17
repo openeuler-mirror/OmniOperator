@@ -43,15 +43,14 @@ int64_t BatchFilterCodeGen::GetFunction()
     if (func == nullptr) {
         return 0;
     }
-    return this->CreateWrapper(*func);
+    return this->CreateBatchWrapper(*func);
 }
 
-int64_t BatchFilterCodeGen::CreateWrapper(llvm::Function &filterFn)
+int64_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
 {
-    llvm::Function *filterFunc = &filterFn;
-
+    llvm::Function *filterFunc = &filter;
     std::vector<Type *> args;
-    args.push_back(llvmTypes->I64PtrType()); // vecBatch
+    args.push_back(llvmTypes->I64PtrType()); // inputData
     args.push_back(llvmTypes->I32Type());    // rowCnt
     args.push_back(llvmTypes->I32PtrType()); // selectedRows
     args.push_back(llvmTypes->I64PtrType()); // inputBitmap
@@ -63,7 +62,6 @@ int64_t BatchFilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     llvm::Function *funcDecl =
         llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "BATCH_FILTER_WRAPPER", module);
     BasicBlock *filterMain = BasicBlock::Create(*context, "FILTER_MAIN", funcDecl);
-
     // set arg names
     Argument *data = funcDecl->getArg(INPUT_INDEX);
     data->setName("ARGS_ARRAY");
@@ -106,7 +104,6 @@ int64_t BatchFilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
-
     auto sym = eoe(jit->lookup("BATCH_FILTER_WRAPPER"));
     return sym.getAddress();
 }

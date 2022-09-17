@@ -35,7 +35,6 @@ public:
 
     friend class ExpressionCodeGen;
     friend class RowExpressionCodeGen;
-    friend class BatchExpressionCodeGen;
 
 private:
     llvm::Value *data;

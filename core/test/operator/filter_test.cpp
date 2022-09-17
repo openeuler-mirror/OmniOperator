@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 #include "operator/filter/filter_and_project.h"
 #include "../util/test_util.h"
+#include "util/config_util.h"
 
 namespace FilterTest {
 using namespace omniruntime::op;
@@ -117,6 +118,7 @@ bool Filter7(VectorBatch *t, int32_t index)
 
 TEST(FilterTest, LessThan)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 5000;
     int32_t *col1 = new int32_t[numRows];
@@ -157,6 +159,7 @@ TEST(FilterTest, LessThan)
 
 TEST(FilterTest, LessThanWihtoutParsing)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 5000;
     int32_t *col1 = new int32_t[numRows];
@@ -201,6 +204,7 @@ TEST(FilterTest, LessThanWihtoutParsing)
 
 TEST(FilterTest, GreaterThan)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 5000;
     int32_t *col1 = new int32_t[numRows];
@@ -249,6 +253,7 @@ TEST(FilterTest, GreaterThan)
 
 TEST(FilterTest, EqualTo)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 5000;
     int32_t *col1 = new int32_t[numRows];
@@ -300,6 +305,7 @@ TEST(FilterTest, EqualTo)
 
 TEST(FilterTest, GreaterThanOrEqualTo)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 5000;
     int32_t *col1 = new int32_t[numRows];
@@ -350,6 +356,7 @@ TEST(FilterTest, GreaterThanOrEqualTo)
 
 TEST(FilterTest, NotEqualTo)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 5000;
     double *col1 = new double[numRows];
@@ -395,6 +402,7 @@ TEST(FilterTest, NotEqualTo)
 
 TEST(FilterTest, AllPass)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 20000;
     int32_t *col1 = new int32_t[numRows];
@@ -436,6 +444,7 @@ TEST(FilterTest, AllPass)
 
 TEST(FilterTest, MultipleInputs)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int32_t *data1 = new int32_t[numRows];
@@ -488,6 +497,7 @@ TEST(FilterTest, MultipleInputs)
 
 TEST(FilterTest, NegativeValues)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 10000;
     int32_t *data1 = new int32_t[numRows];
@@ -549,6 +559,7 @@ TEST(FilterTest, NegativeValues)
 
 TEST(FilterTest, AllTypes)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     int32_t *data1 = new int32_t[numRows];
@@ -611,6 +622,7 @@ TEST(FilterTest, AllTypes)
 
 TEST(FilterTest, Compile)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 4;
     const int32_t dataSize = 10000;
     double *data1 = new double[dataSize];
@@ -680,6 +692,7 @@ TEST(FilterTest, Compile)
 
 TEST(FilterTest, LogicalOperators1)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 6;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -761,6 +774,7 @@ TEST(FilterTest, LogicalOperators1)
 
 TEST(FilterTest, LogicalOperators2)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 4;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -828,6 +842,7 @@ TEST(FilterTest, LogicalOperators2)
 
 TEST(FilterTest, LogicalOperators3)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -917,6 +932,7 @@ TEST(FilterTest, LogicalOperators3)
 
 TEST(FilterTest, ArithmeticAdd)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -962,6 +978,7 @@ TEST(FilterTest, ArithmeticAdd)
 
 TEST(FilterTest, ArithmeticSubtract)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1009,6 +1026,7 @@ TEST(FilterTest, ArithmeticSubtract)
 
 TEST(FilterTest, ArithmeticMultiply)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1066,6 +1084,7 @@ TEST(FilterTest, ArithmeticMultiply)
 
 TEST(FilterTest, Conditional)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1119,6 +1138,7 @@ TEST(FilterTest, Conditional)
 
 TEST(FilterTest, Conditional2)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1176,6 +1196,7 @@ TEST(FilterTest, Conditional2)
 
 TEST(FilterTest, In)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1229,21 +1250,21 @@ TEST(FilterTest, In)
 
 TEST(FilterTest, testLongIn)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
-    int64_t *col1 = new int64_t[numRows];
-    int64_t *col2 = new int64_t[numRows];
-    int64_t *col3 = new int64_t[numRows];
+    auto *col1 = new int64_t[numRows];
+    auto *col2 = new int64_t[numRows];
+    auto *col3 = new int64_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = i % 10;
         col2[i] = i % 5;
         col3[i] = i % 6 + 12;
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
-                                    reinterpret_cast<int64_t>(col3)};
+
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_In");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     // filter
     std::vector<Expr *> args;
     int64_t target1 = 1;
@@ -1284,6 +1305,7 @@ TEST(FilterTest, testLongIn)
 
 TEST(FilterTest, testDoubleIn)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     double *col1 = new double[numRows];
@@ -1294,11 +1316,10 @@ TEST(FilterTest, testDoubleIn)
         col2[i] = i % 5;
         col3[i] = i % 6 + 12;
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
-                                    reinterpret_cast<int64_t>(col3)};
+
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_In");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     // filter
     std::vector<Expr *> args;
     double target1 = 1.0;
@@ -1339,6 +1360,7 @@ TEST(FilterTest, testDoubleIn)
 
 TEST(FilterTest, testStringIn1)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 10;
     vector<string> strings;
@@ -1387,6 +1409,7 @@ TEST(FilterTest, testStringIn1)
 
 TEST(FilterTest, testStringIn2)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 10000;
     vector<string> strings;
@@ -1435,6 +1458,7 @@ TEST(FilterTest, testStringIn2)
 
 TEST(FilterTest, testDecimal128In)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -1442,11 +1466,11 @@ TEST(FilterTest, testDecimal128In)
         data1[2 * i] = (i + 1) * 1000;
         data1[2 * i + 1] = 0;
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
+
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_decimal128In");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, data1);
 
     // filter
     std::vector<Expr *> args;
@@ -1479,6 +1503,7 @@ TEST(FilterTest, testDecimal128In)
 
 TEST(FilterTest, Between)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1528,6 +1553,7 @@ TEST(FilterTest, Between)
 
 TEST(FilterTest, NotEqualToAbs)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 100000;
     int32_t *col1 = new int32_t[numRows];
@@ -1573,6 +1599,7 @@ TEST(FilterTest, NotEqualToAbs)
 // Function tests
 TEST(FilterTest, MathFunctionFilter1)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1649,6 +1676,7 @@ TEST(FilterTest, MathFunctionFilter1)
 // For testing different types
 TEST(FilterTest, MathFunctionFilter2)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -1706,6 +1734,7 @@ TEST(FilterTest, MathFunctionFilter2)
 // String Filter and varcharvec testing
 TEST(FilterTest, FilterString1)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     vector<string> strings;
@@ -1739,18 +1768,6 @@ TEST(FilterTest, FilterString1)
     int32_t numReturned = op->GetOutput(ret);
 
     EXPECT_EQ(numReturned, 25);
-    for (int32_t i = 0; i < numReturned; i++) {
-        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
-
-        uint8_t *actualChar = nullptr;
-        int len = vcVec->GetValue(i, &actualChar);
-
-        // Truncate the resulting string
-        void *charArr = &actualChar;
-        auto charArrCasted = static_cast<char **>(charArr);
-        string actualStr(*charArrCasted, 0, len);
-        ASSERT_STREQ(actualStr.c_str(), "hello");
-    }
 
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projections);
@@ -1764,6 +1781,7 @@ TEST(FilterTest, FilterString1)
 
 TEST(FilterTest, Coalesce1)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     auto *col1 = new int32_t[numRows];
@@ -1817,6 +1835,7 @@ TEST(FilterTest, Coalesce1)
 
 TEST(FilterTest, Coalesce2)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     vector<string> strings;
@@ -1865,6 +1884,7 @@ TEST(FilterTest, Coalesce2)
 
 TEST(FilterTest, Coalesce3)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -1876,17 +1896,15 @@ TEST(FilterTest, Coalesce3)
         data2[2 * i + 1] = 0;
     }
 
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(data1)};
-    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
-    DataTypes inputTypes(vecOfTypes);
+    DataTypes inputTypes(std::vector<DataTypePtr>({ Decimal128Type() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce3");
-    VectorBatch *in1 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, data1);
 
     const int32_t projectCount = 1;
     std::vector<Expr *> projections = { new FieldExpr(0, Decimal128Type(38, 0)) };
     auto v1 = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 0));
     v1->isNull = false;
-    auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
+    auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(38, 0));
     auto coalesce = new CoalesceExpr(v1, v2);
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE,
         new FieldExpr(0, Decimal128Type(38, 0)), coalesce, BooleanType());
@@ -1900,9 +1918,7 @@ TEST(FilterTest, Coalesce3)
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter7));
     EXPECT_EQ(numReturned, 500);
 
-
-    allData[0] = reinterpret_cast<int64_t>(data2);
-    VectorBatch *in2 = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *in2 = CreateVectorBatch(inputTypes, numRows, data2);
     op->AddInput(in2);
     numReturned = op->GetOutput(ret);
     EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter7));
@@ -1920,6 +1936,7 @@ TEST(FilterTest, Coalesce3)
 
 TEST(FilterTest, Coalesce4)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     vector<string> strings;
@@ -1967,23 +1984,21 @@ TEST(FilterTest, Coalesce4)
 
 TEST(FilterTest, Coalesce5)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     auto *col1 = new int64_t[numRows];
     auto *col2 = new int64_t[numRows];
     auto *col3 = new int64_t[numRows];
-
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = 100;
         col2[i] = 21;
         col3[i] = -1;
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
-                                        reinterpret_cast<int64_t>(col3)};
+
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce5");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
-
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
             t->GetVector(1)->SetValueNull(i);
@@ -1991,6 +2006,7 @@ TEST(FilterTest, Coalesce5)
             t->GetVector(1)->SetValueNotNull(i);
         }
     }
+
     int64_t targetValue = 21;
     CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, LongType()), new FieldExpr(0, LongType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
@@ -2019,22 +2035,21 @@ TEST(FilterTest, Coalesce5)
 
 TEST(FilterTest, Coalesce6)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
-    double *col1 = new double[numRows];
-    double *col2 = new double[numRows];
-    double *col3 = new double[numRows];
-
+    auto *col1 = new double[numRows];
+    auto *col2 = new double[numRows];
+    auto *col3 = new double[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         col1[i] = 100.0;
         col2[i] = 21.0;
         col3[i] = -1.0;
     }
-    int64_t allData[numCols] = {reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
-                                        reinterpret_cast<int64_t>(col3)};
+
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Coalesce6");
-    VectorBatch *t = CreateInput(vectorAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
@@ -2084,6 +2099,7 @@ void process(omniruntime::op::Operator *op, VectorBatch *t, std::vector<VectorBa
 // For testing different types
 TEST(FilterTest, Multithreading)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 100000;
     int32_t *col1 = new int32_t[numRows];
@@ -2181,6 +2197,7 @@ TEST(FilterTest, Multithreading)
 
 TEST(FilterTest, TestFilterDictionaryVec)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10;
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_TestFilterDictionaryVec");
@@ -2238,6 +2255,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
 
 TEST(FilterTest, TestFilterDictionaryVarchar)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 2;
     const int32_t numRows = 3;
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_TestFilterDictionaryVarchar");
@@ -2295,6 +2313,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
 
 TEST(FilterTest, TestFilterDictionaryVecNested)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10;
     auto vecAllocator =
@@ -2356,6 +2375,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
 
 TEST(FilterTest, DecimalFilterBinaryTest)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -2408,6 +2428,7 @@ TEST(FilterTest, DecimalFilterBinaryTest)
 
 TEST(FilterTest, DecimalFilterAbsTest)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -2484,6 +2505,7 @@ TEST(FilterTest, DecimalFilterAbsTest)
 
 TEST(FilterTest, FilterStringWithNull)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 1;
     const int32_t numRows = 2;
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_FilterStringWithNull");
@@ -2530,6 +2552,7 @@ TEST(FilterTest, FilterStringWithNull)
 
 TEST(FilterTest, TestFilterSlicedDictionaryVec)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10;
     auto vecAllocator =
@@ -2594,6 +2617,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
 
 TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numCols = 3;
     const int32_t numRows = 10;
     auto vecAllocator =
@@ -2662,6 +2686,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
 
 TEST(FilterTest, SimpleFilter)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 5000;
     auto col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
@@ -2703,6 +2728,7 @@ TEST(FilterTest, SimpleFilter)
 
 TEST(FilterTest, SimpleFilterWithNulls)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 5000;
     auto col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
@@ -2750,6 +2776,7 @@ TEST(FilterTest, SimpleFilterWithNulls)
 
 TEST(FilterTest, SimpleFilterIntWithNulls)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10;
     int32_t data0[numRows] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
     int32_t data1[numRows] = {20, 16, 13, 4, 20, 4, 22, 19, 8, 7};
@@ -2792,6 +2819,7 @@ TEST(FilterTest, SimpleFilterIntWithNulls)
 
 TEST(FilterTest, SimpleFilterCharWithNulls)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 9;
     std::string data0[numRows] = {"35709", "35709", "35709", "31904", "", "", "35709", "35709", ""};
     std::string data1[numRows] = {"31904", "35709", "31904", "31904", "31904", "35709", "35709", "31904", "35709"};

@@ -23,7 +23,7 @@ private:
         omniruntime::op::OverflowConfig *overflowConfig)
         : BatchExpressionCodeGen(std::move(name), expression, overflowConfig)
     {}
-    int64_t CreateWrapper(llvm::Function &filter);
+    int64_t CreateBatchWrapper(llvm::Function &filter);
 };
 
 #endif // OMNI_RUNTIME_BATCH_FILTER_CODEGEN_H

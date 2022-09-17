@@ -75,11 +75,15 @@ bool Projection::Initialize(bool filter, OverflowConfig *overflowConfig)
         this->columnProjectionIndex = fieldExpr->colVal;
         return true;
     }
-
+    int64_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
         this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
+        f = this->codegen->GetFunction();
+    } else {
+        this->batchCodegen = BatchProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
+        f = this->batchCodegen->GetFunction();
     }
-    auto f = this->codegen->GetFunction();
+
     if (f == 0) {
         return false;
     }

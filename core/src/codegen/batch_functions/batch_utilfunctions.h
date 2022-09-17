@@ -42,6 +42,8 @@ extern "C" DLLEXPORT void FillString(int64_t contextPtr, uint8_t **dataArray, bo
 // fill varchar length array according to offset array
 extern "C" DLLEXPORT void FillLength(int32_t *offsets, int32_t *rowIdxArray, int32_t *lengthArray, int32_t rowCnt);
 
+extern "C" DLLEXPORT void FillLengthInFuncExpr(int32_t *lengthArray, int32_t length, int32_t rowCnt);
+
 // logical operations for boolean
 extern "C" DLLEXPORT int32_t CreateAndNot(bool *dataArray, bool *nullArray, int32_t *rowIdxArray, int32_t rowCnt);
 
@@ -59,6 +61,8 @@ extern "C" DLLEXPORT void CreateOrExpr(bool *left, bool *leftNull, bool *right, 
 extern "C" DLLEXPORT void CreateAndExpr(bool *left, bool *leftNull, bool *right, bool *rightNull, int32_t rowCnt);
 
 // copy result to output vector
+extern "C" DLLEXPORT void CopyNull(bool *dataArray, bool *output, int32_t *rowIdxArray, int32_t rowCnt);
+
 extern "C" DLLEXPORT void CopyBoolean(bool *dataArray, bool *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void CopyInt32(int32_t *dataArray, int32_t *output, int32_t rowCnt);
@@ -150,18 +154,13 @@ extern DLLEXPORT void InExpr(int32_t cmpCnt, int64_t *cmpValues, int64_t *cmpBoo
     }
 
     for (int i = 0; i < rowCnt; ++i) {
-        bool hasSet = false;
+        finalResult[i] = false;
+        finalNull[i] = false;
         for (int j = 0; j < cmpCnt; ++j) {
             if (!toCmpBool[i] && !cmpNullsList[j][i] && toCmpValue[i] == cmpValuesList[j][i]) {
                 finalResult[i] = true;
-                finalNull[i] = false;
-                hasSet = true;
                 break;
             }
-        }
-        if (!hasSet) {
-            finalResult[i] = false;
-            finalNull[i] = false;
         }
     }
 }

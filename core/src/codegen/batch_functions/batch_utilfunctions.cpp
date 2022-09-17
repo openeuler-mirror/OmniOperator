@@ -80,11 +80,11 @@ extern "C" DLLEXPORT void FillString(int64_t contextPtr, uint8_t **dataArray, bo
     char *ret;
     for (int i = 0; i < rowCnt; i++) {
         ret = ArenaAllocatorMalloc(contextPtr, length);
-        err = memcpy_s(ret, length, literal, length);
+        err = memcpy_s(ret, length + 1, literal, length);
         if (err != EOK) {
             char message[] = "Fill string failed";
             SetError(contextPtr, message, sizeof(message) / sizeof(char));
-            dataArray[i] = (uint8_t *)"";
+            dataArray[i] = nullptr;
             nullArray[i] = true;
             lengthArray[i] = 0;
             continue;
@@ -99,6 +99,13 @@ extern "C" DLLEXPORT void FillLength(int32_t *offsets, int32_t *rowIdxArray, int
 {
     for (int i = 0; i < rowCnt; i++) {
         lengthArray[i] = offsets[rowIdxArray[i] + 1] - offsets[i];
+    }
+}
+
+extern "C" DLLEXPORT void FillLengthInFuncExpr(int32_t *lengthArray, int32_t length, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        lengthArray[i] = length;
     }
 }
 
@@ -162,12 +169,10 @@ extern "C" DLLEXPORT void CreateAndExpr(bool *left, bool *leftNull, bool *right,
     }
 }
 
-extern "C" DLLEXPORT void BatchInInt32(int32_t *left, bool *leftNull, int32_t *right, bool *rightNull, int32_t *output,
-    bool *outNull, int32_t rowCnt)
+extern "C" DLLEXPORT void CopyNull(bool *dataArray, bool *output, int32_t *rowIdxArray, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
-        outNull[i] = (leftNull[i] || rightNull[i]);
-        output[i] = ((left[i] == right[i]) && (!outNull[i]));
+        dataArray[i] = output[rowIdxArray[i]];
     }
 }
 
@@ -267,7 +272,7 @@ extern "C" DLLEXPORT void CoalesceString(uint8_t **lArray, bool *lIsNull, int32_
     bool *rIsNull, int32_t *rLength, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
-        if (lIsNull[i] == true) {
+        if (lIsNull[i]) {
             lArray[i] = rArray[i];
             lIsNull[i] = rIsNull[i];
             lLength[i] = rLength[i];
@@ -289,21 +294,16 @@ extern "C" DLLEXPORT void InExprString(int32_t cmpCnt, int64_t *cmpValues, int64
     }
 
     for (int i = 0; i < rowCnt; ++i) {
-        bool hasSet = false;
+        finalResult[i] = false;
+        finalNull[i] = false;
         for (int j = 0; j < cmpCnt; ++j) {
             if (!toCmpBool[i] && !cmpNullsList[j][i]) {
                 if (StrCompare(reinterpret_cast<const char *>(toCmpValue[i]), toCmpLength[i],
                     reinterpret_cast<const char *>(cmpValuesList[j][i]), cmpLengthsList[j][i]) == 0) {
                     finalResult[i] = true;
-                    finalNull[i] = false;
-                    hasSet = true;
                     break;
                 }
             }
-        }
-        if (!hasSet) {
-            finalResult[i] = false;
-            finalNull[i] = false;
         }
     }
 }

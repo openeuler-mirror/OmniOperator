@@ -56,12 +56,16 @@ extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr
     char *ret;
     for (int i = 0; i < rowCnt; ++i) {
         length[i] = dictionaryVectorPtr->GetVarchar(rowIdxArray[i], &result);
+        if (length[i] == 0) {
+            str[i] = (uint8_t *) "";
+            continue;
+        }
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
         err = memcpy_s(ret, length[i], result, length[i]);
-        if (length[i] != 0 && err != EOK) {
+        if (err != EOK) {
             char message[] = "Get string from dictionary vector failed";
             SetError(contextPtr, message, sizeof(message) / sizeof(char));
-            str[i] = (uint8_t *)"";
+            str[i] = nullptr;
             continue;
         }
         str[i] = reinterpret_cast<uint8_t *>(ret);
@@ -112,12 +116,16 @@ extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t 
     char *ret;
     for (int i = 0; i < rowCnt; ++i) {
         length[i] = offsetArray[rowIdxArray[i] + 1] - offsetArray[rowIdxArray[i]];
+        if (length[i] == 0) {
+            str[i] = (uint8_t *) "";
+            continue;
+        }
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
         err = memcpy_s(ret, length[i], vector + offsetArray[rowIdxArray[i]], length[i]);
-        if (length[i] != 0 && err != EOK) {
+        if (err != EOK) {
             char message[] = "Get string from vector failed";
             SetError(contextPtr, message, sizeof(message) / sizeof(char));
-            str[i] = (uint8_t *)"";
+            str[i] = nullptr;
             continue;
         }
         str[i] = reinterpret_cast<uint8_t *>(ret);

@@ -23,7 +23,7 @@ using namespace CodegenUtil;
 
 TEST(BatchCodeGenTest, CastDouble)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto data1 = new FieldExpr(0, DoubleType());
     std::string castStr = "CAST";
     std::vector<Expr *> args1;
@@ -73,7 +73,7 @@ TEST(BatchCodeGenTest, CastDouble)
 
 TEST(BatchCodeGenTest, ProjectSparkConfig)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::string castStr = "CAST";
     std::vector<Expr *> argLeft { new FieldExpr(0, Decimal64Type(7, 0)) };
     FuncExpr *subLeft = GetFuncExpr(castStr, argLeft, Decimal64Type(8, 0));
@@ -118,7 +118,7 @@ TEST(BatchCodeGenTest, ProjectSparkConfig)
 
 TEST(BatchCodeGenTest, CastDecimal128ToString)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto data = new FieldExpr(0, Decimal128Type(38, 0));
     std::string castStr = "CAST";
     std::vector<Expr *> args;
@@ -164,7 +164,7 @@ TEST(BatchCodeGenTest, CastDecimal128ToString)
 
 TEST(BatchCodeGenTest, AllType)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *eq2Left = new FieldExpr(1, LongType());
     LiteralExpr *eq2Right = new LiteralExpr(3000000000L, LongType());
     BinaryExpr *eq2Expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eq2Left, eq2Right, BooleanType());
@@ -226,7 +226,7 @@ TEST(BatchCodeGenTest, AllType)
 
 TEST(BatchCodeGenTest, Round)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::string funcStr = "round";
 
     auto data0 = new FieldExpr(0, IntType());
@@ -354,7 +354,7 @@ TEST(BatchCodeGenTest, Round)
 
 TEST(BatchCodeGenTest, MultipleColumns)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *subLeft = new FieldExpr(0, IntType());
     LiteralExpr *subRight = new LiteralExpr(10, IntType());
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, IntType());
@@ -404,7 +404,7 @@ TEST(BatchCodeGenTest, MultipleColumns)
 
 TEST(BatchCodeGenTest, DictionaryVecDouble)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *addRight = new LiteralExpr(10.0, DoubleType());
     std::vector<Expr *> exprs = { new BinaryExpr(omniruntime::expressions::Operator::ADD,
         new FieldExpr(0, DoubleType()), addRight, DoubleType()) };
@@ -447,7 +447,7 @@ TEST(BatchCodeGenTest, DictionaryVecDouble)
 
 TEST(BatchCodeGenTest, DictionaryVecDecimal128)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *addRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD,
         new FieldExpr(0, Decimal128Type(38, 0)), addRight, Decimal128Type(38, 0));
@@ -492,7 +492,7 @@ TEST(BatchCodeGenTest, DictionaryVecDecimal128)
 
 TEST(BatchCodeGenTest, DictionaryVecDecimal64)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *addRight = new LiteralExpr(20, Decimal64Type(8, 1));
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, new FieldExpr(0, Decimal64Type(8, 0)),
         addRight, Decimal64Type(8, 1));
@@ -536,7 +536,7 @@ TEST(BatchCodeGenTest, DictionaryVecDecimal64)
 
 TEST(BatchCodeGenTest, DictionaryVecBoolean)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *andRight = new LiteralExpr(true, BooleanType());
     BinaryExpr *andExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, new FieldExpr(0, BooleanType()),
         andRight, BooleanType());
@@ -587,7 +587,7 @@ TEST(BatchCodeGenTest, DictionaryVecBoolean)
 
 TEST(BatchCodeGenTest, DictionaryVarchar)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
         new LiteralExpr(6, IntType()), BooleanType());
 
@@ -649,7 +649,7 @@ TEST(BatchCodeGenTest, DictionaryVarchar)
 
 TEST(BatchCodeGenTest, DictionaryVec)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     BetweenExpr *filterExpr =
         new BetweenExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()), new FieldExpr(2, IntType()));
 
@@ -710,7 +710,7 @@ TEST(BatchCodeGenTest, DictionaryVec)
 
 TEST(BatchCodeGenTest, AddDecimalReturnNull)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *right1 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *left1 = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *addExpr1 =
@@ -773,7 +773,7 @@ TEST(BatchCodeGenTest, AddDecimalReturnNull)
 
 TEST(BatchCodeGenTest, IsNullExpr)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *expr = new FieldExpr(0, IntType());
     IsNullExpr *isNullExpr = new IsNullExpr(expr);
 
@@ -815,7 +815,7 @@ TEST(BatchCodeGenTest, IsNullExpr)
 
 TEST(BatchCodeGenTest, UnaryExpr)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *expr = new FieldExpr(0, IntType());
     IsNullExpr *isNullExpr = new IsNullExpr(expr);
     auto notExpr = new UnaryExpr(omniruntime::expressions::Operator::NOT, isNullExpr, BooleanType());

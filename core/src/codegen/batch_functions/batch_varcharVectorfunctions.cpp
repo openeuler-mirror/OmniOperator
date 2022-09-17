@@ -9,7 +9,8 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-extern DLLEXPORT int32_t BatchWrapVarcharVector(int64_t vectorAddr, uint8_t **data, int32_t *dataLen, int32_t rowCnt)
+extern "C" DLLEXPORT int32_t BatchWrapVarcharVector(int64_t vectorAddr, uint8_t **data, int32_t *dataLen,
+    int32_t rowCnt)
 {
     auto *varcharVectorPtr = reinterpret_cast<VarcharVector *>(vectorAddr);
     for (int i = 0; i < rowCnt; ++i) {

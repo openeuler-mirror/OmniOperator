@@ -397,8 +397,6 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal64(int64_t contextPtr, double 
     int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     std::stringstream ss;
-    int32_t precision = 0;
-    int32_t scale = 0;
     OpStatus status;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
@@ -411,6 +409,8 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal64(int64_t contextPtr, double 
         std::string s;
         ss >> s;
 
+        int32_t precision = 0;
+        int32_t scale = 0;
         int64_t result = 0;
         // cannot use output[i] instead of result, because StringToDecimal64 uses the result value.
         status = DecimalOperations::StringToDecimal64(s, result, scale, precision);
@@ -423,7 +423,7 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal64(int64_t contextPtr, double 
         if (status != SUCCESS) {
             std::ostringstream errorMessage;
             errorMessage.precision(DOUBLE_MAX_PRECISION);
-            errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
+            errorMessage << "Cannot cast DOUBLE '" << x[i] << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
             int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
             SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
             output[i] = 1;
@@ -490,8 +490,6 @@ extern "C" DLLEXPORT void BatchCastLongToDecimal128(int64_t contextPtr, int64_t 
 extern "C" DLLEXPORT void BatchCastDoubleToDecimal128(int64_t contextPtr, double *x, bool *isAnyNull,
     Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
-    int32_t precision = 0;
-    int32_t scale = 0;
     OpStatus status;
     std::stringstream ss;
     std::string s;
@@ -501,25 +499,30 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal128(int64_t contextPtr, double
             continue;
         }
         ss.clear();
+        ss.str("");
         ss << std::setprecision(DOUBLE_MAX_PRECISION) << x[i];
         s = ss.str();
 
-        status = DecimalOperations::StringToDecimal128(s, output[i], scale, precision);
+        int32_t precision = 0;
+        int32_t scale = 0;
+        Decimal128 result(0);
+        status = DecimalOperations::StringToDecimal128(s, result, scale, precision);
         if (status == SUCCESS) {
-            status = DecimalOperations::Rescale128(output[i], outScale - scale, output[i]);
+            status = DecimalOperations::Rescale128(result, outScale - scale, result);
         }
         if (status == SUCCESS) {
-            status = DecimalOperations::IsOverflows(output[i], outPrecision);
+            status = DecimalOperations::IsOverflows(result, outPrecision);
         }
         if (status != SUCCESS) {
             std::ostringstream errorMessage;
             errorMessage.precision(DOUBLE_MAX_PRECISION);
-            errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
+            errorMessage << "Cannot cast DOUBLE '" << x[i] << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
             int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
             SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
             output[i].SetValue(0, 1);
             continue;
         }
+        output[i] = result;
     }
 }
 
@@ -840,8 +843,6 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal64RetNull(bool *isNull, double
     int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     std::stringstream ss;
-    int32_t precision = 0;
-    int32_t scale = 0;
     OpStatus status;
     for (int i = 0; i < rowCnt; ++i) {
         ss.clear();
@@ -849,6 +850,8 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal64RetNull(bool *isNull, double
         ss << std::setprecision(DOUBLE_MAX_PRECISION) << x[i];
         std::string s = ss.str();
 
+        int32_t precision = 0;
+        int32_t scale = 0;
         int64_t result = 0;
         // cannot use output[i] instead of result, because StringToDecimal64 uses the result value.
         status = DecimalOperations::StringToDecimal64(s, result, scale, precision);
@@ -910,8 +913,6 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal128RetNull(bool *isNull, doubl
     int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     std::stringstream ss;
-    int32_t precision = 0;
-    int32_t scale = 0;
     OpStatus status;
     for (int i = 0; i < rowCnt; ++i) {
         ss.clear();
@@ -920,18 +921,22 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal128RetNull(bool *isNull, doubl
         std::string s;
         ss >> s;
 
-        status = DecimalOperations::StringToDecimal128(s, output[i], scale, precision);
+        int32_t precision = 0;
+        int32_t scale = 0;
+        Decimal128 result(0);
+        status = DecimalOperations::StringToDecimal128(s, result, scale, precision);
         if (status == SUCCESS) {
-            status = DecimalOperations::Rescale128(output[i], outScale - scale, output[i]);
+            status = DecimalOperations::Rescale128(result, outScale - scale, result);
         }
         if (status == SUCCESS) {
-            status = DecimalOperations::IsOverflows(output[i], outPrecision);
+            status = DecimalOperations::IsOverflows(result, outPrecision);
         }
         if (status != SUCCESS) {
             isNull[i] = true;
             output[i].SetValue(0, 1);
             continue;
         }
+        output[i] = result;
     }
 }
 

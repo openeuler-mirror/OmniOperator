@@ -84,7 +84,7 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastStringToDecimal128), castFnStr, {},
             { OMNI_VARCHAR }, OMNI_DECIMAL128, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToDate), castFnStr, {},
-            { OMNI_VARCHAR }, OMNI_DATE32, INPUT_DATA, true),
+            { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStrWithDiffWidths), castFnStr, {},
             { OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA, true),
 
@@ -112,8 +112,6 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             { OMNI_CHAR, OMNI_VARCHAR }, OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(ConcatStrCharRetNull), "concat_null", {},
             { OMNI_VARCHAR, OMNI_CHAR }, OMNI_CHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
-        Function(reinterpret_cast<void *>(CastDecimal64ToStringRetNull), "CAST_null", {},
-            { OMNI_DECIMAL64 }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
 
         Function(reinterpret_cast<void *>(CastIntToStringRetNull), "CAST_null", {},
             { OMNI_INT }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
@@ -121,21 +119,17 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             { OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(CastDoubleToStringRetNull), "CAST_null", {},
             { OMNI_DOUBLE }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastDecimal64ToStringRetNull), "CAST_null", {},
+                 { OMNI_DECIMAL64 }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(CastDecimal128ToStringRetNull), "CAST_null", {},
             { OMNI_DECIMAL128 }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
 
-        Function(reinterpret_cast<void *>(CastStringToIntRetNull), "CAST_null", {},
-            { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToLongRetNull), "CAST_null", {},
-            { OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToDoubleRetNull), "CAST_null", {},
-            { OMNI_VARCHAR }, OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDecimal64RetNull), "CAST_null", {},
             { OMNI_VARCHAR }, OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDecimal128RetNull), "CAST_null", {},
             { OMNI_VARCHAR }, OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToDateRetNull), "CAST_null", {},
-            { OMNI_VARCHAR }, OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
+            { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStrWithDiffWidthsRetNull), "CAST_null", {},
             { OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true)
 

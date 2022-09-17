@@ -22,7 +22,7 @@ using namespace CodegenUtil;
 
 TEST(BatchCodeGenTest, IntCompare1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *lessThanLeft = new FieldExpr(0, IntType());
     auto *lessThanRight = new LiteralExpr(50, IntType());
     auto *lessThanExpr =
@@ -76,7 +76,7 @@ TEST(BatchCodeGenTest, IntCompare1)
 
 TEST(BatchCodeGenTest, IntCompare2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *gtLeft = new FieldExpr(0, IntType());
     auto *gtRight = new LiteralExpr(50, IntType());
     auto *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
@@ -128,7 +128,7 @@ TEST(BatchCodeGenTest, IntCompare2)
 
 TEST(BatchCodeGenTest, LongCompare1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *greatThanOrEqLeft = new FieldExpr(0, LongType());
     auto *greatThanOrEqRight = new LiteralExpr(50L, LongType());
     auto *greatThanOrEqExpr =
@@ -183,7 +183,7 @@ TEST(BatchCodeGenTest, LongCompare1)
 
 TEST(BatchCodeGenTest, LongCompare2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *eqLeft = new FieldExpr(0, LongType());
     auto *eqRight = new LiteralExpr(9L, LongType());
     auto *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
@@ -235,7 +235,7 @@ TEST(BatchCodeGenTest, LongCompare2)
 
 TEST(BatchCodeGenTest, DoubleCompare1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *eqLeft = new FieldExpr(0.0, DoubleType());
     auto *eqRight = new LiteralExpr(50.0, DoubleType());
     auto *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
@@ -287,7 +287,7 @@ TEST(BatchCodeGenTest, DoubleCompare1)
 
 TEST(BatchCodeGenTest, DoubleCompare2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *gtLeft = new FieldExpr(0.0, DoubleType());
     auto *gtRight = new LiteralExpr(50.0, DoubleType());
     auto *gtExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
@@ -339,7 +339,7 @@ TEST(BatchCodeGenTest, DoubleCompare2)
 
 TEST(BatchCodeGenTest, StringCompare)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, VarcharType()),
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
 
@@ -386,7 +386,7 @@ TEST(BatchCodeGenTest, StringCompare)
 
 TEST(BatchCodeGenTest, Decimal64Compare1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *lteLeft = new FieldExpr(0, Decimal64Type(8, 0));
     LiteralExpr *lteRight = new LiteralExpr(3, Decimal64Type(8, 1));
     BinaryExpr *lteExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lteLeft, lteRight, BooleanType());
@@ -432,7 +432,7 @@ TEST(BatchCodeGenTest, Decimal64Compare1)
 
 TEST(BatchCodeGenTest, Decimal64Compare2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *eqLeft = new FieldExpr(0, Decimal64Type(8, 0));
     LiteralExpr *eqRight = new LiteralExpr(0, Decimal64Type(8, 1));
     BinaryExpr *eqExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, eqLeft, eqRight, BooleanType());
@@ -478,7 +478,7 @@ TEST(BatchCodeGenTest, Decimal64Compare2)
 
 TEST(BatchCodeGenTest, Decimal128Compare1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *lteRight = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 1));
     FieldExpr *lteLetf = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *lteExpr = new BinaryExpr(omniruntime::expressions::Operator::LTE, lteLetf, lteRight, BooleanType());
@@ -528,7 +528,7 @@ TEST(BatchCodeGenTest, Decimal128Compare1)
 
 TEST(BatchCodeGenTest, Decimal128Compare2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *ltRight = new LiteralExpr(new std::string("50000"), Decimal128Type(38, 1));
     FieldExpr *ltLetf = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, ltLetf, ltRight, BooleanType());
@@ -578,7 +578,7 @@ TEST(BatchCodeGenTest, Decimal128Compare2)
 
 TEST(BatchCodeGenTest, IntArith)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *addLeft = new FieldExpr(0, IntType());
     auto *addRight = new LiteralExpr(1, IntType());
     auto *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
@@ -653,7 +653,7 @@ TEST(BatchCodeGenTest, IntArith)
 
 TEST(BatchCodeGenTest, LongArith)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *addLeft = new FieldExpr(0, LongType());
     auto *addRight = new LiteralExpr(1L, LongType());
     auto *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
@@ -723,11 +723,12 @@ TEST(BatchCodeGenTest, LongArith)
     delete[] col2;
     delete[] col3;
     delete[] col4;
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, DoubleArith)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto *addLeft = new FieldExpr(0, DoubleType());
     auto *addRight = new LiteralExpr(1.0, DoubleType());
     auto *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, DoubleType());
@@ -802,8 +803,8 @@ TEST(BatchCodeGenTest, DoubleArith)
 
 TEST(BatchCodeGenTest, Decimal64Arith1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
-    auto subLeft = new LiteralExpr(4321563L, Decimal64Type(7, 3));
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto subLeft = new FieldExpr(0, Decimal64Type(7, 3));
     auto subRight = new LiteralExpr(123468L, Decimal64Type(6, 4));
     BinaryExpr *subExpr =
         new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal64Type(8, 4));
@@ -816,11 +817,13 @@ TEST(BatchCodeGenTest, Decimal64Arith1)
     }
 
     const int32_t numRows = 1;
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 4321563;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 3) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith1");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -832,14 +835,15 @@ TEST(BatchCodeGenTest, Decimal64Arith1)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal64Arith2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
-    auto mulLeft = new LiteralExpr(100L, Decimal64Type(7, 2));
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto mulLeft = new FieldExpr(0, Decimal64Type(7, 2));
     auto mulRight = new LiteralExpr(100L, Decimal64Type(7, 2));
     BinaryExpr *mulExpr =
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal64Type(7, 4));
@@ -849,16 +853,18 @@ TEST(BatchCodeGenTest, Decimal64Arith2)
 
     std::vector<std::unique_ptr<Projection>> projections;
     for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
+        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
         projections.push_back(move(projection));
     }
 
     const int32_t numRows = 1;
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 100;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 2) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith2");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -870,14 +876,15 @@ TEST(BatchCodeGenTest, Decimal64Arith2)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal64Arith3)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
-    auto left = new LiteralExpr(1225L, Decimal64Type(4, 2));
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto left = new FieldExpr(0, Decimal64Type(4, 2));
     auto right = new LiteralExpr(125L, Decimal64Type(3, 2));
 
     BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, left, right, Decimal64Type(2, 1));
@@ -887,16 +894,18 @@ TEST(BatchCodeGenTest, Decimal64Arith3)
 
     std::vector<std::unique_ptr<Projection>> projections;
     for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
+        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
         projections.push_back(move(projection));
     }
 
     const int32_t numRows = 1;
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 1225;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(4, 2) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith3");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -908,14 +917,15 @@ TEST(BatchCodeGenTest, Decimal64Arith3)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal64Arith4)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
-    auto left = new LiteralExpr(12250L, Decimal64Type(5, 3));
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto left = new FieldExpr(0, Decimal64Type(5, 3));
     auto right = new LiteralExpr(125L, Decimal64Type(3, 2));
 
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, left, right, Decimal64Type(4, 3));
@@ -925,16 +935,18 @@ TEST(BatchCodeGenTest, Decimal64Arith4)
 
     std::vector<std::unique_ptr<Projection>> projections;
     for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
+        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
         projections.push_back(move(projection));
     }
 
     const int32_t numRows = 1;
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 12250;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(5, 3) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith4");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -946,13 +958,14 @@ TEST(BatchCodeGenTest, Decimal64Arith4)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal128Arith1)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 1));
     BinaryExpr *addExpr =
@@ -993,7 +1006,7 @@ TEST(BatchCodeGenTest, Decimal128Arith1)
 
 TEST(BatchCodeGenTest, Decimal128Arith2)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *subLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *subRight = new LiteralExpr(new string("1"), Decimal128Type(38, 1));
     BinaryExpr *subExpr =
@@ -1040,6 +1053,7 @@ TEST(BatchCodeGenTest, Decimal128Arith2)
 
 TEST(BatchCodeGenTest, Decimal128Arith3)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     FieldExpr *mulLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *mulRight = new LiteralExpr(new std::string("3"), Decimal128Type(38, 1));
     BinaryExpr *mulExpr =
@@ -1080,7 +1094,7 @@ TEST(BatchCodeGenTest, Decimal128Arith3)
 
 TEST(BatchCodeGenTest, Decimal128Arith4)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     LiteralExpr *divRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV,
         new FieldExpr(0, Decimal128Type(38, 0)), divRight, Decimal128Type(38, 0));

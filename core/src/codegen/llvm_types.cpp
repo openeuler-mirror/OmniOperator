@@ -172,7 +172,7 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
     }
 }
 
-llvm::Type *LLVMTypes::ToDataPointerType(DataTypeId typeId)
+llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
 {
     switch (typeId) {
         case OMNI_BOOLEAN:

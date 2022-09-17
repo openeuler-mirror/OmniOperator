@@ -55,22 +55,15 @@ int64_t BatchProjectionCodeGen::GetFunction()
     if (func == nullptr) {
         return 0;
     }
-    return this->CreateWrapper(*func);
+    return this->CreateBatchWrapper(*func);
 }
 
-int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
+int64_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
 {
     llvm::Function *proj = &projFunc;
 
     std::vector<Type *> args;
-    /*
-     * For filter enabled:
-     * def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr)
-     * For filter disabled:
-     * def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr, i32* selected_array, i32 num_selected)
-     */
-
-    // vecBatch, rowCnt, outputData, (selectedRows, numSelected), bitmap, offsets, outputNull, outputOffsets, execution
+    // data, rowCnt, outputData, (selectedRows, numSelected), bitmap, offsets, outputNull, outputOffsets, execution
     // context, dictionary vectors,
     args.push_back(llvmTypes->I64PtrType());
     args.push_back(llvmTypes->I32Type());
@@ -96,7 +89,6 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     numRows->setName("NUM_ROWS");
     Argument *outputAddress = funcDecl->getArg(OUTPUT_ADDRESS_INDEX);
     outputAddress->setName("OUTPUT_ADDRESS");
-
     // Only use these values if filter enabled
     Argument *selected = nullptr;
     Argument *numSelected = nullptr;
@@ -106,22 +98,16 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         numSelected = funcDecl->getArg(NUM_SELECTED);
         numSelected->setName("NUM_SELECTED");
     }
-
     Argument *bitmap = funcDecl->getArg(BITMAP);
     bitmap->setName("BITMAP");
-
     Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
     offsets->setName("OFFSETS");
-
     Argument *nullValuesAddress = funcDecl->getArg(NEW_NULL_VALUES_INDEX);
     nullValuesAddress->setName("NULL_VALUES_ADDRESS");
-
     Argument *outputOffsetsAddress = funcDecl->getArg(OUTPUT_OFFSETS_INDEX);
     outputOffsetsAddress->setName("OUTPUT_OFFSETS_ADDRESS");
-
     Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
     executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
-
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
     dictionaryVectors->setName("DICTIONARY_VECTORS");
 
@@ -186,8 +172,8 @@ int64_t BatchProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
             funcArgs, nullptr, "copy_result");
     }
 
-    auto nullColPtr = builder->CreateIntToPtr(nullValuesAddress, llvmTypes->I1PtrType());
-    funcArgs = { nullColPtr, isNullPtr, numRows };
+    auto dstNullPtr = builder->CreateIntToPtr(nullValuesAddress, llvmTypes->I1PtrType());
+    funcArgs = { dstNullPtr, isNullPtr, numRows };
     llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
     builder->CreateRet(numRows);
 

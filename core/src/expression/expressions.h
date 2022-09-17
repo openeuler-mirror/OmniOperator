@@ -256,6 +256,12 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+    static inline bool IsCastStrStr(const omniruntime::expressions::FuncExpr &e)
+    {
+        return (e.funcName == "CAST" || e.funcName == "CAST_null") &&
+               e.arguments[0]->GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR &&
+               e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
+    }
 };
 }
 }

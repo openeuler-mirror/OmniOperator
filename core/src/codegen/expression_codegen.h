@@ -187,13 +187,6 @@ private:
     llvm::Value *CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr);
     std::vector<llvm::Value *> GetHiveUdfArgValues(const omniruntime::expressions::FuncExpr &fExpr, bool &isInvalid);
     void CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr);
-
-    static inline bool IsCastStrStr(const omniruntime::expressions::FuncExpr &e)
-    {
-        return (e.funcName == "CAST" || e.funcName == "CAST_null") &&
-               e.arguments[0]->GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR &&
-               e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
-    }
 };
 
 #endif

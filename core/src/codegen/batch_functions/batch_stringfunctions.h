@@ -15,12 +15,16 @@
 #include "util/engine.h"
 #include "codegen/functions/context_helper.h"
 #include "codegen/string_util.h"
+#include "type/decimal128.h"
+#include "type/decimal_operations.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
 #endif
+
+using namespace omniruntime::type;
 
 // string compare functions
 extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
@@ -43,6 +47,66 @@ extern "C" DLLEXPORT void BatchEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **
 
 extern "C" DLLEXPORT void BatchNotEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
     int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDate(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDateRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastIntToString(int64_t contextPtr, int32_t *value, bool *isAnyNull, uint8_t **output,
+    int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastLongToString(int64_t contextPtr, int64_t *value, bool *isAnyNull, uint8_t **output,
+    int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDoubleToString(int64_t contextPtr, double *value, bool *isAnyNull, uint8_t **output,
+    int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal64ToString(int64_t contextPtr, int64_t *x, int32_t precision, int32_t scale,
+    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal128ToString(int64_t contextPtr, Decimal128 *x, int32_t precision,
+    int32_t scale, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastIntToStringRetNull(bool *isNull, int64_t contextPtr, int32_t *value,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastLongToStringRetNull(bool *isNull, int64_t contextPtr, int64_t *value,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDoubleToStringRetNull(bool *isNull, int64_t contextPtr, double *value,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal64ToStringRetNull(bool *isNull, int64_t contextPtr, int64_t *x,
+    int32_t precision, int32_t scale, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal128ToStringRetNull(bool *isNull, int64_t contextPtr, Decimal128 *inputDecimal,
+    int32_t precision, int32_t scale, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
+    int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
+    Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchToUpperStr(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchToUpperChar(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen,
+    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchToLowerStr(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchToLowerChar(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen,
+    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchLikeStr(uint8_t **str, int32_t *strLen, uint8_t **regexToMatch, int32_t *regexLen,
     bool *isAnyNull, bool *output, int32_t rowCnt);
@@ -280,7 +344,5 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
         output[i] = ret;
     }
 }
-
-
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

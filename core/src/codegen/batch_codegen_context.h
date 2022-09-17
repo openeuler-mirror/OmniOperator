@@ -3,7 +3,6 @@
  * Description: batch codegen context
  */
 
-
 #ifndef OMNI_RUNTIME_BATCH_CODEGEN_CONTEXT_H
 #define OMNI_RUNTIME_BATCH_CODEGEN_CONTEXT_H
 
@@ -46,6 +45,5 @@ private:
     llvm::Value *executionContext;
     llvm::Value *dictionaryVectors;
 };
-
 
 #endif // OMNI_RUNTIME_BATCH_CODEGEN_CONTEXT_H

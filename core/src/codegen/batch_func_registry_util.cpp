@@ -10,8 +10,10 @@ using namespace omniruntime::type;
 
 std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
 {
-    std::vector<Function> utilFnRegistry = { Function(reinterpret_cast<void *>(FillRowIndexArray), "fill_rowIdx", {},
-        { OMNI_INT, OMNI_INT }, OMNI_INT, INPUT_DATA),
+    std::vector<Function> utilFnRegistry = {
+        Function(reinterpret_cast<void *>(FillRowIndexArray), "fill_rowIdx", {}, { OMNI_INT, OMNI_INT }, OMNI_INT,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(CopyNull), "batch_copy_null", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(FillNull), "batch_fill_null", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(FillBool), "batch_fill_literal", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN,
             INPUT_DATA),
@@ -23,10 +25,11 @@ std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(FillDouble), "batch_fill_literal", {}, { OMNI_DOUBLE }, OMNI_DOUBLE,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(FillString), "batch_fill_literal", {}, { OMNI_CHAR }, OMNI_CHAR, INPUT_DATA),
         Function(reinterpret_cast<void *>(FillString), "batch_fill_literal", {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(FillLength), "batch_fill_length", {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(FillLengthInFuncExpr), "batch_fill_length_literal", {}, { OMNI_INT },
+            OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(CopyInt32), "batch_copy", {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(CopyInt64), "batch_copy", {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(CopyDecimal128), "batch_copy", {}, { OMNI_DECIMAL128 }, OMNI_DECIMAL128,
@@ -60,8 +63,6 @@ std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
             OMNI_DOUBLE, INPUT_DATA),
         Function(reinterpret_cast<void *>(CoalesceString), "batch_coalesce", {}, { OMNI_VARCHAR, OMNI_VARCHAR },
             OMNI_VARCHAR, INPUT_DATA),
-        Function(reinterpret_cast<void *>(CoalesceString), "batch_coalesce", {}, { OMNI_CHAR, OMNI_CHAR }, OMNI_CHAR,
-            INPUT_DATA),
         Function(reinterpret_cast<void *>(Coalesce<int64_t>), "batch_coalesce", {}, { OMNI_DECIMAL64, OMNI_DECIMAL64 },
             OMNI_DECIMAL64, INPUT_DATA),
         Function(reinterpret_cast<void *>(Coalesce<Decimal128>), "batch_coalesce", {},
@@ -93,20 +94,16 @@ std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(SwitchExpr<Decimal128>), "batch_switch", {}, { OMNI_DECIMAL128 },
             OMNI_DECIMAL128, INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(InExpr<bool>), "batch_in", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(InExpr<bool>), "batch_in", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExpr<int32_t>), "batch_in", {}, { OMNI_INT }, OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(InExpr<int64_t>), "batch_in", {}, { OMNI_LONG }, OMNI_BOOLEAN,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(InExpr<double>), "batch_in", {}, { OMNI_DOUBLE }, OMNI_BOOLEAN,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(InExpr<int64_t>), "batch_in", {}, { OMNI_LONG }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(InExpr<double>), "batch_in", {}, { OMNI_DOUBLE }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExprString), "batch_in", {}, { OMNI_CHAR }, OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(InExprString), "batch_in", {}, { OMNI_VARCHAR }, OMNI_BOOLEAN,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(InExprString), "batch_in", {}, { OMNI_VARCHAR }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExpr<int64_t>), "batch_in", {}, { OMNI_DECIMAL64 }, OMNI_BOOLEAN,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(InExpr<Decimal128>), "batch_in", {}, { OMNI_DECIMAL128 },
-                 OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(InExpr<Decimal128>), "batch_in", {}, { OMNI_DECIMAL128 }, OMNI_BOOLEAN,
+            INPUT_DATA),
     };
 
     return utilFnRegistry;

@@ -165,7 +165,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     int32_t numSelectedRows = this->filter->apply(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
         reinterpret_cast<int64_t>(context), dictionaries);
     if (context->HasError()) {
-        // resource cleanup
         delete[] selectedRows;
         context->GetArena()->Reset();
         VectorHelper::FreeVecBatch(vecBatch);
@@ -186,7 +185,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
             valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         if (context->HasError()) {
             delete col;
-            // resource cleanup
             for (int32_t j = 0; j < i; j++) {
                 delete projectedVecs->GetVector(j);
             }
@@ -223,10 +221,14 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
 
 Filter::Filter(const expressions::Expr &expression, OverflowConfig *overflowConfig) : expr(&expression)
 {
+    int64_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
         this->codeGen = FilterCodeGen::Create("filterFunc", expression, overflowConfig);
+        f = this->codeGen->GetFunction();
+    } else {
+        this->batchCodeGen = BatchFilterCodeGen::Create("filterFunc", expression, overflowConfig);
+        f = this->batchCodeGen->GetFunction();
     }
-    auto f = this->codeGen->GetFunction();
     if (f == 0) {
         this->isSupported = false;
         this->apply = nullptr;
