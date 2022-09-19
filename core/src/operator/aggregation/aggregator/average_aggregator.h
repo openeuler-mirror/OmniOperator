@@ -60,7 +60,7 @@ public:
             state.avgVal = sumVal;
             state.avgCnt = static_cast<int64_t>(count);
         } else {
-            *(static_cast<ResultType *>(state.val)) += *static_cast<ResultType *>(sumVal);
+            *(static_cast<ResultType *>(state.avgVal)) += *static_cast<ResultType *>(sumVal);
             state.avgCnt += static_cast<int64_t>(count);
         }
     }
