@@ -35,13 +35,14 @@ public:
         int32_t maxLen = 0;
         uint8_t *maxVal = executionContext->GetArena()->Allocate(3 * width);
 
+        LogDebug("HMPP-Agg-max");
         auto result =
             HMPPS_Max_varchar(static_cast<uint8_t *>(vector->GetValues()), offsets, vector->GetSize(), maxVal, &maxLen);
         if (result != HMPP_STS_NO_ERR) {
             throw OmniException("HMPP ERROR", "max failed for hmpp error");
         }
 
-        if (state.val == nullptr) {
+        if (state.strVal == nullptr) {
             state.strVal = maxVal;
             state.strLen = maxLen;
         } else {
