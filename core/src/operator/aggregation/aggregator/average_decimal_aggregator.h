@@ -41,6 +41,7 @@ public:
         auto sumVal =
             reinterpret_cast<HmppDecimal128 *>(executionContext->GetArena()->Allocate(sizeof(HmppDecimal128)));
         switch (inputTypeId) {
+            LogDebug("HMPP-Agg-avg");
             case OMNI_DECIMAL128: {
                 result = HMPPS_Mean_decimal128(
                     static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset),

@@ -37,6 +37,7 @@ public:
         HmppResult result = HMPP_STS_NO_ERR;
         auto maxVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
         switch (inputTypeId) {
+            LogDebug("HMPP-Agg-max");
             case OMNI_SHORT: {
                 result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int16_t *>(maxVal));

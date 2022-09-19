@@ -35,13 +35,14 @@ public:
         int32_t minLen = 3 * width;
         uint8_t *minVal = executionContext->GetArena()->Allocate(3 * width);
 
+        LogDebug("HMPP-Agg-min");
         auto result =
             HMPPS_Min_varchar(static_cast<uint8_t *>(vector->GetValues()), offsets, vector->GetSize(), minVal, &minLen);
         if (result != HMPP_STS_NO_ERR) {
             throw OmniException("HMPP ERROR", "min failed for hmpp error");
         }
 
-        if (state.val == nullptr) {
+        if (state.strVal == nullptr) {
             state.strVal = minVal;
             state.strLen = minLen;
         } else {
