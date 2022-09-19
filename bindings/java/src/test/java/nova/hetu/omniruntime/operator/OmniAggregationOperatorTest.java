@@ -5,10 +5,14 @@
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_ALL;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT_COLUMN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MAX;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MIN;
 import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
@@ -21,9 +25,19 @@ import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.vector.Decimal128Vec;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -173,6 +187,133 @@ public class OmniAggregationOperatorTest {
         assertEquals(factory2, factory1);
         assertEquals(factory1, factory1);
         assertNotEquals(factory3, factory1);
+    }
+
+    @Test
+    public void testExecuteMinMaxWithHmpp() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE, new CharDataType(20),
+                new VarcharDataType(20), new Decimal128DataType(20, 5)};
+        FunctionType minFn = OMNI_AGGREGATION_TYPE_MIN;
+        FunctionType maxFn = OMNI_AGGREGATION_TYPE_MAX;
+        FunctionType[] aggFunctionTypes = {minFn, minFn, minFn, minFn, minFn, minFn, maxFn, maxFn, maxFn, maxFn, maxFn,
+                maxFn};
+        int[] aggInputChannels = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5};
+        int[] maskChannels = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+        DataType[] aggOutputTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE,
+                new CharDataType(20), new VarcharDataType(20), new Decimal128DataType(20, 5), IntDataType.INTEGER,
+                LongDataType.LONG, DoubleDataType.DOUBLE, new CharDataType(20), new VarcharDataType(20),
+                new Decimal128DataType(20, 5)};
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
+                aggInputChannels, maskChannels, aggOutputTypes, true, false);
+
+        Object[][] sampleDatas = {{2, 1, 5, 3, 1}, {3L, 10L, 2L, 7L, 3L}, {12.3, 7.2, 20.5, 6.1, 12.3},
+                {"hello", "world", "c++", "shell", "golang"}, {"operator", "vectorBatch", "udf", "expression", "omni"}};
+        Object[][] decimalDatas = {{4000L, 0L}, {2000L, 0L}, {1000L, 0L}, {2000L, 0L}, {5000L, 0L}};
+
+        Vec[] buildVecs = new Vec[sourceTypes.length];
+        for (int i = 0; i < 5; i++) {
+            buildVecs[i] = createVec(sourceTypes[i], sampleDatas[i]);
+        }
+        buildVecs[5] = createVec(sourceTypes[5], decimalDatas);
+
+        VecBatch inputData = new VecBatch(buildVecs);
+        OmniOperator omniOperator = factory.createOperator();
+        omniOperator.addInput(inputData);
+        Iterator<VecBatch> output = omniOperator.getOutput();
+
+        while (output.hasNext()) {
+            VecBatch vecBatch = output.next();
+            if (vecBatch.getVectors().length != aggOutputTypes.length) {
+                throw new IllegalArgumentException(
+                        format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                                vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+            }
+
+            assertNotNull(vecBatch);
+            assertEquals(vecBatch.getVectors().length, 12);
+            Vec[] vectors = vecBatch.getVectors();
+            assertEquals(((IntVec) vectors[0]).get(0), 1);
+            assertEquals(((LongVec) vectors[1]).get(0), 2L);
+            assertEquals(((DoubleVec) vectors[2]).get(0), 6.1);
+            assertEquals(new String(((VarcharVec) vectors[3]).get(0)), "c++");
+            assertEquals(new String(((VarcharVec) vectors[4]).get(0)), "expression");
+            assertEquals(((Decimal128Vec) vectors[5]).get(0), new Object[]{1000L, 0L});
+            assertEquals(((IntVec) vectors[6]).get(0), 5);
+            assertEquals(((LongVec) vectors[7]).get(0), 10L);
+            assertEquals(((DoubleVec) vectors[8]).get(0), 20.5);
+            assertEquals(new String(((VarcharVec) vectors[9]).get(0)), "world");
+            assertEquals(new String(((VarcharVec) vectors[10]).get(0)), "vectorBatch");
+            assertEquals(((Decimal128Vec) vectors[11]).get(0), new Object[]{5000L, 0L});
+
+            freeVecBatch(vecBatch);
+        }
+        omniOperator.close();
+        factory.close();
+    }
+
+    @Test
+    public void testExecuteSumAvgWithHmppMultipleStage() {
+        DataType[] sourceTypes = {LongDataType.LONG, new Decimal128DataType(20, 5)};
+        FunctionType sumFn = OMNI_AGGREGATION_TYPE_SUM;
+        FunctionType avgFn = OMNI_AGGREGATION_TYPE_AVG;
+        FunctionType[] aggFunctionTypes = {sumFn, sumFn, avgFn, avgFn};
+        int[] aggInputChannels = {0, 1, 0, 1};
+        int[] maskChannels = {-1, -1, -1, -1};
+        DataType[] partialAggOutputTypes = {LongDataType.LONG, new VarcharDataType(24),
+                new ContainerDataType(new DataType[]{DoubleDataType.DOUBLE, LongDataType.LONG}),
+                new VarcharDataType(32)};
+        OmniAggregationOperatorFactory factory1 = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
+                aggInputChannels, maskChannels, partialAggOutputTypes, true, true);
+
+        Object[][] sampleDatas = {{3L, 10L, 2L, 7L, 3L}};
+        Object[][] decimalDatas = {{4000L, 0L}, {2000L, 0L}, {1000L, 0L}, {3000L, 0L}, {5000L, 0L}};
+
+        Vec[] buildVecs = new Vec[sourceTypes.length];
+        for (int i = 0; i < 1; i++) {
+            buildVecs[i] = createVec(sourceTypes[i], sampleDatas[i]);
+        }
+        buildVecs[1] = createVec(sourceTypes[1], decimalDatas);
+        VecBatch inputData = new VecBatch(buildVecs);
+
+        OmniOperator omniOperator1 = factory1.createOperator();
+        omniOperator1.addInput(inputData);
+        Iterator<VecBatch> partialOutput = omniOperator1.getOutput();
+
+        int[] finalAggInputChannels = {0, 1, 2, 3};
+        DataType[] finalAggOutputTypes = {LongDataType.LONG, new Decimal128DataType(20, 5), DoubleDataType.DOUBLE,
+                new Decimal128DataType(20, 5)};
+        OmniAggregationOperatorFactory factory2 = new OmniAggregationOperatorFactory(partialAggOutputTypes,
+                aggFunctionTypes, finalAggInputChannels, maskChannels, finalAggOutputTypes, false, false);
+
+        OmniOperator omniOperator2 = factory2.createOperator();
+        while (partialOutput.hasNext()) {
+            VecBatch partialVecBatch = partialOutput.next();
+            omniOperator2.addInput(partialVecBatch);
+        }
+
+        Iterator<VecBatch> finalOutput = omniOperator2.getOutput();
+        while (finalOutput.hasNext()) {
+            VecBatch finalVecBatch = finalOutput.next();
+            if (finalVecBatch.getVectors().length != finalAggOutputTypes.length) {
+                throw new IllegalArgumentException(format(
+                        "output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                        finalVecBatch.getVectors().length, finalAggOutputTypes.length, finalVecBatch.getRowCount()));
+            }
+
+            assertNotNull(finalVecBatch);
+            assertEquals(finalVecBatch.getVectors().length, 4);
+            Vec[] vectors = finalVecBatch.getVectors();
+            assertEquals(((LongVec) vectors[0]).get(0), 25L);
+            assertEquals(((Decimal128Vec) vectors[1]).get(0), new Object[]{15000L, 0L});
+            assertEquals(((DoubleVec) vectors[2]).get(0), 5.0);
+            assertEquals(((Decimal128Vec) vectors[3]).get(0), new Object[]{3000L, 0L});
+
+            freeVecBatch(finalVecBatch);
+        }
+        omniOperator2.close();
+        omniOperator1.close();
+        factory2.close();
+        factory1.close();
     }
 
     @Test

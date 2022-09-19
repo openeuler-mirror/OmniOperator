@@ -7,6 +7,9 @@
 
 #include "aggregator.h"
 #include "type/decimal_operations.h"
+#ifdef ENABLE_HMPP
+#include "HMPP/hmpps.h"
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -21,6 +24,47 @@ public:
     {}
 
     ~AverageAggregator() override {}
+
+#ifdef ENABLE_HMPP
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        auto vector = vectorBatch->GetVector(channel);
+
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto nullAddr = vector->GetValueNulls();
+        bool overflow = false;
+        auto sumVal = reinterpret_cast<double *>(executionContext->GetArena()->Allocate(sizeof(double)));
+        int32_t count = 0;
+
+        auto inputTypeId = inputType->GetId();
+        HmppResult result = HMPP_STS_NO_ERR;
+        switch (inputTypeId) {
+            case OMNI_LONG: {
+                result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
+                    rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
+                    sumVal, &count);
+                break;
+            }
+            default: {
+                throw OmniException("NOT SUPPORT", "Unsupported input type for avg aggregate");
+                break;
+            }
+        }
+
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "avg failed for hmpp error");
+        }
+        if (state.avgVal == nullptr) {
+            state.avgVal = sumVal;
+            state.avgCnt = static_cast<int64_t>(count);
+        } else {
+            *(static_cast<ResultType *>(state.val)) += *static_cast<ResultType *>(sumVal);
+            state.avgCnt += static_cast<int64_t>(count);
+        }
+    }
+#endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {

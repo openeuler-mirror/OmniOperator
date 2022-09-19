@@ -50,6 +50,9 @@ append_options()
             elif [ "$i" = '--enable-dt' ]; then
               echo "-- Enable DT checker"
               options="$options -DENABLE_DT=ON -DCOVERAGE=ON"
+            elif [ "$i" = '--enable-hmpp' ]; then
+              echo " --Enable using hmpp library"
+              options="$options -DENABLE_HMPP=ON"
             fi
         fi
     done

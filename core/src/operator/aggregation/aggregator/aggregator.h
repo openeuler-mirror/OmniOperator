@@ -68,7 +68,7 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *                 */
+     *                    */
     Aggregator(FunctionType aggregateType, DataTypePtr inputType, DataTypePtr outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
@@ -81,6 +81,13 @@ public:
     {}
 
     virtual ~Aggregator() {}
+
+#ifdef ENABLE_HMPP
+    virtual void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
+    {
+        throw OmniException("NOT SUPPORT", "this aggregator is not supported by hmpp");
+    }
+#endif
 
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
