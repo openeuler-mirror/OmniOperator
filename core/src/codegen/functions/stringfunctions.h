@@ -62,14 +62,13 @@ extern DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value,
 extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value, bool isNull, int32_t *outLen);
 
 extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
-    bool isNull,
-    int32_t *outLen);
+    bool isNull, int32_t *outLen);
 
 extern DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t high, uint64_t low, int32_t precision,
     int32_t scale, bool isNull, int32_t *outLen);
 
-extern DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t *outLen);
+extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *srcStr, int32_t srcLen,
+    int32_t srcWidth, bool isNull, int32_t dstWidth, int32_t *outLen);
 
 // Cast string to numeric type
 extern DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
@@ -79,19 +78,16 @@ extern DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, i
 extern DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
 
 extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t precision,
-    int32_t scale);
+    int32_t precision, int32_t scale);
 
 extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t outPrecision,
-    int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, T startIdx, T length,
     bool isNull, int32_t *outLen)
 {
     if (isNull) {
-        *outLen = 0;
         return "";
     }
     if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
@@ -143,24 +139,24 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     if (res != EOK) {
         omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
             omniruntime::codegen::SUBSTR_ERR_MSG.length());
+        *outLen = 0;
         return nullptr;
     }
     return ret;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, T startIdx,
     T length, bool isNull, int32_t *outLen)
 {
     return Substr<T>(contextPtr, str, strLen, startIdx, length, isNull, outLen);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
     bool isNull, int32_t *outLen)
 {
     if (isNull) {
-        *outLen = 0;
         return nullptr;
     }
     if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
@@ -199,12 +195,13 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     if (res != EOK) {
         omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
             omniruntime::codegen::SUBSTR_ERR_MSG.length());
+        *outLen = 0;
         return nullptr;
     }
     return ret;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
     T startIdx, bool isNull, int32_t *outLen)
 {
@@ -215,15 +212,13 @@ extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int
     int32_t *outLen);
 
 extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    bool isNull,
-    int32_t *outLen);
+    bool isNull, int32_t *outLen);
 
 extern DLLEXPORT const char *ToLowerStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
     int32_t *outLen);
 
 extern DLLEXPORT const char *ToLowerChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    bool isNull,
-    int32_t *outLen);
+    bool isNull, int32_t *outLen);
 
 extern DLLEXPORT int64_t LengthChar(const char *str, int32_t width, int32_t strLen, bool isNull);
 
@@ -283,7 +278,7 @@ extern DLLEXPORT int64_t CastStringToDecimal64RetNull(bool *isNull, const char *
 extern DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *str, int32_t strLen, int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-extern DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *str,
-    int32_t strLen, int32_t *outLen);
+extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *srcStr,
+    int32_t srcLen, int32_t srcWidth, int32_t dstWidth, int32_t *outLen);
 
 #endif

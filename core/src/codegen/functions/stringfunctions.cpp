@@ -52,7 +52,7 @@ extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *b
 extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen, bool isNull)
 {
     if (isNull) {
-        return 0;
+        return false;
     }
     string s = string(str, strLen);
     string r = string(regexToMatch, regexLen);
@@ -259,6 +259,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
         errno_t res = memcpy_s(ret, *outLen + 1, str, strLen);
         if (res != EOK) {
             SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            *outLen = 0;
             return nullptr;
         }
         return ret;
@@ -272,6 +273,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
             res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
             if (res != EOK) {
                 SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                *outLen = 0;
                 return nullptr;
             }
             indexBuffer += replaceLen;
@@ -279,6 +281,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
             res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, str + index, codePointLength);
             if (res != EOK) {
                 SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+                *outLen = 0;
                 return nullptr;
             }
             indexBuffer += codePointLength;
@@ -287,6 +290,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
         res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
         if (res != EOK) {
             SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            *outLen = 0;
             return nullptr;
         }
         return ret;
@@ -317,6 +321,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
     if (res != EOK) {
         SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+        *outLen = 0;
         return nullptr;
     }
     return ret;
@@ -344,7 +349,8 @@ extern DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t value, 
     if (res != EOK) {
         char message[] = "cast failed";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
-        return ret;
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -361,7 +367,8 @@ extern DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value,
     if (res != EOK) {
         char message[] = "cast failed";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -388,7 +395,8 @@ extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value
     if (res != EOK) {
         char message[] = "cast failed";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -406,7 +414,8 @@ extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x
     if (res != EOK) {
         char message[] = "cast failed";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -425,19 +434,26 @@ extern DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t 
     if (res != EOK) {
         char message[] = "cast failed";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
 
-extern DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t *outLen)
+extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const char *srcStr, int32_t srcLen,
+    int32_t srcWidth, bool isNull, int32_t dstWidth, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
     }
-    *outLen = std::min(strLen, *outLen);
-    return str;
+    bool hasErr = false;
+    const char *ret = CastStrWithDiffWidthsRetNull(contextPtr, &hasErr, srcStr, srcLen, srcWidth, dstWidth, outLen);
+    if (hasErr) {
+        ostringstream errMsg;
+        errMsg << "cast varchar[" << srcWidth << "] to varchar[" << dstWidth << "] failed.";
+        SetError(contextPtr, errMsg.str().c_str(), errMsg.str().length());
+    }
+    return ret;
 }
 
 // Cast string to numeric type
@@ -727,7 +743,8 @@ extern DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *is
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
         *isNull = true;
-        return ret;
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -740,7 +757,8 @@ extern DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *i
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
         *isNull = true;
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -763,7 +781,8 @@ extern DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool 
     errno_t res = memcpy_s(ret, *outLen, (oss.str()).c_str(), *outLen);
     if (res != EOK) {
         *isNull = true;
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -777,7 +796,8 @@ extern DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr, bo
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
         *isNull = true;
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -792,7 +812,8 @@ extern DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPtr, b
     errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
     if (res != EOK) {
         *isNull = true;
-        return "";
+        *outLen = 0;
+        return nullptr;
     }
     return ret;
 }
@@ -903,9 +924,22 @@ extern DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *st
     *outLowPtr = result.LowBits();
 }
 
-extern DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *str,
-    int32_t strLen, int32_t *outLen)
+extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *srcStr,
+    int32_t srcLen, int32_t srcWidth, int32_t dstWidth, int32_t *outLen)
 {
-    *outLen = std::min(strLen, *outLen);
-    return str;
+    int32_t chCount = std::min(srcWidth, dstWidth);
+    int32_t dstLen = 0;
+    int32_t count = 0;
+    while (dstLen < srcLen && count < chCount) {
+        int32_t charLen = omniruntime::Utf8Util::LengthOfCodePoint(srcStr[dstLen]);
+        if (charLen < 0) {
+            *isNull = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        dstLen += charLen;
+        count++;
+    }
+    *outLen = dstLen;
+    return srcStr;
 }

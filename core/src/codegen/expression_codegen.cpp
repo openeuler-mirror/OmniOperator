@@ -1660,6 +1660,10 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetDefaultFunctionArgValues(
                     static_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
             }
             argVals.push_back(this->value->length);
+            if (IsCastStrStr(fExpr)) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<VarcharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
+            }
         }
         if (TypeUtil::IsDecimalType(argN->GetReturnTypeId())) {
             argVals.push_back(llvmTypes->CreateConstantInt(
@@ -1741,6 +1745,10 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetDataAndOverflowNullArgs(
                     static_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
             }
             argVals.push_back(this->value->length);
+            if (IsCastStrStr(fExpr)) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<VarcharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
+            }
         }
         if (TypeUtil::IsDecimalType(argN->GetReturnTypeId())) {
             argVals.push_back(llvmTypes->CreateConstantInt(
@@ -1808,7 +1816,12 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
         return;
     } else {
         if (TypeUtil::IsStringType(funcRetType)) {
+            if (IsCastStrStr(fExpr)) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<VarcharDataType *>(fExpr.GetReturnType().get())->GetWidth()));
+            }
             outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
+            builder->CreateStore(llvmTypes->CreateConstantInt(0), outputLenPtr);
             argVals.push_back(outputLenPtr);
         }
         auto f = module->getFunction(functionName);
@@ -2040,10 +2053,12 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         return;
     } else {
         if (TypeUtil::IsStringType(funcRetType)) {
+            if (IsCastStrStr(fExpr)) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<VarcharDataType *>(fExpr.GetReturnType().get())->GetWidth()));
+            }
             outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-            builder->CreateStore(
-                llvmTypes->CreateConstantInt(static_cast<CharDataType *>(fExpr.GetReturnType().get())->GetWidth()),
-                outputLenPtr);
+            builder->CreateStore(llvmTypes->CreateConstantInt(0), outputLenPtr);
             argVals.push_back(outputLenPtr);
         }
 
