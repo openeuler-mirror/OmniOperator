@@ -2358,6 +2358,45 @@ TEST(FunctionTest, DecimalDivOpeartion)
     delete context;
 }
 
+TEST(FunctionTest, CastDecimal64ToDoubleRetNull)
+{
+    bool isNull = false;
+    double result = CastDecimal64ToDoubleRetNull(&isNull, 100, 38, 0);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToDoubleRetNull(&isNull, 99, 38, 1);
+    EXPECT_EQ(result, 9.9);
+    result = CastDecimal64ToDoubleRetNull(&isNull, 100, 38, 0);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToDoubleRetNull(&isNull, -8888, 38, 2);
+    EXPECT_EQ(result, -88.88);
+}
+
+TEST(FunctionTest, CastDecimal128ToDoubleRetNull)
+{
+    bool isNull = false;
+    double result = CastDecimal128ToDoubleRetNull(&isNull, 0, 100, 38, 0);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal128ToDoubleRetNull(&isNull, 0, 534, 38, 3);
+    EXPECT_EQ(result, 0.534);
+    result = CastDecimal128ToDoubleRetNull(&isNull, 0, 123, 38, 5);
+    EXPECT_EQ(result, 0.00123);
+    result = CastDecimal128ToDoubleRetNull(&isNull, 0, 1234, 38, 2);
+    EXPECT_EQ(result, 12.34);
+    result = CastDecimal128ToDoubleRetNull(&isNull, 0, 1234, 38, 2);
+    EXPECT_EQ(result, 12.34);
+}
+
+TEST(FunctionTest, CastDecimal64ToLongRetNull)
+{
+    bool isNull = false;
+    int64_t result = CastDecimal64ToLongRetNull(&isNull, 100, 38, 0);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToLongRetNull(&isNull, 123999, 38, 3);
+    EXPECT_EQ(result, 124);
+    result = CastDecimal64ToLongRetNull(&isNull, 123111, 38, 3);
+    EXPECT_EQ(result, 123);
+}
+
 TEST(FunctionTest, EvaluateHiveUdfSingle)
 {
     auto context = new ExecutionContext();

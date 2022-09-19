@@ -215,11 +215,18 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(CastDecimal64ToIntRetNull), "CAST_null", {}, { OMNI_DECIMAL64 }, OMNI_INT,
             INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastDecimal64ToLongRetNull), "CAST_null", {}, { OMNI_DECIMAL64 }, OMNI_LONG,
+            INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastDecimal64ToDoubleRetNull), "CAST_null", {}, { OMNI_DECIMAL64 },
+            OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(CastDecimal128ToIntRetNull), "CAST_null", {}, { OMNI_DECIMAL128 }, OMNI_INT,
             INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastDecimal128ToLongRetNull), "CAST_null", {}, { OMNI_DECIMAL128 }, OMNI_LONG,
             INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastDecimal128ToDoubleRetNull), "CAST_null", {}, { OMNI_DECIMAL128 },
+            OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
+
         // UnscaledValue
         Function(reinterpret_cast<void *>(UnscaledValue64), "UnscaledValue", {}, {OMNI_DECIMAL64}, OMNI_LONG,
                  INPUT_DATA),

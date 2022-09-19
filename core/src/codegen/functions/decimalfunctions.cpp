@@ -1047,9 +1047,6 @@ extern "C" DLLEXPORT void CastLongToDecimal128(int64_t contextPtr, int64_t x, bo
     if (status == SUCCESS) {
         status = DecimalOperations::IsOverflows(result, outPrecision);
     }
-    if (status == SUCCESS) {
-        status = DecimalOperations::IsOverflows(result, outPrecision);
-    }
     if (status != SUCCESS) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast BIGINT '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
@@ -2075,9 +2072,6 @@ extern "C" DLLEXPORT void CastLongToDecimal128RetNull(bool *isNull, int64_t x, i
     if (status == SUCCESS) {
         status = DecimalOperations::IsOverflows(result, outPrecision);
     }
-    if (status == SUCCESS) {
-        status = DecimalOperations::IsOverflows(result, outPrecision);
-    }
     if (status != SUCCESS) {
         *isNull = true;
         return;
@@ -2137,6 +2131,27 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToIntRetNull(bool *isNull, int64_t x, 
     return result;
 }
 
+extern "C" DLLEXPORT int64_t CastDecimal64ToLongRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
+{
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        int64_t scaledValue = 0;
+        DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
+        return scaledValue;
+    }
+
+    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
+    if (x >= 0) {
+        return (x + tenToScale / 2) / tenToScale;
+    }
+    return -((-x + tenToScale / 2) / tenToScale);
+}
+
+extern "C" DLLEXPORT double CastDecimal64ToDoubleRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
+{
+    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
+    return (static_cast<double>(x)) / static_cast<double>(tenToScale);
+}
+
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
     int32_t scale)
 {
@@ -2181,6 +2196,14 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t x
         return 0;
     }
     return result;
+}
+
+extern "C" DLLEXPORT double CastDecimal128ToDoubleRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
+    int32_t scale)
+{
+    Decimal128 input(xHigh, xLow);
+    string doubleString = DecimalOperations::ScaleOfDecimal(input.ToString(), scale);
+    return stod(doubleString);
 }
 
 extern "C" DLLEXPORT int64_t UnscaledValue64(int64_t x, int32_t precision, int32_t scale)
