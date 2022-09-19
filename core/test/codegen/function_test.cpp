@@ -6,13 +6,16 @@
 #include <vector>
 #include <chrono>
 #include "gtest/gtest.h"
-#include "../../src/expression/expressions.h"
-#include "../../src/codegen/functions/stringfunctions.h"
-#include "../../src/codegen/functions/decimalfunctions.h"
-#include "../../src/codegen/functions/mathfunctions.h"
-#include "../../src/codegen/functions/murmur3_hash.h"
-#include "../../src/codegen/functions/dictionaryfunctions.h"
-#include "../../src/codegen/functions/varcharVectorfunctions.h"
+#include "expression/expressions.h"
+#include "codegen/functions/stringfunctions.h"
+#include "codegen/functions/decimalfunctions.h"
+#include "codegen/functions/mathfunctions.h"
+#include "codegen/functions/murmur3_hash.h"
+#include "codegen/functions/dictionaryfunctions.h"
+#include "codegen/functions/varcharVectorfunctions.h"
+#include "codegen/functions/udffunctions.h"
+#include "jni_mock.h"
+#include "udf/cplusplus/jni_util.h"
 
 namespace omniruntime {
 using namespace omniruntime::op;
@@ -524,32 +527,32 @@ TEST(FunctionTest, AddDec128)
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 9, op2.HighBits(), op2.LowBits(),
-        38, 9, 38, 9, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 9, op2.HighBits(), op2.LowBits(), 38, 9, 38, 9,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(5);
     op2 = DecimalOperations::UnscaledDecimal(10);
     expected = DecimalOperations::UnscaledDecimal(15);
-    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 12, op2.HighBits(), op2.LowBits(),
-        38, 12, 38, 12, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 12, op2.HighBits(), op2.LowBits(), 38, 12, 38,
+        12, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-1);
     op2 = DecimalOperations::UnscaledDecimal(1);
     expected = DecimalOperations::UnscaledDecimal(0);
-    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(),
-        38, 0, 38, 0, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(-7);
-    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(),
-        38, 0, 38, 0, &zHigh, &zLow);
+    AddDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -570,32 +573,32 @@ TEST(FunctionTest, SubDec128)
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(0);
     expected = DecimalOperations::UnscaledDecimal(0);
-    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
-        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(10);
     op2 = DecimalOperations::UnscaledDecimal(5);
     expected = DecimalOperations::UnscaledDecimal(5);
-    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
-        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(5);
     op2 = DecimalOperations::UnscaledDecimal(10);
     expected = DecimalOperations::UnscaledDecimal(-5);
-    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
-        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(1);
-    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
-        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    SubDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -615,40 +618,40 @@ TEST(FunctionTest, MulDec128)
     op1 = DecimalOperations::UnscaledDecimal(0);
     op2 = DecimalOperations::UnscaledDecimal(500);
     expected = DecimalOperations::UnscaledDecimal(0);
-    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 7,
-        op2.HighBits(), op2.LowBits(), 38, 7, 38, 14, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 7, op2.HighBits(), op2.LowBits(), 38, 7, 38,
+        14, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(1);
     op2 = DecimalOperations::UnscaledDecimal(500);
     expected = DecimalOperations::UnscaledDecimal(500);
-    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 1,
-        op2.HighBits(), op2.LowBits(), 38, 1, 38, 2, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 1, op2.HighBits(), op2.LowBits(), 38, 1, 38, 2,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(3);
     op2 = DecimalOperations::UnscaledDecimal(5);
     expected = DecimalOperations::UnscaledDecimal(15);
-    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
-        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(-4);
     expected = DecimalOperations::UnscaledDecimal(12);
-    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0,
-        op2.HighBits(), op2.LowBits(), 38, 0, 38, 0, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0, 38, 0,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-3);
     op2 = DecimalOperations::UnscaledDecimal(4);
     expected = DecimalOperations::UnscaledDecimal(-12);
-    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 3,
-        op2.HighBits(), op2.LowBits(), 38, 3, 38, 6, &zHigh, &zLow);
+    MulDec128Dec128Dec128(contextPtr, op1.HighBits(), op1.LowBits(), 38, 3, op2.HighBits(), op2.LowBits(), 38, 3, 38, 6,
+        &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -672,40 +675,40 @@ TEST(FunctionTest, DivDec128)
     op1 = DecimalOperations::UnscaledDecimal(10);
     op2 = DecimalOperations::UnscaledDecimal(2);
     expected = DecimalOperations::UnscaledDecimal(5);
-    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(),
+        precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-10);
     op2 = DecimalOperations::UnscaledDecimal(2);
     expected = DecimalOperations::UnscaledDecimal(-5);
-    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(),
+        precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(-10);
     op2 = DecimalOperations::UnscaledDecimal(-2);
     expected = DecimalOperations::UnscaledDecimal(5);
-    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(),
+        precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(7);
     op2 = DecimalOperations::UnscaledDecimal(3);
     expected = DecimalOperations::UnscaledDecimal(2);
-    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(),
+        precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
     op1 = DecimalOperations::UnscaledDecimal(8);
     op2 = DecimalOperations::UnscaledDecimal(3);
     expected = DecimalOperations::UnscaledDecimal(3);
-    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
+    DivDec128Dec128Dec128(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(), op2.LowBits(),
+        precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -1267,8 +1270,8 @@ TEST(FunctionTest, ToUpperChar)
     string expected = "[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}.";
     int32_t width = 100;
     int32_t outLen = 0;
-    const char *result = ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), false,
-        &outLen);
+    const char *result =
+        ToUpperChar(contextptr, test.c_str(), width, static_cast<int32_t>(test.length()), false, &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1297,8 +1300,8 @@ TEST(FunctionTest, ToLowerChar)
     string expected = "[\\]^_abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz{|}.";
     int32_t width = 100;
     int32_t outLen = 0;
-    const char *result = ToLowerChar(contextPtr, test.c_str(), width, static_cast<int32_t>(test.length()), false,
-        &outLen);
+    const char *result =
+        ToLowerChar(contextPtr, test.c_str(), width, static_cast<int32_t>(test.length()), false, &outLen);
     string actual = string(result, outLen);
     EXPECT_EQ(actual, expected);
     EXPECT_EQ(outLen, 62);
@@ -1442,8 +1445,8 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
 
     string str = "operator1";
     string searchStr = "o";
-    auto result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(), false, &outLen);
+    auto result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+        false, &outLen);
     string expected = "peratr1";
     EXPECT_EQ(outLen, 7);
     EXPECT_EQ(string(result, outLen), expected);
@@ -2353,5 +2356,60 @@ TEST(FunctionTest, DecimalDivOpeartion)
     EXPECT_EQ(high, 0);
     EXPECT_EQ(low, 33333);
     delete context;
+}
+
+TEST(FunctionTest, EvaluateHiveUdfSingle)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t inputTypes[] = {OMNI_INT, OMNI_INT};
+    int32_t retType = OMNI_INT;
+    int32_t vecCount = 2;
+
+    int32_t inputValue[2] = {3, 5};
+    uint8_t inputNull[2] = {0, 0};
+    int64_t inputLength = 0;
+    int32_t outputValue;
+    int8_t outputNull;
+    int32_t outputLength;
+
+    using namespace omniruntime::mock;
+    using namespace testing::internal;
+    using testing::_;
+    using testing::Assign;
+    using testing::DoAll;
+    using testing::Return;
+    JNIEnvMock *env = CreateJNIEnvMock();
+    JniUtil::SetEnv(env);
+
+    // for InitHiveUdf
+    EXPECT_CALL(*env, FindClass(_)).WillRepeatedly(Return(nullptr));
+    EXPECT_CALL(*env, ExceptionCheck()).WillRepeatedly(Return(false));
+    EXPECT_CALL(*env, NewGlobalRef(_)).WillRepeatedly(Return(nullptr));
+    EXPECT_CALL(*env, DeleteLocalRef(_)).WillRepeatedly(Return());
+    EXPECT_CALL(*env, GetStaticMethodID(_, _, _)).WillRepeatedly(Return(nullptr));
+    EXPECT_CALL(*env, GetStaticFieldID(_, _, _)).WillRepeatedly(Return(nullptr));
+
+    // for EvaluateHiveUdfSingle
+    EXPECT_CALL(*env, NewStringUTF(_)).WillOnce(Return(jstring("AddIntUDF")));
+    EXPECT_CALL(*env, NewObjectArray(vecCount, _, _)).WillOnce(Return(nullptr));
+    EXPECT_CALL(*env, GetStaticObjectField(_, _)).WillRepeatedly(Return(nullptr));
+    EXPECT_CALL(*env, SetObjectArrayElement(_, _, _)).WillRepeatedly(Return());
+
+    InAndOutputInfos infos {};
+    EXPECT_CALL(*env, CallStaticVoidMethodV(_, _, infos))
+        .WillOnce(DoAll(Assign((int32_t *)(&outputValue), 8), Assign((int8_t *)(&outputNull), 0)))
+        .WillRepeatedly(Return());
+
+    EvaluateHiveUdfSingle(contextPtr, "omniruntime.udf.AddIntUDF", inputTypes, retType, vecCount,
+        reinterpret_cast<int64_t>(inputValue), reinterpret_cast<int64_t>(inputNull), inputLength,
+        reinterpret_cast<int64_t>(&outputValue), reinterpret_cast<int64_t>(&outputNull),
+        reinterpret_cast<int64_t>(&outputLength));
+
+    ASSERT_EQ(outputValue, 8);
+    ASSERT_EQ(outputNull, 0);
+
+    delete context;
+    DestroyJNIEnvMock(env);
 }
 }

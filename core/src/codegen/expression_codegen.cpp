@@ -1830,9 +1830,176 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     }
 }
 
+Value *ExpressionCodeGen::CreateHiveUdfArgTypes(const FuncExpr &fExpr)
+{
+    auto elementType = IntegerType::getInt32Ty(*context);
+    auto elementSize = static_cast<int32_t>(fExpr.arguments.size());
+    auto arrayType = ArrayType::get(elementType, elementSize);
+    auto alloca = builder->CreateAlloca(arrayType);
+    auto zero = ConstantInt::get(*context, APInt(32, 0, true));
+    for (int32_t i = 0; i < elementSize; i++) {
+        auto index = ConstantInt::get(*context, APInt(32, i, true));
+        auto ptr = builder->CreateGEP(alloca, { zero, index });
+        builder->CreateStore(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnTypeId()), ptr);
+    }
+    return alloca;
+}
+
+static bool GetValueOffsets(const FuncExpr &fExpr, std::vector<int32_t> &valueOffsets)
+{
+    int32_t valueSize = 0;
+    for (auto argExpr : fExpr.arguments) {
+        valueOffsets.emplace_back(valueSize);
+
+        auto argReturnType = argExpr->GetReturnTypeId();
+        switch (argReturnType) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                valueSize += sizeof(int32_t);
+                break;
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
+                valueSize += sizeof(int64_t);
+                break;
+            case OMNI_DOUBLE:
+                valueSize += sizeof(double);
+                break;
+            case OMNI_BOOLEAN:
+                valueSize += sizeof(bool);
+                break;
+            case OMNI_SHORT:
+                valueSize += sizeof(int16_t);
+                break;
+            case OMNI_DECIMAL128:
+                valueSize += 2 * sizeof(int64_t);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                valueSize += sizeof(uint8_t *);
+                break;
+            default:
+                LogWarn("Unsupported data type in Data Expr %d", argReturnType);
+                return false;
+        }
+    }
+    valueOffsets.emplace_back(valueSize);
+    return true;
+}
+
+std::vector<Value *> ExpressionCodeGen::GetHiveUdfArgValues(const FuncExpr &fExpr, bool &isInvalid)
+{
+    std::vector<Value *> argVals;
+    std::vector<int32_t> valueOffsets;
+    if (!GetValueOffsets(fExpr, valueOffsets)) {
+        isInvalid = true;
+        return argVals;
+    }
+
+    // create array for value, null and length of all arguments
+    auto argSize = static_cast<int32_t>(fExpr.arguments.size());
+    auto valueArrayType = ArrayType::get(llvmTypes->I8Type(), valueOffsets[argSize]);
+    auto valueArray = builder->CreateAlloca(valueArrayType);
+    auto nullArrayType = ArrayType::get(llvmTypes->I8Type(), argSize);
+    auto nullArray = builder->CreateAlloca(nullArrayType);
+    auto lengthArrayType = ArrayType::get(llvmTypes->I32Type(), argSize);
+    auto lengthArray = builder->CreateAlloca(lengthArrayType);
+    auto zero = ConstantInt::get(*context, APInt(32, 0, true));
+
+    for (int32_t i = 0; i < argSize; i++) {
+        auto argExpr = fExpr.arguments[i];
+        auto argExprResult = VisitExpr(*argExpr);
+        if (!argExprResult->IsValidValue()) {
+            isInvalid = true;
+            return argVals;
+        }
+
+        // get pointer for value, null and length
+        auto valueIndex = ConstantInt::get(*context, APInt(32, valueOffsets[i], true));
+        auto nullIndex = ConstantInt::get(*context, APInt(32, i, true));
+        auto lengthIndex = ConstantInt::get(*context, APInt(32, i, true));
+        auto valuePtr = builder->CreateGEP(valueArray, { zero, valueIndex });
+        auto nullPtr = builder->CreateGEP(nullArray, { zero, nullIndex });
+        auto lengthPtr = builder->CreateGEP(lengthArray, { zero, lengthIndex });
+
+        builder->CreateStore(argExprResult->data, valuePtr);
+        builder->CreateStore(argExprResult->isNull, nullPtr);
+        if (TypeUtil::IsStringType(argExpr->GetReturnTypeId())) {
+            builder->CreateStore(argExprResult->length, lengthPtr);
+        } else {
+            builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthPtr);
+        }
+    }
+
+    argVals.emplace_back(valueArray);
+    argVals.emplace_back(nullArray);
+    argVals.emplace_back(lengthArray);
+
+    return argVals;
+}
+
+void ExpressionCodeGen::CallHiveUdfFunction(const FuncExpr &fExpr)
+{
+    std::vector<Value *> argVals;
+    argVals.emplace_back(this->codegenContext->executionContext);
+    argVals.emplace_back(CreateStringConstant(fExpr.funcName));                  // for udf class name
+    argVals.emplace_back(CreateHiveUdfArgTypes(fExpr));                          // for inputTypes
+    argVals.emplace_back(llvmTypes->CreateConstantInt(fExpr.GetReturnTypeId())); // for ret type
+    argVals.emplace_back(llvmTypes->CreateConstantInt(fExpr.arguments.size()));  // for vec count
+
+    bool isInvalidExpr = false;
+    auto inputArgs = GetHiveUdfArgValues(fExpr, isInvalidExpr);
+    if (isInvalidExpr) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+    argVals.insert(argVals.end(), inputArgs.begin(), inputArgs.end()); // for inputValues, inputNulls, inputLength
+
+    Value *outputValuePtr;
+    Value *outputLenPtr;
+    if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
+        auto valueSize = llvmTypes->CreateConstantInt(200);
+        outputValuePtr = llvmEngine->CallExternFunction("ArenaAllocatorMalloc", { OMNI_LONG, OMNI_INT }, OMNI_CHAR,
+            { this->codegenContext->executionContext, valueSize }, nullptr);
+        outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "outputLength");
+    } else {
+        outputValuePtr = builder->CreateAlloca(llvmTypes->ToLLVMType(fExpr.GetReturnTypeId()), nullptr, "outputValue");
+        outputLenPtr = llvmTypes->CreateConstantLong(0);
+    }
+    argVals.emplace_back(outputValuePtr);
+    auto outputNullPtr = builder->CreateAlloca(Type::getInt8Ty(*context), nullptr, "outputNull");
+    argVals.emplace_back(outputNullPtr);
+    argVals.emplace_back(outputLenPtr);
+
+    auto signature = FunctionSignature("EvaluateHiveUdfSingle", std::vector<DataTypeId> {}, OMNI_INT);
+    auto function = FunctionRegistry::LookupFunction(&signature);
+    auto f = module->getFunction(function->GetId());
+    if (f) {
+        auto ret = llvmEngine->CreateCall(f, argVals, "call_evaluate_hive_udf");
+        InlineFunctionInfo inlineFunctionInfo;
+        llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
+        Value *outputValue = outputValuePtr;
+        Value *outputLen = nullptr;
+        if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
+            outputLen = builder->CreateLoad(outputLenPtr);
+        } else {
+            outputValue = builder->CreateLoad(outputValuePtr);
+        }
+        auto outputNull = builder->CreateLoad(outputNullPtr);
+        this->value = make_shared<CodeGenValue>(outputValue, outputNull, outputLen);
+    } else {
+        LogWarn("Unable to generate udf function : %s", fExpr.funcName.c_str());
+        this->value = CreateInvalidCodeGenValue();
+    }
+}
+
 // Handles all functions
 void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
 {
+    if (fExpr.functionType == HIVE_UDF) {
+        CallHiveUdfFunction(fExpr);
+        return;
+    }
+
     if (this->overflowConfig != nullptr &&
         this->overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         auto signature = fExpr.function->GetSignatures()[0];

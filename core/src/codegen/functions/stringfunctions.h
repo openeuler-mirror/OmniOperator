@@ -142,7 +142,7 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     errno_t res = memcpy_s(ret, *outLen, str + startIndex, *outLen);
     if (res != EOK) {
         omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
-                                       omniruntime::codegen::SUBSTR_ERR_MSG.length());
+            omniruntime::codegen::SUBSTR_ERR_MSG.length());
         return nullptr;
     }
     return ret;
@@ -198,7 +198,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     errno_t res = memcpy_s(ret, *outLen, str + startIndex, *outLen);
     if (res != EOK) {
         omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
-                                       omniruntime::codegen::SUBSTR_ERR_MSG.length());
+            omniruntime::codegen::SUBSTR_ERR_MSG.length());
         return nullptr;
     }
     return ret;

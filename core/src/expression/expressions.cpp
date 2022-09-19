@@ -316,7 +316,7 @@ FuncExpr::~FuncExpr()
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType)
-    : funcName(fnName), arguments(args)
+    : funcName(fnName), arguments(args), functionType(BUILTIN)
 {
     dataType = std::move(returnType);
 
@@ -329,7 +329,14 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
     const Function *function)
-    : funcName(fnName), arguments(args), function(function)
+    : funcName(fnName), arguments(args), function(function), functionType(BUILTIN)
+{
+    dataType = std::move(returnType);
+}
+
+FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+    ExprFunctionType functionType)
+    : funcName(fnName), arguments(args), function(nullptr), functionType(functionType)
 {
     dataType = std::move(returnType);
 }

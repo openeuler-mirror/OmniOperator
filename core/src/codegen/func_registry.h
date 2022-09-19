@@ -17,6 +17,7 @@
 #include "func_registry_hash.h"
 #include "func_registry_string.h"
 #include "func_registry_varchar_vector.h"
+#include "func_registry_hive_udf.h"
 
 namespace omniruntime {
 struct Hash {
@@ -33,6 +34,7 @@ struct Equals {
 };
 
 using FunctionMapPtr = std::unique_ptr<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>;
+using HiveUdfMapPtr = std::unique_ptr<std::unordered_map<std::string, std::string>>;
 
 class FunctionRegistry {
 public:
@@ -44,6 +46,8 @@ public:
 
     static bool IsNullExecutionContextSet(FunctionSignature *signature);
 
+    static const std::string &LookupHiveUdf(const std::string &udfName);
+
     static std::vector<std::unique_ptr<BaseFunctionRegistry>> GetFunctionRegistries();
 
     static std::vector<Function> &GetFunctions();
@@ -52,6 +56,7 @@ private:
     static std::vector<Function> registeredFunctions;
     static FunctionMapPtr functionRegistry;
     static FunctionMapPtr functionNullRegistry;
+    static HiveUdfMapPtr hiveUdfMap;
 
     static std::vector<Function> Initialize();
 };

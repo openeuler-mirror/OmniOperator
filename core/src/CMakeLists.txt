@@ -7,6 +7,7 @@ add_subdirectory(codegen)
 add_subdirectory(expression)
 add_subdirectory(type)
 add_subdirectory(cpu_checker)
+add_subdirectory(udf/cplusplus)
 
 set(OM_TARGET ${OMNI_RUNTIME_SO})
 
@@ -17,6 +18,7 @@ set(MY_LINK
         util
         expression
         type
+        udf
         ${OMNI_CODEGEN_SO}
         ${OMNI_OPERATOR_SO}
         ${OMNI_VECTOR_SO}

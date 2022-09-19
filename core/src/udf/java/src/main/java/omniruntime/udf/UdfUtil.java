@@ -11,7 +11,6 @@ import sun.misc.Unsafe;
 
 import java.io.StringWriter;
 import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
 
 /**
  * udf util.
@@ -48,9 +47,8 @@ public class UdfUtil {
      * @param offset the offset
      * @param value the value
      */
-    public static void putString(long base, int offset, String value) {
-        byte[] chars = value.getBytes(StandardCharsets.UTF_8);
-        UNSAFE.copyMemory(chars, BYTE_ARRAY_OFFSET, null, base + offset, chars.length);
+    public static void putBytes(long base, int offset, byte[] value) {
+        UNSAFE.copyMemory(value, BYTE_ARRAY_OFFSET, null, base + offset, value.length);
     }
 
     /**
@@ -75,10 +73,10 @@ public class UdfUtil {
      * @param length the length
      * @return return the string result
      */
-    public static String getString(long base, int offset, int length) {
+    public static byte[] getBytes(long base, int offset, int length) {
         byte[] target = new byte[length];
         UNSAFE.copyMemory(null, base + offset, target, BYTE_ARRAY_OFFSET, length);
-        return new String(target, StandardCharsets.UTF_8);
+        return target;
     }
 
     /**

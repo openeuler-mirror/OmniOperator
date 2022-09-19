@@ -9,6 +9,7 @@ import static org.testng.Assert.assertNull;
 
 import nova.hetu.omniruntime.type.DataType.DataTypeId;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,11 +48,11 @@ public class HiveUdfTestUtil {
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     // for char or varchar, we store pointer
-                    String valueStr = value == null ? "" : (String) value;
+                    byte[] chars = (value == null ? "" : (String) value).getBytes(StandardCharsets.UTF_8);
                     long ptr = UdfUtil.UNSAFE.allocateMemory(100);
                     UdfUtil.UNSAFE.putLong(valueAddr + offset, ptr);
-                    UdfUtil.putString(ptr, 0, valueStr);
-                    UdfUtil.UNSAFE.putInt(lengthAddr + (long) i * Integer.BYTES, valueStr.length());
+                    UdfUtil.putBytes(ptr, 0, chars);
+                    UdfUtil.UNSAFE.putInt(lengthAddr + (long) i * Integer.BYTES, chars.length);
                     break;
                 }
                 case OMNI_DOUBLE:
@@ -304,10 +305,10 @@ public class HiveUdfTestUtil {
         for (int i = 0; i < inputValue.length; i++) {
             boolean isNull = inputValue[i] == null;
             long valueAddr = UdfUtil.UNSAFE.getLong(valuesAddr + (long) i * Long.BYTES);
-            String value = isNull ? "" : (String) inputValue[i];
-            UdfUtil.putString(valueAddr, 0, value);
+            byte[] chars = (isNull ? "" : (String) inputValue[i]).getBytes(StandardCharsets.UTF_8);
+            UdfUtil.putBytes(valueAddr, 0, chars);
             UdfUtil.UNSAFE.putByte(nullsAddr + i, (byte) (isNull ? 1 : 0));
-            UdfUtil.UNSAFE.putInt(lengthsAddr + (long) i * Integer.BYTES, value.length());
+            UdfUtil.UNSAFE.putInt(lengthsAddr + (long) i * Integer.BYTES, chars.length);
         }
     }
 
@@ -414,7 +415,8 @@ public class HiveUdfTestUtil {
                 assertNull(expectValues[i]);
             } else {
                 int length = UdfUtil.UNSAFE.getInt(actualLengths + (long) i * Integer.BYTES);
-                assertEquals(UdfUtil.getString(actualValues, offset, length), (String) expectValues[i]);
+                assertEquals(UdfUtil.getBytes(actualValues, offset, length),
+                        ((String) expectValues[i]).getBytes(StandardCharsets.UTF_8));
                 offset += length;
             }
         }

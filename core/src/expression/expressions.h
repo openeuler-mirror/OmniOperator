@@ -86,6 +86,11 @@ bool IsComparisonOperator(Operator op);
 bool IsLogicalOperator(Operator op);
 Operator StringToOperator(const std::string &opStr);
 
+enum ExprFunctionType {
+    BUILTIN = 0,
+    HIVE_UDF
+};
+
 class Expr {
 public:
     DataTypePtr dataType; // dataType of returned value
@@ -238,12 +243,15 @@ public:
     std::string funcName;
     std::vector<Expr *> arguments;
     const omniruntime::Function *function;
+    ExprFunctionType functionType;
 
     FuncExpr();
     ~FuncExpr() override;
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType);
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
         const omniruntime::Function *function);
+    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+        ExprFunctionType functionType);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
