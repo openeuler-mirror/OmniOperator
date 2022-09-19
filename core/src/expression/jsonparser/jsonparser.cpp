@@ -357,6 +357,12 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
         return new FuncExpr(funcName, args, std::move(retType), function);
     }
 
+    auto &hiveUdfClass = omniruntime::FunctionRegistry::LookupHiveUdf(funcName);
+    if (!hiveUdfClass.empty()) {
+        return new FuncExpr(hiveUdfClass, args, std::move(retType), HIVE_UDF);
+    }
+    LogWarn("Function not supported: %s", funcName.c_str());
+
     Expr::DeleteExprs(args);
     // if operator is not supported, return nullptr
     return nullptr;

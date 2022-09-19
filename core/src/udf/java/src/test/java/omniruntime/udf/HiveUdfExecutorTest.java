@@ -19,6 +19,7 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -195,7 +196,7 @@ public class HiveUdfExecutorTest {
         HiveUdfExecutor.executeSingle(testJarPath, className, inputTypes, outputType, inputInfoAddrs.get(0),
                 inputInfoAddrs.get(1), inputInfoAddrs.get(2), outputValueAddr, outputNullAddr, outputLengthAddr);
         assertNotEquals(UdfUtil.UNSAFE.getByte(outputNullAddr), 1);
-        assertEquals(UdfUtil.getString(outputValueAddr, 0, 0), "");
+        assertEquals(UdfUtil.getBytes(outputValueAddr, 0, 0), "".getBytes(StandardCharsets.UTF_8));
         assertEquals(UdfUtil.UNSAFE.getInt(outputLengthAddr), 0);
         releaseSingleInput(inputTypes, inputInfoAddrs.get(0), inputInfoAddrs.get(1), inputInfoAddrs.get(2));
 
@@ -203,7 +204,7 @@ public class HiveUdfExecutorTest {
         HiveUdfExecutor.executeSingle(testJarPath, className, inputTypes, outputType, inputInfoAddrs.get(0),
                 inputInfoAddrs.get(1), inputInfoAddrs.get(2), outputValueAddr, outputNullAddr, outputLengthAddr);
         assertNotEquals(UdfUtil.UNSAFE.getByte(outputNullAddr), 1);
-        assertEquals(UdfUtil.getString(outputValueAddr, 0, 9), "JohnJimmy");
+        assertEquals(UdfUtil.getBytes(outputValueAddr, 0, 9), "JohnJimmy".getBytes(StandardCharsets.UTF_8));
         assertEquals(UdfUtil.UNSAFE.getInt(outputLengthAddr), 9);
         releaseSingleInput(inputTypes, inputInfoAddrs.get(0), inputInfoAddrs.get(1), inputInfoAddrs.get(2));
 
@@ -211,7 +212,7 @@ public class HiveUdfExecutorTest {
         HiveUdfExecutor.executeSingle(testJarPath, className, inputTypes, outputType, inputInfoAddrs.get(0),
                 inputInfoAddrs.get(1), inputInfoAddrs.get(2), outputValueAddr, outputNullAddr, outputLengthAddr);
         assertNotEquals(UdfUtil.UNSAFE.getByte(outputNullAddr), 1);
-        assertEquals(UdfUtil.getString(outputValueAddr, 0, 5), "hello");
+        assertEquals(UdfUtil.getBytes(outputValueAddr, 0, 5), "hello".getBytes(StandardCharsets.UTF_8));
         assertEquals(UdfUtil.UNSAFE.getInt(outputLengthAddr), 5);
         releaseSingleInput(inputTypes, inputInfoAddrs.get(0), inputInfoAddrs.get(1), inputInfoAddrs.get(2));
 
@@ -414,8 +415,10 @@ public class HiveUdfExecutorTest {
                 outputLengthAddr, outputStateAddr);
         assertEquals(UdfUtil.UNSAFE.getInt(outputStateAddr + Integer.BYTES), rowCount);
         expectValues = new Object[]{"hello", "world"};
-        assertEquals(UdfUtil.getString(outputValueAddr, 0, 5), expectValues[0]);
-        assertEquals(UdfUtil.getString(outputValueAddr, 5, 5), expectValues[1]);
+        assertEquals(UdfUtil.getBytes(outputValueAddr, 0, 5),
+                ((String) expectValues[0]).getBytes(StandardCharsets.UTF_8));
+        assertEquals(UdfUtil.getBytes(outputValueAddr, 5, 5),
+                ((String) expectValues[1]).getBytes(StandardCharsets.UTF_8));
         assertEquals(UdfUtil.UNSAFE.getByte(outputNullAddr + 5), 0);
         assertEquals(UdfUtil.UNSAFE.getByte(outputNullAddr + 6), 0);
         assertEquals(UdfUtil.UNSAFE.getInt(outputLengthAddr + 5 * Integer.BYTES), 5);

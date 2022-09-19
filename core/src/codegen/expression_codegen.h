@@ -53,7 +53,8 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 // Given an expression generates the function for it.
 class ExpressionCodeGen : public ExprVisitor {
 public:
-    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr, omniruntime::op::OverflowConfig *overflowConfig);
+    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr,
+        omniruntime::op::OverflowConfig *overflowConfig);
     ~ExpressionCodeGen() override;
 
     std::string DumpCode();
@@ -174,15 +175,18 @@ private:
     bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
         const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
         std::pair<llvm::Value **, llvm::Value **> cmpPair);
-    std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr,
-                                           llvm::Value **isAnyNull, bool &isInvalidExpr);
+    std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull,
+        bool &isInvalidExpr);
     std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
-                                                  llvm::Value **isAnyNull, bool &isInvalidExpr);
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
     std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
-                                                          llvm::Value **isAnyNull, bool &isInvalidExpr, llvm::Value *overflowNull);
+        llvm::Value **isAnyNull, bool &isInvalidExpr, llvm::Value *overflowNull);
     std::vector<llvm::Value *> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
     void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
+    llvm::Value *CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr);
+    std::vector<llvm::Value *> GetHiveUdfArgValues(const omniruntime::expressions::FuncExpr &fExpr, bool &isInvalid);
+    void CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr);
 };
 
 #endif

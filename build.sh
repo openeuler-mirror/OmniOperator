@@ -53,6 +53,8 @@ if [ "$1" = 'coverage-java' ]; then
 
     cd ../../bindings/java
     mvn clean install devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
+    cd ../../core/src/udf/java
+    mvn clean install
 elif [ "$1" = 'coverage-c++' ]; then
     echo "-- Enable coverage for c++"
     sh build.sh coverage
@@ -63,11 +65,15 @@ elif [ "$1" = 'coverage-c++' ]; then
 
     cd ../../bindings/java
     mvn clean install -DskipTests
+    cd ../../core/src/udf/java
+    mvn clean install
 elif [ "$1" = 'release' ]; then
     echo "-- Only build"
     sh build.sh release
 
     cd ../../bindings/java
+    mvn clean install
+    cd ../../core/src/udf/java
     mvn clean install
 elif [ "$1" = 'test' ]; then
     echo "-- Enable build and test"
@@ -76,6 +82,8 @@ elif [ "$1" = 'test' ]; then
 
     cd ../../bindings/java
     mvn clean install -DskipTests
+    cd ../../core/src/udf/java
+    mvn clean install
 else
     echo "-- Enable default options"
     sh build.sh release
@@ -83,10 +91,12 @@ else
 
     cd ../../bindings/java
     mvn clean install
+    cd ../../core/src/udf/java
+    mvn clean install
 fi
 
 if [ "$1" = 'release' ]; then
-    cd ../../
+    cd ../../../../
     # clean environment
     if [ -z "$OMNI_HOME" ]; then
       echo "OMNI_HOME is empty"
@@ -112,6 +122,7 @@ if [ "$1" = 'release' ]; then
 
     cp -r $package_files/ $targz_name
     cp bindings/java/target/*.jar $targz_name
+    cp core/src/udf/java/target/*.jar $targz_name
     tar --owner root --group root -zcvf $targz_name.tar.gz $targz_name
     zip $zip_name.zip $targz_name.tar.gz
 fi

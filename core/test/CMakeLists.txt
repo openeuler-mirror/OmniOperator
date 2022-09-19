@@ -7,6 +7,7 @@ add_subdirectory(memory)
 add_subdirectory(benchmark)
 add_subdirectory(parser)
 add_subdirectory(type)
+add_subdirectory(codegen)
 if (DEFINED ENABLE_DT)
     if (${ENABLE_DT} STREQUAL "ON")
         add_subdirectory(dt)
@@ -22,6 +23,7 @@ set(MY_LINK
         benchtest
         parsertest
         typetest
+        codegentest
         )
 
 # find gtest package
@@ -37,6 +39,7 @@ target_link_libraries(${OM_TEST_TARGET}
         ${MY_LINK}
         -Wl,--no-whole-archive
         gtest
+        gmock
         pthread
         stdc++
         dl

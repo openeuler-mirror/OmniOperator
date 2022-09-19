@@ -23,7 +23,8 @@ enum class ErrorCode {
     EXCEED_SPILL_THRESHOLD,
     READ_FAILED,
     LOAD_LAZY_VECTOR_FAILED,
-    MEM_CAP_EXCEEDED
+    MEM_CAP_EXCEEDED,
+    JVM_FAILED
 };
 
 std::string &GetErrorCode(const ErrorCode &errorCode);

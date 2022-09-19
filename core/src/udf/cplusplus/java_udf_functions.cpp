@@ -1,0 +1,186 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Description: java udf functions.
+ */
+#include <jni.h>
+#include "jni_util.h"
+#include "util/error_code.h"
+#include "util/type_util.h"
+#include "codegen/functions/context_helper.h"
+#include "java_udf_functions.h"
+
+namespace omniruntime {
+namespace udf {
+using namespace omniruntime::op;
+using namespace omniruntime::codegen;
+
+const std::string GET_ENV_FAILED = "Get env from JVM failed.";
+const std::string JVM_OOM = "The JVM is likely OOM.";
+
+using OutputState = struct OutputState {
+    int32_t outputValueCapacity;
+    int32_t rowIdx;
+};
+
+omniruntime::op::ErrorCode InitUdf()
+{
+    return JniUtil::Init();
+}
+
+static jobjectArray CreateInputTypeArray(JNIEnv *env, jclass dataTypeIdCls, const int32_t *inputTypes, int32_t vecCount)
+{
+    jobjectArray paramTypes = env->NewObjectArray(vecCount, dataTypeIdCls, nullptr);
+    for (int32_t i = 0; i < vecCount; i++) {
+        auto fieldId = JniUtil::GetFieldId(inputTypes[i]);
+        auto paramObj = env->GetStaticObjectField(dataTypeIdCls, fieldId);
+        env->SetObjectArrayElement(paramTypes, i, paramObj);
+    }
+    return paramTypes;
+}
+
+void ExecuteHiveUdfSingle(int64_t contextPtr, const char *udfClass, int32_t *inputTypes, int32_t retType,
+    int32_t vecCount, int64_t inputValueAddr, int64_t inputNullAddr, int64_t inputLengthAddr, int64_t outputValueAddr,
+    int64_t outputNullAddr, int64_t outputLengthAddr)
+{
+    auto executorCls = JniUtil::GetHiveUdfExecutorCls();
+    auto executeSingleMethod = JniUtil::GetExecuteSingleMethod();
+
+    // prepare udf name for jni call
+    auto env = JniUtil::GetJNIEnv();
+    if (env == nullptr) {
+        codegen::SetError(contextPtr, GET_ENV_FAILED.c_str(), static_cast<int32_t>(GET_ENV_FAILED.length()));
+        return;
+    }
+    jstring jUdfClassName = env->NewStringUTF(udfClass);
+    if (jUdfClassName == nullptr) {
+        codegen::SetError(contextPtr, JVM_OOM.c_str(), static_cast<int32_t>(JVM_OOM.length()));
+        return;
+    }
+
+    // prepare input types and return type for jni call
+    auto dataTypeIdCls = JniUtil::GetDataTypeIdCls();
+    jobjectArray jParamTypes = CreateInputTypeArray(env, dataTypeIdCls, inputTypes, vecCount);
+    auto jRetType = env->GetStaticObjectField(dataTypeIdCls, JniUtil::GetFieldId(retType));
+
+    env->CallStaticVoidMethod(executorCls, executeSingleMethod, jUdfClassName, jParamTypes, jRetType, inputValueAddr,
+        inputNullAddr, inputLengthAddr, outputValueAddr, outputNullAddr, outputLengthAddr);
+    if (env->ExceptionCheck()) {
+        auto msg = JniUtil::GetExceptionMsg(env);
+        codegen::SetError(contextPtr, msg.c_str(), static_cast<int32_t>(msg.length()));
+    }
+    env->DeleteLocalRef(jUdfClassName);
+}
+
+static void ExecHiveUdfOutputString(int64_t contextPtr, const char *udfClass, int32_t *inputTypes, int32_t retType,
+    int32_t vecCount, int32_t rowCount, int64_t *inputValues, int64_t *inputNulls, int64_t *inputLengths,
+    int64_t outputValueAddr, int64_t outputNullAddr, int64_t outputLengthAddr)
+{
+    auto executorCls = JniUtil::GetHiveUdfExecutorCls();
+    auto executeBatchMethod = JniUtil::GetExecuteBatchMethod();
+
+    // prepare udf name for jni call
+    auto env = JniUtil::GetJNIEnv();
+    if (env == nullptr) {
+        codegen::SetError(contextPtr, GET_ENV_FAILED.c_str(), static_cast<int32_t>(GET_ENV_FAILED.length()));
+        return;
+    }
+    jstring jUdfClassName = env->NewStringUTF(udfClass);
+    if (jUdfClassName == nullptr) {
+        codegen::SetError(contextPtr, JVM_OOM.c_str(), static_cast<int32_t>(JVM_OOM.length()));
+        return;
+    }
+
+    // prepare input types and return type for jni call
+    auto dataTypeIdCls = JniUtil::GetDataTypeIdCls();
+    jobjectArray jParamTypes = CreateInputTypeArray(env, dataTypeIdCls, inputTypes, vecCount);
+    auto jRetType = env->GetStaticObjectField(dataTypeIdCls, JniUtil::GetFieldId(retType));
+
+    auto inputValuesAddr = reinterpret_cast<int64_t>(inputValues);
+    auto inputNullsAddr = reinterpret_cast<int64_t>(inputNulls);
+    auto inputLengthsAddr = reinterpret_cast<int64_t>(inputLengths);
+    auto outputValueAddrArr = reinterpret_cast<int64_t *>(outputValueAddr);
+    auto outputLengthArr = reinterpret_cast<int32_t *>(outputLengthAddr);
+
+    auto outputState = new OutputState { 0, 0 };
+    auto outputStateAddr = reinterpret_cast<int64_t>(outputState);
+    int32_t outputValueCapacity = 1024;
+    int32_t start = 0;
+    while (outputState->rowIdx < rowCount) {
+        // handle remaining data
+        auto outputValuePtr = ArenaAllocatorMalloc(contextPtr, outputValueCapacity);
+        outputState->outputValueCapacity = outputValueCapacity;
+        env->CallStaticVoidMethod(executorCls, executeBatchMethod, jUdfClassName, jParamTypes, jRetType, rowCount,
+            outputStateAddr, inputValuesAddr, inputNullsAddr, inputLengthsAddr, outputValuePtr, outputNullAddr,
+            outputLengthAddr);
+        if (env->ExceptionCheck()) {
+            auto msg = JniUtil::GetExceptionMsg(env);
+            codegen::SetError(contextPtr, msg.c_str(), static_cast<int32_t>(msg.length()));
+            env->DeleteLocalRef(jUdfClassName);
+            delete outputState;
+            return;
+        }
+
+        // transform output value to multiple addresses
+        int32_t offset = 0;
+        for (int32_t i = start; i < outputState->rowIdx; i++) {
+            outputValueAddrArr[i] = reinterpret_cast<int64_t>(outputValuePtr + offset);
+            offset += outputLengthArr[i];
+        }
+        outputValueCapacity *= 2;
+        start = outputState->rowIdx;
+    }
+    env->DeleteLocalRef(jUdfClassName);
+    delete outputState;
+}
+
+static void ExecHiveUdfOutputNonString(int64_t contextPtr, const char *udfClass, int32_t *inputTypes, int32_t retType,
+    int32_t vecCount, int32_t rowCount, int64_t *inputValues, int64_t *inputNulls, int64_t *inputLengths,
+    int64_t outputValueAddr, int64_t outputNullAddr, int64_t outputLengthAddr)
+{
+    auto executorCls = JniUtil::GetHiveUdfExecutorCls();
+    auto executeBatchMethod = JniUtil::GetExecuteBatchMethod();
+
+    // prepare udf name for jni call
+    auto env = JniUtil::GetJNIEnv();
+    if (env == nullptr) {
+        codegen::SetError(contextPtr, GET_ENV_FAILED.c_str(), static_cast<int32_t>(GET_ENV_FAILED.length()));
+        return;
+    }
+    jstring jUdfClassName = env->NewStringUTF(udfClass);
+    if (jUdfClassName == nullptr) {
+        codegen::SetError(contextPtr, JVM_OOM.c_str(), static_cast<int32_t>(JVM_OOM.length()));
+        return;
+    }
+
+    // prepare input types and return type for jni call
+    auto dataTypeIdCls = JniUtil::GetDataTypeIdCls();
+    jobjectArray jParamTypes = CreateInputTypeArray(env, dataTypeIdCls, inputTypes, vecCount);
+    auto jRetType = env->GetStaticObjectField(dataTypeIdCls, JniUtil::GetFieldId(retType));
+
+    auto inputValuesAddr = reinterpret_cast<int64_t>(inputValues);
+    auto inputNullsAddr = reinterpret_cast<int64_t>(inputNulls);
+    auto inputLengthsAddr = reinterpret_cast<int64_t>(inputLengths);
+
+    env->CallStaticVoidMethod(executorCls, executeBatchMethod, jUdfClassName, jParamTypes, jRetType, rowCount, 0,
+        inputValuesAddr, inputNullsAddr, inputLengthsAddr, outputValueAddr, outputNullAddr, outputLengthAddr);
+    if (env->ExceptionCheck()) {
+        auto msg = JniUtil::GetExceptionMsg(env);
+        codegen::SetError(contextPtr, msg.c_str(), static_cast<int32_t>(msg.length()));
+    }
+    env->DeleteLocalRef(jUdfClassName);
+}
+
+void ExecuteHiveUdfBatch(int64_t contextPtr, const char *udfClass, int32_t *inputTypes, int32_t retType,
+    int32_t vecCount, int32_t rowCount, int64_t *inputValues, int64_t *inputNulls, int64_t *inputLengths,
+    int64_t outputValueAddr, int64_t outputNullAddr, int64_t outputLengthAddr)
+{
+    if (TypeUtil::IsStringType(static_cast<type::DataTypeId>(retType))) {
+        ExecHiveUdfOutputString(contextPtr, udfClass, inputTypes, retType, vecCount, rowCount, inputValues, inputNulls,
+            inputLengths, outputValueAddr, outputNullAddr, outputLengthAddr);
+    } else {
+        ExecHiveUdfOutputNonString(contextPtr, udfClass, inputTypes, retType, vecCount, rowCount, inputValues,
+            inputNulls, inputLengths, outputValueAddr, outputNullAddr, outputLengthAddr);
+    }
+}
+}
+}

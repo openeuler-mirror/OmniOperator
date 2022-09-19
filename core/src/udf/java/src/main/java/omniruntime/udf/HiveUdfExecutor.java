@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -216,7 +217,8 @@ public class HiveUdfExecutor {
         } else {
             int length = UdfUtil.UNSAFE.getInt(inputLengthAddr + (long) paramIdx * Integer.BYTES);
             long valueAddr = UdfUtil.UNSAFE.getLong(inputValueAddr + valueOffset);
-            return UdfUtil.getString(valueAddr, 0, length);
+            byte[] chars = UdfUtil.getBytes(valueAddr, 0, length);
+            return new String(chars, StandardCharsets.UTF_8);
         }
     }
 
@@ -224,6 +226,9 @@ public class HiveUdfExecutor {
             Object result) {
         if (result == null) {
             UdfUtil.UNSAFE.putByte(outputNullAddr, (byte) 1);
+            if (retType == DataTypeId.OMNI_CHAR || retType == DataTypeId.OMNI_VARCHAR) {
+                UdfUtil.UNSAFE.putInt(outputLengthAddr, 0);
+            }
             return;
         }
         UdfUtil.UNSAFE.putByte(outputNullAddr, (byte) 0);
@@ -245,9 +250,9 @@ public class HiveUdfExecutor {
                 break;
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
-                String value = (String) result;
-                UdfUtil.UNSAFE.putInt(outputLengthAddr, value.length());
-                UdfUtil.putString(outputValueAddr, 0, value);
+                byte[] chars = ((String) result).getBytes(StandardCharsets.UTF_8);
+                UdfUtil.putBytes(outputValueAddr, 0, chars);
+                UdfUtil.UNSAFE.putInt(outputLengthAddr, chars.length);
                 break;
             }
             default: {
@@ -366,14 +371,14 @@ public class HiveUdfExecutor {
                 Object result = method.invoke(udfObj, inputArgs);
                 if (result != null) {
                     // set value
-                    String value = (String) result;
-                    int length = value.length();
+                    byte[] chars = ((String) result).getBytes(StandardCharsets.UTF_8);
+                    int length = chars.length;
                     if (outputOffset + length > outputValueCapacity) {
                         UdfUtil.UNSAFE.putInt(outputStateAddr + Integer.BYTES, rowIdx);
                         return;
                     }
 
-                    UdfUtil.putString(outputValueAddr, outputOffset, value);
+                    UdfUtil.putBytes(outputValueAddr, outputOffset, chars);
                     UdfUtil.UNSAFE.putByte(outputNullAddr + rowIdx, (byte) 0);
                     UdfUtil.UNSAFE.putInt(outputLengthAddr + (long) rowIdx * Integer.BYTES, length);
                     outputOffset += length;
@@ -445,8 +450,8 @@ public class HiveUdfExecutor {
                 case OMNI_VARCHAR: {
                     long valueAddr = UdfUtil.UNSAFE.getLong(inputValueAddrs[i] + (long) rowIdx * Long.BYTES);
                     int length = UdfUtil.UNSAFE.getInt(inputLengthAddrs[i] + (long) rowIdx * Integer.BYTES);
-                    String value = UdfUtil.getString(valueAddr, 0, length);
-                    inputObjects[i] = value;
+                    byte[] chars = UdfUtil.getBytes(valueAddr, 0, length);
+                    inputObjects[i] = new String(chars, StandardCharsets.UTF_8);
                     break;
                 }
                 default: {

@@ -9,10 +9,12 @@
 using namespace std;
 using namespace omniruntime;
 using omniruntime::Function;
+const std::string INVALID_HIVE_UDF = "";
 
 vector<Function> FunctionRegistry::registeredFunctions = Initialize();
 FunctionMapPtr FunctionRegistry::functionRegistry;
 FunctionMapPtr FunctionRegistry::functionNullRegistry;
+HiveUdfMapPtr FunctionRegistry::hiveUdfMap;
 
 vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries()
 {
@@ -24,6 +26,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
     functionRegistries.push_back(make_unique<HashFunctionRegistry>());
     functionRegistries.push_back(make_unique<VarcharVectorFunctionRegistry>());
+    functionRegistries.push_back(make_unique<HiveUdfRegistry>());
 
     // External functions
     functionRegistries.push_back(make_unique<ExternalFunctionRegistry>());
@@ -33,6 +36,9 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
 
 std::vector<Function> FunctionRegistry::Initialize()
 {
+    hiveUdfMap = std::make_unique<std::unordered_map<std::string, std::string>>();
+    HiveUdfRegistry::GenerateHiveUdfMap(*(hiveUdfMap.get()));
+
     std::vector<Function> allFunctions;
     functionRegistry =
         std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
@@ -65,7 +71,6 @@ const Function *FunctionRegistry::LookupFunction(FunctionSignature *signature)
 {
     auto result = functionRegistry->find(signature);
     if (result == functionRegistry->end()) {
-        LogWarn("Function not supported: %s", signature->ToString().c_str());
         return nullptr;
     }
     return result->second;
@@ -87,6 +92,15 @@ bool FunctionRegistry::IsNullExecutionContextSet(FunctionSignature *signature)
         signature->GetReturnType(), signature->GetFunctionAddress());
     auto result = functionNullRegistry->find(&signatureNull);
     return result->second->IsExecutionContextSet();
+}
+
+const std::string &FunctionRegistry::LookupHiveUdf(const std::string &udfName)
+{
+    auto result = hiveUdfMap->find(udfName);
+    if (result == hiveUdfMap->end()) {
+        return INVALID_HIVE_UDF;
+    }
+    return result->second;
 }
 
 std::vector<Function> &FunctionRegistry::GetFunctions()
