@@ -1103,7 +1103,14 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
     }
     if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
         int64_t scaledValue = 0;
-        DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
+        OpStatus status = DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
+        if (status == type::OP_OVERFLOW || scaledValue < INT_MIN  || scaledValue > INT_MAX) {
+            ostringstream errorMessage;
+            errorMessage << "Cannot cast " << DecimalOperations::ScaleOfDecimal(to_string(x), scale) << " to INTEGER";
+            int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
+            SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+            return 0;
+        }
         return static_cast<int32_t>(scaledValue);
     }
 
@@ -1163,11 +1170,10 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHi
 
     if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
         DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
-        int32_t result = static_cast<int32_t>(outDecimal.LowBits());
-        return outDecimal.HighBits() < 0 ? -result : result;
+    } else {
+        DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     }
 
-    DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t longValue;
     OpStatus statusDecimal = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, longValue);
     int32_t result;
@@ -1194,11 +1200,10 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
 
     if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
         DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
-        int64_t result = static_cast<int64_t>(outDecimal.LowBits());
-        return outDecimal.HighBits() < 0 ? -result : result;
+    } else {
+        DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     }
 
-    DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
     int64_t result;
     OpStatus status = DecimalOperations::UnscaledDecimal128ToLong(outDecimal, result);
     if (status != SUCCESS) {

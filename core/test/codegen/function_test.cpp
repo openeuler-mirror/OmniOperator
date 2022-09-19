@@ -2451,4 +2451,185 @@ TEST(FunctionTest, EvaluateHiveUdfSingle)
     delete context;
     DestroyJNIEnvMock(env);
 }
+
+TEST(FunctionTest, CastDecimal64ToInt_normal_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal64ToInt(contextPtr, 123456, 4, 2, false);
+    ASSERT_EQ(result, 1234);
+    ASSERT_FALSE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToInt_positive_overflow_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal64ToInt(contextPtr, 1232147483667, 11, 2, false);
+    ASSERT_EQ(result, 0);
+    ASSERT_TRUE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToInt_negative_overflow_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal64ToInt(contextPtr, -1232147483667, 11, 2, false);
+    ASSERT_EQ(result, 0);
+    ASSERT_TRUE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToLong_normal_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    auto result = CastDecimal64ToLong(123456, 4, 2, false);
+    ASSERT_EQ(result, 1234);
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+}
+
+TEST(FunctionTest, CastDecimal128ToInt_normal_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    Decimal128 deci;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("1234.56", deci, scale, precision);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal128ToInt(contextPtr, deci.HighBits(), deci.LowBits(), precision, scale, false);
+    ASSERT_EQ(result, 1234);
+    ASSERT_FALSE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToInt_positive_overflow_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    Decimal128 deci;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("12321474836.67", deci, scale, precision);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal128ToInt(contextPtr, deci.HighBits(), deci.LowBits(), precision, scale, false);
+    ASSERT_EQ(result, 0);
+    ASSERT_TRUE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToInt_negative_overflow_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    Decimal128 deci;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("-12321474836.67", deci, scale, precision);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal128ToInt(contextPtr, deci.HighBits(), deci.LowBits(), precision, scale, false);
+    ASSERT_EQ(result, 0);
+    ASSERT_TRUE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToLong_normal_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    Decimal128 deci;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("12321474836.67", deci, scale, precision);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal128ToLong(contextPtr, deci.HighBits(), deci.LowBits(), precision, scale, false);
+    ASSERT_EQ(result, 12321474836);
+    ASSERT_FALSE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToLong_positive_overflow_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    Decimal128 deci;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("12345678912345678912345.67", deci, scale, precision);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal128ToLong(contextPtr, deci.HighBits(), deci.LowBits(), precision, scale, false);
+    ASSERT_EQ(result, 0);
+    ASSERT_TRUE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToLong_negative_overflow_when_engine_is_spark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+
+    Decimal128 deci;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("-12345678912345678912345.67", deci, scale, precision);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    auto result = CastDecimal128ToLong(contextPtr, deci.HighBits(), deci.LowBits(), precision, scale, false);
+    ASSERT_EQ(result, 0);
+    ASSERT_TRUE(context->HasError());
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
 }
