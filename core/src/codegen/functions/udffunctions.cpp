@@ -3,18 +3,26 @@
  * Description: udf functions.
  */
 #include <mutex>
+#include "context_helper.h"
 #include "udf/cplusplus/java_udf_functions.h"
 #include "udffunctions.h"
 
+using namespace omniruntime::codegen;
+using namespace omniruntime::udf;
+
 namespace {
-    std::once_flag init_udf_flag;
+std::once_flag init_udf_flag;
+bool g_isUdfInited;
+const std::string INIT_UDF_FAILED = "Init UDF failed";
 }
 
 static void InitHiveUdf()
 {
-    auto ret = omniruntime::udf::InitUdf();
+    auto ret = InitUdf();
     if (ret != omniruntime::op::ErrorCode::SUCCESS) {
-        LogError("Init UDF failed since %s.", GetErrorMessage(ret).c_str());
+        g_isUdfInited = false;
+    } else {
+        g_isUdfInited = true;
     }
 }
 
@@ -23,8 +31,12 @@ extern DLLEXPORT void EvaluateHiveUdfSingle(int64_t contextPtr, const char *udfC
     int64_t outputNull, int64_t outputLength)
 {
     std::call_once(init_udf_flag, InitHiveUdf);
-    omniruntime::udf::ExecuteHiveUdfSingle(contextPtr, udfClass, inputTypes, retType, vecCount, inputValue, inputNull,
-        inputLength, outputValue, outputNull, outputLength);
+    if (!g_isUdfInited) {
+        SetError(contextPtr, INIT_UDF_FAILED.c_str(), static_cast<int32_t>(INIT_UDF_FAILED.length()));
+        return;
+    }
+    ExecuteHiveUdfSingle(contextPtr, udfClass, inputTypes, retType, vecCount, inputValue, inputNull, inputLength,
+        outputValue, outputNull, outputLength);
 }
 
 extern DLLEXPORT void EvaluateHiveUdfBatch(int64_t contextPtr, const char *udfClass, int32_t *inputTypes,
@@ -32,6 +44,10 @@ extern DLLEXPORT void EvaluateHiveUdfBatch(int64_t contextPtr, const char *udfCl
     int64_t *inputLengths, int64_t outputValue, int64_t outputNull, int64_t outputLength)
 {
     std::call_once(init_udf_flag, InitHiveUdf);
-    omniruntime::udf::ExecuteHiveUdfBatch(contextPtr, udfClass, inputTypes, retType, vecCount, rowCount, inputValues,
-        inputNulls, inputLengths, outputValue, outputNull, outputLength);
+    if (!g_isUdfInited) {
+        SetError(contextPtr, INIT_UDF_FAILED.c_str(), static_cast<int32_t>(INIT_UDF_FAILED.length()));
+        return;
+    }
+    ExecuteHiveUdfBatch(contextPtr, udfClass, inputTypes, retType, vecCount, rowCount, inputValues, inputNulls,
+        inputLengths, outputValue, outputNull, outputLength);
 }

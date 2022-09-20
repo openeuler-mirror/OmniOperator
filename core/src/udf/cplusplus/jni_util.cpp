@@ -231,7 +231,7 @@ jmethodID JniUtil::GetThrowableToStringMethod()
 std::string JniUtil::GetExceptionMsg(JNIEnv *env)
 {
     if (JniUtil::GetUdfUtilCls() == nullptr) {
-        return "Init UDF failed since load class UdfUtil failed.";
+        return "Load UdfUtil class failed.";
     }
     auto exception = env->ExceptionOccurred();
     env->ExceptionClear();

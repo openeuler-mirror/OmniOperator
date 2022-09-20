@@ -34,20 +34,32 @@ static std::string GetHiveUdfPropertyPath()
     return TransEnv(omniHome) + "/hive-udf/udf.properties";
 }
 
+static void Trim(std::string &value)
+{
+    value.erase(0, value.find_first_not_of(' '));
+    value.erase(value.find_last_not_of(' ') + 1);
+}
+
 void HiveUdfRegistry::GenerateHiveUdfMap(std::unordered_map<std::string, std::string> &hiveUdfMap)
 {
     std::string propertyFile = GetHiveUdfPropertyPath();
     std::ifstream file(propertyFile);
     if (!file.good()) {
-        LogError("%s does not exist.", propertyFile.c_str());
+        LogWarn("%s does not exist.", propertyFile.c_str());
         return;
     }
 
     std::string s;
     while (getline(file, s)) {
+        Trim(s);
         auto pos = s.find(' ');
+        if (pos == std::string::npos) {
+            continue;
+        }
         std::string udfName = s.substr(0, pos);
         std::string udfClass = s.substr(pos + 1);
+        Trim(udfName);
+        Trim(udfClass);
         std::transform(udfName.begin(), udfName.end(), udfName.begin(), ::tolower);
         hiveUdfMap.insert(std::make_pair(udfName, udfClass));
     }

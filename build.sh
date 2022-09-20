@@ -15,28 +15,21 @@ if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
   cp -r ../json ${open_source_dir}
   cp -r ../llvm-project ${open_source_dir}
 
-  cd ${open_source_dir}
-
-  echo "Start build huawei_secure_c"
-  cd huawei_secure_c/src
+  echo "Start build open source code for huawei_secure_c, jemalloc and json"
+  cd ${open_source_dir}/huawei_secure_c/src
   sudo make
   cd ../../
   sudo cp huawei_secure_c/lib/libsecurec.so $OMNI_HOME/lib
   sudo cp -r huawei_secure_c/include/ $OMNI_HOME/lib
 
-  echo "Start jemalloc"
   cd jemalloc
   sudo ./autogen.sh --disable-initial-exec-tls
-  sudo make -j16
-  sudo make install
+  sudo make -j16 && sudo make install
 
-  echo "Start build json"
-  cd ../json
-  mkdir build
-  cd build
+  mkdir ../json/build
+  cd ../json/build
   sudo cmake ../
-  sudo make -j16
-  sudo make install
+  sudo make -j16 && sudo make install
 
   cd ../../../core/build
 else
