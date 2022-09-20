@@ -10,12 +10,12 @@
 #include <vector>
 #include "util/error_code.h"
 
-#define RETURN_ERROR_CODE_IF_EXC(env)                                                           \
-    do {                                                                                        \
-        if ((env)->ExceptionCheck()) {                                                          \
-            LogError("Get Jni object failed since %s.", JniUtil::GetExceptionMsg(env).c_str()); \
-            return ErrorCode::JVM_FAILED;                                                       \
-        }                                                                                       \
+#define RETURN_ERROR_CODE_IF_EXC(env)                                                            \
+    do {                                                                                         \
+        if ((env)->ExceptionCheck()) {                                                           \
+            LogError("Get Jni object failed since : %s", JniUtil::GetExceptionMsg(env).c_str()); \
+            return ErrorCode::JVM_FAILED;                                                        \
+        }                                                                                        \
     } while (false)
 
 class JniUtil {
