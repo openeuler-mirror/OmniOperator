@@ -1,4 +1,9 @@
-file(GLOB_RECURSE OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+if(ENABLE_HMPP)
+    file(GLOB_RECURSE OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+else()
+    file(GLOB_RECURSE OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+    list(REMOVE_ITEM OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/hmpp_hash_util.cpp)
+endif()
 set(OP_TARGET ${OMNI_OPERATOR_SO})
 find_package(nlohmann_json 3.7.3 REQUIRED)
 # compile .a file

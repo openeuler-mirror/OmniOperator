@@ -10,11 +10,14 @@
 #include "vector/vector_helper.h"
 #include "operator/pages_hash_strategy.h"
 #include "lookup_join.h"
+#ifdef ENABLE_HMPP
+#include <HMPP/hmpp.h>
+#include "operator/hmpp_hash_util.h"
+#endif
 
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
@@ -41,8 +44,8 @@ LookupJoinOperatorFactory::~LookupJoinOperatorFactory() = default;
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType inputJoinType,
-    int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig)
+    int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType inputJoinType, int64_t hashBuilderFactoryAddr,
+    OverflowConfig *overflowConfig)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
@@ -205,6 +208,184 @@ uint64_t LookupJoinOperator::GetNextJoinPosition(uint64_t currentJoinPosition) c
     return hashTables->GetNextJoinPosition(currentJoinPosition);
 }
 
+#ifdef ENABLE_HMPP
+template <typename T>
+void CalculateColHashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+{
+    if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+        LogDebug("HMPP-Join-hash");
+        if (vector->MayHaveNull()) {
+            for (uint32_t i = 0; i < rowCount; ++i) {
+                if (vector->IsValueNull(static_cast<int32_t>(i))) {
+                    nulls[i] = true;
+                    continue;
+                }
+            }
+        }
+        HmppResult result = HmppHashUtil::ComputeHash(vector, combinedHash);
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "Join HMPPS_ComputeHash failed for hmpp error");
+        }
+        return;
+    } else {
+        omniruntime::vec::Vector *result = nullptr;
+        int32_t idIndex;
+        int64_t hash;
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<T *>(result)->GetValue(idIndex));
+            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+        }
+    }
+}
+
+void CalculateColDec64Hashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+{
+    if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+        LogDebug("HMPP-Join-hashDec64");
+        int32_t positionOffset = vector->GetPositionOffset();
+        const int64_t *decimalAddr = reinterpret_cast<const int64_t *>(vector->GetValues()) + positionOffset;
+        int64_t *resultHash = new int64_t[rowCount]();
+        int8_t *nullAddr = nullptr;
+        if (vector->MayHaveNull()) {
+            int32_t positionOffset = vector->GetPositionOffset();
+            nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
+            for (uint32_t i = 0; i < rowCount; ++i) {
+                if (vector->IsValueNull(static_cast<int32_t>(i))) {
+                    nulls[i] = true;
+                    continue;
+                }
+            }
+        }
+        HmppResult result = HMPPS_Hash_decimal64(decimalAddr, rowCount, nullAddr, resultHash);
+        if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
+            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_decimal64 failed for hmpp error");
+        }
+        result = HMPPS_CombineHash(combinedHash, resultHash, rowCount, combinedHash);
+        if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
+            throw OmniException("HMPP ERROR", "Join HMPPS_CombineHash_decimal64 failed for hmpp error");
+        }
+        delete[] resultHash;
+        return;
+    } else {
+        int32_t idIndex;
+        int64_t hash;
+        omniruntime::vec::Vector *result = nullptr;
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            hash = HashUtil::HashDecimal64Value(static_cast<omniruntime::vec::LongVector *>(result)->GetValue(idIndex));
+            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+        }
+    }
+}
+
+void CalculateColDec128Hashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+{
+    if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+        LogDebug("HMPP-Join-hashDec128");
+        int64_t *resultHash = new int64_t[rowCount]();
+        int8_t *nullAddr = nullptr;
+        int32_t positionOffset = vector->GetPositionOffset();
+        HmppDecimal128 *decimalAddr = static_cast<HmppDecimal128 *>((vector)->GetValues()) + positionOffset;
+        if (vector->MayHaveNull()) {
+            nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
+            for (uint32_t i = 0; i < rowCount; ++i) {
+                if (vector->IsValueNull(static_cast<int32_t>(i))) {
+                    nulls[i] = true;
+                    continue;
+                }
+            }
+        }
+        HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowCount, nullAddr, resultHash);
+        if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
+            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_decimal128 failed for hmpp error");
+        }
+        result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(combinedHash), resultHash, rowCount,
+            reinterpret_cast<int64_t *>(combinedHash));
+        if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
+            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_decimal128 failed for hmpp error");
+        }
+        delete[] resultHash;
+        return;
+    } else {
+        Decimal128 decimal128Value;
+        int64_t hash;
+        omniruntime::vec::Vector *result = nullptr;
+        int32_t idIndex;
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(result)->GetValue(idIndex);
+            hash = HashUtil::HashValue(static_cast<int64_t>(decimal128Value.LowBits()), decimal128Value.HighBits());
+            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+        }
+    }
+}
+
+void CalculateColVarcharHashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+{
+    if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+        LogDebug("HMPP-Join-hashVarchar");
+        int8_t *nullAddr = nullptr;
+        int32_t positionOffset = vector->GetPositionOffset();
+        int64_t *resultHash = new int64_t[rowCount]();
+        uint8_t *varcharVectorAddr = static_cast<uint8_t *>((vector)->GetValues());
+        int32_t *offest = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
+        if (vector->MayHaveNull()) {
+            nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
+            for (uint32_t i = 0; i < rowCount; ++i) {
+                if (vector->IsValueNull(static_cast<int32_t>(i))) {
+                    nulls[i] = true;
+                    continue;
+                }
+            }
+        }
+        HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest, rowCount, nullAddr, resultHash);
+        if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
+            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_varchar failed for hmpp error");
+        }
+        result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(combinedHash), resultHash, rowCount, combinedHash);
+        if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
+            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_varchar failed for hmpp error");
+        }
+        delete[] resultHash;
+        return;
+    } else {
+        int64_t hash;
+        int32_t idIndex;
+        int32_t valueLength;
+        omniruntime::vec::Vector *result = nullptr;
+        uint8_t *varcharValue = nullptr;
+        for (uint32_t i = 0; i < rowCount; ++i) {
+            result = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndId(static_cast<int32_t>(i), idIndex);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            valueLength = static_cast<omniruntime::vec::VarcharVector *>(result)->GetValue(idIndex, &varcharValue);
+            hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+        }
+    }
+}
+#else
 template <typename T>
 void CalculateColHashes(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
@@ -324,6 +505,7 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, uint32_t rowCount,
         }
     }
 }
+#endif
 
 void PopulateHashes(Vector **hashCols, uint32_t rowCount, int32_t *hashColTypes, uint32_t hashColsCount,
     int64_t *hashes, bool *nulls)

@@ -1,4 +1,9 @@
-aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
+if(ENABLE_HMPP)
+    aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
+ELSE()
+    aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
+    list(REMOVE_ITEM OP_TESTS_LIST ${CMAKE_CURRENT_LIST_DIR}/hmpp_hash_test.cpp)
+endif()
 set(OP_TEST_TARGET optest)
 add_library(${OP_TEST_TARGET} ${OP_TESTS_LIST})
 

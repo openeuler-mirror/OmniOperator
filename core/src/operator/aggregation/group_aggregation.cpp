@@ -13,6 +13,10 @@
 #include "operator/hash_util.h"
 #include "operator/util/operator_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#ifdef ENABLE_HMPP
+#include <HMPP/hmpp.h>
+#include "operator/hmpp_hash_util.h"
+#endif
 
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
@@ -158,7 +162,25 @@ OmniStatus HashAggregationOperator::Init()
 void HashAggregationOperator::PreLoop(VectorBatch *vecBatch) {}
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
-
+#ifdef ENABLE_HMPP
+static void GenerateCombinedHashesHMPP(Vector **vectors, uint32_t rowCount, const int32_t colNum,
+    uint64_t *combinedHashVal)
+{
+    Vector *vector = nullptr;
+    for (int32_t i = 0; i < colNum; ++i) {
+        vector = vectors[i];
+        if (vector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
+            GROUP_AGG_FUNCTIONS[vector->GetTypeId()].hashFuncVect(vector, 0, rowCount, combinedHashVal);
+        } else {
+            int32_t newIndexes[rowCount];
+            Vector *originalVector =
+                static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(0, rowCount, newIndexes);
+            GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].hashFunc(originalVector, rowCount, newIndexes,
+                combinedHashVal);
+        }
+    }
+}
+#else
 static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t colNum,
     uint64_t *combinedHashVal)
 {
@@ -176,7 +198,7 @@ static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t ro
         }
     }
 }
-
+#endif
 std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t *hash, int32_t blockSize)
 {
     std::vector<BucketIterator> bucktes(blockSize, groupedRows.end());
@@ -217,7 +239,54 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
     }
     return -1;
 }
+#ifdef ENABLE_HMPP
+void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
+    int32_t groupByColNum, int32_t aggNum)
+{
+    uint64_t *combinedHashVal = new uint64_t[rowCount]();
+    static const int blockSize = 1024;
+    Vector *groupByVectors[groupByColNum];
+    for (int i = 0; i < groupByColNum; ++i) {
+        groupByVectors[i] = vecBatch->GetVector(groupByColIdx[i]);
+    }
 
+    GenerateCombinedHashesHMPP(groupByVectors, rowCount, groupByColNum, combinedHashVal);
+
+    uint32_t run = blockSize;
+    for (uint32_t start = 0; start < rowCount; start = start + blockSize) {
+        if ((start + blockSize) > rowCount) {
+            run = rowCount - start;
+        }
+
+        for (uint32_t rowIdx = 0; rowIdx < run; ++rowIdx) {
+            uint64_t hash = combinedHashVal[start + rowIdx];
+            int32_t isSamePos = -1;
+            uint32_t actualIdx = start + rowIdx;
+            auto &bucket = groupedRows[hash];
+            isSamePos = IsSameGroupByTuples(groupByVectors, actualIdx, groupByColNum, bucket);
+            if (isSamePos == -1) {
+                std::vector<AggregateState> groupByTuple(groupByColNum + aggNum, AggregateState());
+                for (int32_t i = 0; i < groupByColNum; ++i) {
+                    DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualIdx, executionContext.get());
+                }
+                bucket.push_back(groupByTuple);
+                size_t chainLength = bucket.size();
+                for (int32_t i = 0; i < aggNum; ++i) {
+                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], vecBatch,
+                        static_cast<int32_t>(actualIdx));
+                }
+            } else {
+                for (int32_t i = 0; i < aggNum; ++i) {
+                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], vecBatch,
+                        static_cast<int32_t>(actualIdx));
+                }
+            }
+        }
+    }
+
+    delete[] combinedHashVal;
+}
+#else
 void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
 {
@@ -263,6 +332,7 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
         }
     }
 }
+#endif
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
@@ -292,6 +362,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
+
 
 /**
  * @param types
@@ -341,6 +412,7 @@ void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const s
         GROUP_AGG_FUNCTIONS[type->GetId()].setVector(vectorBatch, *type, colIndex, vecAllocator, rowCount);
     }
 }
+
 
 int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
@@ -407,6 +479,141 @@ OmniStatus HashAggregationOperator::Close()
     return OMNI_STATUS_NORMAL;
 }
 
+#ifdef ENABLE_HMPP
+template <typename V, typename D>
+void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+{
+    LogDebug("HMPP-HASHAGG-hash");
+    HmppResult result = HmppHashUtil::ComputeHash(vector, reinterpret_cast<int64_t *>(combinedHash));
+    if (result != HMPP_STS_NO_ERR) {
+        throw OmniException("HMPP ERROR", "AGG HMPPS_ComputeHash failed for hmpp error");
+    }
+    return;
+}
+
+void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+{
+    int8_t *nullAddr = nullptr;
+    int64_t *resultHash = new int64_t[rowCount]();
+    int32_t positionOffset = vector->GetPositionOffset();
+    uint8_t *varcharVectorAddr = static_cast<uint8_t *>((vector)->GetValues());
+    int32_t *offest = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
+    LogDebug("HMPP-HASHAGG-hashVarchar");
+    if (vector->MayHaveNull()) {
+        nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
+    }
+    HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest, rowCount, nullAddr, resultHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(combinedHash), resultHash, rowCount,
+        reinterpret_cast<int64_t *>(combinedHash));
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    delete[] resultHash;
+    return;
+}
+
+void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+{
+    int64_t *resultHash = new int64_t[rowCount]();
+    int8_t *nullAddr = nullptr;
+    int32_t positionOffset = vector->GetPositionOffset();
+    HmppDecimal128 *decimalAddr = static_cast<HmppDecimal128 *>((vector)->GetValues()) + positionOffset;
+    LogDebug("HMPP-HASHAGG-hashDecimal");
+    if (vector->MayHaveNull()) {
+        nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
+    }
+    HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowCount, nullAddr, resultHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(combinedHash), resultHash, rowCount,
+        reinterpret_cast<int64_t *>(combinedHash));
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    delete[] resultHash;
+    return;
+}
+
+template <typename V, typename D>
+void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+{
+    int32_t rowSize = vector->GetSize();
+    int64_t tempCombinedHash[rowSize];
+    LogDebug("HMPP-HASHAGG-hash");
+    HmppHashUtil::ComputeHash(vector, tempCombinedHash);
+    for (uint32_t i = 0; i < rowCount; ++i) {
+        combinedHash[i] = tempCombinedHash[rowIndexes[i]];
+    }
+    return;
+}
+
+void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+{
+    int32_t rowSize = vector->GetSize();
+    int8_t *nullAddr = nullptr;
+    int64_t *resultHash = new int64_t[rowSize]();
+    int64_t tempCombinedHash[rowSize];
+    uint8_t *varcharVectorAddr = static_cast<uint8_t *>((vector)->GetValues());
+    int32_t positionOffset = vector->GetPositionOffset();
+    int32_t *offest = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
+    LogDebug("HMPP-HASHAGG-hashVarchar");
+    if (vector->MayHaveNull()) {
+        nullAddr = static_cast<int8_t *>(vector->GetValueNulls());
+    }
+    HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest, rowCount, nullAddr, resultHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    result = HMPPS_CombineHash(tempCombinedHash, resultHash, rowCount, tempCombinedHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    for (uint32_t i = 0; i < rowCount; ++i) {
+        combinedHash[i] = tempCombinedHash[rowIndexes[i]];
+    }
+    delete[] resultHash;
+    return;
+}
+
+void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+{
+    int32_t rowSize = vector->GetSize();
+    int64_t *resultHash = new int64_t[rowSize]();
+    int64_t tempCombinedHash[rowSize];
+    int32_t positionOffset = vector->GetPositionOffset();
+    int8_t *nullAddr = nullptr;
+    HmppDecimal128 *decimalAddr = static_cast<HmppDecimal128 *>((vector)->GetValues()) + positionOffset;
+    LogDebug("HMPP-HASHAGG-hashDecimal");
+    if (vector->MayHaveNull()) {
+        nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
+    }
+    HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowCount, nullAddr, resultHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(tempCombinedHash), resultHash, rowCount, tempCombinedHash);
+    if (result != HMPP_STS_NO_ERR) {
+        delete[] resultHash;
+        throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
+    }
+    for (uint32_t i = 0; i < rowCount; ++i) {
+        combinedHash[i] = tempCombinedHash[rowIndexes[i]];
+    }
+    delete[] resultHash;
+    return;
+}
+#else
 template <typename V, typename D>
 void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
@@ -475,6 +682,7 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
         combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
+#endif
 
 template <typename V, typename D>
 void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame)
