@@ -167,28 +167,20 @@ public:
         }
     }
 
-    static inline long AddWithOverflow(Decimal128 &left, Decimal128 &right, Decimal128 &result)
+    static inline OpStatus AddWithOverflow(Decimal128 &left, Decimal128 &right, Decimal128 &result)
     {
-        bool leftNegative = IsNegative(left);
-        bool rightNegative = IsNegative(right);
-
-        long overflow = 0;
-        if (leftNegative == rightNegative) {
-            overflow = AddUnsignedReturnOverflow(left, right, result, leftNegative);
-            if (leftNegative) {
-                overflow = -overflow;
-            }
+        __int128_t x = left.ToInt128();
+        __int128_t y = right.ToInt128();
+        __int128_t r = 0;
+        if (__builtin_add_overflow(x, y, &r)) {
+            return OP_OVERFLOW;
         } else {
-            int compare = CompareAbsolute(left, right);
-            if (compare > 0) {
-                SubtractUnsigned(left, right, result, leftNegative);
-            } else if (compare < 0) {
-                SubtractUnsigned(right, left, result, !leftNegative);
-            } else {
-                SetToZero(result);
+            result = Decimal128(r);
+            if (ExceedsOrEqualTenToThirtyEight(result)) {
+                return OP_OVERFLOW;
             }
+            return SUCCESS;
         }
-        return overflow;
     }
 
     static inline int64_t Pow64TenToScale(int64_t x, int32_t reScale)
@@ -1049,9 +1041,9 @@ public:
         int64_t remainderHigh = remainder.HighBits();
         if (CompareUnsigned(remainderLow, remainderHigh, divisorLow, divisorHigh) >= 0) {
             IncrementUnsafe(quotient, 0);
-            if (ExceedsOrEqualTenToThirtyEight(quotient)) {
-                return OP_OVERFLOW;
-            }
+        }
+        if (ExceedsOrEqualTenToThirtyEight(quotient)) {
+            return OP_OVERFLOW;
         }
 
         if (quotientIsNegative) {

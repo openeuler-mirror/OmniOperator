@@ -121,6 +121,14 @@ public:
         return s;
     }
 
+    __int128_t ToInt128()
+    {
+        __int128_t decimal = highBits < 0 ? highBits ^ (1L << 63) : highBits;
+        decimal = decimal << 64;
+        decimal = decimal + lowBits;
+        return highBits < 0 ? -decimal : decimal;
+    }
+
     static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
     static constexpr int64_t SIGN_INT_MASK = 1 << 31;
     static constexpr uint32_t INT_TO_UNSIGNED_LONG_MASK = 0xFFFF'FFFF;
