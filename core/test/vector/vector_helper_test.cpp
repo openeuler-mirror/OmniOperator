@@ -57,7 +57,7 @@ TEST(VectorHelper, setAndGetValue)
     VectorHelper::SetValue(vector5, 5, &value5);
     uint8_t *result5 = nullptr;
     int32_t len = VectorHelper::GetValue(vector5, 5, &result5);
-    std::string expected(reinterpret_cast<char *>(result5), 0, len);
+    std::string expected(reinterpret_cast<char *>(result5), len);
     EXPECT_EQ(expected, value5);
     delete vector5;
 

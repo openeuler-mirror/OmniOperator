@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
     <version>1.1.0</version>
 
-    <properties >
+    <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <guava.version>30.0-jre</guava.version>
         <java.version>8</java.version>

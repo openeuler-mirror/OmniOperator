@@ -90,7 +90,7 @@ TEST(ContainerVector, copyPositions)
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
     std::vector<DataTypePtr> dataTypes = { DoubleType(), LongType() };
-    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
+    auto *originalVector = new ContainerVector(allocator, rows * 2, vecAddr, 2, dataTypes);
 
     int32_t positions[] = {1, 3, 5, 7, 9};
     ContainerVector *copyPositioned = originalVector->CopyPositions(positions, 0, 5);
@@ -126,7 +126,7 @@ TEST(ContainerVector, copyRegion)
     std::vector<uintptr_t> vecAddr = { reinterpret_cast<uintptr_t>(doubleVector),
         reinterpret_cast<uintptr_t>(longVector) };
     std::vector<DataTypePtr> dataTypes = { DoubleType(), LongType() };
-    auto *originalVector = new ContainerVector(allocator, rows, vecAddr, 2, dataTypes);
+    auto *originalVector = new ContainerVector(allocator, rows * 2, vecAddr, 2, dataTypes);
 
     int offset = 1;
     ContainerVector *copyRegionedVec = originalVector->CopyRegion(offset, 5);
@@ -221,7 +221,7 @@ TEST(ContainerVector, appendVector)
     std::vector<uintptr_t> appendedAddr = { reinterpret_cast<uintptr_t>(appendedDouble),
         reinterpret_cast<uintptr_t>(appendedLong) };
     std::vector<DataTypePtr> appendedDataType = { DoubleType(), LongType() };
-    auto *appended = new ContainerVector(allocator, rows, appendedAddr, columnCount, appendedDataType);
+    auto *appended = new ContainerVector(allocator, rows * 2, appendedAddr, columnCount, appendedDataType);
     appended->Append(vector, 0, 5);
     appended->Append(vector2, 5, 5);
 

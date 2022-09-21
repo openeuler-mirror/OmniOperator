@@ -171,10 +171,10 @@ TEST(FunctionTest, WrapVarcharVector)
     WrapVarcharVector(vecptr, 3, (uint8_t *)"world", 5);
     uint8_t *temp = nullptr;
     int len = varcharVector->GetValue(0, &temp);
-    string result(reinterpret_cast<char *>(temp), 0, len);
+    string result(reinterpret_cast<char *>(temp), len);
     EXPECT_EQ(result, "hello");
     len = varcharVector->GetValue(3, &temp);
-    string result2(reinterpret_cast<char *>(temp), 0, len);
+    string result2(reinterpret_cast<char *>(temp), len);
     EXPECT_EQ(result2, "world");
     delete varcharVector;
     delete vecAllocator;
