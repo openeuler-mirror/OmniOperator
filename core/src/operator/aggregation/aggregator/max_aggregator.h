@@ -37,30 +37,34 @@ public:
         HmppResult result = HMPP_STS_NO_ERR;
         auto maxVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
         switch (inputTypeId) {
-            LogDebug("HMPP-Agg-max");
             case OMNI_SHORT: {
+                LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int16_t *>(maxVal));
                 break;
             }
             case OMNI_INT:
             case OMNI_DATE32: {
+                LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int32_t *>(maxVal));
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
+                LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int64_t *>(maxVal));
                 break;
             }
             case OMNI_DOUBLE: {
+                LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<double *>(maxVal));
                 break;
             }
             case OMNI_DECIMAL128: {
+                LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_decimal(
                     static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset),
                     rowCount, reinterpret_cast<HmppDecimal128 *>(maxVal));
