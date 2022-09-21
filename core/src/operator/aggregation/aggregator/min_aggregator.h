@@ -37,30 +37,34 @@ public:
         HmppResult result = HMPP_STS_NO_ERR;
         auto minVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
         switch (inputTypeId) {
-            LogDebug("HMPP-Agg-min");
             case OMNI_SHORT: {
+                LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int16_t *>(minVal));
                 break;
             }
             case OMNI_INT:
             case OMNI_DATE32: {
+                LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int32_t *>(minVal));
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
+                LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int64_t *>(minVal));
                 break;
             }
             case OMNI_DOUBLE: {
+                LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<double *>(minVal));
                 break;
             }
             case OMNI_DECIMAL128: {
+                LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_decimal(
                     static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + 2 * positionOffset),
                     rowCount, reinterpret_cast<HmppDecimal128 *>(minVal));

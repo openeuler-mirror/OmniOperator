@@ -41,8 +41,8 @@ public:
         auto inputTypeId = inputType->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         switch (inputTypeId) {
-            LogDebug("HMPP-Agg-avg");
             case OMNI_LONG: {
+                LogDebug("HMPP-Agg-avg");
                 result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
                     rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
                     sumVal, &count);

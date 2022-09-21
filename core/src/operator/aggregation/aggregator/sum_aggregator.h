@@ -37,8 +37,8 @@ public:
         auto inputTypeId = inputType->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         switch (inputTypeId) {
-            LogDebug("HMPP-Agg-sum");
             case OMNI_LONG: {
+                LogDebug("HMPP-Agg-sum");
                 result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
                     rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
                     reinterpret_cast<int64_t *>(sumVal));
