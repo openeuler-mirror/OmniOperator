@@ -170,7 +170,6 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
     }
 }
 
-
 llvm::Type *LLVMTypes::GetFunctionReturnType(DataTypeId typeId)
 {
     if (TypeUtil::IsStringType(typeId)) {

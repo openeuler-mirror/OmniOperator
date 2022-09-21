@@ -98,7 +98,7 @@ uint32_t ReverseBytes(uint32_t x)
         ((x >> REVERSE_SHIFT_N) & REVERSE_AND_C) | ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
 }
 
-uint32_t HashBytesByInt(const string base, uint32_t lengthInBytes, uint32_t seed)
+uint32_t HashBytesByInt(const string &base, uint32_t lengthInBytes, uint32_t seed)
 {
     uint32_t h1 = seed;
     for (uint i = 0; i < lengthInBytes; i += MM3_SIZE_INT) {
@@ -138,7 +138,7 @@ uint32_t HashLong(uint64_t input, uint32_t seed)
     return Fmix(h1, MM3_SIZE_LONG);
 }
 
-uint32_t HashUnsafeBytes(const string base, uint32_t lengthInBytes, uint32_t seed)
+uint32_t HashUnsafeBytes(const string &base, uint32_t lengthInBytes, uint32_t seed)
 {
     uint32_t lengthAligned = lengthInBytes - lengthInBytes % MM3_SIZE_INT;
     uint32_t h1 = HashBytesByInt(base, lengthAligned, seed);

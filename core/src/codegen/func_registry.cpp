@@ -29,6 +29,9 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
     functionRegistries.push_back(make_unique<VarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
 
+    functionRegistries.push_back(make_unique<BatchMathFunctionRegistry>());
+    functionRegistries.push_back(make_unique<BatchHashFunctionRegistry>());
+
     // External functions
     functionRegistries.push_back(make_unique<ExternalFunctionRegistry>());
 
