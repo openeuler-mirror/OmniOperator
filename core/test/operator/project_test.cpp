@@ -3603,7 +3603,7 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
     const int32_t numRows = 1;
     int32_t numCols = 1;
 
-    std::string castStr = "CAST_null";
+    std::string castStr = "CAST";
     std::vector<Expr *> args1 = { new FieldExpr(0, VarcharType(18)) };
     auto castExpr1 = GetFuncExpr(castStr, args1, VarcharType(1024));
 
