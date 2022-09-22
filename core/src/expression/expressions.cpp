@@ -71,6 +71,13 @@ void Expr::DeleteExprs(const std::vector<Expr *> &exprs)
     }
 }
 
+void Expr::DeleteExprs(const std::vector<std::vector<Expr *>> &exprs)
+{
+    for (std::vector<Expr *>  expr: exprs) {
+        Expr::DeleteExprs(expr);
+    }
+}
+
 // Literal Expression methods
 LiteralExpr::LiteralExpr() = default;
 

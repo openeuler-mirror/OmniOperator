@@ -58,6 +58,20 @@ public class DataTypeSerializer {
     }
 
     /**
+     * Serialize data types.
+     *
+     * @param dataTypes serialize data types[][]
+     * @return return the string[] after serialization
+     */
+    public static String[] serialize(DataType[][] dataTypes) {
+        String[] strings = new String[dataTypes.length];
+        for (int i = 0; i < dataTypes.length; i++) {
+            strings[i] = serialize(dataTypes[i]);
+        }
+        return strings;
+    }
+
+    /**
      * Deserialize a single data type.
      *
      * @param type the string need to be deserialization
