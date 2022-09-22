@@ -2269,6 +2269,10 @@ TEST(FunctionTest, DecimalAddOpeartion)
     AddDec128Dec128Dec128(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
     EXPECT_EQ(high, 0);
     EXPECT_EQ(low, 33330);
+    Decimal128 right = Decimal128("99999999999999999999980000000000000000");
+    AddDec128Dec64Dec128(contextPtr, right.HighBits(), right.LowBits(), 38, 6, 999999999999999999L, 18, 6, 38, 6, &high,
+        &low);
+    EXPECT_TRUE(context->HasError());
     delete context;
 }
 
@@ -2344,17 +2348,18 @@ TEST(FunctionTest, DecimalDivOpeartion)
 {
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    Decimal128 l = Decimal128("9999999999999999999999");
-    Decimal128 r = Decimal128("99999999999999999999999999999999999999");
+    Decimal128 right = Decimal128("9999999999999999999999");
+    Decimal128 left = Decimal128("99999999999999999999999999999999999999");
     int64_t high = 0;
     uint64_t low = 0;
     // dec128 mul dec128 return dec128
-    DivDec128Dec128Dec128(contextPtr, r.HighBits(), r.LowBits(), 38, 16, l.HighBits(), l.LowBits(), 22, 6, 38, 16,
-        &high, &low);
+    DivDec128Dec128Dec128(contextPtr, left.HighBits(), left.LowBits(), 38, 16, right.HighBits(), right.LowBits(), 22, 6,
+        38, 16, &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "10000000000000000000001");
     DivDec128Dec128Dec128(contextPtr, 0, 100, 38, 0, 0, 3, 38, 0, 38, 3, &high, &low);
-    EXPECT_EQ(high, 0);
-    EXPECT_EQ(low, 33333);
+    right = Decimal128("-9999999999999999999999.9999999999999999");
+    DivDec128Dec128Dec128(contextPtr, right.HighBits(), right.LowBits(), 38, 16, 0, 999999, 22, 6, 38, 16, &high, &low);
+    EXPECT_TRUE(context->HasError());
     delete context;
 }
 
