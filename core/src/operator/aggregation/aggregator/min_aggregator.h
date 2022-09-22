@@ -33,6 +33,7 @@ public:
         auto positionOffset = vector->GetPositionOffset();
         auto rowCount = vector->GetSize();
         auto inputTypeId = inputType->GetId();
+        auto outputTypeId = outputType->GetId();
 
         HmppResult result = HMPP_STS_NO_ERR;
         auto minVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
@@ -41,6 +42,9 @@ public:
                 LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int16_t *>(minVal));
+                if (outputTypeId == OMNI_LONG) {
+                    *minVal = *reinterpret_cast<int16_t *>(minVal);
+                }
                 break;
             }
             case OMNI_INT:
@@ -48,6 +52,9 @@ public:
                 LogDebug("HMPP-Agg-min");
                 result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int32_t *>(minVal));
+                if (outputTypeId == OMNI_LONG) {
+                    *minVal = *reinterpret_cast<int32_t *>(minVal);
+                }
                 break;
             }
             case OMNI_LONG:
@@ -83,8 +90,7 @@ public:
             state.val = minVal;
         } else {
             auto preMinVal = static_cast<ResultType *>(state.val);
-            auto currMinVal = reinterpret_cast<ResultType *>(minVal);
-            *static_cast<ResultType *>(state.val) = (Compare(*preMinVal, *currMinVal) == -1) ? *preMinVal : *currMinVal;
+            *static_cast<ResultType *>(state.val) = (Compare(*preMinVal, *minVal) == -1) ? *preMinVal : *minVal;
         }
     }
 #endif

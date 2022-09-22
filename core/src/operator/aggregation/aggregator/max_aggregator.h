@@ -33,6 +33,7 @@ public:
         auto positionOffset = vector->GetPositionOffset();
         auto rowCount = vector->GetSize();
         auto inputTypeId = inputType->GetId();
+        auto outputTypeId = outputType->GetId();
 
         HmppResult result = HMPP_STS_NO_ERR;
         auto maxVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
@@ -41,6 +42,9 @@ public:
                 LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int16_t *>(maxVal));
+                if (outputTypeId == OMNI_LONG) {
+                    *maxVal = *reinterpret_cast<int16_t *>(maxVal);
+                }
                 break;
             }
             case OMNI_INT:
@@ -48,6 +52,9 @@ public:
                 LogDebug("HMPP-Agg-max");
                 result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
                     rowCount, reinterpret_cast<int32_t *>(maxVal));
+                if (outputTypeId == OMNI_LONG) {
+                    *maxVal = *reinterpret_cast<int32_t *>(maxVal);
+                }
                 break;
             }
             case OMNI_LONG:
@@ -83,8 +90,7 @@ public:
             state.val = maxVal;
         } else {
             auto preMaxVal = static_cast<ResultType *>(state.val);
-            auto currMaxVal = reinterpret_cast<ResultType *>(maxVal);
-            *static_cast<ResultType *>(state.val) = (Compare(*preMaxVal, *currMaxVal) == 1) ? *preMaxVal : *currMaxVal;
+            *static_cast<ResultType *>(state.val) = (Compare(*preMaxVal, *maxVal) == 1) ? *preMaxVal : *maxVal;
         }
     }
 #endif
