@@ -1869,6 +1869,8 @@ TEST(FunctionTest, CastDoubleToDecimal64)
     s = 1.17549E-38;
     result = CastDoubleToDecimal64(contextPtr, s, false, 18, 0);
     EXPECT_EQ(result, 0.00);
+    result = CastDoubleToDecimal64(contextPtr, 0, false, 17, 16);
+    EXPECT_EQ(result, 0);
     delete context;
 }
 
@@ -1965,6 +1967,8 @@ TEST(FunctionTest, CastDecimal64ToLong)
     EXPECT_EQ(result, 100);
     result = CastDecimal64ToLong(-8888, 38, 2, false);
     EXPECT_EQ(result, -89);
+    result = CastDecimal64ToLong(INT64_MIN, 22, 0, false);
+    EXPECT_EQ(result, INT64_MIN);
 }
 
 TEST(FunctionTest, CastDecimal64ToDouble)
@@ -2008,6 +2012,8 @@ TEST(FunctionTest, CastDecimal128ToLong)
     EXPECT_EQ(result, 89);
     result = CastDecimal128ToLong(contextPtr, 1, 1, 38, 20, false);
     EXPECT_EQ(result, 0);
+    result = CastDecimal128ToLong(contextPtr, 1L << 63, 9223372036854775808UL, 22, 0, false);
+    EXPECT_EQ(result, INT64_MIN);
     delete context;
 }
 
@@ -2048,6 +2054,9 @@ TEST(FunctionTest, CastStringToLong)
     s = "9223372036854775808";
     result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 0);
+    s = "-9223372036854775808";
+    result = CastStringToLong(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, INT64_MIN);
     delete context;
 }
 
