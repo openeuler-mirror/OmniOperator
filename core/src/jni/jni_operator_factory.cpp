@@ -63,9 +63,63 @@ void GetExprsFromJson(const string *keysArr, jint keyCount, vector<omniruntime::
         if (expression == nullptr) {
             Expr::DeleteExprs(expressions);
             throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
-                "The expression is not supported yet.");
+                "The expression is not supported yet: " + jsonExpression.dump());
         }
         expressions.push_back(expression);
+    }
+}
+
+void GetExprsFromJson(vector<string> &keysArr, jint keyCount, vector<omniruntime::expressions::Expr *> &expressions)
+{
+    for (int32_t i = 0; i < keyCount; i++) {
+        auto jsonExpression = nlohmann::json::parse(keysArr.at(i));
+        auto expression = JSONParser::ParseJSON(jsonExpression);
+        if (expression == nullptr) {
+            Expr::DeleteExprs(expressions);
+            throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
+                "The expression is not supported yet: " + jsonExpression.dump());
+        }
+        expressions.push_back(expression);
+    }
+}
+
+void GetBoolVector(JNIEnv *env, jbooleanArray booleanArray, std::vector<bool> &output)
+{
+    auto length = static_cast<int32_t>(env->GetArrayLength(booleanArray));
+    auto bools = env->GetBooleanArrayElements(booleanArray, JNI_FALSE);
+    for (int32_t i = 0; i < length; i++) {
+        output.push_back(bools[i]);
+    }
+}
+
+void GetIntVector(JNIEnv *env, jintArray intArray, std::vector<uint32_t> &output)
+{
+    auto length = static_cast<int32_t>(env->GetArrayLength(intArray));
+    auto ptr = env->GetIntArrayElements(intArray, JNI_FALSE);
+    for (int32_t i = 0; i < length; i++) {
+        output.push_back(*ptr);
+        ptr++;
+    }
+}
+
+
+void GetDataTypesVector(JNIEnv *env, jobjectArray jSourceType, std::vector<DataTypes> &output)
+{
+    auto len = static_cast<int32_t>(env->GetArrayLength(jSourceType));
+    for (int i = 0; i < len; ++i) {
+        auto str = static_cast<jstring>(env->GetObjectArrayElement(jSourceType, i));
+        auto sourceTypesCharPtr = env->GetStringUTFChars(str, JNI_FALSE);
+        auto dataTypes = Deserialize(sourceTypesCharPtr);
+        env->ReleaseStringUTFChars(str, sourceTypesCharPtr);
+        output.push_back(dataTypes);
+    }
+}
+
+void DeserializeJsonToArray(const char *str, vector<string> &arr)
+{
+    auto result = nlohmann::json::parse(str);
+    for (auto &json : result) {
+        arr.push_back(json);
     }
 }
 

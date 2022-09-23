@@ -100,6 +100,7 @@ public:
     virtual ~Expr() = default;
     virtual void Accept(ExprVisitor &visitor) const = 0;
     static void DeleteExprs(const std::vector<Expr *> &exprs);
+    static void DeleteExprs(const std::vector<std::vector<Expr *>> &exprs);
 };
 
 class LiteralExpr : public Expr {
