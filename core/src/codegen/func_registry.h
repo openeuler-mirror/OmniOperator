@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 #include <memory>
+#include <mutex>
 
 #include "function.h"
 #include "external_func_registry.h"
@@ -52,11 +53,14 @@ public:
 
     static std::vector<Function> &GetFunctions();
 
+    static void InitHiveUdfMap();
+
 private:
     static std::vector<Function> registeredFunctions;
     static FunctionMapPtr functionRegistry;
     static FunctionMapPtr functionNullRegistry;
     static HiveUdfMapPtr hiveUdfMap;
+    static std::once_flag initHiveUdfMap;
 
     static std::vector<Function> Initialize();
 };

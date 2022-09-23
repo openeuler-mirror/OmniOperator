@@ -15,6 +15,7 @@ vector<Function> FunctionRegistry::registeredFunctions = Initialize();
 FunctionMapPtr FunctionRegistry::functionRegistry;
 FunctionMapPtr FunctionRegistry::functionNullRegistry;
 HiveUdfMapPtr FunctionRegistry::hiveUdfMap;
+std::once_flag FunctionRegistry::initHiveUdfMap;
 
 vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries()
 {
@@ -37,13 +38,12 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
 std::vector<Function> FunctionRegistry::Initialize()
 {
     hiveUdfMap = std::make_unique<std::unordered_map<std::string, std::string>>();
-    HiveUdfRegistry::GenerateHiveUdfMap(*(hiveUdfMap.get()));
 
     std::vector<Function> allFunctions;
     functionRegistry =
         std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
     functionNullRegistry =
-            std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
+        std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
 
     auto registries = GetFunctionRegistries();
     for (auto const & registry : registries) {
@@ -94,8 +94,14 @@ bool FunctionRegistry::IsNullExecutionContextSet(FunctionSignature *signature)
     return result->second->IsExecutionContextSet();
 }
 
+void FunctionRegistry::InitHiveUdfMap()
+{
+    HiveUdfRegistry::GenerateHiveUdfMap(*(hiveUdfMap.get()));
+}
+
 const std::string &FunctionRegistry::LookupHiveUdf(const std::string &udfName)
 {
+    std::call_once(initHiveUdfMap, InitHiveUdfMap);
     auto result = hiveUdfMap->find(udfName);
     if (result == hiveUdfMap->end()) {
         return INVALID_HIVE_UDF;
