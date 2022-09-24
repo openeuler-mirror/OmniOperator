@@ -1974,6 +1974,7 @@ void ExpressionCodeGen::CallHiveUdfFunction(const FuncExpr &fExpr)
         outputValuePtr = llvmEngine->CallExternFunction("ArenaAllocatorMalloc", { OMNI_LONG, OMNI_INT }, OMNI_CHAR,
             { this->codegenContext->executionContext, valueSize }, nullptr);
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "outputLength");
+        builder->CreateStore(llvmTypes->CreateConstantInt(0), outputLenPtr);
     } else {
         outputValuePtr = builder->CreateAlloca(llvmTypes->ToLLVMType(fExpr.GetReturnTypeId()), nullptr, "outputValue");
         outputLenPtr = llvmTypes->CreateConstantLong(0);

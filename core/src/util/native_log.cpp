@@ -78,7 +78,6 @@ void InitLevel(JNIEnv *env)
     } else {
         g_logLevel = static_cast<int>(LogType::LOG_ERROR) + 1;
     }
-    return;
 }
 
 JNIEXPORT void Java_nova_hetu_omniruntime_utils_NativeLog_initLog(JNIEnv *env, jclass jclz)

@@ -5,6 +5,7 @@
 #include "filter_and_project.h"
 #include "vector/vector_helper.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "util/config_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -219,9 +220,11 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-Filter::Filter(const expressions::Expr &expression, OverflowConfig *overflowConfig)
-    : codeGen(FilterCodeGen::Create("filterFunc", expression, overflowConfig)), expr(&expression)
+Filter::Filter(const expressions::Expr &expression, OverflowConfig *overflowConfig) : expr(&expression)
 {
+    if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
+        this->codeGen = FilterCodeGen::Create("filterFunc", expression, overflowConfig);
+    }
     auto f = this->codeGen->GetFunction();
     if (f == 0) {
         this->isSupported = false;

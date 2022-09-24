@@ -5,6 +5,7 @@
 #include "projection.h"
 #include "vector/vector_helper.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "util/config_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -75,7 +76,9 @@ bool Projection::Initialize(bool filter, OverflowConfig *overflowConfig)
         return true;
     }
 
-    this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
+    if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
+        this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
+    }
     auto f = this->codegen->GetFunction();
     if (f == 0) {
         return false;
