@@ -3752,4 +3752,251 @@ TEST(AggregatorTest, spark_avg_double_normal)
     delete avgFactory;
 }
 
+//first basic function:  first with ignore null
+TEST(AggregatorTest, first_int_ignorenull_test)
+{
+    auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
+    std::vector<int32_t> channal0 = { 0 };
+    auto firstIgnoreNullIntAggPartial = firstIgnoreNullFactory->CreateAggregator(
+            AggregatorUtil::WrapWithDataTypes(IntType()),
+            AggregatorUtil::WrapWithDataTypes(IntType()),
+         channal0, true, true);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("first_int_ignorenull_test");
+
+    auto* inputIntVec1 = new IntVector(vectorAllocator, 5);
+    inputIntVec1->SetValueNull(0);
+    inputIntVec1->SetValueNull(1);
+    inputIntVec1->SetValueNull(2);
+    inputIntVec1->SetValueNull(3);
+    inputIntVec1->SetValueNull(4);
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->SetVector(0, inputIntVec1);
+
+    auto *resultfirstVec1 = new IntVector(vectorAllocator, 1);
+    auto *resultValueSetVec1 = new BooleanVector(vectorAllocator, 1);
+    std::vector<Vector*> extractVecs = {resultfirstVec1, resultValueSetVec1};
+
+    AggregateState state { nullptr };
+
+    //add first VectorBatch
+    firstIgnoreNullIntAggPartial->InitiateGroup(state, vecBatch1, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 2);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 3);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 4);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    //add second VectorBatch,keep value not change
+    auto* inputIntVec2 = new IntVector(vectorAllocator, 3);
+    inputIntVec2->SetValueNull(0);
+    inputIntVec2->SetValue(1, 211);
+    inputIntVec2->SetValueNull(2);
+    auto *vecBatch2 = new VectorBatch(1);
+    vecBatch2->SetVector(0, inputIntVec2);
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(211, resultfirstVec1->GetValue(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 2);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(211, resultfirstVec1->GetValue(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    state.val = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
+    delete resultfirstVec1;
+    delete resultValueSetVec1;
+    delete firstIgnoreNullFactory;
+}
+
+//first basic function:  first include null
+TEST(AggregatorTest, first_int_includenull_test)
+{
+    auto firstWithNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL);
+    std::vector<int32_t> channal0 = { 0 };
+    auto firstWithNullIntAggPartial = firstWithNullFactory->CreateAggregator(
+            AggregatorUtil::WrapWithDataTypes(IntType()),
+            AggregatorUtil::WrapWithDataTypes(IntType()),
+            channal0, true, true);
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("first_int_includenull_test");
+
+    auto* inputIntVec1 = new IntVector(vectorAllocator, 5);
+    inputIntVec1->SetValueNull(0);
+    inputIntVec1->SetValueNull(1);
+    inputIntVec1->SetValue(2, 111);
+    inputIntVec1->SetValue(3, 113);
+    inputIntVec1->SetValueNull(4);
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->SetVector(0, inputIntVec1);
+
+    auto *resultfirstVec1 = new IntVector(vectorAllocator, 1);
+    auto *resultValueSetVec1 = new BooleanVector(vectorAllocator, 1);
+    std::vector<Vector*> extractVecs = {resultfirstVec1, resultValueSetVec1};
+
+    AggregateState state { nullptr };
+    firstWithNullIntAggPartial->InitiateGroup(state, vecBatch1, 0);
+    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 1);
+    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 2);
+    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 3);
+    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 4);
+    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(true, resultValueSetVec1->GetValue(0));
+
+    state.val = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch1);
+    delete resultfirstVec1;
+    delete resultValueSetVec1;
+    delete firstWithNullFactory;
+}
+
+//first agg function for 2 steps partial  + final
+TEST(AggregatorTest, first_int_ignorenull_2steps_test)
+{
+    auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
+
+    VectorAllocator *vectorAllocator =
+            VectorAllocator::GetGlobalAllocator()->NewChildAllocator("first_int_ignorenull_2steps_test");
+
+    std::vector<int32_t> channal0 = { 0 };
+    auto firstIgnoreNullIntAggPartial = firstIgnoreNullFactory->CreateAggregator(
+            AggregatorUtil::WrapWithDataTypes(LongType()),
+            AggregatorUtil::WrapWithDataTypes(LongType()),
+            channal0, true, true);
+
+    auto* inputLongVec1 = new LongVector(vectorAllocator, 2);
+    inputLongVec1->SetValueNull(0);
+    inputLongVec1->SetValueNull(1);
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->SetVector(0, inputLongVec1);
+
+    auto *resultfirstVec1 = new LongVector(vectorAllocator, 1);
+    auto *resultValueSetVec1 = new BooleanVector(vectorAllocator, 1);
+    std::vector<Vector*> extractVecs1 = {resultfirstVec1, resultValueSetVec1};
+
+    AggregateState state { nullptr };
+
+    //add first VectorBatch
+    firstIgnoreNullIntAggPartial->InitiateGroup(state, vecBatch1, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs1, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs1, 0);
+    EXPECT_EQ(true, resultfirstVec1->IsValueNull(0));
+    EXPECT_EQ(false, resultValueSetVec1->GetValue(0));
+
+    std::vector<DataTypePtr> vector;
+    vector.push_back(LongType());
+    vector.push_back(BooleanType());
+    DataTypesPtr inputTypes = std::make_unique<DataTypes>(vector);
+
+    std::vector<int32_t> channal2 = { 0, 1 };
+    auto firstIgnoreNullIntAggFinal = firstIgnoreNullFactory->CreateAggregator(
+            inputTypes,
+            AggregatorUtil::WrapWithDataTypes(LongType()),
+            channal2, false, false);
+
+    auto* inputLongVec2 = new LongVector(vectorAllocator, 4);
+    inputLongVec2->SetValueNull(0);
+    inputLongVec2->SetValue(1, 111);
+    inputLongVec2->SetValueNull(2);
+    inputLongVec2->SetValueNull(3);
+
+    auto* inputBooleanVec2 = new BooleanVector(vectorAllocator, 4);
+    inputBooleanVec2->SetValue(0, false);
+    inputBooleanVec2->SetValue(1, true);
+    inputBooleanVec2->SetValue(2, false);
+    inputBooleanVec2->SetValue(3, false);
+
+    auto *vecBatch2 = new VectorBatch(2);
+    vecBatch2->SetVector(0, inputLongVec2);
+    vecBatch2->SetVector(1, inputBooleanVec2);
+
+    auto *resultfirstVec2 = new LongVector(vectorAllocator, 1);
+    std::vector<Vector*> extractVecs2 = {resultfirstVec2};
+
+    firstIgnoreNullIntAggFinal->InitiateGroup(state, vecBatch2, 0);
+    firstIgnoreNullIntAggFinal->ExtractValues(state, extractVecs2, 0);
+    EXPECT_EQ(true, resultfirstVec2->IsValueNull(0));
+
+    firstIgnoreNullIntAggFinal->ProcessGroup(state, vecBatch2, 1);
+    firstIgnoreNullIntAggFinal->ExtractValues(state, extractVecs2, 0);
+    EXPECT_EQ(false, resultfirstVec2->IsValueNull(0));
+    EXPECT_EQ(111, resultfirstVec2->GetValue(0));
+
+    firstIgnoreNullIntAggFinal->ProcessGroup(state, vecBatch2, 2);
+    firstIgnoreNullIntAggFinal->ExtractValues(state, extractVecs2, 0);
+    EXPECT_EQ(false, resultfirstVec2->IsValueNull(0));
+    EXPECT_EQ(111, resultfirstVec2->GetValue(0));
+
+    firstIgnoreNullIntAggFinal->ProcessGroup(state, vecBatch2, 3);
+    firstIgnoreNullIntAggFinal->ExtractValues(state, extractVecs2, 0);
+    EXPECT_EQ(false, resultfirstVec2->IsValueNull(0));
+    EXPECT_EQ(111, resultfirstVec2->GetValue(0));
+
+
+    firstIgnoreNullIntAggFinal->ProcessGroup(state, vecBatch2, 4);
+    firstIgnoreNullIntAggFinal->ExtractValues(state, extractVecs2, 0);
+    EXPECT_EQ(false, resultfirstVec2->IsValueNull(0));
+    EXPECT_EQ(111, resultfirstVec2->GetValue(0));
+
+    state.val = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
+    delete resultfirstVec1;
+    delete resultValueSetVec1;
+    delete resultfirstVec2;
+    delete firstIgnoreNullFactory;
+}
+
+
 }
