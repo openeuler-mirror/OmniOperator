@@ -566,14 +566,14 @@ void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t 
     int32_t *offest = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
     LogDebug("HMPP-HASHAGG-hashVarchar");
     if (vector->MayHaveNull()) {
-        nullAddr = static_cast<int8_t *>(vector->GetValueNulls());
+        nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
     }
-    HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest, rowCount, nullAddr, resultHash);
+    HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest, rowSize, nullAddr, resultHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
     }
-    result = HMPPS_CombineHash(tempCombinedHash, resultHash, rowCount, tempCombinedHash);
+    result = HMPPS_CombineHash(tempCombinedHash, resultHash, rowSize, tempCombinedHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
@@ -597,12 +597,12 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
     if (vector->MayHaveNull()) {
         nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset;
     }
-    HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowCount, nullAddr, resultHash);
+    HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowSize, nullAddr, resultHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
     }
-    result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(tempCombinedHash), resultHash, rowCount, tempCombinedHash);
+    result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(tempCombinedHash), resultHash, rowSize, tempCombinedHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
