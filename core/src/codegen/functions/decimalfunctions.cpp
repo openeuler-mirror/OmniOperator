@@ -1165,7 +1165,7 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
     OpStatus status = DecimalOperations::ToIntExact(longResult, result);
     if (status != SUCCESS) {
         ostringstream errorMessage;
-        errorMessage << "Cannot cast '" << DecimalOperations::ScaleOfDecimal(to_string(x), scale) << "' to  BIGINT";
+        errorMessage << "Cannot cast '" << DecimalOperations::ScaleOfDecimal(to_string(x), scale) << "' to  INTEGER";
         int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
         SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
         return 0;

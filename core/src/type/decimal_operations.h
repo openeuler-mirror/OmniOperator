@@ -26,9 +26,12 @@ enum OpStatus {
     FAIL = 3
 };
 
+using int128_t = __int128_t;
+
 static constexpr int64_t LONG_MIN_VALUE = 0x8000'0000'0000'0000;
 static constexpr int64_t LONG_MAX_VALUE = 0x7FFF'FFFF'FFFF'FFFF;
 static constexpr int64_t ALL_BITS_SET_64 = 0xFFFF'FFFF'FFFF'FFFFLL;
+static constexpr int64_t DECIMAL64_MAX_VALUE = 99'9999'9999'9999'9999;
 static const Decimal128 MIN_VALUE = { LLONG_MAX + 1, 0x0000'0000'0000'0000L };
 static const Decimal128 MAX_VALUE = { 0x7FFF'FFFF'FFFF'FFFFL, 0xFFFF'FFFF'FFFF'FFFFLL };
 static constexpr int64_t INT_BASE = 1L << 32;
@@ -1220,19 +1223,24 @@ public:
             result = value;
             return SUCCESS;
         }
+        int64_t tenOfScale;
+        int128_t tmpValue = value;
         if (rescaleFactor < 0) {
+            tenOfScale = INT64_TEN_POWERS_TABLE[-rescaleFactor];
             if (value < 0) {
-                value = value - pow(10, -rescaleFactor) / 2;
+                tmpValue -= tenOfScale / 2;
             } else {
-                value = value + pow(10, -rescaleFactor) / 2;
+                tmpValue += tenOfScale / 2;
             }
+            tmpValue /= tenOfScale;
+        } else {
+            tenOfScale = INT64_TEN_POWERS_TABLE[rescaleFactor];
+            tmpValue *= tenOfScale;
         }
-        result = Pow64TenToScale(value, rescaleFactor);
-        if (((value | static_cast<int64_t>(pow(10, rescaleFactor))) >> 31 != 0)) {
-            if ((result / value != static_cast<int64_t>(pow(10, rescaleFactor)))) {
-                return OP_OVERFLOW;
-            }
+        if (abs(tmpValue) > DECIMAL64_MAX_VALUE) {
+            return OP_OVERFLOW;
         }
+        result = tmpValue;
         return SUCCESS;
     }
 
@@ -1288,7 +1296,9 @@ public:
         if (high < 0) {
             negative = true;
         }
-        if ((high != 0 && high != 1L << 63) || low > INT64_MAX) {
+        if ((high != 0 && high != 1L << 63) ||
+            (low > INT64_MAX && !negative) ||
+            (low - 1 > INT64_MAX && negative)) {
             return OP_OVERFLOW;
         }
         result = negative ? -low : low;
