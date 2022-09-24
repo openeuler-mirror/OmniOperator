@@ -15,12 +15,13 @@ namespace omniruntime {
 namespace op {
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
+    SumLongDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
     {}
 
-    SumLongDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
+    SumLongDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+        bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
 
     ~SumLongDecimalAggregator() override {}
@@ -28,7 +29,7 @@ public:
 #ifdef ENABLE_HMPP
     void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        auto vector = vectorBatch->GetVector(channel);
+        auto vector = vectorBatch->GetVector(channels[0]);
 
         auto vectorValues = vector->GetValues();
         auto positionOffset = vector->GetPositionOffset();
@@ -62,12 +63,26 @@ public:
             DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
         }
     }
+
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        // just support row Raw data
+        if (!inputRaw) {
+            return false;
+        }
+        // not accept dictionnary vector
+        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            return false;
+        }
+        // only OMNI_DECIMAL128 type input support
+        return (inputTypes->GetType(0)->GetId() == OMNI_DECIMAL128);
+    }
 #endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -92,7 +107,7 @@ public:
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -105,8 +120,10 @@ public:
         DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), initState, overflow);
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
         if (state.val == nullptr) {
             vector->SetValueNull(rowIndex);
             return;

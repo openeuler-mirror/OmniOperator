@@ -51,13 +51,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     // create expression objects
     Parser parser;
     std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 1, sourceTypes);
-
+    auto overflowConfig = new OverflowConfig();
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
-        sourceTypes, outputCols, 4, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
-        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1,
-        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels,
-        nullptr);
+    WindowWithExprOperatorFactory *operatorFactory =
+        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols, 4,
+        windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, overflowConfig);
 
     WindowWithExprOperator *windowOperator =
         dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
@@ -85,6 +85,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
+    delete overflowConfig;
 }
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)

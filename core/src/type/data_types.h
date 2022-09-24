@@ -56,6 +56,26 @@ public:
         return dataTypesSize;
     }
 
+    std::shared_ptr<DataTypes> Instance()
+    {
+        return std::make_shared<DataTypes>(dataTypes);
+    }
+
+    static std::shared_ptr<DataTypes> NoneDataTypesInstance()
+    {
+        static std::vector<DataTypePtr> dataTypes;
+        dataTypes.push_back(NoneDataType::Instance());
+        static std::shared_ptr<DataTypes> types = std::make_shared<DataTypes>(dataTypes);
+        return types;
+    }
+
+    static std::shared_ptr<DataTypes> GenerateDataTypes(DataTypePtr dataTypePtr)
+    {
+        std::vector<DataTypePtr> singleDataType;
+        singleDataType.push_back(dataTypePtr);
+        return std::make_shared<DataTypes>(singleDataType);
+    }
+
 private:
     void InitDataTypeIds()
     {
@@ -70,6 +90,8 @@ private:
     std::vector<DataTypePtr> dataTypes;
     int32_t *dataTypeIds;
 };
+
+using DataTypesPtr = std::shared_ptr<DataTypes>;
 }
 }
 

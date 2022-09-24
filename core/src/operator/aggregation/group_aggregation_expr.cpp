@@ -13,57 +13,75 @@ namespace op {
 using namespace omniruntime::type;
 
 HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
-    const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
-    const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const DataTypes &sourceDataTypes,
-    const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes, uint32_t *maskColumns, bool inputRaw, bool outputPartial,
-    OverflowConfig *overflowConfig)
+    std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+    std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
+    std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
+    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig)
 {
-    uint32_t aggColNum = aggKeys.size();
+    uint32_t aggColNum = 0;
+    for (auto aggKeys : aggsKeys) {
+        aggColNum += aggKeys.size();
+    }
+
+    // do groupByKeys and aggsKeys expression handle, and get new sourceTypes, groupby and agg columnar index
     uint32_t projectColNum = groupByNum + aggColNum;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
-    for (uint32_t i = 0; i < groupByNum; ++i) {
+    for (uint32_t i = 0; i < groupByNum; i++) {
         projectKeys[i] = groupByKeys.at(i);
     }
-    for (uint32_t i = 0, j = groupByNum; i < aggColNum; ++i, ++j) {
-        projectKeys[j] = aggKeys.at(i);
+    uint32_t projectColIdx = groupByNum;
+    for (auto aggKeys : aggsKeys) {
+        for (uint32_t i = 0; i < aggKeys.size(); i++) {
+            projectKeys[projectColIdx] = aggKeys.at(i);
+            projectColIdx++;
+        }
     }
-    std::vector<int32_t> hashAggCols;
+    std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
-        this->rowProjections, this->projectCols, hashAggCols, this->projectFuncs, overflowConfig);
-
+        this->rowProjections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, overflowConfig);
     uint32_t groupByCols[groupByNum];
-    for (uint32_t i = 0; i < groupByNum; ++i) {
-        groupByCols[i] = static_cast<uint32_t>(hashAggCols[i]);
+    for (uint32_t i = 0; i < groupByNum; i++) {
+        groupByCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[i]);
     }
     uint32_t aggCols[aggColNum];
-    for (uint32_t i = 0, j = groupByNum; i < aggColNum; ++i, ++j) {
-        aggCols[i] = static_cast<uint32_t>(hashAggCols[j]);
+    for (uint32_t i = 0, j = groupByNum; i < aggColNum; i++, j++) {
+        aggCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[j]);
     }
 
+    // get groupby columnar data types and index
     std::vector<DataTypePtr> groupByTypeVec;
     groupByTypeVec.reserve(groupByNum);
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByTypeVec.push_back(newSourceTypes[groupByCols[i]]);
     }
     this->groupByTypes = std::make_unique<DataTypes>(groupByTypeVec);
-    std::vector<DataTypePtr> aggTypeVec;
-    aggTypeVec.reserve(aggColNum);
-    for (uint32_t i = 0; i < aggColNum; i++) {
-        aggTypeVec.push_back(newSourceTypes[aggCols[i]]);
-    }
-    this->aggTypes = std::make_unique<DataTypes>(aggTypeVec);
-
     std::vector<uint32_t> groupByCol =
         std::vector<uint32_t>(static_cast<uint32_t *>(groupByCols), static_cast<uint32_t *>(groupByCols) + groupByNum);
-    std::vector<uint32_t> aggCol =
-        std::vector<uint32_t>(static_cast<uint32_t *>(aggCols), static_cast<uint32_t *>(aggCols) + aggColNum);
-    std::vector<uint32_t> aggFunc = std::vector<uint32_t>(aggFuncTypes, aggFuncTypes + aggNum);
-    std::vector<uint32_t> maskColumnContext = std::vector<uint32_t>(maskColumns, maskColumns + aggNum);
+
+    // get agg columnar data types and index
+    std::vector<std::vector<uint32_t>> aggColIdx;
+    std::vector<DataTypes> aggInputDataTypes;
+    std::vector<DataTypes> aggOutputDataTypes;
+    uint32_t startIdx = 0;
+    for (auto aggKeys : aggsKeys) {
+        // agg columnar index and data types
+        std::vector<uint32_t> aggFuncColIdx;
+        std::vector<DataTypePtr> aggInputTypeVec;
+        uint32_t oneAggSize = aggKeys.size();
+        for (uint32_t i = 0; i < oneAggSize; i++) {
+            aggFuncColIdx.push_back(aggCols[startIdx + i]);
+            aggInputTypeVec.push_back(newSourceTypes[aggCols[startIdx + i]]);
+        }
+        startIdx += oneAggSize;
+        aggColIdx.push_back(aggFuncColIdx);
+        aggInputDataTypes.push_back(*std::make_unique<DataTypes>(aggInputTypeVec));
+    }
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggCol, *aggTypes,
-        aggOutputTypes, aggFunc, maskColumnContext, inputRaw, outputPartial);
+    this->hashAggOperatorFactory =
+        new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes,
+        aggFuncTypes, maskColumns, inputRaws, outputPartial, overflowConfig->IsOverflowAsNull());
     this->hashAggOperatorFactory->Init();
 }
 

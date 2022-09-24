@@ -7,6 +7,7 @@
 
 #include "aggregator.h"
 #ifdef ENABLE_HMPP
+#include "aggregator_util.h"
 #include "HMPP/hmpps.h"
 #endif
 
@@ -14,12 +15,13 @@ namespace omniruntime {
 namespace op {
 template <typename InputVecType, typename OutputVecType, typename ResultType> class MinAggregator : public Aggregator {
 public:
-    MinAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel)
+    MinAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
     {}
 
-    MinAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
+    MinAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw,
+        bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
 
     ~MinAggregator() override {}
@@ -27,13 +29,13 @@ public:
 #ifdef ENABLE_HMPP
     void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        auto vector = vectorBatch->GetVector(channel);
+        auto vector = vectorBatch->GetVector(channels[0]);
 
         auto vectorValues = vector->GetValues();
         auto positionOffset = vector->GetPositionOffset();
         auto rowCount = vector->GetSize();
-        auto inputTypeId = inputType->GetId();
-        auto outputTypeId = outputType->GetId();
+        auto inputTypeId = inputTypes->GetType(0)->GetId();
+        auto outputTypeId = outputTypes->GetType(0)->GetId();
 
         HmppResult result = HMPP_STS_NO_ERR;
         auto minVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
@@ -93,12 +95,27 @@ public:
             *static_cast<ResultType *>(state.val) = (Compare(*preMinVal, *minVal) == -1) ? *preMinVal : *minVal;
         }
     }
+
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        // just support raw input data and must no null inpout
+        if (!inputRaw && vectorBatch->GetVector(channels[0])->MayHaveNull()) {
+            return false;
+        }
+        // not accept dictionnary vector
+        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            return false;
+        }
+        // type check with whitelist for min
+        auto inputTypeId = inputTypes->GetType(0)->GetId();
+        return AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(inputTypeId);
+    }
 #endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -114,7 +131,7 @@ public:
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -125,8 +142,10 @@ public:
     }
 
     // TODO extract common function for sum/min/max
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
         auto v = static_cast<OutputVecType *>(vector);
         if (state.val == nullptr) {
             v->SetValueNull(rowIndex);

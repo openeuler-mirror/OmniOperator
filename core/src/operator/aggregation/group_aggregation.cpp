@@ -91,10 +91,13 @@ OmniStatus HashAggregationOperatorFactory::Init()
     for (uint32_t i = 0; i < groupByColsVector.size(); ++i) {
         groupByColIdx.push_back(groupByColsVector[i]);
     }
-    for (uint32_t i = 0; i < aggInputColsVector.size(); ++i) {
-        aggInputCols.push_back(aggInputColsVector[i]);
+    for (auto aggInputColsVector : aggsInputColsVector) {
+        std::vector<int32_t> aggInputCols;
+        for (uint32_t i = 0; i < aggInputColsVector.size(); ++i) {
+            aggInputCols.push_back(aggInputColsVector[i]);
+        }
+        aggsInputCols.push_back(aggInputCols);
     }
-
     ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
 
     return ret;
@@ -116,27 +119,38 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         groupByIndex[i] = c;
     }
 
-    uint32_t aggInputChannelIndex = 0;
-    for (uint32_t i = 0; i < this->aggregatorFactories.size(); ++i) {
-        uint32_t aggregateType = aggFuncTypesVector[i];
-        DataTypePtr inputType;
-        int32_t aggInputCol;
+    // refresh inputDateTypes and intputColumnar index for OMNI_AGGREGATION_TYPE_COUNT_ALL type aggregator
+    uint32_t aggInputColsSize = 0;
+    uint32_t aggCountAllSkipCnt = 0;
+    uint32_t aggregateType = OMNI_AGGREGATION_TYPE_INVALIDE;
+    for (uint32_t i = 0; i < this->aggregatorFactories.size(); i++) {
+        std::vector<int32_t> aggInputColIdxVec;
+        std::vector<DataTypePtr> inputDataTypesPtr;
+        aggregateType = aggFuncTypesVector[i];
+
+        // for COUNT_ALL aggregator no input(key and columnar index)
+        // use aggCountAllSkipCnt to align with aggsInputCols and aggregatorFactories index not same
         if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-            inputType = NoneType();
-            aggInputCol = Aggregator::INVALID_INPUT_COL;
+            inputDataTypesPtr.push_back(NoneType());
+            aggInputColIdxVec.push_back(-1);
+            aggCountAllSkipCnt++;
         } else {
-            inputType = this->aggInputTypes.GetType(aggInputChannelIndex);
-            aggInputCol = aggInputCols[aggInputChannelIndex];
-            aggInputChannelIndex++;
+            for (uint32_t j = 0; j < this->aggsInputCols[i - aggCountAllSkipCnt].size(); j++) {
+                inputDataTypesPtr.push_back(aggInputTypes[i - aggCountAllSkipCnt].GetType(j));
+                aggInputColIdxVec.push_back(aggsInputCols[i - aggCountAllSkipCnt][j]);
+                aggInputColsSize++;
+            }
         }
-        auto outputType = this->aggOutputTypes.GetType(i);
-        auto aggregator =
-            aggregatorFactories[i]->CreateAggregator(inputType, outputType, aggInputCol, inputRaw, outputPartial);
+
+        auto inputTypes = DataTypes(inputDataTypesPtr).Instance();
+        auto outputTypes = aggOutputTypes[i].Instance();
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputTypes, outputTypes, aggInputColIdxVec,
+            inputRaws[i], outputPartials[i], isOverflowAsNull);
         aggs.push_back(std::move(aggregator));
     }
 
-    auto groupByOperator = new HashAggregationOperator(groupByIndex, aggInputCols, aggInputTypes, aggOutputTypes,
-        std::move(aggs), inputRaw, outputPartial);
+    auto groupByOperator = new HashAggregationOperator(groupByIndex, aggsInputCols, aggInputColsSize, aggInputTypes,
+        aggOutputTypes, std::move(aggs), inputRaws, outputPartials);
     groupByOperator->Init();
     return groupByOperator;
 }
@@ -144,15 +158,20 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
 OmniStatus HashAggregationOperator::Init()
 {
     auto groupByColsSize = groupByCols.size();
-    auto aggInputColsSize = aggInputCols.size();
     auto colSize = groupByColsSize + aggInputColsSize;
     sourceTypes = new int32_t[colSize];
+    // group by source types
     for (auto &c : groupByCols) {
         sourceTypes[c.idx] = static_cast<int32_t>(c.input->GetId());
     }
 
-    for (size_t idx = 0; idx < aggInputColsSize; idx++) {
-        sourceTypes[idx + groupByColsSize] = static_cast<int32_t>(aggInputTypes.GetType(idx)->GetId());
+    // agg source types
+    uint32_t sourceTypesIdx = groupByColsSize;
+    for (auto &dataTypes : aggInputTypes) {
+        for (int32_t idx = 0; idx < dataTypes.GetSize(); idx++) {
+            sourceTypes[sourceTypesIdx] = static_cast<int32_t>(dataTypes.GetType(idx)->GetId());
+            sourceTypesIdx++;
+        }
     }
     executionContext = std::make_unique<ExecutionContext>();
     executionContext->GetArena()->SetAllocator(vecAllocator);
@@ -340,19 +359,10 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     this->PreLoop(vecBatch);
     auto groupColNum = this->groupByCols.size();
     auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
-    auto aggColNum = this->aggInputCols.size();
     auto aggNum = this->aggregators.size();
-    auto aggColIdx = std::make_unique<int32_t[]>(aggColNum);
-    auto aggFuncTypes = std::make_unique<int32_t[]>(aggNum);
 
     for (size_t i = 0; i < groupColNum; ++i) {
         groupByColIdx[i] = this->groupByCols[i].idx;
-    }
-    for (size_t i = 0; i < aggColNum; ++i) {
-        aggColIdx[i] = this->aggInputCols[i];
-    }
-    for (size_t i = 0; i < aggNum; i++) {
-        aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
 
     uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
@@ -378,9 +388,11 @@ int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataTypePt
         types.push_back(i.input);
         rowSize += OperatorUtil::GetTypeSize(i.input);
     }
-    for (int32_t i = 0; i < aggOutputTypes.GetSize(); ++i) {
-        types.push_back(aggOutputTypes.GetType(i));
-        rowSize += OperatorUtil::GetTypeSize(aggOutputTypes.GetType(i));
+    for (auto singleAgg : aggOutputTypes) {
+        for (int32_t i = 0; i < singleAgg.GetSize(); i++) {
+            types.push_back(singleAgg.GetType(i));
+            rowSize += OperatorUtil::GetTypeSize(singleAgg.GetType(i));
+        }
     }
     return rowSize;
 }
@@ -399,8 +411,16 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
 void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
     ChainIterator &rowIterator, int32_t rowIndex)
 {
-    for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex) {
-        aggregators[aggIndex]->ExtractValue((*rowIterator)[colIndex], vecBatch->GetVector(colIndex), rowIndex);
+    int aggOutputStartIndex = startIndex;
+    for (uint32_t aggIndex = 0; aggIndex < aggregators.size(); aggIndex++) {
+        // construct extract vectors for per aggregator
+        std::vector<Vector *> extractVectors;
+        auto oneAggOutputCols = aggOutputTypes[aggIndex].GetSize();
+        for (auto j = 0; j < oneAggOutputCols; j++) {
+            extractVectors.push_back(vecBatch->GetVector(aggOutputStartIndex + j));
+        }
+        aggregators[aggIndex]->ExtractValues((*rowIterator)[startIndex + aggIndex], extractVectors, rowIndex);
+        aggOutputStartIndex += oneAggOutputCols;
     }
 }
 
@@ -417,8 +437,11 @@ void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const s
 int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
     uint32_t groupByColSize = groupByCols.size();
-    uint32_t aggColSize = aggregators.size();
-    uint32_t colCount = groupByColSize + aggColSize;
+    uint32_t aggOutputColSize = 0;
+    for (auto oneAggOutputTypes : aggOutputTypes) {
+        aggOutputColSize += oneAggOutputTypes.GetSize();
+    }
+    uint32_t colCount = groupByColSize + aggOutputColSize;
     std::vector<DataTypePtr> types;
     int32_t rowByteSize = GetRowSizeAndOutputTypes(types, colCount);
 

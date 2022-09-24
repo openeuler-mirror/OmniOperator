@@ -176,9 +176,9 @@ public:
 
 class AggregateWindowFunction : public WindowFunction {
 public:
-    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, omniruntime::type::DataTypePtr inputType,
+    AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType, omniruntime::type::DataTypePtr inputType,
         omniruntime::type::DataTypePtr outputType, omniruntime::vec::VectorAllocator *allocator,
-        std::unique_ptr<WindowFrameInfo> frame);
+        std::unique_ptr<WindowFrameInfo> frame, bool isOverflowAsNull = false);
     ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
@@ -187,7 +187,7 @@ public:
 
 private:
     WindowIndex *windowIndex;
-    int32_t argumentChannels;
+    std::vector<int32_t> argumentChannels;
     std::unique_ptr<omniruntime::op::AggregatorFactory> aggregatorFactory;
     int32_t currentStart;
     int32_t currentEnd;
@@ -196,6 +196,7 @@ private:
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
     std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
     omniruntime::vec::VectorAllocator *allocator;
+    bool isOverflowAsNull;
 
     void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, omniruntime::vec::Vector *pColumn,
         int32_t index) const;

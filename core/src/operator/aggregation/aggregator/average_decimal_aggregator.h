@@ -14,12 +14,13 @@ namespace omniruntime {
 namespace op {
 class AverageDecimalAggregator : public Aggregator {
 public:
-    AverageDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel)
+    AverageDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
     {}
 
-    AverageDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
+    AverageDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+        bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
 
     ~AverageDecimalAggregator() override {}
@@ -27,7 +28,7 @@ public:
 #ifdef ENABLE_HMPP
     void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        auto vector = vectorBatch->GetVector(channel);
+        auto vector = vectorBatch->GetVector(channels[0]);
 
         auto vectorValues = vector->GetValues();
         auto positionOffset = vector->GetPositionOffset();
@@ -36,7 +37,7 @@ public:
         bool overflow = false;
         int32_t count = 0;
 
-        auto inputTypeId = inputType->GetId();
+        auto inputTypeId = inputTypes->GetType(0)->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         auto sumVal =
             reinterpret_cast<HmppDecimal128 *>(executionContext->GetArena()->Allocate(sizeof(HmppDecimal128)));
@@ -79,12 +80,26 @@ public:
                 oldCount);
         }
     }
+
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        // just support raw input data
+        if (!inputRaw) {
+            return false;
+        }
+        // not accept dictionnary vector
+        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            return false;
+        }
+        // only OMNI_DECIMAL128 type input support
+        return (inputTypes->GetType(0)->GetId() == OMNI_DECIMAL128);
+    }
 #endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         // null rows dont count
         if (vector->IsValueNull(offset)) {
             return;
@@ -99,9 +114,9 @@ public:
             int64_t oldOverflow = 0;
             int64_t oldCount = 0;
             Decimal128 curVal;
-            if (inputType->GetId() == OMNI_DECIMAL64) {
+            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
                 curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
-            } else if (inputType->GetId() == OMNI_DECIMAL128) {
+            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
                 curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
             }
             Decimal128 leftVal;
@@ -143,15 +158,15 @@ public:
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
         if (inputRaw) {
             Decimal128 initState;
-            if (inputType->GetId() == OMNI_DECIMAL64) {
+            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
                 initState = DecimalOperations::UnscaledDecimal((static_cast<LongVector *>(vector))->GetValue(offset));
-            } else if (inputType->GetId() == OMNI_DECIMAL128) {
+            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
                 initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
             }
 
@@ -166,8 +181,10 @@ public:
         }
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
         if (state.val == nullptr) {
             vector->SetValueNull(rowIndex);
             return;
@@ -195,11 +212,11 @@ public:
             int32_t scaleDiff = 0;
             // for spark, input type is always decimal. for olk, input type is varbinary and the precision
             // and scale are zero.
-            auto outType = outputType->GetId();
-            auto inType = inputType->GetId();
+            auto outType = outputTypes->GetIds()[0];
+            auto inType = inputTypes->GetIds()[0];
             if (inType == OMNI_DECIMAL64 || inType == OMNI_DECIMAL128) {
-                scaleDiff = static_cast<DecimalDataType *>(outputType.get())->GetScale() -
-                    static_cast<DecimalDataType *>(inputType.get())->GetScale();
+                scaleDiff = static_cast<DecimalDataType *>(outputTypes->GetType(0).get())->GetScale() -
+                    static_cast<DecimalDataType *>(inputTypes->GetType(0).get())->GetScale();
             }
             Decimal128 rescaledDividend;
             // rescale dividend and divisor to output scale

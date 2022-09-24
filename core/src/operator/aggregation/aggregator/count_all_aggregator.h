@@ -11,13 +11,13 @@ namespace omniruntime {
 namespace op {
 class CountAllAggregator : public Aggregator {
 public:
-    CountAllAggregator(DataTypePtr out)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneDataType::Instance(), out, INVALID_INPUT_COL)
+    CountAllAggregator(DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, DataTypes::NoneDataTypesInstance(), outputTypes, channels)
     {}
 
-    CountAllAggregator(DataTypePtr out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, NoneDataType::Instance(), out, INVALID_INPUT_COL, inputRaw,
-        outputPartial)
+    CountAllAggregator(DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, DataTypes::NoneDataTypesInstance(), outputTypes, channels,
+        inputRaw, outputPartial)
     {}
 
     ~CountAllAggregator() override {}
@@ -28,7 +28,7 @@ public:
             state.count++;
         } else {
             int32_t offset;
-            Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+            Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
             state.count += (static_cast<LongVector *>(vector))->GetValue(offset);
         }
     }
@@ -40,12 +40,14 @@ public:
             return;
         }
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         state.count = (static_cast<LongVector *>(vector))->GetValue(offset);
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
         auto v = static_cast<LongVector *>(vector);
         v->SetValue(rowIndex, state.count);
     }

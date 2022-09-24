@@ -108,7 +108,7 @@ public class OmniHashAggregationOperatorFactory
 
     private static native long createHashAggregationOperatorFactory(String[] groupByChanel, String groupByTypes,
             String[] aggChannels, String aggTypes, int[] aggFunctionTypes, int[] maskChannels, String aggOutputTypes,
-            boolean isInputRaw, boolean isOutputPartial);
+            boolean isInputRaw, boolean isOutputPartial, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
@@ -116,7 +116,7 @@ public class OmniHashAggregationOperatorFactory
                 DataTypeSerializer.serialize(context.groupByTypes), context.aggChannels,
                 DataTypeSerializer.serialize(context.aggTypes), toNativeConstants(context.aggFunctionTypes),
                 context.maskChannels, DataTypeSerializer.serialize(context.aggOutputTypes), context.isInputRaw,
-                context.isOutputPartial);
+                context.isOutputPartial, OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**

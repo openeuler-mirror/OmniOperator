@@ -16,7 +16,7 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
     int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
     const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount, int32_t *windowFrameTypesField,
     int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
-    int32_t *windowFrameEndChannelsField)
+    int32_t *windowFrameEndChannelsField, bool isOverflowAsNullField)
     : sourceTypes(sourceTypes),
       outputColsCount(outputColsCount),
       windowFunctionCount(windowFunctionCount),
@@ -26,7 +26,8 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
       preSortedChannelPrefix(preSortedChannelPrefix),
       expectedPositions(expectedPositions),
       allTypes(allTypes),
-      argumentChannelsCount(argumentChannelsCount)
+      argumentChannelsCount(argumentChannelsCount),
+      isOverflowAsNull(isOverflowAsNullField)
 {
     this->outputCols.insert(this->outputCols.begin(), outputCols, outputCols + outputColsCount);
     this->windowFunctionTypes.insert(this->windowFunctionTypes.begin(), windowFunctionTypes,
@@ -64,25 +65,26 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
     int32_t expectedPositionsField, const DataTypes &allTypesField, int32_t *argumentChannelsField,
     int32_t argumentChannelsCountField, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
-    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
+    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
+    bool isOverflowAsNullField)
 {
     auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
         windowFunctionTypesField, windowFunctionCountField, partitionColsField, partitionCountField,
         preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
         sortColCountField, preSortedChannelPrefixField, expectedPositionsField, allTypesField, argumentChannelsField,
         argumentChannelsCountField, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField);
+        windowFrameEndTypesField, windowFrameEndChannelsField, isOverflowAsNullField);
     operatorFactory->Init();
     return operatorFactory;
 }
 
 Operator *WindowOperatorFactory::CreateOperator()
 {
-    auto windowOperator =
-        new WindowOperator(sourceTypes, outputCols, outputColsCount, windowFunctionTypes, windowFunctionCount,
-        partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings, sortNullFirsts,
-        sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, argumentChannelsCount,
-        windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    auto windowOperator = new WindowOperator(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
+        windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
+        sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels,
+        argumentChannelsCount, windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes,
+        windowFrameEndChannels, isOverflowAsNull);
     windowOperator->Init();
     return windowOperator;
 }
@@ -95,7 +97,8 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
     int32_t expectedPositions, const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels,
     int32_t argumentChannelsCount, const std::vector<int32_t> &windowFrameTypes,
     const std::vector<int32_t> &windowFrameStartTypes, const std::vector<int32_t> &windowFrameStartChannels,
-    const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels)
+    const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels,
+    bool isOverflowAsNull)
     : sourceTypes(sourceTypes),
       typesCount(sourceTypes.GetSize()),
       outputCols(outputCols),
@@ -120,7 +123,8 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
       windowFrameStartTypes(windowFrameStartTypes),
       windowFrameStartChannels(windowFrameStartChannels),
       windowFrameEndTypes(windowFrameEndTypes),
-      windowFrameEndChannels(windowFrameEndChannels)
+      windowFrameEndChannels(windowFrameEndChannels),
+      isOverflowAsNull(isOverflowAsNull)
 {
     for (int32_t i = 0; i < partitionCount; i++) {
         this->sortCols.push_back(partitionCols[i]);
@@ -158,12 +162,12 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MIN:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
                     sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator,
-                    std::move(windowFrame))));
+                    std::move(windowFrame), isOverflowAsNull)));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
-                windowFunctions.push_back(
-                    std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, NoneDataType::Instance(),
-                    allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator, std::move(windowFrame))));
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator,
+                    std::move(windowFrame), isOverflowAsNull)));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;

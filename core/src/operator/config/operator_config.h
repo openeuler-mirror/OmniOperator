@@ -142,6 +142,11 @@ public:
         return overflowConfigId;
     }
 
+    bool IsOverflowAsNull() const
+    {
+        return overflowConfigId == OVERFLOW_CONFIG_NULL;
+    }
+
 private:
     OverflowConfigId overflowConfigId;
 };

@@ -49,6 +49,16 @@ public class FunctionType extends Constant {
     public static FunctionType OMNI_AGGREGATION_TYPE_DNV;
 
     /**
+     * The constant OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL.
+     */
+    public static FunctionType OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL;
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL.
+     */
+    public static FunctionType OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL;
+
+    /**
      * The constant OMNI_WINDOW_TYPE_ROW_NUMBER.
      */
     public static FunctionType OMNI_WINDOW_TYPE_ROW_NUMBER;

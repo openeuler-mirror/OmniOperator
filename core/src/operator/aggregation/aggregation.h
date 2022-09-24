@@ -17,22 +17,28 @@ namespace omniruntime {
 namespace op {
 class AggregationCommonOperator : public Operator {
 public:
-    explicit AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
-        : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial)
+    explicit AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<bool> &inputRaws,
+        std::vector<bool> &outputPartials, bool isOverflowAsNull = false)
+        : aggregators(std::move(aggs)),
+          inputRaws(inputRaws),
+          outputPartials(outputPartials),
+          isOverflowAsNull(isOverflowAsNull)
     {}
 
     ~AggregationCommonOperator() override {};
 
 protected:
     std::vector<std::unique_ptr<Aggregator>> aggregators;
-    int inputRaw;
-    int outputPartial;
+    std::vector<bool> inputRaws;
+    std::vector<bool> outputPartials;
+    bool isOverflowAsNull;
 };
 
 class AggregationCommonOperatorFactory : public OperatorFactory {
 public:
-    AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial, std::vector<uint32_t> &maskColsContext)
-        : inputRaw(inputRaw), outputPartial(outputPartial)
+    AggregationCommonOperatorFactory(std::vector<bool> inputRaws, std::vector<bool> outputPartials,
+        std::vector<uint32_t> &maskColsContext, bool isOverflowAsNull = false)
+        : inputRaws(inputRaws), outputPartials(outputPartials), isOverflowAsNull(isOverflowAsNull)
     {
         for (size_t i = 0; i < maskColsContext.size(); ++i) {
             maskCols.push_back(maskColsContext[i]);
@@ -56,9 +62,10 @@ public:
         const std::vector<uint32_t> &funcTypesContext, const std::vector<int32_t> &maskCols);
 
 protected:
-    int inputRaw;
-    int outputPartial;
+    std::vector<bool> inputRaws;
+    std::vector<bool> outputPartials;
     std::vector<int32_t> maskCols;
+    bool isOverflowAsNull;
 };
 }
 }

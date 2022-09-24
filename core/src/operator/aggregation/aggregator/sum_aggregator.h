@@ -14,18 +14,19 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename IN, typename ResultType> class SumAggregator : public Aggregator {
 public:
-    SumAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
+    SumAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
     {}
-    SumAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
+    SumAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw,
+        bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
     ~SumAggregator() override {}
 
 #ifdef ENABLE_HMPP
     void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        auto vector = vectorBatch->GetVector(channel);
+        auto vector = vectorBatch->GetVector(channels[0]);
 
         auto vectorValues = vector->GetValues();
         auto positionOffset = vector->GetPositionOffset();
@@ -34,7 +35,7 @@ public:
         bool overflow = false;
         auto sumVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
 
-        auto inputTypeId = inputType->GetId();
+        auto inputTypeId = inputTypes->GetType(0)->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         switch (inputTypeId) {
             case OMNI_LONG: {
@@ -59,12 +60,22 @@ public:
             *(static_cast<ResultType *>(state.val)) += *static_cast<ResultType *>(sumVal);
         }
     }
+
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        // not accept dictionnary vector
+        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            return false;
+        }
+        // only OMNI_LONG type input support
+        return (inputTypes->GetType(0)->GetId() == OMNI_LONG);
+    }
 #endif
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -78,7 +89,7 @@ public:
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -88,9 +99,10 @@ public:
         state.val = ptr;
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
-        auto v = static_cast<V *>(vector);
+        int32_t offset;
+        auto v = static_cast<V *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
         if (state.val == nullptr) {
             v->SetValueNull(rowIndex);
             return;

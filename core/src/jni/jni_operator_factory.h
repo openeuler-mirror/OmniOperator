@@ -46,7 +46,7 @@ JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
     jstring jAggType, jintArray jAggFuncType, jintArray jMaskCols, jstring jOutPutTye, jboolean inputRaw,
-    jboolean outputPartial);
+    jboolean outputPartial, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
@@ -89,7 +89,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels,
     jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
-    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels);
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory
@@ -211,9 +211,9 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
-    jintArray jAggFuncType, jintArray jMaskCols, jstring jOutputType, jboolean inputRaw, jboolean outputPartial,
-    jstring jOperatorConfig);
+        JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
+        jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws, jbooleanArray jOutputPartials,
+        jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory

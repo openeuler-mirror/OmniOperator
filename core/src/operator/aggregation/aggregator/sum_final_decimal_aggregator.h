@@ -17,12 +17,13 @@ namespace op {
  */
 class SumFinalDecimalAggregator : public Aggregator {
 public:
-    SumFinalDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
+    SumFinalDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
     {}
 
-    SumFinalDecimalAggregator(DataTypePtr in, DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
+    SumFinalDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+        bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
 
     ~SumFinalDecimalAggregator() override = default;
@@ -30,7 +31,7 @@ public:
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -59,7 +60,7 @@ public:
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -76,8 +77,10 @@ public:
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), curVal, oldOverflow);
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
         if (state.val == nullptr) {
             vector->SetValueNull(rowIndex);
             return;

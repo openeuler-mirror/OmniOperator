@@ -12,8 +12,9 @@ namespace op {
 class MaskColAggregator : public Aggregator {
 public:
     MaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
-        : Aggregator(realAggregator->GetType(), realAggregator->GetInputType(), realAggregator->GetOutputType(),
-        realAggregator->GetInputChannel(), realAggregator->IsInputRaw(), realAggregator->IsOutputPartial()),
+        : Aggregator(realAggregator->GetType(), realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(),
+        realAggregator->GetInputChannels(), realAggregator->IsInputRaw(), realAggregator->IsOutputPartial(),
+        realAggregator->IsOverflowAsNull()),
           maskColumnId(maskColumnId),
           realAggregator(std::move(realAggregator))
     {}
@@ -27,6 +28,11 @@ public:
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
             ProcessGroup(state, vectorBatch, rowIdx);
         }
+    }
+
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        return realAggregator->CanProcessWithHMPP(state, vectorBatch);
     }
 #endif
 
@@ -56,9 +62,9 @@ public:
         }
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
-        realAggregator->ExtractValue(state, vector, rowIndex);
+        realAggregator->ExtractValues(state, vectors, rowIndex);
     }
 
     bool IsInputRaw() const override
@@ -71,24 +77,30 @@ public:
         return realAggregator->IsOutputPartial();
     }
 
+    bool IsOverflowAsNull() const
+    {
+        return realAggregator->IsOverflowAsNull();
+    }
+
     FunctionType GetType() const override
     {
         return realAggregator->GetType();
     }
 
-    const DataTypePtr &GetInputType() const override
+    const DataTypesPtr &GetInputTypes() const override
     {
-        return realAggregator->GetInputType();
+        return realAggregator->GetInputTypes();
     }
 
-    const DataTypePtr &GetOutputType() const override
+    const DataTypesPtr &GetOutputTypes() const override
     {
-        return realAggregator->GetOutputType();
+        return realAggregator->GetOutputTypes();
     }
 
-    int32_t GetInputChannel() const override
+    const std::vector<int32_t> &GetInputChannels() const
     {
-        return realAggregator->GetInputChannel();
+        return realAggregator->GetInputChannels();
+        ;
     }
 
 private:

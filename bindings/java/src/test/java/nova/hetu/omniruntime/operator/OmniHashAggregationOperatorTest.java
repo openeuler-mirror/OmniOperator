@@ -56,7 +56,7 @@ public class OmniHashAggregationOperatorTest {
         String[] aggChannels = {"#3"};
         DataType[] aggTypes = {LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
 
         OmniHashAggregationOperatorFactory factoryWithJit = new OmniHashAggregationOperatorFactory(groupByChannel,
                 groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
@@ -122,7 +122,7 @@ public class OmniHashAggregationOperatorTest {
         String[] aggChannels = {"#3"};
         DataType[] aggTypes = {LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
 
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChannel,
                 groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
@@ -140,7 +140,7 @@ public class OmniHashAggregationOperatorTest {
         VecBatch vecBatch = null;
         while (output.hasNext()) {
             vecBatch = output.next();
-            if (vecBatch.getVectors().length != aggOutputTypes.length) {
+            if (vecBatch.getVectors().length != aggOutputTypes.length + groupByTypes.length) {
                 throw new IllegalArgumentException(
                         format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
                                 vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
@@ -167,7 +167,7 @@ public class OmniHashAggregationOperatorTest {
         String[] aggChannels = {"#2", "#3"};
         DataType[] aggTypes = {LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
 
         DataType[] inputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel, groupByTypes,
@@ -186,7 +186,7 @@ public class OmniHashAggregationOperatorTest {
         VecBatch vecBatch = null;
         while (output.hasNext()) {
             vecBatch = output.next();
-            if (vecBatch.getVectors().length != aggOutputTypes.length) {
+            if (vecBatch.getVectors().length != aggOutputTypes.length + groupByTypes.length) {
                 throw new IllegalArgumentException(
                         format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
                                 vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
@@ -222,7 +222,7 @@ public class OmniHashAggregationOperatorTest {
         String[] aggChannels = {"#3"};
         DataType[] aggTypes = {LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
 
         FactoryContext factory1 = new FactoryContext(groupByChannel, groupByTypes, aggChannels, aggTypes,
                 aggFunctionTypes, aggOutputTypes, true, false, new OperatorConfig());
@@ -271,7 +271,7 @@ public class OmniHashAggregationOperatorTest {
         String[] aggChannels = {"#2", "#3"};
         DataType[] aggTypes = {LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel, groupByTypes,
                 aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
