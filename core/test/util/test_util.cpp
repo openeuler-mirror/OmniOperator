@@ -599,4 +599,27 @@ omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<o
     }
     return vectorBatch;
 }
+
+void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
+    std::vector<int32_t> &outLen)
+{
+    for (int32_t i = 0; i < expected.size(); i++) {
+        std::string actual(reinterpret_cast<char *>(result[i]), outLen[i]);
+        EXPECT_EQ(actual, expected[i]);
+    }
+}
+
+void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result)
+{
+    for (int32_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
+
+void AssertBoolEquals(std::vector<bool> &expected, bool *result)
+{
+    for (int32_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
 }

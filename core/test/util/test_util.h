@@ -148,6 +148,13 @@ void GetTestTypeIds(omniruntime::type::DataTypes &inputTypes, std::string *proje
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
     std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
 
+void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
+    std::vector<int32_t> &outLen);
+
+void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result);
+
+void AssertBoolEquals(std::vector<bool> &expected, bool *result);
+
 std::string GenerateSpillPath();
 }
 
