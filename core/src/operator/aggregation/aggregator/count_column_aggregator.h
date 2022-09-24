@@ -11,13 +11,13 @@ namespace omniruntime {
 namespace op {
 class CountColumnAggregator : public Aggregator {
 public:
-    CountColumnAggregator(DataTypePtr out, int32_t channel)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneDataType::Instance(), out, channel)
+    CountColumnAggregator(DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, DataTypes::NoneDataTypesInstance(), outputTypes, channels)
     {}
 
-    CountColumnAggregator(DataTypePtr out, int32_t channel, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, NoneDataType::Instance(), out, channel, inputRaw,
-        outputPartial)
+    CountColumnAggregator(DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, DataTypes::NoneDataTypesInstance(), outputTypes, channels,
+        inputRaw, outputPartial)
     {}
 
     ~CountColumnAggregator() override {}
@@ -25,7 +25,7 @@ public:
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         if (vector->IsValueNull(offset)) {
             return;
         }
@@ -39,7 +39,7 @@ public:
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
         // It is only effective when COUNT(col). When COUNT(*) or COUNT(1) should directly accumulate vector size;
         if (vector->IsValueNull(offset)) {
             state.count = 0;
@@ -54,8 +54,10 @@ public:
         state.count = (static_cast<LongVector *>(vector))->GetValue(offset);
     }
 
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
         auto v = static_cast<LongVector *>(vector);
         v->SetValue(rowIndex, state.count);
     }

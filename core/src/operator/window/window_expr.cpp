@@ -63,12 +63,12 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
         auto index = outputColsCount + i;
         newOutputCols[index] = sourceTypes.GetSize() + static_cast<int32_t>(i);
     }
-    this->operatorFactory =
-        WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes), newOutputCols, newOutputColsCount,
-        windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
-        sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes,
-        fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField, windowFrameStartTypesField,
-        windowFrameStartChannelsField, windowFrameEndTypesField, windowFrameEndChannelsField);
+    this->operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes), newOutputCols,
+        newOutputColsCount, windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols,
+        preGroupedCount, sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix,
+        expectedPositions, allTypes, fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField,
+        windowFrameStartTypesField, windowFrameStartChannelsField, windowFrameEndTypesField,
+        windowFrameEndChannelsField, overflowConfig->IsOverflowAsNull());
 }
 
 WindowWithExprOperatorFactory::~WindowWithExprOperatorFactory()

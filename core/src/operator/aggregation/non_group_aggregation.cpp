@@ -5,6 +5,7 @@
 #include "non_group_aggregation.h"
 #include "vector/vector_common.h"
 #include "operator/status.h"
+#include "util/type_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
@@ -15,9 +16,16 @@ OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
     auto &types = sourceTypes.Get();
-    for (uint32_t i = 0; i < aggInputColsVector.size(); i++) {
-        aggInputCols.push_back(aggInputColsVector[i]);
-        aggInputTypes.push_back(types[aggInputColsVector[i]]);
+
+    for (auto aggInputCol : aggsInputColsVector) {
+        std::vector<DataTypePtr> aggInputTypeVec;
+        std::vector<int32_t> aggsInputVec;
+        for (uint32_t i = 0; i < aggInputCol.size(); i++) {
+            aggInputTypeVec.push_back(types[aggInputCol[i]]);
+            aggsInputVec.push_back(aggInputCol[i]);
+        }
+        aggsInputCols.push_back(aggsInputVec);
+        aggsInputTypes.push_back(std::make_unique<DataTypes>(aggInputTypeVec));
     }
 
     ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
@@ -34,27 +42,32 @@ Operator *AggregationOperatorFactory::CreateOperator()
 {
     std::vector<std::unique_ptr<Aggregator>> aggs;
 
-    uint32_t aggInputChannelIndex = 0;
-    for (int32_t i = 0; i < this->aggOutputTypes.GetSize(); i++) {
+    uint32_t aggCountAllSkipCnt = 0;
+    for (uint32_t i = 0; i < this->aggsOutputTypes.size(); i++) {
         uint32_t aggregateType = aggFuncTypesVector[i];
-        DataTypePtr inputType;
-        int32_t aggInputCol;
-        if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-            inputType = NoneDataType::Instance();
-            aggInputCol = Aggregator::INVALID_INPUT_COL;
-        } else {
-            inputType = aggInputTypes[aggInputChannelIndex];
-            aggInputCol = aggInputCols[aggInputChannelIndex];
-            aggInputChannelIndex++;
-        }
+        std::vector<int32_t> aggInputColIdxVec;
+        std::vector<DataTypePtr> inputDataTypesPtr;
 
-        auto outputType = aggOutputTypes.GetType(i);
-        auto aggregator =
-            aggregatorFactories[i]->CreateAggregator(inputType, outputType, aggInputCol, inputRaw, outputPartial);
+        // for COUNT_ALL aggregator no input(key and columnar index)
+        // use aggCountAllSkipCnt to align with aggsInputCols and aggregatorFactories index not same
+        if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
+            inputDataTypesPtr.push_back(NoneType());
+            aggInputColIdxVec.push_back(-1);
+            aggCountAllSkipCnt++;
+        } else {
+            for (uint32_t j = 0; j < this->aggsInputCols[i - aggCountAllSkipCnt].size(); j++) {
+                aggInputColIdxVec.push_back(aggsInputCols[i - aggCountAllSkipCnt][j]);
+                inputDataTypesPtr.push_back(aggsInputTypes[i - aggCountAllSkipCnt]->GetType(j));
+            }
+        }
+        auto inputTypes = DataTypes(inputDataTypesPtr).Instance();
+        auto outputTypes = aggsOutputTypes[i].Instance();
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputTypes, outputTypes, aggInputColIdxVec,
+            inputRaws[i], outputPartials[i]);
         aggs.push_back(std::move(aggregator));
     }
 
-    return new AggregationOperator(std::move(aggs), aggOutputTypes, inputRaw, outputPartial);
+    return new AggregationOperator(std::move(aggs), aggsOutputTypes, inputRaws, outputPartials);
 }
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
@@ -63,25 +76,10 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     int32_t rowCount = vecBatch->GetRowCount();
     for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
-        auto &state = aggStates[aggIdx];
+        auto &state = aggsStates[aggIdx];
 
-        /* *
-         * The current HMPP accelerator library supports only most types of min/max and sum/avg(long and decimal128
-         * types). The following code before the IF branch is for whitelist checking
-         */
 #ifdef ENABLE_HMPP
-        auto aggType = aggregator->GetType();
-        auto inputTypeId = aggregator->GetInputType()->GetId();
-        auto inputChannel = aggregator->GetInputChannel();
-        auto isVecContainsNull =
-            (aggType != OMNI_AGGREGATION_TYPE_COUNT_ALL) && vecBatch->GetVector(inputChannel)->MayHaveNull();
-        bool isSpecialAgg1 = ((aggType == OMNI_AGGREGATION_TYPE_MIN || aggType == OMNI_AGGREGATION_TYPE_MAX) &&
-            inputTypeId != OMNI_BOOLEAN && !isVecContainsNull);
-        bool isSpecialAgg2 = ((aggType == OMNI_AGGREGATION_TYPE_SUM || aggType == OMNI_AGGREGATION_TYPE_AVG) &&
-            (inputTypeId == OMNI_LONG || inputTypeId == OMNI_DECIMAL128));
-
-        if ((isSpecialAgg1 || isSpecialAgg2) &&
-            vecBatch->GetVector(inputChannel)->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY && inputRaw == true) {
+        if (aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
         } else {
             for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
@@ -101,16 +99,29 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
     // always output one row
-    auto aggCount = aggregators.size();
-    auto outputVecBatch = new VectorBatch(aggCount, 1);
-    outputVecBatch->NewVectors(this->vecAllocator, aggOutputTypes.Get());
+    int32_t aggsCount = 0;
+    std::vector<DataTypePtr> aggsOutputDataTypePtrs;
+    for (auto aggOutputTypes : aggsOutputTypes) {
+        auto aggSize = aggOutputTypes.GetSize();
+        aggsCount += aggSize;
+        for (int i = 0; i < aggSize; ++i) {
+            aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
+        }
+    }
+    auto outputVecBatch = new VectorBatch(aggsCount, 1);
+    outputVecBatch->NewVectors(this->vecAllocator, aggsOutputDataTypePtrs);
 
     // set result value
-    for (size_t aggIdx = 0; aggIdx < aggCount; ++aggIdx) {
+    int32_t aggOutputColsStart = 0;
+    for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
-        auto outputVec = outputVecBatch->GetVector(aggIdx);
-        auto state = aggStates[aggIdx];
-        aggregator->ExtractValue(state, outputVec, 0);
+        auto state = aggsStates[aggIdx];
+        std::vector<Vector *> extractVectors;
+        for (int i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
+            extractVectors.push_back(outputVecBatch->GetVector(aggOutputColsStart + i));
+        }
+        aggOutputColsStart += aggsOutputTypes[aggIdx].GetSize();
+        aggregator->ExtractValues(state, extractVectors, 0);
     }
 
     result.push_back(outputVecBatch);

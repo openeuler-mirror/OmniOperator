@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/aggregation/aggregator/all_aggregators.h"
+#include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation.h"
 #include "vector/vector_helper.h"
@@ -255,9 +256,15 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
     std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(aggFunType, aggFunType + 2);
     std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + 2);
 
+    auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWraps = AggregatorUtil::WrapWithVector(inputRaw, 2);
+    auto outputPartialWraps = AggregatorUtil::WrapWithVector(outputPartial, 2);
     std::cout << "after jit" << std::endl;
-    auto *nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes,
-        aggColVector, aggInputTypes, aggOutputTypes, aggFuncTypeVector, maskColsVector, inputRaw, outputPartial);
+    auto *nativeOperatorFactory =
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVectorWrap,
+        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawWraps, outputPartialWraps);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->Init();
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
@@ -278,8 +285,12 @@ uintptr_t CreateAggFactoryWithJit()
     std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + CONST_VALUE_4);
 
     std::cout << "after jit" << std::endl;
-    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeVector, aggInputColsVector,
-        maskColsVector, sourceTypes, true, false);
+    auto aggInputColsVectorWrap = AggregatorUtil::WrapWithVector(aggInputColsVector);
+    auto sourceTypesWrap = AggregatorUtil::WrapWithVector(sourceTypes);
+    auto trueWraps = AggregatorUtil::WrapWithVector(true, CONST_VALUE_4);
+    auto falseWraps = AggregatorUtil::WrapWithVector(false, CONST_VALUE_4);
+    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeVector, aggInputColsVectorWrap,
+        maskColsVector, sourceTypesWrap, trueWraps, falseWraps);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
@@ -313,9 +324,14 @@ uintptr_t CreateHashFactoryWithoutJit(HAFactoryParameters &parameters)
     std::vector<uint32_t> maskColsVector =
         std::vector<uint32_t>(parameters.maskCols.data(), parameters.maskCols.data() + parameters.maskCols.size());
 
+    auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWraps = AggregatorUtil::WrapWithVector(parameters.inputRaw, aggColVector.size());
+    auto outputPartialWraps = AggregatorUtil::WrapWithVector(parameters.outputPartial, aggColVector.size());
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVector, aggInputTypes,
-        aggOutputTypes, aggFuncTypeVector, maskColsVector, parameters.inputRaw, parameters.outputPartial);
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVectorWrap,
+        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawWraps, outputPartialWraps);
     nativeOperatorFactory->Init();
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
 }
@@ -421,16 +437,27 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     DataTypes aggOutputTypes1(outputTypes1);
     std::vector<ColumnIndex> groupByColumns1 = { c0, c1 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
+    auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 2, true, true));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 3, true, true));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 4, true, true));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols1Wrap[1], true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols1Wrap[2], true, true));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 5, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[3], true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 6, true, true));
-    HashAggregationOperator *groupBy1 = new HashAggregationOperator(groupByColumns1, aggInputCols1, aggInputTypes1,
-        aggOutputTypes1, std::move(aggs1), true, true);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[4], true, true));
+
+    auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
+    auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
+    auto inputRawWrap1 = AggregatorUtil::WrapWithVector(true, 5);
+    auto outputPartialWrap1 = AggregatorUtil::WrapWithVector(true, 5);
+    HashAggregationOperator *groupBy1 = new HashAggregationOperator(groupByColumns1, aggInputCols1Wrap, 5,
+        aggInputTypes1Wrap, aggOutputTypes1Wrap, std::move(aggs1), inputRawWrap1, outputPartialWrap1);
     groupBy1->Init();
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -455,17 +482,28 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     DataTypes aggOutputTypes2(outputTypes2);
     groupByColumns1 = { c2, c3 };
 
+    auto aggInputCols2Wrap = AggregatorUtil::WrapWithVector(aggInputCols2);
     aggs1.clear();
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 2, true, true));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 3, true, true));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 4, true, true));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[0], true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols2Wrap[1], true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols2Wrap[2], true, true));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 5, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[3], true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 6, true, true));
-    HashAggregationOperator *groupBy2 = new HashAggregationOperator(groupByColumns1, aggInputCols2, aggInputTypes2,
-        aggOutputTypes2, std::move(aggs1), true, true);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[4], true, true));
+
+    auto aggInputTypes2Wrap = AggregatorUtil::WrapWithVector(aggInputTypes2);
+    auto aggOutputTypes2Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes2);
+    auto inputRawWrap2 = AggregatorUtil::WrapWithVector(true, 5);
+    auto outputPartialWrap2 = AggregatorUtil::WrapWithVector(true, 5);
+    HashAggregationOperator *groupBy2 = new HashAggregationOperator(groupByColumns1, aggInputCols2Wrap, 5,
+        aggInputTypes2Wrap, aggOutputTypes2Wrap, std::move(aggs1), inputRawWrap2, outputPartialWrap2);
     groupBy2->Init();
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -488,16 +526,28 @@ TEST(HashAggregationOperatorTest, verify_correctness)
 
     std::vector<ColumnIndex> groupByColumns2 = { c4, c5 };
     std::vector<std::unique_ptr<Aggregator>> aggs2;
+    auto aggInputCols3Wrap = AggregatorUtil::WrapWithVector(aggInputCols3);
+
     aggs2.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 2, false, false));
-    aggs2.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 3, false, false));
-    aggs2.push_back(std::make_unique<CountColumnAggregator>(LongType(), 4, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[0], false, false));
+    aggs2.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols3Wrap[1], false, false));
+    aggs2.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols3Wrap[2], false, false));
     aggs2.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 5, false, false));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[3], false, false));
     aggs2.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 6, false, false));
-    HashAggregationOperator *groupBy3 = new HashAggregationOperator(groupByColumns2, aggInputCols3, aggInputTypes3,
-        aggOutputTypes3, std::move(aggs2), false, false);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[4], false, false));
+
+    auto aggInputTypes3Wrap = AggregatorUtil::WrapWithVector(aggInputTypes3);
+    auto aggOutputTypes3Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes3);
+    auto inputRawWrap3 = AggregatorUtil::WrapWithVector(false, 5);
+    auto outputPartialWrap3 = AggregatorUtil::WrapWithVector(false, 5);
+    HashAggregationOperator *groupBy3 = new HashAggregationOperator(groupByColumns2, aggInputCols3Wrap, 5,
+        aggInputTypes3Wrap, aggOutputTypes3Wrap, std::move(aggs2), inputRawWrap3, outputPartialWrap3);
     groupBy3->Init();
 
     for (uint32_t i = 0; i < result1.size(); ++i) {
@@ -560,12 +610,21 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 1, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(VarcharType(), VarcharType(), 2, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(VarcharType(), VarcharType(), 3, INPUT_MODE, OUTPUT_MODE));
+    auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
 
-    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1,
-        aggInputTypes1, aggOutputTypes1, std::move(aggs1), true, false);
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+
+    auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
+    auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
+    auto inputRawWrap1 = AggregatorUtil::WrapWithVector(true, 3);
+    auto outputPartialWrap1 = AggregatorUtil::WrapWithVector(false, 3);
+    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1Wrap, 3,
+        aggInputTypes1Wrap, aggOutputTypes1Wrap, std::move(aggs1), inputRawWrap1, outputPartialWrap1);
     groupByVarChar->Init();
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -622,11 +681,20 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 1, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(CharType(), CharType(), 2, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(CharType(), CharType(), 3, INPUT_MODE, OUTPUT_MODE));
-    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1,
-        aggInputTypes1, aggOutputTypes1, std::move(aggs1), true, false);
+    auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(CharType()),
+        AggregatorUtil::WrapWithDataTypes(CharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(CharType()),
+        AggregatorUtil::WrapWithDataTypes(CharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+
+    auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
+    auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
+    auto inputRawWrap1 = AggregatorUtil::WrapWithVector(true, 3);
+    auto outputPartialWrap1 = AggregatorUtil::WrapWithVector(false, 3);
+    HashAggregationOperator *groupByVarChar = new HashAggregationOperator(groupByColumns1, aggInputCols1Wrap, 3,
+        aggInputTypes1Wrap, aggOutputTypes1Wrap, std::move(aggs1), inputRawWrap1, outputPartialWrap1);
     groupByVarChar->Init();
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -694,18 +762,27 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
 
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 1, INPUT_MODE,
-        OUTPUT_MODE));
+    auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
     aggs1.push_back(
-        std::make_unique<AverageAggregator<LongVector>>(LongType(), DoubleType(), 2, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 3, INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4,
-        INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 5,
-        INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[3], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[4], INPUT_MODE, OUTPUT_MODE));
 
-    HashAggregationOperator *groupByNULL = new HashAggregationOperator(groupByColumns1, aggInputCols1, aggInputTypes1,
-        aggOutputTypes1, std::move(aggs1), true, false);
+    auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
+    auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
+    auto inputRawWrap1 = AggregatorUtil::WrapWithVector(true, 5);
+    auto outputPartialWrap1 = AggregatorUtil::WrapWithVector(false, 5);
+    HashAggregationOperator *groupByNULL = new HashAggregationOperator(groupByColumns1, aggInputCols1Wrap, 5,
+        aggInputTypes1Wrap, aggOutputTypes1Wrap, std::move(aggs1), inputRawWrap1, outputPartialWrap1);
     groupByNULL->Init();
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -769,12 +846,20 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     DataTypes aggOutputTypes(outputTypes);
     std::vector<ColumnIndex> groupByColumns = { c0, c1 };
     std::vector<std::unique_ptr<Aggregator>> aggs;
+    auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
     aggs.push_back(
-        std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(IntType(), IntType(), 0, INPUT_MODE, OUTPUT_MODE));
-    aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 1, INPUT_MODE,
-        OUTPUT_MODE));
-    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes,
-        aggOutputTypes, std::move(aggs), true, false);
+        std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), aggInputColsWrap[0], INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[1], INPUT_MODE, OUTPUT_MODE));
+
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, 2);
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, 2);
+    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByColumns, aggInputColsWrap, 2,
+        aggInputTypesWrap, aggOutputTypesWrap, std::move(aggs), inputRawWrap, outputPartialWrap);
     groupBy->Init();
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -817,32 +902,54 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
         LongType(),    LongType(),    BooleanType(), BooleanType(),
         BooleanType(), BooleanType(), BooleanType() };
     DataTypes sourceTypes(types);
+
+    std::vector<DataTypePtr> inputTypes = { LongType(),    LongType(),    LongType(),
+                                       LongType(),    LongType() };
+    DataTypes inputDataTypes(inputTypes);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, dataHash, data0, data1, data2, data3, data4,
         data5, data6, data7, data8, data9);
 
     std::vector<int32_t> aggInputCols = { 1, 2, 3, 4, 5 };
     ColumnIndex c0 = { 0, LongType(), LongType() };
     std::vector<ColumnIndex> groupByColumns = { c0 };
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+    std::vector<int32_t> channal4 = { 4 };
+    std::vector<int32_t> channal5 = { 5 };
 
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs;
-    std::unique_ptr<Aggregator> aggregator = std::make_unique<CountColumnAggregator>(LongType(), 1, true, true);
+    auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
+    std::unique_ptr<Aggregator> aggregator =
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal1, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(6, std::move(aggregator)));
-    aggregator = std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 2, true, true);
+    aggregator =
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(7, std::move(aggregator)));
-    aggregator = std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 3, true, true);
+    aggregator = std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), channal3, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(8, std::move(aggregator)));
     aggregator =
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, true, true);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(9, std::move(aggregator)));
     aggregator =
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 5, true, true);
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(10, std::move(aggregator)));
 
     std::vector<DataTypePtr> partialOutputTypes { LongType(), LongType(), ContainerType(), LongType(), LongType() };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
-    auto aggregate1 = new HashAggregationOperator(groupByColumns, aggInputCols, sourceTypes, aggPartialOutputTypes,
-        std::move(aggs), true, true);
+
+    auto inputTypesWrap = AggregatorUtil::WrapWithVector(inputDataTypes);
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto aggregate1 = new HashAggregationOperator(groupByColumns, aggInputColsWrap, aggs.size(), inputTypesWrap,
+        aggPartialOutputTypesWrap, std::move(aggs), inputRawWrap, outputPartialWrap);
 
     aggregate1->Init();
     aggregate1->AddInput(vecBatch1);
@@ -853,18 +960,27 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 1, false, false));
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 2, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), DoubleType(), 3, false, false));
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal1, false, false));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3, false, false));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 5, false, false));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, false, false));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), LongType(), DoubleType(), LongType(), LongType() };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
-    auto aggregate2 = new HashAggregationOperator(groupByColumns, aggInputCols, sourceTypes, aggFinalOutputTypes,
-        std::move(aggs1), false, false);
+
+    auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
+    auto inputRawWrap2 = AggregatorUtil::WrapWithVector(false, aggs1.size());
+    auto outputPartialWrap2 = AggregatorUtil::WrapWithVector(false, aggs1.size());
+    auto aggregate2 = new HashAggregationOperator(groupByColumns, aggInputColsWrap, aggs1.size(), inputTypesWrap,
+        aggFinalOutputTypesWrap, std::move(aggs1), inputRawWrap2, outputPartialWrap2);
 
     aggregate2->Init();
     for (uint32_t i = 0; i < result.size(); ++i) {
@@ -925,8 +1041,16 @@ TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
         std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFunType), reinterpret_cast<uint32_t *>(aggFunType) + 2);
     std::vector<uint32_t> maskColsVector =
         std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskCols), reinterpret_cast<uint32_t *>(maskCols) + 2);
-    HashAggregationOperatorFactory *nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColVector,
-        groupTypes, aggColVector, aggInputTypes, aggOutputTypes, aggFuncTypeVector, maskColsVector, true, false);
+
+    auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, 2);
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, 2);
+    HashAggregationOperatorFactory *nativeOperatorFactory =
+        new HashAggregationOperatorFactory(groupByColVector, groupTypes, aggColVectorWrap, aggInputTypesWrap,
+        aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawWrap, outputPartialWrap);
+
     nativeOperatorFactory->Init();
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
 
@@ -1021,6 +1145,16 @@ TEST(AggregationOperatorTest, hmpp_min_max)
     int64_t data1[dataSize] = {3L, 10L, 2L, 7L, 3L};
     double data2[dataSize] = {12.3, 7.2, 20.5, 6.1, 12.3};
     Decimal128 data3[dataSize] = {4000L, 2000L, 1000L, 2000L, 5000L};
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+    std::vector<int32_t> channal4 = { 4 };
+    std::vector<int32_t> channal5 = { 5 };
+    std::vector<int32_t> channal6 = { 6 };
+    std::vector<int32_t> channal7 = { 7 };
+    std::vector<int32_t> channal8 = { 8 };
+    std::vector<int32_t> channal9 = { 9 };
 
     std::string aggNames[] = {"min", "min", "min", "min", "min", "max", "max", "max", "max", "max"};
     std::vector<DataTypePtr> groupTypes;
@@ -1035,31 +1169,46 @@ TEST(AggregationOperatorTest, hmpp_min_max)
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 0, true, true));
+        std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, true));
     aggs1.push_back(
-        std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(IntType(), LongType(), 1, true, true));
+        std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal1, true, true));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 2, true, true));
-    aggs1.push_back(
-        std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 3, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, true));
+    aggs1.push_back(std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3,
+        true, true));
     aggs1.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        Decimal128Type(20, 5), Decimal128Type(20, 5), 4, true, true));
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channal4, true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 5, true, true));
+        std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal5, true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(IntType(), LongType(), 6, true, true));
+        std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal6, true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 7, true, true));
-    aggs1.push_back(
-        std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 8, true, true));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal7, true, true));
+    aggs1.push_back(std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), AggregatorUtil::WrapWithDataTypes(DoubleType()), channal8,
+        true, true));
     aggs1.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        Decimal128Type(20, 5), Decimal128Type(20, 5), 9, true, true));
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channal9, true, true));
     std::vector<DataTypePtr> partialOutputTypes {
         IntType(), LongType(), LongType(), DoubleType(), Decimal128Type(20, 5),
         IntType(), LongType(), LongType(), DoubleType(), Decimal128Type(20, 5)
     };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
-    auto aggregate1 = new AggregationOperator(std::move(aggs1), aggPartialOutputTypes, true, true);
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRaws1Wrap = AggregatorUtil::WrapWithVector(true, aggs1.size());
+    auto outputPartials1Wrap = AggregatorUtil::WrapWithVector(true, aggs1.size());
+
+    auto aggregate1 =
+        new AggregationOperator(std::move(aggs1), aggPartialOutputTypesWrap, inputRaws1Wrap, outputPartials1Wrap);
 
     aggregate1->AddInput(input);
 
@@ -1070,29 +1219,44 @@ TEST(AggregationOperatorTest, hmpp_min_max)
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
     aggs2.push_back(
-        std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 0, false, false));
+        std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, false, false));
     aggs2.push_back(
-        std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(LongType(), IntType(), 1, false, false));
+        std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal1, false, false));
     aggs2.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 2, false, false));
-    aggs2.push_back(std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 3,
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
+    aggs2.push_back(std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3,
         false, false));
     aggs2.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        Decimal128Type(20, 5), Decimal128Type(20, 5), 4, false, false));
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channal4, false, false));
     aggs2.push_back(
-        std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(IntType(), IntType(), 5, false, false));
+        std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal5, false, false));
     aggs2.push_back(
-        std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(LongType(), IntType(), 6, false, false));
+        std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal6, false, false));
     aggs2.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 7, false, false));
-    aggs2.push_back(std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(DoubleType(), DoubleType(), 8,
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal7, false, false));
+    aggs2.push_back(std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), AggregatorUtil::WrapWithDataTypes(DoubleType()), channal8,
         false, false));
     aggs2.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        Decimal128Type(20, 5), Decimal128Type(20, 5), 9, false, false));
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channal9, false, false));
     std::vector<DataTypePtr> finalOutputTypes { IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5),
         IntType(), IntType(), LongType(), DoubleType(), Decimal128Type(20, 5) };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
-    auto aggregate2 = new AggregationOperator(std::move(aggs2), aggFinalOutputTypes, false, false);
+    auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
+    auto inputRaws2Wrap = AggregatorUtil::WrapWithVector(false, aggs2.size());
+    auto outputPartials2Wrap = AggregatorUtil::WrapWithVector(false, aggs2.size());
+
+    auto aggregate2 =
+        new AggregationOperator(std::move(aggs2), aggFinalOutputTypesWrap, inputRaws2Wrap, outputPartials2Wrap);
 
     for (uint32_t i = 0; i < result.size(); i++) {
         aggregate2->AddInput(result[i]);
@@ -1156,15 +1320,23 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar)
     input->SetVector(0, vector1);
     input->SetVector(1, vector2);
 
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(VarcharType(100), VarcharType(100), 0, true, true));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(VarcharType(100), VarcharType(100), 1, true, true));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal0, true, true));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal1, true, true));
 
     std::vector<DataTypePtr> partialOutputTypes { VarcharType(100), VarcharType(100) };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRaws1Wrap = AggregatorUtil::WrapWithVector(true, aggs1.size());
+    auto outputPartials1Wrap = AggregatorUtil::WrapWithVector(true, aggs1.size());
 
-    auto aggOperator1 = new AggregationOperator(std::move(aggs1), aggPartialOutputTypes, true, true);
+    auto aggOperator1 =
+        new AggregationOperator(std::move(aggs1), aggPartialOutputTypesWrap, inputRaws1Wrap, outputPartials1Wrap);
     aggOperator1->AddInput(input);
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = aggOperator1->GetOutput(result);
@@ -1172,13 +1344,19 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
-    aggs2.push_back(std::make_unique<MinVarcharAggregator>(VarcharType(100), VarcharType(100), 0, false, false));
-    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(VarcharType(100), VarcharType(100), 1, false, false));
+    aggs2.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal0, false, false));
+    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal1, false, false));
 
     std::vector<DataTypePtr> finalOutputTypes { VarcharType(100), VarcharType(100) };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
+    auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
+    auto inputRaws2Wrap = AggregatorUtil::WrapWithVector(false, aggs2.size());
+    auto outputPartials2Wrap = AggregatorUtil::WrapWithVector(false, aggs2.size());
 
-    auto aggOperator2 = new AggregationOperator(std::move(aggs2), aggFinalOutputTypes, false, false);
+    auto aggOperator2 =
+        new AggregationOperator(std::move(aggs2), aggFinalOutputTypesWrap, inputRaws2Wrap, inputRaws2Wrap);
     for (uint32_t i = 0; i < result.size(); i++) {
         aggOperator2->AddInput(result[i]);
     }
@@ -1225,19 +1403,31 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
 
     ASSERT(!(input == nullptr));
 
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 0, true, true));
-    aggs1.push_back(
-        std::make_unique<SumLongDecimalAggregator>(Decimal128Type(20, 5), SUM_IMMEDIATE_VARBINARY, 1, true, true));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 2, true, true));
-    aggs1.push_back(
-        std::make_unique<AverageDecimalAggregator>(Decimal128Type(20, 5), AVG_IMMEDIATE_VARBINARY, 3, true, true));
+        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true));
+    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channal1, true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), channal2, true, true));
+    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channal3, true, true));
     std::vector<DataTypePtr> partialOutputTypes { LongType(), SUM_IMMEDIATE_VARBINARY,
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), AVG_IMMEDIATE_VARBINARY };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
-    auto aggregate1 = new AggregationOperator(std::move(aggs1), aggPartialOutputTypes, true, true);
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRaws1Wrap = AggregatorUtil::WrapWithVector(true, aggs1.size());
+    auto outputPartials1Wrap = AggregatorUtil::WrapWithVector(true, aggs1.size());
+
+    auto aggregate1 =
+        new AggregationOperator(std::move(aggs1), aggPartialOutputTypesWrap, inputRaws1Wrap, outputPartials1Wrap);
 
     aggregate1->AddInput(input);
 
@@ -1248,16 +1438,25 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
     aggs2.push_back(
-        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 0, false, false));
+        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false));
     aggs2.push_back(
-        std::make_unique<SumFinalDecimalAggregator>(SUM_IMMEDIATE_VARBINARY, Decimal128Type(20, 5), 1, false, false));
-    aggs2.push_back(std::make_unique<AverageAggregator<IntVector>>(ContainerType(), DoubleType(), 2, false, false));
+        std::make_unique<SumFinalDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channal1, false, false));
+    aggs2.push_back(std::make_unique<AverageAggregator<IntVector>>(AggregatorUtil::WrapWithDataTypes(ContainerType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal2, false, false));
     aggs2.push_back(
-        std::make_unique<AverageDecimalAggregator>(AVG_IMMEDIATE_VARBINARY, Decimal128Type(20, 5), 3, false, false));
+        std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channal3, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), Decimal128Type(20, 5), DoubleType(),
         Decimal128Type(20, 5) };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
-    auto aggregate2 = new AggregationOperator(std::move(aggs2), aggFinalOutputTypes, false, false);
+    auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
+    auto inputRaws2Wrap = AggregatorUtil::WrapWithVector(false, aggs2.size());
+    auto outputPartials2Wrap = AggregatorUtil::WrapWithVector(false, aggs1.size());
+
+    auto aggregate2 =
+        new AggregationOperator(std::move(aggs2), aggFinalOutputTypesWrap, inputRaws2Wrap, outputPartials2Wrap);
 
     for (uint32_t i = 0; i < result.size(); i++) {
         aggregate2->AddInput(result[i]);
@@ -1299,18 +1498,33 @@ TEST(AggregationOperatorTest, verify_correctness)
     }
 
     std::vector<std::unique_ptr<Aggregator>> aggs;
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+    std::vector<int32_t> channal4 = { 4 };
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 0, true, true));
-    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 1, true, true));
-    aggs.push_back(std::make_unique<CountColumnAggregator>(LongType(), 2, true, true));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true));
+    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), channal1, true, true));
     aggs.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 3, true, true));
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, true));
     aggs.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, true, true));
+    aggs.push_back(
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, true));
     std::vector<DataTypePtr> partialOutputTypes { LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType(), LongType() };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
-    auto aggregate1 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
+
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto aggregate1 =
+        new AggregationOperator(std::move(aggs), aggPartialOutputTypesWrap, inputRawWrap, outputPartialWrap);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         aggregate1->AddInput(input1[i]);
@@ -1325,17 +1539,27 @@ TEST(AggregationOperatorTest, verify_correctness)
     ASSERT(!(input2 == nullptr));
     aggs.clear();
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 0, true, true));
-    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 1, true, true));
-    aggs.push_back(std::make_unique<CountColumnAggregator>(LongType(), 2, true, true));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true));
+    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), channal1, true, true));
     aggs.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 3, true, true));
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, true));
     aggs.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, true, true));
+    aggs.push_back(
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, true));
     std::vector<DataTypePtr> partialOutputTypes2 { LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType(), LongType() };
     DataTypes aggPartialOutputTypes2(partialOutputTypes2);
-    auto aggregate2 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes2, true, true);
+    auto aggPartialOutputTypes2Wrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes2);
+    auto inputRaw2Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartial2Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+
+    auto aggregate2 =
+        new AggregationOperator(std::move(aggs), aggPartialOutputTypes2Wrap, inputRaw2Wrap, outputPartial2Wrap);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         aggregate2->AddInput(input2[i]);
@@ -1347,16 +1571,25 @@ TEST(AggregationOperatorTest, verify_correctness)
     // Second stage
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 0, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), DoubleType(), 1, false, false));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 2, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal1, false, false));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 3, false, false));
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, false, false));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, false, false));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), DoubleType(), LongType(), LongType(), LongType() };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
-    auto aggregate3 = new AggregationOperator(std::move(aggs1), aggFinalOutputTypes, false, false);
+    auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
+    auto inputRaw3Wrap = AggregatorUtil::WrapWithVector(false, aggs1.size());
+    auto outputPartial3Wrap = AggregatorUtil::WrapWithVector(false, aggs1.size());
+    auto aggregate3 =
+        new AggregationOperator(std::move(aggs1), aggFinalOutputTypesWrap, inputRaw3Wrap, outputPartial3Wrap);
 
     for (uint32_t i = 0; i < result.size(); ++i) {
         aggregate3->AddInput(result[i]);
@@ -1398,24 +1631,41 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
     VectorBatch *vecBatch1 =
         CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
 
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+    std::vector<int32_t> channal4 = { 4 };
+
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs;
-    std::unique_ptr<Aggregator> aggregator = std::make_unique<CountColumnAggregator>(LongType(), 0, true, true);
+    std::unique_ptr<Aggregator> aggregator =
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(5, std::move(aggregator)));
-    aggregator = std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 1, true, true);
+    aggregator =
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal1, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(6, std::move(aggregator)));
-    aggregator = std::make_unique<AverageAggregator<LongVector>>(LongType(), ContainerType(), 2, true, true);
+    aggregator = std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(ContainerType()), channal2, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(7, std::move(aggregator)));
     aggregator =
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 3, true, true);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(8, std::move(aggregator)));
     aggregator =
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, true, true);
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(9, std::move(aggregator)));
 
     DataTypes aggPartialOutputTypes(std::vector<DataTypePtr> { LongType(), LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType() });
-    auto aggregate1 = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
+
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRaw1Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartial1Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto aggregate1 =
+        new AggregationOperator(std::move(aggs), aggPartialOutputTypesWrap, inputRaw1Wrap, outputPartial1Wrap);
 
     aggregate1->AddInput(vecBatch1);
 
@@ -1425,17 +1675,27 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(LongType(), 0, false, false));
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 1, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), DoubleType(), 2, false, false));
+        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 3, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal1, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal2, false, false));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(LongType(), LongType(), 4, false, false));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, false, false));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), LongType(), DoubleType(), LongType(), LongType() };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
-    auto aggregate2 = new AggregationOperator(std::move(aggs1), aggFinalOutputTypes, false, false);
+
+    auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
+    auto inputRaw2Wrap = AggregatorUtil::WrapWithVector(false, aggs1.size());
+    auto outputPartial2Wrap = AggregatorUtil::WrapWithVector(false, aggs1.size());
+    auto aggregate2 =
+        new AggregationOperator(std::move(aggs1), aggFinalOutputTypesWrap, inputRaw2Wrap, outputPartial2Wrap);
 
     for (uint32_t i = 0; i < result.size(); ++i) {
         aggregate2->AddInput(result[i]);
@@ -1479,10 +1739,16 @@ TEST(AggregationOperatorTest, avg_correctness_test)
     ColumnIndex c0 = { 0, LongType(), LongType() };
     std::vector<ColumnIndex> aggregateColumns = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs;
-    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(LongType(), DoubleType(), 0));
+    std::vector<int32_t> channal0 = { 0 };
+    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0));
     std::vector<DataTypePtr> outputTypes { DoubleType() };
     DataTypes aggOutputTypes(outputTypes);
-    auto aggregate = new AggregationOperator(std::move(aggs), aggOutputTypes, true, false);
+
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRaw1Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartial1Wrap = AggregatorUtil::WrapWithVector(false, aggs.size());
+    auto aggregate = new AggregationOperator(std::move(aggs), aggOutputTypesWrap, inputRaw1Wrap, outputPartial1Wrap);
 
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         aggregate->AddInput(input[i]);
@@ -1508,14 +1774,23 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, 6, data0, data1);
 
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+
     std::vector<std::unique_ptr<Aggregator>> aggs;
-    aggs.push_back(std::make_unique<MinVarcharAggregator>(VarcharType(10), VarcharType(10), 0));
-    aggs.push_back(std::make_unique<MaxVarcharAggregator>(VarcharType(10), VarcharType(10), 1));
+    aggs.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(10)),
+        AggregatorUtil::WrapWithDataTypes(VarcharType(10)), channal0));
+    aggs.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(10)),
+        AggregatorUtil::WrapWithDataTypes(VarcharType(10)), channal1));
 
     std::vector<DataTypePtr> partialOutputTypes { VarcharType(10), VarcharType(10) };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
 
-    auto aggOperator = new AggregationOperator(std::move(aggs), aggPartialOutputTypes, true, true);
+    auto aggPartialOutputTypesWrap = AggregatorUtil::WrapWithVector(aggPartialOutputTypes);
+    auto inputRaw1Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartial1Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto aggOperator =
+        new AggregationOperator(std::move(aggs), aggPartialOutputTypesWrap, inputRaw1Wrap, outputPartial1Wrap);
     aggOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = aggOperator->GetOutput(result);
@@ -1557,8 +1832,12 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
                             static_cast<uint32_t>(-1) };
     std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(maskCols, maskCols + 4);
 
-    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesVector, aggInputColsVector,
-        maskColsVector, aggOutputTypes, true, false);
+    auto aggInputColsVectorWrap = AggregatorUtil::WrapWithVector(aggInputColsVector);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypesVector.size());
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypesVector.size());
+    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesVector, aggInputColsVectorWrap,
+        maskColsVector, aggOutputTypesWrap, inputRawWrap, outputPartialWrap);
     nativeOperatorFactory->Init();
     int64_t factoryAddr = reinterpret_cast<int64_t>(nativeOperatorFactory);
     const auto processorCount = std::thread::hardware_concurrency();
@@ -1679,9 +1958,15 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
     // ------------------------------------------Create operator--------------------------------------------
     std::cout << "after JIT" << std::endl;
+
+    auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawsWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypeVector.size());
+    auto outputPartialsWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeVector.size());
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVector,
-        aggInputTypes, aggOutputTypes, aggFuncTypeVector, maskColsVector, true, false);
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVectorWrap,
+        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawsWrap, outputPartialsWrap);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
     // create operator
@@ -1720,8 +2005,14 @@ TEST(HashAggregationOperatorTest, compare_perf)
     double cpuElapsed = timer.GetCpuElapse();
     std::cout << "HashAgg with OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    HashAggregationOperatorFactory *nativeOperatorFactory2 = new HashAggregationOperatorFactory(groupByColVector,
-        groupInputTypes, aggColVector, aggInputTypes, aggOutputTypes, aggFuncTypeVector, maskColsVector, true, false);
+    auto aggColVector2Wrap = AggregatorUtil::WrapWithVector(aggColVector);
+    auto aggInputTypes2Wrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypes2Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRaw2Wrap = AggregatorUtil::WrapWithVector(true, aggFuncTypeVector.size());
+    auto outputPartial2Wrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeVector.size());
+    HashAggregationOperatorFactory *nativeOperatorFactory2 =
+        new HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVector2Wrap, aggInputTypes2Wrap,
+        aggOutputTypes2Wrap, aggFuncTypeVector, maskColsVector, inputRaw2Wrap, outputPartial2Wrap);
     nativeOperatorFactory2->Init();
     std::cout << "after create factory" << std::endl;
     auto groupBy = nativeOperatorFactory2->CreateOperator();
@@ -1893,14 +2184,25 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     std::vector<DataTypePtr> aggOutputFieldTypes { LongType(), LongType() };
     DataTypes aggOutputTypes(aggOutputFieldTypes);
     std::vector<ColumnIndex> groupByColumns = { c0, c1 };
-    std::vector<std::unique_ptr<Aggregator>> aggs;
-    aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 2, INPUT_MODE,
-        OUTPUT_MODE));
-    aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 3, INPUT_MODE,
-        OUTPUT_MODE));
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
 
-    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes,
-        aggOutputTypes, std::move(aggs), true, false);
+    std::vector<std::unique_ptr<Aggregator>> aggs;
+    aggs.push_back(
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, INPUT_MODE, OUTPUT_MODE));
+
+    auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggs.size());
+    HashAggregationOperator *groupBy = new HashAggregationOperator(groupByColumns, aggInputColsWrap, 2,
+        aggInputTypesWrap, aggOutputTypesWrap, std::move(aggs), inputRawWrap, outputPartialWrap);
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -1932,13 +2234,20 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     DataTypes aggOutputTypes1(outputTypes1);
 
     groupByColumns = { c0, c1 };
-    aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(Date32DataType::Instance(),
-        Date32DataType::Instance(), 2, INPUT_MODE, OUTPUT_MODE));
-    aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(Date32DataType::Instance(),
-        Date32DataType::Instance(), 3, INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(
+        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()),
+        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()), channal2, INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(
+        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()),
+        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()), channal3, INPUT_MODE, OUTPUT_MODE));
 
-    groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes1, aggOutputTypes1,
-        std::move(aggs), true, false);
+    auto aggInputCols2Wrap = AggregatorUtil::WrapWithVector(aggInputCols);
+    auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
+    auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
+    auto inputRaw2Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartial2Wrap = AggregatorUtil::WrapWithVector(false, aggs.size());
+    groupBy = new HashAggregationOperator(groupByColumns, aggInputCols2Wrap, 2, aggInputTypes1Wrap, aggOutputTypes1Wrap,
+        std::move(aggs), inputRaw2Wrap, outputPartial2Wrap);
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
@@ -1979,11 +2288,17 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     std::vector<DataTypePtr> outputTypes2 { LongType() };
     DataTypes aggOutputTypes2(outputTypes2);
     groupByColumns = { c0 };
-    aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(LongType(), LongType(), 1, INPUT_MODE,
-        OUTPUT_MODE));
+    aggs.push_back(
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal1, INPUT_MODE, OUTPUT_MODE));
 
-    groupBy = new HashAggregationOperator(groupByColumns, aggInputCols, aggInputTypes2, aggOutputTypes2,
-        std::move(aggs), true, false);
+    auto aggInputCols3Wrap = AggregatorUtil::WrapWithVector(aggInputCols);
+    auto aggInputTypes2Wrap = AggregatorUtil::WrapWithVector(aggInputTypes2);
+    auto aggOutputTypes2Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes2);
+    auto inputRaw3Wrap = AggregatorUtil::WrapWithVector(true, aggs.size());
+    auto outputPartial3Wrap = AggregatorUtil::WrapWithVector(false, aggs.size());
+    groupBy = new HashAggregationOperator(groupByColumns, aggInputCols3Wrap, 1, aggInputTypes2Wrap, aggOutputTypes2Wrap,
+        std::move(aggs), inputRaw3Wrap, outputPartial3Wrap);
 
     groupBy->Init();
 
@@ -2007,10 +2322,15 @@ TEST(AggregatorTest, sum_test)
 {
     int32_t rowPerVecBatch = 200;
     auto sumFactory = new SumAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal3 = { 3 };
     // sum test types : long + decimal + dictionary + null
-    auto sumLong = sumFactory->CreateAggregator(LongType(), LongType(), 0, true, false);
-    auto sumShortDecimal = sumFactory->CreateAggregator(SHORT_DECIMAL_TYPE, LONG_DECIMAL_TYPE, 0, true, false);
-    auto sumNull = sumFactory->CreateAggregator(LongType(), LongType(), 3, true, false);
+    auto sumLong = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto sumShortDecimal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(SHORT_DECIMAL_TYPE),
+        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal0, true, false);
+    auto sumNull = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_sum_test");
@@ -2078,9 +2398,13 @@ TEST(AggregatorTest, count_column_test)
 {
     int32_t rowPerVecBatch = 200;
     auto countFactory = new CountColumnAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal2 = { 2 };
     // count test types : long + dictionary + null
-    auto countLong = countFactory->CreateAggregator(LongType(), LongType(), 0, true, false);
-    auto countNull = countFactory->CreateAggregator(LongType(), LongType(), 2, true, false);
+    auto countLong = countFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto countNull = countFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_column_test");
@@ -2131,10 +2455,12 @@ TEST(AggregatorTest, count_all_test)
 {
     int32_t rowPerVecBatch = 200;
     auto countAllFactory = new CountAllAggregatorFactory();
-    auto countLong =
-        countAllFactory->CreateAggregator(NoneType(), LongType(), Aggregator::INVALID_INPUT_COL, true, false);
-    auto countNull =
-        countAllFactory->CreateAggregator(NoneType(), LongType(), Aggregator::INVALID_INPUT_COL, true, false);
+    std::vector<int32_t> channal0 = { -1 };
+
+    auto countLong = countAllFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(NoneType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto countNull = countAllFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(NoneType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_all_test");
@@ -2159,6 +2485,8 @@ TEST(AggregatorTest, count_all_test)
     state.val = nullptr;
 
     // process null
+    std::vector<int32_t> countNullChannels;
+    countNullChannels.push_back(-1);
     for (int32_t i = 0; i < rowPerVecBatch; ++i) {
         if (i == 0) {
             countNull->InitiateGroup(state, vecBatch, i);
@@ -2177,14 +2505,27 @@ TEST(AggregatorTest, min_test)
 {
     int32_t rowPerVecBatch = 200;
     auto minFactory = new MinAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+    std::vector<int32_t> channal4 = { 4 };
+    std::vector<int32_t> channal5 = { 5 };
+    std::vector<int32_t> channal6 = { 6 };
     // min test types : long + decimal + varchar + dictionary + null
-    auto minLong = minFactory->CreateAggregator(LongType(), LongType(), 0, true, false);
-    auto minDecimal = minFactory->CreateAggregator(LONG_DECIMAL_TYPE, LONG_DECIMAL_TYPE, 3, true, false);
-    auto minVarchar = minFactory->CreateAggregator(VarcharType(), VarcharType(), 4, true, false);
-    auto minNull = minFactory->CreateAggregator(LongType(), LongType(), 2, true, false);
-    auto minIntLong = minFactory->CreateAggregator(IntType(), LongType(), 5, true, false);
-    auto minLongInt = minFactory->CreateAggregator(LongType(), IntType(), 0, true, false);
-    auto minBoolean = minFactory->CreateAggregator(BooleanType(), BooleanType(), 6, true, false);
+    auto minLong = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto minDecimal = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
+        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal3, true, false);
+    auto minVarchar = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        AggregatorUtil::WrapWithDataTypes(VarcharType()), channal4, true, false);
+    auto minNull = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, false);
+    auto minIntLong = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, false);
+    auto minLongInt = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, false);
+    auto minBoolean = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(BooleanType()),
+        AggregatorUtil::WrapWithDataTypes(BooleanType()), channal6, true, false);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_minTest");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongType(), rowPerVecBatch);
@@ -2250,7 +2591,9 @@ TEST(AggregatorTest, min_test)
     std::string expectedStr = "1";
     EXPECT_EQ(0, std::memcmp(state.val, expectedStr.c_str(), 1));
     VarcharVector minVarcharOutput(vectorAllocator, 1, 1);
-    minVarchar->ExtractValue(state, &minVarcharOutput, 0);
+    std::vector<Vector *> minVarcharOutputVector;
+    minVarcharOutputVector.push_back(&minVarcharOutput);
+    minVarchar->ExtractValues(state, minVarcharOutputVector, 0);
     uint8_t *strRes = nullptr;
     minVarcharOutput.GetValue(0, &strRes);
     EXPECT_EQ(0, std::memcmp(strRes, expectedStr.c_str(), 1));
@@ -2297,14 +2640,27 @@ TEST(AggregatorTest, max_test)
 {
     int32_t rowPerVecBatch = 200;
     auto maxFactory = new MaxAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal4 = { 4 };
+    std::vector<int32_t> channal5 = { 5 };
+    std::vector<int32_t> channal6 = { 6 };
     // max test types : long + decimal + varchar + dictionary + null
-    auto maxLong = maxFactory->CreateAggregator(LongType(), LongType(), 0, true, false);
-    auto maxDecimal = maxFactory->CreateAggregator(LONG_DECIMAL_TYPE, LONG_DECIMAL_TYPE, 1, true, false);
-    auto maxVarchar = maxFactory->CreateAggregator(VarcharType(), VarcharType(), 2, true, false);
-    auto maxNull = maxFactory->CreateAggregator(LongType(), LongType(), 4, true, false);
-    auto maxIntLong = maxFactory->CreateAggregator(IntType(), LongType(), 5, true, false);
-    auto maxLongInt = maxFactory->CreateAggregator(LongType(), IntType(), 0, true, false);
-    auto maxBoolean = maxFactory->CreateAggregator(BooleanType(), BooleanType(), 6, true, false);
+    auto maxLong = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto maxDecimal = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
+        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal1, true, false);
+    auto maxVarchar = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        AggregatorUtil::WrapWithDataTypes(VarcharType()), channal2, true, false);
+    auto maxNull = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, false);
+    auto maxIntLong = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
+        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, false);
+    auto maxLongInt = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, false);
+    auto maxBoolean = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(BooleanType()),
+        AggregatorUtil::WrapWithDataTypes(BooleanType()), channal6, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_max_test1");
@@ -2372,7 +2728,9 @@ TEST(AggregatorTest, max_test)
     EXPECT_EQ(0, std::memcmp(state.val, expectedStr.c_str(), 1));
     VarcharVector maxVarcharOutput(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_maxTest2"), 1,
         1);
-    maxVarchar->ExtractValue(state, &maxVarcharOutput, 0);
+    std::vector<Vector *> maxVarcharOutputVector;
+    maxVarcharOutputVector.push_back(&maxVarcharOutput);
+    maxVarchar->ExtractValues(state, maxVarcharOutputVector, 0);
     uint8_t *strRes = nullptr;
     maxVarcharOutput.GetValue(0, &strRes);
     EXPECT_EQ(0, std::memcmp(strRes, expectedStr.c_str(), 1));
@@ -2431,10 +2789,16 @@ TEST(AggregatorTest, avg_test)
     int32_t rowPerVecBatch = 200;
 
     auto avgFactory = new AverageAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal3 = { 3 };
     // avg test types : long + decimal + dictionary + null
-    auto avgLong = avgFactory->CreateAggregator(LongType(), DoubleType(), 0, true, false);
-    auto avgDecimal = avgFactory->CreateAggregator(LONG_DECIMAL_TYPE, LONG_DECIMAL_TYPE, 1, true, false);
-    auto avgNull = avgFactory->CreateAggregator(LongType(), DoubleType(), 3, true, false);
+    auto avgLong = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, false);
+    auto avgDecimal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
+        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal1, true, false);
+    auto avgNull = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
+        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_avg_test");
@@ -2466,7 +2830,9 @@ TEST(AggregatorTest, avg_test)
         }
     }
     DoubleVector avgLongOutput(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_avgTest"), 1);
-    avgLong->ExtractValue(state, &avgLongOutput, 0);
+    std::vector<Vector *> avgLongOutputVector;
+    avgLongOutputVector.push_back(&avgLongOutput);
+    avgLong->ExtractValues(state, avgLongOutputVector, 0);
     EXPECT_TRUE(avgLongOutput.GetValue(0) - 1 <= DBL_EPSILON);
     state.val = nullptr;
 
@@ -2479,7 +2845,9 @@ TEST(AggregatorTest, avg_test)
         }
     }
     DoubleVector avgNullOutput(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_avgTest"), 1);
-    avgNull->ExtractValue(state, &avgNullOutput, 0);
+    std::vector<Vector *> avgNullOutputVector;
+    avgNullOutputVector.push_back(&avgNullOutput);
+    avgNull->ExtractValues(state, avgNullOutputVector, 0);
     EXPECT_TRUE(avgNullOutput.IsValueNull(0));
     state.val = nullptr;
 

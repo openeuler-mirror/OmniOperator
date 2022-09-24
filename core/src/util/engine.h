@@ -51,6 +51,16 @@ public:
         return engineType;
     }
 
+    bool IsSparkEngine()
+    {
+        return EngineType::Spark == engineType;
+    }
+
+    bool IsOLKEngine()
+    {
+        return EngineType::OLK == engineType;
+    }
+
 private:
     EngineType engineType;
 };

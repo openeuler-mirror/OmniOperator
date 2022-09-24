@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "operator/aggregation/definitions.h"
-#include "type/data_type.h"
+#include "type/data_types.h"
 #include "vector/vector.h"
 #include "vector/vector_common.h"
 #include "operator/execution_context.h"
@@ -55,8 +55,15 @@ using DecimalSumState = struct DecimalSumState {
     int64_t highBits;
 };
 
+using FirstState = struct FirstState {
+    void *val;
+    bool valIsNull;
+    bool valueSet;
+};
+
 static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = sizeof(DecimalSumState);
 static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = sizeof(DecimalAverageState);
+static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
 
 template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
 {
@@ -67,16 +74,29 @@ class Aggregator {
 public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
-     * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *                    */
-    Aggregator(FunctionType aggregateType, DataTypePtr inputType, DataTypePtr outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false)
+     * @param inputTypes indicates this aggregator's input data types(support multi-input)
+     * it can use normal vector or container vector
+     * @param outputTypes indicates this aggregator's output data types(support multi-input)
+     * it can use normal vector or container vector
+     * @param channels indicates this aggregator's input channels for VectorBatch.
+     * @param inputRaw indicates this aggregator's input data type
+     * true for raw input, false for intermeidate input, default value as true.
+     * @param outputPartial indicates this aggregator's output data type.
+     * true for intermeidate output, false for final output, default value as false.
+     * @param isOverflowAsNull indicates aggregator handle overflow calculation result
+     * true overflow as null value, false throw exception, default value as false.
+     *
+     */
+    Aggregator(FunctionType aggregateType, DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+        const std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = false)
         : type(aggregateType),
-          inputType(std::move(inputType)),
-          outputType(std::move(outputType)),
+          inputTypes(std::move(inputTypes)),
+          outputTypes(std::move(outputTypes)),
           inputRaw(inputRaw),
           outputPartial(outputPartial),
-          channel(channel),
+          isOverflowAsNull(isOverflowAsNull),
+          channels(channels),
           executionContext(std::make_unique<ExecutionContext>())
     {}
 
@@ -86,6 +106,11 @@ public:
     virtual void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
     {
         throw OmniException("NOT SUPPORT", "this aggregator is not supported by hmpp");
+    }
+    // HMPP handle flag for input handle framework, push down choice to aggregator
+    virtual bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
+    {
+        return false;
     }
 #endif
 
@@ -97,7 +122,7 @@ public:
     virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) = 0;
 
     // set result to output vector
-    virtual void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) = 0;
+    virtual void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) = 0;
 
     virtual bool IsInputRaw() const
     {
@@ -109,24 +134,29 @@ public:
         return this->outputPartial;
     }
 
+    virtual bool IsOverflowAsNull() const
+    {
+        return this->isOverflowAsNull;
+    }
+
     virtual FunctionType GetType() const
     {
         return type;
     }
 
-    virtual const DataTypePtr &GetInputType() const
+    virtual const DataTypesPtr &GetInputTypes() const
     {
-        return inputType;
+        return inputTypes;
     }
 
-    virtual const DataTypePtr &GetOutputType() const
+    virtual const DataTypesPtr &GetOutputTypes() const
     {
-        return outputType;
+        return outputTypes;
     }
 
-    virtual int32_t GetInputChannel() const
+    virtual const std::vector<int32_t> &GetInputChannels() const
     {
-        return channel;
+        return channels;
     }
 
     void SetExecutionContextAllocator(BaseAllocator *allocator)
@@ -140,11 +170,12 @@ public:
 
 protected:
     FunctionType type;
-    DataTypePtr inputType;
-    DataTypePtr outputType;
+    DataTypesPtr inputTypes;
+    DataTypesPtr outputTypes;
     bool inputRaw;
     bool outputPartial;
-    int32_t channel;
+    bool isOverflowAsNull;
+    std::vector<int32_t> channels;
     std::unique_ptr<ExecutionContext> executionContext;
 };
 } // end of namespace op

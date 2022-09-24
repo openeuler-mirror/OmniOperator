@@ -15,10 +15,16 @@ namespace omniruntime {
 namespace op {
 class HashAggregationWithExprOperatorFactory : public OperatorFactory {
 public:
-    HashAggregationWithExprOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &groupByKeys,
-        uint32_t groupByNum, const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum,
-        const DataTypes &sourceDataTypes, const DataTypes &aggOutputTypes, uint32_t *aggFuncTypes,
-        uint32_t *maskColumns, bool inputRaw, bool outputPartial, OverflowConfig *overflowConfig);
+    HashAggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys,
+                                           uint32_t groupByNum,
+                                           std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
+                                           DataTypes &sourceDataTypes,
+                                           std::vector<DataTypes> &aggOutputTypes,
+                                           std::vector<uint32_t> &aggFuncTypes,
+                                           std::vector<uint32_t> &maskColumns,
+                                           std::vector<bool> &inputRaws,
+                                           std::vector<bool> &outputPartial,
+                                           OverflowConfig *overflowConfig);
 
     ~HashAggregationWithExprOperatorFactory() override;
 
@@ -27,7 +33,7 @@ public:
 private:
     std::unique_ptr<DataTypes> sourceTypes;
     std::unique_ptr<DataTypes> groupByTypes;
-    std::unique_ptr<DataTypes> aggTypes;
+    std::vector<std::unique_ptr<DataTypes>> aggTypes;
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;

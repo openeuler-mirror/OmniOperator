@@ -51,14 +51,14 @@ public class OmniHashAggregationWithExprOperatorTest {
     @Test
     public void testHashAggregationWithExprComparePref() {
         String[] groupByChannel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(2, 1)};
-        String[] aggChannels = {getOmniJsonFieldReference(2, 3)};
+        String[][] aggChannels = {{getOmniJsonFieldReference(2, 3)}};
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {LongDataType.LONG}};
 
         OmniHashAggregationWithExprOperatorFactory factoryWithJit = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChannel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig());
+                groupByChannel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, new boolean[]{true, true},
+                new boolean[]{false, false}, new OperatorConfig());
         OmniOperator omniOperatorWithJit = factoryWithJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
@@ -78,8 +78,8 @@ public class OmniHashAggregationWithExprOperatorTest {
         System.out.println("HashAggregationWithExpr with jit use " + (end1 - start1) + " ms.");
 
         OmniHashAggregationWithExprOperatorFactory factoryWithoutJit = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChannel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig());
+                groupByChannel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, new boolean[]{true, true},
+                new boolean[]{false, false}, new OperatorConfig());
         OmniOperator omniOperatorWithoutJit = factoryWithoutJit.createOperator();
 
         ImmutableList.Builder<VecBatch> vecBatchList2 = ImmutableList.builder();
@@ -114,16 +114,17 @@ public class OmniHashAggregationWithExprOperatorTest {
     public void testHashAggWithPartialExpr() {
         String[] groupByChanel = {omniJsonFourArithmeticExpr("MODULUS", 2, getOmniJsonFieldReference(2, 0),
                 getOmniJsonLiteral(2, false, 3)), getOmniJsonFieldReference(1, 2)};
-        String[] aggChannels = {omniJsonFourArithmeticExpr("MULTIPLY", 2, getOmniJsonFieldReference(2, 1),
-                getOmniJsonLiteral(2, false, 5)), getOmniJsonFieldReference(1, 3)};
+        String[][] aggChannels = {{omniJsonFourArithmeticExpr("MULTIPLY", 2, getOmniJsonFieldReference(2, 1),
+                getOmniJsonLiteral(2, false, 5))}, {getOmniJsonFieldReference(1, 3)}};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {DoubleDataType.DOUBLE}};
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, new boolean[]{true, true},
+                new boolean[]{false, false});
 
         OmniOperator omniOperator = factory.createOperator();
 
@@ -157,18 +158,20 @@ public class OmniHashAggregationWithExprOperatorTest {
                 omniJsonFourArithmeticExpr("MODULUS", 2, getOmniJsonFieldReference(2, 0),
                         getOmniJsonLiteral(2, false, 3)),
                 omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 2), getOmniJsonLiteral(1, false, 5))};
-        String[] aggChannels = {
-                omniJsonFourArithmeticExpr("MULTIPLY", 2, getOmniJsonFieldReference(2, 1),
-                        getOmniJsonLiteral(2, false, 5)),
-                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 3), getOmniJsonLiteral(1, false, 5))};
+        String[][] aggChannels = {
+                {omniJsonFourArithmeticExpr("MULTIPLY", 2, getOmniJsonFieldReference(2, 1),
+                        getOmniJsonLiteral(2, false, 5))},
+                {omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 3),
+                        getOmniJsonLiteral(1, false, 5))}};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {DoubleDataType.DOUBLE}};
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, new boolean[]{true, true},
+                new boolean[]{false, false});
 
         OmniOperator omniOperator = factory.createOperator();
 
@@ -196,16 +199,17 @@ public class OmniHashAggregationWithExprOperatorTest {
     @Test
     public void testHashAggWithNoExpr() {
         String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
-        String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
+        String[][] aggChannels = {{getOmniJsonFieldReference(2, 1)}, {getOmniJsonFieldReference(1, 3)}};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
                 OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE, LongDataType.LONG};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {DoubleDataType.DOUBLE}, {LongDataType.LONG}};
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes,
+                new boolean[]{true, true, true}, new boolean[]{false, false, false});
 
         OmniOperator omniOperator = factory.createOperator();
 
@@ -234,40 +238,42 @@ public class OmniHashAggregationWithExprOperatorTest {
     public void testHashAggWithInvalidGroupByKeys() {
         String[] groupByChanel = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 0)),
                 getOmniJsonFieldReference(1, 2)};
-        String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
+        String[][] aggChannels = {{getOmniJsonFieldReference(2, 1)}, {getOmniJsonFieldReference(1, 3)}};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {DoubleDataType.DOUBLE}};
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, new boolean[]{true, true},
+                new boolean[]{false, false});
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
     public void testHashAggWithInvalidAggKeys() {
         String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
-        String[] aggChannels = {omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1)),
-                getOmniJsonFieldReference(1, 3)};
+        String[][] aggChannels = {{omniFunctionExpr("abc", 2, getOmniJsonFieldReference(2, 1))},
+                {getOmniJsonFieldReference(1, 3)}};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {DoubleDataType.DOUBLE}};
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, new boolean[]{true, true},
+                new boolean[]{false, false});
     }
 
     @Test
     public void testFactoryContextEquals() {
         String[] groupByChanel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(1, 2)};
-        String[] aggChannels = {getOmniJsonFieldReference(2, 1), getOmniJsonFieldReference(1, 3)};
+        String[][] aggChannels = {{getOmniJsonFieldReference(2, 1)}, {getOmniJsonFieldReference(1, 3)}};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
+        DataType[][] aggOutputTypes = {{LongDataType.LONG}, {DoubleDataType.DOUBLE}};
 
         DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         FactoryContext factory1 = new FactoryContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
-                aggOutputTypes, true, false, new OperatorConfig());
+                aggOutputTypes, new boolean[]{true, true}, new boolean[]{false, false}, new OperatorConfig());
         FactoryContext factory2 = new FactoryContext(groupByChanel, aggChannels, sourceTypes, aggFunctionTypes,
-                aggOutputTypes, true, false, new OperatorConfig());
+                aggOutputTypes, new boolean[]{true, true}, new boolean[]{false, false}, new OperatorConfig());
         FactoryContext factory3 = null;
 
         assertEquals(factory2, factory1);
