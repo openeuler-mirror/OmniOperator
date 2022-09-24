@@ -2,8 +2,6 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch string functions implementation
  */
-
-
 #ifndef OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H
 #define OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H
 
@@ -17,7 +15,7 @@
 #include "util/utf8_util.h"
 #include "util/engine.h"
 #include "type/decimal128.h"
-#include "../functions/context_helper.h"
+#include "codegen/functions/context_helper.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -30,8 +28,6 @@ using namespace omniruntime::type;
 namespace omniruntime {
 namespace codegen {
 // Defining constant of the gap for case conversions
-const int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
-const std::string SUBSTR_ERR_MSG = "Substring failed";
 const std::string REPLACE_ERR_MSG = "Replace failed";
 const std::string CONCAT_ERR_MSG = "Concat failed";
 constexpr uint8_t EMPTY[] = "";
@@ -75,10 +71,10 @@ extern DLLEXPORT void BatchSubstr(int64_t contextPtr, uint8_t **str, int32_t *st
         int64_t startCodePoint = startIdx[i];
         int64_t lengthCodePoint = length[i];
         int32_t len = strLen[i];
+        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
         if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint + len < 0 ||
             startCodePoint > len) {
             outLen[i] = 0;
-            output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
             continue;
         }
         const char *charStr = reinterpret_cast<const char *>(str[i]);
@@ -87,7 +83,6 @@ extern DLLEXPORT void BatchSubstr(int64_t contextPtr, uint8_t **str, int32_t *st
             if (startIndex < 0) {
                 // before beginning of string
                 outLen[i] = 0;
-                output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
                 continue;
             }
             endIdx = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startIndex, lengthCodePoint);
@@ -104,31 +99,19 @@ extern DLLEXPORT void BatchSubstr(int64_t contextPtr, uint8_t **str, int32_t *st
                 EngineType engineType = EngineUtil::GetInstance().GetEngineType();
                 if (engineType != EngineType::Spark || startCodePoint + lengthCodePoint <= 0) {
                     outLen[i] = 0;
-                    output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
                     continue;
                 }
                 lengthCodePoint += startCodePoint;
                 startCodePoint = 0;
             }
             startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startCodePoint);
-            if (startCodePoint + lengthCodePoint < codePoints) {
-                endIdx = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startIndex, lengthCodePoint);
-            } else {
-                endIdx = len;
-            }
+            endIdx = startCodePoint + lengthCodePoint < codePoints ?
+                omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startIndex, lengthCodePoint) :
+                len;
         }
 
         outLen[i] = endIdx - startIndex;
-        char *ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        errno_t res = memcpy_s(ret, outLen[i], str[i] + startIndex, outLen[i]);
-        if (res != EOK) {
-            outLen[i] = 0;
-            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
-                omniruntime::codegen::SUBSTR_ERR_MSG.length());
-            output[i] = nullptr;
-            continue;
-        }
-        output[i] = reinterpret_cast<uint8_t *>(ret);
+        output[i] = str[i] + startIndex;
     }
 }
 
@@ -143,8 +126,6 @@ template <typename T>
 extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx,
     bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    char *ret;
-    errno_t res;
     int64_t startIndex;
     for (int32_t i = 0; i < rowCnt; i++) {
         if (isAnyNull[i]) {
@@ -154,9 +135,9 @@ extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, in
         }
         int64_t startCodePoint = startIdx[i];
         int32_t len = strLen[i];
+        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
         if (startCodePoint == 0 || len == 0 || startCodePoint + len < 0 || startCodePoint > len) {
             outLen[i] = 0;
-            output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
             continue;
         }
 
@@ -165,7 +146,6 @@ extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, in
             startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startCodePoint - 1);
             if (startIndex < 0) {
                 outLen[i] = 0;
-                output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
                 continue;
             }
         } else {
@@ -176,7 +156,6 @@ extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, in
                 EngineType engineType = EngineUtil::GetInstance().GetEngineType();
                 if (engineType != EngineType::Spark) {
                     outLen[i] = 0;
-                    output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
                     continue;
                 }
                 startCodePoint = 0;
@@ -186,17 +165,7 @@ extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, in
         }
 
         outLen[i] = len - startIndex;
-
-        ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        res = memcpy_s(ret, outLen[i], str[i] + startIndex, outLen[i]);
-        if (res != EOK) {
-            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
-                omniruntime::codegen::SUBSTR_ERR_MSG.length());
-            outLen[i] = 0;
-            output[i] = nullptr;
-            continue;
-        }
-        output[i] = reinterpret_cast<uint8_t *>(ret);
+        output[i] = str[i] + startIndex;
     }
 }
 
@@ -342,7 +311,7 @@ static inline const char *ReplaceWithSearchNotEmpty(int64_t contextPtr, const ch
 }
 
 static inline const char *ReplaceWithSearchEmpty(int64_t contextPtr, const char *str, int32_t strLen,
-                                                 const char *replaceStr, int32_t replaceLen, bool *hasErr, int32_t *outLen)
+    const char *replaceStr, int32_t replaceLen, bool *hasErr, int32_t *outLen)
 {
     int32_t strCodePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
     *outLen = strLen + (strCodePoints + 1) * replaceLen;

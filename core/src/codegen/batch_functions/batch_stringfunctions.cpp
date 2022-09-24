@@ -2,17 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch string functions implementation
  */
-
 #include "batch_stringfunctions.h"
 #include <iostream>
 #include <string>
-#include <cstring>
 #include <regex>
 #include <huawei_secure_c/include/securec.h>
-#include <bits/basic_string.h>
-#include "type/decimal128.h"
-#include "type/decimal_operations.h"
-
 
 #ifdef _WIN32
 #else
@@ -22,19 +16,6 @@
 using namespace std;
 using namespace omniruntime::codegen;
 using namespace omniruntime::type;
-
-namespace {
-const int THOUSANDS = 1000;
-const int HUNDREDS = 100;
-const int TENS = 10;
-const double SECOND_OF_DAY = 86400.0;
-const int BASE_YEAR = 1900;
-
-const int THOU = 0;
-const int HUN = 1;
-const int TEN = 2;
-const int ONE = 3;
-}
 
 extern DLLEXPORT void BatchLikeStr(uint8_t **str, int32_t *strLen, uint8_t **regexToMatch, int32_t *regexLen,
     bool *isAnyNull, bool *output, int32_t rowCnt)
@@ -183,7 +164,6 @@ extern DLLEXPORT void BatchLengthChar(uint8_t **str, const int32_t width, int32_
     }
 }
 
-
 extern DLLEXPORT void BatchLengthCharReturnInt32(uint8_t **str, const int32_t width, int32_t *strLen, bool *isAnyNull,
     int32_t *output, int32_t rowCnt)
 {
@@ -306,7 +286,7 @@ extern DLLEXPORT void BatchConcatCharCharRetNull(bool *isNull, int64_t contextPt
 {
     for (int32_t i = 0; i < rowCnt; i++) {
         auto ret = ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
-            reinterpret_cast<const char *>(bp), bpLen[i], isNull + i, outLen + i);
+            reinterpret_cast<const char *>(bp[i]), bpLen[i], isNull + i, outLen + i);
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
     }
 }
@@ -329,25 +309,6 @@ extern DLLEXPORT void BatchConcatStrCharRetNull(bool *isNull, int64_t contextPtr
         auto ret = ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], isNull + i, outLen + i);
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
-    }
-}
-
-extern DLLEXPORT void BatchCastIntToStringRetNull(bool *isNull, int64_t contextPtr, int32_t *value, uint8_t **output,
-    int32_t *outLen, int32_t rowCnt)
-{
-    for (int i = 0; i < rowCnt; ++i) {
-        string str = to_string(value[i]);
-        outLen[i] = static_cast<int32_t>(str.size());
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-        errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-        if (res != EOK) {
-            char message[] = "cast failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
-            isNull[i] = true;
-            continue;
-        }
-        isNull[i] = false;
-        output[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
 
