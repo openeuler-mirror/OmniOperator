@@ -128,7 +128,7 @@ private:
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
     ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs, int32_t nProj,
-                              const DataTypes &inputTypes, int32_t nCols, OverflowConfig *overflowConfig);
+        const DataTypes &inputTypes, int32_t nCols, OverflowConfig *overflowConfig);
 
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;

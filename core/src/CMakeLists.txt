@@ -14,11 +14,6 @@ set(OM_TARGET ${OMNI_RUNTIME_SO})
 # link libraries
 set(MY_LINK
         jni
-        memory
-        util
-        expression
-        type
-        udf
         ${OMNI_CODEGEN_SO}
         ${OMNI_OPERATOR_SO}
         ${OMNI_VECTOR_SO}
