@@ -488,7 +488,16 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             filledRowSize = 0;
         }
         FillGroupByVectors(batchToFill, 0, groupByColSize, group, filledRowSize);
-        FillAggVectors(batchToFill, groupByColSize, colCount, group, filledRowSize);
+        try {
+            FillAggVectors(batchToFill, groupByColSize, colCount, group, filledRowSize);
+        } catch (const OmniException &e) {
+            // release VectorBatch when aggregator.ExtractValues throw exception
+            // when spark hash agg sum/avg decimal overflow, it will throw exception when OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+            for (auto vecBatch: result) {
+                VectorHelper::FreeVecBatch(vecBatch);
+            }
+            throw e;
+        }
         filledRowSize++;
     }
     // set finished.
