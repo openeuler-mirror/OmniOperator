@@ -24,8 +24,8 @@ extern "C" DLLEXPORT void BatchLikeStr(uint8_t **str, int32_t *strLen, uint8_t *
         }
         s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         std::string r = std::string(reinterpret_cast<char *>(regexToMatch[i]), regexLen[i]);
-        std::wregex re(ToWideString(r));
-        output[i] = regex_match(ToWideString(s), re);
+        std::wregex re(StringUtil::ToWideString(r));
+        output[i] = regex_match(StringUtil::ToWideString(s), re);
     }
 }
 
@@ -44,8 +44,8 @@ extern "C" DLLEXPORT void BatchLikeChar(uint8_t **str, int32_t strWidth, int32_t
         originalStr.append(reinterpret_cast<char *>(str[i]), strLen[i]);
         originalStr.append(paddingCount, ' ');
         std::string r = std::string(reinterpret_cast<char *>(regexToMatch[i]), regexLen[i]);
-        std::wregex re(ToWideString(r));
-        output[i] = regex_match(ToWideString(originalStr), re);
+        std::wregex re(StringUtil::ToWideString(r));
+        output[i] = regex_match(StringUtil::ToWideString(originalStr), re);
     }
 }
 
@@ -60,7 +60,7 @@ extern "C" DLLEXPORT void BatchConcatStrStr(int64_t contextPtr, uint8_t **ap, in
             continue;
         }
         hasErr = false;
-        auto ret = ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
+        auto ret = StringUtil::ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], &hasErr, outLen + i);
         if (hasErr) {
             SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
@@ -73,7 +73,7 @@ extern "C" DLLEXPORT void BatchConcatStrStrRetNull(bool *isNull, int64_t context
     uint8_t **bp, int32_t *bpLen, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
-        auto ret = ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
+        auto ret = StringUtil::ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], isNull + i, outLen + i);
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
     }
@@ -91,7 +91,7 @@ extern "C" DLLEXPORT void BatchConcatCharChar(int64_t contextPtr, uint8_t **ap, 
         }
 
         hasErr = false;
-        auto ret = ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
+        auto ret = StringUtil::ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], &hasErr, outLen + i);
         if (hasErr) {
             SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
@@ -104,7 +104,7 @@ extern "C" DLLEXPORT void BatchConcatCharCharRetNull(bool *isNull, int64_t conte
     int32_t *apLen, uint8_t **bp, int32_t bWidth, int32_t *bpLen, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
-        auto ret = ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
+        auto ret = StringUtil::ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], isNull + i, outLen + i);
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
     }
@@ -121,7 +121,7 @@ extern "C" DLLEXPORT void BatchConcatCharStr(int64_t contextPtr, uint8_t **ap, i
             continue;
         }
         hasErr = false;
-        auto ret = ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
+        auto ret = StringUtil::ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], &hasErr, outLen + i);
         if (hasErr) {
             SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
@@ -134,7 +134,7 @@ extern "C" DLLEXPORT void BatchConcatCharStrRetNull(bool *isNull, int64_t contex
     int32_t *apLen, uint8_t **bp, int32_t *bpLen, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
-        auto ret = ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
+        auto ret = StringUtil::ConcatCharDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), aWidth, apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], isNull + i, outLen + i);
 
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
@@ -152,7 +152,7 @@ extern "C" DLLEXPORT void BatchConcatStrChar(int64_t contextPtr, uint8_t **ap, i
             continue;
         }
         hasErr = false;
-        auto ret = ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
+        auto ret = StringUtil::ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], &hasErr, outLen + i);
         if (hasErr) {
             SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
@@ -165,7 +165,7 @@ extern "C" DLLEXPORT void BatchConcatStrCharRetNull(bool *isNull, int64_t contex
     uint8_t **bp, int32_t bWidth, int32_t *bpLen, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
-        auto ret = ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
+        auto ret = StringUtil::ConcatStrDiffWidths(contextPtr, reinterpret_cast<const char *>(ap[i]), apLen[i],
             reinterpret_cast<const char *>(bp[i]), bpLen[i], isNull + i, outLen + i);
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
     }
@@ -180,14 +180,14 @@ extern "C" DLLEXPORT void BatchCastStrWithDiffWidths(int64_t contextPtr, uint8_t
             output[i] = nullptr;
         }
         bool hasErr = false;
-        const uint8_t *ret =
-            CastStrStr(&hasErr, reinterpret_cast<const char *>(str[i]), srcWidth, strLen[i], outLen + i, dstWidth);
+        const char *ret = StringUtil::CastStrStr(&hasErr, reinterpret_cast<const char *>(str[i]), srcWidth, strLen[i],
+            outLen + i, dstWidth);
         if (hasErr) {
             std::ostringstream errMsg;
             errMsg << "cast varchar[" << srcWidth << "] to varchar[" << dstWidth << "] failed.";
             SetError(contextPtr, errMsg.str().c_str(), errMsg.str().length());
         }
-        output[i] = const_cast<uint8_t *>(ret);
+        output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
     }
 }
 
@@ -195,8 +195,9 @@ extern "C" DLLEXPORT void BatchCastStrWithDiffWidthsRetNull(bool *isNull, int64_
     int32_t srcWidth, int32_t *strLen, uint8_t **output, int32_t *outLen, int32_t dstWidth, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; ++i) {
-        output[i] = const_cast<uint8_t *>(CastStrStr(isNull + i, reinterpret_cast<const char *>(srcStr[i]), srcWidth,
-            strLen[i], outLen + i, dstWidth));
+        auto ret = StringUtil::CastStrStr(isNull + i, reinterpret_cast<const char *>(srcStr[i]), srcWidth, strLen[i],
+            outLen + i, dstWidth);
+        output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ret));
     }
 }
 
@@ -246,32 +247,54 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
 {
     bool hasErr;
     uint8_t *ret;
-    for (int32_t i = 0; i < rowCnt; i++) {
-        if (isAnyNull[i]) {
-            outLen[i] = 0;
-            output[i] = nullptr;
-            continue;
-        }
-        hasErr = false;
-        EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-        if (searchLen[i] == 0 && engineType == EngineType::Spark) {
-            outLen[i] = strLen[i];
-            ret = str[i];
-        } else if (searchLen[i] == 0) {
-            auto result = ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[i]), strLen[i],
-                reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
-            ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-        } else {
-            auto result = ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]), strLen[i],
-                reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
-                reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
-            ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-        }
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    if (engineType == EngineType::Spark) {
+        for (int32_t i = 0; i < rowCnt; i++) {
+            if (isAnyNull[i]) {
+                outLen[i] = 0;
+                output[i] = nullptr;
+                continue;
+            }
+            hasErr = false;
+            if (searchLen[i] == 0) {
+                outLen[i] = strLen[i];
+                ret = str[i];
+            } else {
+                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
+                    reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
+                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+            }
 
-        if (hasErr) {
-            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            if (hasErr) {
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            }
+            output[i] = ret;
         }
-        output[i] = ret;
+    } else {
+        for (int32_t i = 0; i < rowCnt; i++) {
+            if (isAnyNull[i]) {
+                outLen[i] = 0;
+                output[i] = nullptr;
+                continue;
+            }
+            hasErr = false;
+            if (searchLen[i] == 0) {
+                auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                    strLen[i], reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
+                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+            } else {
+                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
+                    reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
+                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+            }
+
+            if (hasErr) {
+                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+            }
+            output[i] = ret;
+        }
     }
 }
 
@@ -296,8 +319,8 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8
                 outLen[i] = strLen[i];
                 ret = str[i];
             } else {
-                auto result = ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]), strLen[i],
-                    reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
+                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
                     reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
                 ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
             }
@@ -315,12 +338,12 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8
             }
             hasErr = false;
             if (searchLen[i] == 0) {
-                auto result = ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[i]), strLen[i],
-                    reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
+                auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                    strLen[i], reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
                 ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
             } else {
-                auto result = ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]), strLen[i],
-                    reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
+                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
                     reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
                 ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
             }
