@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
- * Description: Average aggregate for short decimal
+ * Description: average aggregate for intermedia data vector are multi vectors
  *
  *
  */

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * Description: Aggregate factories
+ * Description: sum aggregate for intermedia data vector are multi vectors
  */
 
 #ifndef OMNI_RUNTIME_SUM_FINAL_DECIMAL_AGGREGATOR_H

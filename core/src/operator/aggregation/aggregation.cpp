@@ -29,11 +29,10 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
             case OMNI_AGGREGATION_TYPE_SUM: {
                 if (EngineUtil::GetInstance().IsSparkEngine()) {
                     CreateAggregatorFactory<SumSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                    break;
                 } else {
                     CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                    break;
                 }
+                break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT_COLUMN: {
                 CreateAggregatorFactory<CountColumnAggregatorFactory>(aggregatorFactories, maskCols[i]);
@@ -54,11 +53,10 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
             case OMNI_AGGREGATION_TYPE_AVG: {
                 if (EngineUtil::GetInstance().IsSparkEngine()) {
                     CreateAggregatorFactory<AverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                    break;
                 } else {
                     CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);
-                    break;
                 }
+                break;
             }
             case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL: {
                 CreateAggregatorFactory<FirstIgnoreNullAggregatorFactory>(aggregatorFactories, maskCols[i]);

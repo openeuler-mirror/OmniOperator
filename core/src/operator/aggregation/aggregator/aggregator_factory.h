@@ -38,6 +38,9 @@ public:
         bool isOverflowAsNull = true) override
     {
         // fetch first inputTypes id as aggregator input type and map to type
+        // spark rule for sum function input type:
+        //    timestamp/sting: cast as double
+        //    boolean, date, binnary: not support
         auto inputTypeId = inputTypes->GetIds()[0];
         switch (inputTypeId) {
             case OMNI_SHORT: {
@@ -104,7 +107,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *                          */
+             *                             */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64: {
                 return std::make_unique<SumShortDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
@@ -136,6 +139,9 @@ public:
         bool isOverflowAsNull = true) override
     {
         // fetch first inputTypes id as aggregator input type and map to type
+        // spark rule for average function input type:
+        //    timestamp/sting: cast as double
+        //    boolean, date, binnary: not support
         auto inputTypeId = inputTypes->GetIds()[0];
         switch (inputTypeId) {
             case OMNI_SHORT: {
@@ -420,10 +426,19 @@ public:
         bool isOverflowAsNull = false) override
     {
         // fetch first inputTypes id as aggregator input type and map to type
+        // spark rule for first function input type:
+        //    binnary/sting: run with SortAggregateExec, so current not implemented
         auto inputTypeId = inputTypes->GetIds()[0];
         switch (inputTypeId) {
+            case OMNI_BOOLEAN: {
+                return std::make_unique<FirstAggregator<BooleanVector, bool>>(aggregateType, std::move(inputTypes),
+                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
+            case OMNI_SHORT: {
+                return std::make_unique<FirstAggregator<IntVector, int16_t>>(aggregateType, std::move(inputTypes),
+                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
             case OMNI_INT:
-            case OMNI_SHORT:
             case OMNI_DATE32: {
                 return std::make_unique<FirstAggregator<IntVector, int32_t>>(aggregateType, std::move(inputTypes),
                     std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);

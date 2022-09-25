@@ -476,7 +476,16 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             allGroups[groupCount++] = group;
         }
     }
+    FillOutputVecBatch(result, groupByColSize, colCount, rowsPerBatch, allGroups);
 
+    // set finished.
+    SetStatus(OMNI_STATUS_FINISHED);
+    return expectedBatchSize;
+}
+
+void HashAggregationOperator::FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize,
+                                                 uint32_t colCount, int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups)
+{
     // fill groups to vecbatch
     int32_t filledRowSize = 0;
     VectorBatch *batchToFill = result[0];
@@ -501,9 +510,6 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
         }
         filledRowSize++;
     }
-    // set finished.
-    SetStatus(OMNI_STATUS_FINISHED);
-    return expectedBatchSize;
 }
 
 OmniStatus HashAggregationOperator::Close()

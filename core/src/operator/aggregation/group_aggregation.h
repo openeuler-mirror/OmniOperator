@@ -75,14 +75,9 @@ void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &te
 
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
-    HashAggregationOperator(std::vector<ColumnIndex> &groupByCols,
-        std::vector<std::vector<int32_t>> &aggInputCols,
-        uint32_t aggInputColsSize,
-        std::vector<DataTypes> &aggInputTypes,
-        std::vector<DataTypes> &aggOutputTypes,
-        std::vector<std::unique_ptr<Aggregator>> aggs,
-        std::vector<bool> &inputRaws,
-        std::vector<bool> &outputPartials)
+    HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<std::vector<int32_t>> &aggInputCols,
+        uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
+        std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<bool> &inputRaws, std::vector<bool> &outputPartials)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -133,22 +128,20 @@ private:
     std::vector<DataTypes> aggInputTypes;
     std::vector<DataTypes> aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
+
+    void FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize, uint32_t colCount,
+                            int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups);
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol,
-                                   const DataTypes &groupInputTypes,
-                                   std::vector<std::vector<uint32_t>> &aggsCols,
-                                   std::vector<DataTypes> &aggInputTypes,
-                                   std::vector<DataTypes> &aggOutputTypes,
-                                   std::vector<uint32_t> &aggFuncTypes,
-                                   std::vector<uint32_t> &maskColsVector,
-                                   std::vector<bool> inputRaws,
-                                   std::vector<bool> outputPartials,
-                                   bool overflowAsNull = false)
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
+        std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+        std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
+        bool overflowAsNull = false)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
           groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
