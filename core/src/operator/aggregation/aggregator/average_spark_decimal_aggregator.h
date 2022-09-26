@@ -37,43 +37,15 @@ public:
             return;
         }
 
-        auto inputType = inputTypes->GetIds()[0];
         if (inputRaw) {
-            // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
-            // 1. get a new value
-            int64_t oldOverflow = 0;
-            int64_t oldCount = 0;
-            Decimal128 curVal;
-            if (inputType == OMNI_DECIMAL64) {
-                curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
-            } else if (inputType == OMNI_DECIMAL128) {
-                curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
-            }
-            Decimal128 leftVal;
-            // 2. decode current state
-            DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                oldCount);
-            // 3. if overflowed, no need to do calculation
-            if (oldOverflow > 0) {
-                ++oldCount;
-                DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                    oldCount);
-                return;
-            }
-            // 4. do calculation
-            int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
-            oldOverflow += newOverflow;
-            ++oldCount;
-            // 5. encode to state
-            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                oldCount);
+            ProcessGroupInputRaw(state, vector, offset);
         } else {
             // get value from containerVector
             Decimal128 curVal;
-            if (inputType == OMNI_DECIMAL64) {
+            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
                 curVal = DecimalOperations::UnscaledDecimal(
                     reinterpret_cast<LongVector *>(vectorBatch->GetVector(channels[0]))->GetValue(offset));
-            } else if (inputType == OMNI_DECIMAL128) {
+            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
                 curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset);
             }
             int32_t avgCountOffset;
@@ -186,27 +158,9 @@ public:
             reinterpret_cast<LongVector *>(avgCountVector)
                 ->SetValue(rowIndex, static_cast<DecimalAverageState *>(state.val)->count);
         } else {
-            int32_t sumPrec = inputDecimalType->GetPrecision();
-            int32_t sumScale = inputDecimalType->GetScale();
-            int32_t divideResultPrec = 0;
-            int32_t divideResultScale = 0;
-            GetDivideResultDecimalType(sumPrec, sumScale, divideResultPrec, divideResultScale);
-
-            Decimal128 dividend;
-            // rescale dividend and divisor to divideResultScale(see GetDivideResultDecimalType)
-            OpStatus dividendRescalStatus =
-                DecimalOperations::Rescale128(decodedDec, divideResultScale - sumScale, dividend);
-            Decimal128 avgResultDec;
-            OpStatus divideStatus = DecimalOperations::DivideRoundUp(dividend, countDec, 0, 0, avgResultDec);
-
-            // avg = sum/count 's result should rescale to the output DecimalType
             Decimal128 finalResultDec;
-            OpStatus resultRescaleStatus = DecimalOperations::Rescale128(avgResultDec,
-                outputDecimalType->GetScale() - divideResultScale, finalResultDec);
-
-            bool isOverflow = dividendRescalStatus == OP_OVERFLOW || divideStatus == OP_OVERFLOW ||
-                resultRescaleStatus == OP_OVERFLOW;
-            if (isOverflow) {
+            OpStatus status = CalcAvg(inputDecimalType, decodedDec, countDec, outputDecimalType, finalResultDec);
+            if (status == OpStatus::OP_OVERFLOW) {
                 SetNullOrThrowException(vector, rowIndex);
                 return;
             }
@@ -221,6 +175,64 @@ public:
     }
 
 private:
+    // ProcessGroup in inputRaw mode
+    void ProcessGroupInputRaw(AggregateState &state, Vector *vector, int32_t offset)
+    {
+        // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
+        // 1. get a new value
+        int64_t oldOverflow = 0;
+        int64_t oldCount = 0;
+        Decimal128 curVal;
+        if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
+        } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+            curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
+        }
+        Decimal128 leftVal;
+        // 2. decode current state
+        DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
+            oldCount);
+        // 3. if overflowed, no need to do calculation
+        if (oldOverflow > 0) {
+            ++oldCount;
+            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
+                oldCount);
+            return;
+        }
+        // 4. do calculation
+        int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
+        oldOverflow += newOverflow;
+        ++oldCount;
+        // 5. encode to state
+        DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
+            oldCount);
+    }
+
+    // calculate avg=sum/count, and rescale to the result Decimal Type
+    OpStatus CalcAvg(DecimalDataType *sumType, Decimal128 &sumDec, Decimal128 &countDec,
+        DecimalDataType *outputDecimalType, Decimal128 &finalResultDec)
+    {
+        int32_t sumPrec = sumType->GetPrecision();
+        int32_t sumScale = sumType->GetScale();
+        int32_t divideResultPrec = 0;
+        int32_t divideResultScale = 0;
+        GetDivideResultDecimalType(sumPrec, sumScale, divideResultPrec, divideResultScale);
+
+        Decimal128 dividend;
+        // rescale dividend and divisor to divideResultScale(see GetDivideResultDecimalType)
+        OpStatus dividendRescalStatus = DecimalOperations::Rescale128(sumDec, divideResultScale - sumScale, dividend);
+        Decimal128 avgResultDec;
+        OpStatus divideStatus = DecimalOperations::DivideRoundUp(dividend, countDec, 0, 0, avgResultDec);
+
+        // avg = sum/count 's result should rescale to the output DecimalType
+        OpStatus resultRescaleStatus = DecimalOperations::Rescale128(avgResultDec,
+            outputDecimalType->GetScale() - divideResultScale, finalResultDec);
+
+        bool isOverflow =
+            dividendRescalStatus == OP_OVERFLOW || divideStatus == OP_OVERFLOW || resultRescaleStatus == OP_OVERFLOW;
+
+        return isOverflow ? OpStatus::OP_OVERFLOW : OpStatus::SUCCESS;
+    }
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(Vector *vector, int index)
     {
