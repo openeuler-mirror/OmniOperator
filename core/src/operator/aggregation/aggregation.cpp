@@ -27,7 +27,11 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
     for (uint32_t i = 0; i < funcTypesContext.size(); ++i) {
         switch (funcTypesContext[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
-                CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                if (EngineUtil::GetInstance().IsSparkEngine()) {
+                    CreateAggregatorFactory<SumSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                } else {
+                    CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                }
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT_COLUMN: {
@@ -47,7 +51,19 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
-                CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                if (EngineUtil::GetInstance().IsSparkEngine()) {
+                    CreateAggregatorFactory<AverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                } else {
+                    CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL: {
+                CreateAggregatorFactory<FirstIgnoreNullAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL: {
+                CreateAggregatorFactory<FirstIncludeNullAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;
             }
             default: {

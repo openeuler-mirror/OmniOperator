@@ -476,7 +476,16 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             allGroups[groupCount++] = group;
         }
     }
+    FillOutputVecBatch(result, groupByColSize, colCount, rowsPerBatch, allGroups);
 
+    // set finished.
+    SetStatus(OMNI_STATUS_FINISHED);
+    return expectedBatchSize;
+}
+
+void HashAggregationOperator::FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize,
+    uint32_t colCount, int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups)
+{
     // fill groups to vecbatch
     int32_t filledRowSize = 0;
     VectorBatch *batchToFill = result[0];
@@ -488,12 +497,19 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             filledRowSize = 0;
         }
         FillGroupByVectors(batchToFill, 0, groupByColSize, group, filledRowSize);
-        FillAggVectors(batchToFill, groupByColSize, colCount, group, filledRowSize);
+        try {
+            FillAggVectors(batchToFill, groupByColSize, colCount, group, filledRowSize);
+        } catch (const OmniException &e) {
+            // release VectorBatch when aggregator.ExtractValues throw exception
+            // when spark hash agg sum/avg decimal overflow, it will throw exception when
+            // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+            for (auto vecBatch : result) {
+                VectorHelper::FreeVecBatch(vecBatch);
+            }
+            throw e;
+        }
         filledRowSize++;
     }
-    // set finished.
-    SetStatus(OMNI_STATUS_FINISHED);
-    return expectedBatchSize;
 }
 
 OmniStatus HashAggregationOperator::Close()
