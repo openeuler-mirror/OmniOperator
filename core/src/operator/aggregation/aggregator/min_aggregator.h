@@ -99,7 +99,7 @@ public:
     bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
         // just support raw input data and must no null inpout
-        if (!inputRaw && vectorBatch->GetVector(channels[0])->MayHaveNull()) {
+        if (!inputRaw || vectorBatch->GetVector(channels[0])->MayHaveNull()) {
             return false;
         }
         // not accept dictionnary vector
