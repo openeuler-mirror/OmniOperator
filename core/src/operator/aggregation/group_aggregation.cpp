@@ -484,7 +484,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 }
 
 void HashAggregationOperator::FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize,
-                                                 uint32_t colCount, int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups)
+    uint32_t colCount, int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups)
 {
     // fill groups to vecbatch
     int32_t filledRowSize = 0;
