@@ -79,10 +79,10 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VARCHAR, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
-     SetVarcharVector,   FillVarcharValue },
-    {OMNI_CHAR, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
-     SetVarcharVector,   FillVarcharValue },
+    {OMNI_VARCHAR, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl,
+     DuplicateVarcharKeyValue, SetVarcharVector,   FillVarcharValue },
+    {OMNI_CHAR, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl,
+     DuplicateVarcharKeyValue, SetVarcharVector,   FillVarcharValue },
     {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
 };
 
@@ -200,6 +200,7 @@ static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t ro
         }
     }
 }
+
 std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t *hash, int32_t blockSize)
 {
     std::vector<BucketIterator> bucktes(blockSize, groupedRows.end());
@@ -240,6 +241,7 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
     }
     return -1;
 }
+
 #ifdef ENABLE_HMPP
 void HashAggregationOperator::InLoopHMPP(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
@@ -289,6 +291,7 @@ void HashAggregationOperator::InLoopHMPP(VectorBatch *vecBatch, uint32_t rowCoun
     delete[] combinedHashVal;
 }
 #endif
+
 void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
 {
@@ -362,7 +365,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     }
 
     uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
-    this->InLoop(vecBatch, rowCount, groupByColIdx.get(), groupColNum, aggNum);
+    this->InLoopProxy(vecBatch, rowCount, groupByColIdx.get(), groupColNum, aggNum);
 
     this->PostLoop(vecBatch);
     VectorHelper::FreeVecBatch(vecBatch);

@@ -43,6 +43,7 @@ using FunctionByDataType = struct FunctionByDataType {
 using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
 
 // HMPP function
+#ifdef ENABLE_HMPP
 template <typename V, typename D>
 void HashFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
 void HashVarcharFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
@@ -52,6 +53,7 @@ template <typename V, typename D>
 void HashFuncVectImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashVarcharVectFuncImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashDecimalVectFuncHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+#endif
 
 template <typename V, typename D>
 void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
@@ -125,8 +127,10 @@ public:
     void PreLoop(VectorBatch *vecBatch);
     void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
         int32_t aggNum);
+    #ifdef ENABLE_HMPP
     void InLoopHMPP(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
                 int32_t aggNum);
+    #endif
     void InLoopProxy(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
                     int32_t aggNum);
     void PostLoop(VectorBatch *vecBatch) const;

@@ -82,7 +82,7 @@ void ConfigUtil::SetProperties(Properties &tmpProperties)
 
     // set the property enableHMPP
     bool isEnableHMPP = false;
-    GetProperty<bool>("isEnableHMPP", isEnableHMPP);
+    GetProperty<bool>("enableHMPP", isEnableHMPP);
     tmpProperties.SetEnableHMPP(isEnableHMPP);
 }
 

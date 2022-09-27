@@ -7,7 +7,9 @@
 #include "operator/status.h"
 #include "util/type_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#ifdef ENABLE_HMPP
 #include "util/config_util.h"
+#endif
 
 namespace omniruntime {
 namespace op {

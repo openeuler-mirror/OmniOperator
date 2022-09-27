@@ -60,11 +60,9 @@ static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateSt
 
 static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUNT] = {
     {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INT, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImplProxy<IntVector, int32_t>, HashFuncVectImplProxy<IntVector,
-     int32_t>,
-     IsSameNodeFuncImpl<IntVector, int32_t>,
-     FillOutputFuncImp<IntVector, int32_t>
-    },
+    {OMNI_INT, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImplProxy<IntVector, int32_t>,
+     HashFuncVectImplProxy<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
+     FillOutputFuncImp<IntVector, int32_t>},
     {OMNI_LONG, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImplProxy<LongVector, int64_t>,
      HashFuncVectImplProxy<LongVector, int64_t>,  IsSameNodeFuncImpl<LongVector, int64_t>,
      FillOutputFuncImp<LongVector, int64_t>
@@ -101,8 +99,8 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
     {OMNI_VARCHAR, DuplicateVarcharKeyValue, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy,
      IsSameNodeFuncVarcharImpl, FillVarcharFuncImp
     },
-    {OMNI_CHAR, DuplicateVarcharKeyValue, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl,
-     FillVarcharFuncImp },
+    {OMNI_CHAR, DuplicateVarcharKeyValue, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy,
+     IsSameNodeFuncVarcharImpl, FillVarcharFuncImp },
     {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, nullptr},
 };
 
