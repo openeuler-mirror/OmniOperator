@@ -63,9 +63,8 @@ public:
 
     static std::shared_ptr<DataTypes> NoneDataTypesInstance()
     {
-        static std::vector<DataTypePtr> dataTypes;
-        dataTypes.push_back(NoneDataType::Instance());
-        static std::shared_ptr<DataTypes> types = std::make_shared<DataTypes>(dataTypes);
+        static std::shared_ptr<DataTypes> types =
+            std::make_shared<DataTypes>(std::vector<DataTypePtr> { NoneDataType::Instance() });
         return types;
     }
 
