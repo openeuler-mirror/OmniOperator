@@ -45,13 +45,12 @@ TEST(BatchCodeGenTest, CastDouble)
 
     const int32_t numRows = 1000;
     const int32_t numCols = 2;
-    double *col1 = MakeDoubles(numRows, 0);
-    double *col2 = MakeDoubles(numRows, 0);
+    double *col1 = MakeDoubles(numRows);
+    double *col2 = MakeDoubles(numRows);
     std::vector<DataTypePtr> vecOfTypes = { DoubleType(), DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2) };
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -98,10 +97,9 @@ TEST(BatchCodeGenTest, ProjectSparkConfig)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDoubleToString");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -141,10 +139,9 @@ TEST(BatchCodeGenTest, CastDecimal128ToString)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col) };
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDecimal128ToString");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -208,14 +205,12 @@ TEST(BatchCodeGenTest, AllType)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(data1), reinterpret_cast<int64_t>(data2),
-        reinterpret_cast<int64_t>(data3) };
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_AllTypes");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_AllType");
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1, data2, data3);
 
     int32_t numSelectedRows = 0;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, vecAllocator);
+        vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 100);
 
     Expr::DeleteExprs({ filterExpr });
@@ -294,7 +289,6 @@ TEST(BatchCodeGenTest, Round)
     double *col2 = MakeDoubles(numRows, -5.123);
     double *col3 = MakeDoubles(numRows, -5.123);
     double *col4 = MakeDoubles(numRows, -1001.456);
-
     auto *col5 = new double[numRows];
     double start = 1;
     int32_t idx = 0;
@@ -306,14 +300,12 @@ TEST(BatchCodeGenTest, Round)
         }
     }
     const int32_t numCols = 6;
+
     std::vector<DataTypePtr> vecOfTypes = { IntType(),    LongType(),   DoubleType(),
         DoubleType(), DoubleType(), DoubleType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col0), reinterpret_cast<int64_t>(col1),
-        reinterpret_cast<int64_t>(col2), reinterpret_cast<int64_t>(col3), reinterpret_cast<int64_t>(col4),
-        reinterpret_cast<int64_t>(col5) };
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Round");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col0, col1, col2, col3, col4, col5);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -381,16 +373,14 @@ TEST(BatchCodeGenTest, MultipleColumns)
     }
 
     const int32_t numRows = 1000;
-    int32_t *col1 = MakeInts(numRows, 0);
+    int32_t *col1 = MakeInts(numRows);
     int32_t *col2 = MakeInts(numRows, -100);
     int64_t *col3 = MakeLongs(numRows, -10);
     const int32_t numCols = 3;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2),
-        reinterpret_cast<int64_t>(col3) };
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_MultipleColumns");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -753,10 +743,9 @@ TEST(BatchCodeGenTest, AddDecimalReturnNull)
     int64_t *col2 = new int64_t[1] { INT64_MAX };
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), LongType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col1), reinterpret_cast<int64_t>(col2) };
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_AddDecimalReturnNull");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2);
 
     int32_t numSelectedRows = numRows;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -802,9 +791,8 @@ TEST(BatchCodeGenTest, IsNullExpr)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col1) };
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_IsNullExpr");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     for (int32_t i = 0; i < 4; i++) {
         vecBatch->GetVector(0)->SetValueNull(i);
@@ -845,9 +833,8 @@ TEST(BatchCodeGenTest, UnaryExpr)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
     DataTypes inputTypes(vecOfTypes);
-    int64_t allData[numCols] = { reinterpret_cast<int64_t>(col1) };
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_UnaryExpr");
-    VectorBatch *vecBatch = CreateVecBatch(vecAllocator, numRows, numCols, inputTypes.GetIds(), allData);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     for (int32_t i = 0; i < 4; i++) {
         vecBatch->GetVector(0)->SetValueNull(i);

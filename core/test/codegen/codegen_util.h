@@ -11,22 +11,11 @@
 
 namespace CodegenUtil {
 void GetDataFromVecBatch(omniruntime::vec::VectorBatch &vecBatch, int64_t valueAddrs[], int64_t nullAddrs[],
-    int64_t offsetAddrs[],
-    int64_t dictionaries[]);
+    int64_t offsetAddrs[], int64_t dictionaries[]);
 
 omniruntime::vec::VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
-    std::vector<std::unique_ptr<omniruntime::op::Projection>> &projections,
-    int32_t numCols,
-    omniruntime::vec::VectorBatch *vecBatch,
-    int32_t &numSelectedRows, omniruntime::vec::VectorAllocator *vecAllocator);
-
-int32_t *MakeInts(const int32_t size, const int32_t start);
-
-int64_t *MakeDecimals(const int32_t size, const int32_t start);
-
-int64_t *MakeLongs(const int32_t size, const int64_t start);
-
-double *MakeDoubles(const int32_t size, const double start);
+    std::vector<std::unique_ptr<omniruntime::op::Projection>> &projections, int32_t numCols,
+    omniruntime::vec::VectorBatch *vecBatch, int32_t &numSelectedRows, omniruntime::vec::VectorAllocator *vecAllocator);
 }
 
 #endif

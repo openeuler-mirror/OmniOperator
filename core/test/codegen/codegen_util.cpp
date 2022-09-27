@@ -42,12 +42,9 @@ void GetDataFromVecBatch(VectorBatch &vecBatch, int64_t valueAddrs[], int64_t nu
 }
 
 VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
-    std::vector<std::unique_ptr<omniruntime::op::Projection>> &projections,
-    int32_t numCols,
-    VectorBatch *vecBatch,
+    std::vector<std::unique_ptr<omniruntime::op::Projection>> &projections, int32_t numCols, VectorBatch *vecBatch,
     int32_t &numSelectedRows, VectorAllocator *vecAllocator)
 {
-
     int32_t numRows = vecBatch->GetRowCount();
     int32_t selectedRows[numRows];
     int64_t dictionaries[numCols];
@@ -64,60 +61,13 @@ VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
 
     auto ret = (projections.size() > 0) ? new VectorBatch(projections.size(), numSelectedRows) : nullptr;
     for (uint32_t i = 0; i < projections.size(); i++) {
-        Vector *col = projections[i]->Project(vecAllocator, vecBatch,
-            (filter.get() != nullptr) ? selectedRows : nullptr, numSelectedRows, valueAddrs, nullAddrs, offsetAddrs,
-            context, dictionaries);
+        Vector *col =
+            projections[i]->Project(vecAllocator, vecBatch, (filter.get() != nullptr) ? selectedRows : nullptr,
+            numSelectedRows, valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         ret->SetVector(i, col);
     }
     context->GetArena()->Reset();
     delete context;
     return ret;
-}
-
-int32_t *MakeInts(const int32_t size, const int32_t start)
-{
-    auto *arr = new int32_t[size];
-    int32_t idx = 0;
-    for (int32_t i = start; i < start + size; i++) {
-        arr[idx++] = i;
-    }
-    return arr;
-}
-
-int64_t *MakeDecimals(const int32_t size, const int32_t start)
-{
-    auto *arr = new int64_t[size * 2];
-    int32_t idx = 0;
-    for (int64_t i = start; i < start + size; i++) {
-        if (i >= 0) {
-            arr[2 * idx] = i;
-            arr[2 * idx + 1] = 0;
-        } else {
-            arr[2 * idx] = i * -1;
-            arr[2 * idx + 1] = 1LL << 63;
-        }
-        idx++;
-    }
-    return arr;
-}
-
-int64_t *MakeLongs(const int32_t size, const int64_t start)
-{
-    auto *arr = new int64_t[size];
-    int32_t idx = 0;
-    for (int64_t i = start; i < start + size; i++) {
-        arr[idx++] = i;
-    }
-    return arr;
-}
-
-double *MakeDoubles(const int32_t size, const double start)
-{
-    auto *arr = new double[size];
-    int32_t idx = 0;
-    for (double i = start; i < start + size; i++) {
-        arr[idx++] = i;
-    }
-    return arr;
 }
 }
