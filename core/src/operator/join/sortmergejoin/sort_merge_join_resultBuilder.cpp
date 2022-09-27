@@ -268,10 +268,12 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
     bool nulls[allColsCount];
     int32_t lengths[allColsCount];
 
+    int64_t tmpInt = 0;
+    int64_t tmpIntAddr = reinterpret_cast<int64_t>(&tmpInt);
     for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes.GetSize(); leftColIdx++) {
         if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
             nulls[leftColIdx] = true;
-            values[leftColIdx] = 0;
+            values[leftColIdx] = tmpIntAddr;
             lengths[leftColIdx] = 0;
         } else {
             auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
@@ -284,7 +286,7 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         int32_t colIdx = leftTableOutputTypes.GetSize() + rightColIdx;
         if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
             nulls[colIdx] = true;
-            values[colIdx] = 0;
+            values[colIdx] = tmpIntAddr;
             lengths[colIdx] = 0;
         } else {
             auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
