@@ -1871,8 +1871,6 @@ TEST(FunctionTest, CastDoubleToDecimal64)
     EXPECT_EQ(result, 0.00);
     result = CastDoubleToDecimal64(contextPtr, 0, false, 17, 16);
     EXPECT_EQ(result, 0);
-    result = CastDoubleToDecimal64(contextPtr, 3.1415926535437824, false, 17, 16);
-    EXPECT_EQ(result, 31415926535437824);
     delete context;
 }
 
