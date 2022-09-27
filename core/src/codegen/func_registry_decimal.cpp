@@ -63,7 +63,7 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(DivDec64Dec128Dec128), "Div_decimal64", {}, paramTypes64Op128, retType128,
             INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(DivDec128Dec64Dec128), "Div_decimal128", {}, paramTypes64Op128, retType128,
+        Function(reinterpret_cast<void *>(DivDec128Dec64Dec128), "Div_decimal128", {}, paramTypes128Op64, retType128,
             INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(ModDec64Dec64Dec64), "Mod_decimal64", {}, paramTypes64, retType64,
@@ -172,7 +172,7 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(DivDec64Dec128Dec128RetNull), "Div_decimal64_null", {}, paramTypes64Op128,
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(DivDec128Dec64Dec128RetNull), "Div_decimal128_null", {}, paramTypes64Op128,
+        Function(reinterpret_cast<void *>(DivDec128Dec64Dec128RetNull), "Div_decimal128_null", {}, paramTypes128Op64,
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(ModDec64Dec64Dec64RetNull), "Mod_decimal64_null", {}, paramTypes64, retType64,
