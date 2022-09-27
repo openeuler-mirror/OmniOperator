@@ -409,6 +409,69 @@ public class OmniHashJoinWithExprOperatorsTest {
         hashBuilderOperatorFactory.close();
     }
 
+    /**
+     * Test full hash join multiple build batch.
+     */
+    @Test
+    public void testFullOuterJoinMultipleBatch() {
+        DataType[] buildTypes = {LongDataType.LONG, new VarcharDataType(5)};
+        String[] buildHashKeys = {getOmniJsonFieldReference(2, 0)};
+        OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory =
+                new OmniHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, Optional.empty(), 1);
+        OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{1L}, {"35709"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{13L}, {"31904"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{16L}, {"31904"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{20L, 20L}, {"31904", "35709"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{19L, 19L}, {"35709", "31904"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{7L}, {"35709"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{10L}, {"35709"}}));
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, new Object[][]{{14L}, {"31904"}}));
+        hashBuilderOperator.getOutput();
+
+        DataType[] probeTypes = {LongDataType.LONG, new VarcharDataType(5)};
+        int[] probeOutputCols = {0, 1};
+        String[] probeHashKeys = {getOmniJsonFieldReference(2, 0)};
+        int[] buildOutputCols = {0, 1};
+        DataType[] buildOutputTypes = {LongDataType.LONG, new VarcharDataType(5)};
+        OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory =
+                new OmniLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeHashKeys,
+                        buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_FULL, hashBuilderOperatorFactory);
+        OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
+        OmniLookupOuterJoinWithExprOperatorFactory lookupOuterJoinOperatorFactory =
+                new OmniLookupOuterJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeHashKeys,
+                        buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory, new OperatorConfig());
+        OmniOperator lookupOuterJoinOperator = lookupOuterJoinOperatorFactory.createOperator();
+        Object[][] probeDatas = {{22L, 13L, 16L, 20L, 20L, 19L, 4L, 4L, 8L, 7L},
+                {"90419", "31904", "35709", "35709", null, "35709", "12477", "38721", "88371", null}};
+        VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
+        lookupJoinOperator.addInput(probeVecBatch);
+        VecBatch resultVecBatch = lookupJoinOperator.getOutput().next();
+        VecBatch appendBatch = lookupOuterJoinOperator.getOutput().next();
+
+        assertVecBatchEquals(resultVecBatch, new Object[][]{
+                {22L, 13L, 16L, 20L, 20L, 20L, 20L, 19L, 19L, 4L, 4L, 8L, 7L},
+                {"90419", "31904", "35709", "35709", "35709", null, null, "35709",
+                        "35709", "12477", "38721", "88371", null},
+                {null, 13L, 16L, 20L, 20L, 20L, 20L, 19L, 19L, null, null, null, 7L},
+                {null, "31904", "31904", "35709", "31904", "35709", "31904", "31904",
+                        "35709", null, null, null, "35709"}
+        });
+        assertVecBatchEquals(appendBatch, new Object[][]{
+                {null, null, null},
+                {null, null, null},
+                {1L, 10L, 14L},
+                {"35709", "35709", "31904"}
+        });
+
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupOuterJoinOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
+        lookupOuterJoinOperatorFactory.close();
+    }
+
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp =
             ".*EXPRESSION_NOT_SUPPORT.*")
     public void testHashBuilderWithInvalidKeys() {
