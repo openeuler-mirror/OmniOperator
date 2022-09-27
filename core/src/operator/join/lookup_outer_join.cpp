@@ -162,7 +162,7 @@ void AppendToVarchar(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowI
 void LookupOuterJoinOperator::AppendToNext(VectorBatch *vectorBatch, const int32_t *buildOutputIds,
     int32_t buildOutputColsCount, int32_t probeOutputColsCount, int32_t destRowIndex)
 {
-    uint32_t address;
+    uint64_t address;
     uint32_t hashTableIndex;
     iterator->NextUnVisitedAddress(hashTableIndex, address);
     auto vecBatchIndex = DecodeSliceIndex(address);
@@ -211,7 +211,7 @@ LookupOuterPositionIterator::LookupOuterPositionIterator(JoinHashTables *joinHas
       joinHashTables(joinHashTables)
 {}
 
-void LookupOuterPositionIterator::NextUnVisitedAddress(uint32_t &hashTableIndex, uint32_t &address)
+void LookupOuterPositionIterator::NextUnVisitedAddress(uint32_t &hashTableIndex, uint64_t &address)
 {
     while (currentHashTable < joinHashTables->GetHashTableSize()) {
         auto hashTable = joinHashTables->GetHashTable(currentHashTable);

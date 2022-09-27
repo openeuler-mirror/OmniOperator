@@ -65,7 +65,7 @@ private:
 class LookupOuterPositionIterator {
 public:
     LookupOuterPositionIterator(JoinHashTables *hashTables);
-    void NextUnVisitedAddress(uint32_t &hashTableIndex, uint32_t &address);
+    void NextUnVisitedAddress(uint32_t &hashTableIndex, uint64_t &address);
     void Reset();
 
 private:
