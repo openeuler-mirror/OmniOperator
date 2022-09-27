@@ -42,6 +42,17 @@ using FunctionByDataType = struct FunctionByDataType {
 
 using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
 
+// HMPP function
+template <typename V, typename D>
+void HashFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
+void HashVarcharFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+    uint64_t *combinedHash);
+void HashDecimalFuncHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
+template <typename V, typename D>
+void HashFuncVectImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+void HashVarcharVectFuncImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+void HashDecimalVectFuncHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+
 template <typename V, typename D>
 void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
 void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
@@ -49,8 +60,22 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
 
 template <typename V, typename D>
 void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+
 void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+
+template <typename V, typename D>
+void HashFuncImplProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
+void HashVarcharFuncImplProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+    uint64_t *combinedHash);
+void HashDecimalFuncProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
+
+template <typename V, typename D>
+void HashFuncVectImplProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+
+void HashVarcharVectFuncImplProxy(Vector *vector, const uint32_t start, const uint32_t rowCount,
+    uint64_t *combinedHash);
+void HashDecimalVectFuncProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 
 template <typename V, typename D>
 void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame);
@@ -100,6 +125,10 @@ public:
     void PreLoop(VectorBatch *vecBatch);
     void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
         int32_t aggNum);
+    void InLoopHMPP(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
+                int32_t aggNum);
+    void InLoopProxy(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
+                    int32_t aggNum);
     void PostLoop(VectorBatch *vecBatch) const;
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> &GetStates()
     {
@@ -130,7 +159,7 @@ private:
     std::unique_ptr<ExecutionContext> executionContext;
 
     void FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize, uint32_t colCount,
-                            int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups);
+        int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups);
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

@@ -13,6 +13,7 @@
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
 #include "operator/hmpp_hash_util.h"
+#include "util/config_util.h"
 #endif
 
 using namespace omniruntime::vec;
@@ -210,7 +211,7 @@ uint64_t LookupJoinOperator::GetNextJoinPosition(uint64_t currentJoinPosition) c
 
 #ifdef ENABLE_HMPP
 template <typename T>
-void CalculateColHashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+void CalculateColHashesHMPP(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
 {
     if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         LogDebug("HMPP-Join-hash");
@@ -243,7 +244,8 @@ void CalculateColHashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int
     }
 }
 
-void CalculateColDec64Hashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+void CalculateColDec64HashesHMPP(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash,
+    bool *nulls)
 {
     if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         LogDebug("HMPP-Join-hashDec64");
@@ -289,7 +291,8 @@ void CalculateColDec64Hashes(omniruntime::vec::Vector *vector, uint32_t rowCount
     }
 }
 
-void CalculateColDec128Hashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+void CalculateColDec128HashesHMPP(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash,
+    bool *nulls)
 {
     if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         LogDebug("HMPP-Join-hashDec128");
@@ -337,7 +340,8 @@ void CalculateColDec128Hashes(omniruntime::vec::Vector *vector, uint32_t rowCoun
     }
 }
 
-void CalculateColVarcharHashes(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
+void CalculateColVarcharHashesHMPP(omniruntime::vec::Vector *vector, uint32_t rowCount, int64_t *combinedHash,
+    bool *nulls)
 {
     if (vector->GetEncoding() != omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
         LogDebug("HMPP-Join-hashVarchar");
@@ -385,7 +389,8 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vector, uint32_t rowCou
         }
     }
 }
-#else
+#endif
+
 template <typename T>
 void CalculateColHashes(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
@@ -505,7 +510,59 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, uint32_t rowCount,
         }
     }
 }
+
+template <typename T>
+void CalculateColHashesProxy(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        CalculateColHashesHMPP<T>(vec, rowCount, hashes, nulls);
+    } else {
+        CalculateColHashes<T>(vec, rowCount, hashes, nulls);
+    }
+#else
+    CalculateColHashes<T>(vec, rowCount, hashes, nulls);
 #endif
+}
+
+void CalculateColDec64HashesProxy(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        CalculateColDec64HashesHMPP(vec, rowCount, hashes, nulls);
+    } else {
+        CalculateColDec64Hashes(vec, rowCount, hashes, nulls);
+    }
+#else
+    CalculateColDec64Hashes(vec, rowCount, hashes, nulls);
+#endif
+}
+
+void CalculateColDec128HashesProxy(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        CalculateColDec128HashesHMPP(vec, rowCount, hashes, nulls);
+    } else {
+        CalculateColDec128Hashes(vec, rowCount, hashes, nulls);
+    }
+#else
+    CalculateColDec128Hashes(vec, rowCount, hashes, nulls);
+#endif
+}
+
+void CalculateColVarcharHashesProxy(omniruntime::vec::Vector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        CalculateColVarcharHashesHMPP(vec, rowCount, hashes, nulls);
+    } else {
+        CalculateColVarcharHashes(vec, rowCount, hashes, nulls);
+    }
+#else
+    CalculateColVarcharHashes(vec, rowCount, hashes, nulls);
+#endif
+}
 
 void PopulateHashes(Vector **hashCols, uint32_t rowCount, int32_t *hashColTypes, uint32_t hashColsCount,
     int64_t *hashes, bool *nulls)
@@ -514,30 +571,30 @@ void PopulateHashes(Vector **hashCols, uint32_t rowCount, int32_t *hashColTypes,
         switch (hashColTypes[i]) {
             case omniruntime::type::OMNI_INT:
             case omniruntime::type::OMNI_DATE32:
-                CalculateColHashes<omniruntime::vec::IntVector>(hashCols[i], rowCount, hashes, nulls);
+                CalculateColHashesProxy<omniruntime::vec::IntVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
             case omniruntime::type::OMNI_SHORT:
-                CalculateColHashes<omniruntime::vec::ShortVector>(hashCols[i], rowCount, hashes, nulls);
+                CalculateColHashesProxy<omniruntime::vec::ShortVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
             case omniruntime::type::OMNI_LONG:
-                CalculateColHashes<omniruntime::vec::LongVector>(hashCols[i], rowCount, hashes, nulls);
+                CalculateColHashesProxy<omniruntime::vec::LongVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
             case omniruntime::type::OMNI_DOUBLE:
-                CalculateColHashes<omniruntime::vec::DoubleVector>(hashCols[i], rowCount, hashes, nulls);
+                CalculateColHashesProxy<omniruntime::vec::DoubleVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
             case omniruntime::type::OMNI_BOOLEAN:
-                CalculateColHashes<omniruntime::vec::BooleanVector>(hashCols[i], rowCount, hashes, nulls);
+                CalculateColHashesProxy<omniruntime::vec::BooleanVector>(hashCols[i], rowCount, hashes, nulls);
                 break;
             case omniruntime::type::OMNI_DECIMAL64:
-                CalculateColDec64Hashes(hashCols[i], rowCount, hashes, nulls);
+                CalculateColDec64HashesProxy(hashCols[i], rowCount, hashes, nulls);
                 break;
             case omniruntime::type::OMNI_DECIMAL128: {
-                CalculateColDec128Hashes(hashCols[i], rowCount, hashes, nulls);
+                CalculateColDec128HashesProxy(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
             case omniruntime::type::OMNI_VARCHAR:
             case omniruntime::type::OMNI_CHAR: {
-                CalculateColVarcharHashes(hashCols[i], rowCount, hashes, nulls);
+                CalculateColVarcharHashesProxy(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
             default: {

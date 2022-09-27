@@ -16,6 +16,7 @@
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
 #include "operator/hmpp_hash_util.h"
+#include "util/config_util.h"
 #endif
 
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
@@ -39,36 +40,36 @@ template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint
 
 static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INT, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>,
+    {OMNI_INT, HashFuncImplProxy<IntVector, int32_t>, HashFuncVectImplProxy<IntVector, int32_t>,
      IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
      SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
     },
-    {OMNI_LONG, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>,
+    {OMNI_LONG, HashFuncImplProxy<LongVector, int64_t>, HashFuncVectImplProxy<LongVector, int64_t>,
      IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
      SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
     },
     {
-        OMNI_DOUBLE, HashFuncImpl<DoubleVector, double>, HashFuncVectImpl<DoubleVector, double>,
+        OMNI_DOUBLE, HashFuncImplProxy<DoubleVector, double>, HashFuncVectImplProxy<DoubleVector, double>,
         IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
         SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>
     },
     {
-        OMNI_BOOLEAN, HashFuncImpl<BooleanVector, bool>, HashFuncVectImpl<BooleanVector, bool>,
+        OMNI_BOOLEAN, HashFuncImplProxy<BooleanVector, bool>, HashFuncVectImplProxy<BooleanVector, bool>,
         IsSameNodeFuncImpl<BooleanVector, bool>, DuplicateKeyValueImpl<BooleanVector, bool>,
         SetVectorImpl<BooleanVector>, FillValueImpl<BooleanVector, bool>
     },
-    {OMNI_SHORT, HashFuncImpl<ShortVector, int16_t>, HashFuncVectImpl<ShortVector, int16_t>,
+    {OMNI_SHORT, HashFuncImplProxy<ShortVector, int16_t>, HashFuncVectImplProxy<ShortVector, int16_t>,
      IsSameNodeFuncImpl<ShortVector, int16_t>, DuplicateKeyValueImpl<ShortVector, int16_t>,
      SetVectorImpl<ShortVector>, FillValueImpl<ShortVector, int16_t>},
-    {OMNI_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>,
+    {OMNI_DECIMAL64, HashFuncImplProxy<LongVector, int64_t>, HashFuncVectImplProxy<LongVector, int64_t>,
      IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
      SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
     },
-    {OMNI_DECIMAL128, HashDecimalFunc, HashDecimalVectFunc,
+    {OMNI_DECIMAL128, HashDecimalFuncProxy, HashDecimalVectFuncProxy,
      IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
      SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>
     },
-    {OMNI_DATE32, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>,
+    {OMNI_DATE32, HashFuncImplProxy<IntVector, int32_t>, HashFuncVectImplProxy<IntVector, int32_t>,
      IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
      SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
     },
@@ -78,9 +79,9 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
+    {OMNI_VARCHAR, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
      SetVarcharVector,   FillVarcharValue },
-    {OMNI_CHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
+    {OMNI_CHAR, HashVarcharFuncImplProxy, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue,
      SetVarcharVector,   FillVarcharValue },
     {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
 };
@@ -181,25 +182,7 @@ OmniStatus HashAggregationOperator::Init()
 void HashAggregationOperator::PreLoop(VectorBatch *vecBatch) {}
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
-#ifdef ENABLE_HMPP
-static void GenerateCombinedHashesHMPP(Vector **vectors, uint32_t rowCount, const int32_t colNum,
-    uint64_t *combinedHashVal)
-{
-    Vector *vector = nullptr;
-    for (int32_t i = 0; i < colNum; ++i) {
-        vector = vectors[i];
-        if (vector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
-            GROUP_AGG_FUNCTIONS[vector->GetTypeId()].hashFuncVect(vector, 0, rowCount, combinedHashVal);
-        } else {
-            int32_t newIndexes[rowCount];
-            Vector *originalVector =
-                static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(0, rowCount, newIndexes);
-            GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].hashFunc(originalVector, rowCount, newIndexes,
-                combinedHashVal);
-        }
-    }
-}
-#else
+
 static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t colNum,
     uint64_t *combinedHashVal)
 {
@@ -217,7 +200,6 @@ static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t ro
         }
     }
 }
-#endif
 std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t *hash, int32_t blockSize)
 {
     std::vector<BucketIterator> bucktes(blockSize, groupedRows.end());
@@ -259,7 +241,7 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
     return -1;
 }
 #ifdef ENABLE_HMPP
-void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
+void HashAggregationOperator::InLoopHMPP(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
 {
     uint64_t *combinedHashVal = new uint64_t[rowCount]();
@@ -269,7 +251,8 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
         groupByVectors[i] = vecBatch->GetVector(groupByColIdx[i]);
     }
 
-    GenerateCombinedHashesHMPP(groupByVectors, rowCount, groupByColNum, combinedHashVal);
+    // compute hashes in batches using HMPP
+    GenerateCombinedHashes(groupByVectors, 0, rowCount, groupByColNum, combinedHashVal);
 
     uint32_t run = blockSize;
     for (uint32_t start = 0; start < rowCount; start = start + blockSize) {
@@ -305,7 +288,7 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
 
     delete[] combinedHashVal;
 }
-#else
+#endif
 void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
 {
@@ -351,7 +334,20 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
         }
     }
 }
+
+void HashAggregationOperator::InLoopProxy(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
+    int32_t groupByColNum, int32_t aggNum)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        InLoopHMPP(vecBatch, rowCount, groupByColIdx, groupByColNum, aggNum);
+    } else {
+        InLoop(vecBatch, rowCount, groupByColIdx, groupByColNum, aggNum);
+    }
+#else
+    InLoop(vecBatch, rowCount, groupByColIdx, groupByColNum, aggNum);
 #endif
+}
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
@@ -520,7 +516,7 @@ OmniStatus HashAggregationOperator::Close()
 
 #ifdef ENABLE_HMPP
 template <typename V, typename D>
-void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+void HashFuncVectImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     LogDebug("HMPP-HASHAGG-hash");
     HmppResult result = HmppHashUtil::ComputeHash(vector, reinterpret_cast<int64_t *>(combinedHash));
@@ -530,7 +526,7 @@ void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCo
     return;
 }
 
-void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+void HashVarcharVectFuncImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     int8_t *nullAddr = nullptr;
     int64_t *resultHash = new int64_t[rowCount]();
@@ -556,7 +552,7 @@ void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_
     return;
 }
 
-void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+void HashDecimalVectFuncHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     int64_t *resultHash = new int64_t[rowCount]();
     int8_t *nullAddr = nullptr;
@@ -582,7 +578,7 @@ void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t ro
 }
 
 template <typename V, typename D>
-void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+void HashFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     int32_t rowSize = vector->GetSize();
     int64_t *tempCombinedHash = new int64_t[rowSize]();
@@ -599,7 +595,7 @@ void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowInd
     return;
 }
 
-void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+void HashVarcharFuncImplHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     int32_t rowSize = vector->GetSize();
     int8_t *nullAddr = nullptr;
@@ -632,7 +628,7 @@ void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t 
     return;
 }
 
-void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+void HashDecimalFuncHMPP(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     int32_t rowSize = vector->GetSize();
     int64_t *resultHash = new int64_t[rowSize]();
@@ -663,7 +659,8 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
     delete[] tempCombinedHash;
     return;
 }
-#else
+#endif
+
 template <typename V, typename D>
 void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
@@ -732,7 +729,87 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
         combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
+
+template <typename V, typename D>
+void HashFuncVectImplProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        HashFuncVectImplHMPP<V, D>(vector, start, rowCount, combinedHash);
+    } else {
+        HashFuncVectImpl<V, D>(vector, start, rowCount, combinedHash);
+    }
+#else
+    HashFuncVectImpl<V, D>(vector, start, rowCount, combinedHash);
 #endif
+}
+
+void HashVarcharVectFuncImplProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        HashVarcharVectFuncImplHMPP(vector, start, rowCount, combinedHash);
+    } else {
+        HashVarcharVectFuncImpl(vector, start, rowCount, combinedHash);
+    }
+#else
+    HashVarcharVectFuncImpl(vector, start, rowCount, combinedHash);
+#endif
+}
+
+void HashDecimalVectFuncProxy(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        HashDecimalVectFuncHMPP(vector, start, rowCount, combinedHash);
+    } else {
+        HashDecimalVectFunc(vector, start, rowCount, combinedHash);
+    }
+#else
+    HashDecimalVectFunc(vector, start, rowCount, combinedHash);
+#endif
+}
+
+template <typename V, typename D>
+void HashFuncImplProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        HashFuncImplHMPP<V, D>(vector, rowCount, rowIndexes, combinedHash);
+    } else {
+        HashFuncImpl<V, D>(vector, rowCount, rowIndexes, combinedHash);
+    }
+#else
+    HashFuncImpl<V, D>(vector, rowCount, rowIndexes, combinedHash);
+#endif
+}
+
+void HashVarcharFuncImplProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+    uint64_t *combinedHash)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        HashVarcharFuncImplHMPP(vector, rowCount, rowIndexes, combinedHash);
+    } else {
+        HashVarcharFuncImpl(vector, rowCount, rowIndexes, combinedHash);
+    }
+#else
+    HashVarcharFuncImpl(vector, rowCount, rowIndexes, combinedHash);
+#endif
+}
+
+void HashDecimalFuncProxy(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
+{
+#ifdef ENABLE_HMPP
+    if (ConfigUtil::IsEnableHMPP()) {
+        HashDecimalFuncHMPP(vector, rowCount, rowIndexes, combinedHash);
+    } else {
+        HashDecimalFunc(vector, rowCount, rowIndexes, combinedHash);
+    }
+#else
+    HashDecimalFunc(vector, rowCount, rowIndexes, combinedHash);
+#endif
+}
 
 template <typename V, typename D>
 void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame)
