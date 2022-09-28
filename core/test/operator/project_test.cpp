@@ -1076,7 +1076,7 @@ TEST(ProjectionTest, ProjectString1)
         // Truncate the resulting string
         void *charArr = &actualChar;
         auto charArrCasted = static_cast<char **>(charArr);
-        string actualStr(*charArrCasted, 0, len);
+        string actualStr(*charArrCasted, len);
     }
 
     Expr::DeleteExprs(exprs);
@@ -1747,7 +1747,7 @@ TEST(ProjectionTest, StringSubstr)
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
 
-        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), len);
         if (i % 2 == 0) {
             EXPECT_EQ(actualStr, expected1);
         } else {
@@ -2168,13 +2168,13 @@ TEST(ProjectionTest, ConcatStrAndChar)
         VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
         uint8_t *actualChar1 = nullptr;
         int len1 = vcVec1->GetValue(i, &actualChar1);
-        string actualStr1(reinterpret_cast<char *>(actualChar1), 0, len1);
+        string actualStr1(reinterpret_cast<char *>(actualChar1), len1);
         EXPECT_EQ(actualStr1, expected1);
 
         VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
         uint8_t *actualChar2 = nullptr;
         int len2 = vcVec2->GetValue(i, &actualChar2);
-        string actualStr2(reinterpret_cast<char *>(actualChar2), 0, len2);
+        string actualStr2(reinterpret_cast<char *>(actualChar2), len2);
         EXPECT_EQ(actualStr2, expected2);
     }
 
@@ -2260,7 +2260,7 @@ TEST(ProjectionTest, varcharExpand)
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
 
-        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), len);
         if (i % 2 == 0) {
             EXPECT_EQ(actualStr, expected1);
         } else {
@@ -3387,7 +3387,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
-        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, to_string(col[i]));
     }
 
@@ -3431,7 +3431,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
-        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, to_string(col[i * 2]));
     }
 
@@ -3476,7 +3476,7 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
-        string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, res[i]);
     }
 
@@ -3530,14 +3530,14 @@ TEST(ProjectionTest, ProjectCastStringToString)
     VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
     uint8_t *actualChar1 = nullptr;
     int len1 = vcVec1->GetValue(0, &actualChar1);
-    string actualStr1(reinterpret_cast<char *>(actualChar1), 0, len1);
+    string actualStr1(reinterpret_cast<char *>(actualChar1), len1);
     EXPECT_EQ(len1, 18);
     EXPECT_EQ(actualStr1, expected1);
 
     VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
     uint8_t *actualChar2 = nullptr;
     int len2 = vcVec2->GetValue(0, &actualChar2);
-    string actualStr2(reinterpret_cast<char *>(actualChar2), 0, len2);
+    string actualStr2(reinterpret_cast<char *>(actualChar2), len2);
     EXPECT_EQ(len2, 10);
     EXPECT_EQ(actualStr2, expected2);
 

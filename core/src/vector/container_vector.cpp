@@ -78,7 +78,7 @@ ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset
     auto newContainerVec = new ContainerVector(GetAllocator(), length, vecAddr, vectorCount, dataTypes);
     for (int32_t i = 0; i < length; ++i) {
         int position = positions[offset + i];
-        newContainerVec->SetValueNull(position, IsValueNull(position));
+        newContainerVec->SetValueNull(i, IsValueNull(position));
     }
     return newContainerVec;
 }

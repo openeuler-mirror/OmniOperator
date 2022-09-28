@@ -5,15 +5,12 @@
 #include "memory_pool.h"
 
 #include <iostream>
-#include <jemalloc/jemalloc.h>
 #include "memory_statistic.h"
 
 using namespace std;
 namespace omniruntime {
 namespace mem {
-const size_t ALIGNMENT = 64;
-
-class JemallocAllocator {
+class SimpleAllocator {
 public:
     static int Allocate(int64_t size, uint8_t **buffer)
     {
@@ -21,15 +18,15 @@ public:
             std::cout << "allocate size is negative." << std::endl;
             return -1;
         }
-        // jemalloc alloc
-        *buffer = reinterpret_cast<uint8_t *>(mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(ALIGNMENT)));
+        // alloc based on the size
+        *buffer = reinterpret_cast<uint8_t *>(malloc(static_cast<size_t>(size)));
         return 0;
     }
 
     static int Release(uint8_t *buffer)
     {
-        // jemalloc free
-        dallocx(reinterpret_cast<void *>(buffer), MALLOCX_ALIGN(ALIGNMENT));
+        // free the memory
+        free(reinterpret_cast<void *>(buffer));
         return 0;
     }
 };
@@ -60,7 +57,7 @@ public:
     }
 };
 
-class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {
+class SimpleMemoryPool : public BaseMemoryPoolImpl<SimpleAllocator> {
 public:
     uint64_t GetPreferredSize(uint64_t size) override
     {
@@ -88,11 +85,11 @@ public:
     }
 };
 
-static omniruntime::mem::JemallocMemoryPool g_jemallocMemoryPool;
+static omniruntime::mem::SimpleMemoryPool g_simpleMemoryPool;
 
 MemoryPool *GetMemoryPool()
 {
-    return &g_jemallocMemoryPool;
+    return &g_simpleMemoryPool;
 }
 }
 }

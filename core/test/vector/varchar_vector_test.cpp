@@ -50,7 +50,7 @@ TEST(VarcharVector, sliceVector)
         str.append(std::to_string(i + 3));
         uint8_t *actualChar = nullptr;
         int len = sliceVector1->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, str);
     }
 
@@ -64,7 +64,7 @@ TEST(VarcharVector, sliceVector)
         str.append(std::to_string(i + 4));
         uint8_t *actualChar = nullptr;
         int len = sliceVector2->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, str);
     }
 
@@ -98,7 +98,7 @@ TEST(VarcharVector, setAndGetValue)
         str.append(std::to_string(i));
         uint8_t *actualChar = nullptr;
         int len = vector->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, str);
     }
 
@@ -128,7 +128,7 @@ TEST(VarcharVector, setValueNull)
         } else {
             uint8_t *actual = nullptr;
             int len = vector->GetValue(i, &actual);
-            std::string actualStr(reinterpret_cast<char *>(actual), 0, len);
+            std::string actualStr(reinterpret_cast<char *>(actual), len);
             EXPECT_EQ(actualStr, std::to_string(i));
         }
     }
@@ -159,11 +159,11 @@ TEST(VarcharVector, copyPositions)
     for (int i = 0; i < copyPostionVector->GetSize(); i++) {
         uint8_t *expectedChar = nullptr;
         int len = vector->GetValue(positions[i], &expectedChar);
-        std::string expectedStr(reinterpret_cast<char *>(expectedChar), 0, len);
+        std::string expectedStr(reinterpret_cast<char *>(expectedChar), len);
 
         uint8_t *actualChar = nullptr;
         int len1 = copyPostionVector->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len1);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len1);
         EXPECT_EQ(actualStr, expectedStr);
     }
 
@@ -192,11 +192,11 @@ TEST(VarcharVector, copyRegion)
     for (int i = 0; i < copyRegionVector->GetSize(); i++) {
         uint8_t *expectedChar = nullptr;
         int len = vector->GetValue(i + 2, &expectedChar);
-        std::string expectedStr(reinterpret_cast<char *>(expectedChar), 0, len);
+        std::string expectedStr(reinterpret_cast<char *>(expectedChar), len);
 
         uint8_t *actualChar = nullptr;
         int len1 = copyRegionVector->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len1);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len1);
         EXPECT_EQ(actualStr, expectedStr);
     }
 
@@ -297,7 +297,7 @@ TEST(VarcharVector, setValueExpand)
         str.append(std::to_string(i));
         uint8_t *actualChar = nullptr;
         int len = vector->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, str);
     }
 
@@ -319,7 +319,7 @@ TEST(VarcharVector, setValueExpand)
         str.append(std::to_string(i));
         uint8_t *actualChar = nullptr;
         int len = vector1->GetValue(i, &actualChar);
-        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), len);
         EXPECT_EQ(actualStr, str);
     }
 
@@ -333,7 +333,7 @@ TEST(VarcharVector, setValueExpand)
     EXPECT_EQ(iniZeroCapacityVector->GetCapacityInBytes(), 32 * 1024);
     uint8_t *actualChar = nullptr;
     int len = iniZeroCapacityVector->GetValue(0, &actualChar);
-    std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+    std::string actualStr(reinterpret_cast<char *>(actualChar), len);
     EXPECT_EQ(actualStr, s);
 
     delete vector;
