@@ -57,8 +57,8 @@ extern DLLEXPORT bool LikeStr(const char *str, int32_t strLen, const char *regex
     string s = string(str, strLen);
     string r = string(regexToMatch, regexLen);
 
-    wregex re(ToWideString(r));
-    return regex_match(ToWideString(s), re);
+    wregex re(StringUtil::ToWideString(r));
+    return regex_match(StringUtil::ToWideString(s), re);
 }
 
 extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen, const char *regexToMatch,
@@ -72,8 +72,8 @@ extern DLLEXPORT bool LikeChar(const char *str, int32_t strWidth, int32_t strLen
         originalStr.append(" ");
     }
     string r = string(regexToMatch, regexLen);
-    wregex re(ToWideString(r));
-    return regex_match(ToWideString(originalStr), re);
+    wregex re(StringUtil::ToWideString(r));
+    return regex_match(StringUtil::ToWideString(originalStr), re);
 }
 
 extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
@@ -84,7 +84,7 @@ extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, in
     }
 
     bool hasErr = false;
-    const char *ret = ConcatStrStrRetNull(contextPtr, &hasErr, ap, apLen, bp, bpLen, outLen);
+    const char *ret = StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
@@ -99,7 +99,7 @@ extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, 
         return nullptr;
     }
     bool hasErr = false;
-    const char *ret = ConcatCharCharRetNull(contextPtr, &hasErr, ap, aWidth, apLen, bp, bWidth, bpLen, outLen);
+    const char *ret = StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
@@ -114,7 +114,7 @@ extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, i
         return nullptr;
     }
     bool hasErr = false;
-    const char *ret = ConcatCharStrRetNull(contextPtr, &hasErr, ap, aWidth, apLen, bp, bpLen, outLen);
+    const char *ret = StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
@@ -130,7 +130,7 @@ extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, i
     }
 
     bool hasErr = false;
-    const char *ret = ConcatStrCharRetNull(contextPtr, &hasErr, ap, apLen, bp, bWidth, bpLen, outLen);
+    const char *ret = StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
         return nullptr;
@@ -252,77 +252,25 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     if (isNull) {
         return nullptr;
     }
+
+    bool hasErr = false;
+    char *ret;
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (searchLen == 0 && engineType == EngineType::Spark) {
         *outLen = strLen;
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        errno_t res = memcpy_s(ret, *outLen + 1, str, strLen);
-        if (res != EOK) {
-            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-            *outLen = 0;
-            return nullptr;
-        }
-        return ret;
+        ret = const_cast<char *>(str);
     } else if (searchLen == 0) {
-        int32_t strCodePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
-        *outLen = strLen + (strCodePoints + 1) * replaceLen;
-        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        int32_t indexBuffer = 0;
-        errno_t res;
-        for (int32_t index = 0; index < strLen;) {
-            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
-            if (res != EOK) {
-                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-                *outLen = 0;
-                return nullptr;
-            }
-            indexBuffer += replaceLen;
-            int32_t codePointLength = omniruntime::Utf8Util::LengthOfCodePoint(*(str + index));
-            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, str + index, codePointLength);
-            if (res != EOK) {
-                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-                *outLen = 0;
-                return nullptr;
-            }
-            indexBuffer += codePointLength;
-            index += codePointLength;
-        }
-        res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
-        if (res != EOK) {
-            SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-            *outLen = 0;
-            return nullptr;
-        }
-        return ret;
-    }
-
-    if (strLen == 0) {
-        *outLen = 0;
-        return "";
-    }
-
-    string s = string(str, strLen);
-    string search = string(searchStr, searchLen);
-    string replace = string(replaceStr, replaceLen);
-    string::size_type matchIndex = 0;
-    if (replaceLen == 0) {
-        while ((matchIndex = s.find(search, matchIndex)) != string::npos) {
-            s = s.substr(0, matchIndex) + s.substr(matchIndex + searchLen);
-        }
+        auto result =
+            StringUtil::ReplaceWithSearchEmpty(contextPtr, str, strLen, replaceStr, replaceLen, &hasErr, outLen);
+        ret = (const_cast<char *>(result));
     } else {
-        while ((matchIndex = s.find(search, matchIndex)) != string::npos) {
-            s.replace(matchIndex, searchLen, replace);
-            matchIndex += replaceLen;
-        }
+        auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr,
+            replaceLen, &hasErr, outLen);
+        ret = const_cast<char *>(result);
     }
 
-    *outLen = s.length();
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
-    if (res != EOK) {
+    if (hasErr) {
         SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-        *outLen = 0;
-        return nullptr;
     }
     return ret;
 }
@@ -447,7 +395,7 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const
         return nullptr;
     }
     bool hasErr = false;
-    const char *ret = CastStrWithDiffWidthsRetNull(contextPtr, &hasErr, srcStr, srcLen, srcWidth, dstWidth, outLen);
+    const char *ret = StringUtil::CastStrStr(&hasErr, srcStr, srcWidth, srcLen, outLen, dstWidth);
     if (hasErr) {
         ostringstream errMsg;
         errMsg << "cast varchar[" << srcWidth << "] to varchar[" << dstWidth << "] failed.";
@@ -619,91 +567,25 @@ extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str
 extern DLLEXPORT const char *ConcatStrStrRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t apLen,
     const char *bp, int32_t bpLen, int32_t *outLen)
 {
-    *outLen = apLen + bpLen;
-    if (*outLen <= 0) {
-        *outLen = 0;
-        return "";
-    }
-
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
-    errno_t res2 = memcpy_s(ret + apLen, *outLen, bp, bpLen);
-    if (res1 != EOK || res2 != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
-    return ret;
+    return StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern DLLEXPORT const char *ConcatCharCharRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t aWidth,
     int32_t apLen, const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
-    int32_t aPaddingCount = bpLen > 0 ? aWidth - omniruntime::Utf8Util::CountCodePoints(ap, apLen) : 0;
-    *outLen = apLen + aPaddingCount + bpLen;
-    if (*outLen <= 0) {
-        *outLen = 0;
-        return "";
-    }
-
-    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
-    // both empty strings, the security function will not return an error.
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
-    errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
-    errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
-    if (res1 != EOK || res2 != EOK || res3 != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
-    return ret;
+    return StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern DLLEXPORT const char *ConcatCharStrRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t aWidth,
     int32_t apLen, const char *bp, int32_t bpLen, int32_t *outLen)
 {
-    int32_t aPaddingCount = bpLen > 0 ? aWidth - omniruntime::Utf8Util::CountCodePoints(ap, apLen) : 0;
-    *outLen = apLen + aPaddingCount + bpLen;
-    if (*outLen <= 0) {
-        *outLen = 0;
-        return "";
-    }
-
-    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
-    // both empty strings, the security function will not return an error.
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
-    errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
-    errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
-    if (res1 != EOK || res2 != EOK || res3 != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
-    return ret;
+    return StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern DLLEXPORT const char *ConcatStrCharRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t apLen,
     const char *bp, int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
-    *outLen = apLen + bpLen;
-    if (*outLen <= 0) {
-        *outLen = 0;
-        return "";
-    }
-
-    // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
-    // both empty strings, the security function will not return an error.
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-    errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
-    errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
-    if (res1 != EOK || res2 != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
-    return ret;
+    return StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, isNull, outLen);
 }
 
 extern DLLEXPORT int32_t CastStringToDateRetNull(bool *isNull, const char *str, int32_t strLen)
@@ -927,19 +809,5 @@ extern DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *st
 extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *srcStr,
     int32_t srcLen, int32_t srcWidth, int32_t dstWidth, int32_t *outLen)
 {
-    int32_t chCount = std::min(srcWidth, dstWidth);
-    int32_t dstLen = 0;
-    int32_t count = 0;
-    while (dstLen < srcLen && count < chCount) {
-        int32_t charLen = omniruntime::Utf8Util::LengthOfCodePoint(srcStr[dstLen]);
-        if (charLen < 0) {
-            *isNull = true;
-            *outLen = 0;
-            return nullptr;
-        }
-        dstLen += charLen;
-        count++;
-    }
-    *outLen = dstLen;
-    return srcStr;
+    return StringUtil::CastStrStr(isNull, srcStr, srcWidth, srcLen, outLen, dstWidth);
 }

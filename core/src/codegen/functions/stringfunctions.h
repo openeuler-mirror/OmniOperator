@@ -10,11 +10,10 @@
 #include <memory>
 #include <algorithm>
 #include <huawei_secure_c/include/securec.h>
-#include <locale>
-#include <codecvt>
 #include "context_helper.h"
 #include "util/utf8_util.h"
 #include "util/engine.h"
+#include "codegen/string_util.h"
 
 // All extern functions go here temporarily
 #ifdef _WIN32
@@ -22,16 +21,6 @@
 #else
 #define DLLEXPORT
 #endif
-
-namespace omniruntime {
-namespace codegen {
-// Defining constant of the gap for case conversions
-const int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
-const std::string SUBSTR_ERR_MSG = "Substring failed";
-const std::string REPLACE_ERR_MSG = "Replace failed";
-const std::string CONCAT_ERR_MSG = "Concat failed";
-}
-}
 
 extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen);
 
@@ -88,11 +77,11 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     bool isNull, int32_t *outLen)
 {
     if (isNull) {
-        return "";
+        return nullptr;
     }
     if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
         *outLen = 0;
-        return "";
+        return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
     }
 
     int64_t endIdx;
@@ -104,7 +93,7 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
         if (startIndex < 0) {
             // before beginning of string
             *outLen = 0;
-            return "";
+            return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
         }
         endIdx = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startIndex, lengthCodePoint);
         if (endIdx < 0) {
@@ -120,7 +109,7 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
             EngineType engineType = EngineUtil::GetInstance().GetEngineType();
             if (engineType != EngineType::Spark || startCodePoint + lengthCodePoint <= 0) {
                 *outLen = 0;
-                return "";
+                return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
             }
             lengthCodePoint += startCodePoint;
             startCodePoint = 0;
@@ -134,15 +123,7 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     }
 
     *outLen = endIdx - startIndex;
-    auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str + startIndex, *outLen);
-    if (res != EOK) {
-        omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
-            omniruntime::codegen::SUBSTR_ERR_MSG.length());
-        *outLen = 0;
-        return nullptr;
-    }
-    return ret;
+    return str + startIndex;
 }
 
 template <typename T>
@@ -161,7 +142,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     }
     if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
         *outLen = 0;
-        return "";
+        return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
     }
 
     int64_t startCodePoint = startIdx;
@@ -170,7 +151,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
         startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint - 1);
         if (startIndex < 0) {
             *outLen = 0;
-            return "";
+            return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
         }
     } else {
         // negative start is relative to end of string
@@ -180,7 +161,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
             EngineType engineType = EngineUtil::GetInstance().GetEngineType();
             if (engineType != EngineType::Spark) {
                 *outLen = 0;
-                return "";
+                return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
             }
             startCodePoint = 0;
         }
@@ -189,16 +170,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     }
 
     *outLen = strLen - startIndex;
-
-    auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str + startIndex, *outLen);
-    if (res != EOK) {
-        omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::SUBSTR_ERR_MSG.c_str(),
-            omniruntime::codegen::SUBSTR_ERR_MSG.length());
-        *outLen = 0;
-        return nullptr;
-    }
-    return ret;
+    return str + startIndex;
 }
 
 template <typename T>
@@ -233,12 +205,6 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
 
 extern DLLEXPORT const char *ReplaceStrStrWithoutRep(int64_t contextPtr, const char *str, int32_t strLen,
     const char *searchStr, int32_t searchLen, bool isNull, int32_t *outLen);
-
-static inline std::wstring ToWideString(std::string &s)
-{
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
-    return convert.from_bytes(s);
-}
 
 extern DLLEXPORT const char *ConcatStrStrRetNull(int64_t contextPtr, bool *isNull, const char *ap, int32_t apLen,
     const char *bp, int32_t bpLen, int32_t *outLen);
