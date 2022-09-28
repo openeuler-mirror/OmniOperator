@@ -214,10 +214,21 @@ private:
     {
         int32_t sumPrec = sumType->GetPrecision();
         int32_t sumScale = sumType->GetScale();
+        // for raw input type Decimal(p,s)
+        // in final mode, aggregator's input type(sumType) is Decimal(p+10,s)
+        // window operator only has one stage, and it's input type(sumType) is Decimal(p,s), so precision need to +10
+        if (inputRaw && !outputPartial) {
+            sumPrec += 10;
+            sumPrec = std::min(sumPrec, MAX_PRECISION);
+        }
+        // before calculate avg, try to check if overflowed when cast sum and count to the wider type
+        if (IsCastToWiderTypeOverflow(sumDec, sumPrec, sumScale, countDec)) {
+            return OpStatus::OP_OVERFLOW;
+        }
+
         int32_t divideResultPrec = 0;
         int32_t divideResultScale = 0;
         GetDivideResultDecimalType(sumPrec, sumScale, divideResultPrec, divideResultScale);
-
         Decimal128 dividend;
         // rescale dividend and divisor to divideResultScale(see GetDivideResultDecimalType)
         OpStatus dividendRescalStatus = DecimalOperations::Rescale128(sumDec, divideResultScale - sumScale, dividend);
@@ -246,10 +257,6 @@ private:
     // GetDivideResultDecimalType get the sum/count result decimal type, and count's type is always Decimal(20,0)
     void GetDivideResultDecimalType(int32_t sumPrec, int32_t sumScale, int32_t &resultPrec, int32_t &resultScale)
     {
-        static constexpr int32_t COUNT_PRECISION = 20;
-        static constexpr int32_t COUNT_SCALE = 0;
-        static constexpr int32_t MINIMUM_ADJUSTED_SCALE = 6;
-
         int32_t scale = std::max(MINIMUM_ADJUSTED_SCALE, sumScale + COUNT_PRECISION + 1);
         int32_t prec = sumPrec - sumScale + COUNT_SCALE + scale;
 
@@ -271,6 +278,30 @@ private:
         resultScale = std::max(MAX_PRECISION - intDigits, minScaleValue);
         resultPrec = MAX_PRECISION;
     }
+
+    // try to cast sum and count to the wider Decimal Type, return true if overflowed; return false if normal
+    // the input sum and count will never be changed.
+    bool IsCastToWiderTypeOverflow(Decimal128 &sum, int32_t sumPrec, int32_t sumScale, Decimal128 &count)
+    {
+        int32_t scale = std::max(sumScale, COUNT_SCALE);
+        int32_t range = std::max(sumPrec - sumScale, COUNT_PRECISION - COUNT_SCALE);
+        int32_t widerPrec = std::min(range + scale, MAX_PRECISION);
+        int32_t widerScale = std::min(scale, MAX_SCALE);
+
+        Decimal128 sumRescale;
+        OpStatus sumStatus = DecimalOperations::Rescale128(sum, widerScale - sumScale, sumRescale);
+        if (sumStatus == OpStatus::OP_OVERFLOW) {
+            return true;
+        }
+        Decimal128 countRescale;
+        OpStatus countStatus = DecimalOperations::Rescale128(count, widerScale - COUNT_SCALE, countRescale);
+        return countStatus == OpStatus::OP_OVERFLOW;
+    }
+
+private:
+    inline static constexpr int32_t COUNT_PRECISION = 20;
+    inline static constexpr int32_t COUNT_SCALE = 0;
+    inline static constexpr int32_t MINIMUM_ADJUSTED_SCALE = 6;
 };
 }
 }
