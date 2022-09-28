@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "codegen/batch_functions/batch_mathfunctions.h"
 #include "codegen/batch_functions/batch_murmur3_hash.h"
+#include "codegen/batch_functions/batch_decimalfunctions.h"
 #include "operator/execution_context.h"
 
 using namespace omniruntime::op;
@@ -341,4 +342,251 @@ TEST(BatchFunctionTest, Mm3Hash)
 
     BatchMm3Decimal128(decimal128Val, 38, 20, isValNull, seed, isSeedNull, resIsNull, output, rowCnt);
     EXPECT_EQ(output[0], 308064329);
+}
+
+
+TEST(BatchFunctionTest, Decimal64Cmp)
+{
+    int32_t rowCnt = 2;
+    int64_t col1[2] = {12345678L, 123456L};
+    int64_t col2[2] = {12345678L, 1234567890L};
+    bool output[2];
+
+    BatchLessThanDecimal64(col1, 8, 2, col2, 9, 2, output, rowCnt);
+    EXPECT_EQ(output[0], false);
+    EXPECT_EQ(output[1], true);
+
+    BatchLessThanEqualDecimal64(col1, 8, 3, col2, 9, 2, output, rowCnt);
+    EXPECT_EQ(output[0], true);
+    EXPECT_EQ(output[1], true);
+
+    BatchGreaterThanDecimal64(col1, 8, 6, col2, 9, 2, output, rowCnt);
+    EXPECT_EQ(output[0], false);
+    EXPECT_EQ(output[1], false);
+
+    BatchGreaterThanEqualDecimal64(col1, 8, 2, col2, 9, 2, output, rowCnt);
+    EXPECT_EQ(output[0], true);
+    EXPECT_EQ(output[1], false);
+
+    BatchEqualDecimal64(col1, 8, 2, col2, 9, 2, output, rowCnt);
+    EXPECT_EQ(output[0], true);
+    EXPECT_EQ(output[1], false);
+
+    BatchNotEqualDecimal64(col1, 8, 2, col2, 9, 2, output, rowCnt);
+    EXPECT_EQ(output[0], false);
+    EXPECT_EQ(output[1], true);
+}
+
+TEST(BatchFunctionTest, Decimal128Cmp)
+{
+    int32_t rowCnt = 2;
+    Decimal128 col1[2];
+    col1[0].SetValue(1234567L, UINT64_MAX);
+    col1[1].SetValue(123456L, UINT64_MAX);
+    Decimal128 col2[2];
+    col2[0].SetValue(-1234567L, UINT64_MAX);
+    col2[1].SetValue(1234567L, UINT64_MAX);
+    bool output[2];
+
+    BatchLessThanDecimal128(col1, 38, 2, col2, 38, 2, output, rowCnt);
+    EXPECT_EQ(output[0], false);
+    EXPECT_EQ(output[1], true);
+
+    BatchLessThanEqualDecimal128(col1, 38, 4, col2, 38, 3, output, rowCnt);
+    EXPECT_EQ(output[0], false);
+    EXPECT_EQ(output[1], true);
+
+    BatchGreaterThanDecimal128(col1, 38, 6, col2, 38, 2, output, rowCnt);
+    EXPECT_EQ(output[0], true);
+    EXPECT_EQ(output[1], false);
+
+    BatchGreaterThanEqualDecimal128(col1, 38, 2, col2, 38, 4, output, rowCnt);
+    EXPECT_EQ(output[0], true);
+    EXPECT_EQ(output[1], true);
+
+    BatchEqualDecimal128(col1, 38, 2, col2, 38, 2, output, rowCnt);
+    EXPECT_EQ(output[0], false);
+    EXPECT_EQ(output[1], false);
+
+    BatchNotEqualDecimal128(col1, 38, 2, col2, 38, 2, output, rowCnt);
+    EXPECT_EQ(output[0], true);
+    EXPECT_EQ(output[1], true);
+}
+
+TEST(BatchFunctionTest, CastDecimalToDecimal)
+{
+    int32_t rowCnt = 2;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    int64_t decimal64Val[2] = {1234567L, INT64_MAX};
+    Decimal128 decimal128Val[2];
+    decimal128Val[0].SetValue(0, 1234567);
+    decimal128Val[1].SetValue(1LL << 63, 123456);
+    bool isAnyNull[2] = {false, false};
+    bool overflowNull[2] = {false, false};
+    int64_t output64[2];
+    Decimal128 output128[2];
+
+    BatchCastDecimal64To64(contextPtr, decimal64Val, 7, 2, isAnyNull, output64, 10, 3, rowCnt);
+    EXPECT_EQ(output64[0], 12345670L);
+    EXPECT_TRUE(context->HasError());
+
+    BatchCastDecimal64To64RetNull(overflowNull, decimal64Val, 7, 2, output64, 10, 3, rowCnt);
+    EXPECT_EQ(output64[0], 12345670L);
+    EXPECT_FALSE(overflowNull[0]);
+    EXPECT_TRUE(overflowNull[1]);
+
+    BatchCastDecimal128To128(contextPtr, decimal128Val, 20, 10, isAnyNull, output128, 38, 18, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), 123456700000000L);
+    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
+    EXPECT_EQ(output128[1].LowBits(), 12345600000000L);
+
+    overflowNull[0] = false;
+    overflowNull[1] = false;
+    BatchCastDecimal128To128RetNull(overflowNull, decimal128Val, 20, 10, output128, 38, 18, rowCnt);
+    EXPECT_FALSE(overflowNull[0]);
+    EXPECT_FALSE(overflowNull[1]);
+
+    BatchCastDecimal64To128(contextPtr, decimal64Val, 18, 18, isAnyNull, output128, 38, 20, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), 123456700L);
+    EXPECT_EQ(output128[1].HighBits(), 49);
+    EXPECT_EQ(output128[1].LowBits(), 18446744073709551516UL);
+
+    BatchCastDecimal64To128RetNull(overflowNull, decimal64Val, 18, 18, output128, 38, 15, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), 1235);
+    EXPECT_EQ(output128[1].HighBits(), 0);
+    EXPECT_EQ(output128[1].LowBits(), std::round(INT64_MAX / 1000));
+
+    BatchCastDecimal128To64(contextPtr, decimal128Val, 38, 10, isAnyNull, output64, 18, 9, rowCnt);
+    EXPECT_EQ(output64[0], 123457);
+    EXPECT_EQ(output64[1], -12346);
+
+    overflowNull[0] = false;
+    overflowNull[1] = false;
+    BatchCastDecimal128To64RetNull(overflowNull, decimal128Val, 38, 3, output64, 5, 2, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+    EXPECT_EQ(output64[1], -12346);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, CastBasicTypeToDecimal)
+{
+    int32_t rowCnt = 1;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t intVal[1] = {1234567};
+    int64_t longVal[1] = {INT32_MAX};
+    double doubleVal[1] = {99999999.99};
+    bool isAnyNull[1] = {false};
+    bool overflowNull[1] = {false};
+    int64_t output64[1];
+    Decimal128 output128[1];
+
+    BatchCastIntToDecimal64(contextPtr, intVal, isAnyNull, output64, 9, 2, rowCnt);
+    EXPECT_EQ(output64[0], 123456700);
+    BatchCastIntToDecimal128(contextPtr, intVal, isAnyNull, output128, 38, 9, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), 1'234'567'000'000'000);
+    BatchCastIntToDecimal64RetNull(overflowNull, intVal, output64, 6, 0, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+    overflowNull[0] = false;
+    BatchCastIntToDecimal128RetNull(overflowNull, intVal, output128, 18, 12, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+
+    overflowNull[0] = false;
+    BatchCastLongToDecimal64(contextPtr, longVal, isAnyNull, output64, 13, 2, rowCnt);
+    EXPECT_EQ(output64[0], INT_MAX * 100L);
+    BatchCastLongToDecimal128(contextPtr, longVal, isAnyNull, output128, 38, 5, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), INT_MAX * 100'000L);
+    BatchCastLongToDecimal64RetNull(overflowNull, longVal, output64, 9, 0, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+    BatchCastLongToDecimal128RetNull(overflowNull, longVal, output128, 38, 6, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), INT_MAX * 1000'000L);
+
+    overflowNull[0] = false;
+    BatchCastDoubleToDecimal64(contextPtr, doubleVal, isAnyNull, output64, 13, 2, rowCnt);
+    EXPECT_EQ(output64[0], 9'999'999'999L);
+    BatchCastDoubleToDecimal128(contextPtr, doubleVal, isAnyNull, output128, 38, 5, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 0);
+    EXPECT_EQ(output128[0].LowBits(), 9'999'999'999L * 1000L);
+    BatchCastDoubleToDecimal64RetNull(overflowNull, doubleVal, output64, 12, 0, rowCnt);
+    EXPECT_EQ(output64[0], 100'000'000L);
+    BatchCastDoubleToDecimal128RetNull(overflowNull, doubleVal, output128, 19, 18, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, CastDecimalToBasicType)
+{
+    int32_t rowCnt = 1;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t decimal64Val[1] = {1234567};
+    Decimal128 decimal128Val[1];
+    decimal128Val[0].SetValue(0, INT64_MAX);
+    int32_t outputInt[1];
+    int64_t outputLong[1];
+    double outputDouble[1];
+    bool isAnyNull[1] = {false};
+    bool overflowNull[1] = {false};
+
+    BatchCastDecimal64ToInt(contextPtr, decimal64Val, 7, 2, isAnyNull, outputInt, rowCnt);
+    EXPECT_EQ(outputInt[0], 12346);
+    BatchCastDecimal64ToLong(decimal64Val, 7, 2, isAnyNull, outputLong, rowCnt);
+    EXPECT_EQ(outputLong[0], 12346L);
+    BatchCastDecimal64ToDouble(decimal64Val, 7, 2, isAnyNull, outputDouble, rowCnt);
+    EXPECT_EQ(outputDouble[0], 12345.67);
+
+    BatchCastDecimal128ToInt(contextPtr, decimal128Val, 19, 2, isAnyNull, outputInt, rowCnt);
+    EXPECT_TRUE(context->HasError());
+    BatchCastDecimal128ToLong(contextPtr, decimal128Val, 19, 2, isAnyNull, outputLong, rowCnt);
+    EXPECT_EQ(outputLong[0], INT64_MAX / 100L);
+    BatchCastDecimal128ToDouble(decimal128Val, 19, 2, isAnyNull, outputDouble, rowCnt);
+    EXPECT_EQ(outputDouble[0], INT64_MAX / (double)100);
+
+    BatchCastDecimal64ToIntRetNull(overflowNull, decimal64Val, 7, 2, outputInt, rowCnt);
+    EXPECT_EQ(outputInt[0], 12346);
+    BatchCastDecimal64ToLongRetNull(overflowNull, decimal64Val, 7, 2, outputLong, rowCnt);
+    EXPECT_EQ(outputLong[0], 12346L);
+    BatchCastDecimal64ToDoubleRetNull(overflowNull, decimal64Val, 7, 2, outputDouble, rowCnt);
+    EXPECT_EQ(outputDouble[0], 12345.67);
+
+    BatchCastDecimal128ToIntRetNull(overflowNull, decimal128Val, 7, 2, outputInt, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+    BatchCastDecimal128ToLongRetNull(overflowNull, decimal128Val, 7, 2, outputLong, rowCnt);
+    EXPECT_EQ(outputLong[0], INT64_MAX / 100L);
+    BatchCastDecimal128ToDoubleRetNull(overflowNull, decimal128Val, 7, 2, outputDouble, rowCnt);
+    EXPECT_EQ(outputDouble[0], INT64_MAX / (double)100);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, MakeDecimal)
+{
+    int32_t rowCnt = 1;
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t col[1] = {12345678L};
+    int64_t output[1];
+    bool isAnyNull[1] = {false};
+    bool overflowNull[1] = {false};
+
+    BatchUnscaledValue64(col, 7, 2, isAnyNull, output, rowCnt);
+    EXPECT_EQ(output[0], 12345678L);
+
+    BatchMakeDecimal64(contextPtr, col, isAnyNull, output, 7, 2, rowCnt);
+    EXPECT_TRUE(context->HasError());
+
+    BatchMakeDecimal64RetNull(overflowNull, col, output, 7, 2, rowCnt);
+    EXPECT_TRUE(overflowNull[0]);
+
+    delete context;
 }

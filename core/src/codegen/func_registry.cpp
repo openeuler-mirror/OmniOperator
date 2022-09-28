@@ -31,6 +31,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries
 
     functionRegistries.push_back(make_unique<BatchMathFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchHashFunctionRegistry>());
+    functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistry>());
 
     // External functions
     functionRegistries.push_back(make_unique<ExternalFunctionRegistry>());
