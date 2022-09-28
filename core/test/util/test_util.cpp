@@ -609,6 +609,15 @@ void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t 
     }
 }
 
+void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
+    std::vector<uint8_t *> &result, std::vector<int32_t> &outLen)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        std::string actual(reinterpret_cast<char *>(result[i]), outLen[i]);
+        EXPECT_EQ(actual, expected[i + offset]);
+    }
+}
+
 void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result)
 {
     for (int32_t i = 0; i < expected.size(); i++) {

@@ -198,4 +198,65 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
 extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     uint8_t **searchStr, int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
+template <typename L>
+static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str, int32_t *strLen, uint8_t **searchStr,
+    int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull, uint8_t **output, int32_t *outLen,
+    int32_t rowCnt, L lambda)
+{
+    bool hasErr;
+    uint8_t *ret;
+    for (int32_t i = 0; i < rowCnt; i++) {
+        if (isAnyNull[i]) {
+            outLen[i] = 0;
+            output[i] = nullptr;
+            continue;
+        }
+        hasErr = false;
+        if (searchLen[i] == 0) {
+            ret = lambda(&hasErr, i);
+        } else {
+            auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
+                reinterpret_cast<const char *>(str[i]), strLen[i], reinterpret_cast<const char *>(searchStr[i]),
+                searchLen[i], reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
+            ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+        }
+
+        if (hasErr) {
+            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG.c_str(),
+                omniruntime::codegen::REPLACE_ERR_MSG.length());
+        }
+        output[i] = ret;
+    }
+}
+
+template <typename L>
+static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, int32_t *strLen, uint8_t **searchStr,
+    int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt, L lambda)
+{
+    bool hasErr;
+    uint8_t *ret;
+    for (int32_t i = 0; i < rowCnt; i++) {
+        if (isAnyNull[i]) {
+            outLen[i] = 0;
+            output[i] = nullptr;
+            continue;
+        }
+        hasErr = false;
+        if (searchLen[i] == 0) {
+            ret = lambda(&hasErr, i);
+        } else {
+            auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
+                reinterpret_cast<const char *>(str[i]), strLen[i], reinterpret_cast<const char *>(searchStr[i]),
+                searchLen[i], reinterpret_cast<const char *>(omniruntime::codegen::EMPTY), 0, &hasErr, outLen + i);
+            ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+        }
+
+        if (hasErr) {
+            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG.c_str(),
+                omniruntime::codegen::REPLACE_ERR_MSG.length());
+        }
+        output[i] = ret;
+    }
+}
+
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

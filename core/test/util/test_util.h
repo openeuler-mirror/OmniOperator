@@ -151,6 +151,9 @@ omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
 void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
     std::vector<int32_t> &outLen);
 
+void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
+    std::vector<uint8_t *> &result, std::vector<int32_t> &outLen);
+
 void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result);
 
 void AssertBoolEquals(std::vector<bool> &expected, bool *result);

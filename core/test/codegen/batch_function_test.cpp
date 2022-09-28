@@ -16,6 +16,7 @@
 using namespace omniruntime::op;
 using namespace omniruntime::codegen;
 using namespace std;
+using namespace TestUtil;
 
 template <typename T> bool CmpArray(T *x, T *y, int32_t rowCnt)
 {
@@ -318,7 +319,8 @@ TEST(BatchFunctionTest, Mm3Hash)
     double doubleVal[1] = {123.456};
     int64_t decimal64Val[1] = {-2147483648L};
     uint8_t *strVal[1];
-    strVal[0] = (uint8_t *) "hello world";
+    string str = "hello world";
+    strVal[0] = reinterpret_cast<uint8_t *>(const_cast<char *>(str.c_str()));
     int32_t strLen[1] = {11};
     Decimal128 decimal128Val[1];
     decimal128Val[0].SetValue(0, 4000);
@@ -602,8 +604,8 @@ TEST(BatchFunctionTest, SubstrZh)
     std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
     auto strLen = static_cast<int32_t>(str.length());
 
-    std::vector<std::string> inputStr { 8, str };
-    std::vector<int32_t> inputLen { strLen, strLen, strLen, strLen, strLen, strLen, strLen, strLen };
+    std::vector<std::string> inputStr(8, str);
+    std::vector<int32_t> inputLen(8, strLen);
     std::vector<int32_t> startIndexs { 1, 1, 10, -5, 0, 37, -38, -37 };
     std::vector<int32_t> length { 37, 5, 10, 7, 0, strLen + 5, 10, 37 };
     int32_t rowCnt = inputStr.size();
@@ -618,7 +620,7 @@ TEST(BatchFunctionTest, SubstrZh)
         outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
-    TestUtil::AssertStringEquals(expected, outResult, outLen);
+    AssertStringEquals(expected, outResult, outLen);
 
     delete context;
 }
@@ -631,8 +633,8 @@ TEST(BatchFunctionTest, SubstrCharZh)
     int32_t width = 37;
     int32_t strLen = str.length();
 
-    std::vector<std::string> inputStr { 8, str };
-    std::vector<int32_t> inputLen { strLen, strLen, strLen, strLen, strLen, strLen, strLen, strLen };
+    std::vector<std::string> inputStr(8, str);
+    std::vector<int32_t> inputLen(8, strLen);
     std::vector<int32_t> startIndexs { 1, 1, 10, -5, 0, 37, -38, -37 };
     std::vector<int32_t> length { 37, 5, 10, 7, 0, strLen + 5, 10, 37 };
     int32_t rowCnt = inputStr.size();
@@ -648,7 +650,7 @@ TEST(BatchFunctionTest, SubstrCharZh)
         outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
-    TestUtil::AssertStringEquals(expected, outResult, outLen);
+    AssertStringEquals(expected, outResult, outLen);
 
     delete context;
 }
@@ -660,8 +662,8 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
     std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
     auto strLen = static_cast<int32_t>(str.length());
 
-    std::vector<std::string> inputStr { 7, str };
-    std::vector<int32_t> inputLen { strLen, strLen, strLen, strLen, strLen, strLen, strLen };
+    std::vector<std::string> inputStr(7, str);
+    std::vector<int32_t> inputLen(7, strLen);
     std::vector<int32_t> startIndexs { 1, 9, -3, 0, 37, -38, -37 };
     int32_t rowCnt = inputStr.size();
     std::vector<int32_t> outLen(rowCnt);
@@ -673,10 +675,10 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
 
     bool isAnyNull[] = {false, false, false, false, false, false, false};
     BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
-                         outLen.data(), rowCnt);
+        outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
-    TestUtil::AssertStringEquals(expected, outResult, outLen);
+    AssertStringEquals(expected, outResult, outLen);
 
     delete context;
 }
@@ -690,8 +692,8 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
     std::string str = "时欧基乌斯侧后解 h";
     auto strLen = static_cast<int32_t>(str.length());
 
-    std::vector<std::string> inputStr { str };
-    std::vector<int32_t> inputLen { strLen };
+    std::vector<std::string> inputStr(1, str);
+    std::vector<int32_t> inputLen(1, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
     std::vector<int32_t> startIndexs { -15 };
@@ -705,8 +707,8 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
     BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
         outLen.data(), rowCnt);
 
-    std::vector<std::string> expected { str };
-    TestUtil::AssertStringEquals(expected, outResult, outLen);
+    std::vector<std::string> expected(1, str);
+    AssertStringEquals(expected, outResult, outLen);
 
     engineType = "OLK";
     EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
@@ -722,9 +724,9 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
     std::string str = "时欧基乌斯侧后解 h";
     auto strLen = static_cast<int32_t>(str.length());
 
-    std::vector<std::string> inputStr { 4, str };
+    std::vector<std::string> inputStr(4, str);
     int32_t rowCnt = inputStr.size();
-    std::vector<int32_t> inputLen { strLen, strLen, strLen, strLen };
+    std::vector<int32_t> inputLen(4, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
     std::vector<int32_t> startIndexs { -15, -15, -15, -15 };
@@ -739,7 +741,7 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
     BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull1,
         outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "", "时", "时欧基乌斯侧后解 ", "时欧基乌斯侧后解 h" };
-    TestUtil::AssertStringEquals(expected, outResult, outLen);
+    AssertStringEquals(expected, outResult, outLen);
 
     engineType = "OLK";
     EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
@@ -754,8 +756,8 @@ TEST(BatchFunctionTest, SubstrCharWithStartZh)
     auto width = static_cast<int32_t>(str.length());
     int32_t strLen = str.length();
 
-    std::vector<std::string> inputStr { 7, str };
-    std::vector<int32_t> inputLen { strLen, strLen, strLen, strLen, strLen, strLen, strLen };
+    std::vector<std::string> inputStr(7, str);
+    std::vector<int32_t> inputLen(7, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
     std::vector<int32_t> startIndexs { 1, 9, -3, 0, 37, -38, -37 };
@@ -770,7 +772,7 @@ TEST(BatchFunctionTest, SubstrCharWithStartZh)
         outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
-    TestUtil::AssertStringEquals(expected, outResult, outLen);
+    AssertStringEquals(expected, outResult, outLen);
 
     delete context;
 }
@@ -792,7 +794,7 @@ TEST(BatchFunctionTest, LengthStrZh)
     bool isAnyNull[] = {false, false};
     BatchLengthStr(strAddr.data(), inputLen.data(), isAnyNull, outLen.data(), rowCnt);
     std::vector<int64_t> expected { 37, 15 };
-    TestUtil::AssertLongEquals(expected, outLen);
+    AssertLongEquals(expected, outLen);
 }
 
 
@@ -801,8 +803,8 @@ TEST(BatchFunctionTest, LikeStrZh)
     std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
     int32_t strLen = str.length();
 
-    std::vector<std::string> inputStr { 4, str };
-    std::vector<int32_t> inputLen { strLen, strLen, strLen, strLen };
+    std::vector<std::string> inputStr(4, str);
+    std::vector<int32_t> inputLen(4, strLen);
     std::vector<std::string> patternStr { "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞.$",
         "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞..$",
         "^时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣.*$",
@@ -822,7 +824,7 @@ TEST(BatchFunctionTest, LikeStrZh)
     BatchLikeStr(strAddr.data(), inputLen.data(), patternAddr.data(), patternLen.data(), isAnyNull, output, rowCnt);
 
     std::vector<bool> expected { true, false, true, false };
-    TestUtil::AssertBoolEquals(expected, output);
+    AssertBoolEquals(expected, output);
 }
 
 TEST(BatchFunctionTest, LikeCharZh)
@@ -882,10 +884,7 @@ TEST(BatchFunctionTest, ReplaceStrStrStrZh)
         "粉色*的*诞袜",
         "",
         "粉色de圣诞袜" };
-    for (int32_t i = 0; i < rowCnt; i++) {
-        std::string actual(reinterpret_cast<char *>(output[i]), outLen[i]);
-        EXPECT_EQ(actual, expected[i]);
-    }
+    AssertStringEquals(expected, output, outLen);
     delete context;
 }
 
@@ -913,10 +912,7 @@ TEST(BatchFunctionTest, ReplaceWithoutRepZh)
     std::vector<std::string> expected {
         "apple", "ale", "粉色的圣诞袜", "粉色的袜", "粉色de圣诞袜", "粉圣诞袜",
     };
-    for (int32_t i = 0; i < rowCnt; i++) {
-        std::string actual(reinterpret_cast<char *>(output[i]), outLen[i]);
-        EXPECT_EQ(actual, expected[i]);
-    }
+    AssertStringEquals(expected, output, outLen);
     delete context;
 }
 
@@ -941,7 +937,7 @@ TEST(BatchFunctionTest, ConcatStrStrZh)
     BatchConcatStrStr(contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bpLen.data(), isAnyNull, output.data(),
         outLen.data(), rowCnt);
     std::vector<std::string> expected { "你是Chinese?Yes我是", "粉色de圣诞袜", "pink圣诞袜" };
-    TestUtil::AssertStringEquals(expected, output, outLen);
+    AssertStringEquals(expected, output, outLen);
     delete context;
 }
 
@@ -959,22 +955,14 @@ TEST(BatchFunctionTest, ConcatCharCharZh)
         "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
-    std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
-        "*黑色*   粉色de",
-        "Hei你好吗  Oh我很好",
-        "Oh我很好   Hei你好吗",
-        "Hei你好吗    Oh我很好  ",
-        "Oh我很好     Hei你好吗  ",
-        "   Hei你好吗      Oh我很好",
-        "   Oh我很好       Hei你好吗",
-        "Hei   你好吗   Oh   我很好",
-        "Oh   我很好    Hei   你好",
-        "     Oh我很好   ",
-        "Oh我很好   ",
-        "Hei你好吗     ",
-        "        Hei你好吗",
-        "Hei你好吗",
-        "        Hei你好" };
+    std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*   粉色de",
+        "Hei你好吗  Oh我很好", "Oh我很好   Hei你好吗",
+        "Hei你好吗    Oh我很好  ", "Oh我很好     Hei你好吗  ",
+        "   Hei你好吗      Oh我很好", "   Oh我很好       Hei你好吗",
+        "Hei   你好吗   Oh   我很好", "Oh   我很好    Hei   你好",
+        "     Oh我很好   ", "Oh我很好   ",
+        "Hei你好吗     ", "        Hei你好吗",
+        "Hei你好吗", "        Hei你好" };
     int32_t batch = 8;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -994,11 +982,7 @@ TEST(BatchFunctionTest, ConcatCharCharZh)
         bool isAnyNull[] = {false, false};
         BatchConcatCharChar(contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(), bWidth[i], bpLen.data(),
             isAnyNull, output.data(), outLen.data(), rowCnt);
-        //        TestUtil::AssertStringEquals(expected, output, outLen);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1032,10 +1016,7 @@ TEST(BatchFunctionTest, ConcatCharStrZh)
         bool isAnyNull[] = {false, false};
         BatchConcatCharStr(contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(), bpLen.data(), isAnyNull,
             output.data(), outLen.data(), rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1069,10 +1050,7 @@ TEST(BatchFunctionTest, ConcatStrCharZh)
         bool isAnyNull[] = {false, false};
         BatchConcatStrChar(contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bWidth[i], bpLen.data(), isAnyNull,
             output.data(), outLen.data(), rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1098,7 +1076,7 @@ TEST(BatchFunctionTest, ConcatStrStrRetNull)
     BatchConcatStrStrRetNull(isNull, contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bpLen.data(),
         output.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "你是Chinese?Yes我是", "粉色de圣诞袜", "pink圣诞袜" };
-    TestUtil::AssertStringEquals(expected, output, outLen);
+    AssertStringEquals(expected, output, outLen);
     delete context;
 }
 
@@ -1116,22 +1094,14 @@ TEST(BatchFunctionTest, ConcatCharCharRetNull)
         "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
-    std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
-        "*黑色*   粉色de",
-        "Hei你好吗  Oh我很好",
-        "Oh我很好   Hei你好吗",
-        "Hei你好吗    Oh我很好  ",
-        "Oh我很好     Hei你好吗  ",
-        "   Hei你好吗      Oh我很好",
-        "   Oh我很好       Hei你好吗",
-        "Hei   你好吗   Oh   我很好",
-        "Oh   我很好    Hei   你好",
-        "     Oh我很好   ",
-        "Oh我很好   ",
-        "Hei你好吗     ",
-        "        Hei你好吗",
-        "Hei你好吗",
-        "        Hei你好" };
+    std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*   粉色de",
+        "Hei你好吗  Oh我很好", "Oh我很好   Hei你好吗",
+        "Hei你好吗    Oh我很好  ", "Oh我很好     Hei你好吗  ",
+        "   Hei你好吗      Oh我很好", "   Oh我很好       Hei你好吗",
+        "Hei   你好吗   Oh   我很好", "Oh   我很好    Hei   你好",
+        "     Oh我很好   ", "Oh我很好   ",
+        "Hei你好吗     ", "        Hei你好吗",
+        "Hei你好吗", "        Hei你好" };
     int32_t batch = 8;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1151,10 +1121,7 @@ TEST(BatchFunctionTest, ConcatCharCharRetNull)
         bool isNull[] = {false, false};
         BatchConcatCharCharRetNull(isNull, contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(), bWidth[i],
             bpLen.data(), output.data(), outLen.data(), rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1187,11 +1154,8 @@ TEST(BatchFunctionTest, ConcatCharStrRetNull)
 
         bool isNull[] = {false, false};
         BatchConcatCharStrRetNull(isNull, contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(),
-                                  bpLen.data(), output.data(), outLen.data(), rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+            bpLen.data(), output.data(), outLen.data(), rowCnt);
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1225,10 +1189,7 @@ TEST(BatchFunctionTest, ConcatStrCharRetNull)
         bool isNull[] = {false, false};
         BatchConcatStrCharRetNull(isNull, contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bWidth[i],
             bpLen.data(), output.data(), outLen.data(), rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1256,10 +1217,7 @@ TEST(BatchFunctionTest, CastStrWithDiffWidths)
         bool isAnyNull[] = {false, false};
         BatchCastStrWithDiffWidths(contextPtr, srcAddr.data(), srcWidth[i], strLen.data(), isAnyNull, output.data(),
             outLen.data(), dstWidth[i], rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }
@@ -1287,10 +1245,7 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
         bool isNull[] = {false, false};
         BatchCastStrWithDiffWidthsRetNull(isNull, contextPtr, srcAddr.data(), srcWidth[i], strLen.data(), output.data(),
             outLen.data(), dstWidth[i], rowCnt);
-        for (int32_t row = 0; row < rowCnt; row++) {
-            std::string actual(reinterpret_cast<char *>(output[row]), outLen[row]);
-            EXPECT_EQ(actual, expected[i * rowCnt + row]);
-        }
+        AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
     }
     delete context;
 }

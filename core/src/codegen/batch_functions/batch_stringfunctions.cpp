@@ -178,6 +178,7 @@ extern "C" DLLEXPORT void BatchCastStrWithDiffWidths(int64_t contextPtr, uint8_t
         if (isAnyNull[i]) {
             outLen[i] = 0;
             output[i] = nullptr;
+            continue;
         }
         bool hasErr = false;
         const char *ret = StringUtil::CastStrStr(&hasErr, reinterpret_cast<const char *>(str[i]), srcWidth, strLen[i],
@@ -245,112 +246,43 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
     uint8_t **searchStr, int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    bool hasErr;
-    uint8_t *ret;
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
-        for (int32_t i = 0; i < rowCnt; i++) {
-            if (isAnyNull[i]) {
-                outLen[i] = 0;
-                output[i] = nullptr;
-                continue;
-            }
-            hasErr = false;
-            if (searchLen[i] == 0) {
+        // lambda(&hasErr, i)
+        ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
+            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t* {
                 outLen[i] = strLen[i];
-                ret = str[i];
-            } else {
-                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
-                    reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
-                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-            }
-
-            if (hasErr) {
-                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-            }
-            output[i] = ret;
-        }
+                return str[i];
+            });
     } else {
-        for (int32_t i = 0; i < rowCnt; i++) {
-            if (isAnyNull[i]) {
-                outLen[i] = 0;
-                output[i] = nullptr;
-                continue;
-            }
-            hasErr = false;
-            if (searchLen[i] == 0) {
-                auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                    strLen[i], reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
-                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-            } else {
-                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
-                    reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
-                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-            }
-
-            if (hasErr) {
-                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-            }
-            output[i] = ret;
-        }
+        ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
+            output, outLen, rowCnt,
+            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+                auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
+                    strLen[index], reinterpret_cast<const char *>(replaceStr[index]), replaceLen[index], hasErr,
+                    outLen + index);
+                return reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+            });
     }
 }
 
 extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     uint8_t **searchStr, int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    uint8_t *replaceStr[1] = {const_cast<uint8_t *>(EMPTY)};
-    int32_t replaceLen[1] = { 0 };
-
-    bool hasErr;
-    uint8_t *ret;
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
-        for (int32_t i = 0; i < rowCnt; i++) {
-            if (isAnyNull[i]) {
-                outLen[i] = 0;
-                output[i] = nullptr;
-                continue;
-            }
-            hasErr = false;
-            if (searchLen[i] == 0) {
-                outLen[i] = strLen[i];
-                ret = str[i];
-            } else {
-                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
-                    reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
-                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-            }
-            if (hasErr) {
-                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-            }
-            output[i] = ret;
-        }
+        // lambda(&hasErr, i)
+        ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
+            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+                outLen[index] = strLen[index];
+                return str[index];
+            });
     } else {
-        for (int32_t i = 0; i < rowCnt; i++) {
-            if (isAnyNull[i]) {
-                outLen[i] = 0;
-                output[i] = nullptr;
-                continue;
-            }
-            hasErr = false;
-            if (searchLen[i] == 0) {
-                auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                    strLen[i], reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
-                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-            } else {
-                auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                    strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
-                    reinterpret_cast<const char *>(replaceStr[0]), replaceLen[0], &hasErr, outLen + i);
-                ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
-            }
-            if (hasErr) {
-                SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
-            }
-            output[i] = ret;
-        }
+        ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
+            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+                auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
+                    strLen[index], reinterpret_cast<const char *>(EMPTY), 0, hasErr, outLen + index);
+                return reinterpret_cast<uint8_t *>(const_cast<char *>(result));
+            });
     }
 }
