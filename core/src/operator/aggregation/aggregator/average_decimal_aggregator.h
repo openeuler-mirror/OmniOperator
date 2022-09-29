@@ -62,7 +62,7 @@ public:
 
         if (state.val == nullptr) {
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
-            int64_t newOverflow = overflow == false ? 0 : 1 << 63;
+            int64_t newOverflow = overflow ? 1 : 0;
             DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val),
                 Decimal128(sumVal->high, sumVal->low), newOverflow, static_cast<int64_t>(count));
         } else {
@@ -73,7 +73,7 @@ public:
                 oldCount);
 
             auto currSumVal = Decimal128(sumVal->high, sumVal->low);
-            int64_t newOverflow = DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
+            int64_t newOverflow = overflow ? 1 : DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
             oldOverflow += newOverflow;
             oldCount += static_cast<int64_t>(count);
             DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), preSumVal, oldOverflow,

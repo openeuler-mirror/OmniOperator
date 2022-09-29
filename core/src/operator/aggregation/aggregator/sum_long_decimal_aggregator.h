@@ -49,7 +49,7 @@ public:
 
         if (state.val == nullptr) {
             state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
-            int64_t newOverflow = overflow == false ? 0 : 1 << 63;
+            int64_t newOverflow = overflow ? 1 : 0;
             DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val),
                 Decimal128(sumVal->high, sumVal->low), newOverflow);
         } else {
@@ -58,7 +58,7 @@ public:
             DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
 
             auto currSumVal = Decimal128(sumVal->high, sumVal->low);
-            int64_t newOverflow = DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
+            int64_t newOverflow = overflow ? 1 : DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
             oldOverflow += newOverflow;
             DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
         }
