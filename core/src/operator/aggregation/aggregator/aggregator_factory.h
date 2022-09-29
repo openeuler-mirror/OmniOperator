@@ -435,7 +435,7 @@ public:
                     std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_SHORT: {
-                return std::make_unique<FirstAggregator<IntVector, int16_t>>(aggregateType, std::move(inputTypes),
+                return std::make_unique<FirstAggregator<ShortVector, int16_t>>(aggregateType, std::move(inputTypes),
                     std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_INT:
