@@ -121,7 +121,7 @@ public:
         return s;
     }
 
-    __int128_t ToInt128()
+    __int128_t ToInt128() const
     {
         __int128_t decimal = highBits < 0 ? highBits ^ (1L << 63) : highBits;
         decimal = decimal << 64;

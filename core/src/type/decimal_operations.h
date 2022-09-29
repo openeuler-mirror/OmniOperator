@@ -51,35 +51,17 @@ static std::array<int64_t, 14> POWERS_OF_FIVE_INT = { 1,
     5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
     5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
     5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 };
-static std::array<int64_t, 28> POWERS_OF_FIVE_LONG = { 1,
-    5,
-    5 * 5,
-    5 * 5 * 5,
-    5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L,
-    5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L * 5L *
-        5L };
+
+static std::array<__int128_t, MAX_PRECISION> GetPowersOfFive()
+{
+    std::array<__int128_t, MAX_PRECISION> powersOfFive;
+    powersOfFive[0] = 1;
+    for (int i = 1; i < MAX_PRECISION; ++i) {
+        powersOfFive[i] = powersOfFive[i - 1] * 5;
+    }
+    return powersOfFive;
+}
+static std::array<__int128_t, MAX_PRECISION> POWERS_OF_FIVE_LONG =  GetPowersOfFive();
 
 static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
     1,                     // 0 / 10^0
@@ -956,7 +938,7 @@ public:
         dividend[3] = HighInt(dividendHigh);
 
         if (dividendScaleFactor > 0) {
-            Decimal128 left = UnscaledDecimal(POWERS_OF_FIVE_LONG[dividendScaleFactor]);
+            Decimal128 left = Decimal128(POWERS_OF_FIVE_LONG[dividendScaleFactor]);
             Decimal128 right;
             if (Pack(dividend, right) != SUCCESS) {
                 return OP_OVERFLOW;
@@ -974,7 +956,7 @@ public:
         divisor[3] = HighInt(divisorHigh);
 
         if (divisorScaleFactor > 0) {
-            Decimal128 left = UnscaledDecimal(POWERS_OF_FIVE_LONG[divisorScaleFactor]);
+            Decimal128 left = Decimal128(POWERS_OF_FIVE_LONG[divisorScaleFactor]);
             Decimal128 right;
             if (Pack(divisor, right) != SUCCESS) {
                 return OP_OVERFLOW;

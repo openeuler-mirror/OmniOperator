@@ -20,6 +20,8 @@ namespace codegen {
 #define DLLEXPORT
 #endif
 
+static constexpr int DOUBLE_MAX_PRECISION = numeric_limits<double>::max_digits10;
+
 // decimal128 arithmetical functions
 extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
     int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool isNull)
@@ -597,14 +599,6 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale, result, outScale);
-    if (status == SUCCESS && outScale != xScale) {
-        if (DecimalOperations::Rescale128(result, outScale - xScale, result) == SUCCESS) {
-            status = DecimalOperations::IsOverflows(result, outPrecision);
-        } else {
-            status = OP_OVERFLOW;
-        }
-    }
-
     if (status == OP_OVERFLOW) {
         char message[] = "Decimal overflow";
         SetError(contextPtr, message, sizeof(message) / sizeof(char));
@@ -1023,7 +1017,7 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(int64_t contextPtr, double x,
         return 0;
     }
     std::stringstream ss;
-    ss << std::setprecision(15) << x;
+    ss << std::setprecision(DOUBLE_MAX_PRECISION) << x;
     string s = ss.str();
 
     int32_t precision = 0;
@@ -1038,7 +1032,7 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(int64_t contextPtr, double x,
     }
     if (status != SUCCESS) {
         ostringstream errorMessage;
-        errorMessage.precision(15);
+        errorMessage.precision(DOUBLE_MAX_PRECISION);
         errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
         int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
         SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
@@ -1108,7 +1102,7 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, b
         return;
     }
     std::stringstream ss;
-    ss << std::setprecision(15) << x;
+    ss << std::setprecision(DOUBLE_MAX_PRECISION) << x;
     string s = ss.str();
 
     int32_t precision = 0;
@@ -1123,7 +1117,7 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, b
     }
     if (status != SUCCESS) {
         ostringstream errorMessage;
-        errorMessage.precision(15);
+        errorMessage.precision(DOUBLE_MAX_PRECISION);
         errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
         int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
         SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
@@ -1740,14 +1734,6 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128RetNull(bool *isNull, int64_t xHig
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale, result, outScale);
-    if (status == SUCCESS && outScale != xScale) {
-        if (DecimalOperations::Rescale128(result, outScale - xScale, result) == SUCCESS) {
-            status = DecimalOperations::IsOverflows(result, outPrecision);
-        } else {
-            status = OP_OVERFLOW;
-        }
-    }
-
     if (status == OP_OVERFLOW) {
         *isNull = true;
         return;
@@ -2098,7 +2084,7 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64RetNull(bool *isNull, double x
     int32_t outScale)
 {
     std::stringstream ss;
-    ss << std::setprecision(15) << x;
+    ss << std::setprecision(DOUBLE_MAX_PRECISION) << x;
     string s = ss.str();
 
     int32_t precision = 0;
@@ -2158,7 +2144,7 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128RetNull(bool *isNull, double x, 
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     std::stringstream ss;
-    ss << std::setprecision(15) << x;
+    ss << std::setprecision(DOUBLE_MAX_PRECISION) << x;
     string s = ss.str();
 
     int32_t precision = 0;
