@@ -161,6 +161,9 @@ void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &resu
 void AssertBoolEquals(std::vector<bool> &expected, bool *result);
 
 std::string GenerateSpillPath();
+
+omniruntime::vec::VectorBatch *CreateVecBatch(omniruntime::vec::VectorAllocator *vectorAllocator, const int32_t numRows,
+    const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData);
 }
 
 #endif
