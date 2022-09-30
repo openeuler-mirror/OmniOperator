@@ -10,7 +10,7 @@
 
 class Properties {
 public:
-    Properties() : isEnableBatchExprEvaluate(false) {}
+    Properties() : isEnableBatchExprEvaluate(false), isEnableHMPP(false) {}
     ~Properties() = default;
 
     void SetEnableBatchExprEvaluate(bool isEnable)
@@ -21,6 +21,16 @@ public:
     bool IsEnableBatchExprEvaluate()
     {
         return isEnableBatchExprEvaluate;
+    }
+
+    void SetEnableHMPP(bool isEnable)
+    {
+        isEnableHMPP = isEnable;
+    }
+
+    bool IsEnableHMPP()
+    {
+        return isEnableHMPP;
     }
 
     void SetHiveUdfPropertyFilePath(const std::string &udfPath)
@@ -35,6 +45,7 @@ public:
 
 private:
     bool isEnableBatchExprEvaluate;
+    bool isEnableHMPP;
     std::string hiveUdfPropertyFilePath {};
 };
 
@@ -48,6 +59,11 @@ public:
 
     // for test
     static void SetEnableBatchExprEvaluate(bool isEnable);
+
+    static bool IsEnableHMPP();
+
+    // for test
+    static void SetEnableHMPP(bool isEnable);
 
 private:
     static std::map<std::string, std::string> configMap;

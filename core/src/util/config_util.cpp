@@ -79,6 +79,11 @@ void ConfigUtil::SetProperties(Properties &tmpProperties)
     if (ret) {
         tmpProperties.SetHiveUdfPropertyFilePath(hiveUdfPropertyFilePath);
     }
+
+    // set the property enableHMPP
+    bool isEnableHMPP = false;
+    GetProperty<bool>("enableHMPP", isEnableHMPP);
+    tmpProperties.SetEnableHMPP(isEnableHMPP);
 }
 
 static void Convert(const std::string &value, bool &property)
@@ -118,4 +123,14 @@ std::string &ConfigUtil::GetHiveUdfPropertyFilePath()
 void ConfigUtil::SetEnableBatchExprEvaluate(bool isEnable)
 {
     g_properties.SetEnableBatchExprEvaluate(isEnable);
+}
+
+bool ConfigUtil::IsEnableHMPP()
+{
+    return g_properties.IsEnableHMPP();
+}
+
+void ConfigUtil::SetEnableHMPP(bool isEnable)
+{
+    g_properties.SetEnableHMPP(isEnable);
 }

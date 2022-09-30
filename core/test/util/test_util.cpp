@@ -40,6 +40,21 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
+bool VecBatchMatches(std::vector<VectorBatch *> &outputPages, std::vector<VectorBatch *> &expectPage)
+{
+    if (outputPages.size() != expectPage.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < expectPage.size(); i++) {
+        if (!VecBatchMatch(outputPages[i], expectPage[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber)
 {
     for (int32_t i = 0; i < columnNumber; i++) {
@@ -603,7 +618,7 @@ omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<o
 void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
     std::vector<int32_t> &outLen)
 {
-    for (int32_t i = 0; i < expected.size(); i++) {
+    for (size_t i = 0; i < expected.size(); i++) {
         std::string actual(reinterpret_cast<char *>(result[i]), outLen[i]);
         EXPECT_EQ(actual, expected[i]);
     }
@@ -620,14 +635,14 @@ void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int3
 
 void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result)
 {
-    for (int32_t i = 0; i < expected.size(); i++) {
+    for (size_t i = 0; i < expected.size(); i++) {
         EXPECT_EQ(result[i], expected[i]);
     }
 }
 
 void AssertBoolEquals(std::vector<bool> &expected, bool *result)
 {
-    for (int32_t i = 0; i < expected.size(); i++) {
+    for (size_t i = 0; i < expected.size(); i++) {
         EXPECT_EQ(result[i], expected[i]);
     }
 }

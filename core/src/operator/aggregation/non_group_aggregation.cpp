@@ -7,6 +7,9 @@
 #include "operator/status.h"
 #include "util/type_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#ifdef ENABLE_HMPP
+#include "util/config_util.h"
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -74,12 +77,13 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto aggCount = aggregators.size();
     int32_t rowCount = vecBatch->GetRowCount();
+
     for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
 
 #ifdef ENABLE_HMPP
-        if (aggregator->CanProcessWithHMPP(state, vecBatch)) {
+        if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
         } else {
             for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
