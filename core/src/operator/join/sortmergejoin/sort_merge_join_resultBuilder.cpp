@@ -17,7 +17,7 @@ JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes
     int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
     const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
     DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator,
-    OverflowConfig *overflowConfig)
+    OverflowConfig *overflowConfig, JoinType joinType)
     : leftTableOutputTypes(leftTableOutputTypes),
       leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
@@ -27,7 +27,8 @@ JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes
       rightTableOutputColsCount(rightTableOutputColsCount),
       rightTablePagesIndex(rightTablePagesIndex),
       filterExpStr(filter),
-      vecAllocator(vecAllocator)
+      vecAllocator(vecAllocator),
+      joinType(joinType)
 {
     int32_t leftRowSize =
         OperatorUtil::GetOutputRowSize(this->leftTableOutputTypes.Get(), leftTableOutputCols, leftTableOutputColsCount);
@@ -161,6 +162,24 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForRightTable(int32_t right
     }
 }
 
+void JoinResultBuilder::PaddingLeftTableNull(int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch,
+    int32_t &buildRowCount)
+{
+    ParsingAndOrganizationResultsForLeftTable(JOIN_NULL_FLAG, JOIN_NULL_FLAG, buildVectorBatch, buildRowCount);
+    ParsingAndOrganizationResultsForRightTable(DecodeSliceIndex(rightTableRowAddress),
+        DecodePosition(rightTableRowAddress), buildVectorBatch, buildRowCount);
+    buildRowCount++;
+}
+
+void JoinResultBuilder::PaddingRightTableNull(int64_t leftTableRowAddress, vec::VectorBatch *buildVectorBatch,
+    int32_t &buildRowCount)
+{
+    ParsingAndOrganizationResultsForLeftTable(DecodeSliceIndex(leftTableRowAddress),
+        DecodePosition(leftTableRowAddress), buildVectorBatch, buildRowCount);
+    ParsingAndOrganizationResultsForRightTable(JOIN_NULL_FLAG, JOIN_NULL_FLAG, buildVectorBatch, buildRowCount);
+    buildRowCount++;
+}
+
 int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
     std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses)
 {
@@ -180,36 +199,39 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatc
     }
 
     for (int32_t addressPosition = 0; addressPosition < inputSize; addressPosition++) {
-        int64_t leftAddress = streamedTableValueAddresses[addressPosition];
-        int32_t leftBatchId = DecodeSliceIndex(leftAddress);
-        int32_t leftRowId = DecodePosition(leftAddress);
-
-        int64_t rightAddress = bufferedTableValueAddresses[addressPosition];
-        int32_t rightBatchId = DecodeSliceIndex(rightAddress);
-        int32_t rightRowId = DecodePosition(rightAddress);
-
-        if (!(leftBatchId == JOIN_NULL_FLAG || rightBatchId == JOIN_NULL_FLAG)) {
-            FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+        int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
+        int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
+        if (preStreamedRowAddress != INT64_MAX && preStreamedRowAddress != streamedRowAddress &&
+            !preLeftTableRowMatchedOut) {
+            PaddingRightTableNull(preStreamedRowAddress, buildVectorBatch, buildRowCount);
         }
-
-        if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-            ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
-            ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
-            buildRowCount++;
-            if (buildRowCount >= maxRowCount) {
-                isFillOneBatch = true;
-                buildVectorBatch = NewEmptyVectorBatch();
-                buildVectorBatchs.push_back(buildVectorBatch);
-                buildVectorBatchRowCount.push_back(0);
-                buildVectorBatchRowCount[buildVectorBatchCount - 1] = buildRowCount;
-                buildRowCount = 0;
-                buildVectorBatchCount++;
-            }
+        if (preStreamedRowAddress == INT64_MAX || preStreamedRowAddress != streamedRowAddress) {
+            preLeftTableRowMatchedOut = false;
+        }
+        if (!(DecodeSliceIndex(streamedRowAddress) == JOIN_NULL_FLAG ||
+            DecodeSliceIndex(bufferedRowAddress) == JOIN_NULL_FLAG)) {
+            FreeVectorBatches(isPreKeyMatched[addressPosition], DecodeSliceIndex(streamedRowAddress),
+                DecodeSliceIndex(bufferedRowAddress));
+        }
+        PaddingNullAndVerifyingTheOutput(isPreKeyMatched, streamedRowAddress, bufferedRowAddress, buildVectorBatch,
+            buildRowCount);
+        preStreamedRowAddress = streamedRowAddress;
+        if (buildRowCount >= maxRowCount) {
+            isFillOneBatch = true;
+            buildVectorBatch = NewEmptyVectorBatch();
+            buildVectorBatchs.push_back(buildVectorBatch);
+            buildVectorBatchRowCount.push_back(0);
+            buildVectorBatchRowCount[buildVectorBatchCount - 1] = buildRowCount;
+            buildRowCount = 0;
+            buildVectorBatchCount++;
         }
     }
-
+    if (preStreamedRowAddress != INT64_MAX && !preLeftTableRowMatchedOut) {
+        PaddingRightTableNull(preStreamedRowAddress, buildVectorBatch,
+            buildRowCount); // pad NULL for last mismatch row
+    }
+    preStreamedRowAddress = INT64_MAX;
     buildVectorBatchRowCount[buildVectorBatchCount - 1] = buildRowCount;
-
     return isFillOneBatch ? 1 : 0;
 }
 
@@ -268,34 +290,65 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
     bool nulls[allColsCount];
     int32_t lengths[allColsCount];
 
-    int64_t tmpInt = 0;
-    int64_t tmpIntAddr = reinterpret_cast<int64_t>(&tmpInt);
     for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes.GetSize(); leftColIdx++) {
-        if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
-            nulls[leftColIdx] = true;
-            values[leftColIdx] = tmpIntAddr;
-            lengths[leftColIdx] = 0;
-        } else {
-            auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
-            nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
-            values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
-        }
+        auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
+        nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
+        values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
     }
 
     for (int32_t rightColIdx = 0; rightColIdx < rightTableOutputTypes.GetSize(); rightColIdx++) {
         int32_t colIdx = leftTableOutputTypes.GetSize() + rightColIdx;
-        if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
-            nulls[colIdx] = true;
-            values[colIdx] = tmpIntAddr;
-            lengths[colIdx] = 0;
-        } else {
-            auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
-            nulls[colIdx] = rightVector->IsValueNull(rightRowId);
-            values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
-        }
+        auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
+        nulls[colIdx] = rightVector->IsValueNull(rightRowId);
+        values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
+}
+
+void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched,
+    int64_t leftTableRowAddress, int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch,
+    int32_t &buildRowCount)
+{
+    int32_t leftBatchId = DecodeSliceIndex(leftTableRowAddress);
+    int32_t leftRowId = DecodePosition(leftTableRowAddress);
+    int32_t rightBatchId = DecodeSliceIndex(rightTableRowAddress);
+    int32_t rightRowId = DecodePosition(rightTableRowAddress);
+
+    switch (joinType) {
+        case JoinType::OMNI_JOIN_TYPE_INNER:
+            if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
+                buildRowCount++;
+            }
+            preLeftTableRowMatchedOut = true;
+            break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT:
+            // JOIN_NULL_FLAG row direct output && filter match direct output, pad no NULL
+            if (IsNullFlagBatchAndRow(leftBatchId, leftRowId) || IsNullFlagBatchAndRow(rightBatchId, rightRowId) ||
+                IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
+                buildRowCount++;
+                preLeftTableRowMatchedOut = true;
+            }
+            break;
+        case JoinType::OMNI_JOIN_TYPE_FULL:
+            // JOIN_NULL_FLAG row direct output && filter match direct output, pad no NULL
+            if (IsNullFlagBatchAndRow(leftBatchId, leftRowId) || IsNullFlagBatchAndRow(rightBatchId, rightRowId) ||
+                IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
+                buildRowCount++;
+                preLeftTableRowMatchedOut = true;
+            } else { // filter mismatch, pad left table NULL
+                PaddingLeftTableNull(rightTableRowAddress, buildVectorBatch, buildRowCount);
+            }
+            break;
+        default:
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "SMJ unsupported join type");
+    }
 }
 
 void JoinResultBuilder::Finish()
