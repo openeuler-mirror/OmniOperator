@@ -1154,7 +1154,7 @@ public:
 
     static inline OpStatus IsOverflows(int64_t value, int precision)
     {
-        if (precision > 19 || abs(value) >= POWERS_OF_TEN[precision]) {
+        if (precision > 19 || value == INT64_MIN || abs(value) >= POWERS_OF_TEN[precision]) {
             return OP_OVERFLOW;
         }
         return SUCCESS;
