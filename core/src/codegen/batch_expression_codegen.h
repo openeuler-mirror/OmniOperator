@@ -162,6 +162,12 @@ private:
     std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::AllocaInst *isAnyNull, bool &isInvalidExpr, llvm::AllocaInst *overflowNull);
     void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
+    llvm::Value *ArenaAlloc(llvm::Value *sizeInBytes);
+    llvm::Value *GetTypeSize(omniruntime::type::DataTypeId dataTypeId);
+    std::vector<llvm::Value *> GetHiveUdfArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+        bool &isInvalidExpr);
+    llvm::Value *CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr);
+    void CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr);
 };
 
 #endif // OMNI_RUNTIME_BATCH_EXPRESSION_CODEGEN_H

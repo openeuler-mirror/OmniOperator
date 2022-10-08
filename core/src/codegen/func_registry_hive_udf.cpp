@@ -5,6 +5,7 @@
 #include <fstream>
 #include <algorithm>
 #include "util/debug.h"
+#include "util/config_util.h"
 #include "functions/udffunctions.h"
 #include "func_registry_hive_udf.h"
 
@@ -20,20 +21,6 @@ std::vector<Function> HiveUdfRegistry::GetFunctions()
     return hiveUdfFunctions;
 }
 
-static std::string TransEnv(const char *srcEnv)
-{
-    return std::string { srcEnv };
-}
-
-static std::string GetHiveUdfPropertyPath()
-{
-    auto omniHome = std::getenv("OMNI_HOME");
-    if (omniHome == nullptr) {
-        return "/opt/hive-udf/udf.properties";
-    }
-    return TransEnv(omniHome) + "/hive-udf/udf.properties";
-}
-
 static void Trim(std::string &value)
 {
     value.erase(0, value.find_first_not_of(' '));
@@ -42,7 +29,12 @@ static void Trim(std::string &value)
 
 void HiveUdfRegistry::GenerateHiveUdfMap(std::unordered_map<std::string, std::string> &hiveUdfMap)
 {
-    std::string propertyFile = GetHiveUdfPropertyPath();
+    std::string propertyFile = ConfigUtil::GetHiveUdfPropertyFilePath();
+    if (propertyFile.empty()) {
+        LogWarn("No hive udf properties file.");
+        return;
+    }
+
     std::ifstream file(propertyFile);
     if (!file.good()) {
         LogWarn("%s does not exist.", propertyFile.c_str());

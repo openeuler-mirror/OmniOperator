@@ -109,9 +109,9 @@ static void ExecHiveUdfOutputString(int64_t contextPtr, const char *udfClass, in
         // handle remaining data
         auto outputValuePtr = ArenaAllocatorMalloc(contextPtr, outputValueCapacity);
         outputState->outputValueCapacity = outputValueCapacity;
-        env->CallStaticVoidMethod(executorCls, executeBatchMethod, jUdfClassName, jParamTypes, jRetType, rowCount,
-            outputStateAddr, inputValuesAddr, inputNullsAddr, inputLengthsAddr, outputValuePtr, outputNullAddr,
-            outputLengthAddr);
+        env->CallStaticVoidMethod(executorCls, executeBatchMethod, jUdfClassName, jParamTypes, jRetType,
+            inputValuesAddr, inputNullsAddr, inputLengthsAddr, rowCount, outputValuePtr, outputNullAddr,
+            outputLengthAddr, outputStateAddr);
         if (env->ExceptionCheck()) {
             auto msg = JniUtil::GetExceptionMsg(env);
             codegen::SetError(contextPtr, msg.c_str(), static_cast<int32_t>(msg.length()));
@@ -161,8 +161,8 @@ static void ExecHiveUdfOutputNonString(int64_t contextPtr, const char *udfClass,
     auto inputNullsAddr = reinterpret_cast<int64_t>(inputNulls);
     auto inputLengthsAddr = reinterpret_cast<int64_t>(inputLengths);
 
-    env->CallStaticVoidMethod(executorCls, executeBatchMethod, jUdfClassName, jParamTypes, jRetType, rowCount, 0,
-        inputValuesAddr, inputNullsAddr, inputLengthsAddr, outputValueAddr, outputNullAddr, outputLengthAddr);
+    env->CallStaticVoidMethod(executorCls, executeBatchMethod, jUdfClassName, jParamTypes, jRetType, inputValuesAddr,
+        inputNullsAddr, inputLengthsAddr, rowCount, outputValueAddr, outputNullAddr, outputLengthAddr, 0);
     if (env->ExceptionCheck()) {
         auto msg = JniUtil::GetExceptionMsg(env);
         codegen::SetError(contextPtr, msg.c_str(), static_cast<int32_t>(msg.length()));
