@@ -614,6 +614,17 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToDouble(const int64_t *x, int32_t p
     bool *isAnyNull, double *output, int32_t rowCnt)
 {
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        for (int i = 0; i < rowCnt; ++i) {
+            if (isAnyNull[i]) {
+                output[i] = 1.0;
+                continue;
+            }
+            std::string doubleString = DecimalOperations::ScaleOfDecimal(std::to_string(x[i]), scale);
+            output[i] = stod(doubleString);
+        }
+        return;
+    }
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 1.0;
@@ -998,7 +1009,8 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleRetNull(bool *isNull, const 
 {
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     for (int i = 0; i < rowCnt; ++i) {
-        output[i] = (static_cast<double>(x[i])) / static_cast<double>(tenToScale);
+        std::string doubleString = DecimalOperations::ScaleOfDecimal(std::to_string(x[i]), scale);
+        output[i] = stod(doubleString);
     }
 }
 

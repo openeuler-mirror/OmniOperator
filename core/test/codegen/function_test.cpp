@@ -2398,6 +2398,8 @@ TEST(FunctionTest, CastDecimal64ToDoubleRetNull)
     EXPECT_EQ(result, 100);
     result = CastDecimal64ToDoubleRetNull(&isNull, -8888, 38, 2);
     EXPECT_EQ(result, -88.88);
+    result = CastDecimal64ToDoubleRetNull(&isNull, 12'3456'7890'1234'5612L, 18, 2);
+    EXPECT_EQ(result, 1.234567890123456E15);
 }
 
 TEST(FunctionTest, CastDecimal128ToDoubleRetNull)

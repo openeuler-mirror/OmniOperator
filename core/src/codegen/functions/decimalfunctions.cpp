@@ -1190,6 +1190,10 @@ extern "C" DLLEXPORT double CastDecimal64ToDouble(int64_t x, int32_t precision, 
     if (isNull) {
         return 0;
     }
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+        string doubleString = DecimalOperations::ScaleOfDecimal(to_string(x), scale);
+        return stod(doubleString);
+    }
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     return (static_cast<double>(x)) / static_cast<double>(tenToScale);
 }
@@ -2208,8 +2212,8 @@ extern "C" DLLEXPORT int64_t CastDecimal64ToLongRetNull(bool *isNull, int64_t x,
 
 extern "C" DLLEXPORT double CastDecimal64ToDoubleRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
 {
-    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
-    return (static_cast<double>(x)) / static_cast<double>(tenToScale);
+    string doubleString = DecimalOperations::ScaleOfDecimal(to_string(x), scale);
+    return stod(doubleString);
 }
 
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
