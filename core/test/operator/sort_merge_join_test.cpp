@@ -1360,7 +1360,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 
     auto *resultBuilder = new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount,
         leftPagesIndex, rightSourceTypes, rightTableOutputCols, rightTableOutputColsCount, rightPagesIndex, filter,
-        vecAllocator, nullptr);
+        vecAllocator, nullptr, OMNI_JOIN_TYPE_INNER);
 
     std::vector<bool> isPreMatched;
     isPreMatched.insert(isPreMatched.end(), 6, false);
@@ -1438,7 +1438,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
 
     auto *resultBuilder = new JoinResultBuilder(leftSourceTypes, leftTableOutputCols, leftTableOutputColsCount,
         leftPagesIndex, rightSourceTypes, rightTableOutputCols, rightTableOutputColsCount, rightPagesIndex, filter,
-        vecAllocator, nullptr);
+        vecAllocator, nullptr, OMNI_JOIN_TYPE_INNER);
 
     std::vector<bool> isPreMatched;
     isPreMatched.insert(isPreMatched.end(), 3, false);
