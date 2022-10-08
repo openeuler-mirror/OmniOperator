@@ -253,9 +253,8 @@ private:
 
     void Initialization();
 
-    void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-        std::vector<type::DataTypePtr> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
-        int32_t &rowCount);
+    void ProcessData(int finalOutputColsCount, std::vector<type::DataTypePtr> &outputTypes, int32_t position,
+        omniruntime::vec::VectorBatch *&vecBatch, int32_t rowCount);
 
     void InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
         const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
