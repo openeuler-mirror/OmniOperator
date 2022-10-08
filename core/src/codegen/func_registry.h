@@ -22,6 +22,11 @@
 #include "batch_func_registry_decimal.h"
 #include "batch_func_registry_math.h"
 #include "batch_func_registry_hash.h"
+#include "batch_func_registry_decimal.h"
+#include "batch_func_registry_dictionary.h"
+#include "batch_func_registry_string.h"
+#include "batch_func_registry_varchar_vector.h"
+#include "batch_func_registry_util.h"
 
 namespace omniruntime {
 struct Hash {

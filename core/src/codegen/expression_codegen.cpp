@@ -31,7 +31,7 @@ namespace {
 const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
-const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
+const int EXPRFUNC_OUT_NULL_INDEX = 7;
 }
 
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Expr &e)
@@ -676,7 +676,7 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
         builder->CreateStore(result->length, lengthGep);
     }
 
-    builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
+    builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_NULL_INDEX));
 
     // cast char* to int64 for output
     if (expr->GetReturnTypeId() == DataTypeId::OMNI_VARCHAR) {
@@ -1660,7 +1660,7 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetDefaultFunctionArgValues(
                     static_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
             }
             argVals.push_back(this->value->length);
-            if (IsCastStrStr(fExpr)) {
+            if (FuncExpr::IsCastStrStr(fExpr)) {
                 argVals.push_back(llvmTypes->CreateConstantInt(
                     static_cast<VarcharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
             }
@@ -1745,7 +1745,7 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetDataAndOverflowNullArgs(
                     static_cast<CharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
             }
             argVals.push_back(this->value->length);
-            if (IsCastStrStr(fExpr)) {
+            if (FuncExpr::IsCastStrStr(fExpr)) {
                 argVals.push_back(llvmTypes->CreateConstantInt(
                     static_cast<VarcharDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetWidth()));
             }
@@ -1816,7 +1816,7 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
         return;
     } else {
         if (TypeUtil::IsStringType(funcRetType)) {
-            if (IsCastStrStr(fExpr)) {
+            if (FuncExpr::IsCastStrStr(fExpr)) {
                 argVals.push_back(llvmTypes->CreateConstantInt(
                     static_cast<VarcharDataType *>(fExpr.GetReturnType().get())->GetWidth()));
             }
@@ -2054,7 +2054,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         return;
     } else {
         if (TypeUtil::IsStringType(funcRetType)) {
-            if (IsCastStrStr(fExpr)) {
+            if (FuncExpr::IsCastStrStr(fExpr)) {
                 argVals.push_back(llvmTypes->CreateConstantInt(
                     static_cast<VarcharDataType *>(fExpr.GetReturnType().get())->GetWidth()));
             }

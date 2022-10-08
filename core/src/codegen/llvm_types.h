@@ -63,6 +63,8 @@ public:
 
     llvm::Type *ToPointerType(omniruntime::type::DataTypeId typeId);
 
+    llvm::Type *ToBatchDataPointerType(omniruntime::type::DataTypeId typeId);
+
     llvm::Type *GetFunctionReturnType(omniruntime::type::DataTypeId typeId);
 
     virtual ~LLVMTypes();

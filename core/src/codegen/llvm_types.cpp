@@ -164,6 +164,32 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
         case OMNI_CHAR:
         case OMNI_VARCHAR:
             return I64PtrType();
+        case OMNI_DECIMAL128:
+            return I128PtrType();
+        default:
+            LLVM_DEBUG_LOG("Unsupported column data type %d", typeId);
+            return I64PtrType();
+    }
+}
+
+llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
+{
+    switch (typeId) {
+        case OMNI_BOOLEAN:
+            return I1PtrType();
+        case OMNI_INT:
+        case OMNI_DATE32:
+            return I32PtrType();
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            return I64PtrType();
+        case OMNI_DOUBLE:
+            return DoublePtrType();
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
+            return PtrType(I8PtrType());
+        case OMNI_DECIMAL128:
+            return I128PtrType();
         default:
             LLVM_DEBUG_LOG("Unsupported column data type %d", typeId);
             return I64PtrType();

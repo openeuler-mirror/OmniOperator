@@ -187,14 +187,20 @@ CallInst *LLVMEngine::CreateCall(llvm::Function *func, std::vector<llvm::Value *
     return builder->CreateCall(func, argsVals, name);
 }
 
-llvm::Value *LLVMEngine::CallExternFunction(const std::string fn_name,
-    std::vector<omniruntime::type::DataTypeId> params, const omniruntime::type::DataTypeId &returnType,
-    std::vector<llvm::Value *> args, llvm::Value *executionContextPtr, std::string msg)
+llvm::Value *LLVMEngine::CallExternFunction(const string fn_name, vector<DataTypeId> params,
+    const DataTypeId returnType, vector<Value *> args, llvm::Value *executionContextPtr, const string msg,
+    omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
 {
     if (executionContextPtr != nullptr) {
-        args.insert(args.begin(), executionContextPtr);
+        if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() ==
+            omniruntime::op::OVERFLOW_CONFIG_NULL) {
+            args.insert(args.begin(), overflowNull);
+        } else {
+            args.insert(args.begin(), executionContextPtr);
+        }
     }
-    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString();
+
+    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString(overflowConfig);
     auto f = module->getFunction(funcId);
     auto ret = CreateCall(f, args, msg);
     return ret;

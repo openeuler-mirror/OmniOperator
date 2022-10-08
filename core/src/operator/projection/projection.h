@@ -6,6 +6,7 @@
 #define __PROJECTION_H__
 
 #include <vector>
+#include "codegen/batch_projection_codegen.h"
 #include "codegen/projection_codegen.h"
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
@@ -68,6 +69,7 @@ public:
     ~Projection()
     {
         this->codegen.reset();
+        this->batchCodegen.reset();
     }
     bool IsSupported();
 
@@ -94,6 +96,7 @@ public:
 private:
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
+    std::unique_ptr<BatchProjectionCodeGen> batchCodegen { nullptr };
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;

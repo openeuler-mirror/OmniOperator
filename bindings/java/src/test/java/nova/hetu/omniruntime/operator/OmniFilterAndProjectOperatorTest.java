@@ -1046,7 +1046,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators3() {
-        final int numRows = 10000;
+        final int numRows = 1024;
         IntVec col01 = new IntVec(numRows);
         DoubleVec col02 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {

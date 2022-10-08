@@ -22,7 +22,7 @@ using namespace CodegenUtil;
 
 TEST(BatchCodeGenTest, IntIn)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::vector<Expr *> args;
     args.push_back(new FieldExpr(0, IntType()));
     args.push_back(new LiteralExpr(1, IntType()));
@@ -79,7 +79,7 @@ TEST(BatchCodeGenTest, IntIn)
 
 TEST(BatchCodeGenTest, LongIn)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::vector<Expr *> args;
     int64_t target1 = 1;
     int64_t target2 = 3;
@@ -138,7 +138,7 @@ TEST(BatchCodeGenTest, LongIn)
 
 TEST(BatchCodeGenTest, DoubleIn)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::vector<Expr *> args;
     double target1 = 1.0;
     double target2 = 3.0;
@@ -196,7 +196,7 @@ TEST(BatchCodeGenTest, DoubleIn)
 
 TEST(BatchCodeGenTest, StringIn)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::vector<Expr *> args;
     args.push_back(new FieldExpr(0, VarcharType()));
     args.push_back(new LiteralExpr(new std::string("hello"), VarcharType()));
@@ -251,8 +251,8 @@ TEST(BatchCodeGenTest, StringIn)
 
 TEST(BatchCodeGenTest, Decimal64In)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
-    auto arg0 = new LiteralExpr(65781L, Decimal64Type(6, 0));
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto arg0 = new FieldExpr(0, Decimal64Type(6, 0));
     auto arg1 = new LiteralExpr(120945L, Decimal64Type(6, 0));
     auto arg2 = new LiteralExpr(65781L, Decimal64Type(6, 0));
     auto arg3 = new LiteralExpr(65781L, Decimal64Type(6, 0));
@@ -263,17 +263,20 @@ TEST(BatchCodeGenTest, Decimal64In)
 
     std::vector<std::unique_ptr<Projection>> projections;
     for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
+        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
         projections.push_back(move(projection));
     }
 
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numRows = 1;
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 65781;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(6, 0) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64In");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
-    int32_t numSelectedRows = 0;
+    int32_t numSelectedRows = 1;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
         vecBatch, numSelectedRows, vecAllocator);
 
@@ -283,13 +286,14 @@ TEST(BatchCodeGenTest, Decimal64In)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal128In)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     std::vector<Expr *> args;
     args.push_back(new FieldExpr(0, Decimal128Type(38, 0)));
     args.push_back(new LiteralExpr(new std::string("1000"), Decimal128Type(38, 0)));
@@ -335,7 +339,7 @@ TEST(BatchCodeGenTest, Decimal128In)
 
 TEST(BatchCodeGenTest, IntBetween)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     BetweenExpr *filterExpr =
         new BetweenExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()), new FieldExpr(2, IntType()));
 
@@ -389,7 +393,7 @@ TEST(BatchCodeGenTest, IntBetween)
 
 TEST(BatchCodeGenTest, LongBetween)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     BetweenExpr *filterExpr =
         new BetweenExpr(new FieldExpr(1, LongType()), new FieldExpr(0, LongType()), new FieldExpr(2, LongType()));
 
@@ -443,7 +447,7 @@ TEST(BatchCodeGenTest, LongBetween)
 
 TEST(BatchCodeGenTest, DoubleBetween)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     BetweenExpr *filterExpr =
         new BetweenExpr(new FieldExpr(1, DoubleType()), new FieldExpr(0, DoubleType()), new FieldExpr(2, DoubleType()));
 
@@ -498,8 +502,8 @@ TEST(BatchCodeGenTest, DoubleBetween)
 
 TEST(BatchCodeGenTest, Decimal64Between)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
-    auto value = new LiteralExpr(76582L, Decimal64Type(5, 2));
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto value = new FieldExpr(0, Decimal64Type(5, 2));
     auto lowerBound = new LiteralExpr(87230L, Decimal64Type(5, 4));
     auto upperBound = new LiteralExpr(876903L, Decimal64Type(6, 1));
     auto expr = new BetweenExpr(value, lowerBound, upperBound);
@@ -509,17 +513,20 @@ TEST(BatchCodeGenTest, Decimal64Between)
     std::vector<std::unique_ptr<Projection>> projections;
 
     for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
+        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
         projections.push_back(move(projection));
     }
 
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numRows = 1;
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 76582;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(5, 2) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Between");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
-    int32_t numSelectedRows = 0;
+    int32_t numSelectedRows = 1;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
         vecBatch, numSelectedRows, vecAllocator);
 
@@ -529,13 +536,14 @@ TEST(BatchCodeGenTest, Decimal64Between)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal128Between)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto lowerBound = new LiteralExpr(new std::string("999"), Decimal128Type(38, 0));
     auto upperBound = new LiteralExpr(new std::string("3001"), Decimal128Type(38, 0));
 
@@ -580,7 +588,7 @@ TEST(BatchCodeGenTest, Decimal128Between)
 
 TEST(BatchCodeGenTest, DoubleCoalesce)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, DoubleType()), new FieldExpr(0, DoubleType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(21.0, DoubleType()),
         coalesceExpr, BooleanType());
@@ -637,7 +645,7 @@ TEST(BatchCodeGenTest, DoubleCoalesce)
 
 TEST(BatchCodeGenTest, IntCoalesce)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new LiteralExpr(21, IntType()),
         coalesceExpr, BooleanType());
@@ -697,7 +705,7 @@ TEST(BatchCodeGenTest, IntCoalesce)
 
 TEST(BatchCodeGenTest, StringCoalesce)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     CoalesceExpr *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, VarcharType()), new LiteralExpr(new std::string("bye"), VarcharType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, coalesceExpr,
@@ -748,7 +756,7 @@ TEST(BatchCodeGenTest, StringCoalesce)
 
 TEST(BatchCodeGenTest, LongCoalesce)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     int64_t targetValue = 21;
     CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, LongType()), new FieldExpr(0, LongType()));
     BinaryExpr *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ,
@@ -808,7 +816,7 @@ TEST(BatchCodeGenTest, LongCoalesce)
 
 TEST(BatchCodeGenTest, Decimal64Coalesce)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto condition = new LiteralExpr(true, BooleanType());
     auto v1 = new LiteralExpr(123400L, Decimal64Type(7, 2));
     v1->isNull = true;
@@ -828,16 +836,19 @@ TEST(BatchCodeGenTest, Decimal64Coalesce)
 
     std::vector<std::unique_ptr<Projection>> projections;
     for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
+        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
         projections.push_back(move(projection));
     }
 
-    const int32_t numCols = 0;
-    std::vector<DataTypePtr> vecOfTypes = {};
-    vector<DataTypePtr> inputTypes(vecOfTypes);
+    const int32_t numRows = 1;
+    const int32_t numCols = 1;
+    auto col1 = new int64_t[numRows];
+    col1[0] = 1234;
+    std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 2) };
+    DataTypes inputTypes(vecOfTypes);
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Coalesce");
-    VectorBatch *vecBatch = CreateEmptyVectorBatch(inputTypes);
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     int32_t numSelectedRows = 0;
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
@@ -848,13 +859,14 @@ TEST(BatchCodeGenTest, Decimal64Coalesce)
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
     delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
 TEST(BatchCodeGenTest, Decimal128Coalesce)
 {
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
     auto v1 = new LiteralExpr(new std::string("500000"), Decimal128Type(38, 0));
     v1->isNull = false;
     auto v2 = new LiteralExpr(new std::string("1234"), Decimal128Type(38, 0));

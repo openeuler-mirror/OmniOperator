@@ -75,11 +75,15 @@ bool Projection::Initialize(bool filter, OverflowConfig *overflowConfig)
         this->columnProjectionIndex = fieldExpr->colVal;
         return true;
     }
-
+    int64_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
         this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
+        f = this->codegen->GetFunction();
+    } else {
+        this->batchCodegen = BatchProjectionCodeGen::Create("proj_func", *(this->expr), filter, overflowConfig);
+        f = this->batchCodegen->GetFunction();
     }
-    auto f = this->codegen->GetFunction();
+
     if (f == 0) {
         return false;
     }
@@ -264,7 +268,6 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
         Vector *outCol =
             proj[i]->Project(vecAllocator, vecBatch, valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
         if (context->HasError()) {
-            // resource cleanup
             delete outCol;
             for (int32_t j = 0; j < i; j++) {
                 delete outBatch->GetVector(j);

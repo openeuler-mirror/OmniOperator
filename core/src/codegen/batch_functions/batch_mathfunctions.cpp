@@ -18,7 +18,6 @@
 
 using namespace omniruntime::codegen;
 
-
 extern "C" DLLEXPORT void BatchCastInt32ToInt64(int32_t *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {

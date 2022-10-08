@@ -326,7 +326,7 @@ extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value
     if (isNull) {
         return nullptr;
     }
-    int precision = 15;
+    int precision = std::numeric_limits<double>::max_digits10;
 
     ostringstream oss;
     oss.precision(precision);
@@ -647,7 +647,7 @@ extern DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *i
 
 extern DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool *isNull, double value, int32_t *outLen)
 {
-    int precision = 15;
+    int precision = std::numeric_limits<double>::max_digits10;
 
     ostringstream oss;
     oss.precision(precision);
