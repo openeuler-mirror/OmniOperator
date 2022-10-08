@@ -36,6 +36,7 @@ static const Decimal128 MIN_VALUE = { LLONG_MAX + 1, 0x0000'0000'0000'0000L };
 static const Decimal128 MAX_VALUE = { 0x7FFF'FFFF'FFFF'FFFFL, 0xFFFF'FFFF'FFFF'FFFFLL };
 static constexpr int64_t INT_BASE = 1L << 32;
 static constexpr int MAX_PRECISION = 38;
+static constexpr int MAX_SCALE = 38;
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
 static std::array<int64_t, 14> POWERS_OF_FIVE_INT = { 1,
     5,

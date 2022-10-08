@@ -3366,6 +3366,119 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
     delete avgFactory;
 }
 
+TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_return_null_when_isOverflowAsNull_is_true)
+{
+    auto avgFactory = new AverageSparkAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0, 1 };
+    auto avgDeciAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)), channal0, true, true, true);
+
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+        "spark_avg_decimal128_count_cast_to_wider_type_overflow_return_null_when_isOverflowAsNull_is_true");
+
+    Decimal128 deci1 = 0;
+    int32_t inputPrec1 = 0;
+    int32_t inputScale1 = 0;
+    DecimalOperations::StringToDecimal128("-0.99999999999999999999999999999999999999", deci1, inputPrec1, inputScale1);
+    Decimal128 deci2 = 0;
+    int32_t inputPrec2 = 0;
+    int32_t inputScale2 = 0;
+    DecimalOperations::StringToDecimal128("0.14159265354378240000000000000000000000", deci2, inputPrec2, inputScale2);
+    Decimal128 deci3 = 0;
+    int32_t inputPrec3 = 0;
+    int32_t inputScale3 = 0;
+    DecimalOperations::StringToDecimal128("0.00000000000000000000000000000000000000", deci3, inputPrec3, inputScale3);
+
+    auto *deci38_38Vec = new Decimal128Vector(vectorAllocator, 3);
+    deci38_38Vec->SetValue(0, deci1);
+    deci38_38Vec->SetValue(1, deci2);
+    deci38_38Vec->SetValue(2, deci3);
+
+    auto *avgCountVec = new LongVector(vectorAllocator, 3);
+    avgCountVec->SetValue(0, 1);
+    avgCountVec->SetValue(1, 1);
+    avgCountVec->SetValue(2, 1);
+
+    auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
+
+    std::vector<Vector *> extractVec = { resultVec, avgCountVec };
+
+    auto *vecBatch = new VectorBatch(2);
+    vecBatch->SetVector(0, deci38_38Vec);
+    vecBatch->SetVector(1, avgCountVec);
+
+    AggregateState state { nullptr };
+    avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
+    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+
+    auto avgDeciAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)), channal0, false, false, true);
+
+    avgDeciAggFinal->ProcessGroup(state, vecBatch, 1);
+    avgDeciAggFinal->ProcessGroup(state, vecBatch, 2);
+    avgDeciAggFinal->ExtractValues(state, extractVec, 0);
+    EXPECT_TRUE(resultVec->IsValueNull(0));
+
+    state.val = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete resultVec;
+    delete avgFactory;
+}
+
+TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outputPartial_is_false)
+{
+    auto avgFactory = new AverageSparkAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0, 1 };
+    auto avgDeciWindow = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 0)),
+        AggregatorUtil::WrapWithDataTypes(Decimal128Type(26, 4)), channal0, true, false, true);
+
+    VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
+        "spark_avg_decimal128_normal_when_inputRaw_is_true_and_outputPartial_is_false");
+
+    Decimal128 deci1 = 0;
+    int32_t inputPrec1 = 0;
+    int32_t inputScale1 = 0;
+    DecimalOperations::StringToDecimal128("1234567890123456789012", deci1, inputPrec1, inputScale1);
+    Decimal128 deci2 = 0;
+    int32_t inputPrec2 = 0;
+    int32_t inputScale2 = 0;
+    DecimalOperations::StringToDecimal128("9999999999999999999999", deci2, inputPrec2, inputScale2);
+
+    auto *deci22_0Vec = new Decimal128Vector(vectorAllocator, 2);
+    deci22_0Vec->SetValue(0, deci1);
+    deci22_0Vec->SetValue(1, deci2);
+
+    auto *avgCountVec = new LongVector(vectorAllocator, 2);
+    avgCountVec->SetValue(0, 1);
+    avgCountVec->SetValue(1, 1);
+
+    auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
+
+    std::vector<Vector *> extractVec = { resultVec, avgCountVec };
+
+    auto *vecBatch = new VectorBatch(2);
+    vecBatch->SetVector(0, deci22_0Vec);
+    vecBatch->SetVector(1, avgCountVec);
+
+    AggregateState state { nullptr };
+    avgDeciWindow->ProcessGroup(state, vecBatch, 0);
+    avgDeciWindow->ProcessGroup(state, vecBatch, 1);
+    avgDeciWindow->ExtractValues(state, extractVec, 0);
+
+    Decimal128 expected = 0;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("5617283945061728394505.5000", expected, precision, scale);
+
+    EXPECT_EQ(expected.ToString(), resultVec->GetValue(0).ToString());
+    EXPECT_EQ(expected, resultVec->GetValue(0));
+
+    state.val = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete resultVec;
+    delete avgFactory;
+}
+
 TEST(AggregatorTest, spark_sum_short_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
