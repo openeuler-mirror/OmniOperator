@@ -68,7 +68,6 @@ private:
     int32_t maxRowCount;
 
     int64_t preStreamedRowAddress = INT64_MAX;
-    JoinType joinType;
     bool preLeftTableRowMatchedOut = false; // current left row matched out or pad null
 
     vec::VectorAllocator *vecAllocator;
@@ -79,6 +78,7 @@ private:
 
     SimpleFilter *simpleFilter = nullptr;
     ExecutionContext *executionContext = nullptr;
+    JoinType joinType;
 };
 }
 }

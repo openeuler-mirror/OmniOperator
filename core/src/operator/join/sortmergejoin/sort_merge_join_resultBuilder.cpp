@@ -208,10 +208,11 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatc
         if (preStreamedRowAddress == INT64_MAX || preStreamedRowAddress != streamedRowAddress) {
             preLeftTableRowMatchedOut = false;
         }
-        if (!(DecodeSliceIndex(streamedRowAddress) == JOIN_NULL_FLAG ||
-            DecodeSliceIndex(bufferedRowAddress) == JOIN_NULL_FLAG)) {
-            FreeVectorBatches(isPreKeyMatched[addressPosition], DecodeSliceIndex(streamedRowAddress),
-                DecodeSliceIndex(bufferedRowAddress));
+
+        int32_t leftBatchId = DecodeSliceIndex(streamedRowAddress);
+        int32_t rightBatchId = DecodeSliceIndex(bufferedRowAddress);
+        if (!(leftBatchId == JOIN_NULL_FLAG || rightBatchId == JOIN_NULL_FLAG)) {
+            FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
         }
         PaddingNullAndVerifyingTheOutput(isPreKeyMatched, streamedRowAddress, bufferedRowAddress, buildVectorBatch,
             buildRowCount);
