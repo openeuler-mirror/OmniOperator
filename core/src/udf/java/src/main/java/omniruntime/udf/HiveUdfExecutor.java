@@ -4,6 +4,8 @@
 
 package omniruntime.udf;
 
+import static java.lang.String.format;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import nova.hetu.omniruntime.type.DataType.DataTypeId;
@@ -12,16 +14,22 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import org.apache.hadoop.hive.ql.exec.UDF;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * hive udf executor for call evaluate interface to handle data.
@@ -30,22 +38,34 @@ import java.util.List;
  * @since 2022-07-25
  */
 public class HiveUdfExecutor {
-    private static URLClassLoader classLoader = null;
+    private static final String OMNI_CONF_FILE_PATH = format("conf%somni.conf", File.separatorChar);
+    private static final Pattern PROPERTY_PATTERN = Pattern.compile("(.*)=+(.*)");
+    private static String loadExceptionMsg;
+    private static URLClassLoader classLoader;
+
+    static {
+        try {
+            String hiveUdfDir = getHiveUdfDir();
+            classLoader = createClassLoader(hiveUdfDir);
+        } catch (IOException | OmniRuntimeException e) {
+            loadExceptionMsg = e.getMessage();
+        }
+    }
 
     private static URLClassLoader createClassLoader(String udfPath) {
         File udfDir = new File(udfPath);
         if (!udfDir.exists()) {
-            String msg = udfPath + " does not exist.";
-            throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+            loadExceptionMsg = udfPath + " does not exist.";
+            return null;
         }
         if (!udfDir.isDirectory()) {
-            String msg = udfPath + " is not a directory.";
-            throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+            loadExceptionMsg = udfPath + " is not a directory.";
+            return null;
         }
         File[] jarFiles = udfDir.listFiles();
         if (jarFiles == null || jarFiles.length == 0) {
-            String msg = udfPath + " is invalid or has no files.";
-            throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+            loadExceptionMsg = udfPath + " is invalid or has no files.";
+            return null;
         }
 
         List<URL> urls = new ArrayList<>();
@@ -53,18 +73,41 @@ public class HiveUdfExecutor {
             try {
                 urls.add(file.toURI().toURL());
             } catch (MalformedURLException e) {
-                throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, e);
+                loadExceptionMsg = file + " to url failed.";
+                return null;
             }
         }
         return URLClassLoader.newInstance(urls.toArray(new URL[urls.size()]), HiveUdfExecutor.class.getClassLoader());
     }
 
-    private static String getDefaultUdfPath() {
-        String udfPath = System.getenv("OMNI_HOME");
-        if (udfPath == null || udfPath.equals("")) {
-            udfPath = File.separator + "opt";
+    private static String getHiveUdfDir() throws IOException {
+        String omniConfPath;
+        String omniHomeDir = System.getenv("OMNI_HOME");
+        if (omniHomeDir == null || omniHomeDir.equals("")) {
+            omniConfPath = File.separator + "opt" + File.separatorChar + OMNI_CONF_FILE_PATH;
+        } else {
+            omniConfPath = omniHomeDir + File.separatorChar + OMNI_CONF_FILE_PATH;
+            omniConfPath = Paths.get("/", omniConfPath).normalize().toString();
+            if (!omniConfPath.startsWith(omniHomeDir)) {
+                String msg = omniConfPath + " does not in " + omniHomeDir + ".";
+                throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
+            }
         }
-        return udfPath + File.separator + "hive-udf" + File.separator + "udf";
+
+        BufferedReader bufferedReader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(omniConfPath), StandardCharsets.UTF_8));
+        String property;
+        while ((property = bufferedReader.readLine()) != null) {
+            Matcher matcher = PROPERTY_PATTERN.matcher(property.trim());
+            if (!matcher.matches()) {
+                continue;
+            }
+            if (matcher.group(1).trim().equals("hiveUdfDir")) {
+                return matcher.group(2).trim();
+            }
+        }
+        String msg = "Do not configure the hiveUdfDir in " + omniConfPath + ".";
+        throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
     }
 
     /**
@@ -92,7 +135,8 @@ public class HiveUdfExecutor {
         try {
             loader.close();
         } catch (IOException e) {
-            throw new OmniRuntimeException("Close class loader failed since " + e);
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR,
+                    "Close class loader failed since " + e + ".");
         }
     }
 
@@ -113,7 +157,7 @@ public class HiveUdfExecutor {
             long inputValueAddr, long inputNullAddr, long inputLengthAddr, long outputValueAddr, long outputNullAddr,
             long outputLengthAddr) {
         if (classLoader == null) {
-            classLoader = createClassLoader(getDefaultUdfPath());
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, loadExceptionMsg);
         }
         executeSingle(classLoader, udfClassName, paramTypes, retType, inputValueAddr, inputNullAddr, inputLengthAddr,
                 outputValueAddr, outputNullAddr, outputLengthAddr);
@@ -133,13 +177,13 @@ public class HiveUdfExecutor {
                 // create udf object
                 udfObj = udfClass.getConstructor().newInstance();
             } else {
-                String msg = "Not support " + udfClassName + " now";
-                throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+                String msg = "Not support " + udfClassName + " now.";
+                throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
             }
         } catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException
                 | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-            String msg = udfClassName + " load failed since " + e;
-            throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+            String msg = udfClassName + " load failed since " + e + ".";
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
         }
 
         try {
@@ -147,7 +191,7 @@ public class HiveUdfExecutor {
             Object result = method.invoke(udfObj, inputArgObjects);
             setResult(retType, outputValueAddr, outputNullAddr, outputLengthAddr, result);
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-            String msg = udfClassName + " invoke failed since " + e.getCause();
+            String msg = udfClassName + " invoke failed since " + e.getCause() + ".";
             throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
         }
     }
@@ -289,7 +333,8 @@ public class HiveUdfExecutor {
         try {
             loader.close();
         } catch (IOException e) {
-            throw new OmniRuntimeException("Close class loader failed since " + e);
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR,
+                    "Close class loader failed since " + e + ".");
         }
     }
 
@@ -312,7 +357,7 @@ public class HiveUdfExecutor {
             long inputValueAddr, long inputNullAddr, long inputLengthAddr, int rowCount, long outputValueAddr,
             long outputNullAddr, long outputLengthAddr, long outputStateAddr) {
         if (classLoader == null) {
-            classLoader = createClassLoader(getDefaultUdfPath());
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, loadExceptionMsg);
         }
         executeBatch(classLoader, udfClassName, paramTypes, retType, inputValueAddr, inputNullAddr, inputLengthAddr,
                 rowCount, outputValueAddr, outputNullAddr, outputLengthAddr, outputStateAddr);
@@ -333,29 +378,29 @@ public class HiveUdfExecutor {
                 // create udf object
                 udfObj = udfClass.getConstructor().newInstance();
             } else {
-                String msg = "Not support " + udfClassName + " now";
-                throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+                String msg = "Does not support " + udfClassName + " now.";
+                throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
             }
         } catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException
                 | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-            String msg = udfClassName + " load failed since " + e;
-            throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+            String msg = udfClassName + " load failed since " + e + ".";
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
         }
 
         if (retType == DataTypeId.OMNI_VARCHAR || retType == DataTypeId.OMNI_CHAR) {
             // execute hive udf which outputs string
-            executeBatchForString(udfClassName, paramTypes, rowCount, outputStateAddr, inputValueAddr, inputNullAddr,
-                    inputLengthAddr, outputValueAddr, outputNullAddr, outputLengthAddr, method, udfObj);
+            executeBatchForString(udfClassName, paramTypes, inputValueAddr, inputNullAddr, inputLengthAddr, rowCount,
+                    outputValueAddr, outputNullAddr, outputLengthAddr, outputStateAddr, method, udfObj);
         } else {
             // execute hive udf which outputs other
-            executeBatchForNonString(udfClassName, paramTypes, retType, rowCount, inputValueAddr, inputNullAddr,
-                    inputLengthAddr, outputValueAddr, outputNullAddr, method, udfObj);
+            executeBatchForNonString(udfClassName, paramTypes, retType, inputValueAddr, inputNullAddr, inputLengthAddr,
+                    rowCount, outputValueAddr, outputNullAddr, method, udfObj);
         }
     }
 
-    private static void executeBatchForString(String udfClassName, DataTypeId[] paramTypes, int rowCount,
-            long outputStateAddr, long inputValueAddr, long inputNullAddr, long inputLengthAddr, long outputValueAddr,
-            long outputNullAddr, long outputLengthAddr, Method method, Object udfObj) {
+    private static void executeBatchForString(String udfClassName, DataTypeId[] paramTypes, long inputValueAddr,
+            long inputNullAddr, long inputLengthAddr, int rowCount, long outputValueAddr, long outputNullAddr,
+            long outputLengthAddr, long outputStateAddr, Method method, Object udfObj) {
         int addrArraySize = paramTypes.length;
         long[] inputValueAddrs = UdfUtil.getLongs(inputValueAddr, 0, addrArraySize);
         long[] inputNullAddrs = UdfUtil.getLongs(inputNullAddr, 0, addrArraySize);
@@ -387,7 +432,7 @@ public class HiveUdfExecutor {
                     UdfUtil.UNSAFE.putInt(outputLengthAddr + (long) rowIdx * Integer.BYTES, 0);
                 }
             } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                String msg = udfClassName + " invoke failed since " + e.getCause();
+                String msg = udfClassName + " invoke failed since " + e.getCause() + ".";
                 throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
             }
         }
@@ -395,7 +440,7 @@ public class HiveUdfExecutor {
     }
 
     private static void executeBatchForNonString(String udfClassName, DataTypeId[] paramTypes, DataTypeId retType,
-            int rowCount, long inputValueAddr, long inputNullAddr, long inputLengthAddr, long outputValueAddr,
+            long inputValueAddr, long inputNullAddr, long inputLengthAddr, int rowCount, long outputValueAddr,
             long outputNullAddr, Method method, Object udfObj) {
         int addrArraySize = paramTypes.length;
         long[] inputValueAddrs = UdfUtil.getLongs(inputValueAddr, 0, addrArraySize);
@@ -415,7 +460,7 @@ public class HiveUdfExecutor {
                     UdfUtil.UNSAFE.putByte(outputNullAddr + rowIdx, (byte) 1);
                 }
             } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                String msg = udfClassName + " invoke failed since " + e.getCause();
+                String msg = udfClassName + " invoke failed since " + e.getCause() + ".";
                 throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
             }
         }
@@ -526,8 +571,8 @@ public class HiveUdfExecutor {
             return method;
         }
 
-        String msg = udfClass.getName() + " does not have valid method";
-        throw new OmniRuntimeException(msg);
+        String msg = udfClass.getName() + " does not have valid method.";
+        throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
     }
 
     private static DataTypeId getDataTypeId(Class<?> cls) {
@@ -546,8 +591,8 @@ public class HiveUdfExecutor {
         } else if (cls == String.class) {
             return DataTypeId.OMNI_VARCHAR;
         } else {
-            String msg = cls.getName() + " unsupported now.";
-            throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR, msg);
+            String msg = "Does not support " + cls.getName() + " now.";
+            throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
         }
     }
 }

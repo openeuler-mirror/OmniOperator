@@ -1210,8 +1210,154 @@ void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     }
 }
 
+Value *BatchExpressionCodeGen::ArenaAlloc(Value *sizeInBytes)
+{
+    return llvmEngine->CallExternFunction("ArenaAllocatorMalloc", { OMNI_LONG, OMNI_INT }, OMNI_CHAR,
+        { batchCodegenContext->executionContext, sizeInBytes }, nullptr);
+}
+
+Value *BatchExpressionCodeGen::GetTypeSize(DataTypeId dataTypeId)
+{
+    int32_t typeSize = 0;
+    switch (dataTypeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            typeSize = sizeof(int32_t);
+            break;
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            typeSize = sizeof(int64_t);
+            break;
+        case OMNI_DOUBLE:
+            typeSize = sizeof(double);
+            break;
+        case OMNI_BOOLEAN:
+            typeSize = sizeof(bool);
+            break;
+        case OMNI_SHORT:
+            typeSize = sizeof(int16_t);
+            break;
+        case OMNI_DECIMAL128:
+            typeSize = 2 * sizeof(int64_t);
+            break;
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
+            typeSize = sizeof(int64_t); // for pointer
+            break;
+        default:
+            LogWarn("Unsupported data type in UDF funcExpr %d", dataTypeId);
+            return nullptr;
+    }
+    return llvmTypes->CreateConstantInt(typeSize);
+}
+
+std::vector<llvm::Value *> BatchExpressionCodeGen::GetHiveUdfArgValues(const FuncExpr &fExpr, bool &isInvalidExpr)
+{
+    auto argSize = static_cast<int32_t>(fExpr.arguments.size());
+    auto valueAddrArrayType = ArrayType::get(llvmTypes->I8PtrType(), argSize);
+    auto nullAddrArrayType = ArrayType::get(llvmTypes->I8PtrType(), argSize);
+    auto lengthAddrArrayType = ArrayType::get(llvmTypes->I32PtrType(), argSize);
+    auto valueAddrArray = builder->CreateAlloca(valueAddrArrayType);
+    auto nullAddrArray = builder->CreateAlloca(nullAddrArrayType);
+    auto lengthAddrArray = builder->CreateAlloca(lengthAddrArrayType);
+
+    std::vector<Value *> argVals;
+    for (int32_t i = 0; i < argSize; i++) {
+        auto argExpr = fExpr.arguments[i];
+        auto argExprResult = VisitExpr(*argExpr);
+        if (!argExprResult->IsValidValue()) {
+            isInvalidExpr = true;
+            return argVals;
+        }
+
+        auto valuePtr = builder->CreateGEP(valueAddrArray, llvmTypes->CreateConstantInt(i));
+        auto nullPtr = builder->CreateGEP(nullAddrArray, llvmTypes->CreateConstantInt(i));
+        auto lengthPtr = builder->CreateGEP(lengthAddrArray, llvmTypes->CreateConstantInt(i));
+        builder->CreateStore(argExprResult->data, valuePtr);
+        builder->CreateStore(argExprResult->isNull, nullPtr);
+        auto length = TypeUtil::IsStringType(argExpr->GetReturnTypeId()) ? argExprResult->length :
+                                                                           llvmTypes->CreateConstantLong(0);
+        builder->CreateStore(length, lengthPtr);
+    }
+
+    argVals.push_back(valueAddrArray);
+    argVals.push_back(nullAddrArray);
+    argVals.push_back(lengthAddrArray);
+    return argVals;
+}
+
+llvm::Value *BatchExpressionCodeGen::CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr)
+{
+    auto elementType = IntegerType::getInt32Ty(*context);
+    auto elementSize = static_cast<int32_t>(fExpr.arguments.size());
+    auto arrayType = ArrayType::get(elementType, elementSize);
+    auto alloca = builder->CreateAlloca(arrayType);
+    auto zero = ConstantInt::get(*context, APInt(32, 0, true));
+    for (int32_t i = 0; i < elementSize; i++) {
+        auto index = ConstantInt::get(*context, APInt(32, i, true));
+        auto ptr = builder->CreateGEP(alloca, { zero, index });
+        builder->CreateStore(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnTypeId()), ptr);
+    }
+    return alloca;
+}
+
+void BatchExpressionCodeGen::CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr)
+{
+    auto returnTypeId = fExpr.GetReturnTypeId();
+    std::vector<llvm::Value *> argVals;
+    argVals.emplace_back(batchCodegenContext->executionContext);
+    argVals.emplace_back(CreateConstantString(fExpr.funcName));                 // for udf class name
+    argVals.emplace_back(CreateHiveUdfArgTypes(fExpr));                         // for inputTypes
+    argVals.emplace_back(llvmTypes->CreateConstantInt(returnTypeId));           // for return type
+    argVals.emplace_back(llvmTypes->CreateConstantInt(fExpr.arguments.size())); // for vec count
+    argVals.emplace_back(batchCodegenContext->rowCnt);                          // for row count
+
+    bool isInvalidExpr = false;
+    auto inputArgs = GetHiveUdfArgValues(fExpr, isInvalidExpr);
+    if (isInvalidExpr) {
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
+    }
+    argVals.insert(argVals.end(), inputArgs.begin(), inputArgs.end()); // for inputValues, inputNulls, inputLengths
+
+    // for output value, output null, output length
+    auto returnTypeSize = GetTypeSize(returnTypeId);
+    if (returnTypeSize == nullptr) {
+        this->value = CreateBatchInvalidCodeGenValue();
+        return;
+    }
+    auto arraySize = batchCodegenContext->rowCnt;
+    auto outputValuePtr = ArenaAlloc(builder->CreateMul(returnTypeSize, arraySize));
+    auto outputNullPtr = ArenaAlloc(arraySize);
+    auto outputLengthPtr = TypeUtil::IsStringType(returnTypeId) ?
+        ArenaAlloc(builder->CreateMul(GetTypeSize(OMNI_INT), arraySize)) :
+        llvmTypes->CreateConstantLong(0);
+    argVals.emplace_back(outputValuePtr);
+    argVals.emplace_back(outputNullPtr);
+    argVals.emplace_back(outputLengthPtr);
+
+    auto signature = FunctionSignature("EvaluateHiveUdfBatch", std::vector<DataTypeId> {}, OMNI_INT);
+    auto function = FunctionRegistry::LookupFunction(&signature);
+    auto f = module->getFunction(function->GetId());
+    if (f) {
+        auto ret = llvmEngine->CreateCall(f, argVals, "call_evaluate_hive_udf");
+        InlineFunctionInfo inlineFunctionInfo;
+        llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
+        this->value = make_shared<CodeGenValue>(outputValuePtr, outputNullPtr,
+            TypeUtil::IsStringType(returnTypeId) ? outputLengthPtr : nullptr);
+    } else {
+        LogWarn("Unable to generate udf function : %s", fExpr.funcName.c_str());
+        this->value = CreateBatchInvalidCodeGenValue();
+    }
+}
+
 void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
 {
+    if (fExpr.functionType == HIVE_UDF) {
+        CallHiveUdfFunction(fExpr);
+        return;
+    }
+
     if (this->overflowConfig != nullptr &&
         this->overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         auto signature = fExpr.function->GetSignatures()[0];
