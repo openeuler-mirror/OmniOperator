@@ -1844,6 +1844,12 @@ TEST(FunctionTest, CastLongToDecimal64)
     s = 922'3372'0368'5477'5807;
     result = CastLongToDecimal64(contextPtr, s, false, 18, 3);
     EXPECT_EQ(result, 0);
+    s = 9223372036854775807;
+    result = CastLongToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 0);
+    s =  INT64_MIN;
+    result = CastLongToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 0);
     delete context;
 }
 
