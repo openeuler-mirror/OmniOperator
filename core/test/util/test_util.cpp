@@ -187,7 +187,7 @@ ContainerVector *CreateContainerVector(std::vector<DataTypePtr> &fieldTypes, int
     for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
         auto *fieldVector = fieldTypes[colIdx]->GetId() == OMNI_CONTAINER ?
             CreateContainerVector(static_cast<ContainerDataType *>(fieldTypes[colIdx].get())->GetFieldTypes(), rowCount,
-                args) :
+            args) :
             CreateVector(*fieldTypes[colIdx], rowCount, args);
         vectorAddresses[colIdx] = reinterpret_cast<uintptr_t>(fieldVector);
     }
@@ -648,47 +648,81 @@ void AssertBoolEquals(std::vector<bool> &expected, bool *result)
     }
 }
 
-VectorBatch *CreateVecBatch(VectorAllocator *vectorAllocator, const int32_t numRows, const int32_t numCols,
-    const int32_t *inputTypeIds, int64_t *allData)
+int32_t *MakeInts(const int32_t size, const int32_t start)
 {
-    auto *vecBatch = new VectorBatch(numCols, numRows);
-    vector<omniruntime::type::DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    vecBatch->NewVectors(vectorAllocator, inputTypes);
-    for (int i = 0; i < numCols; ++i) {
-        switch (inputTypeIds[i]) {
-            case OMNI_INT:
-                ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
-                break;
-            case OMNI_LONG:
-                ((LongVector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *)allData[i], numRows);
-                break;
-            case OMNI_DOUBLE:
-                ((DoubleVector *)vecBatch->GetVector(i))->SetValues(0, (double *)allData[i], numRows);
-                break;
-            case OMNI_SHORT:
-                ((ShortVector *)vecBatch->GetVector(i))->SetValues(0, (int16_t *)allData[i], numRows);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                for (int j = 0; j < numRows; ++j) {
-                    int64_t addr = reinterpret_cast<int64_t *>(allData[i])[j];
-                    std::string s(reinterpret_cast<char *>(addr));
-                    ((VarcharVector *)vecBatch->GetVector(i))
-                        ->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
-                }
-                break;
-            }
-            case OMNI_DECIMAL128:
-                ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *)allData[i], numRows);
-                break;
-            default: {
-                LogError("No such data type %d", inputTypeIds[i]);
-                break;
-            }
+    if (size > 0) {
+        auto *arr = new int32_t[size];
+        int32_t idx = 0;
+        for (int32_t i = start; i < start + size; i++) {
+            arr[idx++] = i;
         }
+        return arr;
+    } else {
+        return nullptr;
     }
-    return vecBatch;
 }
 
+int64_t *MakeDecimals(const int32_t size, const int32_t start)
+{
+    if (size > 0) {
+        const int32_t INDEX_FACTOR = 2;
+        auto *arr = new int64_t[size * 2];
+        int32_t idx = 0;
+        for (int64_t i = start; i < start + size; i++) {
+            if (i >= 0) {
+                arr[INDEX_FACTOR * idx] = i;
+                arr[INDEX_FACTOR * idx + 1] = 0;
+            } else {
+                arr[INDEX_FACTOR * idx] = i * -1;
+                arr[INDEX_FACTOR * idx + 1] = 1LL << 63;
+            }
+            idx++;
+        }
+        return arr;
+    } else {
+        return nullptr;
+    }
+}
+
+int64_t *MakeLongs(const int32_t size, const int64_t start)
+{
+    if (size > 0) {
+        auto *arr = new int64_t[size];
+        int32_t idx = 0;
+        for (int64_t i = start; i < start + size; i++) {
+            arr[idx++] = i;
+        }
+        return arr;
+    } else {
+        return nullptr;
+    }
+}
+
+double *MakeDoubles(const int32_t size, const double start)
+{
+    if (size > 0) {
+        auto *arr = new double[size];
+        int32_t idx = 0;
+        for (double i = start; i < start + size; i++) {
+            arr[idx++] = i;
+        }
+        return arr;
+    } else {
+        return nullptr;
+    }
+}
+
+int16_t *MakeShorts(const int32_t size, const int16_t start)
+{
+    if (size > 0) {
+        auto *arr = new int16_t[size];
+        int32_t idx = 0;
+        for (int16_t i = start; i < start + size; i++) {
+            arr[idx++] = i;
+        }
+        return arr;
+    } else {
+        return nullptr;
+    }
+}
 }

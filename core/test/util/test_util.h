@@ -162,8 +162,15 @@ void AssertBoolEquals(std::vector<bool> &expected, bool *result);
 
 std::string GenerateSpillPath();
 
-omniruntime::vec::VectorBatch *CreateVecBatch(omniruntime::vec::VectorAllocator *vectorAllocator, const int32_t numRows,
-    const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData);
+int32_t *MakeInts(const int32_t size, const int32_t start = 0);
+
+int64_t *MakeDecimals(const int32_t size, const int32_t start = 0);
+
+int64_t *MakeLongs(const int32_t size, const int64_t start = 0);
+
+double *MakeDoubles(const int32_t size, const double start = 0);
+
+int16_t *MakeShorts(const int32_t size, const int16_t start = 0);
 }
 
 #endif
