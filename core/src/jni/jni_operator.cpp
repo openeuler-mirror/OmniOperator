@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include "vector/vector_batch.h"
+#include "vector/vector_helper.h"
 #include "jni_common_def.h"
 #include "operator/operator_factory.h"
 #include "jni_operator.h"
@@ -139,7 +140,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     std::vector<VectorBatch *> outputVecBatches;
     JNI_METHOD_START
     nativeOperator->GetOutput(outputVecBatches);
-    JNI_METHOD_END(nullptr)
+    JNI_METHOD_END_WITH_VECBATCHES(nullptr, outputVecBatches)
     RecordOutputVectorsStack(outputVecBatches, env);
     jobjectArray result = transform(env, outputVecBatches);
     return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->GetStatus());

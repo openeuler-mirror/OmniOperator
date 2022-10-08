@@ -221,13 +221,21 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         finalOutputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
     }
 
-    VectorBatch *vecBatch = nullptr;
     int32_t position = 0;
-    int32_t rowCount = 0;
-    for (int32_t i = 0; i < outputPageCount; i++) {
-        ProcessData(positionCount, finalOutputColsCount, maxRowCount, finalOutputTypes, position, vecBatch, rowCount);
-        position += rowCount;
-        outputPages.push_back(vecBatch);
+    try {
+        for (int32_t i = 0; i < outputPageCount; i++) {
+            int32_t rowCount = min(maxRowCount, positionCount - position);
+            auto *vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
+            outputPages.push_back(vecBatch);
+            ProcessData(finalOutputColsCount, finalOutputTypes, position, vecBatch, rowCount);
+            position += rowCount;
+        }
+    } catch (const OmniException &e) {
+        // in ProcessData, WindowFunction may be throw exception:
+        // when spark sum/avg decimal overflow, it will throw exception when
+        // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+        pagesIndex->Clear();
+        throw e;
     }
 
     pagesIndex->Clear();
@@ -235,12 +243,9 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     return 0;
 }
 
-void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
-    std::vector<type::DataTypePtr> &outputTypes, int32_t position, VectorBatch *&vecBatch, int32_t &rowCount)
+void WindowOperator::ProcessData(int finalOutputColsCount, std::vector<type::DataTypePtr> &outputTypes,
+    int32_t position, VectorBatch *&vecBatch, int32_t rowCount)
 {
-    rowCount = min(maxRowCount, positionCount - position);
-    vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
-
     // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
     // result
     InitResultVectors(outputTypes, vecBatch, rowCount, outputColsCount, finalOutputColsCount);
