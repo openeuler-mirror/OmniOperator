@@ -1007,7 +1007,6 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToLongRetNull(bool *isNull, int64_t 
 extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleRetNull(bool *isNull, const int64_t *x, int32_t precision,
     int32_t scale, double *output, int32_t rowCnt)
 {
-    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     for (int i = 0; i < rowCnt; ++i) {
         std::string doubleString = DecimalOperations::ScaleOfDecimal(std::to_string(x[i]), scale);
         output[i] = stod(doubleString);
