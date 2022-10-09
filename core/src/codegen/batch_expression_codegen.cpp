@@ -1254,12 +1254,10 @@ Value *BatchExpressionCodeGen::GetTypeSize(DataTypeId dataTypeId)
 std::vector<llvm::Value *> BatchExpressionCodeGen::GetHiveUdfArgValues(const FuncExpr &fExpr, bool &isInvalidExpr)
 {
     auto argSize = static_cast<int32_t>(fExpr.arguments.size());
-    auto valueAddrArrayType = ArrayType::get(llvmTypes->I8PtrType(), argSize);
-    auto nullAddrArrayType = ArrayType::get(llvmTypes->I8PtrType(), argSize);
-    auto lengthAddrArrayType = ArrayType::get(llvmTypes->I32PtrType(), argSize);
-    auto valueAddrArray = builder->CreateAlloca(valueAddrArrayType);
-    auto nullAddrArray = builder->CreateAlloca(nullAddrArrayType);
-    auto lengthAddrArray = builder->CreateAlloca(lengthAddrArrayType);
+    auto size = llvmTypes->CreateConstantInt(argSize);
+    auto valueAddrArray = builder->CreateAlloca(llvmTypes->I64Type(), size);
+    auto nullAddrArray = builder->CreateAlloca(llvmTypes->I64Type(), size);
+    auto lengthAddrArray = builder->CreateAlloca(llvmTypes->I64Type(), size);
 
     std::vector<Value *> argVals;
     for (int32_t i = 0; i < argSize; i++) {
@@ -1286,25 +1284,21 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetHiveUdfArgValues(const Fun
     return argVals;
 }
 
-llvm::Value *BatchExpressionCodeGen::CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr)
+Value *BatchExpressionCodeGen::CreateHiveUdfArgTypes(const FuncExpr &fExpr)
 {
-    auto elementType = IntegerType::getInt32Ty(*context);
     auto elementSize = static_cast<int32_t>(fExpr.arguments.size());
-    auto arrayType = ArrayType::get(elementType, elementSize);
-    auto alloca = builder->CreateAlloca(arrayType);
-    auto zero = ConstantInt::get(*context, APInt(32, 0, true));
+    auto alloca = builder->CreateAlloca(llvmTypes->I32Type(), llvmTypes->CreateConstantInt(elementSize));
     for (int32_t i = 0; i < elementSize; i++) {
-        auto index = ConstantInt::get(*context, APInt(32, i, true));
-        auto ptr = builder->CreateGEP(alloca, { zero, index });
+        auto ptr = builder->CreateGEP(alloca, llvmTypes->CreateConstantInt(i));
         builder->CreateStore(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnTypeId()), ptr);
     }
     return alloca;
 }
 
-void BatchExpressionCodeGen::CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr)
+void BatchExpressionCodeGen::CallHiveUdfFunction(const FuncExpr &fExpr)
 {
     auto returnTypeId = fExpr.GetReturnTypeId();
-    std::vector<llvm::Value *> argVals;
+    std::vector<Value *> argVals;
     argVals.emplace_back(batchCodegenContext->executionContext);
     argVals.emplace_back(CreateConstantString(fExpr.funcName));                 // for udf class name
     argVals.emplace_back(CreateHiveUdfArgTypes(fExpr));                         // for inputTypes

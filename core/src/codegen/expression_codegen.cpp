@@ -1845,14 +1845,10 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
 
 Value *ExpressionCodeGen::CreateHiveUdfArgTypes(const FuncExpr &fExpr)
 {
-    auto elementType = IntegerType::getInt32Ty(*context);
     auto elementSize = static_cast<int32_t>(fExpr.arguments.size());
-    auto arrayType = ArrayType::get(elementType, elementSize);
-    auto alloca = builder->CreateAlloca(arrayType);
-    auto zero = ConstantInt::get(*context, APInt(32, 0, true));
+    auto alloca = builder->CreateAlloca(llvmTypes->I32Type(), llvmTypes->CreateConstantInt(elementSize));
     for (int32_t i = 0; i < elementSize; i++) {
-        auto index = ConstantInt::get(*context, APInt(32, i, true));
-        auto ptr = builder->CreateGEP(alloca, { zero, index });
+        auto ptr = builder->CreateGEP(alloca, llvmTypes->CreateConstantInt(i));
         builder->CreateStore(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnTypeId()), ptr);
     }
     return alloca;
@@ -1910,13 +1906,9 @@ std::vector<Value *> ExpressionCodeGen::GetHiveUdfArgValues(const FuncExpr &fExp
 
     // create array for value, null and length of all arguments
     auto argSize = static_cast<int32_t>(fExpr.arguments.size());
-    auto valueArrayType = ArrayType::get(llvmTypes->I8Type(), valueOffsets[argSize]);
-    auto valueArray = builder->CreateAlloca(valueArrayType);
-    auto nullArrayType = ArrayType::get(llvmTypes->I8Type(), argSize);
-    auto nullArray = builder->CreateAlloca(nullArrayType);
-    auto lengthArrayType = ArrayType::get(llvmTypes->I32Type(), argSize);
-    auto lengthArray = builder->CreateAlloca(lengthArrayType);
-    auto zero = ConstantInt::get(*context, APInt(32, 0, true));
+    auto valueArray = builder->CreateAlloca(llvmTypes->I8Type(), llvmTypes->CreateConstantInt(valueOffsets[argSize]));
+    auto nullArray = builder->CreateAlloca(llvmTypes->I8Type(), llvmTypes->CreateConstantInt(argSize));
+    auto lengthArray = builder->CreateAlloca(llvmTypes->I32Type(), llvmTypes->CreateConstantInt(argSize));
 
     for (int32_t i = 0; i < argSize; i++) {
         auto argExpr = fExpr.arguments[i];
@@ -1927,12 +1919,9 @@ std::vector<Value *> ExpressionCodeGen::GetHiveUdfArgValues(const FuncExpr &fExp
         }
 
         // get pointer for value, null and length
-        auto valueIndex = ConstantInt::get(*context, APInt(32, valueOffsets[i], true));
-        auto nullIndex = ConstantInt::get(*context, APInt(32, i, true));
-        auto lengthIndex = ConstantInt::get(*context, APInt(32, i, true));
-        auto valuePtr = builder->CreateGEP(valueArray, { zero, valueIndex });
-        auto nullPtr = builder->CreateGEP(nullArray, { zero, nullIndex });
-        auto lengthPtr = builder->CreateGEP(lengthArray, { zero, lengthIndex });
+        auto valuePtr = builder->CreateGEP(valueArray, llvmTypes->CreateConstantInt(valueOffsets[i]));
+        auto nullPtr = builder->CreateGEP(nullArray, llvmTypes->CreateConstantInt(i));
+        auto lengthPtr = builder->CreateGEP(lengthArray, llvmTypes->CreateConstantInt(i));
 
         builder->CreateStore(argExprResult->data, valuePtr);
         builder->CreateStore(argExprResult->isNull, nullPtr);
