@@ -109,6 +109,53 @@ public:
             }
         }
     }
+    /* *
+     * The serialization format : 1-byte null flag + width bytes data.
+     * @param rowId
+     * @param pos
+     * @return
+     */
+    StringRef SerializeValue(size_t rowId, op::ExecutionContext &executionContext, const char *&begin) override
+    {
+        StringRef res;
+        res.size = sizeof(bool) + sizeof(T);
+        auto *pos = executionContext.AllocContinue(res.size, begin);
+        bool isNull = IsValueNull(rowId);
+        auto err = memcpy_sp(pos, sizeof(bool), &isNull, sizeof(bool));
+        if (err != EOK) {
+            LogError("SerializeValue , but memcpy_sp bool err %d", err);
+            throw OmniException("me mcpy_sp error", "when SerializeValue in Fixed_Width_Vector");
+        }
+
+        if (not isNull) {
+            auto value = GetValue(rowId);
+            auto err = memcpy_sp(pos + sizeof(bool), BYTES, &value, BYTES);
+            if (err != EOK) {
+                LogError("memcpy_sp err %d if real value is not null", err);
+                throw OmniException("me mcpy_sp error", "when SerializeValue in Fixed_Width_Vector");
+            }
+        } else {
+            auto err = memset_sp(pos + sizeof(bool), BYTES, 0, BYTES);
+            if (err != EOK) {
+                LogError("memset_sp err %d if real value is null", err);
+                throw OmniException("me mset_sp error", "when SerializeValue in Fixed_Width_Vector");
+            }
+        }
+        res.data = pos;
+        return res;
+    }
+
+    const char *DeserializeValueIntoThis(size_t rowId, const char *pos) override
+    {
+        bool isNull = *(reinterpret_cast<const bool *>(pos));
+        auto *copyPointer = reinterpret_cast<const T *>(pos + 1);
+        if (not isNull) {
+            SetValue(rowId, *copyPointer);
+        } else {
+            SetValueNull(rowId);
+        }
+        return pos + BYTES + 1;
+    }
 
 protected:
     static const int BYTES = sizeof(T);

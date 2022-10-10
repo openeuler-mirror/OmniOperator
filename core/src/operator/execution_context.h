@@ -40,7 +40,15 @@ public:
     {
         hasError = false;
     }
-
+    char *AllocContinue(size_t totalBytes, char const *& start) {
+        if(start == nullptr){
+            char *ret = reinterpret_cast<char*>(arena.Allocate(totalBytes));
+            start = ret;
+            return ret;
+        }else {
+            return reinterpret_cast<char*>(arena.AllocateContinue(totalBytes,start));
+        }
+    }
 private:
     mem::SimpleArenaAllocator arena;
     bool hasError = false;

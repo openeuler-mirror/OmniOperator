@@ -20,8 +20,10 @@
 
 namespace TestUtil {
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
+bool VecBatchMatchIgnoreOrder(omniruntime::vec::VectorBatch *resultBatch, omniruntime::vec::VectorBatch *expectedBatch);
 bool VecBatchMatches(std::vector<omniruntime::vec::VectorBatch *> &outputPages,
     std::vector<omniruntime::vec::VectorBatch *> &expectPage);
+bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches, std::vector<omniruntime::vec::VectorBatch *> &expectedBatches);
 omniruntime::vec::VectorBatch *CreateVectorBatch(const omniruntime::type::DataTypes &types, int32_t rowCount, ...);
 omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
 omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataType &type, std::string *values,
@@ -48,6 +50,7 @@ omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &v
 omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector *> &vectors);
 
 bool ColumnMatch(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
+bool ColumnMatchIgnoreOrder(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
 
 class Timer {
 public:

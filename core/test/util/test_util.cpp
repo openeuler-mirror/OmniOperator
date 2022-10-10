@@ -41,6 +41,163 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
+template <typename D, typename V>
+bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector) {
+    multiset<D> resRows;
+    multiset<D> expectedRows;
+    size_t resNullCount = 0;
+    size_t expNullCount = 0;
+    for (size_t i = 0; i < resultVector->GetSize(); ++i) {
+        auto leftVector = static_cast<V*>(resultVector);
+        auto rightVector = static_cast<V*>(expectedVector);
+        if (leftVector->IsValueNull(i)) {
+            resNullCount++;
+        } else {
+            resRows.emplace(leftVector->GetValue(i));
+        }
+        if (rightVector->IsValueNull(i)) {
+            expNullCount++;
+        } else {
+            expectedRows.emplace(rightVector->GetValue(i));
+        }
+    }
+
+    return resRows == expectedRows && resNullCount == expNullCount;
+}
+
+bool CompareUnorderedStringRows(VarcharVector *resultVector, VarcharVector *expectedVector) {
+    size_t rowCount = resultVector->GetSize();
+    std::multiset<std::string> resRows;
+    std::multiset<std::string> expectedRows;
+    size_t resNullCount = 0;
+    size_t expNullCount = 0;
+
+    for (size_t i = 0; i < rowCount; ++i) {
+        if (resultVector->IsValueNull(i)) {
+            resNullCount++;
+        } else {
+            uint8_t *leftCharPtr = nullptr;
+            int32_t leftLen = resultVector->GetValue(i, &leftCharPtr);
+            std::string leftStr(reinterpret_cast<char *>(leftCharPtr), leftLen);
+            resRows.emplace(leftStr);
+        }
+
+        if (expectedVector->IsValueNull(i)) {
+            expNullCount++;
+        } else {
+            uint8_t *rightCharPtr = nullptr;
+            int32_t rightLen = expectedVector->GetValue(i, &rightCharPtr);
+            std::string rightStr(reinterpret_cast<char *>(rightCharPtr), rightLen);
+            expectedRows.emplace(rightStr);
+        }
+    }
+
+    return resRows == expectedRows && resNullCount == expNullCount;
+}
+
+bool ColumnMatchIgnoreOrder(Vector *resultVector, Vector *expectedVector)
+{
+    auto resType = resultVector->GetTypeId();
+    bool isMatched = true;
+    switch (resType) {
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            isMatched = CompareUnorderedRows<int32_t, IntVector>(resultVector, expectedVector);
+            break;
+        }
+        case OMNI_SHORT: {
+            isMatched = CompareUnorderedRows<int16_t, ShortVector>(resultVector, expectedVector);
+            break;
+        }
+        case OMNI_DOUBLE: {
+            isMatched = CompareUnorderedRows<double, DoubleVector>(resultVector, expectedVector);
+            break;
+        }
+        case OMNI_LONG:
+        case OMNI_DECIMAL64: {
+            isMatched = CompareUnorderedRows<int64_t, LongVector>(resultVector, expectedVector);
+            break;
+        }
+        case OMNI_BOOLEAN: {
+            isMatched = CompareUnorderedRows<bool, BooleanVector>(resultVector, expectedVector);
+            break;
+        }
+        case OMNI_DECIMAL128: {
+            isMatched = CompareUnorderedRows<Decimal128, Decimal128Vector>(resultVector, expectedVector);
+            break;
+        }
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
+            isMatched = CompareUnorderedStringRows(static_cast<VarcharVector*>(resultVector), static_cast<VarcharVector*>(expectedVector));
+            break;
+        }
+        case OMNI_CONTAINER: {
+            int32_t fieldCount = static_cast<ContainerVector *>(resultVector)->GetVectorCount();
+            for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+                auto *actualFieldCol =
+                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(resultVector)->GetValue(colIdx));
+                auto *expectFieldCol =
+                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectedVector)->GetValue(colIdx));
+                isMatched = ColumnMatchIgnoreOrder(actualFieldCol, expectFieldCol);
+                if (not isMatched) {
+                    break;
+                }
+            }
+            break;
+        }
+        default: {
+            return false;
+        }
+    }
+    return isMatched;
+}
+
+bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBatch)
+{
+    if (resultBatch->GetRowCount() != expectedBatch->GetRowCount()) {
+        return false;
+    }
+
+    int32_t columnNumber = resultBatch->GetVectorCount();
+    if (columnNumber != expectedBatch->GetVectorCount()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < columnNumber; ++i) {
+        if (resultBatch->GetVector(i)->GetEncoding() != expectedBatch->GetVector(i)->GetEncoding()) {
+            return false;
+        }
+    }
+
+    if (!TypesMatch(resultBatch->GetVectorTypeIds(), expectedBatch->GetVectorTypeIds(), columnNumber)) {
+        return false;
+    }
+
+    bool isMatched = true;
+    for (size_t i = 0; i < columnNumber; ++i) {
+        isMatched = ColumnMatchIgnoreOrder(resultBatch->GetVector(i), expectedBatch->GetVector(i));
+        if (not isMatched) {
+            break;
+        }
+    }
+    return isMatched;
+}
+
+bool VecBatchesIgnoreOrderMatch(std::vector<VectorBatch *> &resultBatches, std::vector<VectorBatch *> &expectedBatches)
+{
+    if (resultBatches.size() != expectedBatches.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < resultBatches.size(); i++) {
+        if (not VecBatchMatchIgnoreOrder(resultBatches[i], expectedBatches[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool VecBatchMatches(std::vector<VectorBatch *> &outputPages, std::vector<VectorBatch *> &expectPage)
 {
     if (outputPages.size() != expectPage.size()) {

@@ -13,6 +13,8 @@
 #include "vector_encoding.h"
 #include "tracer/vector_tracer.h"
 #include "util/bit_map.h"
+#include "type/string_ref.h"
+#include "operator/execution_context.h"
 
 namespace omniruntime {
 namespace vec {
@@ -83,7 +85,7 @@ public:
         return valueOffsetsAddress;
     }
 
-    bool IsValueNull(int index)
+    bool IsValueNull(int index) const
     {
         return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
     }
@@ -105,7 +107,7 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
-    int GetValueOffset(int index)
+    int GetValueOffset(int index) const
     {
         return static_cast<int32_t *>(valueOffsetsAddress)[index];
     }
@@ -155,6 +157,31 @@ public:
         return hasNull ?
             BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) :
             0;
+    }
+    /* *
+     *
+     * @param rowId   Serialize the rowId element of the current vector.
+     * @param executionContext Allocate the memory for the serialization result through executionContent.
+     * @param begin stores the serialization result of the previous vector.
+     * If begin is nullptr, the rowId element of the current vector is the first element in the current row.
+     * After the serialization is complete, the value of @begin changes to pos + the number of bytes serialized.
+     * @return Serialized Results
+     */
+    virtual StringRef SerializeValue(size_t rowId, omniruntime::op::ExecutionContext &executionContext,
+        const char *&begin)
+    {
+        return {};
+    }
+
+    /* *
+     *
+     * @param rowId The deserialization result is stored in the rowId element of the vector.
+     * @param pos Pointer to serialized data
+     * @return Pointer to next serialized data
+     */
+    virtual const char *DeserializeValueIntoThis(size_t rowId, const char *pos)
+    {
+        return nullptr;
     }
 
 protected:

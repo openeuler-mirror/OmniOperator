@@ -35,13 +35,36 @@ public:
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(sizeInBytes, minChunkSize));
         }
-
+        continuousUsedMemoryBytes = sizeInBytes;
         uint8_t *ret = availBuf;
         availBuf += sizeInBytes;
         availBytes -= sizeInBytes;
         return ret;
     }
-
+    uint8_t *AllocateContinue(int64_t sizeInBytes, const char *&start)
+    {
+        auto *p = const_cast<char *>(start);
+        uint8_t *ret = (uint8_t *)p;
+        if (sizeInBytes == 0) {
+            return ret;
+        }
+        auto newSpace = continuousUsedMemoryBytes + sizeInBytes;
+        if (availBytes < sizeInBytes) {
+            AllocateChunk(std::max(newSpace, minChunkSize));
+            auto err = memcpy_sp(availBuf, continuousUsedMemoryBytes,  start, continuousUsedMemoryBytes);
+            if (err != EOK) {
+                LogWarn("memcpy_sp error %d when AllocateContinue", err);
+            }
+            start = (const char *)availBuf;
+            availBuf += continuousUsedMemoryBytes;
+            availBytes -= continuousUsedMemoryBytes;
+        }
+        ret = availBuf;
+        availBuf += sizeInBytes;
+        continuousUsedMemoryBytes += sizeInBytes;
+        availBytes -= sizeInBytes;
+        return ret;
+    }
     void Reset()
     {
         if (chunks.size() == 0) {
@@ -100,12 +123,15 @@ private:
             }
             delete chunk;
         }
+        continuousUsedMemoryBytes = 0;
     }
 
     int64_t minChunkSize;
     int64_t totalBytes;
     int64_t availBytes;
     uint8_t *availBuf;
+    // Record the size of the memory used continuously.
+    uint32_t continuousUsedMemoryBytes;
     std::vector<Chunk *> chunks;
     BaseAllocator *allocator;
 };

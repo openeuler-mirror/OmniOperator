@@ -106,6 +106,14 @@ public:
         return OMNI_VEC_ENCODING_DICTIONARY;
     }
 
+    StringRef SerializeValue(size_t rowId, omniruntime::op::ExecutionContext &executionContext,
+        const char *&begin) override
+    {
+        int32_t originId = 0;
+        auto *originVector = ExtractDictionaryAndId(static_cast<int32_t>(rowId), originId);
+        return originVector->SerializeValue(originId, executionContext, begin);
+    }
+
 private:
     DictionaryVector(DictionaryVector *vector, int size, int positionOffset)
         : Vector(vector, size, positionOffset),

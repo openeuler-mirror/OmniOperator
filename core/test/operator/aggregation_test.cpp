@@ -622,7 +622,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, cardinality, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6, expectData7);
 
-    EXPECT_TRUE(VecBatchMatch(result3[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(result3[0], expectVecBatch));
     EXPECT_EQ(result3[0]->GetVectorCount(), 7);
 
     delete[] input1;
@@ -696,7 +696,7 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -768,7 +768,7 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -905,7 +905,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     std::vector<VectorBatch *> result;
     groupBy->GetOutput(result);
     std::vector<VectorBatch *> expected { ConstructSimpleBuildData() };
-    EXPECT_TRUE(VecBatchMatches(result, expected));
+    EXPECT_TRUE(VecBatchesIgnoreOrderMatch(result, expected));
     Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatches(result);
     VectorHelper::FreeVecBatches(expected);
@@ -1649,7 +1649,7 @@ TEST(HashAggregationOperatorTest, hmpp_group_by_agg_same_cols)
     std::vector<VectorBatch *> result;
     groupBy->GetOutput(result);
     std::vector<VectorBatch *> expected { ConstructSimpleBuildData() };
-    EXPECT_TRUE(VecBatchMatches(result, expected));
+    EXPECT_TRUE(VecBatchesIgnoreOrderMatch(result, expected));
     Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatches(result);
     VectorHelper::FreeVecBatches(expected);
@@ -1669,7 +1669,6 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     std::vector<DataTypePtr> groupTypes = { VarcharType(10) };
     std::vector<DataTypePtr> aggTypes = { VarcharType(10), VarcharType(10), VarcharType(10) };
     VectorBatch **input = buildAggInput(vecBatchNum, rowSize, cardinality, 1, 3, groupTypes, aggTypes);
-    VectorHelper::PrintVecBatch(input[0]);
     // First stage
     DataTypePtr type1 = VarcharType(10);
     DataTypePtr type2 = VarcharType(10);
@@ -1707,7 +1706,6 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     std::vector<VectorBatch *> result1;
     int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
     EXPECT_EQ(vecBatchCount, 1);
-    VectorHelper::PrintVecBatch(result1[0]);
     auto resBatch = VectorHelper::ConcatVectorBatches(result1);
     for (auto res : result1) {
         VectorHelper::FreeVecBatch(res);
@@ -1726,7 +1724,7 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, cardinality, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -2410,10 +2408,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     int64_t expectData6[CARDINALITY] = {1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
-    VectorHelper::PrintVecBatch(resultFromFinal[0]);
-    std::cout<<"------expect---------"<<std::endl;
-    VectorHelper::PrintVecBatch(expectVecBatch);
-    EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFromFinal[0], expectVecBatch));
 
     delete[] input1;
     delete[] input2;

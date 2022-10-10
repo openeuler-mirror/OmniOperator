@@ -28,7 +28,9 @@ public:
     VariableWidthVector(VectorAllocator *pAllocator, int size) : Vector(pAllocator, initCapacityInBytes, size, TYPE_ID)
     {}
 
-    int ALWAYS_INLINE GetValue(int index, T **dst)
+    ~VariableWidthVector() override = default;
+
+    int ALWAYS_INLINE GetValue(int index, T **dst) const
     {
         int actualIndex = index + positionOffset;
         int startOffset = GetValueOffset(actualIndex);
@@ -182,6 +184,65 @@ public:
         return newAddress;
     }
 
+    /* *
+     * if nth value is null,we will set -1 as value 's length to distinguish 0 byte varchar
+     * @param rowId
+     * @param executionContext
+     * @param begin
+     * @return
+     */
+    virtual StringRef SerializeValue(size_t rowId, op::ExecutionContext &executionContext,
+        const char *&begin) override final
+    {
+        T *str = nullptr;
+        StringRef res {};
+        int stringLen;
+        auto isNull = Vector::IsValueNull((int)rowId);
+        if (not isNull) {
+            stringLen = GetValue(rowId, &str);
+            res.size = sizeof(stringLen) + stringLen;
+        } else {
+            stringLen = -1;
+            res.size = sizeof(stringLen);
+        }
+        auto *pos = executionContext.AllocContinue(res.size, begin);
+        auto err = memcpy_sp(pos, sizeof(stringLen), &stringLen, sizeof(stringLen));
+        if (err != EOK) {
+            LogError("memcpy_sp err %d, when SerializeValue.", err);
+            throw OmniException("memcpy_sp error", " when SerializeValue");
+        }
+        if (stringLen > 0) {
+            auto err = memcpy_sp(pos + sizeof(stringLen), stringLen, str, stringLen);
+            if (err != EOK) {
+                LogError("SerializeValue,but memcpy_sp err %d", err);
+                throw OmniException("memcpy_sp error", " when SerializeValue");
+            }
+            res.data = pos;
+        }
+        return res;
+    }
+
+    const char *DeserializeValueIntoThis(size_t rowId, const char *pos) override final
+    {
+        int stringSize = 0;
+        auto err = memcpy_sp((void *)&stringSize, sizeof(int), pos, sizeof(int));
+        if (err != EOK) {
+            LogError("DeserializeValueIntoThis,but memcpy_sp err %d", err);
+            throw OmniException("memcpy_sp error", " when DeserializeValueIntoThis");
+        }
+        pos += sizeof(stringSize);
+
+        if (stringSize >= 0) {
+            auto *copyPointer = reinterpret_cast<const T *>(pos);
+            SetValue(rowId, copyPointer, stringSize);
+            return pos + stringSize;
+        } else {
+            // string_size < 0 means null pointer
+            SetValueNull(rowId);
+            return pos;
+        }
+    }
+
 private:
     static const int32_t expandFactor = 2;
 
@@ -213,6 +274,7 @@ private:
         errno_t ret = memcpy_s(data + startOffset, capacityInBytes, value + start, dataLen);
         if (ret != EOK) {
             LogError("set data failed in variable vector. %d", ret);
+            throw OmniException("memcpy_s error", " when SetData");
         }
     }
 

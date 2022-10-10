@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Hash Aggregation Header
  */
 #ifndef GROUP_AGGREGATION_H
@@ -11,6 +11,8 @@
 #include "operator/hash_util.h"
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "operator/util/operator_util.h"
+#include "group_column_marshaller.h"
 
 namespace omniruntime {
 namespace op {
@@ -99,9 +101,7 @@ public:
           aggInputColsSize(aggInputColsSize),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes)
-    {
-        groupedRows.reserve(DEFAULT_HASHTABLE_SIZE);
-    }
+    {}
 
     ~HashAggregationOperator() override {}
 
@@ -116,20 +116,17 @@ public:
     void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *groupByColIdx, int32_t groupByColNum,
         int32_t aggNum);
     void PostLoop(VectorBatch *vecBatch) const;
-    std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> &GetStates()
-    {
-        return groupedRows;
-    }
+
+    template <typename Serialize> void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, VectorBatch &groupVectors);
 
 private:
-    std::vector<BucketIterator> FindBuckets(uint64_t *hash, int32_t blockSize);
-    int32_t InitMaxRowCountAndOutputTypes();
+    int32_t GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types, uint32_t columnCount);
 
-    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
-        int32_t rowIndex);
-
-    void FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
+    void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<DataTypePtr> &types,
         int32_t rowCount);
+
+    template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, std::vector<VectorBatch *> &result);
+    void SetGroupByColumnsHandleType(GroupByFieldHandleType t);
 
 private:
     friend class HashAggregationOperatorFactory;
@@ -143,18 +140,19 @@ private:
     std::vector<DataTypes> aggInputTypes;
     std::vector<DataTypes> aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
+    GroupByFieldHandleType groupByColumnsHandleType = GroupByFieldHandleType::serialize;
+    using AggregateStatePtr = char *;
+    std::unique_ptr<GroupbyColumnSerializeHandler<DefaultHashMap<StringRef, AggregateStatePtr>>> serialize = nullptr;
 
-    void FillOutputSingleVecBatch(VectorBatch *batchToFill);
+    void AggregateAllState(VectorBatch *vecBatch, uint32_t aggNum, std::vector<AggregateStatePtr> rowStates);
 
-    // for output single vecBatch
-    size_t totalRowCount = 0;
-    size_t rowCountOutputted = 0;
-    uint32_t colsCount;
-    int32_t rowsPerBatch;
-    std::vector<DataTypePtr> outputTypes;
-    BucketIterator vecBatchFirstBucket;
-    ChainIterator vecBatchFirstGroup;
-    bool iteratorHasInitialized = false;
+    template <typename Deserialize>
+    void FillOutputResultVectors(Deserialize &deserializeHashmap, uint32_t groupByColSize, uint32_t aggOutputColSize,
+        std::vector<VectorBatch *> &result);
+
+    template <typename Deserialize>
+    void TraverseHashmapToGetResults(Deserialize &deserializeHashmap, VectorBatch &groupVectors,
+        VectorBatch &aggregateVectors, std::vector<VectorBatch *> &result);
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
@@ -190,6 +188,8 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
+    GroupByFieldHandleType handleType;
+    void ChooseGroupByType();
 };
 } // end of namespace op
 } // end of namespace omniruntimef
