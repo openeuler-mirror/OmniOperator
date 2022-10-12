@@ -122,6 +122,34 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M6</version>
             </plugin>
+            <plugin>
+                <groupId>com.huawei.bepcloud</groupId>
+                <artifactId>rebuild-maven-plugin</artifactId>
+                <version>2.1.T1.SPC2</version>
+                <executions>
+                    <execution>
+                        <id>reproducibleBuilds</id>
+                        <goals>
+                            <goal>reproducibleBuild</goal>
+                        </goals>
+                        <configuration>
+                            <recursively>true</recursively>
+                            <fixZipExternalFileAttributes>true</fixZipExternalFileAttributes>
+                            <rules>
+                                <sort>
+                                    <fileName>MANIFEST.MF</fileName>
+                                    <attribute>Include-Resource</attribute>
+                                </sort>
+                                <del>
+                                    <fileName>pom.properties</fileName>
+                                    <contains>#</contains>
+                                </del>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 </project>
