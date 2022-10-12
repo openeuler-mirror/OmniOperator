@@ -218,6 +218,8 @@ void OperatorUtil::ProjectRequiredVectors(const DataTypes &newInputTypes, const 
                     valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             case OMNI_DECIMAL128:
+                newVecBatch->SetVector(i, ProjectVector<Decimal128Vector, Decimal128>(projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount, allocator));
                 break;
             default:
                 break;
