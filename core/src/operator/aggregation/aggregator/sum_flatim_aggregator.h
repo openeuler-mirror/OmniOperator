@@ -61,7 +61,7 @@ public:
         }
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
         auto v =

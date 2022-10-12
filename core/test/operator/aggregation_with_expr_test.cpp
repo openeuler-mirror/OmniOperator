@@ -78,7 +78,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -155,7 +154,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -221,7 +219,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -297,7 +294,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5, expData6);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);

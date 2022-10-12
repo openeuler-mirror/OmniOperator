@@ -4,6 +4,7 @@
  */
 
 #include "window_function.h"
+#include "operator/aggregation/aggregator/aggregator_factory_impl.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -90,7 +91,7 @@ AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_
       isOverflowAsNull(isOverflowAsNull)
 {
     this->argumentChannels.push_back(argumentChannel);
-    this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
+    this->aggregatorFactory = CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
 }
 
 void AggregateWindowFunction::Reset(WindowIndex *pWindowIndex)

@@ -39,10 +39,10 @@ public:
         }
 
         if (inputRaw) {
-            auto currentVal = static_cast<ResultType *>(state.avgVal);
-            *reinterpret_cast<ResultType *>(state.avgVal) =
+            auto currentVal = static_cast<ResultType *>(state.val);
+            *reinterpret_cast<ResultType *>(state.val) =
                 (static_cast<RawInputVectorType *>(vector))->GetValue(offset) + *currentVal;
-            ++state.avgCnt;
+            ++state.count;
         } else {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
@@ -54,8 +54,8 @@ public:
                 VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, avgCountOffset));
             int64_t avgCnt = avgCountVector->GetValue(avgCountOffset);
 
-            auto currentVal = static_cast<ResultType *>(state.avgVal);
-            state.avgCnt += avgCnt;
+            auto currentVal = static_cast<ResultType *>(state.val);
+            state.count += avgCnt;
             *currentVal += avgVal;
         }
     }
@@ -73,8 +73,8 @@ public:
             auto rowVal = (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = rowVal;
-            state.avgVal = ptr;
-            state.avgCnt = 1;
+            state.val = ptr;
+            state.count = 1;
         } else {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
@@ -88,12 +88,12 @@ public:
 
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = avgVal;
-            state.avgVal = ptr;
-            state.avgCnt = avgCnt;
+            state.val = ptr;
+            state.count = avgCnt;
         }
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         if (outputPartial) {
             int32_t avgValOffset;
@@ -110,18 +110,18 @@ public:
                 return;
             }
 
-            avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.avgVal));
-            avgCountVector->SetValue(rowIndex, state.avgCnt);
+            avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+            avgCountVector->SetValue(rowIndex, state.count);
         } else {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
                 VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, avgValOffset));
-            if (state.avgCnt <= 0 || state.val == nullptr) {
+            if (state.count <= 0 || state.val == nullptr) {
                 avgValVector->SetValueNull(rowIndex);
                 return;
             }
-            auto currentVal = *(static_cast<ResultType *>(state.avgVal));
-            auto result = currentVal / state.avgCnt;
+            auto currentVal = *(static_cast<ResultType *>(state.val));
+            auto result = currentVal / state.count;
             avgValVector->SetValue(rowIndex, result);
         }
     }

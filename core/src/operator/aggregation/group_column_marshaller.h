@@ -44,16 +44,16 @@ public:
         return hashmap.Emplace(emplaceKey);
     }
 
-    static void ParseKeyToCols(const StringRef &key, VectorBatch &aggVectors, int rowId)
+    static void ParseKeyToCols(
+        const StringRef &key, VectorBatch *vectorBatch, const int32_t start, const int32_t length, const int rowId)
     {
         auto pos = key.data ;
-        for (int i = 0; i<aggVectors.GetVectorCount(); i++) {
-            auto *curVec = aggVectors.GetVector(i);
-            pos = curVec->DeserializeValueIntoThis(rowId, pos);
+        const int32_t end = start + length;
+        for (int32_t i = start; i < end; ++i) {
+            pos = vectorBatch->GetVector(i)->DeserializeValueIntoThis(rowId, pos);
         }
     }
 };
-
 }
 }
 #endif // OMNI_RUNTIME_GROUP_COLUMN_MARSHALLER_H

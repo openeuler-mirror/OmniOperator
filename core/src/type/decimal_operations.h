@@ -11,15 +11,17 @@
 #include <regex>
 #include <iostream>
 #include <climits>
+#include <cmath>
 #include <huawei_secure_c/include/securec.h>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "util/debug.h"
+#include "util/omni_exception.h"
 #include "decimal_base.h"
 #include "decimal128.h"
-#include "operator/aggregation/aggregator/aggregator.h"
 
 namespace omniruntime {
 namespace type {
+using namespace exception;
 using namespace boost::multiprecision;
 
 enum class Op {
@@ -37,6 +39,21 @@ enum class OpStatus {
     FAIL = 3
 };
 
+using DecimalAverageState = struct DecimalAverageState {
+    int64_t count = 0;
+    int64_t overflow = 0;
+    uint64_t lowBits = 0;
+    int64_t highBits = 0;
+};
+
+using DecimalSumState = struct DecimalSumState {
+    int64_t overflow = 0;
+    uint64_t lowBits = 0;
+    int64_t highBits = 0;
+};
+
+
+using int128_t = __int128_t;
 enum class RoundingMode {
     ROUND_UP,
     ROUND_FLOOR

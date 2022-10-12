@@ -6,7 +6,6 @@
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "util/type_util.h"
-#include "operator/aggregation/aggregator/aggregator_factory.h"
 #ifdef ENABLE_HMPP
 #include "util/config_util.h"
 #endif
@@ -77,8 +76,6 @@ Operator *AggregationOperatorFactory::CreateOperator()
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto aggCount = aggregators.size();
-    int32_t rowCount = vecBatch->GetRowCount();
-
     for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
@@ -87,14 +84,10 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
         if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
         } else {
-            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-                aggregator->ProcessGroup(state, vecBatch, rowIdx);
-            }
+            aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }
 #else
-        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            aggregator->ProcessGroup(state, vecBatch, rowIdx);
-        }
+        aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
 #endif
     }
     VectorHelper::FreeVecBatch(vecBatch);
@@ -120,7 +113,7 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     int32_t aggOutputColsStart = 0;
     for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
-        auto state = aggsStates[aggIdx];
+        auto &state = aggsStates[aggIdx];
         std::vector<Vector *> extractVectors;
         for (int i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
             extractVectors.push_back(outputVecBatch->GetVector(aggOutputColsStart + i));

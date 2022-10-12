@@ -5,15 +5,16 @@
 #ifndef AGGREGATOR_H
 #define AGGREGATOR_H
 
-#include <memory>
-
 #include "operator/aggregation/definitions.h"
 #include "type/data_types.h"
+#include "type/data_type.h"
+#include "type/decimal128.h"
 #include "type/base_operations.h"
 #include "vector/vector.h"
 #include "vector/vector_common.h"
 #include "operator/execution_context.h"
 #include "operator/util/function_type.h"
+#include "util/type_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -25,22 +26,21 @@ using ColumnIndex = struct ColumnIndex {
     DataTypePtr output;
 };
 
-using AggregateState = union AggregateState {
-    // For sum() and basic type min()/max()
-    void *val;
-    // For count()
-    int64_t count;
+using AggregateState = struct AggregateState {
+    // for sum/avg/min/max holds latest aggregatred value
+    // for stringMin/stringMax holds pointer to latestes aggregated value
+    void *val = nullptr;
 
-    // For basic type avg()
-    struct {
-        void *avgVal;
-        int64_t avgCnt;
-    };
-    // For string min()/max()
-    struct {
-        uint8_t *strVal;
-        int32_t strLen;
-    };
+    // for sum/avg holds number of rows aggregated so far (not including null rows), or -1 if overflow happened.
+    // for min/max it is 1 when at leats there is one not-null row in aggregation, otherwise 0.
+    // for count holds number of counted rows
+    int64_t count = 0;
+
+    void Reset()
+    {
+        val = nullptr;
+        count = 0;
+    }
 };
 
 using DecimalAverageState = struct DecimalAverageState {
@@ -86,9 +86,9 @@ public:
      * true overflow as null value, false throw exception, default value as false.
      *
      */
-    Aggregator(FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
-        const std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
-        bool isOverflowAsNull = false)
+    Aggregator(const FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
+        const std::vector<int32_t> &channels, const bool inputRaw = true, const bool outputPartial = false,
+        const bool isOverflowAsNull = false)
         : type(aggregateType),
           inputTypes(inputTypes),
           outputTypes(outputTypes),
@@ -99,7 +99,7 @@ public:
           executionContext(std::make_unique<ExecutionContext>())
     {}
 
-    virtual ~Aggregator() {}
+    virtual ~Aggregator() = default;
 
 #ifdef ENABLE_HMPP
     virtual void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
@@ -113,13 +113,60 @@ public:
     }
 #endif
 
-    // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
-    virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) = 0;
+    virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
+    {
+        throw OmniException("Not implemented",
+            "InitiateGroup(AggregateState &, VectorBatch *, int32_t) not implemented for "
+            + std::to_string(as_integer(type)));
+    }
 
-    virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) = 0;
+    virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
+    {
+        throw OmniException("Not implemented",
+            "ProcessGroup(AggregateState &, VectorBatch *, int32_t) not implemented for "
+            + std::to_string(as_integer(type)));
+    }
+
+    // for no groupby aggregation
+    virtual void ProcessGroup(
+        AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount)
+    {
+#ifdef DEBUG
+        LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
+#endif
+        int32_t end = rowOffset + rowCount;
+        for (int32_t i = rowOffset; i < end; ++i) {
+            ProcessGroup(state, vectorBatch, i);
+        }
+    }
+
+    // for groupby hash aggregation
+    virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+        VectorBatch *vectorBatch, const int32_t rowOffset)
+    {
+#ifdef DEBUG
+        LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
+#endif
+        int32_t rowIndex = rowOffset;
+        size_t rowCount = rowStates.size();
+        for (size_t i = 0; i < rowCount; ++i) {
+            ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+        }
+    }
+
+    virtual void InitState(AggregateState &state)
+    {
+        state.val = nullptr;
+        state.count = 0;
+    }
 
     // set result to output vector
-    virtual void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) = 0;
+    virtual void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, const int32_t rowIndex) = 0;
+
+    virtual bool IsTypedAggregator()
+    {
+        return false;
+    }
 
     virtual bool IsInputRaw() const
     {
@@ -166,13 +213,13 @@ public:
     static const int32_t INVALID_INPUT_COL = -1;
 
 protected:
-    FunctionType type;
+    const FunctionType type;
     const DataTypes inputTypes;
     const DataTypes outputTypes;
-    bool inputRaw;
-    bool outputPartial;
-    bool isOverflowAsNull;
-    std::vector<int32_t> channels;
+    const bool inputRaw;
+    const bool outputPartial;
+    const bool isOverflowAsNull;
+    const std::vector<int32_t> channels;
     std::unique_ptr<ExecutionContext> executionContext;
 };
 } // end of namespace op

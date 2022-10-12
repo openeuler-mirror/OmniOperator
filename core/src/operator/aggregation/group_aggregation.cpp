@@ -7,10 +7,8 @@
 #include "vector/vector_helper.h"
 #include "vector/container_vector.h"
 #include "operator/status.h"
-#include "util/type_util.h"
-#include "operator/hash_util.h"
 #include "operator/util/operator_util.h"
-#include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "util/type_util.h"
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
 #include "operator/hmpp_hash_util.h"
@@ -33,7 +31,7 @@ template void HashFuncVectImpl<BooleanVector, bool>(Vector *vector, const uint32
 template void DuplicateKeyValueImpl<BooleanVector, bool>(AggregateState &state, Vector *vector, const uint32_t offset,
     ExecutionContext *context);
 
-template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, AggregateState &slot,
+template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, const AggregateState &slot,
     bool &isSame);
 
 static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
@@ -170,8 +168,17 @@ void HashAggregationOperator::SetGroupByColumnsHandleType(GroupByFieldHandleType
 }
 OmniStatus HashAggregationOperator::Init()
 {
-    auto groupByColsSize = groupByCols.size();
-    auto colSize = groupByColsSize + aggInputColsSize;
+    // put at beginning so that we do not allocate memory if there is error
+    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
+        serialize = std::make_unique<decltype(serialize)::element_type>();
+    } else {
+        LogError("can not support groupByColumnsHandleType : %d.", groupByColumnsHandleType);
+        // only the serialization method is used now
+        return OMNI_STATUS_ERROR;
+    }
+
+    auto groupByColSize = groupByCols.size();
+    auto colSize = groupByColSize + aggInputColsSize;
     sourceTypes = new int32_t[colSize];
     // group by source types
     for (auto &c : groupByCols) {
@@ -179,7 +186,7 @@ OmniStatus HashAggregationOperator::Init()
     }
 
     // agg source types
-    uint32_t sourceTypesIdx = groupByColsSize;
+    uint32_t sourceTypesIdx = groupByColSize;
     for (auto &dataTypes : aggInputTypes) {
         for (int32_t idx = 0; idx < dataTypes.GetSize(); idx++) {
             sourceTypes[sourceTypesIdx] = static_cast<int32_t>(dataTypes.GetType(idx)->GetId());
@@ -198,32 +205,8 @@ OmniStatus HashAggregationOperator::Init()
     return OMNI_STATUS_NORMAL;
 }
 
-static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t colNum,
-    uint64_t *combinedHashVal)
+void HashAggregationOperator::InLoop(VectorBatch *vecBatch, VectorBatch &groupVectors)
 {
-    Vector *vector = nullptr;
-    for (int32_t i = 0; i < colNum; ++i) {
-        vector = vectors[i];
-        if (vector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
-            GROUP_AGG_FUNCTIONS[vector->GetTypeId()].hashFuncVect(vector, start, rowCount, combinedHashVal);
-        } else {
-            int32_t newIndexes[rowCount];
-            Vector *originalVector =
-                static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(start, rowCount, newIndexes);
-            GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].hashFunc(originalVector, rowCount, newIndexes,
-                combinedHashVal);
-        }
-    }
-}
-
-void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
-    int32_t groupByColNum, int32_t aggNum)
-{
-    VectorBatch groupVectors(groupByColNum);
-    for (size_t i = 0; i < groupByColNum; ++i) {
-        groupVectors.SetVector(i, vecBatch->GetVector(groupByColIdx[i]));
-    }
-
     if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
         Emplace(serialize, vecBatch, groupVectors);
     } else {
@@ -237,44 +220,40 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto groupColNum = this->groupByCols.size();
-    auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
-    auto aggNum = this->aggregators.size();
 
+    VectorBatch groupVectors(groupColNum);
     for (size_t i = 0; i < groupColNum; ++i) {
-        groupByColIdx[i] = this->groupByCols[i].idx;
+        groupVectors.SetVector(i, vecBatch->GetVector(this->groupByCols[i].idx));
     }
 
-    uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
-    this->InLoop(vecBatch, rowCount, groupByColIdx.get(), groupColNum, aggNum);
+    this->InLoop(vecBatch, groupVectors);
 
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 
-
 /**
  * @param types
- * @param columnCount
  * @return rowSize
  * All the output data types are determined in this function. Following allocation for output vectors and filling
  * value should use the 'types' parameter instead of using input vector types.
  */
-int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types, uint32_t columnCount)
+int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types)
 {
     uint32_t rowSize = 0;
     for (auto &i : groupByCols) {
         types.push_back(i.input);
         rowSize += OperatorUtil::GetTypeSize(i.input);
     }
-    for (auto &singleAgg : aggOutputTypes) {
-        for (int32_t i = 0; i < singleAgg.GetSize(); i++) {
-            types.push_back(singleAgg.GetType(i));
-            rowSize += OperatorUtil::GetTypeSize(singleAgg.GetType(i));
+    for (auto &aggregator : aggregators) {
+        const std::vector<DataTypePtr> &aggTypes = aggregator->GetOutputTypes()->Get();
+        for (auto dataType : aggTypes) {
+            types.push_back(dataType);
+            rowSize += OperatorUtil::GetTypeSize(dataType);
         }
     }
     return rowSize;
 }
-
 
 void HashAggregationOperator::SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch,
     const std::vector<DataTypePtr> &types, int32_t rowCount)
@@ -299,11 +278,16 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     SetStatus(OMNI_STATUS_FINISHED);
     return expectedBatchSize;
 }
+
 OmniStatus HashAggregationOperator::Close()
 {
-    delete[] sourceTypes;
+    if (sourceTypes != nullptr) {
+        delete[] sourceTypes;
+        sourceTypes = nullptr;
+    }
     return OMNI_STATUS_NORMAL;
 }
+
 #ifdef ENABLE_HMPP
 void HashFuncVectImplHMPP(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
@@ -321,12 +305,12 @@ void HashVarcharVectFuncImplHMPP(Vector *vector, const uint32_t start, const uin
     int64_t *resultHash = new int64_t[rowCount]();
     int32_t positionOffset = vector->GetPositionOffset();
     uint8_t *varcharVectorAddr = static_cast<uint8_t *>((vector)->GetValues());
-    int32_t *offest = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
+    int32_t *offset = static_cast<int32_t *>((vector)->GetValueOffsets()) + positionOffset;
     LogDebug("HMPP-HASHAGG-hashVarchar");
     if (vector->MayHaveNull()) {
         nullAddr = static_cast<int8_t *>(vector->GetValueNulls()) + positionOffset + start;
     }
-    HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offest + start, rowCount, nullAddr, resultHash);
+    HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offset + start, rowCount, nullAddr, resultHash);
     if (result != HMPP_STS_NO_ERR) {
         delete[] resultHash;
         throw OmniException("HMPP ERROR", "AGG HMPPS_Hash_decimal64 failed for hmpp error");
@@ -475,8 +459,9 @@ void HashDecimalVectFuncProxy(Vector *vector, const uint32_t start, const uint32
     HashDecimalVectFunc(vector, start, rowCount, combinedHash);
 #endif
 }
+
 template <typename V, typename D>
-void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame)
+void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame)
 {
     bool isIntermediateNull = static_cast<D *>(slot.val) == nullptr;
     bool isInputNull = vector->IsValueNull(offset);
@@ -493,14 +478,14 @@ void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &s
     return;
 }
 
-void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame)
+void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame)
 {
-    bool isIntermediateNull = slot.strVal == nullptr;
+    bool isIntermediateNull = slot.val == nullptr;
     bool isInputNull = vector->IsValueNull(offset);
     if (!isInputNull && !isIntermediateNull) {
         uint8_t *data = nullptr;
         int32_t valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
-        isSame = (valLen == slot.strLen) && (memcmp(data, slot.strVal, static_cast<size_t>(valLen)) == 0);
+        isSame = (valLen == slot.count) && (memcmp(data, slot.val, static_cast<size_t>(valLen)) == 0);
         return;
     }
     if (isInputNull != isIntermediateNull) {
@@ -533,8 +518,8 @@ void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint3
     int32_t valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
     uint8_t *data = context->GetArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, static_cast<size_t>(valLen));
-    state.strVal = data;
-    state.strLen = valLen;
+    state.val = data;
+    state.count = valLen;
 }
 
 template <typename V>
@@ -565,127 +550,126 @@ void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnInd
 }
 
 template <typename V, typename D>
-void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex)
+void FillValueImpl(Vector *v, int32_t rowIndex, const AggregateState &state)
 {
-    auto vector = static_cast<V *>(vecBatch->GetVector(colIndex));
-    if ((*tempRowIterator)[colIndex].val == nullptr) {
-        vector->SetValueNull(rowIndex);
-        return;
+    if (state.val == nullptr) {
+        static_cast<V *>(v)->SetValueNull(rowIndex);
+    } else {
+        static_cast<V *>(v)->SetValue(rowIndex, *static_cast<D *>(state.val));
     }
-    vector->SetValue(rowIndex, *static_cast<D *>((*tempRowIterator)[colIndex].val));
 }
 
-void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex)
+void FillVarcharValue(Vector *v, int32_t rowIndex, const AggregateState &state)
 {
-    auto vector = static_cast<VarcharVector *>(vecBatch->GetVector(colIndex));
-    if ((*tempRowIterator)[colIndex].val == nullptr) {
-        vector->SetValueNull(rowIndex);
-        return;
+    if (state.val == nullptr) {
+        static_cast<VarcharVector *>(v)->SetValueNull(rowIndex);
+    } else {
+        static_cast<VarcharVector *>(v)->SetValue(rowIndex, reinterpret_cast<uint8_t *>(state.val), state.count);
     }
-    vector->SetValue(rowIndex, reinterpret_cast<uint8_t *>((*tempRowIterator)[colIndex].strVal),
-        (*tempRowIterator)[colIndex].strLen);
 }
 
 template <typename Serialize>
 void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, VectorBatch &groupVectors)
 {
-    auto rowCount = vecBatch->GetRowCount();
-    std::vector<AggregateStatePtr> rowStates(rowCount);
-    auto aggNum = aggregators.size();
-    for (size_t i = 0; i < rowCount; ++i) {
-        AggregateStatePtr aggPointer = nullptr;
+    int32_t rowCount = vecBatch->GetRowCount();
+    size_t aggNum = aggregators.size();
+    if (aggNum == 0) {
+        // no aggregator, so just perform groupby
+        for (int32_t i = 0; i < rowCount; ++i) {
+            emplaceKey->InsertValueToHashmap(i, &groupVectors, *executionContext);
+        }
+        return;
+    }
+
+    // aggNum > 0
+    std::vector<AggregateState *> rowStates(rowCount);
+    AggregateState *currentGroupStates = nullptr;
+    for (int32_t i = 0; i < rowCount; ++i) {
         auto ret = emplaceKey->InsertValueToHashmap(i, &groupVectors, *executionContext);
         if (ret.IsInsert()) {
-            aggPointer = reinterpret_cast<AggregateStatePtr>(
+            currentGroupStates = reinterpret_cast<AggregateState *>(
                 executionContext->GetArena()->Allocate(aggNum * sizeof(AggregateState)));
-            for (int i = 0; i < aggNum; i++) {
-                auto *p = new (aggPointer + sizeof(AggregateState) * i) AggregateState;
-                memset(p,  0, sizeof(AggregateState));
+            for (size_t j = 0; j < aggNum; ++j) {
+                aggregators[j]->InitState(currentGroupStates[j]);
             }
-            ret.SetValue(aggPointer);
+            ret.SetValue(currentGroupStates);
         } else {
-            aggPointer = (ret.GetValue());
+            currentGroupStates = ret.GetValue();
         }
-        rowStates[i] = aggPointer;
-    }
-    AggregateAllState(vecBatch, aggNum, rowStates);
-}
 
-void HashAggregationOperator::AggregateAllState(VectorBatch *vecBatch, uint32_t aggNum,
-    std::vector<AggregateStatePtr> &rowStates)
-{
-    auto rowCount = rowStates.size();
-    for (uint32_t i = 0; i < aggNum; ++i) {
-        auto &curAggregator = aggregators.at(i);
-        for (uint32_t j = 0; j < rowCount; ++j) {
-            auto *oneRowStates = rowStates.at(j);
-            auto *oneState = reinterpret_cast<AggregateState *>(oneRowStates) + i;
-            auto &s = *oneState;
-            curAggregator->ProcessGroup(s, vecBatch, j);
-        }
+        rowStates[i] = currentGroupStates;
+    }
+
+    for (size_t i = 0; i < aggNum; ++i) {
+        aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
     }
 }
-template <typename Deserialize>
-void HashAggregationOperator::FillOutputResultVectors(Deserialize &deserializeHashmap, uint32_t groupByColSize,
-    uint32_t aggOutputColSize, std::vector<VectorBatch *> &result)
-{
-    auto &hashmap = deserializeHashmap->hashmap;
-    int32_t totalRowCount = hashmap.GetElementsSize();
 
-    uint32_t colCount = groupByColSize + aggOutputColSize;
+void HashAggregationOperator::FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result)
+{
     std::vector<DataTypePtr> types;
-    int32_t rowByteSize = GetRowSizeAndOutputTypes(types, colCount);
+    int32_t rowByteSize = GetRowSizeAndOutputTypes(types);
     auto rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
     auto expectedBatchSize = OperatorUtil::GetVecBatchCount(totalRowCount, rowsPerBatch);
     auto leftRowCount = totalRowCount;
 
     // create all output vector batches
-    for (uint32_t batchId = 0; batchId < expectedBatchSize; ++batchId) {
+    for (int32_t batchId = 0; batchId < expectedBatchSize; ++batchId) {
         auto rowCount = std::min(rowsPerBatch, leftRowCount);
-        auto vecBatch = new VectorBatch(colCount, rowCount);
+        auto vecBatch = new VectorBatch(types.size(), rowCount);
         SetVectors(this->vecAllocator, vecBatch, types, rowCount);
         result.push_back(vecBatch);
         leftRowCount -= rowCount;
+        if (leftRowCount <= 0) {
+            break;
+        }
     }
 }
 
 template <typename Deserialize>
-void HashAggregationOperator::TraverseHashmapToGetResults(Deserialize &deserializeHashmap, VectorBatch &groupVectors,
-    VectorBatch &aggregateVectors, std::vector<VectorBatch *> &result)
+void HashAggregationOperator::TraverseHashmapToGetResults(
+    Deserialize &deserializeHashmap, const int32_t groupByColSize, std::vector<VectorBatch *> &result)
 {
-    auto curBatchId = 0;
+    const int32_t rowsPerBatch = result.at(0)->GetRowCount();
+    const size_t aggNum = this->aggregators.size();
+
+    int32_t curBatchId = 0;
+    int32_t lambdaRowIndex = rowsPerBatch;
+    VectorBatch *curBatch = nullptr;
+
     auto &hashmap = deserializeHashmap->hashmap;
-    int lambdaRowIndex = 0;
-    int groupByColSize = groupVectors.GetVectorCount();
-    int aggOutputColSize = aggregateVectors.GetVectorCount();
-    auto rowsPerBatch = result.at(0)->GetRowCount();
-    auto aggNum = this->aggregators.size();
 
     hashmap.ForEachKV([&](const auto &key, auto &mapped) mutable {
-        if (lambdaRowIndex >= rowsPerBatch) {
-            lambdaRowIndex %= rowsPerBatch;
-            ++curBatchId;
-            for (int i = 0; i < groupByColSize; ++i) {
-                groupVectors.SetVector(i, result.at(curBatchId)->GetVector(i));
-            }
-            for (int i = 0; i < aggOutputColSize; ++i) {
-                aggregateVectors.SetVector(i, result.at(curBatchId)->GetVector(i + groupByColSize));
-            }
+        if (lambdaRowIndex == rowsPerBatch) {
+            lambdaRowIndex = 0;
+            curBatch = result[curBatchId++];
         }
-        std::remove_reference<decltype(deserializeHashmap)>::type::element_type::ParseKeyToCols(key, groupVectors,
-            lambdaRowIndex);
-        int aggOutputStartIndex = 0;
-        for (uint32_t aggIndex = 0; aggIndex < aggNum; ++aggIndex) {
-            auto *states = reinterpret_cast<AggregateStatePtr>(mapped);
-            auto &state = *(reinterpret_cast<AggregateState *>(states + sizeof(AggregateState) * aggIndex));
-            auto oneAggOutputCols = aggOutputTypes[aggIndex].GetSize();
-            std::vector<Vector *> adaptAggVectors;
-            adaptAggVectors.resize(oneAggOutputCols);
-            for (auto j = 0; j < oneAggOutputCols; j++) {
-                adaptAggVectors[j] = (aggregateVectors.GetVector(aggOutputStartIndex + j));
+        std::remove_reference<decltype(deserializeHashmap)>::type::element_type::ParseKeyToCols(
+            key, curBatch, 0, groupByColSize, lambdaRowIndex);
+        ++lambdaRowIndex;
+    });
+
+    int aggOutputStartIndex = groupByColSize;
+    for (size_t aggIndex = 0; aggIndex < aggNum; ++aggIndex) {
+        curBatchId = 0;
+        lambdaRowIndex = rowsPerBatch;
+        auto &aggregator = aggregators[aggIndex];
+        const auto oneAggOutputCols = aggOutputTypes[aggIndex].GetSize();
+        std::vector<Vector *> adaptAggVectors(oneAggOutputCols);
+
+        hashmap.ForEachKV([&](const auto &key, auto &mapped) mutable {
+            auto &state = mapped[aggIndex];
+
+            if (lambdaRowIndex == rowsPerBatch) {
+                lambdaRowIndex = 0;
+                curBatch = result[curBatchId++];
+                for (auto j = 0; j < oneAggOutputCols; j++) {
+                    adaptAggVectors[j] = curBatch->GetVector(aggOutputStartIndex + j);
+                }
             }
+
             try {
-                aggregators[aggIndex]->ExtractValues(state, adaptAggVectors, lambdaRowIndex);
+                aggregator->ExtractValues(state, adaptAggVectors, lambdaRowIndex);
             } catch (const OmniException &oneException) {
                 // release VectorBatch when aggregator.ExtractValues throw exception
                 // when spark hash agg sum/avg decimal overflow, it will throw exception when
@@ -695,38 +679,25 @@ void HashAggregationOperator::TraverseHashmapToGetResults(Deserialize &deseriali
                 }
                 throw oneException;
             }
-            aggOutputStartIndex += oneAggOutputCols;
-        }
-        ++lambdaRowIndex;
-    });
+            lambdaRowIndex++;
+        });
+        aggOutputStartIndex += oneAggOutputCols;
+    }
 }
+
 template <typename Deserialize>
 int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, std::vector<VectorBatch *> &result)
 {
-    uint32_t groupByColSize = groupByCols.size();
-    uint32_t aggOutputColSize = 0;
-    for (auto &oneAggOutputTypes : aggOutputTypes) {
-        aggOutputColSize += oneAggOutputTypes.GetSize();
-    }
     auto &hashmap = deserializeHashmap->hashmap;
     int32_t totalRowCount = hashmap.GetElementsSize();
     if (totalRowCount == 0) {
         return 0;
     }
-    FillOutputResultVectors(deserializeHashmap, groupByColSize, aggOutputColSize, result);
 
-    VectorBatch aggregateVectors(aggOutputColSize);
-    VectorBatch groupVectors(groupByColSize);
-    std::vector<size_t> colIds(groupByColSize, 0);
-    int curBatchId = 0;
-    for (uint32_t i = 0; i < groupByColSize; ++i) {
-        colIds[i] = groupByCols.at(i).idx;
-        groupVectors.SetVector(i, result.at(curBatchId)->GetVector(i));
-    }
-    for (uint32_t i = 0; i < aggOutputColSize; ++i) {
-        aggregateVectors.SetVector(i, result.at(curBatchId)->GetVector(i + groupByColSize));
-    }
-    TraverseHashmapToGetResults(deserializeHashmap, groupVectors, aggregateVectors, result);
+    FillOutputResultVectors(totalRowCount, result);
+
+    TraverseHashmapToGetResults(deserializeHashmap, groupByCols.size(), result);
+
     return result.size();
 }
 } // end of namespace op

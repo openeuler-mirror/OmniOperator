@@ -4,6 +4,7 @@
  */
 
 #include "aggregation.h"
+#include "operator/aggregation/aggregator/aggregator_factory_impl.h"
 
 namespace omniruntime {
 namespace op {

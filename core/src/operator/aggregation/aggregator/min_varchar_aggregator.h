@@ -5,36 +5,292 @@
 #ifndef OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
 #define OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
 
-#include "aggregator.h"
+#include "typed_aggregator.h"
 #ifdef ENABLE_HMPP
 #include "HMPP/hmpps.h"
 #endif
+#include "operator/aggregation/definitions.h"
+
+constexpr int64_t updateFlag = 0x0000000100000000LL;
+constexpr int64_t valueFlag  = 0x00000000FFFFFFFFLL;
 
 namespace omniruntime {
 namespace op {
-class MinVarcharAggregator : public Aggregator {
+inline uint8_t *minCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
+{
+    uint8_t *curVal = nullptr;
+    int32_t curLen = vector->GetValue(idx, &curVal);
+    int32_t len = static_cast<int32_t>(lenAndFlag & valueFlag);
+    auto result = memcmp(res, curVal, std::min(len, curLen));
+    if (result > 0 || (result == 0 && len > curLen)) {
+        lenAndFlag = curLen;
+        lenAndFlag |= updateFlag;
+        return curVal;
+    } else {
+        return res;
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
+    const int32_t rowCount)
+{
+    if (rowCount > 0) {
+        uint8_t *res = nullptr;
+        int32_t idx = rowOffset;
+        const auto end = rowOffset + rowCount;
+
+        state.count = vector->GetValue(idx++, &res);
+        state.count |= updateFlag;
+        while (idx < end) {
+            res = OP(res, state.count, vector, idx++);
+        }
+        state.val = res;
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addDictChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
+    const int32_t * __restrict indexMap)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictChar]: Dictionary Index Map pointer NOT aligned");
+        }
+#endif
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+
+        uint8_t *res = nullptr;
+        int32_t idx = 0;
+
+        state.count = vector->GetValue(indexMap[idx++], &res);
+        state.count |= updateFlag;
+        while (idx < rowCount) {
+            res = OP(res, state.count, vector, indexMap[idx++]);
+        }
+        state.val = res;
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addConditionalChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
+    const int32_t rowCount, const uint8_t * __restrict condition)
+{
+    if (rowCount > 0) {
+        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addConditionalChar]: ConditionMap pointer NOT aligned");
+        }
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+
+        uint8_t *res = nullptr;
+        int32_t idx = rowOffset;
+        const auto end = rowOffset + rowCount;
+        while (idx < end) {
+            if (!(*condition)) {
+                state.count = vector->GetValue(idx, &res);
+                state.count |= updateFlag;
+                ++condition;
+                ++idx;
+                break;
+            }
+            ++condition;
+            ++idx;
+        }
+
+        while (idx < end) {
+            if (!(*condition)) {
+                res = OP(res, state.count, vector, idx);
+            }
+            ++condition;
+            ++idx;
+        }
+        state.val = res;
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addDictConditionalChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
+    const uint8_t * __restrict condition, const int32_t * __restrict indexMap)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditionalChar]: ConditionMap pointer NOT aligned");
+        }
+        if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditionalChar]: Dictionary Index Map pointer NOT aligned");
+        }
+#endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+
+        uint8_t *res = nullptr;
+        int32_t idx = 0;
+
+        while (idx < rowCount) {
+            if (!condition[idx]) {
+                state.count = vector->GetValue(indexMap[idx], &res);
+                state.count |= updateFlag;
+                ++idx;
+                break;
+            }
+            ++idx;
+        }
+
+        while (idx < rowCount) {
+            if (!condition[idx]) {
+                res = OP(res, state.count, vector, indexMap[idx]);
+            }
+            ++idx;
+        }
+        state.val = res;
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    const VarcharVector *vector, const int32_t rowOffset)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+        int32_t rowIdx = rowOffset;
+        for (size_t i = 0; i < rowCount; ++i) {
+            auto &state = rowStates[i][aggIdx];
+            if (state.val == nullptr) {
+                uint8_t *res = nullptr;
+                state.count = vector->GetValue(rowIdx, &res);
+                state.count |= updateFlag;
+                state.val = res;
+            } else {
+                state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, rowIdx);
+            }
+            ++rowIdx;
+        }
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    const VarcharVector *vector, const int32_t * __restrict indexMap)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictUseRowIndexChar]: Dictionary Index Map pointer NOT aligned");
+        }
+#endif
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            auto &state = rowStates[i][aggIdx];
+            if (state.val == nullptr) {
+                uint8_t *res = nullptr;
+                state.count = vector->GetValue(indexMap[i], &res);
+                state.count |= updateFlag;
+                state.val = res;
+            } else {
+                state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, indexMap[i]);
+            }
+        }
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    const VarcharVector *vector, const int32_t rowOffset, const uint8_t * __restrict condition)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
+        }
+#endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+
+        int32_t rowIdx = rowOffset;
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (!(*condition)) {
+                auto &state = rowStates[i][aggIdx];
+                if (state.val == nullptr) {
+                    uint8_t *res = nullptr;
+                    state.count = vector->GetValue(rowIdx, &res);
+                    state.count |= updateFlag;
+                    state.val = res;
+                } else {
+                    state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, rowIdx);
+                }
+            }
+            ++rowIdx;
+            ++condition;
+        }
+    }
+}
+
+template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP
+inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    const VarcharVector *vector, const uint8_t * __restrict condition,
+    const int32_t * __restrict indexMap)
+{
+    const size_t rowCount = rowStates.size();
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
+        }
+        if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditionalUseRowIndexChar]: Dictionary Index Map pointer NOT aligned");
+        }
+#endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (!condition[i]) {
+                auto &state = rowStates[i][aggIdx];
+                if (state.val == nullptr) {
+                    uint8_t *res = nullptr;
+                    state.count = vector->GetValue(indexMap[i], &res);
+                    state.count |= updateFlag;
+                    state.val = res;
+                } else {
+                    state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, indexMap[i]);
+                }
+            }
+        }
+    }
+}
+
+template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
+class MinVarcharAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
-    MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
+    MinVarcharAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
     {}
 
-    MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-        bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial)
-    {}
-
-    ~MinVarcharAggregator() override {}
+    ~MinVarcharAggregator() override = default;
 
 #ifdef ENABLE_HMPP
     void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        auto vector = vectorBatch->GetVector(channels[0]);
+        auto vector = vectorBatch->GetVector(this->channels[0]);
 
         auto offsets =
             static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
         auto width = static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->GetWidth();
         int32_t minLen = 3 * width;
-        uint8_t *minVal = executionContext->GetArena()->Allocate(3 * width);
+        uint8_t *minVal = this->executionContext->GetArena()->Allocate(3 * width);
 
         LogDebug("HMPP-Agg-min");
         auto result =
@@ -43,16 +299,20 @@ public:
             throw OmniException("HMPP ERROR", "min failed for hmpp error");
         }
 
-        if (state.strVal == nullptr) {
-            state.strVal = minVal;
-            state.strLen = minLen;
+        if (state.val == nullptr) {
+            state.val = minVal;
+            state.count = minLen;
         } else {
-            auto preMinVal = reinterpret_cast<char *>(state.strVal);
+            auto preMinVal = reinterpret_cast<char *>(state.val);
 
-            int32_t result = memcmp(preMinVal, reinterpret_cast<char *>(minVal), std::min(state.strLen, minLen));
-            if (result > 0 || (result == 0 && state.strLen > minLen)) {
-                state.strVal = minVal;
-                state.strLen = minLen;
+            int32_t result = memcmp(
+                    preMinVal,
+                    reinterpret_cast<char *>(minVal),
+                    std::min(state.count, static_cast<int64_t>(minLen))
+            );
+            if (result > 0 || (result == 0 && state.count > minLen)) {
+                state.val = minVal;
+                state.count = minLen;
             }
         }
     }
@@ -60,79 +320,95 @@ public:
     bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
         // must no null inpout
-        if (vectorBatch->GetVector(channels[0])->MayHaveNull()) {
+        if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
             return false;
         }
         // not accept dictionnary vector
-        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+        if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
             return false;
         }
         return true;
     }
 #endif
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
-            return;
-        }
-        if (state.val == nullptr) {
-            this->InitiateGroup(state, vectorBatch, rowIndex);
-            return;
-        }
-        uint8_t *rowVal = nullptr;
-        int valLen = (static_cast<VarcharVector *>(vector))->GetValue(offset, &rowVal);
-        auto leftVal = reinterpret_cast<char *>(state.strVal);
-
-        int32_t result = memcmp(leftVal, (char *)rowVal, std::min(state.strLen, valLen));
-        if (result > 0 && state.strLen == valLen) {
-            auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
-            if (err != EOK) {
-                LogError("set data failed in variable vector. %d", err);
-            }
-        }
-        if ((result > 0 && state.strLen != valLen) || (result == 0 && state.strLen > valLen)) {
-            uint8_t *ptr = executionContext->GetArena()->Allocate(valLen);
-            auto err = memcpy_s(ptr, valLen, rowVal, valLen);
-            if (err != EOK) {
-                LogError("set data failed in variable vector. %d", err);
-            }
-
-            state.strVal = ptr;
-            state.strLen = valLen;
+        auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+        if (state.val == nullptr || state.count == 0) {
+            // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
+            v->SetValueNull(offset);
+        } else {
+            v->SetValue(offset, reinterpret_cast<uint8_t *>(state.val), state.count);
         }
     }
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+protected:
+    ALWAYS_INLINE void ProcessRawInput(
+        AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
+        const uint8_t *nullMap, const int32_t *indexMap) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
-            return;
+        VarcharVector *vector = static_cast<VarcharVector *>(v);
+
+        if (indexMap == nullptr) {
+            if (nullMap == nullptr) {
+                addChar<minCharOp>(state, vector, rowOffset, rowCount);
+            } else {
+                addConditionalChar<minCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            }
+        } else {
+            if (nullMap == nullptr) {
+                addDictChar<minCharOp>(state, vector, rowCount, indexMap);
+            } else {
+                addDictConditionalChar<minCharOp>(state, vector, rowCount, nullMap, indexMap);
+            }
         }
-        uint8_t *data = nullptr;
-        int valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
-        uint8_t *ptr = executionContext->GetArena()->Allocate(valLen);
-        auto err = memcpy_s(ptr, valLen, data, valLen);
-        if (err != EOK) {
-            LogError("set data failed in variable vector. %d", err);
-        }
-        state.strVal = ptr;
-        state.strLen = valLen;
+
+        SaveState(state);
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    ALWAYS_INLINE void ProcessGroupRawInput(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-        auto v = static_cast<VarcharVector *>(vector);
-        if (state.val == nullptr) {
-            v->SetValueNull(rowIndex);
+        VarcharVector *vector = static_cast<VarcharVector *>(v);
+
+        if (indexMap == nullptr) {
+            if (nullMap == nullptr) {
+                addUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, rowOffset);
+            } else {
+                addConditionalUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap);
+            }
+        } else {
+            if (nullMap == nullptr) {
+                addDictUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, indexMap);
+            } else {
+                addDictConditionalUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+            }
+        }
+
+        for (AggregateState *states : rowStates) {
+            SaveState(states[aggIdx]);
+        }
+    }
+
+private:
+    ALWAYS_INLINE void SaveState(AggregateState &state)
+    {
+        if ((state.count & updateFlag) == 0) {
             return;
         }
-        v->SetValue(rowIndex, reinterpret_cast<uint8_t *>(state.strVal), state.strLen);
+
+        int32_t len = static_cast<int32_t>(state.count & valueFlag);
+        if (state.val == nullptr || len == 0) {
+            state.val = nullptr;
+            state.count = 0;
+            return;
+        }
+
+        uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
+        memcpy(ptr, state.val, len);
+        state.val = ptr;
+        state.count = len;
     }
 };
 }

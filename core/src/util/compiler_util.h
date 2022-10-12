@@ -12,4 +12,9 @@
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #endif
 
+// for not vectorize replace "tree-vectorize" with "no-tree-vectorize"
+#define VECTORIZE_LOOP __attribute__((optimize("tree-vectorize")))
+#define SIMD_ALWAYS_INLINE inline __attribute__((always_inline))
+#define NO_INLINE __attribute__((__noinline__))
+#define FAST_MATH __attribute__((optimize ("fast-math")))
 #endif // OMNI_RUNTIME_COMPILER_UTIL_H

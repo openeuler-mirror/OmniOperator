@@ -9,15 +9,15 @@
 
 #include <utility>
 #include "type/data_types.h"
-#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
 namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
-    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> &&aggs,
-        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> &inputRaws,
-        std::vector<bool> &outputPartials)
+    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs,
+                        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes,
+                        std::vector<bool> &inputRaws,
+                        std::vector<bool> &outputPartials)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials), aggsOutputTypes(aggsOutputTypes)
     {
         aggsStates.reserve(aggregators.size());
@@ -40,11 +40,16 @@ public:
     Operator *CreateOperator() override;
 
 public:
-    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
-        std::vector<std::vector<uint32_t>> &aggsInputColsVector, std::vector<uint32_t> &maskColsVector,
-        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> inputRaws,
-        std::vector<bool> outputPartials)
-        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector),
+    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes,
+                               std::vector<uint32_t> &aggFuncTypesVector,
+                               std::vector<std::vector<uint32_t>> &aggsInputColsVector,
+                               std::vector<uint32_t> &maskColsVector,
+                               std::vector<omniruntime::type::DataTypes> &aggsOutputTypes,
+                               std::vector<bool> inputRaws,
+                               std::vector<bool> outputPartials,
+                               bool overflowAsNull = false
+    )
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
           sourceTypes(sourceTypes),
           aggFuncTypesVector(aggFuncTypesVector),
           aggsInputColsVector(aggsInputColsVector),

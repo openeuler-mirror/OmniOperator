@@ -17,23 +17,39 @@ using namespace std;
 namespace TestUtil {
 bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber);
 
+void printNotMatchBatches(VectorBatch *outputPages, VectorBatch *expectPage)
+{
+    printf("================ Expected Vector Batch ==================\n");
+    VectorHelper::PrintVecBatch(expectPage);
+    printf("================= Result Vector Batch ===================\n");
+    VectorHelper::PrintVecBatch(outputPages);
+}
+
 bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
     if (outputPages->GetRowCount() != expectPage->GetRowCount()) {
+        printf("Invalid row count. Expected=%d, actual=%d\n", expectPage->GetRowCount(), outputPages->GetRowCount());
+        printNotMatchBatches(outputPages, expectPage);
         return false;
     }
 
     int32_t columnNumber = outputPages->GetVectorCount();
     if (columnNumber != expectPage->GetVectorCount()) {
+        printf("Invalid vector count. Expected=%d, actual=%d\n",
+            expectPage->GetVectorCount(), outputPages->GetVectorCount());
+        printNotMatchBatches(outputPages, expectPage);
         return false;
     }
 
     if (!TypesMatch(outputPages->GetVectorTypeIds(), expectPage->GetVectorTypeIds(), columnNumber)) {
+        printf("Column types do not match\n");
+        printNotMatchBatches(outputPages, expectPage);
         return false;
     }
-
     for (int32_t i = 0; i < columnNumber; i++) {
         if (!ColumnMatch(outputPages->GetVector(i), expectPage->GetVector(i))) {
+            printf("Vector %d not matched\n", i);
+            printNotMatchBatches(outputPages, expectPage);
             return false;
         }
     }
@@ -47,7 +63,7 @@ bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector) {
     multiset<D> expectedRows;
     size_t resNullCount = 0;
     size_t expNullCount = 0;
-    for (size_t i = 0; i < resultVector->GetSize(); ++i) {
+    for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
         auto leftVector = static_cast<V*>(resultVector);
         auto rightVector = static_cast<V*>(expectedVector);
         if (leftVector->IsValueNull(i)) {
@@ -155,42 +171,64 @@ bool ColumnMatchIgnoreOrder(Vector *resultVector, Vector *expectedVector)
 bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBatch)
 {
     if (resultBatch->GetRowCount() != expectedBatch->GetRowCount()) {
+        printf("Invalid row count. Expected=%d, actual=%d\n", expectedBatch->GetRowCount(), resultBatch->GetRowCount());
+        printNotMatchBatches(resultBatch, expectedBatch);
         return false;
     }
 
     int32_t columnNumber = resultBatch->GetVectorCount();
     if (columnNumber != expectedBatch->GetVectorCount()) {
+        printf("Invalid vector count. Expected=%d, actual=%d\n",
+            expectedBatch->GetVectorCount(), resultBatch->GetVectorCount());
+        printNotMatchBatches(resultBatch, expectedBatch);
         return false;
     }
-
-    for (size_t i = 0; i < columnNumber; ++i) {
+    for (int32_t i = 0; i < columnNumber; ++i) {
         if (resultBatch->GetVector(i)->GetEncoding() != expectedBatch->GetVector(i)->GetEncoding()) {
+            printf("Encoding of column %d not match\n", i);
+            printNotMatchBatches(resultBatch, expectedBatch);
             return false;
         }
     }
 
     if (!TypesMatch(resultBatch->GetVectorTypeIds(), expectedBatch->GetVectorTypeIds(), columnNumber)) {
+        printf("Column types do not match\n");
+        printNotMatchBatches(resultBatch, expectedBatch);
         return false;
     }
 
-    bool isMatched = true;
-    for (size_t i = 0; i < columnNumber; ++i) {
-        isMatched = ColumnMatchIgnoreOrder(resultBatch->GetVector(i), expectedBatch->GetVector(i));
-        if (not isMatched) {
-            break;
+    for (int32_t i = 0; i < columnNumber; ++i) {
+        if (!ColumnMatchIgnoreOrder(resultBatch->GetVector(i), expectedBatch->GetVector(i))) {
+            printf("Vector %d not matched\n", i);
+            printNotMatchBatches(resultBatch, expectedBatch);
+            return false;
         }
     }
-    return isMatched;
+
+    return true;
 }
 
 bool VecBatchesIgnoreOrderMatch(std::vector<VectorBatch *> &resultBatches, std::vector<VectorBatch *> &expectedBatches)
 {
     if (resultBatches.size() != expectedBatches.size()) {
+        printf("List of VectorBatches not match. Expecting %ld, got %ld\n",
+            expectedBatches.size(), resultBatches.size());
+        printf("================ Expected Vector Batch (%ld) ==================\n", expectedBatches.size());
+        for (size_t i = 0; i < expectedBatches.size(); ++i) {
+            printf("    ---------- Expected Vector Batch %ld / %ld ----------\n", i, expectedBatches.size());
+            VectorHelper::PrintVecBatch(expectedBatches[i]);
+        }
+        printf("================ Result Vector Batch (%ld) ==================\n", resultBatches.size());
+        for (size_t i = 0; i < resultBatches.size(); ++i) {
+            printf("    ---------- Result Vector Batch %ld / %ld ----------\n", i, resultBatches.size());
+            VectorHelper::PrintVecBatch(resultBatches[i]);
+        }
         return false;
     }
 
     for (size_t i = 0; i < resultBatches.size(); i++) {
-        if (not VecBatchMatchIgnoreOrder(resultBatches[i], expectedBatches[i])) {
+        if (!VecBatchMatchIgnoreOrder(resultBatches[i], expectedBatches[i])) {
+            printf("VectorBatch %ld not match\n", i);
             return false;
         }
     }

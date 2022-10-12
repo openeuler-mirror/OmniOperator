@@ -18,6 +18,8 @@
 
 namespace omniruntime {
 namespace op {
+static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
+
 // First Aggregator date type information:
 // input: InputType
 // intermediate: InputType + bool(wrap with ContainerDataType and ContainerVector)
@@ -85,7 +87,7 @@ public:
         }
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
         auto firstVector =

@@ -5,51 +5,32 @@
 #ifndef OMNI_RUNTIME_COUNT_ALL_AGGREGATOR_H
 #define OMNI_RUNTIME_COUNT_ALL_AGGREGATOR_H
 
-#include "aggregator.h"
+#include "count_column_aggregator.h"
 
 namespace omniruntime {
 namespace op {
-class CountAllAggregator : public Aggregator {
+template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW>
+class CountAllAggregator : public CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
     CountAllAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
+        : CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            OMNI_AGGREGATION_TYPE_COUNT_ALL, outputTypes, channels)
     {}
 
-    CountAllAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_ALL, *DataTypes::NoneDataTypesInstance(), outputTypes, channels,
-        inputRaw, outputPartial)
-    {}
+    ~CountAllAggregator() override = default;
 
-    ~CountAllAggregator() override {}
-
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+protected:
+    virtual ALWAYS_INLINE Vector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
+        uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx) override
     {
-        if (inputRaw) {
-            state.count++;
+        if constexpr (RAW_IN) {
+            *nullMap = nullptr;
+            indexMap.Release();
+            return nullptr;
         } else {
-            int32_t offset;
-            Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-            state.count += (static_cast<LongVector *>(vector))->GetValue(offset);
+            return TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::GetVector(
+                vectorBatch, rowOffset, rowCount, nullMap, indexMap, channelIdx);
         }
-    }
-
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        if (inputRaw) {
-            state.count = 1;
-            return;
-        }
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        state.count = (static_cast<LongVector *>(vector))->GetValue(offset);
-    }
-
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
-    {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-        auto v = static_cast<LongVector *>(vector);
-        v->SetValue(rowIndex, state.count);
     }
 };
 }

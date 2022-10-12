@@ -110,7 +110,7 @@ public:
         return value;
     }
 
-    std::string ToString()
+    std::string ToString() const
     {
         std::string s;
         bool negative = false;

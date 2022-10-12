@@ -10,6 +10,8 @@
 
 namespace omniruntime {
 namespace op {
+static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = sizeof(DecimalAverageState);
+
 class AverageSparkDecimalAggregator : public Aggregator {
 public:
     AverageSparkDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels)
@@ -110,7 +112,7 @@ public:
         }
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
@@ -130,7 +132,7 @@ public:
         auto inputDecimalType = static_cast<DecimalDataType *>(inputTypes.GetType(0).get());
 
         if (overflowAccumulator > 0) {
-            SetNullOrThrowException(vector, rowIndex);
+            this->SetNullOrThrowException(vector, rowIndex);
             return;
         }
 
@@ -158,7 +160,7 @@ public:
             int128 finalResultDec;
             OpStatus status = CalcAvg(inputDecimalType, decodedDec, countDec, outputDecimalType, finalResultDec);
             if (status == OpStatus::OP_OVERFLOW) {
-                SetNullOrThrowException(vector, rowIndex);
+                this->SetNullOrThrowException(vector, rowIndex);
                 return;
             }
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {

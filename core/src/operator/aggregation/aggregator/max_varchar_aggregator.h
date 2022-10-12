@@ -5,36 +5,48 @@
 #ifndef OMNI_RUNTIME_MAX_VARCHAR_AGGREGATOR_H
 #define OMNI_RUNTIME_MAX_VARCHAR_AGGREGATOR_H
 
-#include "aggregator.h"
+#include "min_varchar_aggregator.h"
 #ifdef ENABLE_HMPP
 #include "HMPP/hmpps.h"
 #endif
 
 namespace omniruntime {
 namespace op {
-class MaxVarcharAggregator : public Aggregator {
+inline uint8_t *maxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
+{
+    uint8_t *curVal = nullptr;
+    int32_t curLen = vector->GetValue(idx, &curVal);
+    int32_t len = static_cast<int32_t>(lenAndFlag & valueFlag);
+    auto result = memcmp(res, curVal, std::min(len, curLen));
+    if (result < 0 || (result == 0 && len < curLen)) {
+        lenAndFlag = curLen;
+        lenAndFlag |= updateFlag;
+        return curVal;
+    } else {
+        return res;
+    }
+}
+
+template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
+class MaxVarcharAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
     MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels)
     {}
 
-    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-        bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial)
-    {}
-
-    ~MaxVarcharAggregator() override {}
+    ~MaxVarcharAggregator() override = default;
 
 #ifdef ENABLE_HMPP
     void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        auto vector = vectorBatch->GetVector(channels[0]);
+        auto vector = vectorBatch->GetVector(this->channels[0]);
 
         auto offsets =
             static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
-        auto width = static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->GetWidth();
+        auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
         int32_t maxLen = 0;
-        uint8_t *maxVal = executionContext->GetArena()->Allocate(3 * width);
+        uint8_t *maxVal = this->executionContext->GetArena()->Allocate(3 * width);
 
         LogDebug("HMPP-Agg-max");
         auto result =
@@ -43,16 +55,20 @@ public:
             throw OmniException("HMPP ERROR", "max failed for hmpp error");
         }
 
-        if (state.strVal == nullptr) {
-            state.strVal = maxVal;
-            state.strLen = maxLen;
+        if (state.val == nullptr) {
+            state.val = maxVal;
+            state.count = maxLen;
         } else {
-            auto preMaxVal = reinterpret_cast<char *>(state.strVal);
+            auto preMaxVal = reinterpret_cast<char *>(state.val);
 
-            int32_t result = memcmp(preMaxVal, reinterpret_cast<char *>(maxVal), std::min(state.strLen, maxLen));
-            if (result < 0 || (result == 0 && state.strLen < maxLen)) {
-                state.strVal = maxVal;
-                state.strLen = maxLen;
+            int32_t result = memcmp(
+                    preMaxVal,
+                    reinterpret_cast<char *>(maxVal),
+                    std::min(state.count, static_cast<int64_t>(maxLen))
+            );
+            if (result < 0 || (result == 0 && state.count < maxLen)) {
+                state.val = maxVal;
+                state.count = maxLen;
             }
         }
     }
@@ -60,78 +76,96 @@ public:
     bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
         // must no null inpout
-        if (vectorBatch->GetVector(channels[0])->MayHaveNull()) {
+        if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
             return false;
         }
         // not accept dictionnary vector
-        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+        if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
             return false;
         }
         return true;
     }
 #endif
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
-            return;
-        }
-        if (state.val == nullptr) {
-            this->InitiateGroup(state, vectorBatch, rowIndex);
-            return;
-        }
-        uint8_t *rowVal = nullptr;
-        int valLen = (static_cast<VarcharVector *>(vector))->GetValue(offset, &rowVal);
-        auto leftVal = reinterpret_cast<char *>(state.strVal);
-
-        int32_t result = memcmp(leftVal, (char *)rowVal, std::min(state.strLen, valLen));
-        if (result < 0 && state.strLen == valLen) {
-            auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
-            if (err != EOK) {
-                LogError("set data failed in variable vector. %d", err);
-            }
-        }
-        if ((result < 0 && state.strLen != valLen) || (result == 0 && state.strLen < valLen)) {
-            uint8_t *ptr = executionContext->GetArena()->Allocate(valLen);
-            auto err = memcpy_s(ptr, valLen, rowVal, valLen);
-            if (err != EOK) {
-                LogError("set data failed in variable vector. %d", err);
-            }
-            state.strVal = ptr;
-            state.strLen = valLen;
+        auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+        if (state.val == nullptr || state.count == 0) {
+            // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
+            v->SetValueNull(offset);
+        } else {
+            v->SetValue(offset, reinterpret_cast<uint8_t *>(state.val), state.count);
         }
     }
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+protected:
+    ALWAYS_INLINE void ProcessRawInput(
+        AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
+        const uint8_t *nullMap, const int32_t *indexMap) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
-            return;
+        VarcharVector *vector = static_cast<VarcharVector *>(v);
+
+        if (indexMap == nullptr) {
+            if (nullMap == nullptr) {
+                addChar<maxCharOp>(state, vector, rowOffset, rowCount);
+            } else {
+                addConditionalChar<maxCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            }
+        } else {
+            if (nullMap == nullptr) {
+                addDictChar<maxCharOp>(state, vector, rowCount, indexMap);
+            } else {
+                addDictConditionalChar<maxCharOp>(state, vector, rowCount, nullMap, indexMap);
+            }
         }
-        uint8_t *data = nullptr;
-        int valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
-        auto ptr = executionContext->GetArena()->Allocate(valLen);
-        auto err = memcpy_s(ptr, valLen, data, valLen);
-        if (err != EOK) {
-            LogError("set data failed in variable vector. %d", err);
-        }
-        state.strVal = ptr;
-        state.strLen = valLen;
+
+        SaveState(state);
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    ALWAYS_INLINE void ProcessGroupRawInput(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-        auto v = static_cast<VarcharVector *>(vector);
-        if (state.val == nullptr) {
-            v->SetValueNull(rowIndex);
+        VarcharVector *vector = static_cast<VarcharVector *>(v);
+
+        if (indexMap == nullptr) {
+            if (nullMap == nullptr) {
+                addUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, rowOffset);
+            } else {
+                addConditionalUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap);
+            }
+        } else {
+            if (nullMap == nullptr) {
+                addDictUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, indexMap);
+            } else {
+                addDictConditionalUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+            }
+        }
+
+        for (AggregateState *states : rowStates) {
+            SaveState(states[aggIdx]);
+        }
+    }
+
+
+private:
+    void SaveState(AggregateState &state)
+    {
+        if ((state.count & updateFlag) == 0) {
             return;
         }
-        v->SetValue(rowIndex, reinterpret_cast<uint8_t *>(state.strVal), state.strLen);
+
+        int32_t len = static_cast<int32_t>(state.count & valueFlag);
+        if (state.val == nullptr || len == 0) {
+            state.val = nullptr;
+            state.count = 0;
+            return;
+        }
+
+        uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
+        memcpy(ptr, state.val, len);
+        state.val = ptr;
+        state.count = len;
     }
 };
 }
