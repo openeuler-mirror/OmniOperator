@@ -79,7 +79,7 @@ public:
 
     std::vector<llvm::Value *> GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
-    // TODO: Figure out which of these can be private
+
 protected:
     // Util functions
     llvm::Value *GetIntToPtr(omniruntime::type::DataTypeId typeId, llvm::Value *elementAddr);

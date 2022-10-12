@@ -1252,7 +1252,7 @@ public:
         }
     }
 
-    // TODO this function is not able to handle scale factor >= 18
+    // this function is not able to handle scale factor >= 18
     static inline OpStatus Rescale64To128(int64_t value, int32_t rescaleFactor, Decimal128 &result)
     {
         Decimal128 input(value);

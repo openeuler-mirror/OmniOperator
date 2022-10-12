@@ -584,19 +584,17 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToInt(int64_t contextPtr, int64_t *x
 extern "C" DLLEXPORT void BatchCastDecimal64ToLong(int64_t *x, int32_t precision, int32_t scale, bool *isAnyNull,
     int64_t *output, int32_t rowCnt)
 {
-    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
-        int64_t scaledValue = 0;
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
                 output[i] = 1;
                 continue;
             }
-            DecimalOperations::Rescale64RoundToZero(x[i], -scale, scaledValue);
-            output[i] = static_cast<int32_t>(scaledValue);
+            DecimalOperations::Rescale64RoundToZero(x[i], -scale, output[i]);
         }
         return;
     }
+    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 1;
@@ -985,16 +983,13 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToIntRetNull(bool *isNull, int64_t *
 extern "C" DLLEXPORT void BatchCastDecimal64ToLongRetNull(bool *isNull, int64_t *x, int32_t precision, int32_t scale,
     int64_t *output, int32_t rowCnt)
 {
-    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
-        int64_t scaledValue = 0;
         for (int i = 0; i < rowCnt; ++i) {
-            DecimalOperations::Rescale64RoundToZero(x[i], -scale, scaledValue);
-            output[i] = static_cast<int32_t>(scaledValue);
+            DecimalOperations::Rescale64RoundToZero(x[i], -scale, output[i]);
         }
         return;
     }
-
+    int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     for (int i = 0; i < rowCnt; ++i) {
         if (x[i] >= 0) {
             output[i] = (x[i] + tenToScale / 2) / tenToScale;
