@@ -14,7 +14,7 @@ namespace omniruntime {
 namespace op {
 class HmppHashUtil {
 public:
-    static HmppResult ComputeHash(Vector *vector, int64_t *combinedHash);
+    static HmppResult ComputeHash(Vector *vector, int64_t *combinedHash, int64_t start, int64_t rowCount);
 };
 }
 }

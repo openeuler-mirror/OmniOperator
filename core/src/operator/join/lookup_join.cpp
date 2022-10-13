@@ -223,7 +223,7 @@ void CalculateColHashesHMPP(omniruntime::vec::Vector *vector, uint32_t rowCount,
                 }
             }
         }
-        HmppResult result = HmppHashUtil::ComputeHash(vector, combinedHash);
+        HmppResult result = HmppHashUtil::ComputeHash(vector, combinedHash, 0, rowCount);
         if (result != HMPP_STS_NO_ERR) {
             throw OmniException("HMPP ERROR", "Join HMPPS_ComputeHash failed for hmpp error");
         }
