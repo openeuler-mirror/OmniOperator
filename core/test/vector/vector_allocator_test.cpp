@@ -237,7 +237,11 @@ TEST(VectorAllocator, basic)
     auto *intVector = new IntVector(subAllocator2, size);
     EXPECT_EQ(subAllocator2->GetAllocatedMemory(), 40);           // size * 4 + size
     auto *doubleVector = new DoubleVector(vectorAllocator, size); // size * 8 + size
-    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(), 184);        // 72 + 40 + 72
+    // subAllocator under reserve and will report size when close
+    EXPECT_EQ(vectorAllocator->GetAllocatedMemory(), 72);
+    int64_t allocatedBytes = vectorAllocator->GetAllocatedMemory() +
+            subAllocator1->GetUnTrackedBytes() + subAllocator2->GetUnTrackedBytes();
+    EXPECT_EQ(allocatedBytes, 184);
     EXPECT_EQ(vectorAllocator->GetPeakAllocated(), vectorAllocator->GetAllocatedMemory());
 
     delete longVector;
