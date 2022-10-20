@@ -17,12 +17,19 @@ int64_t BaseAllocator::OperatorAllocatedBytesInternal(int64_t size)
     // fetch_add returns the original value,
     // here we need to calculate the original value plus size as new Allocated
     int64_t newAllocated = allocatedBytes.fetch_add(size, std::memory_order_relaxed) + size;
+
+    while (lock.test_and_set()) {
+        // acquire lock when run thread
+    }
+
     unTrackedBytes += size;
     int64_t parentLimit = UNLIMIT;
     if (unTrackedBytes > reservation && parentAllocator) {
         parentLimit = parentAllocator->AllocatedBytesInternal(unTrackedBytes);
         unTrackedBytes = 0;
     }
+    // release lock when finish thread
+    lock.clear();
 
     bool beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
     int64_t resultLimit = (size > 0 && beyondLimit) ? allocationLimit.load() : parentLimit;
