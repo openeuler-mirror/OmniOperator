@@ -118,12 +118,17 @@ public:
     void OperatorReleaseBytes(int64_t size)
     {
         allocatedBytes.fetch_add(-size, std::memory_order_relaxed);
+        while (lock.test_and_set()) {
+            // acquire lock when run thread
+        }
         unFreedBytes += size;
         if (unFreedBytes > reservation && parentAllocator) {
             // release memory to  parent
             parentAllocator->ReleaseBytes(unFreedBytes);
             unFreedBytes = 0;
         }
+        // release lock when finish thread
+        lock.clear();
     }
 
     void ReleaseBytes(int64_t size)
@@ -197,6 +202,7 @@ private:
     int64_t unTrackedBytes { 0 };
     int64_t unFreedBytes { 0 };
     std::atomic<bool> isOperatorAllocator {false };
+    std::atomic_flag lock = ATOMIC_FLAG_INIT;
 };
 BaseAllocator *GetProcessRootAllocator();
 
