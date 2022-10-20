@@ -12,20 +12,13 @@ namespace omniruntime {
 namespace op {
 
 LookupOuterJoinOperatorFactory::LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
-    int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-    int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables)
+    int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+    const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables)
     : buildOutputTypes(buildOutputTypes),
       probeTypes(probeTypes),
       hashTables(hashTables)
 {
-    int32_t probeHashColTypes[probeHashColsCount];
-    for (int32_t i = 0; i < probeHashColsCount; i++) {
-        probeHashColTypes[i] = probeTypes.GetIds()[probeHashCols[i]];
-    }
     this->probeOutputCols.insert(this->probeOutputCols.end(), probeOutputCols, probeOutputCols + probeOutputColsCount);
-    this->probeHashCols.insert(this->probeHashCols.end(), probeHashCols, probeHashCols + probeHashColsCount);
-    this->probeHashColTypes.insert(this->probeHashColTypes.end(), probeHashColTypes,
-        probeHashColTypes + probeHashColsCount);
     this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
         buildOutputCols + buildOutputTypes.GetSize());
 }
@@ -34,13 +27,12 @@ LookupOuterJoinOperatorFactory::~LookupOuterJoinOperatorFactory() = default;
 
 LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
     const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
-    int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-    const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr)
+    int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory =
-        new LookupOuterJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols,
-            probeHashColsCount, buildOutputCols, buildOutputTypes, hashBuilderFactory->GetHashTables());
+        new LookupOuterJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount, buildOutputCols,
+            buildOutputTypes, hashBuilderFactory->GetHashTables());
     return pOperatorFactory;
 }
 
@@ -51,13 +43,12 @@ Operator *LookupOuterJoinOperatorFactory::CreateOperator()
         probeOutputType.push_back(probeTypes.Get()[col]);
     }
     auto probeOutputTypes = DataTypes(probeOutputType);
-    auto lookupOuterJoinOperator = new LookupOuterJoinOperator(probeOutputTypes, probeOutputCols, probeHashCols,
-        probeHashColTypes, buildOutputCols, buildOutputTypes, hashTables);
+    auto lookupOuterJoinOperator = new LookupOuterJoinOperator(probeOutputTypes, probeOutputCols,
+        buildOutputCols, buildOutputTypes, hashTables);
     return lookupOuterJoinOperator;
 }
 
 LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
-    std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
     std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables)
     : probeOutputTypes(probeOutputTypes),
       probeOutputCols(probeOutputCols),

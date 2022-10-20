@@ -841,13 +841,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFact
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinOperatorFactory_createLookupOuterJoinOperatorFactory(
-    JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashKeys,
-    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
+    JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jBuildOutputCols,
+    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
 {
     auto probeTypesChars = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputCols = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
-    auto probeHashKeys = env->GetIntArrayElements(jProbeHashKeys, JNI_FALSE);
-    auto probeHashKeyCount = env->GetArrayLength(jProbeHashKeys);
     auto buildOutputCols = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
     auto buildOutputTypesChars = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
     jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
@@ -860,7 +858,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinOperatorFactory_crea
     LookupOuterJoinOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeDataTypes,
-        probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeyCount, buildOutputCols, buildOutputDataTypes,
+        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputDataTypes,
         jHashBuilderOperatorFactory);
     JNI_METHOD_END(0L)
 
