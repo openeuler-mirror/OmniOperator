@@ -36,8 +36,7 @@ LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(c
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
     this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
-        *(this->probeTypes.get()), probeOutputCols, probeOutputColsCount,
-        this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
+        *(this->probeTypes.get()), probeOutputCols, probeOutputColsCount, buildOutputCols,
         buildOutputTypes, (int64_t) (hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
 }
 

@@ -19,12 +19,12 @@ namespace op {
 class LookupOuterJoinOperatorFactory : public OperatorFactory {
 public:
     LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
-        int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-        int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables);
+        int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+        const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables);
     ~LookupOuterJoinOperatorFactory() override;
     static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
-        int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-        int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
+        int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+        const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
     Operator *CreateOperator() override;
 
 private:
@@ -32,8 +32,6 @@ private:
     std::vector<int32_t> buildOutputCols;
     DataTypes probeTypes;                 // all types for probe
     std::vector<int32_t> probeOutputCols;        // output columns for probe
-    std::vector<int32_t> probeHashCols;          // join columns for probe
-    std::vector<int32_t> probeHashColTypes;
     JoinHashTables *hashTables;
 };
 
@@ -42,7 +40,6 @@ class LookupOuterPositionIterator;
 class LookupOuterJoinOperator : public Operator {
 public:
     LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
-        std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables);
     ~LookupOuterJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;

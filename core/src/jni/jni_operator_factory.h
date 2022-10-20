@@ -183,12 +183,12 @@ JNIEXPORT jlong JNICALL
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinOperatorFactory
  * Method:    createLookupOuterJoinOperatorFactory
- * Signature: (Ljava/lang/String;[I[I[ILjava/lang/String;J)J
+ * Signature: (Ljava/lang/String;[I[ILjava/lang/String;J)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinOperatorFactory_createLookupOuterJoinOperatorFactory(
-    JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashKeys,
-    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory);
+    JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jBuildOutputCols,
+    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory

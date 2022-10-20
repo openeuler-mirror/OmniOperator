@@ -27,16 +27,15 @@ public class OmniLookupOuterJoinOperatorFactory
      *
      * @param probeTypes the probe types
      * @param probeOutputCols the probe output cols
-     * @param probeHashCols the probe hash cols
      * @param buildOutputCols the build output cols
      * @param buildOutputTypes the build output types
      * @param hashBuilderOperatorFactory the hash builder operator factory
      * @param operatorConfig the operator config
      */
-    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, int[] probeHashCols,
+    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols,
             int[] buildOutputCols, DataType[] buildOutputTypes,
             OmniHashBuilderOperatorFactory hashBuilderOperatorFactory, OperatorConfig operatorConfig) {
-        super(new FactoryContext(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes,
+        super(new FactoryContext(probeTypes, probeOutputCols, buildOutputCols, buildOutputTypes,
                 hashBuilderOperatorFactory, operatorConfig));
     }
 
@@ -45,26 +44,25 @@ public class OmniLookupOuterJoinOperatorFactory
      *
      * @param probeTypes the probe types
      * @param probeOutputCols the probe output cols
-     * @param probeHashCols the probe hash cols
      * @param buildOutputCols the build output cols
      * @param buildOutputTypes the build output types
      * @param hashBuilderOperatorFactory the hash builder operator factory
      */
-    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, int[] probeHashCols,
+    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols,
             int[] buildOutputCols, DataType[] buildOutputTypes,
             OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
-        this(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes,
+        this(probeTypes, probeOutputCols, buildOutputCols, buildOutputTypes,
                 hashBuilderOperatorFactory, new OperatorConfig());
     }
 
     private static native long createLookupOuterJoinOperatorFactory(String probeTypes, int[] probeOutputCols,
-            int[] probeHashCols, int[] buildOutputCols, String buildOutputTypes,
+            int[] buildOutputCols, String buildOutputTypes,
             long hashBuilderOperatorFactory);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createLookupOuterJoinOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
-                context.probeOutputCols, context.probeHashCols, context.buildOutputCols,
+                context.probeOutputCols, context.buildOutputCols,
                 DataTypeSerializer.serialize(context.buildOutputTypes),
                 context.getHashBuilderOperatorFactory());
     }
@@ -79,8 +77,6 @@ public class OmniLookupOuterJoinOperatorFactory
 
         private final int[] probeOutputCols;
 
-        private final int[] probeHashCols;
-
         private final int[] buildOutputCols;
 
         private final DataType[] buildOutputTypes;
@@ -94,18 +90,16 @@ public class OmniLookupOuterJoinOperatorFactory
          *
          * @param probeTypes the probe types
          * @param probeOutputCols the probe output cols
-         * @param probeHashCols the probe hash cols
          * @param buildOutputCols the build output cols
          * @param buildOutputTypes the build output types
          * @param hashBuilderOperatorFactory hashBuilderOperatorFactory
          * @param operatorConfig the operator config
          */
-        public FactoryContext(DataType[] probeTypes, int[] probeOutputCols, int[] probeHashCols, int[] buildOutputCols,
+        public FactoryContext(DataType[] probeTypes, int[] probeOutputCols, int[] buildOutputCols,
                 DataType[] buildOutputTypes, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory,
                 OperatorConfig operatorConfig) {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
             this.probeOutputCols = requireNonNull(probeOutputCols, "probeOutputCols");
-            this.probeHashCols = requireNonNull(probeHashCols, "probeHashCols");
             this.buildOutputCols = requireNonNull(buildOutputCols, "buildOutputCols");
             this.buildOutputTypes = requireNonNull(buildOutputTypes, "buildOutputTypes");
             this.operatorConfig = operatorConfig;
@@ -116,8 +110,8 @@ public class OmniLookupOuterJoinOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
-                    Arrays.hashCode(probeHashCols), Arrays.hashCode(buildOutputCols),
-                    Arrays.hashCode(buildOutputTypes), operatorConfig);
+                    Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
+                    operatorConfig);
         }
 
         @Override
@@ -131,7 +125,6 @@ public class OmniLookupOuterJoinOperatorFactory
             FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(probeTypes, that.probeTypes)
                     && Arrays.equals(probeOutputCols, that.probeOutputCols)
-                    && Arrays.equals(probeHashCols, that.probeHashCols)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
                     && operatorConfig.equals(that.operatorConfig);
