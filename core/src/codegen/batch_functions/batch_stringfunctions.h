@@ -161,8 +161,7 @@ extern DLLEXPORT void BatchSubstr(int64_t contextPtr, uint8_t **str, int32_t *st
         int64_t lengthCodePoint = length[i];
         int32_t len = strLen[i];
         output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
-        if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint + len < 0 ||
-            startCodePoint > len) {
+        if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint > len) {
             outLen[i] = 0;
             continue;
         }
@@ -225,7 +224,7 @@ extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, in
         int64_t startCodePoint = startIdx[i];
         int32_t len = strLen[i];
         output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
-        if (startCodePoint == 0 || len == 0 || startCodePoint + len < 0 || startCodePoint > len) {
+        if (startCodePoint == 0 || len == 0 || startCodePoint > len) {
             outLen[i] = 0;
             continue;
         }

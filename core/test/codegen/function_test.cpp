@@ -1161,6 +1161,15 @@ TEST(FunctionTest, SubstrWithZhForSpark)
     EXPECT_EQ(actual, "时欧基乌斯侧后解 h");
     EXPECT_EQ(outLen, 26);
 
+    string strEn = "apple";
+    result = Substr(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, 3, false, &outLen);
+    actual = string(result, outLen);
+    EXPECT_EQ(actual, "a");
+
+    result = SubstrWithStart(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, false, &outLen);
+    actual = string(result, outLen);
+    EXPECT_EQ(actual, "apple");
+
     engineType = "OLK";
     EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
     delete context;

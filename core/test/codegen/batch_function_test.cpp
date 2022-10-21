@@ -1249,6 +1249,38 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
     delete context;
 }
 
+TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "apple";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(1, str);
+    std::vector<int32_t> inputLen(1, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs {-7};
+    int32_t rowCnt = inputStr.size();
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull[] = {false};
+    BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
+                         outLen.data(), rowCnt);
+
+    std::vector<std::string> expected(1, str);
+    AssertStringEquals(expected, outResult, outLen);
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
 TEST(BatchFunctionTest, SubstrWithZhForSpark)
 {
     std::string engineType("Spark");
@@ -1275,6 +1307,39 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
     BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull1,
         outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "", "时", "时欧基乌斯侧后解 ", "时欧基乌斯侧后解 h" };
+    AssertStringEquals(expected, outResult, outLen);
+
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrWithEnForSpark)
+{
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "apple";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(1, str);
+    int32_t rowCnt = inputStr.size();
+    std::vector<int32_t> inputLen(1, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs {-7};
+    std::vector<int32_t> length {3};
+    std::vector<uint8_t *> strAddr(rowCnt);
+
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull1[] = {false};
+    BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull1,
+                outResult.data(), outLen.data(), rowCnt);
+    std::vector<std::string> expected {"a"};
     AssertStringEquals(expected, outResult, outLen);
 
     engineType = "OLK";
