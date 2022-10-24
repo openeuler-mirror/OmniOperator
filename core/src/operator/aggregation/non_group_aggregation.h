@@ -50,7 +50,7 @@ public:
           aggsOutputTypes(aggsOutputTypes)
     {}
 
-    ~AggregationOperatorFactory() override {}
+    ~AggregationOperatorFactory() override = default;
     OmniStatus Init() override;
     OmniStatus Close() override;
 

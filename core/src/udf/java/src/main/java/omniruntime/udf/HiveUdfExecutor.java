@@ -81,19 +81,13 @@ public class HiveUdfExecutor {
     }
 
     private static String getHiveUdfDir() throws IOException {
-        String omniConfPath;
         String omniHomeDir = System.getenv("OMNI_HOME");
         if (omniHomeDir == null || omniHomeDir.equals("")) {
-            omniConfPath = File.separator + "opt" + File.separatorChar + OMNI_CONF_FILE_PATH;
-        } else {
-            omniConfPath = omniHomeDir + File.separatorChar + OMNI_CONF_FILE_PATH;
-            omniConfPath = Paths.get("/", omniConfPath).normalize().toString();
-            if (!omniConfPath.startsWith(omniHomeDir)) {
-                String msg = omniConfPath + " does not in " + omniHomeDir + ".";
-                throw new OmniRuntimeException(OmniErrorType.OMNI_JAVA_UDF_ERROR, msg);
-            }
+            omniHomeDir = File.separator + "opt";
         }
+        omniHomeDir = Paths.get("/", omniHomeDir).normalize().toString();
 
+        String omniConfPath = omniHomeDir + File.separatorChar + OMNI_CONF_FILE_PATH;
         BufferedReader bufferedReader = new BufferedReader(
                 new InputStreamReader(new FileInputStream(omniConfPath), StandardCharsets.UTF_8));
         String property;
@@ -103,7 +97,10 @@ public class HiveUdfExecutor {
                 continue;
             }
             if (matcher.group(1).trim().equals("hiveUdfDir")) {
-                return matcher.group(2).trim();
+                String hiveUdfDir = matcher.group(2).trim();
+                return (hiveUdfDir.charAt(0) == '.')
+                        ? Paths.get(omniHomeDir, hiveUdfDir).normalize().toString()
+                        : Paths.get("/", hiveUdfDir).normalize().toString();
             }
         }
         String msg = "Do not configure the hiveUdfDir in " + omniConfPath + ".";

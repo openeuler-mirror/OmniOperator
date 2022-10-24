@@ -35,8 +35,7 @@ public class OmniLookupOuterJoinWithExprOperatorFactory
      */
     public OmniLookupOuterJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols,
             String[] probeHashKeys, int[] buildOutputCols, DataType[] buildOutputTypes,
-            OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
-            OperatorConfig operatorConfig) {
+            OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory, OperatorConfig operatorConfig) {
         super(new FactoryContext(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
                 operatorConfig, hashBuilderWithExprOperatorFactory));
     }
@@ -116,8 +115,8 @@ public class OmniLookupOuterJoinWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
-                    Arrays.hashCode(probeHashKeys), Arrays.hashCode(buildOutputCols),
-                    Arrays.hashCode(buildOutputTypes), operatorConfig);
+                    Arrays.hashCode(probeHashKeys), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
+                    operatorConfig);
         }
 
         @Override
@@ -129,8 +128,7 @@ public class OmniLookupOuterJoinWithExprOperatorFactory
                 return false;
             }
             FactoryContext that = (FactoryContext) obj;
-            return Arrays.equals(probeTypes, that.probeTypes)
-                    && Arrays.equals(probeOutputCols, that.probeOutputCols)
+            return Arrays.equals(probeTypes, that.probeTypes) && Arrays.equals(probeOutputCols, that.probeOutputCols)
                     && Arrays.equals(probeHashKeys, that.probeHashKeys)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)

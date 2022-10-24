@@ -7,6 +7,7 @@
 #define OMNI_RUNTIME_CONFIG_UTIL_H
 
 #include <map>
+#include <utility>
 
 class Properties {
 public:
@@ -33,9 +34,9 @@ public:
         return isEnableHMPP;
     }
 
-    void SetHiveUdfPropertyFilePath(const std::string &udfPath)
+    void SetHiveUdfPropertyFilePath(std::string udfPath)
     {
-        hiveUdfPropertyFilePath = udfPath;
+        hiveUdfPropertyFilePath = std::move(udfPath);
     }
 
     std::string &GetHiveUdfPropertyFilePath()
