@@ -40,6 +40,7 @@ Decimal128::Decimal128(__int128_t value)
 
 Decimal128::Decimal128(const std::string& s)
 {
+    bool isNegative = s[0] == '-';
     __int128_t value = 0;
     for (char i : s) {
         if (isdigit(i)) {
@@ -47,6 +48,8 @@ Decimal128::Decimal128(const std::string& s)
             value += i - '0';
         }
     }
+
+    value = !isNegative ? value : -value;
     if (value >= 0) {
         highBits = static_cast<int64_t>(value >> 64);
         lowBits = static_cast<uint64_t>(value);
