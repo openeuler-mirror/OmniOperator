@@ -12,6 +12,11 @@ namespace vec {
 Vector *JniVectorLoader::Load()
 {
     jobject nativeVector = jniEnv->CallStaticObjectMethod(lazyVectorCls, lazyVectorLoaderMethodId, jLoader);
+    jthrowable nativeException = jniEnv->ExceptionOccurred();
+    if (nativeException != nullptr) {
+        jniEnv->ExceptionDescribe();
+    }
+
     auto *loadedVector = reinterpret_cast<Vector *>(nativeVector);
     if (loadedVector) {
         return loadedVector;
