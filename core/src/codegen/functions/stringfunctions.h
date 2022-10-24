@@ -79,7 +79,7 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
     if (isNull) {
         return nullptr;
     }
-    if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
+    if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx > strLen) {
         *outLen = 0;
         return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
     }
@@ -140,7 +140,7 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
     if (isNull) {
         return nullptr;
     }
-    if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
+    if (startIdx == 0 || strLen == 0 || startIdx > strLen) {
         *outLen = 0;
         return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
     }
