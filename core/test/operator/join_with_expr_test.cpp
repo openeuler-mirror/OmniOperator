@@ -8,7 +8,7 @@
 #include "operator/join/lookup_join_expr.h"
 #include "operator/join/lookup_outer_join_expr.h"
 #include "vector/vector_helper.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

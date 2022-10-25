@@ -13,7 +13,7 @@
 #include "vector/vector_helper.h"
 #include "vector/dictionary_vector.h"
 #include "util/config_util.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

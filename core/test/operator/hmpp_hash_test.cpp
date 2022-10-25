@@ -6,7 +6,7 @@
 #include <random>
 #include "gtest/gtest.h"
 #include "operator/hash_util.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 namespace HmppHashTest {
 using namespace omniruntime::op;

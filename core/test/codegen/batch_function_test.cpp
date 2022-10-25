@@ -11,7 +11,7 @@
 #include "operator/execution_context.h"
 #include "engine.h"
 #include "codegen/batch_functions/batch_stringfunctions.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::codegen;

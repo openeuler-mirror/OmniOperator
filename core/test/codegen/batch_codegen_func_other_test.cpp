@@ -8,7 +8,7 @@
 #include <vector>
 #include "operator/filter/filter_and_project.h"
 #include "operator/projection/projection.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 #include "util/config_util.h"
 #include "codegen_util.h"
 

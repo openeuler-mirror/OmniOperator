@@ -13,7 +13,7 @@
 #include "codegen/projection_codegen.h"
 #include "operator/filter/filter_and_project.h"
 #include "codegen/functions/murmur3_hash.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using omniruntime::op::RowProjection;
 using omniruntime::op::RowProjFunc;

@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "operator/union/union.h"
 #include "vector/vector_helper.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

@@ -4,7 +4,7 @@
  */
 #ifndef OMNI_RUNTIME_COMPILER_UTIL_H
 #define OMNI_RUNTIME_COMPILER_UTIL_H
-#include "../../config.h"
+#include "config.h"
 
 #if defined(DEBUG) || defined(TRACE)
 #define ALWAYS_INLINE

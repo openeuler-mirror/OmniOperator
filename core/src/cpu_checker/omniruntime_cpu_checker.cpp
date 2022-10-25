@@ -11,7 +11,7 @@
 #include <string>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
-#include "../../config.h"
+#include "config.h"
 
 int KunpengCpuCheck()
 {

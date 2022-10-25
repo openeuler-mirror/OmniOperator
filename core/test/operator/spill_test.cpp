@@ -10,7 +10,7 @@
 #include "operator/spill/spill_iterator.h"
 #include "vector/vector_helper.h"
 #include "type/data_types.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

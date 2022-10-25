@@ -6,7 +6,7 @@
 #include <chrono>
 #include "gtest/gtest.h"
 #include "operator/partitionedoutput/partitionedoutput.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

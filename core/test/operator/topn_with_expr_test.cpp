@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "operator/topn/topn_expr.h"
 #include "vector/vector_helper.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;

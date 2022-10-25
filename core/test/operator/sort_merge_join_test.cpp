@@ -10,7 +10,7 @@
 #include "operator/join/sortmergejoin/dynamic_pages_index.h"
 #include "operator/join/sortmergejoin/sort_merge_join_resultBuilder.h"
 #include "operator/join/sortmergejoin/sort_merge_join.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace std;

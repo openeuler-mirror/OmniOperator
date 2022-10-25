@@ -9,7 +9,7 @@
 #include <climits>
 #include "gtest/gtest.h"
 #include "operator/projection/projection.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 #include "util/config_util.h"
 
 using namespace omniruntime::op;
