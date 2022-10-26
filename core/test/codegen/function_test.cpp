@@ -1744,7 +1744,6 @@ TEST(FunctionTest, CastDecimal64To64)
     input = 12395;
     result = CastDecimal64To64(contextPtr, input, 18, 2, false, 5, 4);
     string message = context->GetError();
-    message.pop_back();
     EXPECT_EQ(message, "Cannot cast DECIMAL(18, 2) '123.95' to DECIMAL(5, 4)");
     delete context;
 }
@@ -1763,7 +1762,6 @@ TEST(FunctionTest, CastDecimal128To128)
     EXPECT_EQ(low, 13);
     CastDecimal128To128(contextPtr, 0, 129234454, 38, 0, false, 38, 30, &high, &low);
     string message = context->GetError();
-    message.pop_back();
     EXPECT_EQ(message, "Cannot cast DECIMAL(38, 0) '129234454' to DECIMAL(38, 30)");
     delete context;
 }

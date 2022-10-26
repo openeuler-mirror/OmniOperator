@@ -16,6 +16,8 @@
 
 using namespace omniruntime::codegen;
 
+static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
+
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 {
     return static_cast<int64_t>(x);
@@ -133,8 +135,7 @@ extern "C" DLLEXPORT int64_t MultiplyInt64(int64_t left, int64_t right)
 extern "C" DLLEXPORT int64_t DivideInt64(int64_t contextPtr, int64_t divident, int64_t divisor)
 {
     if (divisor == 0) {
-        char message[] = "Divided by zero error!";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO_EROR);
         return 0;
     }
     return divident / divisor;
@@ -143,8 +144,7 @@ extern "C" DLLEXPORT int64_t DivideInt64(int64_t contextPtr, int64_t divident, i
 extern "C" DLLEXPORT int64_t ModulusInt64(int64_t contextPtr, int64_t divident, int64_t divisor)
 {
     if (divisor == 0) {
-        char message[] = "Divided by zero error!";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO_EROR);
         return 0;
     }
     return std::fmod(divident, divisor);
@@ -200,8 +200,7 @@ extern "C" DLLEXPORT int32_t MultiplyInt32(int32_t left, int32_t right)
 extern "C" DLLEXPORT int32_t DivideInt32(int64_t contextPtr, int32_t divident, int32_t divisor)
 {
     if (divisor == 0) {
-        char message[] = "Divided by zero error!";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO_EROR);
         return 0;
     }
     return divident / divisor;
@@ -210,8 +209,7 @@ extern "C" DLLEXPORT int32_t DivideInt32(int64_t contextPtr, int32_t divident, i
 extern "C" DLLEXPORT int32_t ModulusInt32(int64_t contextPtr, int32_t divident, int32_t divisor)
 {
     if (divisor == 0) {
-        char message[] = "Divided by zero error!";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO_EROR);
         return 0;
     }
     return std::fmod(divident, divisor);

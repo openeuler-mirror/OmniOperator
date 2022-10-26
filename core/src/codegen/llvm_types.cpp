@@ -168,7 +168,7 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
             return I128PtrType();
         default:
             LLVM_DEBUG_LOG("Unsupported column data type %d", typeId);
-            return I64PtrType();
+            return nullptr;
     }
 }
 

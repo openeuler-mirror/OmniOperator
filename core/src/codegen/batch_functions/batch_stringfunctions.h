@@ -307,8 +307,7 @@ static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str,
         }
 
         if (hasErr) {
-            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG.c_str(),
-                omniruntime::codegen::REPLACE_ERR_MSG.length());
+            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG);
         }
         output[i] = ret;
     }
@@ -331,14 +330,13 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
             ret = lambda(&hasErr, i);
         } else {
             auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
-                reinterpret_cast<const char *>(str[i]), strLen[i], reinterpret_cast<const char *>(searchStr[i]),
-                searchLen[i], reinterpret_cast<const char *>(omniruntime::codegen::EMPTY), 0, &hasErr, outLen + i);
+                reinterpret_cast<char *>(str[i]), strLen[i], reinterpret_cast<char *>(searchStr[i]), searchLen[i],
+                reinterpret_cast<const char *>(omniruntime::codegen::EMPTY), 0, &hasErr, outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 
         if (hasErr) {
-            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG.c_str(),
-                omniruntime::codegen::REPLACE_ERR_MSG.length());
+            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG);
         }
         output[i] = ret;
     }

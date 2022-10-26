@@ -32,7 +32,7 @@ extern DLLEXPORT void EvaluateHiveUdfSingle(int64_t contextPtr, const char *udfC
 {
     std::call_once(init_udf_flag, InitHiveUdf);
     if (!g_isUdfInited) {
-        SetError(contextPtr, INIT_UDF_FAILED.c_str(), static_cast<int32_t>(INIT_UDF_FAILED.length()));
+        SetError(contextPtr, INIT_UDF_FAILED);
         return;
     }
     ExecuteHiveUdfSingle(contextPtr, udfClass, inputTypes, retType, vecCount, inputValue, inputNull, inputLength,
@@ -45,7 +45,7 @@ extern DLLEXPORT void EvaluateHiveUdfBatch(int64_t contextPtr, const char *udfCl
 {
     std::call_once(init_udf_flag, InitHiveUdf);
     if (!g_isUdfInited) {
-        SetError(contextPtr, INIT_UDF_FAILED.c_str(), static_cast<int32_t>(INIT_UDF_FAILED.length()));
+        SetError(contextPtr, INIT_UDF_FAILED);
         return;
     }
     ExecuteHiveUdfBatch(contextPtr, udfClass, inputTypes, retType, vecCount, rowCount, inputValues, inputNulls,

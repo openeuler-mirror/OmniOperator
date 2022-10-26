@@ -9,10 +9,10 @@
 #include "func_registry_base.h"
 
 namespace omniruntime {
-    class BatchMathFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class BatchMathFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
-#endif //OMNI_RUNTIME_BATCH_FUNC_REGISTRY_MATH_H
+#endif // OMNI_RUNTIME_BATCH_FUNC_REGISTRY_MATH_H

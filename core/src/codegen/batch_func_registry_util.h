@@ -9,9 +9,9 @@
 #include "util/type_util.h"
 
 namespace omniruntime {
-    class BatchUtilFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class BatchUtilFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
-#endif //OMNI_RUNTIME_BATCH_FUNC_REGISTRY_UTIL_H
+#endif // OMNI_RUNTIME_BATCH_FUNC_REGISTRY_UTIL_H

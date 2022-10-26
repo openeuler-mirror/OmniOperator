@@ -34,10 +34,16 @@ void HiveUdfRegistry::GenerateHiveUdfMap(std::unordered_map<std::string, std::st
         LogWarn("No hive udf properties file.");
         return;
     }
+    Trim(propertyFile);
+    auto realPathRes = realpath(propertyFile.c_str(), nullptr);
+    if (realPathRes == nullptr) {
+        LogWarn("realpath failed.");
+        return;
+    }
 
-    std::ifstream file(propertyFile);
+    std::ifstream file(realPathRes);
     if (!file.good()) {
-        LogWarn("%s does not exist.", propertyFile.c_str());
+        LogWarn("%s does not exist.", realPathRes);
         return;
     }
 

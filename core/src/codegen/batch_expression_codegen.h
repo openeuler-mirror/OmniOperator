@@ -120,12 +120,12 @@ protected:
 
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<LLVMEngine> llvmEngine;
-    llvm::LLVMContext *context;
-    llvm::IRBuilder<> *builder;
-    llvm::Module *module;
-    llvm::orc::LLJIT *jit;
+    llvm::LLVMContext *context = nullptr;
+    llvm::IRBuilder<> *builder = nullptr;
+    llvm::Module *module = nullptr;
+    llvm::orc::LLJIT *jit = nullptr;
     llvm::ExitOnError eoe;
-    LLVMTypes *llvmTypes;
+    LLVMTypes *llvmTypes = nullptr;
     std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
     llvm::orc::ResourceTrackerSP rt;
     llvm::Function *func = nullptr;

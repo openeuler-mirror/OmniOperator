@@ -86,7 +86,7 @@ extern DLLEXPORT const char *ConcatStrStr(int64_t contextPtr, const char *ap, in
     bool hasErr = false;
     const char *ret = StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
-        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+        SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
     }
     return ret;
@@ -101,7 +101,7 @@ extern DLLEXPORT const char *ConcatCharChar(int64_t contextPtr, const char *ap, 
     bool hasErr = false;
     const char *ret = StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
-        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+        SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
     }
     return ret;
@@ -116,7 +116,7 @@ extern DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *ap, i
     bool hasErr = false;
     const char *ret = StringUtil::ConcatCharDiffWidths(contextPtr, ap, aWidth, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
-        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+        SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
     }
     return ret;
@@ -132,7 +132,7 @@ extern DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, i
     bool hasErr = false;
     const char *ret = StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, &hasErr, outLen);
     if (hasErr) {
-        SetError(contextPtr, CONCAT_ERR_MSG.c_str(), CONCAT_ERR_MSG.length());
+        SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
     }
     return ret;
@@ -150,8 +150,7 @@ extern DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *str, i
     regex re = regex(regexToMatch);
     string s = string(str, strLen);
     if (!regex_match(s, re)) {
-        char message[] = "Only support cast date\'YYYY-MM-DD\' to integer";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
         return -1;
     }
 
@@ -270,7 +269,7 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
     }
 
     if (hasErr) {
-        SetError(contextPtr, REPLACE_ERR_MSG.c_str(), REPLACE_ERR_MSG.length());
+        SetError(contextPtr, REPLACE_ERR_MSG);
     }
     return ret;
 }
@@ -295,8 +294,7 @@ extern DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t value, 
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
-        char message[] = "cast failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, "cast failed");
         *outLen = 0;
         return nullptr;
     }
@@ -313,8 +311,7 @@ extern DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value,
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
-        char message[] = "cast failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, "cast failed");
         *outLen = 0;
         return nullptr;
     }
@@ -341,8 +338,7 @@ extern DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, (oss.str()).c_str(), *outLen);
     if (res != EOK) {
-        char message[] = "cast failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, "cast failed");
         *outLen = 0;
         return nullptr;
     }
@@ -360,8 +356,7 @@ extern DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64_t x
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
     if (res != EOK) {
-        char message[] = "cast failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, "cast failed");
         *outLen = 0;
         return nullptr;
     }
@@ -380,8 +375,7 @@ extern DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int64_t 
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
     if (res != EOK) {
-        char message[] = "cast failed";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, "cast failed");
         *outLen = 0;
         return nullptr;
     }
@@ -399,7 +393,7 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const
     if (hasErr) {
         ostringstream errMsg;
         errMsg << "cast varchar[" << srcWidth << "] to varchar[" << dstWidth << "] failed.";
-        SetError(contextPtr, errMsg.str().c_str(), errMsg.str().length());
+        SetError(contextPtr, errMsg.str());
     }
     return ret;
 }
@@ -416,8 +410,7 @@ extern DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, in
     if (!regex_match(s, r)) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
@@ -426,8 +419,7 @@ extern DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, in
     } catch (std::exception &e) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
@@ -445,8 +437,7 @@ extern DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, i
     if (!regex_match(s, r)) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
@@ -455,8 +446,7 @@ extern DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, i
     } catch (std::exception &e) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
@@ -474,8 +464,7 @@ extern DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *str, 
     if (!regex_match(s, r)) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
@@ -484,8 +473,7 @@ extern DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *str, 
     } catch (std::exception &e) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -508,8 +496,7 @@ extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *s
         if (status == OP_OVERFLOW) {
             errorMessage << ". Value too large.";
         }
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     status = DecimalOperations::Rescale64(result, outScale - scale, result);
@@ -520,8 +507,7 @@ extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *s
         ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
             "). Value too large.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -544,8 +530,7 @@ extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str
         if (status == OP_OVERFLOW) {
             errorMessage << ". Value too large.";
         }
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return;
     }
     status = DecimalOperations::Rescale128(result, outScale - scale, result);
@@ -556,8 +541,7 @@ extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str
         ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
             "). Value too large.";
-        int len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return;
     }
     *outHighPtr = result.HighBits();

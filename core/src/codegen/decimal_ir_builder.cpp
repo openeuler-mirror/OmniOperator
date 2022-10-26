@@ -37,8 +37,8 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
     std::vector<llvm::Value *> disassembledArgs;
 
     if (executionContextPtr != nullptr) {
-        if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() ==
-            omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        if (overflowConfig != nullptr &&
+            overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
             disassembledArgs.push_back(overflowNull);
         } else {
             disassembledArgs.push_back(executionContextPtr);

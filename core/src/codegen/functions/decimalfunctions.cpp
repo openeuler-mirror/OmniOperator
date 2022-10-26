@@ -21,6 +21,8 @@ namespace codegen {
 #endif
 
 static constexpr int DOUBLE_MAX_PRECISION = numeric_limits<double>::max_digits10;
+const std::string DECIMAL_OVERFLOW { "Decimal overflow" };
+const std::string DIVIDE_ZERO { "Division by zero" };
 
 // decimal128 arithmetical functions
 extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
@@ -109,8 +111,7 @@ extern "C" DLLEXPORT int64_t AddDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
 
@@ -132,8 +133,7 @@ extern "C" DLLEXPORT void AddDec64Dec64Dec128(int64_t contextPtr, int64_t x, int
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -157,8 +157,7 @@ extern "C" DLLEXPORT void AddDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -182,8 +181,7 @@ extern "C" DLLEXPORT void AddDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -207,8 +205,7 @@ extern "C" DLLEXPORT void AddDec128Dec64Dec128(int64_t contextPtr, int64_t yHigh
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -238,8 +235,7 @@ extern "C" DLLEXPORT int64_t SubDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
 
@@ -262,8 +258,7 @@ extern "C" DLLEXPORT void SubDec64Dec64Dec128(int64_t contextPtr, int64_t x, int
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -287,8 +282,7 @@ extern "C" DLLEXPORT void SubDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -312,8 +306,7 @@ extern "C" DLLEXPORT void SubDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -337,8 +330,7 @@ extern "C" DLLEXPORT void SubDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -358,8 +350,7 @@ extern "C" DLLEXPORT int64_t MulDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
 
@@ -384,8 +375,7 @@ extern "C" DLLEXPORT void MulDec64Dec64Dec128(int64_t contextPtr, int64_t x, int
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -403,8 +393,7 @@ extern "C" DLLEXPORT void MulDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     int32_t reScale = xScale + yScale;
     OpStatus status = DecimalOperations::Multiply256(left, right, result, reScale - outScale);
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
     *outHighPtr = result.HighBits();
@@ -429,8 +418,7 @@ extern "C" DLLEXPORT void MulDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -456,8 +444,7 @@ extern "C" DLLEXPORT void MulDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     }
 
     if (status != SUCCESS) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -470,16 +457,14 @@ extern "C" DLLEXPORT int64_t DivDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(x), xScale, Decimal128(y), yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
     return result.HighBits() < 0 ? -static_cast<int64_t>(result.LowBits()) : static_cast<int64_t>(result.LowBits());
@@ -489,16 +474,14 @@ extern "C" DLLEXPORT int64_t DivDec64Dec128Dec64(int64_t contextPtr, int64_t x, 
     int64_t yHigh, int64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(x), xScale, Decimal128(yHigh, yLow), yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
     return result.HighBits() < 0 ? -static_cast<int64_t>(result.LowBits()) : static_cast<int64_t>(result.LowBits());
@@ -508,16 +491,14 @@ extern "C" DLLEXPORT int64_t DivDec128Dec64Dec64(int64_t contextPtr, int64_t xHi
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
     return result.HighBits() < 0 ? -static_cast<int64_t>(result.LowBits()) : static_cast<int64_t>(result.LowBits());
@@ -528,16 +509,14 @@ extern "C" DLLEXPORT void DivDec64Dec64Dec128(int64_t contextPtr, int64_t x, int
     uint64_t *outLowPtr)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(x), xScale, Decimal128(y), yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
     *outHighPtr = result.HighBits();
@@ -549,16 +528,14 @@ extern "C" DLLEXPORT void DivDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
     Decimal128 result;
     OpStatus status = DecimalOperations::InternalDivDec128(Decimal128(xHigh, xLow), xScale, Decimal128(yHigh, yLow),
         yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
     *outHighPtr = result.HighBits();
@@ -570,16 +547,14 @@ extern "C" DLLEXPORT void DivDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
     Decimal128 result;
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(x), xScale, Decimal128(yHigh, yLow), yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
     *outHighPtr = result.HighBits();
@@ -591,8 +566,7 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
 
@@ -600,8 +574,7 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     OpStatus status =
         DecimalOperations::InternalDivDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale, result, outScale);
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -614,8 +587,7 @@ extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     if (x == 0) {
@@ -638,8 +610,7 @@ extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64(int64_t contextPtr, int64_t x, i
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
     return result;
@@ -649,8 +620,7 @@ extern "C" DLLEXPORT int64_t ModDec64Dec128Dec64(int64_t contextPtr, int64_t x, 
     int64_t yHigh, int64_t yLow, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     if (x == 0) {
@@ -673,8 +643,7 @@ extern "C" DLLEXPORT int64_t ModDec64Dec128Dec64(int64_t contextPtr, int64_t x, 
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
     return result;
@@ -684,8 +653,7 @@ extern "C" DLLEXPORT int64_t ModDec128Dec64Dec64(int64_t contextPtr, int64_t xHi
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     if ((xHigh == 0 && xLow == 0)) {
@@ -709,8 +677,7 @@ extern "C" DLLEXPORT int64_t ModDec128Dec64Dec64(int64_t contextPtr, int64_t xHi
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
     return result;
@@ -721,8 +688,7 @@ extern "C" DLLEXPORT void ModDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (y == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
     if ((xHigh == 0 && xLow == 0)) {
@@ -744,8 +710,7 @@ extern "C" DLLEXPORT void ModDec128Dec64Dec128(int64_t contextPtr, int64_t xHigh
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -758,8 +723,7 @@ extern "C" DLLEXPORT void ModDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
     if ((xHigh == 0 && xLow == 0)) {
@@ -781,8 +745,7 @@ extern "C" DLLEXPORT void ModDec128Dec128Dec128(int64_t contextPtr, int64_t xHig
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -795,8 +758,7 @@ extern "C" DLLEXPORT int64_t ModDec128Dec128Dec64(int64_t contextPtr, int64_t xH
     int32_t outScale)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return 0;
     }
     if ((xHigh == 0 && xLow == 0)) {
@@ -816,8 +778,7 @@ extern "C" DLLEXPORT int64_t ModDec128Dec128Dec64(int64_t contextPtr, int64_t xH
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return 0;
     }
 
@@ -829,8 +790,7 @@ extern "C" DLLEXPORT void ModDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
     int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (yHigh == 0 && yLow == 0) {
-        char message[] = "Division by zero";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DIVIDE_ZERO);
         return;
     }
     if (x == 0) {
@@ -852,8 +812,7 @@ extern "C" DLLEXPORT void ModDec64Dec128Dec128(int64_t contextPtr, int64_t x, in
     }
 
     if (status == OP_OVERFLOW) {
-        char message[] = "Decimal overflow";
-        SetError(contextPtr, message, sizeof(message) / sizeof(char));
+        SetError(contextPtr, DECIMAL_OVERFLOW);
         return;
     }
 
@@ -878,8 +837,7 @@ extern "C" DLLEXPORT int64_t CastDecimal64To64(int64_t contextPtr, int64_t x, in
         errorMessage << "Cannot cast DECIMAL(" << precision << ", " << scale << ") '" <<
             DecimalOperations::ScaleOfDecimal(to_string(x), scale) << "' to DECIMAL(" << newPrecision << ", " <<
             newScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -904,8 +862,7 @@ extern "C" DLLEXPORT void CastDecimal128To128(int64_t contextPtr, int64_t xHigh,
         errorMessage << "Cannot cast DECIMAL(" << precision << ", " << scale << ") '" <<
             DecimalOperations::ScaleOfDecimal(Decimal128(xHigh, xLow).ToString(), scale) << "' to DECIMAL(" <<
             newPrecision << ", " << newScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return;
     }
     *outHighPtr = result.HighBits();
@@ -931,8 +888,7 @@ extern "C" DLLEXPORT void CastDecimal64To128(int64_t contextPtr, int64_t x, int3
         errorMessage << "Cannot cast  DECIMAL(" << precision << ", " << scale << ") '" <<
             DecimalOperations::ScaleOfDecimal(to_string(x), scale) << "' to DECIMAL(" << newPrecision << "," <<
             newScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         *outHighPtr = 0;
         *outLowPtr = 0;
         return;
@@ -959,8 +915,7 @@ extern "C" DLLEXPORT int64_t CastDecimal128To64(int64_t contextPtr, int64_t xHig
         errorMessage << "Cannot cast  DECIMAL(" << precision << ", " << scale << ") '" <<
             DecimalOperations::ScaleOfDecimal(input.ToString(), scale) << "' to DECIMAL(" << newPrecision << "," <<
             newScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -981,8 +936,7 @@ extern "C" DLLEXPORT int64_t CastIntToDecimal64(int64_t contextPtr, int32_t x, b
     if (status != SUCCESS) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast INTEGER '" << x << "' to DECIMAL(" << precision << "," << scale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -1003,8 +957,7 @@ extern "C" DLLEXPORT int64_t CastLongToDecimal64(int64_t contextPtr, int64_t x, 
     if (status != SUCCESS) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast BIGINT '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -1034,8 +987,7 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64(int64_t contextPtr, double x,
         ostringstream errorMessage;
         errorMessage.precision(DOUBLE_MAX_PRECISION);
         errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -1059,8 +1011,7 @@ extern "C" DLLEXPORT void CastIntToDecimal128(int64_t contextPtr, int32_t x, boo
     if (status != SUCCESS) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast INTEGER '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return;
     }
     *outHighPtr = result.HighBits();
@@ -1085,8 +1036,7 @@ extern "C" DLLEXPORT void CastLongToDecimal128(int64_t contextPtr, int64_t x, bo
     if (status != SUCCESS) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast BIGINT '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return;
     }
     *outHighPtr = result.HighBits();
@@ -1119,8 +1069,7 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, b
         ostringstream errorMessage;
         errorMessage.precision(DOUBLE_MAX_PRECISION);
         errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         *outHighPtr = 0;
         *outLowPtr = 0;
         return;
@@ -1142,8 +1091,7 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
         if (status == type::OP_OVERFLOW || scaledValue < INT_MIN || scaledValue > INT_MAX) {
             ostringstream errorMessage;
             errorMessage << "Cannot cast " << DecimalOperations::ScaleOfDecimal(to_string(x), scale) << " to INTEGER";
-            int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-            SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+            SetError(contextPtr, errorMessage.str());
             return 0;
         }
         return static_cast<int32_t>(scaledValue);
@@ -1160,8 +1108,7 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
     if (status != SUCCESS) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << DecimalOperations::ScaleOfDecimal(to_string(x), scale) << "' to  INTEGER";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -1221,8 +1168,7 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHi
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << DecimalOperations::ScaleOfDecimal(inputDecimal.ToString(), scale) <<
             "' to  INTEGER";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -1249,8 +1195,7 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << DecimalOperations::ScaleOfDecimal(inputDecimal.ToString(), scale) <<
             "' to  BIGINT";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return result;
@@ -1831,7 +1776,7 @@ extern "C" DLLEXPORT int64_t ModDec128Dec64Dec64RetNull(bool *isNull, int64_t xH
     OpStatus status = DecimalOperations::InternalModDec128(Decimal128(xHigh, xLow), xScale, Decimal128(y), yScale,
         resultScale, resultDecimal);
     result = resultDecimal.HighBits() < 0 ? -static_cast<int64_t>(resultDecimal.LowBits()) :
-        static_cast<int64_t>(resultDecimal.LowBits());
+                                            static_cast<int64_t>(resultDecimal.LowBits());
 
     if (status == SUCCESS && resultScale != outScale) {
         if (DecimalOperations::Rescale64(result, outScale - resultScale, result)) {
@@ -2280,8 +2225,7 @@ extern "C" DLLEXPORT int64_t MakeDecimal64(int64_t contextPtr, int64_t x, int32_
     if (DecimalOperations::IsUnscaledLongOverflow(x, precision, scale)) {
         ostringstream errorMessage;
         errorMessage << "Unscaled value " << x << " out of Decimal(" << precision << ", " << scale << ") range";
-        int32_t len = static_cast<int>(errorMessage.str().length()) + 1;
-        SetError(contextPtr, const_cast<char *>(errorMessage.str().c_str()), len);
+        SetError(contextPtr, errorMessage.str());
         return 0;
     }
     return x;

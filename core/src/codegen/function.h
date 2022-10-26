@@ -37,8 +37,6 @@ public:
         const std::vector<omniruntime::type::DataTypeId> &paramTypes, const omniruntime::type::DataTypeId &retType,
         NullableResultType = DEFAULT, bool setExecutionContext = false);
 
-    Function(const std::string &fnID, const FunctionSignature &signature);
-
     // Copy constructor
     Function &operator = (Function other)
     {

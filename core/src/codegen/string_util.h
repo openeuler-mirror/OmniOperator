@@ -117,7 +117,7 @@ public:
             }
         }
 
-        *outLen = s.length();
+        *outLen = static_cast<int32_t>(s.length());
         auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
         if (res != EOK) {

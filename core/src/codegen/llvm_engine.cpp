@@ -3,6 +3,7 @@
  * Description: Expression code generation utilities
  */
 
+#include <utility>
 #include "expr_info_extractor.h"
 #include "func_registry.h"
 #include "llvm_engine.h"
@@ -192,15 +193,15 @@ llvm::Value *LLVMEngine::CallExternFunction(const string fn_name, vector<DataTyp
     omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
 {
     if (executionContextPtr != nullptr) {
-        if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() ==
-            omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        if (overflowConfig != nullptr &&
+            overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
             args.insert(args.begin(), overflowNull);
         } else {
             args.insert(args.begin(), executionContextPtr);
         }
     }
 
-    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString(overflowConfig);
+    std::string funcId = FunctionSignature(fn_name, std::move(params), returnType).ToString(overflowConfig);
     auto f = module->getFunction(funcId);
     auto ret = CreateCall(f, args, msg);
     return ret;

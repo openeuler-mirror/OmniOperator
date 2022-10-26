@@ -4,7 +4,7 @@
  */
 #include <string>
 
-#include "../functions/murmur3_hash.h"
+#include "codegen/functions/murmur3_hash.h"
 #include "batch_murmur3_hash.h"
 
 using namespace std;

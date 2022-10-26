@@ -9,7 +9,6 @@ using namespace orc;
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
-
 namespace {
 const int INPUT_TABLE_INDEX = 0;
 const int NUM_ROWS_INDEX = 1;
@@ -169,39 +168,9 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     Value *selectedAddress;
 
     // Type of output column
-    Type *outPtrType = nullptr;
-    Function *varcharVectorFunc = nullptr;
-    switch (this->expr->GetReturnTypeId()) {
-        case OMNI_INT:
-        case OMNI_DATE32:
-            outPtrType = llvmTypes->I32PtrType();
-            break;
-        case OMNI_LONG:
-        case OMNI_DECIMAL64:
-            outPtrType = llvmTypes->I64PtrType();
-            break;
-        case OMNI_DOUBLE:
-            outPtrType = llvmTypes->DoublePtrType();
-            break;
-        case OMNI_CHAR:
-        case OMNI_VARCHAR: {
-            outPtrType = llvmTypes->I8PtrType();
-            std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
-            FunctionSignature varcharVectorFuncSignature =
-                FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
-            varcharVectorFunc = module->getFunction(
-                omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
-            break;
-        }
-        case OMNI_DECIMAL128:
-            outPtrType = llvmTypes->I128PtrType();
-            break;
-        case OMNI_BOOLEAN:
-            outPtrType = llvmTypes->I1PtrType();
-            break;
-        default:
-            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnTypeId());
-            break;
+    Type *outPtrType = llvmTypes->ToPointerType(expr->GetReturnTypeId());
+    if (outPtrType == nullptr) {
+        return 0;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
     // Create a integer pointer to store output length value
@@ -255,6 +224,10 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
+        std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
+        FunctionSignature varcharVectorFuncSignature = FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
+        auto varcharVectorFunc =
+            module->getFunction(omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
         auto call = llvmEngine->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
         InlineFunctionInfo inlineFunctionInfo;

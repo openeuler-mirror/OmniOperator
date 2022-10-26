@@ -19,21 +19,21 @@ extern "C" DLLEXPORT
 {
     char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size)
     {
-        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        auto context = reinterpret_cast<ExecutionContext *>(reinterpret_cast<void *>(contextPtr));
         return reinterpret_cast<char *>(context->GetArena()->Allocate(size));
     }
 
     bool ArenaAllocatorReset(int64_t contextPtr)
     {
-        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        auto context = reinterpret_cast<ExecutionContext *>(reinterpret_cast<void *>(contextPtr));
         context->GetArena()->Reset();
         return true;
     }
 
-    bool SetError(int64_t contextPtr, const char *errorMessage, int32_t messageLength)
+    bool SetError(int64_t contextPtr, std::string errorMessage)
     {
-        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
-        context->SetError(std::string(errorMessage, messageLength));
+        auto context = reinterpret_cast<ExecutionContext *>(reinterpret_cast<void *>(contextPtr));
+        context->SetError(errorMessage);
         return true;
     }
 }

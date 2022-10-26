@@ -4,9 +4,8 @@
  */
 
 #include "batch_utilfunctions.h"
-#include "type/decimal_operations.h"
-#include "../functions/context_helper.h"
-#include "../functions/stringfunctions.h"
+#include "codegen/functions/context_helper.h"
+#include "codegen/functions/stringfunctions.h"
 
 using namespace omniruntime::codegen;
 
@@ -82,8 +81,7 @@ extern "C" DLLEXPORT void FillString(int64_t contextPtr, uint8_t **dataArray, bo
         ret = ArenaAllocatorMalloc(contextPtr, length);
         err = memcpy_s(ret, length + 1, literal, length);
         if (err != EOK) {
-            char message[] = "Fill string failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, "Fill string failed");
             dataArray[i] = nullptr;
             nullArray[i] = true;
             lengthArray[i] = 0;
@@ -242,11 +240,11 @@ extern "C" DLLEXPORT void SwitchExprString(int32_t whenCnt, int64_t *whenClauses
     std::vector<int32_t *> resLengths;
 
     for (int i = 0; i < whenCnt; ++i) {
-        whenValues.push_back((bool *)whenClauses[i]);
-        whenNulls.push_back((bool *)whenBools[i]);
-        resValues.push_back((uint8_t **)resultValues[i]);
-        resNulls.push_back((bool *)resultNulls[i]);
-        resLengths.push_back((int32_t *)resultLengths[i]);
+        whenValues.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(whenClauses[i])));
+        whenNulls.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(whenBools[i])));
+        resValues.push_back(reinterpret_cast<uint8_t **>(reinterpret_cast<void *>(resultValues[i])));
+        resNulls.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(resultNulls[i])));
+        resLengths.push_back(reinterpret_cast<int32_t *>(reinterpret_cast<void *>(resultLengths[i])));
     }
 
     for (int i = 0; i < rowCnt; ++i) {
@@ -287,19 +285,19 @@ extern "C" DLLEXPORT void InExprString(int32_t cmpCnt, int64_t *cmpValues, int64
     std::vector<bool *> cmpNullsList;
     std::vector<int32_t *> cmpLengthsList;
 
-    for (int i = 0; i < cmpCnt; ++i) {
-        cmpValuesList.push_back((uint8_t **)cmpValues[i]);
-        cmpNullsList.push_back((bool *)cmpBools[i]);
-        cmpLengthsList.push_back((int32_t *)cmpLengths[i]);
+    for (int32_t i = 0; i < cmpCnt; ++i) {
+        cmpValuesList.push_back(reinterpret_cast<uint8_t **>(reinterpret_cast<void *>(cmpValues[i])));
+        cmpNullsList.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(cmpBools[i])));
+        cmpLengthsList.push_back(reinterpret_cast<int32_t *>(reinterpret_cast<void *>(cmpLengths[i])));
     }
 
-    for (int i = 0; i < rowCnt; ++i) {
+    for (int32_t i = 0; i < rowCnt; ++i) {
         finalResult[i] = false;
         finalNull[i] = false;
-        for (int j = 0; j < cmpCnt; ++j) {
+        for (int32_t j = 0; j < cmpCnt; ++j) {
             if (!toCmpBool[i] && !cmpNullsList[j][i]) {
-                if (StrCompare(reinterpret_cast<const char *>(toCmpValue[i]), toCmpLength[i],
-                    reinterpret_cast<const char *>(cmpValuesList[j][i]), cmpLengthsList[j][i]) == 0) {
+                if (StrCompare(reinterpret_cast<char *>(toCmpValue[i]), toCmpLength[i],
+                    reinterpret_cast<char *>(cmpValuesList[j][i]), cmpLengthsList[j][i]) == 0) {
                     finalResult[i] = true;
                     break;
                 }

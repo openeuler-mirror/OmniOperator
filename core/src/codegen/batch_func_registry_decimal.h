@@ -9,10 +9,10 @@
 #include "func_registry_base.h"
 
 namespace omniruntime {
-    class BatchDecimalFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class BatchDecimalFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
-#endif //OMNI_RUNTIME_BATCH_FUNC_REGISTRY_DECIMAL_H
+#endif // OMNI_RUNTIME_BATCH_FUNC_REGISTRY_DECIMAL_H
