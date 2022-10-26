@@ -107,7 +107,7 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *                             */
+             *                              */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64: {
                 return std::make_unique<SumShortDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
@@ -183,9 +183,6 @@ public:
     {
         // fetch first inputTypes id as aggregator input type and map to type
         auto inputTypeId = inputTypes->GetIds()[0];
-        // TODO add a param to represent engine type or
-        //  inputType and outputType are from physical operations
-        //  use meta programming to avoid explicit Vector type in template
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:

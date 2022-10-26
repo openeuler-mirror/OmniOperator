@@ -18,9 +18,9 @@ namespace omniruntime {
 namespace op {
 class LookupOuterJoinOperatorFactory : public OperatorFactory {
 public:
-    LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
-        int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
-        const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables);
+    LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
+        int32_t probeOutputColsCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
+        JoinHashTables *hashTables);
     ~LookupOuterJoinOperatorFactory() override;
     static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
@@ -31,7 +31,7 @@ private:
     DataTypes buildOutputTypes;
     std::vector<int32_t> buildOutputCols;
     DataTypes probeTypes;                 // all types for probe
-    std::vector<int32_t> probeOutputCols;        // output columns for probe
+    std::vector<int32_t> probeOutputCols; // output columns for probe
     JoinHashTables *hashTables;
 };
 
@@ -44,11 +44,11 @@ public:
     ~LookupOuterJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
-    void AppendToNext(VectorBatch *vectorBatch, const int32_t *buildOutputIds,
-        int32_t buildOutputColsCount, int32_t probeOutputColsCount, int32_t destRowIndex);
+    void AppendToNext(VectorBatch *vectorBatch, const int32_t *buildOutputIds, int32_t buildOutputColsCount,
+        int32_t probeOutputColsCount, int32_t destRowIndex);
 
 private:
-    void BuildVecBatch(VectorBatch * vectorBatch);
+    void BuildVecBatch(VectorBatch *vectorBatch);
 
     DataTypes probeOutputTypes;
     std::vector<int32_t> probeOutputCols;

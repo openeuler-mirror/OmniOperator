@@ -115,8 +115,6 @@ public:
 #endif
 
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
-    // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
-    // only a row.
     virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) = 0;
 
     virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) = 0;
