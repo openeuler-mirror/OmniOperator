@@ -92,11 +92,10 @@ std::string FunctionSignature::ToString() const
 std::string FunctionSignature::ToString(omniruntime::op::OverflowConfig *overflowConfig) const
 {
     auto result = this->funcName;
-    if (overflowConfig != nullptr &&
-        overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+    if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         result += "_null";
     }
-    for (auto const &param: this->paramTypes) {
+    for (auto const &param : this->paramTypes) {
         result += "_";
         result += TypeUtil::TypeToString(param);
     }

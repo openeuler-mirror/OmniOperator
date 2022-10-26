@@ -2,7 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Maps a function in function expression to a precompiled function
  */
-#include <algorithm>
+
 #include "function.h"
 
 using namespace omniruntime::type;
@@ -23,11 +23,6 @@ Function::Function(void *address, const std::string &name, const std::vector<std
     }
 }
 
-Function::Function(const std::string &fnID, const FunctionSignature &signature)
-{
-    this->signatures.push_back(signature);
-}
-
 Function::~Function() = default;
 
 const std::vector<FunctionSignature> &Function::GetSignatures() const
@@ -44,6 +39,7 @@ DataTypeId Function::GetReturnType() const
 {
     return this->signatures.at(0).GetReturnType();
 }
+
 const std::vector<DataTypeId> &Function::GetParamTypes() const
 {
     return this->signatures.at(0).GetParams();

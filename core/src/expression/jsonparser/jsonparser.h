@@ -29,7 +29,6 @@ private:
     static omniruntime::expressions::Expr *ParseJSONIf(const nlohmann::json &jsonExpr);
     static omniruntime::expressions::Expr *ParseJSONCoalesce(const nlohmann::json &jsonExpr);
     static omniruntime::expressions::Expr *ParseJsonIsNull(const nlohmann::json &jsonExpr);
-
     static omniruntime::expressions::Expr *ParseJSONFunc(const nlohmann::json &jsonExpr);
     static omniruntime::expressions::Expr *ParseJSONSwitch(const nlohmann::json &jsonExpr);
 };

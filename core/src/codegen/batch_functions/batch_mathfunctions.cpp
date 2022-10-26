@@ -6,9 +6,8 @@
 #include <iostream>
 #include <cfloat>
 #include "util/engine.h"
-#include "../functions/context_helper.h"
-#include "../functions/mathfunctions.h"
-
+#include "codegen/functions/context_helper.h"
+#include "codegen/functions/mathfunctions.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -17,6 +16,8 @@
 #endif
 
 using namespace omniruntime::codegen;
+
+static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
 extern "C" DLLEXPORT void BatchCastInt32ToInt64(int32_t *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
 {
@@ -180,8 +181,7 @@ extern "C" DLLEXPORT void BatchDivideInt64(int64_t contextPtr, int64_t *left, in
             continue;
         }
         if (right[i] == 0) {
-            char message[] = "Divided by zero error!";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, DIVIDE_ZERO_EROR);
             return;
         }
         left[i] = left[i] / right[i];
@@ -196,8 +196,7 @@ extern "C" DLLEXPORT void BatchModulusInt64(int64_t contextPtr, int64_t *left, i
             continue;
         }
         if (right[i] == 0) {
-            char message[] = "Divided by zero error!";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, DIVIDE_ZERO_EROR);
             return;
         }
         left[i] = std::fmod(left[i], right[i]);
@@ -275,8 +274,7 @@ extern "C" DLLEXPORT void BatchDivideInt32(int64_t contextPtr, int32_t *left, in
             continue;
         }
         if (right[i] == 0) {
-            char message[] = "Divided by zero error!";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, DIVIDE_ZERO_EROR);
             return;
         }
         left[i] = left[i] / right[i];
@@ -291,8 +289,7 @@ extern "C" DLLEXPORT void BatchModulusInt32(int64_t contextPtr, int32_t *left, i
             continue;
         }
         if (right[i] == 0) {
-            char message[] = "Divided by zero error!";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, DIVIDE_ZERO_EROR);
             return;
         }
         left[i] = std::fmod(left[i], right[i]);

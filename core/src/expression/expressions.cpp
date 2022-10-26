@@ -73,7 +73,7 @@ void Expr::DeleteExprs(const std::vector<Expr *> &exprs)
 
 void Expr::DeleteExprs(const std::vector<std::vector<Expr *>> &exprs)
 {
-    for (std::vector<Expr *>  expr: exprs) {
+    for (const std::vector<Expr *> &expr : exprs) {
         Expr::DeleteExprs(expr);
     }
 }
@@ -168,7 +168,7 @@ UnaryExpr::UnaryExpr()
     dataType = BooleanType();
 }
 
-UnaryExpr::UnaryExpr(Operator logOp, Expr *bodyexp) : op(logOp), exp(bodyexp) {}
+UnaryExpr::UnaryExpr(Operator logOp, Expr *bodyExpr) : op(logOp), exp(bodyExpr) {}
 
 UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt) : op(uop), exp(expr)
 {

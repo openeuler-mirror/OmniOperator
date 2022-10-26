@@ -4,7 +4,7 @@
  */
 
 #include "batch_varcharVectorfunctions.h"
-#include "../../vector/variable_width_vector.h"
+#include "vector/variable_width_vector.h"
 
 using namespace omniruntime::vec;
 using namespace std;
@@ -12,9 +12,9 @@ using namespace std;
 extern "C" DLLEXPORT int32_t BatchWrapVarcharVector(int64_t vectorAddr, uint8_t **data, int32_t *dataLen,
     int32_t rowCnt)
 {
-    auto *varcharVectorPtr = reinterpret_cast<VarcharVector *>(vectorAddr);
+    auto *varcharVectorPtr = reinterpret_cast<VarcharVector *>(reinterpret_cast<void *>(vectorAddr));
     for (int i = 0; i < rowCnt; ++i) {
-        varcharVectorPtr->SetValue(i, reinterpret_cast<uint8_t *>(data[i]), dataLen[i]);
+        varcharVectorPtr->SetValue(i, data[i], dataLen[i]);
     }
     return 0;
 }

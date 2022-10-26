@@ -17,5 +17,4 @@
 extern "C" DLLEXPORT int32_t BatchWrapVarcharVector(int64_t vectorAddr, uint8_t **data, int32_t *dataLen,
     int32_t rowCnt);
 
-
 #endif // OMNI_RUNTIME_BATCH_VARCHARVECTORFUNCTIONS_H

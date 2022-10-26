@@ -78,7 +78,7 @@ extern "C" DLLEXPORT void CopyString(uint8_t **dataArray, uint8_t **output, int3
 template <typename T> extern DLLEXPORT void Coalesce(T *lArray, bool *lIsNull, T *rArray, bool *rIsNull, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; ++i) {
-        if (lIsNull[i] == true) {
+        if (lIsNull[i]) {
             lArray[i] = rArray[i];
             lIsNull[i] = rIsNull[i];
         }
@@ -109,15 +109,14 @@ extern DLLEXPORT void SwitchExpr(int32_t whenCnt, int64_t *whenClauses, int64_t 
 {
     std::vector<bool *> whenValues;
     std::vector<bool *> whenNulls;
-
     std::vector<T *> resValues;
     std::vector<bool *> resNulls;
 
     for (int i = 0; i < whenCnt; ++i) {
-        whenValues.push_back((bool *)whenClauses[i]);
-        whenNulls.push_back((bool *)whenBools[i]);
-        resValues.push_back((T *)resultValues[i]);
-        resNulls.push_back((bool *)resultNulls[i]);
+        whenValues.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(whenClauses[i])));
+        whenNulls.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(whenBools[i])));
+        resValues.push_back(reinterpret_cast<T *>(reinterpret_cast<void *>(resultValues[i])));
+        resNulls.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(resultNulls[i])));
     }
 
     for (int i = 0; i < rowCnt; ++i) {
@@ -149,8 +148,8 @@ extern DLLEXPORT void InExpr(int32_t cmpCnt, int64_t *cmpValues, int64_t *cmpBoo
     std::vector<bool *> cmpNullsList;
 
     for (int i = 0; i < cmpCnt; ++i) {
-        cmpValuesList.push_back((T *)cmpValues[i]);
-        cmpNullsList.push_back((bool *)cmpBools[i]);
+        cmpValuesList.push_back(reinterpret_cast<T *>(reinterpret_cast<void *>(cmpValues[i])));
+        cmpNullsList.push_back(reinterpret_cast<bool *>(reinterpret_cast<void *>(cmpBools[i])));
     }
 
     for (int i = 0; i < rowCnt; ++i) {

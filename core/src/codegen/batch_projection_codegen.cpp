@@ -112,33 +112,9 @@ int64_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
     dictionaryVectors->setName("DICTIONARY_VECTORS");
 
     builder->SetInsertPoint(projectionMain);
-    Type *outPtrType = nullptr;
-    switch (this->expr->GetReturnTypeId()) {
-        case OMNI_INT:
-        case OMNI_DATE32:
-            outPtrType = llvmTypes->I32PtrType();
-            break;
-        case OMNI_LONG:
-        case OMNI_DECIMAL64:
-            outPtrType = llvmTypes->I64PtrType();
-            break;
-        case OMNI_DOUBLE:
-            outPtrType = llvmTypes->DoublePtrType();
-            break;
-        case OMNI_CHAR:
-        case OMNI_VARCHAR: {
-            outPtrType = llvmTypes->I8PtrType();
-            break;
-        }
-        case OMNI_DECIMAL128:
-            outPtrType = llvmTypes->I128PtrType();
-            break;
-        case OMNI_BOOLEAN:
-            outPtrType = llvmTypes->I1PtrType();
-            break;
-        default:
-            LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetReturnTypeId());
-            break;
+    Type *outPtrType = llvmTypes->ToPointerType(expr->GetReturnTypeId());
+    if (outPtrType == nullptr) {
+        return 0;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
 

@@ -17,8 +17,6 @@ class ExprVisitor;
 namespace omniruntime {
 namespace expressions {
 using namespace type;
-// place holder context class here
-class Context {};
 
 enum class Operator {
     // Comparison
@@ -45,7 +43,7 @@ enum class OperatorType {
     COMPARISON,
     LOGICAL,
     ARITHMETIC,
-    INVALIDOPTTYPE
+    INVALIDOPTYPE
 };
 
 enum class ExprType {
@@ -142,7 +140,7 @@ public:
 
     UnaryExpr();
     ~UnaryExpr() override;
-    UnaryExpr(Operator logOp, Expr *bodyexp);
+    UnaryExpr(Operator logOp, Expr *bodyExpr);
     UnaryExpr(Operator uop, Expr *expr, DataTypePtr dt);
 
     void Accept(ExprVisitor &visitor) const override;
@@ -259,8 +257,8 @@ public:
     static inline bool IsCastStrStr(const omniruntime::expressions::FuncExpr &e)
     {
         return (e.funcName == "CAST" || e.funcName == "CAST_null") &&
-               e.arguments[0]->GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR &&
-               e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
+            e.arguments[0]->GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR &&
+            e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
     }
 };
 }

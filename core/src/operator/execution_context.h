@@ -13,17 +13,17 @@ class ExecutionContext {
 public:
     explicit ExecutionContext() : arena() {}
 
-    ~ExecutionContext() {}
+    ~ExecutionContext() = default;
 
     mem::SimpleArenaAllocator *GetArena()
     {
         return &arena;
     }
 
-    void SetError(std::string message)
+    void SetError(std::string &message)
     {
         hasError = true;
-        errorMessage = std::move(message);
+        errorMessage = message;
     }
 
     bool HasError() const

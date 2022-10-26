@@ -49,7 +49,7 @@ OperatorType GetBinaryOperatorType(string opStr)
             return OperatorType::ARITHMETIC;
         }
     }
-    return OperatorType::INVALIDOPTTYPE;
+    return OperatorType::INVALIDOPTYPE;
 }
 
 bool IsUnaryOperator(const string &opStr)
@@ -192,7 +192,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // BinaryExpr
     OperatorType binRetType = GetBinaryOperatorType(opStr);
-    if (binRetType != OperatorType::INVALIDOPTTYPE && args.size() == ARG2) {
+    if (binRetType != OperatorType::INVALIDOPTYPE && args.size() == ARG2) {
         return new BinaryExpr(StringToOperator(DemangleOperator(opStr)), args[0], args[1], std::move(type));
     }
 

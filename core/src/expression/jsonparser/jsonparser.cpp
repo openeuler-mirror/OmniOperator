@@ -45,8 +45,8 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
     if (jsonExpr["isNull"].get<bool>()) {
         LiteralExpr *expr = nullptr;
         if (TypeUtil::IsDecimalType(typeId)) {
-            int32_t precision = jsonExpr["precision"].get<int32_t>();
-            int32_t scale = jsonExpr["scale"].get<int32_t>();
+            auto precision = jsonExpr["precision"].get<int32_t>();
+            auto scale = jsonExpr["scale"].get<int32_t>();
             expr = ParserHelper::GetDefaultValueForType(typeId, precision, scale);
         } else {
             expr = ParserHelper::GetDefaultValueForType(typeId);
@@ -199,17 +199,20 @@ Expr *JSONParser::ParseJSONSwitch(const Json &jsonExpr)
     for (int32_t i = 0; i < numOfCases; i++) {
         Expr *left = ParseJSON(jsonExpr["input"]);
         if (left == nullptr) {
+            DeleteWhenClause(whenClause);
             return nullptr;
         }
         Expr *right = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["when"]);
         if (right == nullptr) {
             delete left;
+            DeleteWhenClause(whenClause);
             return nullptr;
         }
         Expr *result = ParseJSON(jsonExpr["Case" + std::to_string(i + 1)]["result"]);
         if (result == nullptr) {
             delete left;
             delete right;
+            DeleteWhenClause(whenClause);
             return nullptr;
         }
         auto *condition = new BinaryExpr(Operator::EQ, left, right, std::make_shared<BooleanDataType>());

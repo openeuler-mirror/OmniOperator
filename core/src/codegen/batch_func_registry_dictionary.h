@@ -9,9 +9,9 @@
 #include "func_registry_base.h"
 
 namespace omniruntime {
-    class BatchDictionaryFunctionRegistry : public BaseFunctionRegistry {
-    public:
-        std::vector<Function> GetFunctions() override;
-    };
+class BatchDictionaryFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
-#endif //OMNI_RUNTIME_BATCH_FUNC_REGISTRY_DICTIONARY_H
+#endif // OMNI_RUNTIME_BATCH_FUNC_REGISTRY_DICTIONARY_H

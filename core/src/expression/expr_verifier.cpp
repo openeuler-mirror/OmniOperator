@@ -18,7 +18,7 @@ bool ExprVerifier::VisitExpr(const Expr &e)
 bool ExprVerifier::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
 {
     return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2)) &&
-           !(TypeUtil::IsDecimalType(type1) && TypeUtil::IsDecimalType(type2));
+        !(TypeUtil::IsDecimalType(type1) && TypeUtil::IsDecimalType(type2));
 }
 
 void ExprVerifier::Visit(const LiteralExpr &literalExpr)
@@ -37,6 +37,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
             break;
         default:
             this->supportedFlag = false;
+            break;
     }
 }
 
@@ -254,9 +255,9 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
 void ExprVerifier::Visit(const SwitchExpr &switchExpr)
 {
     std::vector<std::pair<Expr *, Expr *>> whenClause = switchExpr.whenClause;
-    const int size = whenClause.size();
+    auto size = whenClause.size();
 
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         Expr *cond = whenClause[i].first;
         Expr *resExpr = whenClause[i].second;
         if (!VisitExpr(*cond)) {

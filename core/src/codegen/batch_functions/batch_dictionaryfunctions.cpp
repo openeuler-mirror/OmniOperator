@@ -5,7 +5,7 @@
 
 #include "batch_dictionaryfunctions.h"
 #include "vector/dictionary_vector.h"
-#include "../functions/context_helper.h"
+#include "codegen/functions/context_helper.h"
 
 using namespace omniruntime::vec;
 
@@ -57,14 +57,13 @@ extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr
     for (int i = 0; i < rowCnt; ++i) {
         length[i] = dictionaryVectorPtr->GetVarchar(rowIdxArray[i], &result);
         if (length[i] == 0) {
-            str[i] = (uint8_t *) "";
+            str[i] = (uint8_t *)"";
             continue;
         }
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
         err = memcpy_s(ret, length[i], result, length[i]);
         if (err != EOK) {
-            char message[] = "Get string from dictionary vector failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, "Get string from dictionary vector failed");
             str[i] = nullptr;
             continue;
         }
@@ -117,14 +116,13 @@ extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t 
     for (int i = 0; i < rowCnt; ++i) {
         length[i] = offsetArray[rowIdxArray[i] + 1] - offsetArray[rowIdxArray[i]];
         if (length[i] == 0) {
-            str[i] = (uint8_t *) "";
+            str[i] = (uint8_t *)"";
             continue;
         }
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
         err = memcpy_s(ret, length[i], vector + offsetArray[rowIdxArray[i]], length[i]);
         if (err != EOK) {
-            char message[] = "Get string from vector failed";
-            SetError(contextPtr, message, sizeof(message) / sizeof(char));
+            SetError(contextPtr, "Get string from vector failed");
             str[i] = nullptr;
             continue;
         }

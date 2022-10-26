@@ -55,7 +55,7 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
 
 DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
 {
-    DataTypeId typeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
+    auto typeId = static_cast<DataTypeId>(jsonExpr["returnType"].get<int32_t>());
     int32_t precision = 0;
     int32_t scale = 0;
     uint32_t width = 0;
