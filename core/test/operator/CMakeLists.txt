@@ -1,12 +1,12 @@
-if(ENABLE_HMPP)
+if (ENABLE_HMPP)
     aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
-ELSE()
+ELSE ()
     aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
     list(REMOVE_ITEM OP_TESTS_LIST ${CMAKE_CURRENT_LIST_DIR}/hmpp_hash_test.cpp)
-endif()
+endif ()
 set(OP_TEST_TARGET optest)
 add_library(${OP_TEST_TARGET} ${OP_TESTS_LIST})
 
 # dependent library
 target_link_libraries(${OP_TEST_TARGET} memory type ${OMNI_CODEGEN_SO} ${OMNI_OPERATOR_SO} ${OMNI_VECTOR_SO})
-target_include_directories(${OP_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/operator/algorithm)
+target_include_directories(${OP_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/operator/algorithm ${PROJECT_SOURCE_DIR}/test)

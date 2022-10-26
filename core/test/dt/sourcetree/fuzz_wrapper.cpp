@@ -24,7 +24,8 @@
 #include "operator/join/lookup_join.h"
 #include "operator/join/sortmergejoin/sort_merge_join.h"
 #include "expression/expressions.h"
-#include "../../util/test_util.h"
+#include "util/test_util.h"
+
 // for fuzz mode
 // type1 numbers
 using namespace omniruntime::type;

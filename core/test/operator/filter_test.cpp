@@ -7,7 +7,7 @@
 #include <chrono>
 #include "gtest/gtest.h"
 #include "operator/filter/filter_and_project.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 #include "util/config_util.h"
 
 namespace FilterTest {

@@ -4,7 +4,7 @@
 
 #include <thread>
 #include <gtest/gtest.h>
-#include "../../config.h"
+#include "config.h"
 #include "vector_common.h"
 #include "memory/base_allocator.h"
 

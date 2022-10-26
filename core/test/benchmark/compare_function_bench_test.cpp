@@ -3,7 +3,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 namespace omniruntime {
 using namespace omniruntime::op;

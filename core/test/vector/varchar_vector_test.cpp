@@ -5,7 +5,7 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include "vector_common.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::vec;
 using namespace TestUtil;

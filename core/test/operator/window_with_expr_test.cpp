@@ -4,7 +4,7 @@
  */
 #include "gtest/gtest.h"
 #include "operator/window/window_expr.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 #include "vector/vector_helper.h"
 
 using namespace std;

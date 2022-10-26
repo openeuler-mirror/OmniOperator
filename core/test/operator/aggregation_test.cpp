@@ -17,8 +17,8 @@
 #include "vector/vector_helper.h"
 #include "util/perf_util.h"
 #include "util/config_util.h"
-#include "../util/test_util.h"
-#include "../../libconfig.h"
+#include "util/test_util.h"
+#include "libconfig.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;

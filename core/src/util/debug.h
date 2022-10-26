@@ -7,7 +7,7 @@
 
 #include <chrono>
 #include <stdexcept>
-#include "../../config.h"
+#include "config.h"
 #include "util/global_log.h"
 
 using Time = std::chrono::high_resolution_clock;

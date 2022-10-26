@@ -4,7 +4,7 @@
  */
 
 #include "varcharVectorfunctions.h"
-#include "../../vector/variable_width_vector.h"
+#include "vector/variable_width_vector.h"
 
 using namespace omniruntime::vec;
 using namespace std;

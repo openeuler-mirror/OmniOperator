@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "vector/vector_helper.h"
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
-#include "../util/test_util.h"
+#include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;

@@ -6,7 +6,7 @@
 #define JNI_COMMON_DEF_H
 
 #include <jni.h>
-#include "../util/omni_exception.h"
+#include "util/omni_exception.h"
 
 #define JNI_METHOD_START try {
 // macro end

@@ -26,7 +26,7 @@ execute_process(
 
 ## build test target
 file(GLOB_RECURSE SOURCE_FILES ${AUTO_GEN_DIR}/*.cpp ${WRAPPER_DIR}/*.cpp)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../sourcetree)
+include_directories(${PROJECT_SOURCE_DIR}/test/dt/sourcetree)
 
 add_library(${TARGET} SHARED ${SOURCE_FILES})
 
