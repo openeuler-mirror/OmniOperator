@@ -284,8 +284,6 @@ private:
     bool IsCastToWiderTypeOverflow(Decimal128 &sum, int32_t sumPrec, int32_t sumScale, Decimal128 &count)
     {
         int32_t scale = std::max(sumScale, COUNT_SCALE);
-        int32_t range = std::max(sumPrec - sumScale, COUNT_PRECISION - COUNT_SCALE);
-        int32_t widerPrec = std::min(range + scale, MAX_PRECISION);
         int32_t widerScale = std::min(scale, MAX_SCALE);
 
         Decimal128 sumRescale;

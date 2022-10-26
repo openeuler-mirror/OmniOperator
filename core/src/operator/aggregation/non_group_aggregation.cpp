@@ -17,9 +17,9 @@ using namespace omniruntime::vec;
 
 OmniStatus AggregationOperatorFactory::Init()
 {
-    OmniStatus ret = OMNI_STATUS_NORMAL;
     auto &types = sourceTypes.Get();
-
+    aggsInputCols.reserve(aggsInputColsVector.size());
+    aggsInputTypes.reserve(aggsInputColsVector.size());
     for (auto aggInputCol : aggsInputColsVector) {
         std::vector<DataTypePtr> aggInputTypeVec;
         std::vector<int32_t> aggsInputVec;
@@ -31,9 +31,7 @@ OmniStatus AggregationOperatorFactory::Init()
         aggsInputTypes.push_back(std::make_unique<DataTypes>(aggInputTypeVec));
     }
 
-    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
-
-    return ret;
+    return CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
 }
 
 OmniStatus AggregationOperatorFactory::Close()
@@ -67,6 +65,9 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto outputTypes = aggsOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(inputTypes, outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i]);
+        if (aggregator == nullptr) {
+            throw OmniException("create non_group aggregation operator", "return nullptr when create aggregator ");
+        }
         aggs.push_back(std::move(aggregator));
     }
 

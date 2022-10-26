@@ -17,7 +17,7 @@ namespace omniruntime {
 namespace op {
 class AggregationCommonOperator : public Operator {
 public:
-    explicit AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<bool> &inputRaws,
+    explicit AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
         std::vector<bool> &outputPartials, bool isOverflowAsNull = false)
         : aggregators(std::move(aggs)),
           inputRaws(inputRaws),

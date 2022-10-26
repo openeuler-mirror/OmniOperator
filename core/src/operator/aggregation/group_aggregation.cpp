@@ -88,7 +88,6 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
 
 OmniStatus HashAggregationOperatorFactory::Init()
 {
-    OmniStatus ret = OMNI_STATUS_NORMAL;
     for (uint32_t i = 0; i < groupByColsVector.size(); ++i) {
         groupByColIdx.push_back(groupByColsVector[i]);
     }
@@ -99,9 +98,7 @@ OmniStatus HashAggregationOperatorFactory::Init()
         }
         aggsInputCols.push_back(aggInputCols);
     }
-    ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
-
-    return ret;
+    return CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
 }
 
 OmniStatus HashAggregationOperatorFactory::Close()
@@ -147,6 +144,9 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         auto outputTypes = aggOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(inputTypes, outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
+        if (aggregator == nullptr) {
+            throw OmniException("create group aggregation operator", "return nullptr when create aggregator");
+        }
         aggs.push_back(std::move(aggregator));
     }
 
@@ -289,7 +289,6 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    LogTrace("Enter Func");
     this->PreLoop(vecBatch);
     auto groupColNum = this->groupByCols.size();
     auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
@@ -322,7 +321,7 @@ int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataTypePt
         types.push_back(i.input);
         rowSize += OperatorUtil::GetTypeSize(i.input);
     }
-    for (auto singleAgg : aggOutputTypes) {
+    for (auto &singleAgg : aggOutputTypes) {
         for (int32_t i = 0; i < singleAgg.GetSize(); i++) {
             types.push_back(singleAgg.GetType(i));
             rowSize += OperatorUtil::GetTypeSize(singleAgg.GetType(i));
