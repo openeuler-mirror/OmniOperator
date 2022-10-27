@@ -1,11 +1,11 @@
-# 1.Preface
+# Preface
 This document describes how to compile and deploy the openLooKeng (OLK) and OmniRuntime package for function and performance debugging in ***yellow zone***. The operating system uses ***ubuntu 18.04***.
 
-# 2.Preparing the compilation environment
+# Preparing the compilation environment
 
-## 2.1Configure HTTP proxy
+## Configure HTTP proxy
 
-### 2.1.1Edit file /etc/profile
+### Edit file /etc/profile
 
 Add the following information to the file `/etc/profile`
 
@@ -25,7 +25,7 @@ Notices:
 
   All escape character：<http://3ms.huawei.com/hi/group/2901257/wiki_6179442.html>
 
-### 2.1.2Check whether the external network can be pinged
+### Check whether the external network can be pinged
 
 Type the  command `curl www.baidu.com ` on the command line.
 
@@ -33,7 +33,7 @@ Normally, the following information is displayed, indicating that the external n
 
 ![1661582746423](http://image.huawei.com/tiny-lts/v1/images/5498ed56051b5e62988d9e2e182b60a3_865x593.png@900-0-90-f.png)
 
-## 2.2Configure Ubuntu mirror source
+## Configure Ubuntu mirror source
 
 The default mirror source configuration file is  `/etc/apt/sources.list`,which can configure Ubuntu mirror source.However, it is recommended that  add the .list file in the directory `/etc/apt/sources.list.d`.More specifically,create file 00ubuntu.list  in the directory  `/etc/apt/sources.list.d` and add the following content to file 00ubuntu.list.
 
@@ -63,11 +63,11 @@ apt upgrade
 
 For details about the above configuration, refer to the reference link <http://mirrors.tools.huawei.com/> .
 
-## 2.3Install OmniOperatorJit Dependencies
+## Install OmniOperatorJit Dependencies
 
 The components required for OmniOperatorJit compilation include cmake, LLVM, googletest, jemalloc, json, huawei securec, JDK, and protobuf. The involved software is as follows:
 
-| 软件名称       | 版本要求 |
+| Software       | Version |
 | -------------- | -------- |
 | python         | Python3  |
 | gcc/g++        | 7.3.0    |
@@ -82,27 +82,27 @@ The components required for OmniOperatorJit compilation include cmake, LLVM, goo
 | JDK            | 1.8      |
 | protobuf       | 无       |
 
-### 2.3.1Confirm the Python Version 3
+### Confirm the Python Version 3
 
 ![1661586155228](http://image.huawei.com/tiny-lts/v1/images/538785cfce46f6cac67e0d4600956db0_544x89.png)
 
 Python3 is installed by default.
 
-### 2.3.2Install gcc and g++
+### Install gcc and g++
 
-#### 2.3.2.1Install gcc
+#### Install gcc
 
 Run the command `apt-get install gcc `
 
 ![1661586482227](http://image.huawei.com/tiny-lts/v1/images/16619fd9c801e744c233b363b18def61_831x131.png)
 
-#### 2.3.2.2Install g++
+#### Install g++
 
 Run the command `apt-get install gcc-c++ `
 
 ![1661586482227](http://image.huawei.com/tiny-lts/v1/images/4c2cc402beb2f009462560a2f56c1ea7_845x131.png@900-0-90-f.png)
 
-### 2.3.3Install zlib
+### Install zlib
 
 Run the command `cat /usr/lib64/pkgconfig/zlib.pc ` to check whether zlib has been installed.To install zlib, the installation options are as follows:
 
@@ -118,13 +118,13 @@ Run the command `cat /usr/lib64/pkgconfig/zlib.pc ` to check whether zlib has be
   make install
   ```
 
-### 2.3.4Install autoconf
+### Install autoconf
 
 Run the command `apt-get install autoconf `
 
 ![1661587943041](http://image.huawei.com/tiny-lts/v1/images/65ede1529b53f9d8c20dd062e1696aec_848x186.png@900-0-90-f.png)
 
-### 2.3.5Install cmake
+### Install cmake
 
 - Download source code from https://github.com/Kitware/CMake/archive/refs/tags/v3.13.4.tar.gz
 
@@ -139,7 +139,7 @@ Run the command `apt-get install autoconf `
   ```
 
 
-### 2.3.6Install LLVM
+### Install LLVM
 
 - Download source code from <https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-12.0.1.tar.gz>  
 
@@ -157,7 +157,7 @@ Run the command `apt-get install autoconf `
 
   Notice:the path `/opt/omni-operator/llvm12 `can be customized.
 
-### 2.3.7Install gtest
+### Install gtest
 
 - Download source code from  <https://github.com/google/googletest/archive/refs/tags/release-1.10.0.tar.gz> 
 
@@ -171,7 +171,7 @@ Run the command `apt-get install autoconf `
   make install
   ```
 
-### 2.3.8Install jemalloc
+### Install jemalloc
 
 - Download source code from <https://github.com/jemalloc/jemalloc/archive/refs/tags/5.2.1.tar.gz> 
 
@@ -185,7 +185,7 @@ Run the command `apt-get install autoconf `
   sudo make install
   ```
 
-### 2.3.9Install json
+### Install json
 
 The json version of OmniOperator requires at least 3.7.3. If the GCC version is 10.., choose a later version of json such as 3.9.1. Otherwise, it will result in compilation failure.If the GCC version is 7.3.0,the json version 3.7.3 is recommended.
 
@@ -205,7 +205,7 @@ The json version of OmniOperator requires at least 3.7.3. If the GCC version is 
 
 Notice:The installation procedures for versions 3.9.1 and 3.7.3 are the same.
 
-### 2.3.10Install huawei securec
+### Install huawei securec
 
 - Download source code from <https://codehub-y.huawei.com/hwsecurec_group/huawei_secure_c/files?ref=tag_Huawei_Secure_C_V100R001C01SPC011B003_00001> 
 
@@ -218,11 +218,11 @@ Notice:The installation procedures for versions 3.9.1 and 3.7.3 are the same.
   make
   ```
 
-### 2.3.11Install JDK
+### Install JDK
 
 Run the command `apt-get install java-8-openjdk `
 
-### 2.3.12Install  protobuf
+### Install  protobuf
 
 To install protobuf, the installation options are as follows:
 
@@ -242,7 +242,7 @@ To install protobuf, the installation options are as follows:
 
 If the version number is displayed after run the command  `protoc --version` , the installation of protobuf is successful.
 
-### 2.3.13Configure environment variables
+### Configure environment variables
 
 Run the command `vi /etc/profile `,and add the following content to the file:
 
@@ -290,7 +290,7 @@ Run the command `vi /etc/profile `,and add the following content to the file:
   ln –s clang++ clang++-12
   ```
 
-## 2.4Compile OmniOperatorJit
+## Compile OmniOperatorJit
 
 code repository
 
@@ -302,49 +302,57 @@ Clone code from the preceding repositories to the local host. The compilation se
 
  Notice: the openLooKeng branch must be set to 1.6 or later.
 
-### 2.4.1Compile OmniOperatorJit Core
+### Compile OmniOperatorJit Core
 
 - Run command `cd /OmniOperatorJIT/core/build/ `to go to the directory
 
-- Run the different compilation commands based on different options, as follows:
+  - Run the different compilation commands based on different options, as follows:
 
-  ```
-  RELEASE:
-  sh build.sh release [--disable-jit] [--disable-cpuchecker] [--enable-dt]
+    ```
+    RELEASE:
+    sh build.sh release [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
   
-  DEBUG:
-  sh build.sh debug [op/vec/llvm/all] [--disable-jit] [--disable-cpuchecker] [--enable-dt]
+    DEBUG:
+    sh build.sh debug [op/vec/llvm/all] [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
   
-  TRACE:
-  sh build.sh trace [op/vec/llvm/all] [--disable-jit] [--disable-cpuchecker] [--enable-dt]
+    TRACE:
+    sh build.sh trace [op/vec/llvm/all] [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
   
-  COVERAGE:
-  sh build.sh coverage [op/vec/llvm/all] [--disable-jit] [--disable-cpuchecker] [--enable-dt]
-  ```
+    COVERAGE:
+    sh build.sh coverage [op/vec/llvm/all] [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
+    ```
 
-  Notice:If the COVERAGE option is selected for compilation, run the following command to download the jar package before compilation:
+    Notice: run the following command to download the jar package before compilation:
 
-  ```
-  wget https://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.jar --proxy=off --no-check-certificate
+    ```
+    wget https://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.jar --proxy=off --no-check-certificate
   
-  wget https://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.pom --proxy=off --no-check-certificate
+    wget https://szxy1.artifactory.cd-cloud-artifact.tools.huawei.com/artifactory/sz-maven-public/com/huawei/devtest/devtestcov-maven-plugin/2.1.1/devtestcov-maven-plugin-2.1.1.pom --proxy=off --no-check-certificate
   
-  mvn install:install-file -Dfile=devtestcov-maven-plugin-2.1.1.jar -DpomFile=devtestcov-maven-plugin-2.1.1.pom
-  ```
+    mvn install:install-file -Dfile=devtestcov-maven-plugin-2.1.1.jar -DpomFile=devtestcov-maven-plugin-2.1.1.pom
+    ```
+  
+    ```
+    wget https://cmc.centralrepo.rnd.huawei.com/artifactory/product_maven/com/huawei/bepcloud/rebuild-maven-plugin/2.1.T1.SPC2/rebuild-maven-plugin-2.1.T1.SPC2.jar --proxy=off --no-check-certificate
+    
+    wget https://cmc.centralrepo.rnd.huawei.com/artifactory/product_maven/com/huawei/bepcloud/rebuild-maven-plugin/2.1.T1.SPC2/rebuild-maven-plugin-2.1.T1.SPC2.pom --proxy=off --no-check-certificate
+    
+    mvn install:install-file -Dfile=rebuild-maven-plugin-2.1.T1.SPC2.jar -DpomFile=rebuild-maven-plugin-2.1.T1.SPC2.pom
+    ```
 
-### 2.4.2Compile OmniOperatorJit bindings
+### Compile OmniOperatorJit bindings
 
 - Run command `cd /OmniOperatorJIT/bindings/java `to go to the directory
 - Run command `mvn clean install -DskipTests -T 1C ` to compile code,and the compiled target jar package is stored in the directory `/OmniOperatorJIT/bindings/java/target/ `
 
-### 2.4.3Compile omni-openlookeng-extension 
+### Compile omni-openlookeng-extension 
 
 - Run command `cd /hetu-core ` to go to the directory and choose the branch-1.6
 - Run command `mvn clean install -DskipTests -T 1C ` to compile code and the compiled target jar package is stored in the directory `/hetu-core/hetu-server/target/ `.In addition, it is acceptable to download it from the official website of openLooKeng.
 
-## 2.5Install openLooKeng with OmniOperatorJit
+## Install openLooKeng with OmniOperatorJit
 
-### 2.5.1Prepare documents
+### Prepare documents
 
 In this example,` /opt/omni-operator` is used as the root directory for installing openLooKeng.
 
@@ -358,7 +366,7 @@ boostkit-omniop-bindings-1.0.0-aarch64.jar
 
 *. *. * indicates the version number, for example, 1.6.1.
 
-### 2.5.2Deploy the OpenLooKeng Engine
+### Deploy the OpenLooKeng Engine
 
 - Deploy the openLooKeng engine on the node. For details, see the openLooKeng deployment guide:https://docs.openlookeng.io/zh/docs/docs/installation/deployment.html.
 
@@ -384,7 +392,7 @@ boostkit-omniop-bindings-1.0.0-aarch64.jar
   /opt/hetu-server-1.6.1/bin/launcher start
   ```
 
-# 3.Common issues
+# Common issues
 1. ***Error***: fatal, unable to access 'https://github.com/jemalloc/jemalloc.git/': server certificate verification failed. CAfile: /etc/ssl/certs/ca-certificates.crt CRLfile: none. <br/>
       ***Solution***: `export GIT_SSL_NO_VERIFY=1`
 2. ***Error***: fatal, unable to access 'https://codehub-dg-y.huawei.com/data-app-lab/omni-runtime.git/': Received HTTP code 504 from proxy after CONNECT. <br/>
