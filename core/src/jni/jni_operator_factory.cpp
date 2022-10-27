@@ -137,6 +137,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 
     JNI_METHOD_START
     nativeOperator = operatorFactory->CreateOperator();
+    if (nativeOperator == nullptr) {
+        throw omniruntime::exception::OmniException("CREATE_OPERATOR_FAILED",
+            "return a null pointer when creating operator");
+    }
     JNI_METHOD_END(0L)
 
     auto vectorAllocator = reinterpret_cast<VectorAllocator *>(jNativeVecAllocatorObj);
