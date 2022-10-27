@@ -141,12 +141,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 
     auto vectorAllocator = reinterpret_cast<VectorAllocator *>(jNativeVecAllocatorObj);
     nativeOperator->SetVecAllocator(vectorAllocator);
-    return reinterpret_cast<int64_t>(nativeOperator);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperator));
 }
 
-/**
+/*
  * Return an HashAggregationFactory object address.
- *                                                                                            */
+ */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -198,12 +198,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
     nativeOperatorFactory->Init();
 
-    return reinterpret_cast<int64_t>(nativeOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperatorFactory));
 }
 
-/**
+/*
  * Return an AggregationFactory object address.
- *                                                                                              */
+ */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
@@ -241,7 +241,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     JNI_METHOD_END(0L)
     nativeOperatorFactory->Init();
 
-    return reinterpret_cast<int64_t>(nativeOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperatorFactory));
 }
 
 /*
@@ -275,7 +275,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
         outputColsCount, sortColsArr, ascendingsArr, nullFirstsArr, sortColsCount, operatorConfig);
     JNI_METHOD_END(0L)
 
-    return reinterpret_cast<int64_t>(sortOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(sortOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -336,7 +336,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
     windowOperatorFactory->Init();
 
-    return reinterpret_cast<int64_t>(windowOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(windowOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -358,7 +358,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOpera
     topNOperatorFactory = new TopNOperatorFactory(sourceTypes, jN, sortColsArr, sortAsc, sortNullFirsts, sortColCount);
     JNI_METHOD_END(0L)
 
-    return reinterpret_cast<int64_t>(topNOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(topNOperatorFactory));
 }
 
 static bool CheckExpressionSupported(bool skipVerify, Expr *filterExpr)
@@ -480,7 +480,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         return 0;
     }
 
-    return reinterpret_cast<int64_t>(factory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(factory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -540,7 +540,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
         return 0;
     }
 
-    return reinterpret_cast<int64_t>(factory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(factory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -564,7 +564,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
         buildHashColsArr, buildHashColsCount, filterExpression, jOperatorCount);
     JNI_METHOD_END(0L)
 
-    return reinterpret_cast<int64_t>(hashBuilderOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(hashBuilderOperatorFactory));
 }
 
 omniruntime::expressions::Expr *CreateJoinFilterExpr(const std::string &filterString)
@@ -620,7 +620,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     Expr::DeleteExprs({ filterExpr });
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(lookupJoinOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(lookupJoinOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -653,7 +653,7 @@ Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOpera
         hashChannelDataTypes, hashChannels, hashChannelCount);
     JNI_METHOD_END(0L)
 
-    return reinterpret_cast<int64_t>(partitionedOutputOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(partitionedOutputOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_union_OmniUnionOperatorFactory_createUnionOperatorFactory(
@@ -669,7 +669,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_union_OmniUnionOpera
     unionOperatorFactory = new UnionOperatorFactory(sourcesTypes, sourceTypesCount, jDistinct);
     JNI_METHOD_END(0L)
 
-    return reinterpret_cast<int64_t>(unionOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(unionOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -709,7 +709,7 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
     Expr::DeleteExprs(sortKeyExprArr);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -746,7 +746,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     Expr::DeleteExprs(buildHashKeysArrExprs);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -800,7 +800,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     Expr::DeleteExprs(probeHashKeysArrExprs);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -836,7 +836,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFact
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, probeHashKeysArrExprs)
     Expr::DeleteExprs(probeHashKeysArrExprs);
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -858,11 +858,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinOperatorFactory_crea
     LookupOuterJoinOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeDataTypes,
-        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputDataTypes,
-        jHashBuilderOperatorFactory);
+        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputDataTypes, jHashBuilderOperatorFactory);
     JNI_METHOD_END(0L)
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -927,7 +926,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     Expr::DeleteExprs(argumentKeysArrExprs);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(windowWithExprOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(windowWithExprOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -999,7 +998,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     Expr::DeleteExprs(aggKeysExprsVector);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(nativeOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -1036,7 +1035,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     Expr::DeleteExprs(sortKeyExprArr);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(topNWithExprOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(topNWithExprOperatorFactory));
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_closeNativeOperatorFactory(JNIEnv *env,
@@ -1055,7 +1054,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOpera
     JNI_METHOD_START
     limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
     JNI_METHOD_END(0L)
-    return reinterpret_cast<int64_t>(limitOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(limitOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -1074,7 +1073,7 @@ Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_creat
     distinctLimitOperatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes,
         distinctCols, distinctColCount, jHashChannel, jLimit);
     JNI_METHOD_END(0L)
-    return reinterpret_cast<int64_t>(distinctLimitOperatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(distinctLimitOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -1130,7 +1129,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
     Expr::DeleteExprs(streamedKeysArrExprs);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL
@@ -1168,7 +1167,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     Expr::DeleteExprs(bufferedKeysArrExprs);
     delete overflowConfig;
 
-    return reinterpret_cast<int64_t>(operatorFactory);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprVerify(JNIEnv *env, jclass jObj,
