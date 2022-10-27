@@ -28,6 +28,7 @@
             <groupId>com.huawei.boostkit</groupId>
             <artifactId>boostkit-omniop-bindings</artifactId>
             <version>${omniop.version}</version>
+            <classifier>aarch64</classifier>
         </dependency>
         <dependency>
             <groupId>io.prestosql.hive</groupId>
@@ -79,6 +80,7 @@
                         <goals>
                             <goal>jar</goal>
                         </goals>
+                        <id>default-jar</id>
                         <configuration>
                             <classifier>aarch64</classifier>
                             <archive>
