@@ -129,8 +129,9 @@ enum OverflowConfigId {
     OVERFLOW_CONFIG_NULL = 1
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(OverflowConfigId, { { OVERFLOW_CONFIG_EXCEPTION, "OVERFLOW_CONFIG_EXCEPTION" },
-                                                 { OVERFLOW_CONFIG_NULL, "OVERFLOW_CONFIG_NULL" } })
+NLOHMANN_JSON_SERIALIZE_ENUM(OverflowConfigId,
+    { { OVERFLOW_CONFIG_EXCEPTION, "OVERFLOW_CONFIG_EXCEPTION" }, { OVERFLOW_CONFIG_NULL, "OVERFLOW_CONFIG_NULL" } })
+
 class OverflowConfig {
 public:
     OverflowConfig() : OverflowConfig(OVERFLOW_CONFIG_EXCEPTION) {}

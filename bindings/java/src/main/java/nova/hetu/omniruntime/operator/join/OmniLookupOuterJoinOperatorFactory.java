@@ -32,9 +32,9 @@ public class OmniLookupOuterJoinOperatorFactory
      * @param hashBuilderOperatorFactory the hash builder operator factory
      * @param operatorConfig the operator config
      */
-    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols,
-            int[] buildOutputCols, DataType[] buildOutputTypes,
-            OmniHashBuilderOperatorFactory hashBuilderOperatorFactory, OperatorConfig operatorConfig) {
+    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, int[] buildOutputCols,
+            DataType[] buildOutputTypes, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory,
+            OperatorConfig operatorConfig) {
         super(new FactoryContext(probeTypes, probeOutputCols, buildOutputCols, buildOutputTypes,
                 hashBuilderOperatorFactory, operatorConfig));
     }
@@ -48,23 +48,20 @@ public class OmniLookupOuterJoinOperatorFactory
      * @param buildOutputTypes the build output types
      * @param hashBuilderOperatorFactory the hash builder operator factory
      */
-    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols,
-            int[] buildOutputCols, DataType[] buildOutputTypes,
-            OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
-        this(probeTypes, probeOutputCols, buildOutputCols, buildOutputTypes,
-                hashBuilderOperatorFactory, new OperatorConfig());
+    public OmniLookupOuterJoinOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, int[] buildOutputCols,
+            DataType[] buildOutputTypes, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
+        this(probeTypes, probeOutputCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory,
+                new OperatorConfig());
     }
 
     private static native long createLookupOuterJoinOperatorFactory(String probeTypes, int[] probeOutputCols,
-            int[] buildOutputCols, String buildOutputTypes,
-            long hashBuilderOperatorFactory);
+            int[] buildOutputCols, String buildOutputTypes, long hashBuilderOperatorFactory);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createLookupOuterJoinOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
                 context.probeOutputCols, context.buildOutputCols,
-                DataTypeSerializer.serialize(context.buildOutputTypes),
-                context.getHashBuilderOperatorFactory());
+                DataTypeSerializer.serialize(context.buildOutputTypes), context.getHashBuilderOperatorFactory());
     }
 
     /**
@@ -110,8 +107,7 @@ public class OmniLookupOuterJoinOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
-                    Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
-                    operatorConfig);
+                    Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes), operatorConfig);
         }
 
         @Override
@@ -123,8 +119,7 @@ public class OmniLookupOuterJoinOperatorFactory
                 return false;
             }
             FactoryContext that = (FactoryContext) obj;
-            return Arrays.equals(probeTypes, that.probeTypes)
-                    && Arrays.equals(probeOutputCols, that.probeOutputCols)
+            return Arrays.equals(probeTypes, that.probeTypes) && Arrays.equals(probeOutputCols, that.probeOutputCols)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
                     && operatorConfig.equals(that.operatorConfig);

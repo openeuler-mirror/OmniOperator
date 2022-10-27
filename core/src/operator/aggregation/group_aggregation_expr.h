@@ -16,15 +16,10 @@ namespace op {
 class HashAggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     HashAggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys,
-                                           uint32_t groupByNum,
-                                           std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
-                                           DataTypes &sourceDataTypes,
-                                           std::vector<DataTypes> &aggOutputTypes,
-                                           std::vector<uint32_t> &aggFuncTypes,
-                                           std::vector<uint32_t> &maskColumns,
-                                           std::vector<bool> &inputRaws,
-                                           std::vector<bool> &outputPartial,
-                                           OverflowConfig *overflowConfig);
+        uint32_t groupByNum, std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
+        DataTypes &sourceDataTypes, std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+        std::vector<uint32_t> &maskColumns, std::vector<bool> &inputRaws, std::vector<bool> &outputPartial,
+        OverflowConfig *overflowConfig);
 
     ~HashAggregationWithExprOperatorFactory() override;
 

@@ -11,17 +11,15 @@ namespace omniruntime {
 namespace op {
 class OperatorFactory {
 public:
-    OperatorFactory() {}
+    OperatorFactory() = default;
 
-    virtual ~OperatorFactory() {}
+    virtual ~OperatorFactory() = default;
 
     virtual omniruntime::op::Operator *CreateOperator()
     {
         return nullptr;
     }
 };
-
-using OptModule = omniruntime::op::Operator *(*)(OperatorFactory *);
 }
 }
 

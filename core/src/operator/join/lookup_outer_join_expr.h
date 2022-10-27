@@ -17,21 +17,20 @@ namespace omniruntime {
 namespace op {
 class LookupOuterJoinWithExprOperatorFactory : public OperatorFactory {
 public:
-    static LookupOuterJoinWithExprOperatorFactory *
-    CreateLookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
-        int32_t *probeOutputCols, int32_t probeOutputColsCount,
+    static LookupOuterJoinWithExprOperatorFactory *CreateLookupOuterJoinWithExprOperatorFactory(
+        const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
         int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
-    LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
-        int32_t *probeOutputCols, int32_t probeOutputColsCount,
-        const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
-        int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
+    LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
+        int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
+        int32_t probeHashKeysCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
+        int64_t hashBuilderFactoryAddr);
     ~LookupOuterJoinWithExprOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
 
 private:
     std::unique_ptr<DataTypes> probeTypes; // all types for probe
-    std::vector<int32_t> probeHashCols;          // join columns for probe
+    std::vector<int32_t> probeHashCols;    // join columns for probe
     std::vector<std::unique_ptr<RowProjection>> rowProjections;
     std::vector<RowProjFunc> projectFuncs;
     LookupOuterJoinOperatorFactory *operatorFactory;

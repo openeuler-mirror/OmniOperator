@@ -141,7 +141,6 @@ public:
         state.val = ptr;
     }
 
-    // TODO extract common function for sum/min/max
     void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;

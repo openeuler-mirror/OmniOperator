@@ -16,9 +16,8 @@ namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
     AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs,
-                        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes,
-                        std::vector<bool> &inputRaws,
-                        std::vector<bool> &outputPartials)
+        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> &inputRaws,
+        std::vector<bool> &outputPartials)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials), aggsOutputTypes(aggsOutputTypes)
     {
         for (uint32_t i = 0; i < aggregators.size(); i++) {
@@ -40,13 +39,10 @@ public:
     Operator *CreateOperator() override;
 
 public:
-    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes,
-                               std::vector<uint32_t> &aggFuncTypesVector,
-                               std::vector<std::vector<uint32_t>> &aggsInputColsVector,
-                               std::vector<uint32_t> &maskColsVector,
-                               std::vector<omniruntime::type::DataTypes> &aggsOutputTypes,
-                               std::vector<bool> inputRaws,
-                               std::vector<bool> outputPartials)
+    AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
+        std::vector<std::vector<uint32_t>> &aggsInputColsVector, std::vector<uint32_t> &maskColsVector,
+        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> inputRaws,
+        std::vector<bool> outputPartials)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector),
           sourceTypes(sourceTypes),
           aggFuncTypesVector(aggFuncTypesVector),
@@ -54,7 +50,7 @@ public:
           aggsOutputTypes(aggsOutputTypes)
     {}
 
-    ~AggregationOperatorFactory() override {}
+    ~AggregationOperatorFactory() override = default;
     OmniStatus Init() override;
     OmniStatus Close() override;
 

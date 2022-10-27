@@ -41,6 +41,7 @@ void HiveUdfRegistry::GenerateHiveUdfMap(std::unordered_map<std::string, std::st
         return;
     }
 
+    // the property file has been normalized in ConfigUtil
     std::ifstream file(realPathRes);
     if (!file.good()) {
         LogWarn("%s does not exist.", realPathRes);

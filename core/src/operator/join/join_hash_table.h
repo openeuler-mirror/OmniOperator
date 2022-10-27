@@ -109,15 +109,18 @@ public:
         return positionLinks;
     }
 
-    void Visit(uint32_t joinPosition) {
+    void Visit(uint32_t joinPosition)
+    {
         visitedPositions[joinPosition] = true;
     }
 
-    bool HasVisited(uint32_t joinPosition) {
+    bool HasVisited(uint32_t joinPosition)
+    {
         return visitedPositions[joinPosition];
     }
 
-    uint32_t GetVisitedPositionsSize() const {
+    uint32_t GetVisitedPositionsSize() const
+    {
         return visitedPositionsSize;
     }
 
@@ -205,7 +208,8 @@ public:
         this->filterExpr = filterExpr;
     }
 
-    uint32_t getVisitedCounts() const {
+    uint32_t getVisitedCounts() const
+    {
         return visitedCounts;
     }
 

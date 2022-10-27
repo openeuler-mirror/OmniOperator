@@ -5,18 +5,11 @@
 
 #include <iostream>
 #include <fstream>
+#include <cstring>
 #include "config_util.h"
 
 std::map<std::string, std::string> ConfigUtil::configMap;
 Properties g_properties = ConfigUtil::CreateProperties();
-
-static std::string GetConfigFilePath()
-{
-    std::string confFile = "/conf/omni.conf";
-    auto omniHome = std::getenv("OMNI_HOME");
-    std::string confDir = (omniHome == nullptr) ? "/opt" : std::string { omniHome };
-    return confDir + confFile;
-}
 
 static void Trim(std::string &value)
 {
@@ -24,12 +17,37 @@ static void Trim(std::string &value)
     value.erase(value.find_last_not_of(' ') + 1);
 }
 
+static std::string GetOmniHome()
+{
+    auto omniHome = std::getenv("OMNI_HOME");
+    if (omniHome != nullptr && omniHome[0] != '\0') {
+        std::string confDir { omniHome };
+        Trim(confDir);
+        return confDir;
+    } else {
+        return "/opt";
+    }
+}
+
+static std::string GetConfigFilePath()
+{
+    std::string confFile = "/conf/omni.conf";
+    return GetOmniHome() + confFile;
+}
+
 static std::map<std::string, std::string> LoadConf()
 {
-    auto configFilePath = GetConfigFilePath();
     std::map<std::string, std::string> omniConfigMap;
-    std::ifstream confInput(configFilePath);
+
+    auto configFilePath = GetConfigFilePath();
+    auto configFileRealPath = realpath(configFilePath.c_str(), nullptr);
+    if (configFileRealPath == nullptr) {
+        return omniConfigMap;
+    }
+
+    std::ifstream confInput(configFileRealPath);
     if (!confInput.is_open()) {
+        free(configFileRealPath);
         return omniConfigMap;
     }
 
@@ -51,6 +69,7 @@ static std::map<std::string, std::string> LoadConf()
         omniConfigMap[key] = value;
     }
     confInput.close();
+    free(configFileRealPath);
     return omniConfigMap;
 }
 
@@ -77,7 +96,14 @@ void ConfigUtil::SetProperties(Properties &tmpProperties)
     std::string hiveUdfPropertyFilePath;
     auto ret = GetProperty<std::string &>("hiveUdfPropertyFilePath", hiveUdfPropertyFilePath);
     if (ret) {
-        tmpProperties.SetHiveUdfPropertyFilePath(hiveUdfPropertyFilePath);
+        if (hiveUdfPropertyFilePath[0] == '.') {
+            hiveUdfPropertyFilePath = GetOmniHome() + "/" + hiveUdfPropertyFilePath;
+        }
+        auto realPathRes = realpath(hiveUdfPropertyFilePath.c_str(), nullptr);
+        if (realPathRes != nullptr) {
+            tmpProperties.SetHiveUdfPropertyFilePath(realPathRes);
+            free(realPathRes);
+        }
     }
 
     // set the property enableHMPP

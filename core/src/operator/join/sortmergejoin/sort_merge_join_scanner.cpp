@@ -635,7 +635,6 @@ int32_t SortMergeJoinScanner::FindNextMatchPos()
     while ((compare > 0 && AdvancedBufferedToRowWithNullFreeJoinKey()) ||
         (compare < 0 && AdvancedStreamedWithNullFreeJoinKey())) {
         compare = CompareCurRowKeys();
-        // todo no need?
         // cur-stream-key duplicate with pre-key, also save although buffer not match cur-stream-key
         if (compare != 0 && (streamedPagesIndexPosition > cur) && PreKeyMatched()) {
             SavePrevMatchingRows(true);

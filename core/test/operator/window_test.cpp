@@ -10,7 +10,6 @@
 #include "operator/window/window.h"
 #include "util/test_util.h"
 #include "vector/vector_helper.h"
-#include "libconfig.h"
 #include "perf_util.h"
 
 using namespace std;
