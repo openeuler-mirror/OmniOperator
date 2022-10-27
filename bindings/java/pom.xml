@@ -129,6 +129,7 @@
                         <goals>
                             <goal>jar</goal>
                         </goals>
+                        <id>default-jar</id>
                         <configuration>
                             <classifier>aarch64</classifier>
                             <archive>
