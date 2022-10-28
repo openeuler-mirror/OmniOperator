@@ -95,7 +95,6 @@ public:
 
     void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
-        int32_t offset;
         if (outputPartial) {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(

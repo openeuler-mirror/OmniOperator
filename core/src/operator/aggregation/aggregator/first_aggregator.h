@@ -39,7 +39,6 @@ public:
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
         if (state.val == nullptr) {
             InitState(state);
         }

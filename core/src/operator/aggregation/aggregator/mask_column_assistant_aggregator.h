@@ -100,7 +100,6 @@ public:
     const std::vector<int32_t> &GetInputChannels() const
     {
         return realAggregator->GetInputChannels();
-        ;
     }
 
 private:

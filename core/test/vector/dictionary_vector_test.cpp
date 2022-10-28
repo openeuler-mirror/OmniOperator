@@ -418,7 +418,7 @@ TEST(DictionaryVector, testNullFlag)
     EXPECT_EQ(copyRegion->GetNullCount(), 1);
     delete copyRegion;
 
-    DictionaryVector *slice = dictionaryVec->Slice(2, 3);
+    DictionaryVector *slice = dictionaryVec->Slice(2, 1);
     EXPECT_TRUE(slice->MayHaveNull());
     EXPECT_EQ(slice->GetNullCount(), 0);
     delete slice;

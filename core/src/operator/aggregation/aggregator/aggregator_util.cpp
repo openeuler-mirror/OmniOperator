@@ -16,6 +16,7 @@ std::vector<int32_t> AggregatorUtil::WrapWithVector(int32_t value)
 std::vector<DataTypes> AggregatorUtil::WrapWithVector(const DataTypes &value)
 {
     std::vector<DataTypes> retVector;
+    retVector.reserve(value.GetSize());
     for (int i = 0; i < value.GetSize(); ++i) {
         std::vector<DataTypePtr> vector { value.GetType(i) };
         retVector.push_back(DataTypes(vector));
@@ -26,33 +27,32 @@ std::vector<DataTypes> AggregatorUtil::WrapWithVector(const DataTypes &value)
 std::vector<bool> AggregatorUtil::WrapWithVector(bool value, int num)
 {
     std::vector<bool> retVector;
+    retVector.reserve(num);
     for (int i = 0; i < num; i++) {
         retVector.push_back(value);
     }
     return retVector;
 }
 
-std::vector<std::vector<uint32_t>> AggregatorUtil::WrapWithVector(std::vector<uint32_t> values)
+std::vector<std::vector<uint32_t>> AggregatorUtil::WrapWithVector(std::vector<uint32_t> &values)
 {
-    std::vector<std::vector<uint32_t>> lv2Vector;
+    std::vector<std::vector<uint32_t>> twoLayerVectors;
+    twoLayerVectors.reserve(values.size());
     for (auto value : values) {
-        std::vector<uint32_t> lv1Vector;
-        lv1Vector.push_back(value);
-        lv2Vector.push_back(lv1Vector);
+        twoLayerVectors.push_back({value});
     }
-    return lv2Vector;
+    return twoLayerVectors;
 }
 
 // vector(1,2,3) => vector(vector(1),vector(2),vector(3))
-std::vector<std::vector<int32_t>> AggregatorUtil::WrapWithVector(std::vector<int32_t> values)
+std::vector<std::vector<int32_t>> AggregatorUtil::WrapWithVector(std::vector<int32_t> &values)
 {
-    std::vector<std::vector<int32_t>> lv2Vector;
+    std::vector<std::vector<int32_t>> twoLayerVectors;
+    twoLayerVectors.reserve(values.size());
     for (auto value : values) {
-        std::vector<int32_t> lv1Vector;
-        lv1Vector.push_back(value);
-        lv2Vector.push_back(lv1Vector);
+        twoLayerVectors.push_back({value});
     }
-    return lv2Vector;
+    return twoLayerVectors;
 }
 
 DataTypesPtr AggregatorUtil::WrapWithDataTypes(DataTypePtr value)

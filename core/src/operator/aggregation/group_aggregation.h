@@ -92,7 +92,7 @@ class HashAggregationOperator : public AggregationCommonOperator {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<std::vector<int32_t>> &aggInputCols,
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
-        std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<bool> &inputRaws, std::vector<bool> &outputPartials)
+        std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws, std::vector<bool> &outputPartials)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),

@@ -27,16 +27,14 @@ public:
 
     static std::vector<bool> WrapWithVector(bool value, int num);
 
-    static std::vector<std::vector<uint32_t>> WrapWithVector(std::vector<uint32_t> value);
+    static std::vector<std::vector<uint32_t>> WrapWithVector(std::vector<uint32_t> &value);
 
-    static std::vector<std::vector<int32_t>> WrapWithVector(std::vector<int32_t> value);
+    static std::vector<std::vector<int32_t>> WrapWithVector(std::vector<int32_t> &value);
 
     static DataTypesPtr WrapWithDataTypes(DataTypePtr value);
 
     static bool IsHMPPMaxMinSupportDataTypeId(DataTypeId dataTypeId);
-
-protected:
 };
 }
 }
-#endif // OMNI_RUNTIME_AGGREGATOR_UTIL_H
+#endif // AGGREGATOR_UTIL_H

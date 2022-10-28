@@ -19,7 +19,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig)
 {
     uint32_t aggColNum = 0;
-    for (auto aggKeys : aggsKeys) {
+    for (auto &aggKeys : aggsKeys) {
         aggColNum += aggKeys.size();
     }
 
@@ -30,7 +30,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         projectKeys[i] = groupByKeys.at(i);
     }
     uint32_t projectColIdx = groupByNum;
-    for (auto aggKeys : aggsKeys) {
+    for (auto &aggKeys : aggsKeys) {
         for (uint32_t i = 0; i < aggKeys.size(); i++) {
             projectKeys[projectColIdx] = aggKeys.at(i);
             projectColIdx++;
@@ -64,7 +64,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<DataTypes> aggInputDataTypes;
     std::vector<DataTypes> aggOutputDataTypes;
     uint32_t startIdx = 0;
-    for (auto aggKeys : aggsKeys) {
+    for (auto &aggKeys : aggsKeys) {
         // agg columnar index and data types
         std::vector<uint32_t> aggFuncColIdx;
         std::vector<DataTypePtr> aggInputTypeVec;
