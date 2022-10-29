@@ -67,7 +67,7 @@ extern DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, i
 extern DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
 
 extern DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
-    int32_t precision, int32_t scale);
+    int32_t outPrecision, int32_t outScale);
 
 extern DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);

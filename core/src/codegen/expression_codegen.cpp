@@ -574,7 +574,7 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
         valuePtr = make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
 
-    if (overflowConfig != nullptr && overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+    if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         valuePtr->isNull = builder->CreateOr(builder->CreateNot(isNeitherNull), builder->CreateLoad(overflowNull));
         this->value = valuePtr;
     } else {
@@ -2004,7 +2004,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     }
 
     if (this->overflowConfig != nullptr &&
-        this->overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        this->overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         auto signature = fExpr.function->GetSignatures()[0];
         if (FunctionRegistry::LookupNullFunction(&signature)) {
             FuncExprOverflowNullHelper(fExpr);

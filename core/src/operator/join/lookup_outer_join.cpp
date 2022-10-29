@@ -73,7 +73,7 @@ int32_t LookupOuterJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPag
 {
     int32_t outputColsCount = this->probeOutputCols.size() + this->buildOutputCols.size();
     int32_t maxRowCount = OperatorUtil::GetMaxRowCount((outputColsCount == 0) ? DEFAULT_ROW_SIZE : outputRowSize);
-    uint32_t outputRowCount = hashTables->GetTotalVisitedCounts() - hashTables->getVisitedCounts();
+    uint32_t outputRowCount = hashTables->GetTotalVisitedCounts() - hashTables->GetVisitedCounts();
     int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(outputRowCount, maxRowCount);
     int32_t offset = 0;
     for (int32_t j = 0; j < vecBatchCount; j++) {

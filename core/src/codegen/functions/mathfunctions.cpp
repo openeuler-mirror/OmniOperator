@@ -4,6 +4,7 @@
  */
 #include "mathfunctions.h"
 #include <iostream>
+#include <cfloat>
 #include "context_helper.h"
 #include "util/engine.h"
 
@@ -107,12 +108,12 @@ extern "C" DLLEXPORT bool GreaterThanEqualDouble(double left, double right)
 
 extern "C" DLLEXPORT bool EqualDouble(double left, double right)
 {
-    return left == right;
+    return std::fabs(left - right) < DBL_EPSILON;
 }
 
 extern "C" DLLEXPORT bool NotEqualDouble(double left, double right)
 {
-    return left != right;
+    return std::fabs(left - right) >= DBL_EPSILON;
 }
 
 // long functions

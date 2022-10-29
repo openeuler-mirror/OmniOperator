@@ -78,7 +78,7 @@ public:
 
     Decimal128 GetDecimal128(int32_t position) const;
 
-    DictionaryVector *Slice(int positionOffset, int length) override;
+    DictionaryVector *Slice(int32_t positionOffset, int32_t length) override;
 
     DictionaryVector *CopyPositions(const int *positions, int offset, int length) override;
 

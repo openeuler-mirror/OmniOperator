@@ -194,7 +194,7 @@ llvm::Value *LLVMEngine::CallExternFunction(const string fn_name, vector<DataTyp
 {
     if (executionContextPtr != nullptr) {
         if (overflowConfig != nullptr &&
-            overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+            overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
             args.insert(args.begin(), overflowNull);
         } else {
             args.insert(args.begin(), executionContextPtr);

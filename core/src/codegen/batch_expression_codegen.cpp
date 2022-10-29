@@ -671,7 +671,7 @@ void BatchExpressionCodeGen::BinaryExprDecimalHelper(const omniruntime::expressi
     // when val->isNull = true, val->data is a random number, may cause false exception.
     // so push leftIsNull into args.
     // for functions throwing exception, if leftIsNull == true, do nothing.
-    if (!overflowConfig || overflowConfig->getOverflowConfigId() != omniruntime::op::OVERFLOW_CONFIG_NULL) {
+    if (!overflowConfig || overflowConfig->GetOverflowConfigId() != omniruntime::op::OVERFLOW_CONFIG_NULL) {
         arithFuncParams.insert(arithFuncParams.begin(), leftIsNull);
     }
 
@@ -1353,7 +1353,7 @@ void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
     }
 
     if (this->overflowConfig != nullptr &&
-        this->overflowConfig->getOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        this->overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         auto signature = fExpr.function->GetSignatures()[0];
         if (FunctionRegistry::LookupNullFunction(&signature)) {
             FuncExprOverflowNullHelper(fExpr);

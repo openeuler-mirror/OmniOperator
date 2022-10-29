@@ -74,27 +74,27 @@ public:
 
     ~WindowFrameInfo() {}
 
-    FrameType getType()
+    FrameType GetType()
     {
         return type;
     }
 
-    FrameBoundType getStartType()
+    FrameBoundType GetStartType()
     {
         return startType;
     }
 
-    int32_t getStartChannel()
+    int32_t GetStartChannel()
     {
         return startChannel;
     }
 
-    FrameBoundType getEndType()
+    FrameBoundType GetEndType()
     {
         return endType;
     }
 
-    int32_t getEndChannel()
+    int32_t GetEndChannel()
     {
         return endChannel;
     }

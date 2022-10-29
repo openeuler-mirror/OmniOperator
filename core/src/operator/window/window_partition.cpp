@@ -102,13 +102,13 @@ int32_t WindowPartition::GetFrameStart(WindowFrameInfo *frameInfo, int32_t rowPo
 {
     int32_t frameStart;
 
-    if (frameInfo->getStartType() == OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING) {
+    if (frameInfo->GetStartType() == OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING) {
         frameStart = 0;
-    } else if (frameInfo->getStartType() == OMNI_FRAME_BOUND_PRECEDING) {
+    } else if (frameInfo->GetStartType() == OMNI_FRAME_BOUND_PRECEDING) {
         frameStart = Preceding(rowPosition, GetStartValue(frameInfo));
-    } else if (frameInfo->getStartType() == OMNI_FRAME_BOUND_FOLLOWING) {
+    } else if (frameInfo->GetStartType() == OMNI_FRAME_BOUND_FOLLOWING) {
         frameStart = Following(rowPosition, endPosition, GetStartValue(frameInfo));
-    } else if (frameInfo->getType() == OMNI_FRAME_TYPE_RANGE) {
+    } else if (frameInfo->GetType() == OMNI_FRAME_TYPE_RANGE) {
         frameStart = peerGroupStart - partitionStart;
     } else {
         frameStart = rowPosition;
@@ -121,13 +121,13 @@ int32_t WindowPartition::GetFrameEnd(WindowFrameInfo *frameInfo, int32_t rowPosi
 {
     int32_t frameEnd;
 
-    if (frameInfo->getEndType() == OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING) {
+    if (frameInfo->GetEndType() == OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING) {
         frameEnd = endPosition;
-    } else if (frameInfo->getEndType() == OMNI_FRAME_BOUND_PRECEDING) {
+    } else if (frameInfo->GetEndType() == OMNI_FRAME_BOUND_PRECEDING) {
         frameEnd = Preceding(rowPosition, GetEndValue(frameInfo));
-    } else if (frameInfo->getEndType() == OMNI_FRAME_BOUND_FOLLOWING) {
+    } else if (frameInfo->GetEndType() == OMNI_FRAME_BOUND_FOLLOWING) {
         frameEnd = Following(rowPosition, endPosition, GetEndValue(frameInfo));
-    } else if (frameInfo->getType() == OMNI_FRAME_TYPE_RANGE) {
+    } else if (frameInfo->GetType() == OMNI_FRAME_TYPE_RANGE) {
         frameEnd = peerGroupEnd - partitionStart - 1;
     } else {
         frameEnd = rowPosition;
@@ -138,8 +138,8 @@ int32_t WindowPartition::GetFrameEnd(WindowFrameInfo *frameInfo, int32_t rowPosi
 
 bool WindowPartition::IsEmptyFrame(WindowFrameInfo *frameInfo, int32_t rowPosition, int32_t endPosition)
 {
-    FrameBoundType startType = frameInfo->getStartType();
-    FrameBoundType endType = frameInfo->getEndType();
+    FrameBoundType startType = frameInfo->GetStartType();
+    FrameBoundType endType = frameInfo->GetEndType();
 
     int32_t positions = endPosition - rowPosition;
 
@@ -155,7 +155,7 @@ bool WindowPartition::IsEmptyFrame(WindowFrameInfo *frameInfo, int32_t rowPositi
         return false;
     }
 
-    FrameBoundType boundType = frameInfo->getStartType();
+    FrameBoundType boundType = frameInfo->GetStartType();
     if ((boundType != OMNI_FRAME_BOUND_PRECEDING) && (boundType != OMNI_FRAME_BOUND_FOLLOWING)) {
         return false;
     }
@@ -189,13 +189,13 @@ int32_t WindowPartition::Following(int32_t rowPosition, int32_t endPosition, int
 int64_t WindowPartition::GetStartValue(WindowFrameInfo *frameInfo)
 {
     std::string rangeType("windowFrameStart");
-    return GetFrameValue(frameInfo->getStartChannel(), rangeType);
+    return GetFrameValue(frameInfo->GetStartChannel(), rangeType);
 }
 
 int64_t WindowPartition::GetEndValue(WindowFrameInfo *frameInfo)
 {
     std::string rangeType("windowFrameEnd");
-    return GetFrameValue(frameInfo->getEndChannel(), rangeType);
+    return GetFrameValue(frameInfo->GetEndChannel(), rangeType);
 }
 
 int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeName)

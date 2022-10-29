@@ -8,8 +8,8 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include "type/decimal128.h"
 #include <huawei_secure_c/include/securec.h>
+#include "type/decimal128.h"
 
 using namespace omniruntime::type;
 

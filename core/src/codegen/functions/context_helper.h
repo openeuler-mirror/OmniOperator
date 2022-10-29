@@ -4,6 +4,8 @@
  */
 #ifndef OMNI_RUNTIME_CONTEXT_HELPER_H
 #define OMNI_RUNTIME_CONTEXT_HELPER_H
+
+#include <cstdint>
 #include "operator/execution_context.h"
 
 namespace omniruntime {

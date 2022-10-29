@@ -6,6 +6,7 @@
 #ifndef __HASH_BUILDER_EXPR_H__
 #define __HASH_BUILDER_EXPR_H__
 
+#include <cstdint>
 #include "operator/operator_factory.h"
 #include "type/data_types.h"
 #include "operator/projection/projection.h"

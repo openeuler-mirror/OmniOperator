@@ -3,7 +3,6 @@
  */
 
 #include "vector_helper.h"
-#include <iomanip>
 
 namespace omniruntime {
 namespace vec {
