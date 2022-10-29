@@ -5,6 +5,7 @@
 #ifndef OMNI_RUNTIME_JAVA_UDF_FUNCTIONS_H
 #define OMNI_RUNTIME_JAVA_UDF_FUNCTIONS_H
 
+#include <cstdint>
 #include "type/data_type.h"
 #include "util/error_code.h"
 
