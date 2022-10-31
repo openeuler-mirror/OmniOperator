@@ -208,7 +208,7 @@ public:
         this->filterExpr = filterExpr;
     }
 
-    uint32_t getVisitedCounts() const
+    uint32_t GetVisitedCounts() const
     {
         return visitedCounts;
     }

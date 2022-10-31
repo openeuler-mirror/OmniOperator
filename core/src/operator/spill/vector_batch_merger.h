@@ -6,6 +6,7 @@
 #ifndef OMNI_RUNTIME_VECTOR_BATCH_MERGER_H
 #define OMNI_RUNTIME_VECTOR_BATCH_MERGER_H
 
+#include <cstdint>
 #include <queue>
 #include "spill_iterator.h"
 #include "vector/vector_batch.h"

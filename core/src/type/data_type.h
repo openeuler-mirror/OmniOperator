@@ -503,7 +503,6 @@ public:
         return type;
     }
 
-
     uint32_t GetWidth() const
     {
         return width;

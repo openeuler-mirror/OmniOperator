@@ -36,7 +36,6 @@ public:
 
     friend class ExpressionCodeGen;
 
-
 private:
     LLVMEngine &engine;
     llvm::LLVMContext *context;

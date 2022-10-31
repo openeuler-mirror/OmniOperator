@@ -149,7 +149,7 @@ extern "C" DLLEXPORT void BatchEqualDouble(double *left, double *right, bool *ou
 extern "C" DLLEXPORT void BatchNotEqualDouble(double *left, double *right, bool *output, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
-        output[i] = (left[i] != right[i]);
+        output[i] = std::fabs(left[i] - right[i]) >= DBL_EPSILON;
     }
 }
 

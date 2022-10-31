@@ -138,7 +138,7 @@ public:
 
     OverflowConfig(OverflowConfigId overflowConfigId) : overflowConfigId(overflowConfigId) {}
 
-    OverflowConfigId getOverflowConfigId() const
+    OverflowConfigId GetOverflowConfigId() const
     {
         return overflowConfigId;
     }

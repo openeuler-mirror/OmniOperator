@@ -5,6 +5,7 @@
 #ifndef OMNI_RUNTIME_LLVM_TYPES_H
 #define OMNI_RUNTIME_LLVM_TYPES_H
 
+#include <cstdint>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
 #include "util/type_util.h"

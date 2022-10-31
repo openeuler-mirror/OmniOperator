@@ -285,7 +285,6 @@ public:
         int64_t leftLow = left.LowBits();
         int64_t leftRight = left.HighBits();
 
-
         std::vector<int32_t> resultInts = MultiplyUnsignedMultiPrecision(left, right);
         Decimal128 tenToScale = TenToScale(reScale);
 
@@ -1299,7 +1298,6 @@ public:
 
     static inline OpStatus StringToDecimal64(const std::string &s, int64_t &rs, int32_t &scale, int32_t &precision)
     {
-
         bool isDot = false;
         bool isNeg = false;
         bool isExp = false;
@@ -1626,7 +1624,6 @@ public:
         }
         return false;
     }
-
 };
 }
 }

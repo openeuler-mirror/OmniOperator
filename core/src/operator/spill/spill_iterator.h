@@ -6,6 +6,7 @@
 #ifndef OMNI_RUNTIME_SPILL_ITERATOR_H
 #define OMNI_RUNTIME_SPILL_ITERATOR_H
 
+#include <cstddef>
 #include "spill_unit.h"
 #include "vector/vector_batch.h"
 
