@@ -206,17 +206,9 @@ public:
             res.size = sizeof(stringLen);
         }
         auto *pos = executionContext.AllocContinue(res.size, begin);
-        auto err = memcpy_sp(pos, sizeof(stringLen), &stringLen, sizeof(stringLen));
-        if (err != EOK) {
-            LogError("memcpy_sp err %d, when SerializeValue.", err);
-            throw OmniException("memcpy_sp error", " when SerializeValue");
-        }
+        memcpy(pos, &stringLen, sizeof(stringLen));
         if (stringLen > 0) {
-            auto err = memcpy_sp(pos + sizeof(stringLen), stringLen, str, stringLen);
-            if (err != EOK) {
-                LogError("SerializeValue,but memcpy_sp err %d", err);
-                throw OmniException("memcpy_sp error", " when SerializeValue");
-            }
+            memcpy(pos + sizeof(stringLen), str, stringLen);
             res.data = pos;
         }
         return res;
@@ -225,11 +217,7 @@ public:
     const char *DeserializeValueIntoThis(size_t rowId, const char *pos) override final
     {
         int stringSize = 0;
-        auto err = memcpy_sp((void *)&stringSize, sizeof(int), pos, sizeof(int));
-        if (err != EOK) {
-            LogError("DeserializeValueIntoThis,but memcpy_sp err %d", err);
-            throw OmniException("memcpy_sp error", " when DeserializeValueIntoThis");
-        }
+        memcpy((void *)&stringSize, pos, sizeof(int));
         pos += sizeof(stringSize);
 
         if (stringSize >= 0) {

@@ -144,7 +144,7 @@ private:
     using AggregateStatePtr = char *;
     std::unique_ptr<GroupbyColumnSerializeHandler<DefaultHashMap<StringRef, AggregateStatePtr>>> serialize = nullptr;
 
-    void AggregateAllState(VectorBatch *vecBatch, uint32_t aggNum, std::vector<AggregateStatePtr> rowStates);
+    void AggregateAllState(VectorBatch *vecBatch, uint32_t aggNum, std::vector<AggregateStatePtr> &rowStates);
 
     template <typename Deserialize>
     void FillOutputResultVectors(Deserialize &deserializeHashmap, uint32_t groupByColSize, uint32_t aggOutputColSize,

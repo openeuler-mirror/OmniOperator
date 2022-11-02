@@ -51,10 +51,7 @@ public:
         auto newSpace = continuousUsedMemoryBytes + sizeInBytes;
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(newSpace, minChunkSize));
-            auto err = memcpy_sp(availBuf, continuousUsedMemoryBytes,  start, continuousUsedMemoryBytes);
-            if (err != EOK) {
-                LogWarn("memcpy_sp error %d when AllocateContinue", err);
-            }
+            memcpy(availBuf, start, continuousUsedMemoryBytes);
             start = (const char *)availBuf;
             availBuf += continuousUsedMemoryBytes;
             availBytes -= continuousUsedMemoryBytes;

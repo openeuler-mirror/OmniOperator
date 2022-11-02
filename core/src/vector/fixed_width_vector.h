@@ -121,25 +121,13 @@ public:
         res.size = sizeof(bool) + sizeof(T);
         auto *pos = executionContext.AllocContinue(res.size, begin);
         bool isNull = IsValueNull(rowId);
-        auto err = memcpy_sp(pos, sizeof(bool), &isNull, sizeof(bool));
-        if (err != EOK) {
-            LogError("SerializeValue , but memcpy_sp bool err %d", err);
-            throw OmniException("me mcpy_sp error", "when SerializeValue in Fixed_Width_Vector");
-        }
+        memcpy(pos, &isNull, sizeof(bool));
 
         if (not isNull) {
             auto value = GetValue(rowId);
-            auto err = memcpy_sp(pos + sizeof(bool), BYTES, &value, BYTES);
-            if (err != EOK) {
-                LogError("memcpy_sp err %d if real value is not null", err);
-                throw OmniException("me mcpy_sp error", "when SerializeValue in Fixed_Width_Vector");
-            }
+            memcpy(pos + sizeof(bool), &value, BYTES);
         } else {
-            auto err = memset_sp(pos + sizeof(bool), BYTES, 0, BYTES);
-            if (err != EOK) {
-                LogError("memset_sp err %d if real value is null", err);
-                throw OmniException("me mset_sp error", "when SerializeValue in Fixed_Width_Vector");
-            }
+            memset(pos + sizeof(bool), 0, BYTES);
         }
         res.data = pos;
         return res;

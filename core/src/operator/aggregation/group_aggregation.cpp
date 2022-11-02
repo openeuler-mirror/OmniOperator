@@ -600,10 +600,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
                 executionContext->GetArena()->Allocate(aggNum * sizeof(AggregateState)));
             for (int i = 0; i < aggNum; i++) {
                 auto *p = new (aggPointer + sizeof(AggregateState) * i) AggregateState;
-                auto err = memset_s(p, sizeof(AggregateState), 0, sizeof(AggregateState));
-                if (err != EOK) {
-                    LogError("emplace key when HashAggregationOperator, memset error. %d", err);
-                }
+                memset(p,  0, sizeof(AggregateState));
             }
             ret.SetValue(aggPointer);
         } else {
@@ -615,7 +612,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
 }
 
 void HashAggregationOperator::AggregateAllState(VectorBatch *vecBatch, uint32_t aggNum,
-    std::vector<AggregateStatePtr> rowStates)
+    std::vector<AggregateStatePtr> &rowStates)
 {
     auto rowCount = rowStates.size();
     for (uint32_t i = 0; i < aggNum; ++i) {
