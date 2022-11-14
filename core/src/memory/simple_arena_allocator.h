@@ -41,26 +41,16 @@ public:
         availBytes -= sizeInBytes;
         return ret;
     }
-    uint8_t *AllocateContinue(int64_t sizeInBytes, const char *&start)
+    uint8_t *AllocateContinue(int64_t sizeInBytes, const uint8_t *&start)
     {
-        auto *p = const_cast<char *>(start);
-        uint8_t *ret = (uint8_t *)p;
-        if (sizeInBytes == 0) {
+        /*null means a new begin of allocate*/
+        if(start == nullptr){
+            uint8_t *ret = (Allocate(sizeInBytes));
+            start = (ret);
             return ret;
+        }else {
+            return (AllocateContinueNotNull(sizeInBytes,start));
         }
-        auto newSpace = continuousUsedMemoryBytes + sizeInBytes;
-        if (availBytes < sizeInBytes) {
-            AllocateChunk(std::max(newSpace, minChunkSize));
-            memcpy(availBuf, start, continuousUsedMemoryBytes);
-            start = (const char *)availBuf;
-            availBuf += continuousUsedMemoryBytes;
-            availBytes -= continuousUsedMemoryBytes;
-        }
-        ret = availBuf;
-        availBuf += sizeInBytes;
-        continuousUsedMemoryBytes += sizeInBytes;
-        availBytes -= sizeInBytes;
-        return ret;
     }
     void Reset()
     {
@@ -121,6 +111,28 @@ private:
             delete chunk;
         }
         continuousUsedMemoryBytes = 0;
+    }
+
+    uint8_t *AllocateContinueNotNull(int64_t sizeInBytes, const uint8_t *&start)
+    {
+        auto *p = const_cast<uint8_t *>(start);
+        uint8_t *ret = p;
+        if (sizeInBytes == 0) {
+            return ret;
+        }
+        auto newSpace = continuousUsedMemoryBytes + sizeInBytes;
+        if (availBytes < sizeInBytes) {
+            AllocateChunk(std::max(newSpace, minChunkSize));
+            memcpy(availBuf, start, continuousUsedMemoryBytes);
+            start = availBuf;
+            availBuf += continuousUsedMemoryBytes;
+            availBytes -= continuousUsedMemoryBytes;
+        }
+        ret = availBuf;
+        availBuf += sizeInBytes;
+        continuousUsedMemoryBytes += sizeInBytes;
+        availBytes -= sizeInBytes;
+        return ret;
     }
 
     int64_t minChunkSize;

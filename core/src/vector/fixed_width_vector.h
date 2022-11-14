@@ -115,11 +115,11 @@ public:
      * @param pos
      * @return
      */
-    StringRef SerializeValue(size_t rowId, op::ExecutionContext &executionContext, const char *&begin) override
+    StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &arenaAllocator, const uint8_t *&begin) override
     {
         StringRef res;
         res.size = sizeof(bool) + sizeof(T);
-        auto *pos = executionContext.AllocContinue(res.size, begin);
+        auto *pos = arenaAllocator.AllocateContinue(res.size, begin);
         bool isNull = IsValueNull(rowId);
         memcpy(pos, &isNull, sizeof(bool));
 
@@ -129,11 +129,11 @@ public:
         } else {
             memset(pos + sizeof(bool), 0, BYTES);
         }
-        res.data = pos;
+        res.data = reinterpret_cast<char*>(pos);
         return res;
     }
 
-    const char *DeserializeValueIntoThis(size_t rowId, const char *pos) override
+    const uint8_t *DeserializeValueIntoThis(size_t rowId, const uint8_t *pos) override
     {
         bool isNull = *(reinterpret_cast<const bool *>(pos));
         auto *copyPointer = reinterpret_cast<const T *>(pos + 1);

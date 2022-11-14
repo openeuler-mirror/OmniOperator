@@ -14,7 +14,7 @@
 #include "tracer/vector_tracer.h"
 #include "util/bit_map.h"
 #include "type/string_ref.h"
-#include "operator/execution_context.h"
+#include "memory/simple_arena_allocator.h"
 
 namespace omniruntime {
 namespace vec {
@@ -167,8 +167,8 @@ public:
      * After the serialization is complete, the value of @begin changes to pos + the number of bytes serialized.
      * @return Serialized Results
      */
-    virtual StringRef SerializeValue(size_t rowId, omniruntime::op::ExecutionContext &executionContext,
-        const char *&begin)
+    virtual StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &executionContext,
+        const uint8_t *&begin)
     {
         return {};
     }
@@ -179,7 +179,7 @@ public:
      * @param pos Pointer to serialized data
      * @return Pointer to next serialized data
      */
-    virtual const char *DeserializeValueIntoThis(size_t rowId, const char *pos)
+    virtual const uint8_t *DeserializeValueIntoThis(size_t rowId, const uint8_t *pos)
     {
         return nullptr;
     }

@@ -40,13 +40,13 @@ public:
     {
         hasError = false;
     }
-    char *AllocContinue(size_t totalBytes, char const *& start) {
+    uint8_t *AllocContinue(size_t totalBytes, const uint8_t *& start) {
         if(start == nullptr){
-            char *ret = reinterpret_cast<char*>(arena.Allocate(totalBytes));
+            auto *ret = arena.Allocate(totalBytes);
             start = ret;
             return ret;
         }else {
-            return reinterpret_cast<char*>(arena.AllocateContinue(totalBytes,start));
+            return arena.AllocateContinue(totalBytes,start);
         }
     }
 private:

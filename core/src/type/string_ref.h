@@ -7,6 +7,7 @@
 #include <cstring>
 namespace omniruntime {
 namespace type {
+// replace stringRef with std::string_view
 struct StringRef {
     const char *data = nullptr;
     size_t size = 0;

@@ -191,8 +191,8 @@ public:
      * @param begin
      * @return
      */
-    virtual StringRef SerializeValue(size_t rowId, op::ExecutionContext &executionContext,
-        const char *&begin) override final
+    virtual StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &arenaAllocator,
+        const uint8_t *&begin) override final
     {
         T *str = nullptr;
         StringRef res {};
@@ -205,16 +205,16 @@ public:
             stringLen = -1;
             res.size = sizeof(stringLen);
         }
-        auto *pos = executionContext.AllocContinue(res.size, begin);
+        auto *pos = arenaAllocator.AllocateContinue(res.size, begin);
         memcpy(pos, &stringLen, sizeof(stringLen));
         if (stringLen > 0) {
             memcpy(pos + sizeof(stringLen), str, stringLen);
-            res.data = pos;
+            res.data = reinterpret_cast<char*>(pos);
         }
         return res;
     }
 
-    const char *DeserializeValueIntoThis(size_t rowId, const char *pos) override final
+    const uint8_t *DeserializeValueIntoThis(size_t rowId, const uint8_t *pos) override final
     {
         int stringSize = 0;
         memcpy((void *)&stringSize, pos, sizeof(int));

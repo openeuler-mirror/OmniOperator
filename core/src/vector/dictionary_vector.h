@@ -106,12 +106,12 @@ public:
         return OMNI_VEC_ENCODING_DICTIONARY;
     }
 
-    StringRef SerializeValue(size_t rowId, omniruntime::op::ExecutionContext &executionContext,
-        const char *&begin) override
+    StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &arenaAllocator,
+        const uint8_t *&begin) override
     {
         int32_t originId = 0;
         auto *originVector = ExtractDictionaryAndId(static_cast<int32_t>(rowId), originId);
-        return originVector->SerializeValue(originId, executionContext, begin);
+        return originVector->SerializeValue(originId, arenaAllocator, begin);
     }
 
 private:

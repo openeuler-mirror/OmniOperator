@@ -27,11 +27,11 @@ public:
     type::StringRef
     HandleOneRow(size_t rowId, VectorBatch *groupVectors, ExecutionContext &executionContext)
     {
-        const char *ptr = nullptr;
+        const uint8_t *ptr = nullptr;
         uint32_t len = 0;
         for (int i = 0; i<groupVectors->GetVectorCount(); i++) {
             auto *curVector = groupVectors->GetVector(i);
-            auto strRef = curVector->SerializeValue(rowId, executionContext, ptr);
+            auto strRef = curVector->SerializeValue(rowId, *executionContext.GetArena(), ptr);
             len += strRef.size ;
         }
 
@@ -47,7 +47,7 @@ public:
     static void ParseKeyToCols(
         const StringRef &key, VectorBatch *vectorBatch, const int32_t start, const int32_t length, const int rowId)
     {
-        auto pos = key.data ;
+        auto *pos = reinterpret_cast<const uint8_t *>(key.data);
         const int32_t end = start + length;
         for (int32_t i = start; i < end; ++i) {
             pos = vectorBatch->GetVector(i)->DeserializeValueIntoThis(rowId, pos);
