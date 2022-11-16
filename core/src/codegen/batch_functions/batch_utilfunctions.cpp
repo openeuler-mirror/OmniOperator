@@ -4,7 +4,7 @@
  */
 
 #include "batch_utilfunctions.h"
-#include "codegen/functions/context_helper.h"
+#include "codegen/context_helper.h"
 #include "codegen/functions/stringfunctions.h"
 
 using namespace omniruntime::codegen;

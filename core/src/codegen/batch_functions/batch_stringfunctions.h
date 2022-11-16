@@ -12,11 +12,10 @@
 #include <codecvt>
 #include <huawei_secure_c/include/securec.h>
 #include "util/utf8_util.h"
-#include "codegen/functions/context_helper.h"
+#include "codegen/context_helper.h"
 #include "codegen/string_util.h"
 #include "type/decimal128.h"
 #include "type/decimal_operations.h"
-#include "util/config_util.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -90,14 +89,14 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
 extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
-    int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
-    int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
-    double *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
@@ -159,7 +158,7 @@ extern "C" DLLEXPORT void BatchConcatStrCharRetNull(bool *isNull, int64_t contex
 extern "C" DLLEXPORT void BatchCastStrWithDiffWidths(int64_t contextPtr, uint8_t **str, int32_t srcWidth,
     int32_t *strLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t dstWidth, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStrWithDiffWidthsRetNull(bool *isNull, int64_t contextPtr, uint8_t **srcStr,
+extern "C" DLLEXPORT void BatchCastStrWithDiffWidthsRetNull(bool *isNull, int64_t contextPtr, uint8_t **str,
     int32_t srcWidth, int32_t *strLen, uint8_t **output, int32_t *outLen, int32_t dstWidth, int32_t rowCnt);
 
 template <typename T>
@@ -361,5 +360,5 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
     }
 }
 
-#endif
-// OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H
+
+#endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

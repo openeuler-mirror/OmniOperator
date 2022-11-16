@@ -10,7 +10,7 @@
 
 class FilterCodeGen : public ExpressionCodeGen {
 public:
-    /* *
+    /**
      * Method to create and initialize a FilterCodeGen instance
      *
      * @param name Name for FilterCodeGen module

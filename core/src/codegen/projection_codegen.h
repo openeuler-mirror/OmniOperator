@@ -12,7 +12,7 @@
 
 class ProjectionCodeGen : public ExpressionCodeGen {
 public:
-    /* *
+    /**
      * Method to create and initialize a ProjectionCodeGen instance
      *
      * @param name Name for ProjectionCodeGen module

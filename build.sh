@@ -31,7 +31,14 @@ if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
   sudo cmake ../
   sudo make -j16 && sudo make install
 
-  cd ../../../core/build
+  cd ../../../../boost
+  sudo chmod -R 755 ./tools
+  dos2unix ./bootstrap.sh
+  dos2unix ./tools/build/src/engine/build.sh
+  sudo /bin/bash ./bootstrap.sh
+  sudo ./b2 headers install
+
+  cd ../OmniOperatorJIT/core/build
 else
   cd core/build
 fi

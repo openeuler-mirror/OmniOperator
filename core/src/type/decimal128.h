@@ -9,48 +9,52 @@
 #include <iostream>
 #include <array>
 #include <cstring>
-
+#include <boost/multiprecision/cpp_int.hpp>
 #include "decimal_base.h"
 
 namespace omniruntime {
 namespace type {
+using namespace boost::multiprecision;
+
 // The highest bit of Decimal128 is sign flag.
 class Decimal128 : public BasicDecimal {
 public:
     Decimal128(int64_t highBits, uint64_t lowBits);
 
-    Decimal128(__int128_t value);
+    explicit Decimal128(__int128_t value);
 
-    Decimal128(const std::string& s);
+    explicit Decimal128(const std::string &s);
 
-    Decimal128() : Decimal128(0, 0) {}
+    explicit Decimal128(const char *s);
+
+    Decimal128() : Decimal128(0, 0)
+    {}
 
     Decimal128(const Decimal128 &rhs) = default;
 
+    Decimal128 &operator=(const Decimal128 &rhs) = default;
+
     explicit Decimal128(int64_t unscaledValue);
 
-    Decimal128 &operator = (const Decimal128 &rhs) = default;
-
-    // / \brief Convert any integer value into a Decimal128.
-    template <typename T,
+    template<typename T,
         typename = typename std::enable_if<std::is_integral<T>::value && (sizeof(T) <= sizeof(uint64_t)), T>::type>
-    constexpr Decimal128(T value) noexcept : Decimal128((value >= T { 0 }) ? 0 : -1, static_cast<uint64_t>(value))
-    { // NOLINT
-    }
+    Decimal128(T value):highBits(value < 0 ? SIGN_LONG_MASK : 0), lowBits(value < 0 ? -value : value)
+    {}
 
-    ~Decimal128() {}
+    ~Decimal128()
+    {}
 
-    bool operator == (const Decimal128 &right) const;
+    bool operator==(const Decimal128 &right) const;
 
-    bool operator != (const Decimal128 &right) const;
+    bool operator!=(const Decimal128 &right) const;
 
-    bool operator < (const Decimal128 &right) const;
+    bool operator<(const Decimal128 &right) const;
 
-    bool operator > (const Decimal128 &right) const;
+    bool operator>(const Decimal128 &right) const;
 
-    bool operator <= (const Decimal128 &right) const;
+    bool operator<=(const Decimal128 &right) const;
 
-    bool operator >= (const Decimal128 &right) const;
+    bool operator>=(const Decimal128 &right) const;
 
     int64_t HighBits() const
     {
@@ -66,11 +70,6 @@ public:
     {
         this->highBits = highBitsField;
         this->lowBits = lowBitsField;
-    }
-
-    int64_t Sign() const
-    {
-        return 1 | (highBits >> 63);
     }
 
     static int64_t Absolute(int64_t bits)
@@ -100,6 +99,17 @@ public:
         }
     }
 
+    __int128_t ToInt128() const
+    {
+        bool isNegative = (highBits < 0);
+        __int128_t value = isNegative ? highBits ^ (1L << 63) : highBits;
+        value = (value << 64) + lowBits;
+        if (isNegative) {
+            value = -value;
+        }
+        return value;
+    }
+
     std::string ToString()
     {
         std::string s;
@@ -121,31 +131,15 @@ public:
         return s;
     }
 
-    __int128_t ToInt128() const
-    {
-        __int128_t decimal = highBits < 0 ? highBits ^ (1L << 63) : highBits;
-        decimal = decimal << 64;
-        decimal = decimal + lowBits;
-        return highBits < 0 ? -decimal : decimal;
-    }
-
     static constexpr int64_t SIGN_LONG_MASK = 1LL << 63;
-    static constexpr int64_t SIGN_INT_MASK = 1 << 31;
-    static constexpr uint32_t INT_TO_UNSIGNED_LONG_MASK = 0xFFFF'FFFF;
     static constexpr int32_t MAX_LONG_PRECISION = 38;
-    static constexpr int32_t MAX_SHORT_PRECISION = 18;
-    static constexpr int32_t BYTES_OF_LONG = 8;
-    static constexpr uint64_t LOW_64_BITS = 0xFFFF'FFFF'FFFF'FFFF;
-    static constexpr uint32_t LOW_32_BITS = 0xFFFF'FFFF;
-    static constexpr int32_t MAX_POWER_OF_FIVE_INT = 13;
-    static constexpr int32_t MAX_POWER_OF_FIVE_LONG = 27;
 
 private:
     uint64_t lowBits;
     int64_t highBits;
 };
 
-std::ostream &operator << (std::ostream &os, const Decimal128 &decimal128);
+std::ostream &operator<<(std::ostream &os, const Decimal128 &decimal128);
 }
 }
 

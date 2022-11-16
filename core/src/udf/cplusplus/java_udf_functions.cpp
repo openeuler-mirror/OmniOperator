@@ -6,12 +6,13 @@
 #include "jni_util.h"
 #include "util/error_code.h"
 #include "util/type_util.h"
-#include "codegen/functions/context_helper.h"
+#include "codegen/context_helper.h"
 #include "java_udf_functions.h"
 
 namespace omniruntime {
 namespace udf {
 using namespace omniruntime::op;
+using namespace omniruntime::type;
 using namespace omniruntime::codegen;
 
 const std::string GET_ENV_FAILED = "Get env from JVM failed.";

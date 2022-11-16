@@ -3,7 +3,7 @@
  * Description: udf functions.
  */
 #include <mutex>
-#include "context_helper.h"
+#include "codegen/context_helper.h"
 #include "udf/cplusplus/java_udf_functions.h"
 #include "udffunctions.h"
 

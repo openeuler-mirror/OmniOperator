@@ -72,7 +72,7 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         }
         case OMNI_DECIMAL128: {
             Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(originalRowIndex);
-            std::cout << result.HighBits() << " " << result.LowBits() << "\t";
+            std::cout << result.ToString() << "\t";
             break;
         }
         case OMNI_CONTAINER: {

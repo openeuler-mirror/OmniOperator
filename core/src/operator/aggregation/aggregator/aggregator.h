@@ -9,6 +9,7 @@
 
 #include "operator/aggregation/definitions.h"
 #include "type/data_types.h"
+#include "type/base_operations.h"
 #include "vector/vector.h"
 #include "vector/vector_common.h"
 #include "operator/execution_context.h"
@@ -45,14 +46,12 @@ using AggregateState = union AggregateState {
 using DecimalAverageState = struct DecimalAverageState {
     int64_t count;
     int64_t overflow;
-    uint64_t lowBits;
-    int64_t highBits;
+    int128 val;
 };
 
 using DecimalSumState = struct DecimalSumState {
     int64_t overflow;
-    uint64_t lowBits;
-    int64_t highBits;
+    int128 val;
 };
 
 using FirstState = struct FirstState {

@@ -5,6 +5,9 @@ project(omni-runtime)
 cmake_minimum_required(VERSION 3.10)
 
 message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+
+find_package(Boost 1.79 REQUIRED)
+
 # omniruntime version
 set(OMNI_RUNTIME_VERSION 1.1.0)
 set(OS_ARCHITECTURES aarch64)

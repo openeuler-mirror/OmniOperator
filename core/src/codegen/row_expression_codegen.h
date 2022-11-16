@@ -12,7 +12,7 @@
 
 class RowExpressionCodeGen : public ExpressionCodeGen {
 public:
-    /* *
+    /**
      * Method to create and initialize a RowExpressionCodeGen instance
      *
      * @param name Name for RowExpressionCodeGen module

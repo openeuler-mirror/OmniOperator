@@ -3,7 +3,8 @@
  * Description: Decimal Function Registry
  */
 #include "func_registry_decimal.h"
-#include "functions/decimalfunctions.h"
+#include "functions/decimal_arithmetic_functions.h"
+#include "functions/decimal_cast_functions.h"
 
 using namespace omniruntime;
 using namespace omniruntime::type;
