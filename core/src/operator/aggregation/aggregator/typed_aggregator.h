@@ -305,19 +305,22 @@ private:
         } else {
             auto inputType = inputTypes->GetType(0);
             OutType result {};
-            Decimal128 val128 = val;
+            Decimal128Wrapper val128(val);
 
             // so we shoud add decimal part separately if input is acutally decimal not varchar
             if (inputType->GetId() == OMNI_DECIMAL128) {
                 int32_t scale = -static_cast<DecimalDataType *>(inputType.get())->GetScale();
-                if (DecimalOperations::Rescale128(val, scale, val128) == OP_OVERFLOW) {
+                val128.ReScale(scale);
+                if(val128.IsOverflow() != OpStatus::SUCCESS){
                     overflow = true;
                     return result;
                 }
             }
 
             int64_t result64;
-            if (DecimalOperations::UnscaledDecimal128ToLong(val128, result64) == OP_OVERFLOW) {
+            try {
+                result64 = static_cast<int64_t>(val128);
+            } catch (std::overflow_error &e) {
                 overflow = true;
                 return result;
             }
@@ -338,16 +341,17 @@ private:
         } else if constexpr (std::is_floating_point_v<InType>) {
             return this->CastWithOverflowFloatingPointDecimal<InType>(val, overflow);
         } else {
-            Decimal128 result = DecimalOperations::UnscaledDecimal(static_cast<int64_t>(val));
+            Decimal128Wrapper result(static_cast<int64_t>(val));
             auto outputType = outputTypes->GetType(0);
             if (outputType->GetId() == OMNI_DECIMAL128) {
                 int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale();
-                if (DecimalOperations::Rescale128(result, scale, result) == OP_OVERFLOW) {
+                result.ReScale(scale);
+                if (result.IsOverflow() != OpStatus::SUCCESS) {
                     overflow = true;
                 }
             }
 
-            return result;
+            return result.ToDecimal128();
         }
     }
 
@@ -355,7 +359,7 @@ private:
     {
         auto inputType = inputTypes->GetType(0);
         auto outputType = outputTypes->GetType(0);
-        Decimal128 result = val;
+        Decimal128Wrapper result(val);
         // following if condition makes sure that both input and output are acutally decimal,
         // not varchare (which has no scale)
         if ((inputType->GetId() == OMNI_DECIMAL64 || inputType->GetId() == OMNI_DECIMAL128) 
@@ -363,11 +367,11 @@ private:
             int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale()
                 - static_cast<DecimalDataType *>(inputType.get())->GetScale();
             if (scale != 0) {
-                overflow = (DecimalOperations::Rescale128(result, scale, result) == OP_OVERFLOW);
+                overflow = static_cast<bool>(result.ReScale(scale).IsOverflow());
             }
         }
 
-        return result;
+        return result.ToDecimal128();
     }
 
     int64_t CastWithOverflowDecimalToLong(const Decimal128 val, bool &overflow)
@@ -375,7 +379,7 @@ private:
         auto inputType = inputTypes->GetType(0);
         auto outputType = outputTypes->GetType(0);
         int64_t result {};
-        Decimal128 resultDec;
+        Decimal128Wrapper resultDec(val);
         int32_t scale = 0;
         if (outputType->GetId() == OMNI_DECIMAL64) {
             // following if condition makes sure that input is acutally decimal,
@@ -392,15 +396,17 @@ private:
         }
 
         if (scale != 0) {
-            if (DecimalOperations::Rescale128(val, scale, resultDec) == OP_OVERFLOW) {
+            resultDec.ReScale(scale);
+            if (resultDec.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
                 return result;
             }
         } else {
             resultDec = val;
         }
-
-        if (DecimalOperations::UnscaledDecimal128ToLong(resultDec, result) == OP_OVERFLOW) {
+        try {
+            result = static_cast<int64_t>(resultDec.SetScale(0));
+        } catch (std::overflow_error &e) {
             overflow = true;
         }
         return result;
@@ -416,30 +422,36 @@ private:
             ? static_cast<DecimalDataType *>(inputType.get())->GetScale()
             : 0;
 
-        Decimal128 integralDec = val;
-        Decimal128 fractionalDec {};
+        Decimal128Wrapper integralDec(val);
+        Decimal128Wrapper fractionalDec(0);
         if (scale != 0) {
-            Decimal128 scaleValue = DecimalOperations::TenToScale(scale);
-            if (DecimalOperations::Divide(val, scaleValue, 0, 0, integralDec, fractionalDec) == OP_OVERFLOW) {
+            Decimal128Wrapper scaleValue(TenOfScaleMultipliers[abs(scale)]);
+            integralDec = integralDec.Divide(scaleValue, 0);
+            fractionalDec = integralDec.Mod(scaleValue);
+            if (integralDec.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
                 return result;
             }
         }
         int64_t result64;
-        if (DecimalOperations::UnscaledDecimal128ToLong(integralDec, result64) == OP_OVERFLOW) {
+        try {
+            result = static_cast<int64_t>(integralDec);
+        } catch (std::overflow_error &e) {
             overflow = true;
             return result;
         }
+
         result = static_cast<OutType>(result64);
 
         if (scale != 0) {
-            if (DecimalOperations::UnscaledDecimal128ToLong(fractionalDec, result64) == OP_OVERFLOW) {
+            try {
+                result = static_cast<int64_t>(fractionalDec);
+            } catch (std::overflow_error &e) {
                 overflow = true;
-            } else {
-                result += (static_cast<OutType>(result64) / pow(10.0, scale));
+                return result;
             }
+            result += (static_cast<OutType>(result64) / pow(10.0, scale));
         }
-
         return result;
     }
 
@@ -447,7 +459,7 @@ private:
     {
         auto inputType = inputTypes->GetType(0);
         auto outputType = outputTypes->GetType(0);
-        Decimal128 result = DecimalOperations::UnscaledDecimal(val);
+        Decimal128Wrapper result(val);
         int32_t scale = 0;
         if (inputType->GetId() == OMNI_DECIMAL64) {
             // following if condition makes sure that output is acutally decimal,
@@ -464,12 +476,13 @@ private:
         }
 
         if (scale != 0) {
-            if (DecimalOperations::Rescale128(result, scale, result) == OP_OVERFLOW) {
+            result.ReScale(scale);
+            if (result.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
             }
         }
 
-        return result;
+        return result.ToDecimal128();
     }
 
     template <typename InType>
@@ -477,7 +490,7 @@ private:
     {
         InType integral;
         InType fractional = std::modf(val, &integral);
-        Decimal128 result = DecimalOperations::UnscaledDecimal(static_cast<int64_t>(integral));
+        Decimal128Wrapper result(static_cast<int64_t>(integral));
 
         auto outputType = outputTypes->GetType(0);
         // so we shoud add decimal part separately if input is acutally decimal not varchar
@@ -485,19 +498,21 @@ private:
             ? static_cast<DecimalDataType *>(outputType.get())->GetScale()
             : 0;
         if (scale > 0) {
-            if (DecimalOperations::Rescale128(result, scale, result) == OP_OVERFLOW) {
+            result.ReScale(scale);
+            if (result.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
-                return result;
+                return result.ToDecimal128();
             }
 
             fractional *= pow(10.0, scale);
-            Decimal128 fractionalDec = DecimalOperations::UnscaledDecimal(static_cast<int64_t>(fractional));
-            if (DecimalOperations::AddWithOverflow(result, fractionalDec, result) == OP_OVERFLOW) {
+            Decimal128Wrapper fractionalDec(static_cast<int64_t>(fractional));
+            result=result.Add(fractionalDec);
+            if (result.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
             }
         }
 
-        return result;
+        return result.ToDecimal128();
     }
 };
 } // end of namespace op

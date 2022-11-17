@@ -65,10 +65,10 @@ public:
             state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
             *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
         } else {
-            Decimal128 *preSumVal = reinterpret_cast<Decimal128 *>(state.val);
-            int64_t newOverflow = DecimalOperations::AddWithOverflow(
-                *preSumVal, Decimal128(sumVal.high, sumVal.low), *preSumVal);
-            overflow |= (newOverflow != 0);
+            Decimal128 preSumDec = *(reinterpret_cast<Decimal128 *>(state.val));
+            Decimal128Wrapper preSumVal(preSumDec);
+            preSumVal=preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
+            overflow |= (static_cast<int64_t>(preSumVal.IsOverflow()) != 0);
         }
         if (overflow) {
             state.count = -1;
@@ -110,7 +110,7 @@ public:
             bool overflow = state.count < 0;
 
             if (state.count > 0 && state.val != nullptr) {
-               Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val)).Divide(
+                Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val)).Divide(
                     Decimal128Wrapper(state.count), 0);
                 result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
             }

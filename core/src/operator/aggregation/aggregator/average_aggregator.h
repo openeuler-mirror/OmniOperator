@@ -264,12 +264,13 @@ private:
                         result = avg;
                     }
                 } else if constexpr (OUT_ID == OMNI_DECIMAL64) {
-                    Decimal128 result128;
-                    DecimalOperations::DivideRoundUp(Decimal128(result), Decimal128(state.count), 0, 0, result128);
+                    Decimal128Wrapper result128 = Decimal128Wrapper(result).Divide(Decimal128Wrapper(state.count),
+                        0);
+
                     // overflow will not happen since we already check that in CastWithOverFlow
-                    DecimalOperations::UnscaledDecimal128ToLong(result128, result);
+                    result = static_cast<OutType>(result128);
                 } else if constexpr (OUT_ID == OMNI_DECIMAL128) {
-                    DecimalOperations::DivideRoundUp(result, Decimal128(state.count), 0, 0, result);
+                    result = result.Divide(Decimal128Wrapper(state.count), 0);
                 } else if constexpr (std::is_floating_point_v<OutType>) {
                     result /= state.count;
                 } else {

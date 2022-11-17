@@ -683,7 +683,6 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     delete[] input2;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(result3);
-    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
 }
 
 TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
@@ -2240,7 +2239,6 @@ TEST(HashAggregationOperatorTest, multi_stage)
     delete[] input2;
     VectorHelper::FreeVecBatches(resultFromFinal);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
 }
 
 TEST(HashAggregationOperatorTest, supported_type_test)
@@ -2957,7 +2955,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_sum_decimal128_overflow_return_null_when_isOverflowAsNull_is_true");
-    auto deci = Decimal128Wrapper("99999999999999999999999999999999999999");
+    Decimal128 deci("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Decimal128Vector(vectorAllocator, 3);
     deci38_0Vec->SetValue(0, deci.ToDecimal128());
     deci38_0Vec->SetValue(1, deci.ToDecimal128());
@@ -2980,7 +2978,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    auto expected1 = Decimal128Wrapper("99999999999999999999999999999999999999");
+    Decimal128 expected1("99999999999999999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
@@ -3032,7 +3030,7 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
     avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     avgDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    auto expected1 = Decimal128Wrapper("999999999999999999");
+    Decimal128Wrapper expected1("999999999999.999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
 
@@ -3275,8 +3273,8 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "spark_avg_decimal128_normal_when_inputRaw_is_true_and_outputPartial_is_false");
 
-    auto deci1 = Decimal128Wrapper("1234567890123456789012");
-    auto deci2 = Decimal128Wrapper("9999999999999999999999");
+    Decimal128Wrapper deci1("1234567890123456789012");
+    Decimal128Wrapper deci2("9999999999999999999999");
 
     auto *deci22_0Vec = new Decimal128Vector(vectorAllocator, 2);
     deci22_0Vec->SetValue(0, deci1.ToDecimal128());

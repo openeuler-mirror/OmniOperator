@@ -21,8 +21,9 @@ SIMD_ALWAYS_INLINE
 void sumDecimalOp(Decimal128 *res, int64_t &flag, const DecimalPartialResult &in, const int64_t &notUsed)
 {
     if (flag >= 0) {
-        const int64_t overflow = DecimalOperations::AddWithOverflow(*res, in.sum, *res);
-        if (overflow != 0) {
+        Decimal128Wrapper result = Decimal128Wrapper(*res).Add(in.sum);
+        *res = result.ToDecimal128();
+        if (result.IsOverflow() != OpStatus::SUCCESS) {
             flag = -1;
         } else {
             flag += in.count;
@@ -36,8 +37,9 @@ void sumDecimalConditionalOp(
     Decimal128 *res, int64_t &flag, const DecimalPartialResult &in, const int64_t &notUsed, const uint8_t &condition)
 {
     if (condition == addIf && flag >= 0) {
-        const int64_t overflow = DecimalOperations::AddWithOverflow(*res, in.sum, *res);
-        if (overflow != 0) {
+        Decimal128Wrapper result = Decimal128Wrapper(*res).Add(in.sum);
+        *res = result.ToDecimal128();
+        if (result.IsOverflow() != OpStatus::SUCCESS) {
             flag = -1;
         } else {
             flag += in.count;
@@ -54,10 +56,14 @@ void sumDecimalOp(Decimal128 *res, int64_t &flag, const IN &in, const int64_t &c
     if (flag >= 0) {
         int64_t overflow;
         if constexpr (std::is_same_v<IN, Decimal128>) {
-            overflow = DecimalOperations::AddWithOverflow(*res, in, *res);
+            Decimal128Wrapper result = Decimal128Wrapper(*res).Add(in);
+            *res = result.ToDecimal128();
+            overflow = static_cast<int64_t>(result.IsOverflow());
         } else {
-            Decimal128 curVal = DecimalOperations::UnscaledDecimal(in);
-            overflow = DecimalOperations::AddWithOverflow(*res, curVal, *res);
+            Decimal128Wrapper curVal(in);
+            Decimal128Wrapper result = curVal.Add(*res);
+            *res = result.ToDecimal128();
+            overflow = static_cast<int64_t>(result.IsOverflow());
         }
 
         if (overflow != 0) {
@@ -78,10 +84,14 @@ void sumDecimalConditionalOp(
     if (condition == addIf && flag >= 0) {
         int64_t overflow;
         if constexpr (std::is_same_v<IN, Decimal128>) {
-            overflow = DecimalOperations::AddWithOverflow(*res, in, *res);
+            Decimal128Wrapper result = Decimal128Wrapper(in).Add(*res);
+            overflow = static_cast<int64_t>(result.IsOverflow());
+            *res = result.ToDecimal128();
         } else {
-            Decimal128 curVal = DecimalOperations::UnscaledDecimal(in);
-            overflow = DecimalOperations::AddWithOverflow(*res, curVal, *res);
+            Decimal128Wrapper curVal(in);
+            Decimal128Wrapper result = Decimal128Wrapper(curVal).Add(*res);
+            overflow = static_cast<int64_t>(result.IsOverflow());
+            *res = result.ToDecimal128();
         }
 
         if (overflow != 0) {
@@ -132,10 +142,9 @@ public:
             state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
             *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
         } else {
-            Decimal128 *preSumVal = reinterpret_cast<Decimal128 *>(state.val);
-            int64_t newOverflow = DecimalOperations::AddWithOverflow(
-                *preSumVal, Decimal128(sumVal.high, sumVal.low), *preSumVal);
-            overflow |= (newOverflow != 0);
+            Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
+            preSumVal=preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
+            overflow |= (static_cast<int64_t>(preSumVal.IsOverflow()) != 0);
         }
         if (overflow) {
             state.count = -1;

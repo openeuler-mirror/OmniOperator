@@ -11,7 +11,9 @@
 namespace omniruntime {
 namespace type {
 const int32_t PRINT_OUT_HEX_WIDTH = 16;
-Decimal128::Decimal128(int64_t highBits, uint64_t lowBits) : lowBits(lowBits), highBits(highBits) {}
+
+Decimal128::Decimal128(int64_t highBits, uint64_t lowBits) : lowBits(lowBits), highBits(highBits)
+{}
 
 
 Decimal128::Decimal128(int64_t unscaledValue)
