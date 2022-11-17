@@ -24,13 +24,21 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
         case OMNI_DOUBLE:
             return "double";
         case OMNI_DATE32:
-            return "date32";
+            return "date32 (int32)";
+        case OMNI_TIME32:
+            return "time32 (int32)";
         case OMNI_INT:
             return "int32";
         case OMNI_SHORT:
             return "int16";
         case OMNI_LONG:
             return "int64";
+        case OMNI_DATE64:
+            return "date64 (int64)";
+        case OMNI_TIME64:
+            return "time64 (int64)";
+        case OMNI_TIMESTAMP:
+            return "timestamp (int64)";
         case OMNI_VARCHAR:
             return "string";
         case OMNI_CHAR:
@@ -43,8 +51,14 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "void";
         case OMNI_INVALID:
             return "invalid";
+        case OMNI_CONTAINER:
+            return "container";
+        case OMNI_INTERVAL_MONTHS:
+            return "interval_month";
+        case OMNI_INTERVAL_DAY_TIME:
+            return "interval_day_time";
         default:
-            return "";
+            return "UNKNOWN";
     }
 }
 

@@ -9,6 +9,7 @@
 #include <cfloat>
 
 #include "typed_aggregator.h"
+#include "min_varchar_aggregator.h"
 #ifdef ENABLE_HMPP
 #include "aggregator_util.h"
 #include "HMPP/hmpps.h"
@@ -40,23 +41,25 @@ T getMax()
     }
 }
 
-template<typename IN>
+template<typename IN, typename OUT>
 SIMD_ALWAYS_INLINE
-void minOp(IN *res, int64_t &flag, const IN &in, const int64_t &notUsed)
+void minOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
 {
-    if (*res > in) {
-        *res = in;
+    const OUT cur = static_cast<OUT>(in);
+    if (*res > cur) {
+        *res = cur;
     }
     flag |= 1;
 }
 
-template<typename IN, bool addIf>
+template<typename IN, typename OUT, bool addIf>
 SIMD_ALWAYS_INLINE
-void minConditionalOp(IN *res, int64_t &flag, const IN &in, const int64_t &notUsed, const uint8_t &condition)
+void minConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed, const uint8_t &condition)
 {
     if (condition == addIf) {
-        if (*res > in) {
-            *res = in;
+        const OUT cur = static_cast<OUT>(in);
+        if (*res > cur) {
+            *res = cur;
         }
         flag |= 1;
     }
@@ -68,12 +71,11 @@ class MinAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>
     using InType = typename NativeAndVectorType<IN_ID>::type;
     using OutVector = typename NativeAndVectorType<OUT_ID>::vector;
     using OutType = typename NativeAndVectorType<OUT_ID>::type;
+    // note: for some reason when g++ vectorizes min operation loop, it cannot correctly
+    // evaluate min value for int16_t, so for that type intermediate result is promoted to int32
+    // once we figure out how to resolve this issue in g++m we can set ResultType = InType
+    using ResultType = std::conditional_t<IN_ID == OMNI_SHORT, int32_t, InType>;
 public:
-    MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
-    {}
-
     ~MinAggregator() override = default;
 
 #ifdef ENABLE_HMPP
@@ -178,35 +180,62 @@ public:
         }
 
         bool overflow = state.count < 0;
-        OutType result = this->template CastWithOverflow<InType, OutType>(
-            *reinterpret_cast<InType *>(state.val), overflow);
+        OutType result = this->template CastWithOverflow<ResultType, OutType>(
+            *reinterpret_cast<ResultType *>(state.val), overflow);
+        v->SetValue(offset, result);
         if (overflow) {
             this->SetNullOrThrowException(v, offset, "min_aggregator overflow.");
-        } else {
-            if constexpr (std::is_same_v<OutType, Int128>) {
-                this->SetDecimal128Value(result, v, offset);
-            } else {
-                v->SetValue(offset, result);
-            }
+        } else if (state.count == 0 || state.val == nullptr) {
+            v->SetValueNull(offset);
         }
     }
 
     void InitState(AggregateState &state) override
     {
-        state.val = this->executionContext->GetArena()->Allocate(sizeof(InType));
-        *reinterpret_cast<InType *>(state.val) = getMax<InType>();
+        state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
+        *reinterpret_cast<ResultType *>(state.val) = getMax<ResultType>();
         state.count = 0;
     }
 
+    static std::unique_ptr<Aggregator> Create(
+        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    {
+        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
+            return MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Create(
+                inputTypes, outputTypes, channels);
+        } else if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE
+            || IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
+            LogError("Error in min aggregator: Unsupported input type %s", TypeUtil::TypeToString(IN_ID).c_str());
+            return nullptr;
+        } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG || OUT_ID == OMNI_DOUBLE
+            || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_BOOLEAN)) {
+            LogError("Error in min aggregator: Unsupported output type %s", TypeUtil::TypeToString(OUT_ID).c_str());
+            return nullptr;
+        } else {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
+                "min", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+                return nullptr;
+            }
+
+            return std::unique_ptr<MinAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
+                new MinAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(inputTypes, outputTypes, channels));
+        }
+    }
+
 protected:
-    ALWAYS_INLINE void ProcessRawInput(
+    MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
+    {}
+
+    ALWAYS_INLINE void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override
     {
         if (state.val == nullptr) {
             InitState(state);
         }
-        InType *res = reinterpret_cast<InType *>(state.val);
+        ResultType *res = reinterpret_cast<ResultType *>(state.val);
 
         InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
         ptr += vector->GetPositionOffset();
@@ -214,22 +243,22 @@ protected:
         if (indexMap == nullptr) {
             ptr += rowOffset;
             if (nullMap == nullptr) {
-                add<InType, InType, minOp<InType>>(res, state.count, ptr, rowCount);
+                add<InType, ResultType, minOp<InType, ResultType>>(res, state.count, ptr, rowCount);
             } else {
-                addConditional<InType, InType, minConditionalOp<InType, false>>(
+                addConditional<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
                     res, state.count, ptr, rowCount, nullMap);
             }
         } else {
             if (nullMap == nullptr) {
-                addDict<InType, InType, minOp<InType>>(res, state.count, ptr, rowCount, indexMap);
+                addDict<InType, ResultType, minOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
             } else {
-                addDictConditional<InType, InType, minConditionalOp<InType, false>>(
+                addDictConditional<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
                     res, state.count, ptr, rowCount, nullMap, indexMap);
             }
         }
     }
 
-    ALWAYS_INLINE void ProcessGroupRawInput(
+    ALWAYS_INLINE void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
     {
@@ -239,32 +268,19 @@ protected:
         if (indexMap == nullptr) {
             ptr += rowOffset;
             if (nullMap == nullptr) {
-                addUseRowIndex<InType, InType, minOp<InType>>(rowStates, aggIdx, ptr);
+                addUseRowIndex<InType, ResultType, minOp<InType, ResultType>>(rowStates, aggIdx, ptr);
             } else {
-                addConditionalUseRowIndex<InType, InType, minConditionalOp<InType, false>>(
+                addConditionalUseRowIndex<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
                     rowStates, aggIdx, ptr, nullMap);
             }
         } else {
             if (nullMap == nullptr) {
-                addDictUseRowIndex<InType, InType, minOp<InType>>(rowStates, aggIdx, ptr, indexMap);
+                addDictUseRowIndex<InType, ResultType, minOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
             } else {
-                addDictConditionalUseRowIndex<InType, InType, minConditionalOp<InType, false>>(
+                addDictConditionalUseRowIndex<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
                     rowStates, aggIdx, ptr, nullMap, indexMap);
             }
         }
-    }
-
-    void Validate() override
-    {
-        static_assert(
-            IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE
-            || IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN,
-            "Unsupported input type for min aggregator");
-
-        static_assert(
-            OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG || OUT_ID == OMNI_DOUBLE
-            || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_BOOLEAN,
-            "Unsupported output type for min aggregator");
     }
 };
 }

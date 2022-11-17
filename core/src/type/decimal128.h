@@ -72,6 +72,11 @@ public:
         this->lowBits = lowBitsField;
     }
 
+    bool IsZero() const
+    {
+        return lowBits == 0 && ((~SIGN_LONG_MASK & highBits) == 0);
+    }
+
     static int64_t Absolute(int64_t bits)
     {
         return bits & ~SIGN_LONG_MASK;

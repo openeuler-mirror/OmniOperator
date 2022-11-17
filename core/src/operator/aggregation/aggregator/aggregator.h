@@ -214,8 +214,8 @@ public:
 
 protected:
     const FunctionType type;
-    const DataTypes inputTypes;
-    const DataTypes outputTypes;
+    DataTypes inputTypes;
+    DataTypes outputTypes;
     const bool inputRaw;
     const bool outputPartial;
     const bool isOverflowAsNull;

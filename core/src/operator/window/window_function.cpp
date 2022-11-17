@@ -4,7 +4,6 @@
  */
 
 #include "window_function.h"
-#include "operator/aggregation/aggregator/aggregator_factory_impl.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

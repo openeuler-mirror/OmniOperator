@@ -16,5 +16,8 @@
 #define VECTORIZE_LOOP __attribute__((optimize("tree-vectorize")))
 #define SIMD_ALWAYS_INLINE inline __attribute__((always_inline))
 #define NO_INLINE __attribute__((__noinline__))
+// use __attribute__((optimize ("fast-math"))) for FAST_MATH to auto vectorize floating point loops
+// note that this might generated different results compaired with not vectorized loop since floating point
+// arithmetic is not associative
 #define FAST_MATH __attribute__((optimize ("fast-math")))
 #endif // OMNI_RUNTIME_COMPILER_UTIL_H

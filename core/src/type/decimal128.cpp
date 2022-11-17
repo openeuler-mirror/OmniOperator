@@ -90,7 +90,8 @@ Decimal128::Decimal128(const char *input)
 // All comparing operator remains due to template function
 bool Decimal128::operator==(const Decimal128 &right) const
 {
-    return lowBits == right.lowBits && highBits == right.highBits;
+    // should return true for -0 == 0
+    return (lowBits == right.lowBits && highBits == right.highBits) || (IsZero() && right.IsZero());
 }
 
 bool Decimal128::operator!=(const Decimal128 &right) const

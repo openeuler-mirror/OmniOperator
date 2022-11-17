@@ -88,16 +88,6 @@ inline uint8_t addDictMask(uint8_t * __restrict nullMap, const size_t length,
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW>
 class TypedMaskColAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
-    TypedMaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            realAggregator->GetType(), realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(),
-            realAggregator->GetInputChannels()),
-        maskColumnId(maskColumnId)
-    {
-        this->realAggregator = std::unique_ptr<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>>(
-            static_cast<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> *>(realAggregator.release()));
-    }
-
     ~TypedMaskColAggregator() override = default;
 
 #ifdef ENABLE_HMPP
@@ -127,17 +117,13 @@ public:
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
             vector = vectorBatch->GetVector(aggChannels[0]);
             if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                indexMap.Create(this->allocator, rowCount, false);
+                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
                 vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(
                     rowOffset, rowCount, indexMap.data);
             }
         }
 
-        if constexpr (RAW_IN) {
-            realAggregator->ProcessRawInput(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
-        } else {
-            realAggregator->ProcessPartialInput(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
-        }
+        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
     }
 
     void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
@@ -156,18 +142,13 @@ public:
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
             vector = vectorBatch->GetVector(aggChannels[0]);
             if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                indexMap.Create(this->allocator, rowCount, false);
+                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
                 vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(
                     rowOffset, rowCount, indexMap.data);
             }
         }
 
-        // ProcessGroupUseIndex
-        if constexpr (RAW_IN) {
-            realAggregator->ProcessGroupRawInput(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
-        } else {
-            realAggregator->ProcessGroupPartialInput(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
-        }
+        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
     }
 
     void InitState(AggregateState &state) override
@@ -215,13 +196,29 @@ public:
         return realAggregator->GetInputChannels();
     }
 
+    static std::unique_ptr<Aggregator> Create(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
+    {
+        return std::unique_ptr<TypedMaskColAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>>(
+            new TypedMaskColAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(maskColumnId, std::move(realAggregator)));
+    }
+
 protected:
-    ALWAYS_INLINE void ProcessRawInput(
+    TypedMaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            realAggregator->GetType(), realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(),
+            realAggregator->GetInputChannels()),
+        maskColumnId(maskColumnId)
+    {
+        this->realAggregator = std::unique_ptr<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>>(
+            static_cast<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> *>(realAggregator.release()));
+    }
+
+    ALWAYS_INLINE void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    ALWAYS_INLINE void ProcessGroupRawInput(
+    ALWAYS_INLINE void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
@@ -262,7 +259,7 @@ private:
             }
         }
 
-        nullMap.Create(this->allocator, rowCount, false);
+        nullMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
 
         bool hasValidRows;
         if (maskVector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
@@ -281,7 +278,7 @@ private:
         Vector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;
-        AggregatorBuffer<int32_t> indexMap(this->allocator, rowCount, false);
+        AggregatorBuffer<int32_t> indexMap(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
         BooleanVector *orgVector = static_cast<BooleanVector *>(
             static_cast<DictionaryVector *>(maskVector)->ExtractDictionaryAndIds(rowOffset, rowCount, indexMap.data)
         );

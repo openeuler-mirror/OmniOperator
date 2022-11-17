@@ -44,14 +44,9 @@ void addConditionalCountRaw(int64_t &res, const size_t rowCount, const uint8_t *
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW>
+template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 class CountColumnAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
-    CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            OMNI_AGGREGATION_TYPE_COUNT_COLUMN, DataTypes::NoneDataTypesInstance(), outputTypes, channels)
-    {}
-
     ~CountColumnAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
@@ -61,97 +56,118 @@ public:
         static_cast<LongVector *>(vector)->SetValue(offset, state.count);
     }
 
+    static std::unique_ptr<Aggregator> Create(
+        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    {
+        if constexpr (OUT_ID != OMNI_LONG) {
+            LogError("Error in count column aggregator: Expecting long output type. Got %s",
+                TypeUtil::TypeToString(OUT_ID).c_str());
+            return nullptr;
+        } else if constexpr (!RAW_IN && IN_ID != OMNI_LONG) {
+            LogError("Error in count column aggregator: Expecting long intput type for partial input. Got %s",
+                TypeUtil::TypeToString(IN_ID).c_str());
+            return nullptr;
+        } else {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
+                "count column", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+                return nullptr;
+            }
+
+            return std::unique_ptr<CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
+                new CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(outputTypes, channels));
+        }
+    }
+
 protected:
-    CountColumnAggregator(FunctionType aggregateType, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            aggregateType, DataTypes::NoneDataTypesInstance(), outputTypes, channels)
+            OMNI_AGGREGATION_TYPE_COUNT_COLUMN, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
     {}
 
-    ALWAYS_INLINE void ProcessRawInput(
-        AggregateState &state, Vector *nouUsed1, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        if (nullMap == nullptr) {
-            state.count += rowCount;
-        } else {
-            addConditionalCountRaw<false>(state.count, rowCount, nullMap);
-        }
-    }
+    CountColumnAggregator(FunctionType aggregateType, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            aggregateType, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
+    {}
 
-    ALWAYS_INLINE void ProcessGroupRawInput(
-        std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *notUsed,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        if (nullMap == nullptr) {
-            for (AggregateState *states : rowStates) {
-                states[aggIdx].count++;
-            }
-        } else {
-            size_t rowCount = rowStates.size();
-            for (size_t i = 0; i < rowCount; ++i) {
-                if (!nullMap[i]) {
-                    rowStates[i][aggIdx].count++;
-                }
-            }
-        }
-    }
-
-    ALWAYS_INLINE void ProcessPartialInput(
+    ALWAYS_INLINE void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override
     {
-        int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
-        int64_t noUsed {};
-
-        if (indexMap == nullptr) {
-            ptr += rowOffset;
+        if constexpr (RAW_IN) {
             if (nullMap == nullptr) {
-                add<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount);
+                state.count += rowCount;
             } else {
-                addConditional<int64_t, int64_t, countAllConditionalOp<false>>(
-                    &(state.count), noUsed, ptr, rowCount, nullMap);
+                addConditionalCountRaw<false>(state.count, rowCount, nullMap);
             }
         } else {
-            if (nullMap == nullptr) {
-                addDict<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
+            int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
+            ptr += vector->GetPositionOffset();
+
+            int64_t noUsed {};
+
+            if (indexMap == nullptr) {
+                ptr += rowOffset;
+                if (nullMap == nullptr) {
+                    add<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount);
+                } else {
+                    addConditional<int64_t, int64_t, countAllConditionalOp<false>>(
+                        &(state.count), noUsed, ptr, rowCount, nullMap);
+                }
             } else {
-                addDictConditional<int64_t, int64_t, countAllConditionalOp<false>>(
-                    &(state.count), noUsed, ptr, rowCount, nullMap, indexMap);
+                if (nullMap == nullptr) {
+                    addDict<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
+                } else {
+                    addDictConditional<int64_t, int64_t, countAllConditionalOp<false>>(
+                        &(state.count), noUsed, ptr, rowCount, nullMap, indexMap);
+                }
             }
         }
     }
 
-    ALWAYS_INLINE void ProcessGroupPartialInput(
+    ALWAYS_INLINE void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
     {
-        int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-        size_t rowCount = rowStates.size();
-        int64_t unsedFlag = 0;
-
-        if (indexMap == nullptr) {
-            ptr += rowOffset;
+        if constexpr (RAW_IN) {
             if (nullMap == nullptr) {
-                for (size_t i = 0; i < rowCount; ++i) {
-                    countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL);
+                for (AggregateState *states : rowStates) {
+                    states[aggIdx].count++;
                 }
             } else {
+                size_t rowCount = rowStates.size();
                 for (size_t i = 0; i < rowCount; ++i) {
-                    countAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL, nullMap[i]);
+                    if (!nullMap[i]) {
+                        rowStates[i][aggIdx].count++;
+                    }
                 }
             }
         } else {
-            if (nullMap == nullptr) {
-                for (size_t i = 0; i < rowCount; ++i) {
-                    countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
+            int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
+            ptr += vector->GetPositionOffset();
+            size_t rowCount = rowStates.size();
+            int64_t unsedFlag = 0;
+
+            if (indexMap == nullptr) {
+                ptr += rowOffset;
+                if (nullMap == nullptr) {
+                    for (size_t i = 0; i < rowCount; ++i) {
+                        countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL);
+                    }
+                } else {
+                    for (size_t i = 0; i < rowCount; ++i) {
+                        countAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL, nullMap[i]);
+                    }
                 }
             } else {
-                for (size_t i = 0; i < rowCount; ++i) {
-                    countAllConditionalOp<false>(
-                        &(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL, nullMap[i]);
+                if (nullMap == nullptr) {
+                    for (size_t i = 0; i < rowCount; ++i) {
+                        countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
+                    }
+                } else {
+                    for (size_t i = 0; i < rowCount; ++i) {
+                        countAllConditionalOp<false>(
+                            &(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL, nullMap[i]);
+                    }
                 }
             }
         }

@@ -11,11 +11,17 @@
 
 #include <memory>
 #include <cmath>
+#include <iomanip>      // for setpercision
 
 #include "type/decimal_operations.h"
 
 namespace omniruntime {
 namespace op {
+using DecimalPartialResult = struct DecimalPartialResult {
+    Decimal128 sum = 0;
+    int64_t count = 0;
+};
+
 template <type::DataTypeId dataTypeId> struct NativeAndVectorType {};
 
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_BOOLEAN> {
@@ -70,18 +76,24 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DECIMAL128> {
     using vector = vec::Decimal128Vector;
 };
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_VARCHAR> {
-    using type = uint8_t;
+    using type = DecimalPartialResult;
     using vector = vec::VarcharVector;
 };
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_CHAR> {
     using type = uint8_t;
-    // Reza:: what is proper type
     using vector = vec::VarcharVector;
 };
-
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_CONTAINER> {
-    using type = int64_t;
-    using vector = vec::ContainerVector;
+    using type = double;
+    using vector = vec::DoubleVector;
+};
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_NONE> {
+    using type = void;
+    using vector = void;
+};
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INVALID> {
+    using type = void;
+    using vector = void;
 };
 
 template <typename T>
@@ -126,14 +138,6 @@ class TypedAggregator : public Aggregator {
     friend class TypedMaskColAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>;
 
 public:
-    TypedAggregator(const FunctionType aggregateType, const DataTypesPtr inputTypes,
-        const DataTypesPtr outputTypes, const std::vector<int32_t> &channels)
-        : Aggregator(aggregateType, inputTypes, outputTypes, channels, RAW_IN, PARTIAL_OUT, NULL_OVERFLOW)
-    {
-        Validate();
-    }
-
-
     ~TypedAggregator() override = default;
 
     // for no groupby aggregation
@@ -144,11 +148,7 @@ public:
         uint8_t *nullMap = nullptr;
         Vector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
 
-        if constexpr (RAW_IN) {
-            ProcessRawInput(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
-        } else {
-            ProcessPartialInput(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
-        }
+        ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
     }
 
     // for groupby hash aggregation
@@ -159,12 +159,7 @@ public:
         uint8_t *nullMap = nullptr;
         Vector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
 
-        // ProcessGroupUseIndex
-        if constexpr (RAW_IN) {
-            ProcessGroupRawInput(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
-        } else {
-            ProcessGroupPartialInput(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
-        }
+        ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
     }
 
     bool IsTypedAggregator() override
@@ -173,30 +168,18 @@ public:
     }
 
 protected:
-    virtual void Validate()
+    TypedAggregator(const FunctionType aggregateType, const DataTypes &inputTypes,
+                    const DataTypes &outputTypes, const std::vector<int32_t> &channels)
+        : Aggregator(aggregateType, inputTypes, outputTypes, channels, RAW_IN, PARTIAL_OUT, NULL_OVERFLOW)
     {}
 
-    virtual ALWAYS_INLINE void ProcessRawInput(
+    virtual ALWAYS_INLINE void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual ALWAYS_INLINE void ProcessPartialInput(
-        AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap)
-    {
-        ProcessRawInput(state, vector, rowOffset, rowCount, nullMap, indexMap);
-    }
-
-    virtual ALWAYS_INLINE void ProcessGroupRawInput(
+    virtual ALWAYS_INLINE void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
-
-    virtual ALWAYS_INLINE void ProcessGroupPartialInput(
-        std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        const int32_t rowOffset,  const uint8_t *nullMap, const int32_t *indexMap)
-    {
-        ProcessGroupRawInput(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
-    }
 
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(Vector *vector, const int index, const char *errorMsg)
@@ -205,12 +188,6 @@ protected:
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMsg);
         }
         vector->SetValueNull(index);
-    }
-
-    ALWAYS_INLINE void SetDecimal128Value(const Int128 &value, Decimal128Vector *vector, const int32_t index)
-    {
-        __int128 v = static_cast<__int128>(value);
-        vector->SetValue(index, Decimal128(v));
     }
 
     virtual ALWAYS_INLINE Vector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
@@ -240,7 +217,7 @@ protected:
         }
 
         if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            indexMap.Create(this->allocator, rowCount, false);
+            indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
             return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount, indexMap.data);
         } else {
             indexMap.Release();
@@ -248,9 +225,34 @@ protected:
         }
     }
 
+    // this is needed in case, we directly create aggregator (using Aggregator::Create) without using AggregatorFactory
+    static bool CheckTypes(const std::string &aggName,
+        const DataTypes &inputTypes, const DataTypes &outputTypes, const DataTypeId inId, const DataTypeId outId)
+    {
+        if (inputTypes.GetSize() <= 0 || outputTypes.GetSize() <= 0) {
+            LogError("Error in %s aggregator: Input or output DataTypes is empty", aggName.c_str());
+            return false;
+        }
+
+        if (!CheckType(inputTypes.GetType(0)->GetId(), inId)) {
+            LogError("Error in %s aggregator: Expecting %s input type. Got %s",
+                aggName.c_str(), TypeUtil::TypeToString(inId).c_str(),
+                TypeUtil::TypeToString(inputTypes.GetType(0)->GetId()).c_str());
+            return false;
+        }
+        if (!CheckType(outputTypes.GetType(0)->GetId(), outId)) {
+            LogError("Error in %s aggregator: Expecting %s input type. Got %s",
+                aggName.c_str(), TypeUtil::TypeToString(outId).c_str(),
+                TypeUtil::TypeToString(outputTypes.GetType(0)->GetId()).c_str());
+            return false;
+        }
+
+        return true;
+    }
+
     // template<DataTypeId IN_ID, DataTypeId OUT_ID, typename OutType = typename NativeAndVectorType<OUT_ID>::type, typename InType = typename NativeAndVectorType<IN_ID>::type>
     template<typename InType, typename OutType>
-    OutType CastWithOverflow(const InType val, bool &overflow)
+    OutType CastWithOverflow(const InType &val, bool &overflow)
     {
         if (overflow) {
             return OutType {};
@@ -261,56 +263,29 @@ protected:
         } else if constexpr (std::is_same_v<OutType, Decimal128>) {
             return CastWithOverflowDecimalOutput<InType>(val, overflow);
         } else {
-            OutType res = static_cast<OutType>(val);
-            if constexpr (std::is_floating_point_v<InType> || std::is_floating_point_v<OutType>) {
-                return res;
-            } else {
-                auto inputType = inputTypes->GetType(0);
-                auto outputType = outputTypes->GetType(0);
-                int32_t scale = 0;
-                if (inputType->GetId() == OMNI_DECIMAL64 && outputType->GetId() == OMNI_DECIMAL64) {
-                    int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale()
-                        - static_cast<DecimalDataType *>(inputType.get())->GetScale();
-                }
-
-
-                if (scale > 0) {
-                    OutType scaleFactor = static_cast<OutType>(pow(10, abs(scale)));
-                    res *= scaleFactor;
-                    overflow = static_cast<InType>(res / scaleFactor) != val;
-                } else if (scale < 0) {
-                    OutType scaleFactor = static_cast<OutType>(pow(10, abs(scale)));
-                    res /= scaleFactor;
-                    overflow = static_cast<InType>(res) != (val / static_cast<InType>(scaleFactor));
-                } else {
-                    overflow = static_cast<InType>(res) != val;
-                }
-                return res;
-            }
+            return CastWithOverflowNonDecimal<InType, OutType>(val, overflow);
         }
     }
 
-    BaseAllocator *allocator = BaseAllocator::GetRootAllocator()->NewChildAllocator("aggregator");
-
 private:
     template<typename OutType>
-    OutType CastWithOverflowDecimalInput(const Decimal128 val, bool &overflow)
+    OutType CastWithOverflowDecimalInput(const Decimal128 &val, bool &overflow)
     {
         if constexpr (std::is_same_v<OutType, Decimal128>) {
-            return this->CastWithOverflowDecimaToDecimal(val, overflow);
+            return this->CastWithOverflowDecimalToDecimal(val, overflow);
         } else if constexpr (std::is_same_v<OutType, int64_t>) {
             return this->CastWithOverflowDecimalToLong(val, overflow);
         } else if constexpr (std::is_floating_point_v<OutType>) {
             return this->CastWithOverflowDecimalToFloatingPoint<OutType>(val, overflow);
         } else {
-            auto inputType = inputTypes->GetType(0);
+            auto& inputType = inputTypes.GetType(0);
             OutType result {};
             Decimal128Wrapper val128(val);
 
             // so we shoud add decimal part separately if input is acutally decimal not varchar
             if (inputType->GetId() == OMNI_DECIMAL128) {
                 int32_t scale = -static_cast<DecimalDataType *>(inputType.get())->GetScale();
-                val128.ReScale(scale);
+                val128.ReScale(scale).SetScale(0);
                 if(val128.IsOverflow() != OpStatus::SUCCESS){
                     overflow = true;
                     return result;
@@ -332,7 +307,7 @@ private:
     }
 
     template<typename InType>
-    Decimal128 CastWithOverflowDecimalOutput(const InType val, bool &overflow)
+    Decimal128 CastWithOverflowDecimalOutput(const InType &val, bool &overflow)
     {
         if constexpr (std::is_same_v<InType, Decimal128>) {
             throw OmniException("Invalid Arguement", "Unexpected decimal input for 'CastWithOverflowDecimalOutput'");
@@ -342,42 +317,41 @@ private:
             return this->CastWithOverflowFloatingPointDecimal<InType>(val, overflow);
         } else {
             Decimal128Wrapper result(static_cast<int64_t>(val));
-            auto outputType = outputTypes->GetType(0);
+            auto& outputType = outputTypes.GetType(0);
             if (outputType->GetId() == OMNI_DECIMAL128) {
                 int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale();
-                result.ReScale(scale);
-                if (result.IsOverflow() != OpStatus::SUCCESS) {
-                    overflow = true;
-                }
+                result.ReScale(scale).SetScale(0);
+                overflow = (result.IsOverflow() != OpStatus::SUCCESS);
             }
 
             return result.ToDecimal128();
         }
     }
 
-    Decimal128 CastWithOverflowDecimaToDecimal(const Decimal128 val, bool &overflow)
+    Decimal128 CastWithOverflowDecimalToDecimal(const Decimal128 &val, bool &overflow)
     {
-        auto inputType = inputTypes->GetType(0);
-        auto outputType = outputTypes->GetType(0);
+        auto& inputType = inputTypes.GetType(0);
+        auto& outputType = outputTypes.GetType(0);
         Decimal128Wrapper result(val);
         // following if condition makes sure that both input and output are acutally decimal,
         // not varchare (which has no scale)
-        if ((inputType->GetId() == OMNI_DECIMAL64 || inputType->GetId() == OMNI_DECIMAL128) 
+        if ((inputType->GetId() == OMNI_DECIMAL128)
             && (outputType->GetId() == OMNI_DECIMAL64 || outputType->GetId() == OMNI_DECIMAL128)) {
             int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale()
                 - static_cast<DecimalDataType *>(inputType.get())->GetScale();
             if (scale != 0) {
-                overflow = static_cast<bool>(result.ReScale(scale).IsOverflow());
+                result.ReScale(scale).SetScale(0);
+                overflow = (result.IsOverflow() != OpStatus::SUCCESS);
             }
         }
 
         return result.ToDecimal128();
     }
 
-    int64_t CastWithOverflowDecimalToLong(const Decimal128 val, bool &overflow)
+    int64_t CastWithOverflowDecimalToLong(const Decimal128 &val, bool &overflow)
     {
-        auto inputType = inputTypes->GetType(0);
-        auto outputType = outputTypes->GetType(0);
+        auto& inputType = inputTypes.GetType(0);
+        auto& outputType = outputTypes.GetType(0);
         int64_t result {};
         Decimal128Wrapper resultDec(val);
         int32_t scale = 0;
@@ -396,7 +370,7 @@ private:
         }
 
         if (scale != 0) {
-            resultDec.ReScale(scale);
+            resultDec.ReScale(scale).SetScale(0);
             if (resultDec.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
                 return result;
@@ -413,52 +387,22 @@ private:
     }
 
     template <typename OutType>
-    OutType CastWithOverflowDecimalToFloatingPoint(const Decimal128 val, bool &overflow)
+    OutType CastWithOverflowDecimalToFloatingPoint(const Decimal128 &val, bool &overflow)
     {
-        auto inputType = inputTypes->GetType(0);
-        OutType result {};
         // so we shoud add decimal part separately if input is acutally decimal not varchar
-        int32_t scale = (inputType->GetId() == OMNI_DECIMAL128 || inputType->GetId() == OMNI_DECIMAL64)
+        auto& inputType = inputTypes.GetType(0);
+        int32_t scale = (inputType->GetId() == OMNI_DECIMAL128)
             ? static_cast<DecimalDataType *>(inputType.get())->GetScale()
             : 0;
-
-        Decimal128Wrapper integralDec(val);
-        Decimal128Wrapper fractionalDec(0);
-        if (scale != 0) {
-            Decimal128Wrapper scaleValue(TenOfScaleMultipliers[abs(scale)]);
-            integralDec = integralDec.Divide(scaleValue, 0);
-            fractionalDec = integralDec.Mod(scaleValue);
-            if (integralDec.IsOverflow() != OpStatus::SUCCESS) {
-                overflow = true;
-                return result;
-            }
-        }
-        int64_t result64;
-        try {
-            result = static_cast<int64_t>(integralDec);
-        } catch (std::overflow_error &e) {
-            overflow = true;
-            return result;
-        }
-
-        result = static_cast<OutType>(result64);
-
-        if (scale != 0) {
-            try {
-                result = static_cast<int64_t>(fractionalDec);
-            } catch (std::overflow_error &e) {
-                overflow = true;
-                return result;
-            }
-            result += (static_cast<OutType>(result64) / pow(10.0, scale));
-        }
-        return result;
+        // higher performance if we convert directly rather than going through string
+        std::string doubleString = ToStringWithScale(val.ToString(), scale);
+        return static_cast<OutType>(stod(doubleString));
     }
 
-    Decimal128 CastWithOverflowLongToDecimal(const int64_t val, bool &overflow)
+    Decimal128 CastWithOverflowLongToDecimal(const int64_t &val, bool &overflow)
     {
-        auto inputType = inputTypes->GetType(0);
-        auto outputType = outputTypes->GetType(0);
+        auto& inputType = inputTypes.GetType(0);
+        auto& outputType = outputTypes.GetType(0);
         Decimal128Wrapper result(val);
         int32_t scale = 0;
         if (inputType->GetId() == OMNI_DECIMAL64) {
@@ -476,7 +420,7 @@ private:
         }
 
         if (scale != 0) {
-            result.ReScale(scale);
+            result.ReScale(scale).SetScale(0);
             if (result.IsOverflow() != OpStatus::SUCCESS) {
                 overflow = true;
             }
@@ -486,33 +430,117 @@ private:
     }
 
     template <typename InType>
-    Decimal128 CastWithOverflowFloatingPointDecimal(const InType val, bool &overflow)
+    Decimal128 CastWithOverflowFloatingPointDecimal(const InType &val, bool &overflow)
     {
-        InType integral;
-        InType fractional = std::modf(val, &integral);
-        Decimal128Wrapper result(static_cast<int64_t>(integral));
+        int32_t scale;
+        auto& outputType = outputTypes.GetType(0);
+        if (outputType->GetId() == OMNI_DECIMAL128
+            && (scale = static_cast<DecimalDataType *>(outputType.get())->GetScale()) > 0) {
+            InType integral;
+            InType fractional = std::modf(val, &integral);
 
-        auto outputType = outputTypes->GetType(0);
-        // so we shoud add decimal part separately if input is acutally decimal not varchar
-        int32_t scale = (outputType->GetId() == OMNI_DECIMAL128 || outputType->GetId() == OMNI_DECIMAL64)
-            ? static_cast<DecimalDataType *>(outputType.get())->GetScale()
-            : 0;
-        if (scale > 0) {
-            result.ReScale(scale);
-            if (result.IsOverflow() != OpStatus::SUCCESS) {
-                overflow = true;
-                return result.ToDecimal128();
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(0) << integral;
+            std::string s;
+            ss >> s;
+
+            int128_t res128;
+            int32_t scaleNotUsed = 0;
+            int32_t percisionNotUsed = 0;
+            overflow = DecimalFromString(s, res128, scaleNotUsed, percisionNotUsed) != OpStatus::SUCCESS;
+            Decimal128Wrapper result(res128);
+            result.ReScale(scale).SetScale(0);
+            overflow |= result.IsOverflow() != OpStatus::SUCCESS;
+
+            fractional *= static_cast<InType>(pow(10, scale));
+            integral = round(fractional);
+            result = result.Add(Decimal128Wrapper(static_cast<int64_t>(integral)));
+            overflow = result.IsOverflow() != OpStatus::SUCCESS;
+            return result.ToDecimal128();
+        } else {
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(0) << round(val);
+            std::string s;
+            ss >> s;
+
+            int128_t res128;
+            int32_t scale = 0;
+            int32_t percision = 0;
+            overflow = DecimalFromString(s, res128, scale, percision) != OpStatus::SUCCESS;
+            return Decimal128Wrapper(res128).ToDecimal128();
+        }
+    }
+
+    template <typename InType, typename OutType>
+    OutType CastWithOverflowNonDecimal(const InType &val, bool &overflow)
+    {
+        OutType res = static_cast<OutType>(val);
+        auto& inputType = inputTypes.GetType(0);
+        auto& outputType = outputTypes.GetType(0);
+        int32_t scale;
+
+        if constexpr (std::is_floating_point_v<OutType>) {
+            if (inputType->GetId() == OMNI_DECIMAL64
+                && (scale = static_cast<DecimalDataType *>(inputType.get())->GetScale()) > 0) {
+                res /= pow(10.0, scale);
             }
+        } else if constexpr (std::is_floating_point_v<InType>) {
+            if (outputType->GetId() == OMNI_DECIMAL64
+                && (scale = static_cast<DecimalDataType *>(outputType.get())->GetScale()) > 0) {
+                InType integral;
+                InType fractional = std::modf(val, &integral);
 
-            fractional *= pow(10.0, scale);
-            Decimal128Wrapper fractionalDec(static_cast<int64_t>(fractional));
-            result=result.Add(fractionalDec);
-            if (result.IsOverflow() != OpStatus::SUCCESS) {
-                overflow = true;
+                res = static_cast<OutType>(integral);
+                overflow = static_cast<InType>(res) != integral;
+                overflow |= __builtin_mul_overflow(res, static_cast<OutType>(pow(10, scale)), &res);
+
+                fractional *= static_cast<InType>(pow(10, scale));
+                integral = round(fractional);
+                overflow |= __builtin_add_overflow(res, static_cast<OutType>(integral), &res);
+            } else {
+                InType integral = round(val);
+                res = static_cast<OutType>(integral);
+                overflow = static_cast<InType>(res) != integral;
+            }
+        } else {
+            // at this point input and output are either integral or deciaml64
+            scale = outputType->GetId() == OMNI_DECIMAL64
+                ? static_cast<DecimalDataType *>(outputType.get())->GetScale()
+                : 0;
+            scale -= inputType->GetId() == OMNI_DECIMAL64
+                ? static_cast<DecimalDataType *>(inputType.get())->GetScale()
+                : 0;
+            if (scale == 0) {
+                overflow = static_cast<InType>(res) != val;
+            } else {
+                const OutType scaleFactor = static_cast<OutType>(pow(10, abs(scale)));
+                if (scale > 0) {
+                    overflow = (static_cast<InType>(res) != val) || __builtin_mul_overflow(res, scaleFactor, &res);
+                } else {
+                    const InType scaledDown = val / scaleFactor;
+                    res = static_cast<OutType>(scaledDown);
+                    overflow = static_cast<InType>(res) != scaledDown;
+                }
             }
         }
+        return res;
+    }
 
-        return result.ToDecimal128();
+    static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)
+    {
+        switch (actual) {
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return expected == OMNI_INT;
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return expected == OMNI_LONG;
+            default:
+                return expected == actual;
+        }
     }
 };
 } // end of namespace op

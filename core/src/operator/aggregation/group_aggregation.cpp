@@ -9,6 +9,7 @@
 #include "operator/status.h"
 #include "operator/util/operator_util.h"
 #include "util/type_util.h"
+#include "util/debug.h"
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
 #include "operator/hmpp_hash_util.h"
@@ -95,7 +96,9 @@ OmniStatus HashAggregationOperatorFactory::Init()
         aggsInputCols.push_back(aggInputCols);
     }
     ChooseGroupByType();
-    return CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
+    auto ret = CreateAggregatorFactories(aggregatorFactories, aggFuncTypesVector, GetMaskColumns());
+
+    return ret;
 }
 
 OmniStatus HashAggregationOperatorFactory::Close()
@@ -142,7 +145,9 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
-            throw OmniException("create group aggregation operator", "return nullptr when create aggregator");
+            throw OmniException("OPERATOR_RUNTIME_ERROR",
+                "Unable to create aggregator " +
+                std::to_string(i) + " / " + std::to_string(this->aggregatorFactories.size()));
         }
         aggs.push_back(std::move(aggregator));
     }
@@ -250,7 +255,7 @@ int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataTypePt
         rowSize += OperatorUtil::GetTypeSize(i.input);
     }
     for (auto &aggregator : aggregators) {
-        const std::vector<DataTypePtr> &aggTypes = aggregator->GetOutputTypes()->Get();
+        const std::vector<DataTypePtr> &aggTypes = aggregator->GetOutputTypes().Get();
         for (auto dataType : aggTypes) {
             types.push_back(dataType);
             rowSize += OperatorUtil::GetTypeSize(dataType);

@@ -14,6 +14,8 @@ if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
   cp -r ../jemalloc ${open_source_dir}
   cp -r ../json ${open_source_dir}
   cp -r ../llvm-project ${open_source_dir}
+  cp -r ../googletest ${open_source_dir}/benchmark
+  cp -r ../boost ${open_source_dir}
 
   echo "Start build open source code for huawei_secure_c, jemalloc and json"
   cd ${open_source_dir}/huawei_secure_c/src
@@ -24,12 +26,12 @@ if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
 
   cd jemalloc
   sudo ./autogen.sh --disable-initial-exec-tls
-  sudo make -j16 && sudo make install
+  sudo make -j4 && sudo make install
 
   mkdir ../json/build
   cd ../json/build
   sudo cmake ../
-  sudo make -j16 && sudo make install
+  sudo make -j4 && sudo make install
 
   cd ../../../../boost
   sudo chmod -R 755 ./tools

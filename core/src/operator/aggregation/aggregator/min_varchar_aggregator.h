@@ -37,12 +37,14 @@ inline void addChar(AggregateState &state, const VarcharVector *vector, const in
     const int32_t rowCount)
 {
     if (rowCount > 0) {
-        uint8_t *res = nullptr;
+        uint8_t *res = reinterpret_cast<uint8_t *>(state.val);
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
 
-        state.count = vector->GetValue(idx++, &res);
-        state.count |= updateFlag;
+        if (state.val == nullptr || state.count == 0) {
+            state.count = vector->GetValue(idx++, &res);
+            state.count |= updateFlag;
+        }
         while (idx < end) {
             res = OP(res, state.count, vector, idx++);
         }
@@ -63,11 +65,13 @@ inline void addDictChar(AggregateState &state, const VarcharVector *vector, cons
 #endif
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
-        uint8_t *res = nullptr;
+        uint8_t *res = reinterpret_cast<uint8_t *>(state.val);
         int32_t idx = 0;
 
-        state.count = vector->GetValue(indexMap[idx++], &res);
-        state.count |= updateFlag;
+        if (state.val == nullptr || state.count == 0) {
+            state.count = vector->GetValue(indexMap[idx++], &res);
+            state.count |= updateFlag;
+        }
         while (idx < rowCount) {
             res = OP(res, state.count, vector, indexMap[idx++]);
         }
@@ -86,19 +90,22 @@ inline void addConditionalChar(AggregateState &state, const VarcharVector *vecto
         }
         condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
-        uint8_t *res = nullptr;
+        uint8_t *res = reinterpret_cast<uint8_t *>(state.val);
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
-        while (idx < end) {
-            if (!(*condition)) {
-                state.count = vector->GetValue(idx, &res);
-                state.count |= updateFlag;
+
+        if (state.val == nullptr || state.count == 0) {
+            while (idx < end) {
+                if (!(*condition)) {
+                    state.count = vector->GetValue(idx, &res);
+                    state.count |= updateFlag;
+                    ++condition;
+                    ++idx;
+                    break;
+                }
                 ++condition;
                 ++idx;
-                break;
             }
-            ++condition;
-            ++idx;
         }
 
         while (idx < end) {
@@ -129,17 +136,19 @@ inline void addDictConditionalChar(AggregateState &state, const VarcharVector *v
         condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
-        uint8_t *res = nullptr;
+        uint8_t *res = reinterpret_cast<uint8_t *>(state.val);
         int32_t idx = 0;
 
-        while (idx < rowCount) {
-            if (!condition[idx]) {
-                state.count = vector->GetValue(indexMap[idx], &res);
-                state.count |= updateFlag;
+        if (state.val == nullptr || state.count == 0) {
+            while (idx < rowCount) {
+                if (!condition[idx]) {
+                    state.count = vector->GetValue(indexMap[idx], &res);
+                    state.count |= updateFlag;
+                    ++idx;
+                    break;
+                }
                 ++idx;
-                break;
             }
-            ++idx;
         }
 
         while (idx < rowCount) {
@@ -162,7 +171,7 @@ inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const s
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
             auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr) {
+            if (state.val == nullptr || state.count == 0) {
                 uint8_t *res = nullptr;
                 state.count = vector->GetValue(rowIdx, &res);
                 state.count |= updateFlag;
@@ -191,7 +200,7 @@ inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, con
 
         for (size_t i = 0; i < rowCount; ++i) {
             auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr) {
+            if (state.val == nullptr || state.count == 0) {
                 uint8_t *res = nullptr;
                 state.count = vector->GetValue(indexMap[i], &res);
                 state.count |= updateFlag;
@@ -221,7 +230,7 @@ inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStat
         for (size_t i = 0; i < rowCount; ++i) {
             if (!(*condition)) {
                 auto &state = rowStates[i][aggIdx];
-                if (state.val == nullptr) {
+                if (state.val == nullptr || state.count == 0) {
                     uint8_t *res = nullptr;
                     state.count = vector->GetValue(rowIdx, &res);
                     state.count |= updateFlag;
@@ -258,7 +267,7 @@ inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &row
         for (size_t i = 0; i < rowCount; ++i) {
             if (!condition[i]) {
                 auto &state = rowStates[i][aggIdx];
-                if (state.val == nullptr) {
+                if (state.val == nullptr || state.count == 0) {
                     uint8_t *res = nullptr;
                     state.count = vector->GetValue(indexMap[i], &res);
                     state.count |= updateFlag;
@@ -274,11 +283,6 @@ inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &row
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 class MinVarcharAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
-    MinVarcharAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
-    {}
-
     ~MinVarcharAggregator() override = default;
 
 #ifdef ENABLE_HMPP
@@ -343,8 +347,38 @@ public:
         }
     }
 
+    static std::unique_ptr<Aggregator> Create(
+        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    {
+        if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
+            LogError("Error in min_varchar aggregator: Unsupported input type %s", TypeUtil::TypeToString(IN_ID).c_str());
+            return nullptr;
+        } else if constexpr (!(OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)) {
+            LogError("Error in min_varchar aggregator: Unsupported output type %s", TypeUtil::TypeToString(OUT_ID).c_str());
+            return nullptr;
+        } else if constexpr (IN_ID != OUT_ID) {
+            LogError("Error in min_varchar aggregator: Expecting same input output type. Got %s input and %s output types",
+                TypeUtil::TypeToString(IN_ID).c_str(), TypeUtil::TypeToString(OUT_ID).c_str());
+            return nullptr;
+        } else {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
+                "min_varchar", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+                return nullptr;
+            }
+
+            return std::unique_ptr<MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
+                new MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(
+                    inputTypes, outputTypes, channels));
+        }
+    }
+
 protected:
-    ALWAYS_INLINE void ProcessRawInput(
+    MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
+            OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
+    {}
+
+    ALWAYS_INLINE void ProcessSingleInternal(
         AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override
     {
@@ -367,7 +401,7 @@ protected:
         SaveState(state);
     }
 
-    ALWAYS_INLINE void ProcessGroupRawInput(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
+    ALWAYS_INLINE void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
     {
         VarcharVector *vector = static_cast<VarcharVector *>(v);

@@ -78,7 +78,28 @@ bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector) {
         }
     }
 
-    return resRows == expectedRows && resNullCount == expNullCount;
+    if (resNullCount != expNullCount) {
+        return false;
+    }
+
+    // for double type we should not use double == double (which is used by multiset)
+    if constexpr (std::is_same_v<D, double>) {
+        if (resRows.size() != expectedRows.size()) {
+            return false;
+        }
+
+        auto it1 = resRows.begin();
+        auto it2 = expectedRows.begin();
+        for (; it1 != resRows.end(); ++it1, ++it2) {
+            if (fabs(*it1 - *it2) > DBL_EPSILON) {
+                return false;
+            }
+        }
+
+        return true;
+    } else {
+        return resRows == expectedRows;
+    }
 }
 
 bool CompareUnorderedStringRows(VarcharVector *resultVector, VarcharVector *expectedVector) {

@@ -19,6 +19,4 @@
 #include "operator/aggregation/aggregator/mask_column_assistant_aggregator.h"
 #include "operator/aggregation/aggregator/typed_mask_column_assistant_aggregator.h"
 #include "operator/aggregation/aggregator/first_aggregator.h"
-#include "operator/aggregation/aggregator/sum_decimal_aggregator.h"
-#include "operator/aggregation/aggregator/average_decimal_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

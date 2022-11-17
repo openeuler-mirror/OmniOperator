@@ -63,9 +63,11 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto inputTypes = DataTypes(inputDataTypesPtr).Instance();
         auto outputTypes = aggsOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
-            inputRaws[i], outputPartials[i]);
+            inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
-            throw OmniException("create non_group aggregation operator", "return nullptr when create aggregator ");
+            throw OmniException("OPERATOR_RUNTIME_ERROR",
+                "Unable to create aggregator " +
+                std::to_string(i) + " / " + std::to_string(this->aggregatorFactories.size()));
         }
         aggs.push_back(std::move(aggregator));
     }
@@ -119,7 +121,16 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             extractVectors.push_back(outputVecBatch->GetVector(aggOutputColsStart + i));
         }
         aggOutputColsStart += aggsOutputTypes[aggIdx].GetSize();
-        aggregator->ExtractValues(state, extractVectors, 0);
+
+        try {
+            aggregator->ExtractValues(state, extractVectors, 0);
+        } catch (const OmniException &oneException) {
+            // release VectorBatch when aggregator.ExtractValues throw exception
+            // when spark hash agg sum/avg decimal overflow, it will throw exception when
+            // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+            VectorHelper::FreeVecBatch(outputVecBatch);
+            throw oneException;
+        }
     }
 
     result.push_back(outputVecBatch);
