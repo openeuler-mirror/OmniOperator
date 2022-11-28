@@ -3327,6 +3327,52 @@ TEST(CodeGenTest, Mm3HashDecimal128)
     delete context;
 }
 
+TEST(CodeGenTest, Mm3HashBoolean)
+{
+    std::string funcStr = "mm3hash";
+    DataTypePtr retType = IntType();
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, BooleanType()));
+    args.push_back(new LiteralExpr(42, IntType()));
+    auto expr = GetFuncExpr(funcStr, args, IntType());
+
+    int64_t v1[1] = {true};
+    auto *vals = new int64_t[1];
+    vals[0] = reinterpret_cast<int64_t>(v1);
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    RowProjection rowProjection(*expr);
+    RowProjFunc func = rowProjection.Create(nullptr);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_INT);
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    bool isNull = false;
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+    int32_t expectedRes = Mm3Boolean(v1[0], false, 42, false);
+    EXPECT_EQ(res, expectedRes);
+
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] dataLength;
+    delete context;
+}
+
 TEST(CodeGenTest, Pmod)
 {
     // create expression objects

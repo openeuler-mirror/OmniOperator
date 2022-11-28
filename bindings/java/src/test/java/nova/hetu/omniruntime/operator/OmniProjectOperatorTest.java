@@ -23,6 +23,7 @@ import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.BooleanDataType;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
@@ -30,6 +31,7 @@ import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+import nova.hetu.omniruntime.vector.BooleanVec;
 
 import org.testng.annotations.Test;
 
@@ -127,16 +129,20 @@ public class OmniProjectOperatorTest {
         DoubleVec col2 = new DoubleVec(numRows);
         VarcharVec col3 = new VarcharVec(byteVal1.length + byteVal2.length, numRows);
         Decimal128Vec col4 = new Decimal128Vec(numRows);
-
+        BooleanVec col5 = new BooleanVec(numRows);
+        // col1 value
         col1.set(0, Integer.MIN_VALUE);
         col2.set(0, Double.MAX_VALUE);
         col3.set(0, byteVal1);
         col4.set(0, new long[]{Long.MIN_VALUE, Long.MAX_VALUE});
+        col5.set(0, true);
+        // col2 value
         col1.set(1, Integer.MAX_VALUE);
         col2.set(1, Double.MIN_VALUE);
         col3.set(1, byteVal2);
         col4.set(1, new long[]{Long.MAX_VALUE, Long.MIN_VALUE});
-        // null value
+        col5.set(1, false);
+        // col3 null value
         col1.set(2, Integer.MIN_VALUE);
         col1.setNull(2);
         col2.set(2, Double.MAX_VALUE);
@@ -144,14 +150,15 @@ public class OmniProjectOperatorTest {
         col3.setNull(2);
         col4.set(2, new long[]{Long.MAX_VALUE, Long.MAX_VALUE});
         col4.setNull(2);
+        col5.setNull(2);
 
         String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)",
-                "mm3hash:1(#3, 42:1)"};
+                "mm3hash:1(#3, 42:1)", "mm3hash:1(#4, 42:1)"};
         DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR,
-                Decimal128DataType.DECIMAL128};
+                Decimal128DataType.DECIMAL128, BooleanDataType.BOOLEAN};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         OmniOperator op = factory.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4);
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4, col5);
         for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
@@ -160,19 +167,24 @@ public class OmniProjectOperatorTest {
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), numRows);
         assertEquals(res.getVectors().length, exprs.length);
+        // col1 value check
         assertEquals(((IntVec) res.getVector(0)).get(0), 20);
         assertEquals(((IntVec) res.getVector(1)).get(0), -508695674);
         assertEquals(((IntVec) res.getVector(2)).get(0), 613818021);
         assertEquals(((IntVec) res.getVector(3)).get(0), 265773344);
+        assertEquals(((IntVec) res.getVector(4)).get(0), -559580957);
+        // col2 value check
         assertEquals(((IntVec) res.getVector(0)).get(1), 25);
         assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
         assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
         assertEquals(((IntVec) res.getVector(3)).get(1), -127557072);
+        assertEquals(((IntVec) res.getVector(4)).get(1), 933211791);
         // null value check
         assertEquals(((IntVec) res.getVector(0)).get(2), 15);
         assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
         assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
         assertEquals(((IntVec) res.getVector(3)).get(2), -300363099);
+        assertEquals(((IntVec) res.getVector(4)).get(2), 933211791);
 
         freeVecBatch(res);
         op.close();

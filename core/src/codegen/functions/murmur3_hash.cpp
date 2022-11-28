@@ -217,6 +217,14 @@ extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t
     return static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed));
 }
 
+extern "C" DLLEXPORT int32_t Mm3Boolean(bool val, bool isValNull, int32_t seed, bool isSeedNull)
+{
+    if (isSeedNull) {
+        seed = 0;
+    }
+    return static_cast<int32_t>(HashInt(static_cast<uint32_t>(val * !isValNull), static_cast<uint32_t>(seed)));
+}
+
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull)
 {
     if (isPrevHashValNull) {
