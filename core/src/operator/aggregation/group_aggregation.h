@@ -109,9 +109,8 @@ public:
     OmniStatus Init() override;
 
     OmniStatus Close() override;
-    void PreLoop(VectorBatch *vecBatch);
+
     void InLoop(VectorBatch *vecBatch, VectorBatch &groupVectors);
-    void PostLoop(VectorBatch *vecBatch) const;
 
     template <typename Serialize> void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, VectorBatch &groupVectors);
 
@@ -137,6 +136,7 @@ private:
     std::unique_ptr<ExecutionContext> executionContext;
     GroupByFieldHandleType groupByColumnsHandleType = GroupByFieldHandleType::serialize;
     std::unique_ptr<GroupbyColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
+    bool isInited = false;
 
     void FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result);
 

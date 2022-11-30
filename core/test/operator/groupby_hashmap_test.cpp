@@ -224,7 +224,7 @@ public:
     ~MaxState()
     {
         if (maxState != nullptr) {
-            delete maxState;
+            free(maxState);
             ResourceInfoCollector::GetInstance() -= StateResourceUsedBytes;
         }
     };
@@ -386,9 +386,9 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
         constexpr uint32_t total = 100;
         auto currentBytes = 0;
         // generate group by three column i(int),j(float),k(bool)
-        for (size_t i = 0; i < total; ++i) {
-            for (size_t j = 0; j < total; ++j) {
-                for (size_t k = 0; k < 2; ++k) {
+        for (uint32_t i = 0; i < total; ++i) {
+            for (uint32_t j = 0; j < total; ++j) {
+                for (uint32_t k = 0; k < 2; ++k) {
                     NotPodSharedClass data(i, static_cast<double>(j), k % 2 == 0);
                     data.SetResource();
                     // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
@@ -408,16 +408,16 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
 
         // the min value of all maxValue is 10 , every cell's value equal to key.i * key.j
         auto minMaxValue = 10;
-        for (size_t i = 0; i < total; ++i) {
-            for (size_t j = 0; j < total; ++j) {
-                for (size_t k = 0; k < 2; ++k) {
+        for (uint32_t i = 0; i < total; ++i) {
+            for (uint32_t j = 0; j < total; ++j) {
+                for (uint32_t k = 0; k < 2; ++k) {
                     NotPodSharedClass data(i, static_cast<double>(j), k % 2 == 0);
                     auto ret = hashMap.Emplace(data);
                     EXPECT_TRUE(not ret.IsInsert());
                     auto &s = ret.GetValue();
                     auto maxIndex = i * j + minMaxValue;
                     // simulate ProcessGroup interface
-                    for (size_t t = maxIndex; t > maxIndex - minMaxValue; --t) {
+                    for (uint32_t t = maxIndex; t > maxIndex - minMaxValue; --t) {
                         s.InputProcess(t);
                     }
                 }

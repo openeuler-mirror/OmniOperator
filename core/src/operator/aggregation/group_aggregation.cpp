@@ -168,6 +168,10 @@ void HashAggregationOperator::SetGroupByColumnsHandleType(GroupByFieldHandleType
 }
 OmniStatus HashAggregationOperator::Init()
 {
+    if (isInited) {
+        return OMNI_STATUS_NORMAL;
+    }
+    isInited = true;
     // put at beginning so that we do not allocate memory if there is error
     if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
         serialize = std::make_unique<decltype(serialize)::element_type>();
@@ -549,8 +553,7 @@ void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnInd
     vecBatch->SetVector(columnIndex, containerVector);
 }
 
-template <typename V, typename D>
-void FillValueImpl(Vector *v, int32_t rowIndex, const AggregateState &state)
+template <typename V, typename D> void FillValueImpl(Vector *v, int32_t rowIndex, const AggregateState &state)
 {
     if (state.val == nullptr) {
         static_cast<V *>(v)->SetValueNull(rowIndex);
@@ -627,8 +630,8 @@ void HashAggregationOperator::FillOutputResultVectors(const int32_t totalRowCoun
 }
 
 template <typename Deserialize>
-void HashAggregationOperator::TraverseHashmapToGetResults(
-    Deserialize &deserializeHashmap, const int32_t groupByColSize, std::vector<VectorBatch *> &result)
+void HashAggregationOperator::TraverseHashmapToGetResults(Deserialize &deserializeHashmap, const int32_t groupByColSize,
+    std::vector<VectorBatch *> &result)
 {
     const int32_t rowsPerBatch = result.at(0)->GetRowCount();
     const size_t aggNum = this->aggregators.size();
@@ -644,8 +647,8 @@ void HashAggregationOperator::TraverseHashmapToGetResults(
             lambdaRowIndex = 0;
             curBatch = result[curBatchId++];
         }
-        std::remove_reference<decltype(deserializeHashmap)>::type::element_type::ParseKeyToCols(
-            key, curBatch, 0, groupByColSize, lambdaRowIndex);
+        std::remove_reference<decltype(deserializeHashmap)>::type::element_type::ParseKeyToCols(key, curBatch, 0,
+            groupByColSize, lambdaRowIndex);
         ++lambdaRowIndex;
     });
 
