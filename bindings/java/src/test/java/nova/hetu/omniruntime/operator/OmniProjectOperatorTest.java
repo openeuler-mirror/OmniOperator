@@ -130,19 +130,17 @@ public class OmniProjectOperatorTest {
         VarcharVec col3 = new VarcharVec(byteVal1.length + byteVal2.length, numRows);
         Decimal128Vec col4 = new Decimal128Vec(numRows);
         BooleanVec col5 = new BooleanVec(numRows);
-        // col1 value
         col1.set(0, Integer.MIN_VALUE);
         col2.set(0, Double.MAX_VALUE);
         col3.set(0, byteVal1);
         col4.set(0, new long[]{Long.MIN_VALUE, Long.MAX_VALUE});
         col5.set(0, true);
-        // col2 value
         col1.set(1, Integer.MAX_VALUE);
         col2.set(1, Double.MIN_VALUE);
         col3.set(1, byteVal2);
         col4.set(1, new long[]{Long.MAX_VALUE, Long.MIN_VALUE});
         col5.set(1, false);
-        // col3 null value
+        // null value
         col1.set(2, Integer.MIN_VALUE);
         col1.setNull(2);
         col2.set(2, Double.MAX_VALUE);
