@@ -222,7 +222,8 @@ extern "C" DLLEXPORT int32_t Mm3Boolean(bool val, bool isValNull, int32_t seed, 
     if (isSeedNull) {
         seed = 0;
     }
-    return static_cast<int32_t>(HashInt(static_cast<uint32_t>(val * !isValNull), static_cast<uint32_t>(seed)));
+    uint32_t intVal = val ? 1 : 0;
+    return static_cast<int32_t>(HashInt(static_cast<uint32_t>(intVal * !isValNull), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashValNull, int64_t val, bool isValNull)
