@@ -1380,6 +1380,8 @@ TEST(FunctionTest, ConcatStrStr)
 // Cast
 TEST(FunctionTest, CastStringToDate)
 {
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
     // year-month-day
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
@@ -1389,8 +1391,41 @@ TEST(FunctionTest, CastStringToDate)
     EXPECT_EQ(result, -1);
     result = CastStringToDate(contextPtr, "1980-01-01", 10, false);
     EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980-01-01 12345", 16, false);
+    EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980-1-1", 8, false);
+    EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980-1-01", 9, false);
+    EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980-1-1 123", 12, false);
+    EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980-01-1", 9, false);
+    EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980-01", 7, false);
+    EXPECT_EQ(result, 3652);
+    result = CastStringToDate(contextPtr, "1980", 4, false);
+    EXPECT_EQ(result, 3652);
     result = CastStringToDate(contextPtr, "1453-05-29", 10, false);
     EXPECT_EQ(result, -188682);
+    result = CastStringToDate(contextPtr, "   1453-05-29   ", 16, false);
+    EXPECT_EQ(result, -188682);
+    result = CastStringToDate(contextPtr, "   1 453-05-29   ", 16, false);
+    EXPECT_EQ(result, -1);
+
+    result = CastStringToDate(contextPtr, "1996-09  ", 9, false);
+    EXPECT_EQ(result, 9740);
+    result = CastStringToDate(contextPtr, "1996-09-30", 10, false);
+    EXPECT_EQ(result, 9769);
+
+    bool isNull = false;
+    result = CastStringToDateRetNull(&isNull, "   1453- 05-29    ", 16);
+    EXPECT_EQ(result, -1);
+    result = CastStringToDateRetNull(&isNull, "1453-05-29", 10);
+    EXPECT_EQ(result, -188682);
+    result = CastStringToDateRetNull(&isNull, "   1453-05-29   ", 16);
+    EXPECT_EQ(result, -188682);
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
     delete context;
 }
 

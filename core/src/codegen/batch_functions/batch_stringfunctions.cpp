@@ -6,6 +6,7 @@
 #include <regex>
 #include "type/data_operations.h"
 #include "batch_stringfunctions.h"
+#include "type/date32.h"
 
 #ifdef _WIN32
 #else
@@ -118,40 +119,39 @@ extern "C" DLLEXPORT void BatchCastStringToDate(int64_t contextPtr, uint8_t **st
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    std::string regexToMatch = R"(\d{4}-\d{2}-\d{2}$)";
-    std::regex re = std::regex(regexToMatch);
-    std::string s;
-    int32_t i1 = 5;
-    int32_t i2 = 8;
-    int yr, mnth, day;
-    int base = static_cast<int32_t>('0');
-    struct std::tm epoch;
-    struct std::tm t;
-    std::time_t epochTime;
-    std::time_t desiredTime;
-
-    for (int i = 0; i < rowCnt; ++i) {
-        if (isAnyNull[i]) {
-            output[i] = 0;
-            continue;
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    int32_t result;
+    if (engineType != EngineType::Spark) {
+        for (int i = 0; i < rowCnt; ++i) {
+            if (isAnyNull[i]) {
+                output[i] = 0;
+                continue;
+            }
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (!regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
+                SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
+                output[i] = 0;
+                continue;
+            }
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                SetError(contextPtr, "Value cannot be cast to date: " + s);
+                continue;
+            }
+            output[i] = result;
         }
-        s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
-        if (!regex_match(s, re)) {
-            SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
-            output[i] = 0;
-            continue;
+    } else {
+        for (int i = 0; i < rowCnt; ++i) {
+            if (isAnyNull[i]) {
+                output[i] = 0;
+                continue;
+            }
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                SetError(contextPtr, "Value cannot be cast to date: " + s);
+                continue;
+            }
+            output[i] = result;
         }
-
-        yr = THOUSANDS * (str[i][THOU] - base) + HUNDREDS * (str[i][HUN] - base) + TENS * (str[i][TEN] - base) +
-            (str[i][ONE] - base);
-        mnth = TENS * (str[i][i1] - base) + (str[i][i1 + 1] - base); // compute month
-        day = TENS * (str[i][i2] - base) + (str[i][i2 + 1] - base);  // compute day
-
-        epoch = { 0, 0, 0, 1, 1, 70 };
-        t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
-        epochTime = std::mktime(&epoch);
-        desiredTime = std::mktime(&t);
-        output[i] = static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
     }
 }
 
@@ -467,37 +467,35 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNull(bool *isNull, uint8_t **s
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    std::string regexToMatch = R"(\d{4}-\d{2}-\d{2}$)";
-    std::regex re = std::regex(regexToMatch);
-    std::string s;
-    int32_t i1 = 5;
-    int32_t i2 = 8;
-    int yr, mnth, day;
-    int base = static_cast<int32_t>('0');
-    struct std::tm epoch;
-    struct std::tm t;
-    std::time_t epochTime;
-    std::time_t desiredTime;
-
-    for (int i = 0; i < rowCnt; ++i) {
-        s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
-        if (!regex_match(s, re)) {
-            output[i] = 0;
-            isNull[i] = true;
-            continue;
+    int32_t result;
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    if (engineType == EngineType::Spark) {
+        for (int i = 0; i < rowCnt; ++i) {
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                output[i] = 0;
+                isNull[i] = true;
+                continue;
+            }
+            output[i] = result;
+            isNull[i] = false;
         }
-
-        yr = THOUSANDS * (str[i][THOU] - base) + HUNDREDS * (str[i][HUN] - base) + TENS * (str[i][TEN] - base) +
-            (str[i][ONE] - base);
-        mnth = TENS * (str[i][i1] - base) + (str[i][i1 + 1] - base); // compute month
-        day = TENS * (str[i][i2] - base) + (str[i][i2 + 1] - base);  // compute day
-
-        epoch = { 0, 0, 0, 1, 1, 70 };
-        t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
-        epochTime = std::mktime(&epoch);
-        desiredTime = std::mktime(&t);
-        isNull[i] = false;
-        output[i] = static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
+    } else {
+        for (int i = 0; i < rowCnt; ++i) {
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (!regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
+                output[i] = 0;
+                isNull[i] = true;
+                continue;
+            }
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                output[i] = 0;
+                isNull[i] = true;
+                continue;
+            }
+            output[i] = result;
+            isNull[i] = false;
+        }
     }
 }
 
