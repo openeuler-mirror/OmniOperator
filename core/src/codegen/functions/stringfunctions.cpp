@@ -11,6 +11,7 @@
 #include "codegen/functions/decimalfunctions.h"
 #include "util/engine.h"
 #include "stringfunctions.h"
+#include "type/data_operations.h"
 
 #ifdef _WIN32
 #else
@@ -405,24 +406,20 @@ extern DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, in
         return 0;
     }
     int32_t result;
-    regex r("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
-    string s = string(str, strLen);
-    if (!regex_match(s, r)) {
+    std::string s(str, strLen);
+    int status = StringToInt(s, result);
+    if (status == -1) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
-    try {
-        result = stoi(s);
-    } catch (std::exception &e) {
+    if (status == 1) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
     return result;
 }
 
@@ -432,24 +429,20 @@ extern DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, i
         return 0;
     }
     int64_t result;
-    regex r("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
-    string s = string(str, strLen);
-    if (!regex_match(s, r)) {
+    std::string s(str, strLen);
+    int status = StringToLong(s, result);
+    if (status == -1) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
-    try {
-        result = stol(s);
-    } catch (std::exception &e) {
+    if (status == 1) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
     return result;
 }
 
@@ -459,18 +452,15 @@ extern DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *str, 
         return 0;
     }
     double result;
-    regex r("[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
-    string s = string(str, strLen);
-    if (!regex_match(s, r)) {
+    std::string s(str, strLen);
+    int status = StringToDouble(s, result);
+    if (status == -1) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
-    try {
-        result = stod(s);
-    } catch (std::exception &e) {
+    if (status == 1) {
         ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
         SetError(contextPtr, errorMessage.str());
@@ -687,56 +677,27 @@ extern DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPtr, b
 extern DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *str, int32_t strLen)
 {
     int32_t result;
-    regex r("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
-    string s = string(str, strLen);
-    if (!regex_match(s, r)) {
+    if (StringToInt(std::string(str, strLen), result) != 0) {
         *isNull = true;
         return 0;
     }
-
-    try {
-        result = stoi(s);
-    } catch (std::exception &e) {
-        *isNull = true;
-        return 0;
-    }
-
     return result;
 }
 
 extern DLLEXPORT int64_t CastStringToLongRetNull(bool *isNull, const char *str, int32_t strLen)
 {
     int64_t result;
-    regex r("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
-    string s = string(str, strLen);
-    if (!regex_match(s, r)) {
+    if (StringToLong(std::string(str, strLen), result) != 0) {
         *isNull = true;
         return 0;
     }
-
-    try {
-        result = stol(s);
-    } catch (std::exception &e) {
-        *isNull = true;
-        return 0;
-    }
-
     return result;
 }
 
 extern DLLEXPORT double CastStringToDoubleRetNull(bool *isNull, const char *str, int32_t strLen)
 {
     double result;
-    std::regex r("[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
-    string s = string(str, strLen);
-    if (!regex_match(s, r)) {
-        *isNull = true;
-        return 0;
-    }
-
-    try {
-        result = stod(s);
-    } catch (std::exception &e) {
+    if (StringToDouble(std::string(str, strLen), result) != 0) {
         *isNull = true;
         return 0;
     }

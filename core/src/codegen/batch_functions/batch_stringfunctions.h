@@ -90,11 +90,29 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
 extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, double *output, int32_t rowCnt);
+
 extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int64_t *output,
+    int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDoubleRetNull(bool *isNull, uint8_t **str, int32_t *strLen, double *output,
+    int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchToUpperStr(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt);

@@ -154,6 +154,18 @@ std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
             OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(BatchCastStringToDateRetNull), castFnStrRetNull, {}, { OMNI_VARCHAR },
             OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchCastStringToIntRetNull), castFnStrRetNull, {}, { OMNI_VARCHAR },
+            OMNI_INT, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchCastStringToLongRetNull), castFnStrRetNull, {}, { OMNI_VARCHAR },
+            OMNI_LONG, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchCastStringToDoubleRetNull), castFnStrRetNull, {}, { OMNI_VARCHAR },
+            OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchCastStringToInt), castFnStr, {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA,
+            true),
+        Function(reinterpret_cast<void *>(BatchCastStringToLong), castFnStr, {}, { OMNI_VARCHAR }, OMNI_LONG,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchCastStringToDouble), castFnStr, {}, { OMNI_VARCHAR }, OMNI_DOUBLE,
+            INPUT_DATA, true),
         Function(reinterpret_cast<void *>(BatchCastStrWithDiffWidthsRetNull), castFnStrRetNull, {}, { OMNI_VARCHAR },
             OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true) };
     return batchStringFnRegistry;

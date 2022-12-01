@@ -2,9 +2,10 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch string functions implementation
  */
-#include "batch_stringfunctions.h"
 #include <iostream>
 #include <regex>
+#include "type/data_operations.h"
+#include "batch_stringfunctions.h"
 
 #ifdef _WIN32
 #else
@@ -376,6 +377,90 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
     }
 }
 
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int32_t *output, int32_t rowCnt)
+{
+    int32_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        int status = StringToInt(s, result);
+        if (status == -1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        if (status == 1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t rowCnt)
+{
+    int64_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        int status = StringToLong(s, result);
+        if (status == -1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        if (status == 1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, double *output, int32_t rowCnt)
+{
+    double result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        int status = StringToDouble(s, result);
+        if (status == -1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        if (status == 1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
 extern "C" DLLEXPORT void BatchCastStringToDateRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
     int32_t rowCnt)
 {
@@ -578,6 +663,57 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8
             status = DecimalOperations::IsOverflows(result, outPrecision);
         }
         if (status != SUCCESS) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
+    int32_t rowCnt)
+{
+    int32_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (StringToInt(s, result) != 0) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int64_t *output,
+    int32_t rowCnt)
+{
+    int64_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (StringToLong(s, result) != 0) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDoubleRetNull(bool *isNull, uint8_t **str, int32_t *strLen, double *output,
+    int32_t rowCnt)
+{
+    double result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (StringToDouble(s, result) != 0) {
             output[i] = 0;
             isNull[i] = true;
             continue;
@@ -883,14 +1019,14 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
-            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t* {
+            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t * {
                 outLen[i] = strLen[i];
                 return str[i];
             });
     } else {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
             output, outLen, rowCnt,
-            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
                 auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
                     strLen[index], reinterpret_cast<const char *>(replaceStr[index]), replaceLen[index], hasErr,
                     outLen + index);
@@ -905,13 +1041,13 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
-            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
                 outLen[index] = strLen[index];
                 return str[index];
             });
     } else {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
-            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
                 auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
                     strLen[index], reinterpret_cast<const char *>(EMPTY), 0, hasErr, outLen + index);
                 return reinterpret_cast<uint8_t *>(const_cast<char *>(result));
