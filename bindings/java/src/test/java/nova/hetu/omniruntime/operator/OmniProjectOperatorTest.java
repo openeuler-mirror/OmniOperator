@@ -153,7 +153,7 @@ public class OmniProjectOperatorTest {
         col5.setNull(2);
 
         String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)",
-                "mm3hash:1(#3, 42:1)", "mm3hash:1(#4, 42:4)"};
+                "mm3hash:1(#3, 42:1)", "mm3hash:1(#4, 42:1)"};
         DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR,
                 Decimal128DataType.DECIMAL128, BooleanDataType.BOOLEAN};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
