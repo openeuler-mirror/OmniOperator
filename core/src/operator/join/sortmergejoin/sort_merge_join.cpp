@@ -60,7 +60,8 @@ int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPages
     DynamicPagesIndex *bufferedTblPagesIndex, JoinType joinType)
 {
     switch (joinType) {
-        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_INNER: {
+        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
             if (streamedTblPagesIndex->IsEmptyBatch() || bufferedTblPagesIndex->IsEmptyBatch()) {
                 return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
             }

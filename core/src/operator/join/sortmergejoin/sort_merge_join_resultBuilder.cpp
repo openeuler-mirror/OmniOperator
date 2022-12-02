@@ -325,6 +325,15 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
             }
             preLeftTableRowMatchedOut = true;
             break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
+            // left semi join only needs to output the data of the left table
+            if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                // todo:: handle left semi result
+                buildRowCount++;
+            }
+            preLeftTableRowMatchedOut = true;
+            break;
+        }
         case JoinType::OMNI_JOIN_TYPE_LEFT:
             // JOIN_NULL_FLAG row direct output && filter match direct output, pad no NULL
             if (IsNullFlagBatchAndRow(leftBatchId, leftRowId) || IsNullFlagBatchAndRow(rightBatchId, rightRowId) ||

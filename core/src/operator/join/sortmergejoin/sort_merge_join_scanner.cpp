@@ -35,6 +35,9 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
         case JoinType::OMNI_JOIN_TYPE_INNER:
             InnerJoin();
             break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
+            InnerJoin(false);
+            break;
         case JoinType::OMNI_JOIN_TYPE_LEFT:
             LeftOuterJoin();
             break;
@@ -63,7 +66,7 @@ int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatc
     return 0;
 }
 
-void SortMergeJoinScanner::InnerJoin()
+void SortMergeJoinScanner::InnerJoin(bool isSavedSameKeyForBufferedTable)
 {
     if (preStatus->NewStreamedDataAdded()) { // streamedCode == NEED_DATA
         // new streamed add data
@@ -80,7 +83,7 @@ void SortMergeJoinScanner::InnerJoin()
         if (PreKeyMatched()) {
             // The new streamed row has the same join key as the previous row, so return the same matches.
             SavePrevMatchingRows(true);
-            return RunInnerJoin();
+            return RunInnerJoin(isSavedSameKeyForBufferedTable);
         }
     } else if (preStatus->NewBufferedDataAdded()) { // bufferedCode == NEED_DATA
         // new buffered add data
@@ -103,13 +106,13 @@ void SortMergeJoinScanner::InnerJoin()
         }
         if (PreKeyMatched()) {
             SavePrevMatchingRows(true);
-            return RunInnerJoin();
+            return RunInnerJoin(isSavedSameKeyForBufferedTable);
         }
     }
-    if (!FindMatchingRows()) {
+    if (!FindMatchingRows(isSavedSameKeyForBufferedTable)) {
         return;
     }
-    return RunInnerJoin();
+    return RunInnerJoin(isSavedSameKeyForBufferedTable);
 }
 
 void SortMergeJoinScanner::LeftOuterJoin()
@@ -209,7 +212,7 @@ void SortMergeJoinScanner::FullOuterJoin()
     return RunFullOuterJoin();
 }
 
-void SortMergeJoinScanner::RunInnerJoin()
+void SortMergeJoinScanner::RunInnerJoin(bool isSaveSameKeyForBufferedTable)
 {
     if (!AdvancedStreamedWithNullFreeJoinKey()) {
         preStatus->TransToNeedStreamedData(HasResult());
@@ -217,12 +220,12 @@ void SortMergeJoinScanner::RunInnerJoin()
     }
     if (PreKeyMatched()) {
         SavePrevMatchingRows(true);
-        return RunInnerJoin();
+        return RunInnerJoin(isSaveSameKeyForBufferedTable);
     }
-    if (!FindMatchingRows()) {
+    if (!FindMatchingRows(isSaveSameKeyForBufferedTable)) {
         return;
     }
-    return RunInnerJoin();
+    return RunInnerJoin(isSaveSameKeyForBufferedTable);
 }
 
 void SortMergeJoinScanner::RunLeftOuterJoin()
@@ -258,7 +261,7 @@ void SortMergeJoinScanner::RunFullOuterJoin()
     return RunFullOuterJoin();
 }
 
-bool SortMergeJoinScanner::FindMatchingRows()
+bool SortMergeJoinScanner::FindMatchingRows(bool isSavedSameKeyForBufferedTable)
 {
     auto comp = FindNextMatchPos();
     if (NeedBufferedData()) {
@@ -275,7 +278,7 @@ bool SortMergeJoinScanner::FindMatchingRows()
         return false;
     }
 
-    BufferMatchingRows();
+    BufferMatchingRows(isSavedSameKeyForBufferedTable);
     return true;
 }
 
@@ -477,17 +480,21 @@ bool SortMergeJoinScanner::AdvancedBufferedJoinKey()
     return false;
 }
 
-void SortMergeJoinScanner::BufferMatchingRows()
+void SortMergeJoinScanner::BufferMatchingRows(bool isSavedSameKeyForBufferedTable)
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
     preBufferedValueAddress.clear();
-    int64_t bufferedValueAddr;
-    do {
+    int64_t bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
+    preBufferedValueAddress.push_back(bufferedValueAddr);
+    while (AdvancedBufferedToRowWithNullFreeJoinKey() && ((latestCompareStat = CompareCurRowKeys()) == 0))
+    {
+        // the same key for buffered table
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        preBufferedValueAddress.push_back(bufferedValueAddr);
-        preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
-    } while (AdvancedBufferedToRowWithNullFreeJoinKey() && ((latestCompareStat = CompareCurRowKeys()) == 0));
+        if (isSavedSameKeyForBufferedTable) {
+            preBufferedValueAddress.push_back(bufferedValueAddr);
+        }
+    }
     SavePrevMatchingRows(false);
 }
 
