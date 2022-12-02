@@ -319,6 +319,7 @@ TEST(BatchFunctionTest, Mm3Hash)
     double doubleVal[1] = {123.456};
     int64_t decimal64Val[1] = {-2147483648L};
     uint8_t *strVal[1];
+    bool boolVal[1] = {true};
     string str = "hello world";
     strVal[0] = reinterpret_cast<uint8_t *>(const_cast<char *>(str.c_str()));
     int32_t strLen[1] = {11};
@@ -348,6 +349,9 @@ TEST(BatchFunctionTest, Mm3Hash)
 
     BatchMm3Decimal128(decimal128Val, 38, 20, isValNull, seed, isSeedNull, resIsNull, output, rowCnt);
     EXPECT_EQ(output[0], 308064329);
+
+    BatchMm3Boolean(boolVal, isValNull, seed, isSeedNull, resIsNull, output, rowCnt);
+    EXPECT_EQ(output[0], -559580957);
 }
 
 

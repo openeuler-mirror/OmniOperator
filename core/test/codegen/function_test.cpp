@@ -237,6 +237,11 @@ TEST(FunctionTest, Mm3String)
     EXPECT_EQ(Mm3String("hello world", 11, false, 42, false), -1528836094);
 }
 
+TEST(FunctionTest, Mm3Boolean)
+{
+    EXPECT_EQ(Mm3Boolean(true, false, 42, false), -559580957);
+}
+
 /*
  * Math functions:
  */

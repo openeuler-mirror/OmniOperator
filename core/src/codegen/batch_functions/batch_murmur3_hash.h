@@ -39,6 +39,9 @@ extern "C" DLLEXPORT void BatchMm3Decimal64(int64_t *val, int32_t precision, int
 
 extern "C" DLLEXPORT void BatchMm3Decimal128(Decimal128 *x, int32_t precision, int32_t scale, bool *isValNull,
     int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchMm3Boolean(bool *val, bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull,
+    int32_t *output, int32_t rowCnt);
 }
 }
 
