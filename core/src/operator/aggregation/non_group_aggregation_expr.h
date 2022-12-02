@@ -1,0 +1,56 @@
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: Hash Aggregation WithExpr Header
+ */
+
+#ifndef NON_GROUP_AGGREGATION_EXPR_H
+#define NON_GROUP_AGGREGATION_EXPR_H
+
+#include "operator/operator_factory.h"
+#include "operator/projection/projection.h"
+#include "operator/aggregation/non_group_aggregation.h"
+#include "type/data_types.h"
+
+namespace omniruntime {
+namespace op {
+class AggregationWithExprOperatorFactory : public OperatorFactory {
+public:
+    AggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+        std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OverflowConfig &overflowConfig);
+
+    ~AggregationWithExprOperatorFactory() override;
+
+    Operator *CreateOperator() override;
+
+private:
+    std::unique_ptr<DataTypes> sourceTypes;
+    std::vector<int32_t> projectCols;
+    std::vector<std::unique_ptr<RowProjection>> rowProjections;
+    std::vector<RowProjFunc> projectFuncs;
+    AggregationOperatorFactory *aggOperatorFactory;
+};
+
+class AggregationWithExprOperator : public Operator {
+public:
+    AggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
+        std::vector<RowProjFunc> &projectFuncs, AggregationOperator *AggOperator);
+
+    ~AggregationWithExprOperator() override;
+
+    int32_t AddInput(omniruntime::vec::VectorBatch *inputVecBatch) override;
+
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatches) override;
+
+    OmniStatus Close() override;
+
+private:
+    DataTypes sourceTypes;
+    std::vector<int32_t> projectCols;
+    std::vector<RowProjFunc> projectFuncs;
+    AggregationOperator *aggOperator;
+};
+}
+}
+#endif // NON_GROUP_AGGREGATION_EXPR_H

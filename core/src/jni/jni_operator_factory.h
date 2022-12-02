@@ -215,6 +215,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
         jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws, jbooleanArray jOutputPartials,
         jstring jOperatorConfig);
 
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFactory_createAggregationWithExprOperatorFactory(
+        JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
+jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws, jbooleanArray jOutputPartials,
+        jstring jOperatorConfig);
+
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory
  * Method:    createTopNWithExprOperatorFactory

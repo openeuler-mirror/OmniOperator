@@ -38,7 +38,7 @@ void OperatorUtil::CreateProjectFuncs(const DataTypes &inputTypes,
 void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
     omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-    std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig)
+    std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs,  const OverflowConfig &overflowConfig)
 {
     auto &inputTypeVec = inputTypes.Get();
     int32_t newProjectCol = 0;
@@ -60,7 +60,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
             // expr col
             projectCols.push_back(projectCol);
             allCols.push_back(newProjectCol++);
-            RowProjFunc func = rowProjection->Create(overflowConfig);
+            RowProjFunc func = rowProjection->Create(const_cast<OverflowConfig *>(&overflowConfig));
             projectFuncs.push_back(func);
             DataTypePtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
