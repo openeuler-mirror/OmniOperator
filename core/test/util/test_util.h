@@ -156,9 +156,13 @@ void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t 
 void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
     std::vector<uint8_t *> &result, std::vector<int32_t> &outLen);
 
-void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result);
-
-void AssertBoolEquals(std::vector<bool> &expected, bool *result);
+template<typename T>
+void AssertEquals(const std::vector<T> &expected, const std::vector<T> &result)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
 
 std::string GenerateSpillPath();
 

@@ -2145,6 +2145,29 @@ TEST(FunctionTest, CastStringToDouble)
     s = "1.111e-202";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 1.111e-202);
+    s="1.7976931348623157E308";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 1.7976931348623157E308);
+
+    s="0";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+
+    s="1.7976931348623157E2000";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    string message = context->GetError();
+    EXPECT_EQ(message, "Cannot cast '1.7976931348623157E2000' to DOUBLE. Value too large.");
+
+    s="1.7976931348623157E-2000";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    message = context->GetError();
+    EXPECT_EQ(message, "Cannot cast '1.7976931348623157E-2000' to DOUBLE. Value too large.");
+
+    s="1.7976931348623157E-200.0";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    message = context->GetError();
+    EXPECT_EQ(message, "Cannot cast '1.7976931348623157E-200.0' to DOUBLE. Value is not a number.");
+
     delete context;
 }
 
@@ -2396,6 +2419,94 @@ TEST(FunctionTest, DecimalDivOpeartion)
     right = Decimal128("-99999999999999999999999999999999999999");
     DivDec128Dec128Dec128(contextPtr, right.HighBits(), right.LowBits(), 38, 16, 0, 999999, 22, 6, 38, 16, &high, &low);
     EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
+TEST(FunctionTest, CastStringToNumericalType)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    // String To Int
+    string s = "123";
+    int32_t intResult = CastStringToInt(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(intResult, 123);
+
+    s = "-123";
+    intResult = CastStringToInt(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(intResult, -123);
+
+    s = "0";
+    intResult = CastStringToInt(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(intResult, 0);
+
+    s = "-2147483648";
+    intResult = CastStringToInt(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(intResult, -2147483648);
+
+    s = "2147483647";
+    intResult = CastStringToInt(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(intResult, 2147483647);
+
+    // String To Long
+    s = "123";
+    int64_t longResult = CastStringToLong(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(longResult, 123);
+
+    s = "-123";
+    longResult = CastStringToLong(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(longResult, -123);
+
+    s = "0";
+    longResult = CastStringToLong(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(longResult, 0);
+
+    s = "-9223372036854775808";
+    longResult = CastStringToLong(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(longResult, INT64_MIN);
+
+    s = "9223372036854775807";
+    longResult = CastStringToLong(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(longResult, 9223372036854775807LL);
+
+    // String To Long
+    s = "123.123";
+    double doubleResult = CastStringToDouble(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(doubleResult, 123.123);
+
+    s = "-123.123";
+    doubleResult = CastStringToDouble(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(doubleResult, -123.123);
+
+    s = "0.0";
+    doubleResult = CastStringToDouble(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(doubleResult, 0);
+
+    s = "123e-123";
+    doubleResult = CastStringToDouble(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(doubleResult, 123e-123);
+
+    s = "-123e123";
+    doubleResult = CastStringToDouble(contextPtr, s.c_str(), s.size(), false);
+    EXPECT_EQ(doubleResult, -123e123);
+
+    // Overflow
+    s = "2147483648";
+    intResult = CastStringToInt(contextPtr, s.c_str(), s.length(), false);
+    EXPECT_EQ(context->GetError(), "Cannot cast '2147483648' to INTEGER. Value too large.");
+
+    s = "-2147483649";
+    intResult = CastStringToInt(contextPtr, s.c_str(), s.length(), false);
+    EXPECT_EQ(context->GetError(), "Cannot cast '-2147483649' to INTEGER. Value too large.");
+
+    s = "-9223372036854775809";
+    longResult = CastStringToLong(contextPtr, s.c_str(), s.length(), false);
+    EXPECT_EQ(context->GetError(), "Cannot cast '-9223372036854775809' to BIGINT. Value too large.");
+
+    s = "9223372036854775808";
+    longResult = CastStringToLong(contextPtr, s.c_str(), s.length(), false);
+    EXPECT_EQ(context->GetError(), "Cannot cast '9223372036854775808' to BIGINT. Value too large.");
+
     delete context;
 }
 

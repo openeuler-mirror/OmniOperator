@@ -46,6 +46,18 @@ extern "C" DLLEXPORT void BatchNotEqualDecimal128(Decimal128 *left, int32_t xPre
 extern "C" DLLEXPORT void BatchAbsDecimal128(Decimal128 *x, int32_t xPrecision, int32_t xScale, bool *isNull,
     Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchRoundDecimal128(int64_t contextPtr, Decimal128 *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, bool *isNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchRoundDecimal64(int64_t contextPtr, int64_t *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchRoundDecimal128WithoutRound(int64_t contextPtr, Decimal128 *x, int32_t xPrecision,
+    int32_t xScale, bool *isNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchRoundDecimal64WithoutRound(int64_t contextPtr, int64_t *x, int32_t xPrecision,
+    int32_t xScale, bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
 // decimal64 compare
 extern "C" DLLEXPORT void BatchDecimal64Compare(int64_t *x, int32_t xPrecision, int32_t xScale, int64_t *y,
     int32_t yPrecision, int32_t yScale, int32_t *output, int32_t rowCnt);
@@ -119,6 +131,12 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLong(int64_t contextPtr, Decimal1
 
 extern "C" DLLEXPORT void BatchCastDecimal128ToDouble(Decimal128 *x, int32_t precision, int32_t scale, bool *isAnyNull,
     double *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchRoundDecimal128RetNull(bool *isNull, Decimal128 *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchRoundDecimal64RetNull(bool *isNull, int64_t *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 // Cast Function Return Null
 extern "C" DLLEXPORT void BatchCastDecimal64To64RetNull(bool *isNull, int64_t *x, int32_t precision, int32_t scale,

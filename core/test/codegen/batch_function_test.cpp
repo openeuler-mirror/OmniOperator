@@ -1397,7 +1397,7 @@ TEST(BatchFunctionTest, LengthStrZh)
     bool isAnyNull[] = {false, false};
     BatchLengthStr(strAddr.data(), inputLen.data(), isAnyNull, outLen.data(), rowCnt);
     std::vector<int64_t> expected { 37, 15 };
-    AssertLongEquals(expected, outLen);
+    AssertEquals(expected, outLen);
 }
 
 
@@ -1427,7 +1427,7 @@ TEST(BatchFunctionTest, LikeStrZh)
     BatchLikeStr(strAddr.data(), inputLen.data(), patternAddr.data(), patternLen.data(), isAnyNull, output, rowCnt);
 
     std::vector<bool> expected { true, false, true, false };
-    AssertBoolEquals(expected, output);
+    AssertEquals(expected, std::vector<bool>(output, output + rowCnt));
 }
 
 TEST(BatchFunctionTest, LikeCharZh)

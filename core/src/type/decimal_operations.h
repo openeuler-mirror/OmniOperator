@@ -62,7 +62,8 @@ static std::array<__int128_t, MAX_PRECISION> GetPowersOfFive()
     }
     return powersOfFive;
 }
-static std::array<__int128_t, MAX_PRECISION> POWERS_OF_FIVE_LONG =  GetPowersOfFive();
+
+static std::array<__int128_t, MAX_PRECISION> POWERS_OF_FIVE_LONG = GetPowersOfFive();
 
 static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
     1,                     // 0 / 10^0
@@ -1268,6 +1269,62 @@ public:
         }
         result = input.HighBits() < 0 ? -input.LowBits() : input.LowBits();
         return SUCCESS;
+    }
+
+    static inline OpStatus Round(Decimal128 input, int32_t inScale, int32_t outPrecision, int32_t outScale,
+        int32_t round, Decimal128 &result)
+    {
+        int32_t realRound = inScale - round;
+        if (realRound <= 0) {
+            if (round >= inScale) {
+                result = input;
+                return SUCCESS;
+            }
+        } else {
+            if (realRound > 37) {
+                return OP_OVERFLOW;
+            }
+            __int128_t tenOfScale = POWERS_OF_TEN[realRound];
+            __int128_t temp;
+            if (__builtin_add_overflow(input.ToInt128(), tenOfScale / 2, &temp)) {
+                return OP_OVERFLOW;
+            }
+            temp /= tenOfScale;
+            temp *= POWERS_OF_TEN[realRound - inScale + outScale];
+            if (IsOverflows(Decimal128(temp), outPrecision) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            result = Decimal128(temp);
+            return SUCCESS;
+        }
+    }
+
+    static inline OpStatus Round(int64_t input, int32_t inScale, int32_t outPrecision, int32_t outScale, int32_t round,
+        int64_t &result)
+    {
+        int32_t realRound = inScale - round;
+        if (realRound <= 0) {
+            if (round >= inScale) {
+                result = input;
+                return SUCCESS;
+            }
+        } else {
+            if (realRound > 17) {
+                return OP_OVERFLOW;
+            }
+            int64_t tenOfScale = POWERS_OF_TEN[realRound];
+            int64_t temp;
+            if (__builtin_saddl_overflow(input, tenOfScale / 2, &temp)) {
+                return OP_OVERFLOW;
+            }
+            temp /= tenOfScale;
+            temp *= POWERS_OF_TEN[realRound - inScale + outScale];
+            if (IsOverflows(temp, outPrecision) != SUCCESS) {
+                return OP_OVERFLOW;
+            }
+            result = temp;
+            return SUCCESS;
+        }
     }
 
     static inline OpStatus UnscaledDecimal128ToLong(Decimal128 decimal, int64_t &result)
