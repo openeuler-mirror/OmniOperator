@@ -288,10 +288,10 @@ VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, co
     }
 
     int32_t originVecCount = inputVecBatch->GetVectorCount();
-    int64_t valueAddresses[vecCount];
-    int64_t valueNulls[vecCount];
-    int64_t valueOffsets[vecCount];
-    int64_t dictVectorAddrs[vecCount];
+    int64_t valueAddresses[originVecCount];
+    int64_t valueNulls[originVecCount];
+    int64_t valueOffsets[originVecCount];
+    int64_t dictVectorAddrs[originVecCount];
     for (int32_t i = 0; i < originVecCount; i++) {
         Vector *inputVector = inputVecBatch->GetVector(i);
         if (inputVector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
