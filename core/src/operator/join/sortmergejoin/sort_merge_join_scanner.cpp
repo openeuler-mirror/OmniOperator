@@ -317,7 +317,7 @@ bool SortMergeJoinScanner::LeftOuterFindJoinRows()
     if (latestCompareStat < 0 && !curStreamRowMatchFlag) {
         BufferMissingRows();
         curStreamRowMatchFlag = true;
-        bufferedPagesIndexPosition--;
+        bufferedPagesIndexPosition = (bufferedPagesIndexPosition == 0 ? 0 : bufferedPagesIndexPosition--);
     } else if (latestCompareStat == 0) {
         BufferMatchingRows();
         curStreamRowMatchFlag = true;
@@ -582,7 +582,6 @@ bool SortMergeJoinScanner::HandleFullOuterBufferedNullValue()
 {
     if (CurBufferedHasNull()) {
         StreamMissingRowsForNullBuffered();
-        curBufferRowMatchFlag = true;
         if (preBufferedPagesIndexPosition == bufferedPagesIndexPosition) { // hit buffered end
             preStatus->TransToNeedBufferedData(HasResult());
             return false;
@@ -624,6 +623,7 @@ void SortMergeJoinScanner::StreamMissingRowsForNullBuffered()
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
         preBufferedValueAddress.push_back(bufferedValueAddr);
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
+        curBufferRowMatchFlag = true;
     } while (AdvancedBufferedJoinKey() && CurBufferedHasNull());
     FullOuterJoinSavePrevMatchingRows(false);
 }
