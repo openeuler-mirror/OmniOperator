@@ -1270,8 +1270,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinWithNullFirst)
 
     // construct data
     const int32_t streamedTblDataSize = 10;
-    int64_t streamedTblDataCol1[streamedTblDataSize] = {1,3378,5439,9013,9543,12572,15591,17436,25272,30436};
-    int64_t streamedTblDataCol2[streamedTblDataSize] =  {8042,8221,8261,7067,7883,8354,5861,6539,5870,6907};
+    int64_t streamedTblDataCol1[streamedTblDataSize] = {1, 3378, 5439, 9013, 9543, 12572, 15591, 17436, 25272, 30436};
+    int64_t streamedTblDataCol2[streamedTblDataSize] =  {8042, 8221, 8261, 7067, 7883, 8354, 5861, 6539, 5870, 6907};
     VectorBatch *streamedTblVecBatch1 =
         CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
     streamedTblVecBatch1->GetVector(0)->SetValueNull(0);
@@ -1281,8 +1281,8 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinWithNullFirst)
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     const int32_t bufferedTblSize = 10;
-    int64_t bufferedTblDataCol1[bufferedTblSize] =  {1,879,7804,13206,14690,32279,36620,41764,44840,53836};
-    int64_t bufferedTblDataCol2[bufferedTblSize] =  {7748,5444,5701,6737,5381,6434,8000,7231,7610,7955};
+    int64_t bufferedTblDataCol1[bufferedTblSize] =  {1, 879, 7804, 13206, 14690, 32279, 36620, 41764, 44840, 53836};
+    int64_t bufferedTblDataCol2[bufferedTblSize] =  {7748, 5444, 5701, 6737, 5381, 6434, 8000, 7231, 7610, 7955};
     VectorBatch *bufferedTblVecBatch1 =
         CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
     bufferedTblVecBatch1->GetVector(0)->SetValueNull(0);
@@ -1309,10 +1309,14 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinWithNullFirst)
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
 
     // check the join result
-    int64_t resultCol1[] = {-1,-1,-1,3378,5439,-1,9013,9543,12572,-1,-1,15591,17436,25272,30436,-1,-1,-1,-1,-1};
-    int64_t resultCol2[] = {8042,-1,-1,8221,8261,-1,7067,7883,8354,-1,-1,5861,6539,5870,6907,-1,-1,-1,-1,-1};
-    int64_t resultCol3[] = {-1,-1,879,-1,-1,7804,-1,-1,-1,13206,14690,-1,-1,-1,-1,32279,36620,41764,44840,53836};
-    int64_t resultCol4[] = {-1,7748,5444,-1,-1,5701,-1,-1,-1,6737,5381,-1,-1,-1,-1,6434,8000,7231,7610,7955};
+    int64_t resultCol1[] = {-1, -1, -1, 3378, 5439, -1, 9013, 9543, 12572, -1, -1, 15591, 17436, 25272, 30436, -1, -1,
+                            -1, -1, -1};
+    int64_t resultCol2[] = {8042, -1, -1, 8221, 8261, -1, 7067, 7883, 8354, -1, -1, 5861, 6539, 5870, 6907, -1, -1, -1,
+                            -1, -1};
+    int64_t resultCol3[] = {-1, -1, 879, -1, -1, 7804, -1, -1, -1, 13206, 14690, -1, -1, -1, -1, 32279, 36620, 41764,
+                            44840, 53836};
+    int64_t resultCol4[] = {-1, 7748, 5444, -1, -1, 5701, -1, -1, -1, 6737, 5381, -1, -1, -1, -1, 6434, 8000, 7231,
+                            7610, 7955};
     std::vector<DataTypePtr> resultTypesVec = { LongType(), LongType(), LongType(), LongType() };
     DataTypes resultTypes(resultTypesVec);
     VectorBatch *expectVecBatch = CreateVectorBatch(resultTypes, 20, resultCol1, resultCol2, resultCol3, resultCol4);
