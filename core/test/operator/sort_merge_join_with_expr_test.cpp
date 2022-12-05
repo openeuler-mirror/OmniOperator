@@ -1241,6 +1241,106 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedWithEmptyBuffe
     delete overflowConfig;
 }
 
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinWithNullFirst)
+{
+    std::string blank = "";
+    std::vector<DataTypePtr> streamTypeVector = { LongType(), LongType() };
+    DataTypes streamedTblTypes(streamTypeVector);
+    auto streamCol0 = new FieldExpr(0, LongType());
+    auto streamCol1 = new FieldExpr(1, LongType());
+    std::vector<Expr *> streamedEqualKeyExprs = { streamCol0, streamCol1 };
+    auto overflowConfig = new OverflowConfig();
+    int32_t streamedOutputCols[2] = {0, 1};
+    StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, 2, streamedOutputCols, 2, JoinType::OMNI_JOIN_TYPE_FULL, blank, overflowConfig);
+    omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
+
+    std::vector<DataTypePtr> bufferTypesVector = { LongType(), LongType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    auto bufferCol0 = new FieldExpr(0, LongType());
+    auto bufferCol1 = new FieldExpr(1, LongType());
+    std::vector<Expr *> bufferedEqualKeyExprs = { bufferCol0, bufferCol1 };
+    int bufferedOutputCols[2] = {0, 1};
+    int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
+        bufferedEqualKeyExprs, 2, bufferedOutputCols, 2, streamedWithExprOperatorFactoryAddr, overflowConfig);
+    omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
+
+    // construct data
+    const int32_t streamedTblDataSize = 10;
+    int64_t streamedTblDataCol1[streamedTblDataSize] = {1, 3378, 5439, 9013, 9543, 12572, 15591, 17436, 25272, 30436};
+    int64_t streamedTblDataCol2[streamedTblDataSize] =  {8042, 8221, 8261, 7067, 7883, 8354, 5861, 6539, 5870, 6907};
+    VectorBatch *streamedTblVecBatch1 =
+        CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
+    streamedTblVecBatch1->GetVector(0)->SetValueNull(0);
+
+    int32_t addInputRetCode = -1;
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    const int32_t bufferedTblSize = 10;
+    int64_t bufferedTblDataCol1[bufferedTblSize] =  {1, 879, 7804, 13206, 14690, 32279, 36620, 41764, 44840, 53836};
+    int64_t bufferedTblDataCol2[bufferedTblSize] =  {7748, 5444, 5701, 6737, 5381, 6434, 8000, 7231, 7610, 7955};
+    VectorBatch *bufferedTblVecBatch1 =
+        CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
+    bufferedTblVecBatch1->GetVector(0)->SetValueNull(0);
+
+    // need add buffered table data
+    addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatch1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+
+    // add eof flag to streamed table
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    std::vector<omniruntime::vec::VectorBatch *> result;
+    streamedTblWithExprOperator->GetOutput(result);
+
+    auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
+
+    // check the join result
+    int64_t resultCol1[] = {-1, -1, -1, 3378, 5439, -1, 9013, 9543, 12572, -1, -1, 15591, 17436, 25272, 30436, -1, -1,
+                            -1, -1, -1};
+    int64_t resultCol2[] = {8042, -1, -1, 8221, 8261, -1, 7067, 7883, 8354, -1, -1, 5861, 6539, 5870, 6907, -1, -1, -1,
+                            -1, -1};
+    int64_t resultCol3[] = {-1, -1, 879, -1, -1, 7804, -1, -1, -1, 13206, 14690, -1, -1, -1, -1, 32279, 36620, 41764,
+                            44840, 53836};
+    int64_t resultCol4[] = {-1, 7748, 5444, -1, -1, 5701, -1, -1, -1, 6737, 5381, -1, -1, -1, -1, 6434, 8000, 7231,
+                            7610, 7955};
+    std::vector<DataTypePtr> resultTypesVec = { LongType(), LongType(), LongType(), LongType() };
+    DataTypes resultTypes(resultTypesVec);
+    VectorBatch *expectVecBatch = CreateVectorBatch(resultTypes, 20, resultCol1, resultCol2, resultCol3, resultCol4);
+    for (int32_t colIdx = 0; colIdx < expectVecBatch->GetVectorCount(); colIdx++) {
+        auto vector = static_cast<LongVector *>(expectVecBatch->GetVector(colIdx));
+        for (int32_t rowIdx = 0; rowIdx < expectVecBatch->GetRowCount(); rowIdx++) {
+            if (vector->GetValue(rowIdx) == -1) {
+                vector->SetValueNull(rowIdx);
+            }
+        }
+    }
+    ASSERT_TRUE(VecBatchMatch(result[0], expectVecBatch));
+    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    DeleteOperatorFactory(bufferedWithExprOperatorFactory);
+    DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
 TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinMissMatchBothSide)
 {
     // select t1.b, t2.c from t1 full join t2 where t1.a = t2.d
