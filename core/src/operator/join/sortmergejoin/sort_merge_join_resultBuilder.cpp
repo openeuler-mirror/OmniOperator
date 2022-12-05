@@ -328,7 +328,7 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
             // left semi join only needs to output the data of the left table
             if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-                // todo:: handle left semi result
+                ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
                 buildRowCount++;
             }
             preLeftTableRowMatchedOut = true;

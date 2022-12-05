@@ -72,7 +72,7 @@ public:
     ~SortMergeJoinScanner();
 
 private:
-    void InnerJoin(bool isSavedSameKeyForBufferedTable = true);
+    void InnerJoin(bool onlyBufferFirstMatch = false);
 
     void LeftOuterJoin();
 
@@ -100,19 +100,19 @@ private:
 
     bool CurBufferedHasNull();
 
-    void RunInnerJoin(bool isSaveSameKeyForBufferedTable);
+    void RunInnerJoin(bool onlyBufferFirstMatch);
 
     void RunLeftOuterJoin();
 
     void RunFullOuterJoin();
 
-    bool FindMatchingRows(bool isSavedSameKeyForBufferedTable);
+    bool FindMatchingRows(bool onlyBufferFirstMatch);
 
     bool LeftOuterFindJoinRows();
 
     bool FullOuterFindJoinRows();
 
-    void BufferMatchingRows(bool isSavedSameKeyForBufferedTable = true);
+    void BufferMatchingRows(bool onlyBufferFirstMatch = false);
 
     void BufferMatchingRowsForFullOuter();
 
