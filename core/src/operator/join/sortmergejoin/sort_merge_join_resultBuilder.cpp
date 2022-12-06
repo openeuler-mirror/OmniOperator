@@ -181,7 +181,8 @@ void JoinResultBuilder::PaddingRightTableNull(int64_t leftTableRowAddress, vec::
 }
 
 int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
-    std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses)
+    std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses,
+    std::vector<bool> &isSameBufferedKeyMatched)
 {
     bool isFillOneBatch = false;
     int32_t buildRowCount = 0;
@@ -198,6 +199,7 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatc
         buildRowCount = buildVectorBatchRowCount[buildVectorBatchCount - 1];
     }
 
+    bool isPreRowMatched = false;
     for (int32_t addressPosition = 0; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -214,8 +216,9 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatc
         if (!(leftBatchId == JOIN_NULL_FLAG || rightBatchId == JOIN_NULL_FLAG)) {
             FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
         }
+
         PaddingNullAndVerifyingTheOutput(isPreKeyMatched, streamedRowAddress, bufferedRowAddress, buildVectorBatch,
-            buildRowCount);
+            buildRowCount, isSameBufferedKeyMatched, isPreRowMatched, addressPosition);
         preStreamedRowAddress = streamedRowAddress;
         if (buildRowCount >= maxRowCount) {
             isFillOneBatch = true;
@@ -309,7 +312,7 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
 
 void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched,
     int64_t leftTableRowAddress, int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch,
-    int32_t &buildRowCount)
+    int32_t &buildRowCount, std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched, int32_t positionAddr)
 {
     int32_t leftBatchId = DecodeSliceIndex(leftTableRowAddress);
     int32_t leftRowId = DecodePosition(leftTableRowAddress);
@@ -327,9 +330,22 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
             // left semi join only needs to output the data of the left table
-            if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-                ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
-                buildRowCount++;
+            if (isSameBufferedKeyMatched[positionAddr]) {
+                // same buffered key match and failed to match the previous
+                if (!isPreRowMatched && IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                    ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                    buildRowCount++;
+                    isPreRowMatched = true;
+                }
+            } else {
+                // not the same buffered key
+                if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                    ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                    buildRowCount++;
+                    isPreRowMatched = true;
+                } else {
+                    isPreRowMatched = false;
+                }
             }
             preLeftTableRowMatchedOut = true;
             break;

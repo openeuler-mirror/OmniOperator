@@ -12,13 +12,14 @@ namespace omniruntime {
 namespace op {
 SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
     int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
-    int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch)
+    int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType,
+    bool onlyBufferedFirstMatch)
     : streamedTableKeysTypes(streamedTableKeysTypes),
       joinType(joinType),
       streamedTableKeysCols(streamedTableKeysCols),
       bufferedTableKeysCols(bufferedTableKeysCols),
       keyColsCount(keyColsCount),
-      firstMatch(firstMatch),
+      onlyBufferedFirstMatch(onlyBufferedFirstMatch),
       streamedPagesIndexPosition(-1),
       bufferedPagesIndexPosition(0),
       streamedPagesIndex(streamedTablePagesIndex),
@@ -33,10 +34,8 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
 {
     switch (joinType) {
         case JoinType::OMNI_JOIN_TYPE_INNER:
-            InnerJoin();
-            break;
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
-            InnerJoin(true);
+            InnerJoin();
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT:
             LeftOuterJoin();
@@ -66,7 +65,7 @@ int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatc
     return 0;
 }
 
-void SortMergeJoinScanner::InnerJoin(bool onlyBufferFirstMatch)
+void SortMergeJoinScanner::InnerJoin()
 {
     if (preStatus->NewStreamedDataAdded()) { // streamedCode == NEED_DATA
         // new streamed add data
@@ -83,7 +82,7 @@ void SortMergeJoinScanner::InnerJoin(bool onlyBufferFirstMatch)
         if (PreKeyMatched()) {
             // The new streamed row has the same join key as the previous row, so return the same matches.
             SavePrevMatchingRows(true);
-            return RunInnerJoin(onlyBufferFirstMatch);
+            return RunInnerJoin();
         }
     } else if (preStatus->NewBufferedDataAdded()) { // bufferedCode == NEED_DATA
         // new buffered add data
@@ -106,13 +105,13 @@ void SortMergeJoinScanner::InnerJoin(bool onlyBufferFirstMatch)
         }
         if (PreKeyMatched()) {
             SavePrevMatchingRows(true);
-            return RunInnerJoin(onlyBufferFirstMatch);
+            return RunInnerJoin();
         }
     }
-    if (!FindMatchingRows(onlyBufferFirstMatch)) {
+    if (!FindMatchingRows()) {
         return;
     }
-    return RunInnerJoin(onlyBufferFirstMatch);
+    return RunInnerJoin();
 }
 
 void SortMergeJoinScanner::LeftOuterJoin()
@@ -212,7 +211,7 @@ void SortMergeJoinScanner::FullOuterJoin()
     return RunFullOuterJoin();
 }
 
-void SortMergeJoinScanner::RunInnerJoin(bool onlyBufferFirstMatch)
+void SortMergeJoinScanner::RunInnerJoin()
 {
     if (!AdvancedStreamedWithNullFreeJoinKey()) {
         preStatus->TransToNeedStreamedData(HasResult());
@@ -220,12 +219,12 @@ void SortMergeJoinScanner::RunInnerJoin(bool onlyBufferFirstMatch)
     }
     if (PreKeyMatched()) {
         SavePrevMatchingRows(true);
-        return RunInnerJoin(onlyBufferFirstMatch);
+        return RunInnerJoin();
     }
-    if (!FindMatchingRows(onlyBufferFirstMatch)) {
+    if (!FindMatchingRows()) {
         return;
     }
-    return RunInnerJoin(onlyBufferFirstMatch);
+    return RunInnerJoin();
 }
 
 void SortMergeJoinScanner::RunLeftOuterJoin()
@@ -261,7 +260,7 @@ void SortMergeJoinScanner::RunFullOuterJoin()
     return RunFullOuterJoin();
 }
 
-bool SortMergeJoinScanner::FindMatchingRows(bool onlyBufferFirstMatch)
+bool SortMergeJoinScanner::FindMatchingRows()
 {
     auto comp = FindNextMatchPos();
     if (NeedBufferedData()) {
@@ -278,7 +277,7 @@ bool SortMergeJoinScanner::FindMatchingRows(bool onlyBufferFirstMatch)
         return false;
     }
 
-    BufferMatchingRows(onlyBufferFirstMatch);
+    BufferMatchingRows();
     return true;
 }
 
@@ -480,15 +479,17 @@ bool SortMergeJoinScanner::AdvancedBufferedJoinKey()
     return false;
 }
 
-void SortMergeJoinScanner::BufferMatchingRows(bool onlyBufferFirstMatch)
+void SortMergeJoinScanner::BufferMatchingRows()
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
     preBufferedValueAddress.clear();
+    preBufferedKeyMatched.clear();
     int64_t bufferedValueAddr;
     do {
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        if (!onlyBufferFirstMatch || preBufferedValueAddress.empty()) {
+        if (!onlyBufferedFirstMatch || preBufferedValueAddress.empty()) {
+            preBufferedKeyMatched.emplace_back(!preBufferedValueAddress.empty());
             preBufferedValueAddress.push_back(bufferedValueAddr);
         }
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
@@ -678,6 +679,8 @@ void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
 {
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
+    isSameBuffedKeyMatched.insert(isSameBuffedKeyMatched.end(), preBufferedKeyMatched.begin(),
+        preBufferedKeyMatched.end());
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
     isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);

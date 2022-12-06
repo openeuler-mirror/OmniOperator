@@ -1375,7 +1375,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
         static_cast<int64_t>(EncodeSyntheticAddress(1, 2)), static_cast<int64_t>(EncodeSyntheticAddress(1, 4))
     };
 
-    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1), 0);
+    std::vector<bool> isSameKey;
+    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1, isSameKey), 0);
 
     std::vector<omniruntime::vec::VectorBatch *> outputPages;
 
@@ -1447,7 +1448,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     std::vector<int64_t> rightAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 2)), static_cast<int64_t>(EncodeSyntheticAddress(0, 4)) };
 
-    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1), 0);
+    std::vector<bool> isSameKey;
+    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1, isSameKey), 0);
 
     std::vector<omniruntime::vec::VectorBatch *> outputPages;
 
