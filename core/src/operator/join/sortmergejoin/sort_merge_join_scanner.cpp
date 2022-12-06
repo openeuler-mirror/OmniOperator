@@ -317,7 +317,9 @@ bool SortMergeJoinScanner::LeftOuterFindJoinRows()
     if (latestCompareStat < 0 && !curStreamRowMatchFlag) {
         BufferMissingRows();
         curStreamRowMatchFlag = true;
-        bufferedPagesIndexPosition = (bufferedPagesIndexPosition == 0 ? 0 : bufferedPagesIndexPosition--);
+        if (bufferedPagesIndexPosition > 0) {
+            bufferedPagesIndexPosition--;
+        }
     } else if (latestCompareStat == 0) {
         BufferMatchingRows();
         curStreamRowMatchFlag = true;
