@@ -10,7 +10,7 @@
 #include "context_helper.h"
 #include "codegen/functions/decimalfunctions.h"
 #include "type/date32.h"
-#include "util/engine.h"
+#include "util/config_util.h"
 #include "stringfunctions.h"
 #include "type/data_operations.h"
 
@@ -149,9 +149,9 @@ extern DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *str, i
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
     int32_t result;
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     std::string s(str, strLen);
-    if (engineType != EngineType::Spark && !regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
+    if (ConfigUtil::GetPolicy()->GetStringToDateFormatRule() != StringToDateFormatRule::ALLOW_REDUCED_PRECISION &&
+        !regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
         SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
         return -1;
     }
@@ -247,8 +247,8 @@ extern DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const c
 
     bool hasErr = false;
     char *ret;
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (searchLen == 0 && engineType == EngineType::Spark) {
+    if (searchLen == 0 &&
+        ConfigUtil::GetPolicy()->GetEmptySearchStrReplaceRule() == EmptySearchStrReplaceRule::NOT_REPLACE) {
         *outLen = strLen;
         ret = const_cast<char *>(str);
     } else if (searchLen == 0) {
@@ -560,9 +560,9 @@ extern DLLEXPORT int32_t CastStringToDateRetNull(bool *isNull, const char *str, 
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
     int32_t result;
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     std::string s(str, strLen);
-    if (engineType != EngineType::Spark && !regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
+    if (ConfigUtil::GetPolicy()->GetStringToDateFormatRule() != StringToDateFormatRule::ALLOW_REDUCED_PRECISION &&
+        !regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
         *isNull = true;
         return -1;
     }

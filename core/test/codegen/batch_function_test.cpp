@@ -9,7 +9,6 @@
 #include "codegen/batch_functions/batch_murmur3_hash.h"
 #include "codegen/batch_functions/batch_decimalfunctions.h"
 #include "operator/execution_context.h"
-#include "engine.h"
 #include "codegen/batch_functions/batch_stringfunctions.h"
 #include "util/test_util.h"
 
@@ -1223,8 +1222,7 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
 
 TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "时欧基乌斯侧后解 h";
@@ -1248,15 +1246,13 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
 TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "apple";
@@ -1266,7 +1262,7 @@ TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
     std::vector<int32_t> inputLen(1, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
-    std::vector<int32_t> startIndexs {-7};
+    std::vector<int32_t> startIndexs { -7 };
     int32_t rowCnt = inputStr.size();
     std::vector<uint8_t *> strAddr(rowCnt);
     for (int32_t i = 0; i < rowCnt; i++) {
@@ -1275,20 +1271,18 @@ TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
 
     bool isAnyNull[] = {false};
     BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
-                         outLen.data(), rowCnt);
+        outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
 TEST(BatchFunctionTest, SubstrWithZhForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "时欧基乌斯侧后解 h";
@@ -1313,15 +1307,13 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
     std::vector<std::string> expected { "", "时", "时欧基乌斯侧后解 ", "时欧基乌斯侧后解 h" };
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
 TEST(BatchFunctionTest, SubstrWithEnForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "apple";
@@ -1332,8 +1324,8 @@ TEST(BatchFunctionTest, SubstrWithEnForSpark)
     std::vector<int32_t> inputLen(1, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
-    std::vector<int32_t> startIndexs {-7};
-    std::vector<int32_t> length {3};
+    std::vector<int32_t> startIndexs { -7 };
+    std::vector<int32_t> length { 3 };
     std::vector<uint8_t *> strAddr(rowCnt);
 
     for (int32_t i = 0; i < rowCnt; i++) {
@@ -1342,12 +1334,11 @@ TEST(BatchFunctionTest, SubstrWithEnForSpark)
 
     bool isAnyNull1[] = {false};
     BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull1,
-                outResult.data(), outLen.data(), rowCnt);
-    std::vector<std::string> expected {"a"};
+        outResult.data(), outLen.data(), rowCnt);
+    std::vector<std::string> expected { "a" };
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
@@ -1558,14 +1549,22 @@ TEST(BatchFunctionTest, ConcatCharCharZh)
         "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
-    std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*   粉色de",
-        "Hei你好吗  Oh我很好", "Oh我很好   Hei你好吗",
-        "Hei你好吗    Oh我很好  ", "Oh我很好     Hei你好吗  ",
-        "   Hei你好吗      Oh我很好", "   Oh我很好       Hei你好吗",
-        "Hei   你好吗   Oh   我很好", "Oh   我很好    Hei   你好",
-        "     Oh我很好   ", "Oh我很好   ",
-        "Hei你好吗     ", "        Hei你好吗",
-        "Hei你好吗", "        Hei你好" };
+    std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
+        "*黑色*   粉色de",
+        "Hei你好吗  Oh我很好",
+        "Oh我很好   Hei你好吗",
+        "Hei你好吗    Oh我很好  ",
+        "Oh我很好     Hei你好吗  ",
+        "   Hei你好吗      Oh我很好",
+        "   Oh我很好       Hei你好吗",
+        "Hei   你好吗   Oh   我很好",
+        "Oh   我很好    Hei   你好",
+        "     Oh我很好   ",
+        "Oh我很好   ",
+        "Hei你好吗     ",
+        "        Hei你好吗",
+        "Hei你好吗",
+        "        Hei你好" };
     int32_t batch = 8;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1697,14 +1696,22 @@ TEST(BatchFunctionTest, ConcatCharCharRetNull)
         "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
-    std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*   粉色de",
-        "Hei你好吗  Oh我很好", "Oh我很好   Hei你好吗",
-        "Hei你好吗    Oh我很好  ", "Oh我很好     Hei你好吗  ",
-        "   Hei你好吗      Oh我很好", "   Oh我很好       Hei你好吗",
-        "Hei   你好吗   Oh   我很好", "Oh   我很好    Hei   你好",
-        "     Oh我很好   ", "Oh我很好   ",
-        "Hei你好吗     ", "        Hei你好吗",
-        "Hei你好吗", "        Hei你好" };
+    std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
+        "*黑色*   粉色de",
+        "Hei你好吗  Oh我很好",
+        "Oh我很好   Hei你好吗",
+        "Hei你好吗    Oh我很好  ",
+        "Oh我很好     Hei你好吗  ",
+        "   Hei你好吗      Oh我很好",
+        "   Oh我很好       Hei你好吗",
+        "Hei   你好吗   Oh   我很好",
+        "Oh   我很好    Hei   你好",
+        "     Oh我很好   ",
+        "Oh我很好   ",
+        "Hei你好吗     ",
+        "        Hei你好吗",
+        "Hei你好吗",
+        "        Hei你好" };
     int32_t batch = 8;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1856,8 +1863,7 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
 TEST(FunctionTest, CastStringToDate)
 {
     // year-month-day
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::vector<std::string> srcStr { "1970-01-03", "1969-12-31", "1453-05-29", "   1453-05-29   ",
@@ -1878,7 +1884,6 @@ TEST(FunctionTest, CastStringToDate)
 
     BatchCastStringToDateRetNull(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
     AssertEquals(expected, output);
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
     delete context;
 }

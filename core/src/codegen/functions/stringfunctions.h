@@ -12,7 +12,7 @@
 #include <huawei_secure_c/include/securec.h>
 #include "context_helper.h"
 #include "util/utf8_util.h"
-#include "util/engine.h"
+#include "util/config_util.h"
 #include "codegen/string_util.h"
 
 // All extern functions go here temporarily
@@ -106,8 +106,9 @@ extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t
         startCodePoint += codePoints;
         // before beginning of string
         if (startCodePoint < 0) {
-            EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-            if (engineType != EngineType::Spark || startCodePoint + lengthCodePoint <= 0) {
+            if (ConfigUtil::GetPolicy()->GetNegativeStartIndexOutOfBoundsRule() !=
+                NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND ||
+                startCodePoint + lengthCodePoint <= 0) {
                 *outLen = 0;
                 return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
             }
@@ -158,8 +159,8 @@ extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str
         int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
         startCodePoint += codePoints;
         if (startCodePoint < 0) {
-            EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-            if (engineType != EngineType::Spark) {
+            if (ConfigUtil::GetPolicy()->GetNegativeStartIndexOutOfBoundsRule() !=
+                NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND) {
                 *outLen = 0;
                 return reinterpret_cast<const char *>(omniruntime::codegen::EMPTY);
             }

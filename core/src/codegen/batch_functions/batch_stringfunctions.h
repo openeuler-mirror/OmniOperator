@@ -12,11 +12,11 @@
 #include <codecvt>
 #include <huawei_secure_c/include/securec.h>
 #include "util/utf8_util.h"
-#include "util/engine.h"
 #include "codegen/functions/context_helper.h"
 #include "codegen/string_util.h"
 #include "type/decimal128.h"
 #include "type/decimal_operations.h"
+#include "util/config_util.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -90,14 +90,14 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
 extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int64_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, double *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
@@ -202,8 +202,9 @@ extern DLLEXPORT void BatchSubstr(int64_t contextPtr, uint8_t **str, int32_t *st
             startCodePoint += codePoints;
             // before beginning of string
             if (startCodePoint < 0) {
-                EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-                if (engineType != EngineType::Spark || startCodePoint + lengthCodePoint <= 0) {
+                if (ConfigUtil::GetPolicy()->GetNegativeStartIndexOutOfBoundsRule() !=
+                    NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND ||
+                    startCodePoint + lengthCodePoint <= 0) {
                     outLen[i] = 0;
                     continue;
                 }
@@ -259,8 +260,8 @@ extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, in
             int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(charStr, len);
             startCodePoint += codePoints;
             if (startCodePoint < 0) {
-                EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-                if (engineType != EngineType::Spark) {
+                if (ConfigUtil::GetPolicy()->GetNegativeStartIndexOutOfBoundsRule() !=
+                    NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND) {
                     outLen[i] = 0;
                     continue;
                 }
@@ -360,4 +361,5 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
     }
 }
 
-#endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H
+#endif
+// OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

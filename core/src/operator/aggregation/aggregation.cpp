@@ -27,7 +27,7 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
     for (uint32_t i = 0; i < funcTypesContext.size(); ++i) {
         switch (funcTypesContext[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
-                if (EngineUtil::GetInstance().IsSparkEngine()) {
+                if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
                     CreateAggregatorFactory<SumSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 } else {
                     CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
@@ -51,7 +51,7 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
-                if (EngineUtil::GetInstance().IsSparkEngine()) {
+                if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
                     CreateAggregatorFactory<AverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 } else {
                     CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);

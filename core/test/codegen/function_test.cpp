@@ -1131,8 +1131,7 @@ TEST(FunctionTest, SubstrWithZh)
 
 TEST(FunctionTest, SubstrWithZhForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
     string str = "时欧基乌斯侧后解 h";
@@ -1175,8 +1174,7 @@ TEST(FunctionTest, SubstrWithZhForSpark)
     actual = string(result, outLen);
     EXPECT_EQ(actual, "apple");
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
@@ -1380,8 +1378,7 @@ TEST(FunctionTest, ConcatStrStr)
 // Cast
 TEST(FunctionTest, CastStringToDate)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);
     // year-month-day
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
@@ -1424,8 +1421,7 @@ TEST(FunctionTest, CastStringToDate)
     EXPECT_EQ(result, -188682);
     result = CastStringToDateRetNull(&isNull, "   1453-05-29   ", 16);
     EXPECT_EQ(result, -188682);
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
     delete context;
 }
 
@@ -1894,7 +1890,7 @@ TEST(FunctionTest, CastLongToDecimal64)
     s = 9223372036854775807;
     result = CastLongToDecimal64(contextPtr, s, false, 18, 0);
     EXPECT_EQ(result, 0);
-    s =  INT64_MIN;
+    s = INT64_MIN;
     result = CastLongToDecimal64(contextPtr, s, false, 18, 0);
     EXPECT_EQ(result, 0);
     delete context;
@@ -2180,25 +2176,25 @@ TEST(FunctionTest, CastStringToDouble)
     s = "1.111e-202";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 1.111e-202);
-    s="1.7976931348623157E308";
+    s = "1.7976931348623157E308";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 1.7976931348623157E308);
 
-    s="0";
+    s = "0";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 0);
 
-    s="1.7976931348623157E2000";
+    s = "1.7976931348623157E2000";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     string message = context->GetError();
     EXPECT_EQ(message, "Cannot cast '1.7976931348623157E2000' to DOUBLE. Value too large.");
 
-    s="1.7976931348623157E-2000";
+    s = "1.7976931348623157E-2000";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     message = context->GetError();
     EXPECT_EQ(message, "Cannot cast '1.7976931348623157E-2000' to DOUBLE. Value too large.");
 
-    s="1.7976931348623157E-200.0";
+    s = "1.7976931348623157E-200.0";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     message = context->GetError();
     EXPECT_EQ(message, "Cannot cast '1.7976931348623157E-200.0' to DOUBLE. Value is not a number.");
@@ -2643,8 +2639,7 @@ TEST(FunctionTest, EvaluateHiveUdfSingle)
 
 TEST(FunctionTest, CastDecimal64ToInt_normal_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
@@ -2652,15 +2647,13 @@ TEST(FunctionTest, CastDecimal64ToInt_normal_when_engine_is_spark)
     ASSERT_EQ(result, 1234);
     ASSERT_FALSE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal64ToInt_positive_overflow_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
@@ -2668,15 +2661,13 @@ TEST(FunctionTest, CastDecimal64ToInt_positive_overflow_when_engine_is_spark)
     ASSERT_EQ(result, 0);
     ASSERT_TRUE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal64ToInt_negative_overflow_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
@@ -2684,27 +2675,23 @@ TEST(FunctionTest, CastDecimal64ToInt_negative_overflow_when_engine_is_spark)
     ASSERT_EQ(result, 0);
     ASSERT_TRUE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal64ToLong_normal_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     auto result = CastDecimal64ToLong(123456, 4, 2, false);
     ASSERT_EQ(result, 1234);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
 }
 
 TEST(FunctionTest, CastDecimal128ToInt_normal_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     Decimal128 deci;
     int32_t precision = 0;
@@ -2716,15 +2703,13 @@ TEST(FunctionTest, CastDecimal128ToInt_normal_when_engine_is_spark)
     ASSERT_EQ(result, 1234);
     ASSERT_FALSE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal128ToInt_positive_overflow_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     Decimal128 deci;
     int32_t precision = 0;
@@ -2736,15 +2721,13 @@ TEST(FunctionTest, CastDecimal128ToInt_positive_overflow_when_engine_is_spark)
     ASSERT_EQ(result, 0);
     ASSERT_TRUE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal128ToInt_negative_overflow_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     Decimal128 deci;
     int32_t precision = 0;
@@ -2756,15 +2739,13 @@ TEST(FunctionTest, CastDecimal128ToInt_negative_overflow_when_engine_is_spark)
     ASSERT_EQ(result, 0);
     ASSERT_TRUE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal128ToLong_normal_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     Decimal128 deci;
     int32_t precision = 0;
@@ -2776,15 +2757,13 @@ TEST(FunctionTest, CastDecimal128ToLong_normal_when_engine_is_spark)
     ASSERT_EQ(result, 12321474836);
     ASSERT_FALSE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal128ToLong_positive_overflow_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     Decimal128 deci;
     int32_t precision = 0;
@@ -2796,15 +2775,13 @@ TEST(FunctionTest, CastDecimal128ToLong_positive_overflow_when_engine_is_spark)
     ASSERT_EQ(result, 0);
     ASSERT_TRUE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
 
 TEST(FunctionTest, CastDecimal128ToLong_negative_overflow_when_engine_is_spark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::DOWN);
 
     Decimal128 deci;
     int32_t precision = 0;
@@ -2816,9 +2793,7 @@ TEST(FunctionTest, CastDecimal128ToLong_negative_overflow_when_engine_is_spark)
     ASSERT_EQ(result, 0);
     ASSERT_TRUE(context->HasError());
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
-
 }

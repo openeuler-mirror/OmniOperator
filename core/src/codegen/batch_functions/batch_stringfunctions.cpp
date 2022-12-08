@@ -7,6 +7,7 @@
 #include "type/data_operations.h"
 #include "batch_stringfunctions.h"
 #include "type/date32.h"
+#include "util/config_util.h"
 
 #ifdef _WIN32
 #else
@@ -119,9 +120,8 @@ extern "C" DLLEXPORT void BatchCastStringToDate(int64_t contextPtr, uint8_t **st
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     int32_t result;
-    if (engineType != EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetStringToDateFormatRule() == StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION) {
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
                 output[i] = 0;
@@ -377,8 +377,8 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
     }
 }
 
-extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int32_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int32_t *output, int32_t rowCnt)
 {
     int32_t result;
     std::string s;
@@ -405,8 +405,8 @@ extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str
     }
 }
 
-extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int64_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int64_t *output, int32_t rowCnt)
 {
     int64_t result;
     std::string s;
@@ -433,8 +433,8 @@ extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **st
     }
 }
 
-extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, double *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    double *output, int32_t rowCnt)
 {
     double result;
     std::string s;
@@ -468,8 +468,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNull(bool *isNull, uint8_t **s
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
     int32_t result;
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetStringToDateFormatRule() == StringToDateFormatRule::ALLOW_REDUCED_PRECISION) {
         for (int i = 0; i < rowCnt; ++i) {
             std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
             if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
@@ -1014,8 +1013,7 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
     uint8_t **searchStr, int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetEmptySearchStrReplaceRule() == EmptySearchStrReplaceRule::NOT_REPLACE) {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
             output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t * {
                 outLen[i] = strLen[i];
@@ -1036,8 +1034,7 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
 extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     uint8_t **searchStr, int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetEmptySearchStrReplaceRule() == EmptySearchStrReplaceRule::NOT_REPLACE) {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
             [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
                 outLen[index] = strLen[index];
