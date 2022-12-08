@@ -62,12 +62,22 @@ public:
     SortMergeJoinScanner(const omniruntime::type::DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
         int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex,
         const omniruntime::type::DataTypes &bufferedTableKeysTypes, int32_t *bufferedTableKeysCols,
-        DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch);
+        DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool onlyBufferedFirstMatch);
 
     int64_t FindNextJoinRows();
 
     int32_t GetMatchedValueAddresses(std::vector<bool> &isPreKeyMatched,
         std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses);
+
+    std::vector<bool> &GetMatchedBufferedKeyFlag()
+    {
+        return isSameBufferedKeyMatched;
+    }
+
+    void Clear()
+    {
+        isSameBufferedKeyMatched.clear();
+    }
 
     ~SortMergeJoinScanner();
 
@@ -160,7 +170,7 @@ private:
     int32_t keyColsCount;
 
     // for non-inner-join
-    bool firstMatch;
+    bool onlyBufferedFirstMatch = false;
     bool curStreamRowMatchFlag = false;
     bool curBufferRowMatchFlag = false;
 
@@ -174,6 +184,8 @@ private:
     int64_t preStreamedValueAddress;
     std::unique_ptr<JoinStatus> preStatus;
     std::vector<bool> isPreKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<bool> preBufferedKeyMatched;
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;

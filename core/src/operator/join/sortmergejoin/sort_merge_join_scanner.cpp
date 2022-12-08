@@ -12,13 +12,14 @@ namespace omniruntime {
 namespace op {
 SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTypes, int32_t *streamedTableKeysCols,
     int32_t keyColsCount, DynamicPagesIndex *streamedTablePagesIndex, const DataTypes &bufferedTableKeysTypes,
-    int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType, bool firstMatch)
+    int32_t *bufferedTableKeysCols, DynamicPagesIndex *bufferedTablePagesIndex, JoinType joinType,
+    bool onlyBufferedFirstMatch)
     : streamedTableKeysTypes(streamedTableKeysTypes),
       joinType(joinType),
       streamedTableKeysCols(streamedTableKeysCols),
       bufferedTableKeysCols(bufferedTableKeysCols),
       keyColsCount(keyColsCount),
-      firstMatch(firstMatch),
+      onlyBufferedFirstMatch(onlyBufferedFirstMatch),
       streamedPagesIndexPosition(-1),
       bufferedPagesIndexPosition(0),
       streamedPagesIndex(streamedTablePagesIndex),
@@ -33,6 +34,7 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
 {
     switch (joinType) {
         case JoinType::OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
             InnerJoin();
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT:
@@ -482,10 +484,14 @@ void SortMergeJoinScanner::BufferMatchingRows()
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
     preBufferedValueAddress.clear();
+    preBufferedKeyMatched.clear();
     int64_t bufferedValueAddr;
     do {
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        preBufferedValueAddress.push_back(bufferedValueAddr);
+        if (!onlyBufferedFirstMatch || preBufferedValueAddress.empty()) {
+            preBufferedKeyMatched.emplace_back(!preBufferedValueAddress.empty());
+            preBufferedValueAddress.push_back(bufferedValueAddr);
+        }
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
     } while (AdvancedBufferedToRowWithNullFreeJoinKey() && ((latestCompareStat = CompareCurRowKeys()) == 0));
     SavePrevMatchingRows(false);
@@ -673,6 +679,8 @@ void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
 {
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
+    isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
+                                    preBufferedKeyMatched.end());
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
     isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);

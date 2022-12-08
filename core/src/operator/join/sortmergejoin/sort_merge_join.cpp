@@ -47,9 +47,10 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
 {
     streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes);
     bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes);
+    bool onlyBufferedFirstMatch = (joinType == OMNI_JOIN_TYPE_LEFT_SEMI && filter.empty());
 
     smjScanner = new SortMergeJoinScanner(*streamedTypes, streamedKeysCols.data(), streamedKeysCols.size(),
-        streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, false);
+        streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, onlyBufferedFirstMatch);
 
     joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
         streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
@@ -60,7 +61,8 @@ int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPages
     DynamicPagesIndex *bufferedTblPagesIndex, JoinType joinType)
 {
     switch (joinType) {
-        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_INNER: {
+        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
             if (streamedTblPagesIndex->IsEmptyBatch() || bufferedTblPagesIndex->IsEmptyBatch()) {
                 return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
             }
@@ -119,10 +121,13 @@ int32_t SortMergeJoinOperator::GetJoinResult()
         std::vector<bool> isPreKeyMatched;
         std::vector<int64_t> streamedTblMatchedValueAddresses;
         std::vector<int64_t> bufferedTblMatchedValueAddresses;
+        std::vector<bool> &isSameBufferedKeyMatched = smjScanner->GetMatchedBufferedKeyFlag();
         smjScanner->GetMatchedValueAddresses(isPreKeyMatched, streamedTblMatchedValueAddresses,
             bufferedTblMatchedValueAddresses);
         auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses(isPreKeyMatched,
-            streamedTblMatchedValueAddresses, bufferedTblMatchedValueAddresses);
+            streamedTblMatchedValueAddresses, bufferedTblMatchedValueAddresses, isSameBufferedKeyMatched);
+        // clear smjScanner current matched result for next match
+        smjScanner->Clear();
         if (joinResultBuilderRet == 1) {
             joinResultBuilder->GetOutput(returnVectorBatchs);
         }

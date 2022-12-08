@@ -36,7 +36,7 @@ public:
     void PaddingRightTableNull(int64_t leftTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
 
     int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
-        std::vector<int64_t> &bufferedTableValueAddresses);
+        std::vector<int64_t> &bufferedTableValueAddresses, std::vector<bool> &isSameBufferedKeyMatched);
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages);
 
@@ -49,7 +49,8 @@ private:
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     void PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched, int64_t leftTableRowAddress,
-        int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+        int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount,
+        std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched, int32_t positionAddr);
     VectorBatch *NewEmptyVectorBatch() const;
 
     type::DataTypes leftTableOutputTypes;
