@@ -3137,4 +3137,184 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinBothNullFirst)
     DeleteOperatorFactory(streamedWithExprOperatorFactory);
     delete overflowConfig;
 }
+
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinFilterDeduplicate)
+{
+    // select t1.a, t1.b from t1 left semi join t2 where t1.a = t2.d and t2.c > 4
+    // streamedTbl(left table) t1:  int a, long b;
+    // bufferedTbl(right table) t2: double c, int d;
+    string filterJsonStr = "{\"exprType\":\"BINARY\","
+        "\"returnType\":4,"
+        "\"operator\":\"GREATER_THAN\","
+        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2},"
+        "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3, \"isNull\":false, \"value\":4}}";
+    std::vector<DataTypePtr> streamTypeVector = { IntType(), LongType() };
+    DataTypes streamedTblTypes(streamTypeVector);
+    auto col0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> streamedEqualKeyExprs = { col0 };
+    auto overflowConfig = new OverflowConfig();
+    int streamedOutputCols[2] = {0, 1};
+    StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, 1, streamedOutputCols, 2, JoinType::OMNI_JOIN_TYPE_LEFT_SEMI, filterJsonStr,
+        overflowConfig);
+    omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
+
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    auto col1 = new FieldExpr(1, IntType());
+    std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
+    int bufferedOutputCols[0] = {};
+    auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 0, streamedWithExprOperatorFactoryAddr, overflowConfig);
+    omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
+
+    // construct data
+    const int32_t streamedTblDataSize = 6;
+    int32_t streamedTblDataCol1[streamedTblDataSize] = {0, 1, 1, 2, 3, 4};
+    long streamedTblDataCol2[streamedTblDataSize] =  {6600, 5500, 4400, 3300, 2200, 1100};
+    VectorBatch *streamedTblVecBatch1 =
+        CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
+    streamedTblVecBatch1->GetVector(0)->SetValueNull(0); // NULL, 1, 1, 2, 3, 4
+
+    int32_t addInputRetCode = -1;
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    const int32_t bufferedTblSize = 6;
+    double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 3.3, 4.4, 3.3, 4.4};
+    int32_t bufferedTblDataCol2[bufferedTblSize] =  {0, 1, 2, 2, 3, 4};
+    VectorBatch *bufferedTblVecBatch1 =
+        CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
+    bufferedTblVecBatch1->GetVector(1)->SetValueNull(0); // NULL, 1, 2, 2, 3, 4
+
+    // need add buffered table data
+    addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatch1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+
+    // add eof flag to streamed table
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    std::vector<omniruntime::vec::VectorBatch *> result;
+    streamedTblWithExprOperator->GetOutput(result);
+
+    VectorBatch *streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
+
+    // check the join result
+    int32_t expCol1[] =  {1, 1, 2, 4};
+    long expCol2[] =  {5500, 4400, 3300, 1100};
+    VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, expCol1, expCol2);
+    ASSERT_TRUE(VecBatchMatch(result[0], expectVecBatch));
+    VectorHelper::FreeVecBatch(result[0]);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    DeleteOperatorFactory(bufferedWithExprOperatorFactory);
+    DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinBufferedWithDuplicateFilterResults)
+{
+    // select t1.a, t1.b from t1 left semi join t2 where t1.a = t2.d and t2.c > 4
+    // streamedTbl(left table) t1:  int a, long b;
+    // bufferedTbl(right table) t2: double c, int d;
+    string filterJsonStr = "{\"exprType\":\"BINARY\","
+        "\"returnType\":4,"
+        "\"operator\":\"GREATER_THAN\","
+        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2},"
+        "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":3, \"isNull\":false, \"value\":4}}";
+    std::vector<DataTypePtr> streamTypeVector = { IntType(), LongType() };
+    DataTypes streamedTblTypes(streamTypeVector);
+    auto col0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> streamedEqualKeyExprs = { col0 };
+    auto overflowConfig = new OverflowConfig();
+    int streamedOutputCols[2] = {0, 1};
+    StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, 1, streamedOutputCols, 2, JoinType::OMNI_JOIN_TYPE_LEFT_SEMI, filterJsonStr,
+        overflowConfig);
+    omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
+
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    auto col1 = new FieldExpr(1, IntType());
+    std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
+    int bufferedOutputCols[0] = {};
+    auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 0, streamedWithExprOperatorFactoryAddr, overflowConfig);
+    omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
+
+    // construct data
+    const int32_t streamedTblDataSize = 6;
+    int32_t streamedTblDataCol1[streamedTblDataSize] = {0, 1, 1, 2, 3, 4};
+    long streamedTblDataCol2[streamedTblDataSize] =  {6600, 5500, 4400, 3300, 2200, 1100};
+    VectorBatch *streamedTblVecBatch1 =
+        CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
+    streamedTblVecBatch1->GetVector(0)->SetValueNull(0); // NULL, 1, 1, 2, 3, 4
+
+    int32_t addInputRetCode = -1;
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    const int32_t bufferedTblSize = 7;
+    double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 3.3, 4.4, 4.5, 3.3, 4.4};
+    int32_t bufferedTblDataCol2[bufferedTblSize] =  {0, 1, 2, 2, 2, 3, 4};
+    VectorBatch *bufferedTblVecBatch1 =
+        CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
+    bufferedTblVecBatch1->GetVector(1)->SetValueNull(0); // NULL, 1, 2, 2, 2, 3, 4
+
+    // need add buffered table data
+    addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatch1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+
+    // add eof flag to streamed table
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    std::vector<omniruntime::vec::VectorBatch *> result;
+    streamedTblWithExprOperator->GetOutput(result);
+
+    VectorBatch *streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypeVector);
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof1);
+    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
+
+    // check the join result
+    int32_t expCol1[] =  {1, 1, 2, 4};
+    long expCol2[] =  {5500, 4400, 3300, 1100};
+    VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, expCol1, expCol2);
+    ASSERT_TRUE(VecBatchMatch(result[0], expectVecBatch));
+    VectorHelper::FreeVecBatch(result[0]);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    DeleteOperatorFactory(bufferedWithExprOperatorFactory);
+    DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
+}
 }

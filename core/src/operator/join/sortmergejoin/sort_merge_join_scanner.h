@@ -71,12 +71,12 @@ public:
 
     std::vector<bool> &GetMatchedBufferedKeyFlag()
     {
-        return isSameBuffedKeyMatched;
+        return isSameBufferedKeyMatched;
     }
 
     void Clear()
     {
-        isSameBuffedKeyMatched.clear();
+        isSameBufferedKeyMatched.clear();
     }
 
     ~SortMergeJoinScanner();
@@ -184,7 +184,7 @@ private:
     int64_t preStreamedValueAddress;
     std::unique_ptr<JoinStatus> preStatus;
     std::vector<bool> isPreKeyMatched;
-    std::vector<bool> isSameBuffedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     std::vector<bool> preBufferedKeyMatched;
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;

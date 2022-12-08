@@ -679,8 +679,8 @@ void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
 {
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
-    isSameBuffedKeyMatched.insert(isSameBuffedKeyMatched.end(), preBufferedKeyMatched.begin(),
-        preBufferedKeyMatched.end());
+    isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
+                                    preBufferedKeyMatched.end());
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
     isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);

@@ -328,7 +328,7 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
             }
             preLeftTableRowMatchedOut = true;
             break;
-        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
             // left semi join only needs to output the data of the left table
             if (isSameBufferedKeyMatched[positionAddr]) {
                 // same buffered key match and failed to match the previous
@@ -349,7 +349,6 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
             }
             preLeftTableRowMatchedOut = true;
             break;
-        }
         case JoinType::OMNI_JOIN_TYPE_LEFT:
             // JOIN_NULL_FLAG row direct output && filter match direct output, pad no NULL
             if (IsNullFlagBatchAndRow(leftBatchId, leftRowId) || IsNullFlagBatchAndRow(rightBatchId, rightRowId) ||
