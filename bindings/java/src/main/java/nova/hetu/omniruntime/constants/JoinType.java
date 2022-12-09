@@ -38,6 +38,11 @@ public class JoinType extends Constant {
      */
     public static JoinType OMNI_JOIN_TYPE_LEFT_SEMI;
 
+    /**
+     * The constant OMNI_JOIN_TYPE_LEFT_ANTI.
+     */
+    public static JoinType OMNI_JOIN_TYPE_LEFT_ANTI;
+
     private static final long serialVersionUID = -4086671645951741450L;
 
     /**

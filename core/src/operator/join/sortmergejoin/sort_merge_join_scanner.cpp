@@ -38,6 +38,7 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
             InnerJoin();
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
             LeftOuterJoin();
             break;
         case JoinType::OMNI_JOIN_TYPE_FULL:
@@ -234,6 +235,7 @@ void SortMergeJoinScanner::RunLeftOuterJoin()
         return;
     }
     if (PreKeyMatchedWithNullValue()) {
+        preBufferedKeyMatched.emplace_back(false);
         SavePrevMatchingRows(true);
         return RunLeftOuterJoin();
     }
@@ -528,8 +530,10 @@ void SortMergeJoinScanner::BufferMissingRows()
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
     preBufferedValueAddress.clear();
+    preBufferedKeyMatched.clear();
     auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
     preBufferedValueAddress.push_back(nullValueAddress);
+    preBufferedKeyMatched.emplace_back(false);
     SavePrevMatchingRows(false);
     preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
 }
@@ -681,6 +685,7 @@ void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
         preBufferedValueAddress.end());
     isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
                                     preBufferedKeyMatched.end());
+    preBufferedKeyMatched.clear();
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
     isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);

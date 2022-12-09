@@ -52,6 +52,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
     DEFINE_CONSTANT(OMNI_JOIN_TYPE_RIGHT);
     DEFINE_CONSTANT(OMNI_JOIN_TYPE_FULL);
     DEFINE_CONSTANT(OMNI_JOIN_TYPE_LEFT_SEMI);
+    DEFINE_CONSTANT(OMNI_JOIN_TYPE_LEFT_ANTI);
 
     cls = env->FindClass("nova/hetu/omniruntime/constants/OmniWindowFrameType");
     fieldName = "Lnova/hetu/omniruntime/constants/OmniWindowFrameType;";
