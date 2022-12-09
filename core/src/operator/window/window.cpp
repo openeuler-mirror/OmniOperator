@@ -192,6 +192,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
     Initialization();
     int32_t positionCount = pagesIndex->GetRowCount();
+
     int finalOutputColsCount = 0;
     if (positionCount <= 0) {
         return 0;
@@ -221,38 +222,50 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         finalOutputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
     }
 
+    /*
+     * First, new a vectorBatch dedicated to calling the agg interface with a single column;
+     * Second, the vector in the vectorBatch is obtained from the AggregateWindowFunction::Accumulate with
+     * argumentChannels.
+     * This is mainly to avoid using location information to copy data and construct a continuous vectorBatch when
+     * calling agg interface.
+     */
+    auto inputVecBatchForAgg = new VectorBatch(1, positionCount);
     int32_t position = 0;
     try {
         for (int32_t i = 0; i < outputPageCount; i++) {
             int32_t rowCount = min(maxRowCount, positionCount - position);
             auto *vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
             outputPages.push_back(vecBatch);
-            ProcessData(finalOutputColsCount, finalOutputTypes, position, vecBatch, rowCount);
+            ProcessData(inputVecBatchForAgg, finalOutputColsCount, finalOutputTypes, position, vecBatch, rowCount);
             position += rowCount;
         }
     } catch (const OmniException &e) {
         // in ProcessData, WindowFunction may be throw exception:
         // when spark sum/avg decimal overflow, it will throw exception when
         // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+        delete inputVecBatchForAgg;
+        inputVecBatchForAgg = nullptr;
         pagesIndex->Clear();
         throw e;
     }
 
+    delete inputVecBatchForAgg;
+    inputVecBatchForAgg = nullptr;
     pagesIndex->Clear();
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
-void WindowOperator::ProcessData(int finalOutputColsCount, std::vector<type::DataTypePtr> &outputTypes,
-    int32_t position, VectorBatch *&vecBatch, int32_t rowCount)
+void WindowOperator::ProcessData(VectorBatch *&inputVecBatchForAgg, int finalOutputColsCount,
+    std::vector<type::DataTypePtr> &outputTypes, int32_t position, VectorBatch *&outputVecBatch, int32_t rowCount)
 {
     // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
     // result
-    InitResultVectors(outputTypes, vecBatch, rowCount, outputColsCount, finalOutputColsCount);
+    InitResultVectors(outputTypes, outputVecBatch, rowCount, outputColsCount, finalOutputColsCount);
 
     // build the output data with original input vecBatch, input data are not changed in window operator
     // we add extra columns of window result to the output vecBatch in window partition
-    pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
+    pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), position, rowCount,
         GetVecAllocator());
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
@@ -265,7 +278,7 @@ void WindowOperator::ProcessData(int finalOutputColsCount, std::vector<type::Dat
             partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), partitionStart, partitionEnd,
                 outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
         }
-        partition->ProcessNextRow(vecBatch, j);
+        partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j);
     }
 }
 
