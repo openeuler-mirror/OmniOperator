@@ -367,7 +367,7 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
                     isPreRowMatched = true;
                 }
             } else { // not the same buffered key
-                if (IsNullFlagBatchAndRow(leftBatchId, leftRowId) || IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
+                if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
                     ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
                     buildRowCount++;
                     isPreRowMatched = false;

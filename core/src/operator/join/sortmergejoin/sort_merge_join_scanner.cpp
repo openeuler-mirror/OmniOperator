@@ -235,7 +235,6 @@ void SortMergeJoinScanner::RunLeftOuterJoin()
         return;
     }
     if (PreKeyMatchedWithNullValue()) {
-        preBufferedKeyMatched.emplace_back(false);
         SavePrevMatchingRows(true);
         return RunLeftOuterJoin();
     }
@@ -685,7 +684,6 @@ void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
         preBufferedValueAddress.end());
     isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
                                     preBufferedKeyMatched.end());
-    preBufferedKeyMatched.clear();
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
     isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);
