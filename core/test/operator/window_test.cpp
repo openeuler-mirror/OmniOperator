@@ -1974,6 +1974,138 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
+TEST(NativeOmniWindowOperatorTest, testWindowPerf)
+{
+    DataTypes sourceTypes(std::vector<DataTypePtr>(
+        { IntType(),    LongType(),           DoubleType(), VarcharType(20),       CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),           DoubleType(), VarcharType(20),       CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),           DoubleType(), VarcharType(20),       CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),           DoubleType(), Decimal128Type(22, 5), IntType(),    LongType(),
+        DoubleType(), Decimal128Type(22, 5) }));
+    int32_t outputCols[26] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+                              14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
+    int32_t windowFunctionTypes[26] = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                       OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                       OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                       OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+                                       OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+                                       OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+                                       OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+                                       OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+                                       OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+                                       OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                                       OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                                       OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
+                                       OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
+    int32_t windowFrameTypes[26] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
+                                    OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
+    int32_t windowFrameStartTypes[26] = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING,
+                                         OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING, OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+    int32_t windowFrameStartChannels[26] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  -1, -1,
+                                            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t windowFrameEndTypes[26] = {OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW,
+                                       OMNI_FRAME_BOUND_CURRENT_ROW, OMNI_FRAME_BOUND_CURRENT_ROW};
+    int32_t windowFrameEndChannels[26] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  -1,
+                                          -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int32_t partitionCols[1] = {0};
+    int32_t preGroupedCols[0] = {};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    int32_t preSortedChannelPrefix = 0;
+    int32_t expectedPositions = 10000;
+    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(),    LongType(),
+        DoubleType(), VarcharType(20),
+        CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),
+        DoubleType(), VarcharType(20),
+        CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),
+        DoubleType(), VarcharType(20),
+        CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),
+        DoubleType(), Decimal128Type(22, 5),
+        IntType(),    LongType(),
+        DoubleType(), Decimal128Type(22, 5),
+        LongType(),   LongType(),
+        LongType(),   LongType(),
+        LongType(),   LongType(),
+        IntType(),    LongType(),
+        DoubleType(), VarcharType(20),
+        CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),
+        DoubleType(), VarcharType(20),
+        CharType(20), Decimal128Type(22, 5),
+        IntType(),    LongType(),
+        DoubleType(), Decimal128Type(22, 5),
+        DoubleType(), DoubleType(),
+        DoubleType(), Decimal128Type(22, 5) }));
+    int32_t argumentChannels[26] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                                    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
+
+    // dealing data with the operator
+    WindowOperatorFactory *operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols,
+        26, windowFunctionTypes, 26, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 26, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+    operatorFactory->Init();
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
+    VectorBatch **input = BuildWindowInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, 26, sourceTypes.Get());
+
+    Timer timer;
+    timer.SetStart();
+
+    ASSERT(!(input == nullptr));
+
+    for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
+        auto errNo = windowOperator->AddInput(input[pageIndex]);
+        EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
+    }
+
+    std::vector<VectorBatch *> result;
+    windowOperator->GetOutput(result);
+
+    timer.CalculateElapse();
+    double wallElapsed = timer.GetWallElapse();
+    double cpuElapsed = timer.GetCpuElapse();
+    std::cout << "Window with Omni, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+
+    Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
+
+    delete[] input;
+    VectorHelper::FreeVecBatches(result);
+}
+
 TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 {
     DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
