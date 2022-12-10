@@ -11,6 +11,7 @@
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/group_aggregation_expr.h"
 #include "operator/aggregation/non_group_aggregation.h"
+#include "operator/aggregation/non_group_aggregation_expr.h"
 #include "operator/filter/filter_and_project.h"
 #include "operator/window/window.h"
 #include "operator/join/hash_builder.h"
@@ -1004,6 +1005,79 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
     return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperatorFactory));
 }
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFactory_createAggregationWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
+    jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws,
+    jbooleanArray jOutputPartials, jstring jOperatorConfig)
+{
+    // groupby channel and id
+    auto groupByNum = static_cast<int32_t>(env->GetArrayLength(jGroupByChannel));
+    std::string groupByKeys[groupByNum];
+    GetExpressions(env, jGroupByChannel, groupByKeys, groupByNum);
+
+    auto aggChannelsLength = static_cast<int32_t>(env->GetArrayLength(jAggChannels));
+    vector<vector<string>> aggKeysVector;
+    vector<int> aggColsNums;
+    for (int i = 0; i < aggChannelsLength; ++i) {
+        auto jAggChannel = static_cast<jstring>(env->GetObjectArrayElement(jAggChannels, i));
+        auto aggChannelCharPtr = env->GetStringUTFChars(jAggChannel, JNI_FALSE);
+        vector<string> expressions;
+        DeserializeJsonToArray(aggChannelCharPtr, expressions);
+        aggKeysVector.push_back(expressions);
+        aggColsNums.push_back(expressions.size());
+    }
+
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceType, JNI_FALSE);
+    auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
+
+    std::vector<DataTypes> outDataTypes;
+    GetDataTypesVector(env, jOutputType, outDataTypes);
+
+    vector<uint32_t> aggFuncTypes;
+    GetIntVector(env, jAggFuncType, aggFuncTypes);
+    vector<uint32_t> maskColumns;
+    GetIntVector(env, jMaskCols, maskColumns);
+
+    std::vector<bool> inputRaws;
+    GetBoolVector(env, jInputRaws, inputRaws);
+    std::vector<bool> outputPartials;
+    GetBoolVector(env, jOutputPartials, outputPartials);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
+    vector<omniruntime::expressions::Expr *> groupByKeysExprs;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(groupByKeys, groupByNum, groupByKeysExprs);
+    JNI_METHOD_END_WITH_OVERFLOW(0L, overflowConfig)
+
+    vector<vector<omniruntime::expressions::Expr *>> aggKeysExprsVector;
+    for (int i = 0; i < aggChannelsLength; ++i) {
+        vector<omniruntime::expressions::Expr *> aggKeysExprs;
+        JNI_METHOD_START
+        // parse the expressions
+        GetExprsFromJson(aggKeysVector.at(i), aggColsNums.at(i), aggKeysExprs);
+        aggKeysExprsVector.push_back(aggKeysExprs);
+        JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, aggKeysExprs, overflowConfig)
+    }
+
+    AggregationWithExprOperatorFactory *nativeOperatorFactory = nullptr;
+    JNI_METHOD_START
+    nativeOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprsVector,
+        sourceDataTypes, outDataTypes, aggFuncTypes, maskColumns, inputRaws, outputPartials, *overflowConfig);
+    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, groupByKeysExprs, aggKeysExprsVector)
+
+    Expr::DeleteExprs(groupByKeysExprs);
+    Expr::DeleteExprs(aggKeysExprsVector);
+    delete overflowConfig;
+
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperatorFactory));
+}
+
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprOperatorFactory(JNIEnv *env,

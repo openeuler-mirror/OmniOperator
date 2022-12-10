@@ -213,7 +213,7 @@ public:
     static void CreateRequiredProjectFuncs(const DataTypes &inputTypes, expressions::Expr *projectKeys[],
         int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-        std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig);
+        std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, const OverflowConfig &overflowConfig);
 
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,

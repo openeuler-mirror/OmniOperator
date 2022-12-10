@@ -47,6 +47,10 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        if (state.val == nullptr) {
+            InitiateGroup(state, vectorBatch, rowIndex);
+            return;
+        }
         int32_t offset;
         auto firstState = static_cast<FirstState *>(state.val);
         if (inputRaw) {
@@ -83,10 +87,17 @@ public:
 
     void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+
         int32_t offset;
+        auto firstVector =
+                reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+        if (state.val == nullptr) {
+            firstVector->SetValueNull(rowIndex);
+            return;
+        }
         auto firstState = static_cast<FirstState *>(state.val);
         if (outputPartial) {
-            auto firstVector =
+             firstVector =
                 reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
 
             if (firstState->valIsNull) {
