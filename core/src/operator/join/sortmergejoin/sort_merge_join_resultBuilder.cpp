@@ -359,6 +359,28 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
                 preLeftTableRowMatchedOut = true;
             }
             break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI: // left anti join only needs to output the data of the left table
+            if (isSameBufferedKeyMatched[positionAddr]) { // same buffered key match and failed to match the previous
+                if (!isPreRowMatched && !IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                    ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                    buildRowCount++;
+                    isPreRowMatched = true;
+                }
+            } else { // not the same buffered key
+                if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
+                    ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                    buildRowCount++;
+                    isPreRowMatched = false;
+                } else if (!IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                    ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
+                    buildRowCount++;
+                    isPreRowMatched = true;
+                } else {
+                    isPreRowMatched = false;
+                }
+            }
+            preLeftTableRowMatchedOut = true;
+            break;
         case JoinType::OMNI_JOIN_TYPE_FULL:
             // JOIN_NULL_FLAG row direct output && filter match direct output, pad no NULL
             if (IsNullFlagBatchAndRow(leftBatchId, leftRowId) || IsNullFlagBatchAndRow(rightBatchId, rightRowId) ||

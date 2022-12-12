@@ -1164,6 +1164,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
         case JoinType::OMNI_JOIN_TYPE_LEFT:
         case JoinType::OMNI_JOIN_TYPE_FULL:
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
             break;
         default:
             return 0L;

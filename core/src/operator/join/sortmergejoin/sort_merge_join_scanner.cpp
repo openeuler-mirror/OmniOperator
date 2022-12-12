@@ -38,6 +38,7 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
             InnerJoin();
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
             LeftOuterJoin();
             break;
         case JoinType::OMNI_JOIN_TYPE_FULL:
@@ -528,8 +529,10 @@ void SortMergeJoinScanner::BufferMissingRows()
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
     preBufferedValueAddress.clear();
+    preBufferedKeyMatched.clear();
     auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
     preBufferedValueAddress.push_back(nullValueAddress);
+    preBufferedKeyMatched.emplace_back(false);
     SavePrevMatchingRows(false);
     preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
 }

@@ -17,7 +17,8 @@ enum JoinType {
     OMNI_JOIN_TYPE_LEFT,
     OMNI_JOIN_TYPE_RIGHT,
     OMNI_JOIN_TYPE_FULL,
-    OMNI_JOIN_TYPE_LEFT_SEMI
+    OMNI_JOIN_TYPE_LEFT_SEMI,
+    OMNI_JOIN_TYPE_LEFT_ANTI
 };
 
 enum class SortMergeJoinAddInputCode {

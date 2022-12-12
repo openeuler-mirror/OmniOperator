@@ -47,7 +47,7 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
 {
     streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes);
     bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes);
-    bool onlyBufferedFirstMatch = (joinType == OMNI_JOIN_TYPE_LEFT_SEMI && filter.empty());
+    bool onlyBufferedFirstMatch = (joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) && filter.empty();
 
     smjScanner = new SortMergeJoinScanner(*streamedTypes, streamedKeysCols.data(), streamedKeysCols.size(),
         streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, onlyBufferedFirstMatch);
@@ -61,20 +61,21 @@ int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPages
     DynamicPagesIndex *bufferedTblPagesIndex, JoinType joinType)
 {
     switch (joinType) {
-        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_INNER:
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
             if (streamedTblPagesIndex->IsEmptyBatch() || bufferedTblPagesIndex->IsEmptyBatch()) {
                 return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
             }
             break;
         }
-        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_LEFT: {
+        case JoinType::OMNI_JOIN_TYPE_LEFT:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI: {
             if (streamedTblPagesIndex->IsEmptyBatch()) {
                 return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
             }
             break;
         }
-        case omniruntime::op::JoinType::OMNI_JOIN_TYPE_FULL: {
+        case JoinType::OMNI_JOIN_TYPE_FULL: {
             if (streamedTblPagesIndex->IsEmptyBatch() && bufferedTblPagesIndex->IsEmptyBatch()) {
                 return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
             }
