@@ -1,0 +1,20 @@
+apiVersion: OmniOperatorJIT
+kind: dtfuzz
+fuzzEngine: OmniOperatorJIT
+name: OmniOperatorJIT
+language: C++
+parameters:
+  fuzz_args: -fuzz.C count -fuzz.T time -fuzz.rp reportPath -fuzz.cf corpusPath
+  coverage_args: -fuzz.C 1000 -fuzz.T 10 -fuzz.rp reportPath -fuzz.cf corpusPath
+  reproduce_args:  -fuzz.reproduce 1 -fuzz.reporducePath testcaseName -fuzz.rp reportPath -fuzz.cf corpusPath
+spec:
+- name: suite-01.case1
+  bin: /out/dist
+  cmd: LD_PRELOAD=/opt/buildtools/gcc-7.3.0/lib64/libasan.so /out/dist/bin/dt_engine --config /src/OmniOperatorJIT/core/test/dt/testtree/dtframe.cfg -f.select='suite-01.GlobalFuzz(0, 0, 0, true, 0, 0, 0, $fuzzStrVar1, $fuzzIntRange1_1, $fuzzIntRange1_2)' ${args}
+  fun: case1
+  version: 0.0.8
+- name: suite-01.case2
+  bin: /out/dist
+  cmd: LD_PRELOAD=/opt/buildtools/gcc-7.3.0/lib64/libasan.so /out/dist/bin/dt_engine --config /src/OmniOperatorJIT/core/test/dt/testtree/dtframe.cfg -f.select='suite-01.GlobalFuzz($fuzzIntRange2_1, 0, 0, true, 0, 0, 0, $fuzzStrVar2, $fuzzIntRange2_1, $fuzzIntRange2_2)' ${args}
+  fun: case2
+  version: 0.0.8

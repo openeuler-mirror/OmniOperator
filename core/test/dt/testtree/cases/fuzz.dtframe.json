@@ -56,20 +56,12 @@
 		{
 		  "id": "case1",
 		  "apiName": "GlobalFuzz(0, 0, 0, true, 0, 0, 0, $fuzzStrVar1, $fuzzIntRange1_1, $fuzzIntRange1_2)",
-		  "exeMode": "fuzz",
-		  "fuzzConfig": {
-			"count": 50000000,
-			"singleCaseFuzzTimeoutInSecond": 10800
-		  }
+		  "exeMode": "fuzz"
 		},
 		{
 		  "id": "case2",
 		  "apiName": "GlobalFuzz($fuzzIntRange2_1, 0, 0, true, 0, 0, 0, $fuzzStrVar2, $fuzzIntRange2_1, $fuzzIntRange2_2)",
-		  "exeMode": "fuzz",
-		  "fuzzConfig": {
-			"count": 50000000,
-			"singleCaseFuzzTimeoutInSecond": 10800
-		  }
+		  "exeMode": "fuzz"
 		}
 	  ]
 	}
