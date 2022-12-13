@@ -3116,18 +3116,18 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
     deci18_6Vec->SetValue(1, 999999999999999999L);
     deci18_6Vec->SetValue(2, 999999999999999999L);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = {resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci18_6Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3140,7 +3140,7 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
     sumDeciAggPartial->ProcessGroup(state, vecBatch, 1);
     sumDeciAggPartial->ProcessGroup(state, vecBatch, 2);
@@ -3180,18 +3180,18 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     deci25_8Vec->SetValue(1, deci);
     deci25_8Vec->SetValue(2, deci);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = {resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci25_8Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3204,7 +3204,7 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
     auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
         AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, false, false);
@@ -3244,18 +3244,18 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
     deci38_0Vec->SetValue(1, deci);
     deci38_0Vec->SetValue(2, deci);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = {resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci38_0Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3268,7 +3268,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
     auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, false, false, false);
@@ -3308,18 +3308,18 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     deci38_0Vec->SetValue(1, deci);
     deci38_0Vec->SetValue(2, deci);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = {resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci38_0Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3332,7 +3332,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
     auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, false, false, true);
