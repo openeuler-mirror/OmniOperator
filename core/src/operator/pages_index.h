@@ -70,6 +70,7 @@ private:
     const int32_t *dataTypeIds;
     uint32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
+    std::vector<bool> mayHaveNulls;
     uint64_t *valueAddresses;
     uint32_t positionCount;
     std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
@@ -91,8 +92,9 @@ inline uint32_t DecodePosition(uint64_t sliceAddress)
     return static_cast<uint32_t>(sliceAddress);
 }
 
-static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts,
-    const uint64_t *valueAddresses, omniruntime::vec::Vector **columns, int32_t leftPosition, int32_t rightPosition,
+template <bool columnsNullFlag, int32_t sortAscendings>
+static int32_t ALWAYS_INLINE Compare(const int32_t sortNullFirsts, const uint64_t *valueAddresses,
+    omniruntime::vec::Vector **columns, int32_t leftPosition, int32_t rightPosition,
     omniruntime::op::OperatorUtil::CompareFunc compareFunc)
 {
     int64_t leftValueAddress = valueAddresses[leftPosition];
@@ -110,16 +112,25 @@ static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t
         static_cast<int32_t>(leftColumnPosition), originalLeftColumnPosition);
     rightColumn = omniruntime::vec::VectorHelper::ExpandVectorAndIndex(rightColumn,
         static_cast<int32_t>(rightColumnPosition), originalRightColumnPosition);
-    int32_t compare = omniruntime::op::OperatorUtil::CompareNull(leftColumn, originalLeftColumnPosition, rightColumn,
-        originalRightColumnPosition, sortNullFirsts);
-    if (compare == omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER) {
+
+    int32_t compare = omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER;
+    if constexpr (columnsNullFlag) {
+        compare = omniruntime::op::OperatorUtil::CompareNull(leftColumn, originalLeftColumnPosition, rightColumn,
+            originalRightColumnPosition, sortNullFirsts);
+        if (compare == omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER) {
+            compare = compareFunc(leftColumn, originalLeftColumnPosition, rightColumn, originalRightColumnPosition);
+            if constexpr (sortAscendings == 0) {
+                compare = -compare;
+            }
+        }
+    } else {
         // neither the left nor the right is NULL
         compare = compareFunc(leftColumn, originalLeftColumnPosition, rightColumn, originalRightColumnPosition);
-
-        if (sortAscendings == 0) {
+        if constexpr (sortAscendings == 0) {
             compare = -compare;
         }
     }
+
     return compare;
 }
 }
