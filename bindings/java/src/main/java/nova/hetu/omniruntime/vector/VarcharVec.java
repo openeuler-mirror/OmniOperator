@@ -12,7 +12,7 @@ import nova.hetu.omniruntime.type.VarcharDataType;
  * @since 2021-07-17
  */
 public class VarcharVec extends VariableWidthVec {
-    private static final int INIT_CAPACITY_IN_BYTES = 32 * 1024; // 32K
+    public static final int INIT_CAPACITY_IN_BYTES = 32 * 1024; // 32K
     private static final int EXPAND_FACTOR = 2;
 
     public VarcharVec(VecAllocator allocator, int size) {

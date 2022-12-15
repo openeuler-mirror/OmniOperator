@@ -311,9 +311,7 @@ void WindowOperator::InitResultVectors(const std::vector<DataTypePtr> &outputTyp
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                uint32_t width = static_cast<VarcharDataType &>(*type).GetWidth();
-                vecBatchField->SetVector(colIndex,
-                    new VarcharVector(vecAllocator, rowCountField * static_cast<int32_t>(width), rowCountField));
+                vecBatchField->SetVector(colIndex,new VarcharVector(vecAllocator, rowCountField));
                 break;
             }
             case OMNI_DECIMAL128: {

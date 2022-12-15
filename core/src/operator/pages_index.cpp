@@ -1039,7 +1039,7 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
     uint32_t pageIndex = 0;
     uint32_t position = 0;
 
-    VarcharVector *outputVector = new VarcharVector(vecAllocator, length * width, length);
+    auto *outputVector = new VarcharVector(vecAllocator, length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;
