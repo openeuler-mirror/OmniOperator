@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: JNI Operator Factory Source File
  */
 
@@ -28,6 +28,7 @@
 #include "operator/window/window_expr.h"
 #include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
+#include "operator/fusion/fusion_operator.h"
 #include "operator/config/operator_config.h"
 #include "config.h"
 #include "jni_common_def.h"
@@ -1312,4 +1313,37 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(projectExprs);
     return 1;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_fusion_OmniFusionOperatorFactory_createFusionOperatorFactory(JNIEnv *env,
+    jclass jObj, jlongArray jOperatorFactories, jintArray jOperatorTypes, jstring jOperatorConfig)
+{
+    auto operatorCount = env->GetArrayLength(jOperatorTypes);
+    auto operatorTypesArr = env->GetIntArrayElements(jOperatorTypes, JNI_FALSE);
+    auto operatorFactoriesArr = env->GetLongArrayElements(jOperatorFactories, JNI_FALSE);
+
+    std::vector<OperatorFactory *> operatorFactories(operatorCount);
+    std::vector<omniruntime::op::OperatorType> operatorTypes(operatorCount);
+    for (int32_t i = 0; i < operatorCount; i++) {
+        operatorFactories[i] = reinterpret_cast<OperatorFactory *>(reinterpret_cast<void *>(operatorFactoriesArr[i]));
+        operatorTypes[i] = static_cast<omniruntime::op::OperatorType>(operatorTypesArr[i]);
+    }
+    env->ReleaseIntArrayElements(jOperatorTypes, operatorTypesArr, 0);
+    env->ReleaseLongArrayElements(jOperatorFactories, operatorFactoriesArr, 0);
+
+    for (auto operatorType : operatorTypes) {
+        if (operatorType != omniruntime::op::OMNI_FILTER_AND_PROJECT &&
+            operatorType != omniruntime::op::OMNI_LOOKUP_JOIN &&
+            operatorType != omniruntime::op::OMNI_HASH_AGGREGATION) {
+            return reinterpret_cast<intptr_t>(nullptr);
+        }
+    }
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto overflowConfig = OperatorConfig::DeserializeOverflowConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
+    auto fusionOperatorFactory = new FusionOperatorFactory(operatorFactories, operatorTypes, overflowConfig);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(fusionOperatorFactory));
 }

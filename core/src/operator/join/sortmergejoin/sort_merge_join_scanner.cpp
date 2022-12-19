@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * @Description: sort merge join scanner implementations
  */
 
@@ -320,7 +320,9 @@ bool SortMergeJoinScanner::LeftOuterFindJoinRows()
     if (latestCompareStat < 0 && !curStreamRowMatchFlag) {
         BufferMissingRows();
         curStreamRowMatchFlag = true;
-        bufferedPagesIndexPosition = (bufferedPagesIndexPosition == 0 ? 0 : bufferedPagesIndexPosition--);
+        if (bufferedPagesIndexPosition > 0) {
+            bufferedPagesIndexPosition--;
+        }
     } else if (latestCompareStat == 0) {
         BufferMatchingRows();
         curStreamRowMatchFlag = true;
