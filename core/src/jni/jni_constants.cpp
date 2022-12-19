@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: JNI Constants
  */
 
@@ -66,6 +66,26 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
     DEFINE_CONSTANT(OMNI_FRAME_BOUND_CURRENT_ROW);
     DEFINE_CONSTANT(OMNI_FRAME_BOUND_FOLLOWING);
     DEFINE_CONSTANT(OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING);
+
+    cls = env->FindClass("nova/hetu/omniruntime/constants/OperatorType");
+    fieldName = "Lnova/hetu/omniruntime/constants/OperatorType;";
+    DEFINE_CONSTANT(OMNI_FILTER_AND_PROJECT);
+    DEFINE_CONSTANT(OMNI_PROJECT);
+    DEFINE_CONSTANT(OMNI_LIMIT);
+    DEFINE_CONSTANT(OMNI_DISTINCT_LIMIT);
+    DEFINE_CONSTANT(OMNI_SORT);
+    DEFINE_CONSTANT(OMNI_TOPN);
+    DEFINE_CONSTANT(OMNI_AGGREGATION);
+    DEFINE_CONSTANT(OMNI_HASH_AGGREGATION);
+    DEFINE_CONSTANT(OMNI_WINDOW);
+    DEFINE_CONSTANT(OMNI_HASH_BUILDER);
+    DEFINE_CONSTANT(OMNI_LOOKUP_JOIN);
+    DEFINE_CONSTANT(OMNI_LOOKUP_OUTER_JOIN);
+    DEFINE_CONSTANT(OMNI_SMJ_BUFFER);
+    DEFINE_CONSTANT(OMNI_SMJ_STREAM);
+    DEFINE_CONSTANT(OMNI_PARTITIONED_OUTPUT);
+    DEFINE_CONSTANT(OMNI_UNION);
+    DEFINE_CONSTANT(OMNI_FUSION);
 }
 
 JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_OmniLibs_getVersion(JNIEnv *env, jclass ignore)
