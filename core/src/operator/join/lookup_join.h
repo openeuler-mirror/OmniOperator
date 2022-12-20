@@ -19,14 +19,14 @@ namespace op {
 class LookupJoinOperatorFactory : public OperatorFactory {
 public:
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
-        int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
+        int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
         OverflowConfig *overflowConfig);
     ~LookupJoinOperatorFactory() override;
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-        int32_t *buildOutputCols, const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr,
-        OverflowConfig *overflowConfig);
+        int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
+        int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:
@@ -69,6 +69,7 @@ private:
     DataTypes buildOutputTypes;
     bool probeOnOuterSide;
     bool needTrackPosition;
+    bool onlyBuildSideFirstMatch;
     bool currentProbePositionProducedRow;
     JoinHashTables *hashTables;
     JoinProbe *joinProbe;
@@ -118,7 +119,7 @@ private:
 class LookupJoinOutputBuilder {
 public:
     LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
-        const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
+        int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition);
     void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
@@ -128,6 +129,7 @@ private:
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
     int32_t *buildOutputCols;
+    int32_t buildOutputColsCount;
     DataTypes buildOutputTypes;
     int32_t outputRowSize;
     std::vector<int32_t> probeIndex;
