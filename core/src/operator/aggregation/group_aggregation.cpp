@@ -683,8 +683,7 @@ void SetVectorImpl(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, V
 void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount)
 {
-    vecBatch->SetVector(columnIndex, new VarcharVector(vecAllocator,
-        static_cast<uint32_t>(rowCount) * static_cast<const VarcharDataType &>(type).GetWidth(), rowCount));
+    vecBatch->SetVector(columnIndex, new VarcharVector(vecAllocator, rowCount));
 }
 
 void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,

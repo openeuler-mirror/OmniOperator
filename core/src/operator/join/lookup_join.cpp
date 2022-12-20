@@ -716,7 +716,7 @@ T *ConstructBuildColumn(VectorAllocator *vecAllocator, const JoinHashTables *has
 VarcharVector *ConstructBuildVarcharColumn(VectorAllocator *vecAllocator, const JoinHashTables *hashTables,
     int32_t outputCol, uint64_t *buildIndex, int32_t offset, int32_t length, uint32_t width)
 {
-    auto *vector = new VarcharVector(vecAllocator, static_cast<int32_t>(length * width), length);
+    auto *vector = new VarcharVector(vecAllocator, length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t index = 0;

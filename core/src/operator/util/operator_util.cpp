@@ -97,8 +97,7 @@ static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *val
 static VarcharVector *ProjectVarcharVector(const DataTypePtr &type, const RowProjFunc func, int64_t *valuesAddresses,
     int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
 {
-    VarcharVector *result =
-        new VarcharVector(allocator, static_cast<VarcharDataType *>(type.get())->GetWidth() * rowCount, rowCount);
+    auto *result = new VarcharVector(allocator,  rowCount);
 
     bool isNull = false;
     int32_t length = 0;
