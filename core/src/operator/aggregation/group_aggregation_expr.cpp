@@ -18,6 +18,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
     std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig)
 {
+    originalSourceTypes = std::make_unique<DataTypes>(sourceDataTypes.Get());
     uint32_t aggColNum = 0;
     for (auto &aggKeys : aggsKeys) {
         aggColNum += aggKeys.size();
@@ -93,7 +94,13 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    return new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, hashAggOperator);
+    auto *op = new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, hashAggOperator);
+    std::vector<type::DataTypeId> dataTypeIds;
+    for (int32_t i = 0; i < originalSourceTypes->GetSize(); ++i) {
+        dataTypeIds.push_back(originalSourceTypes->GetType(i)->GetId());
+    }
+    op->Init(dataTypeIds);
+    return op;
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,
@@ -115,6 +122,15 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     return 0;
 }
 
+void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t lens[])
+{
+    auto inputVecBatch = oneRowAdaptor.Trans2VectorBatch(rowValues, lens);
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectRequiredVectors(inputVecBatch, sourceTypes, projectFuncs, projectCols, vecAllocator);
+    hashAggOperator->AddInput(newInputVecBatch);
+    // no need to delete inputVecBatch, it will be reused when this interface call again
+}
+
 int32_t HashAggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
 {
     hashAggOperator->GetOutput(outputVecBatches);
@@ -125,6 +141,12 @@ int32_t HashAggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &o
 OmniStatus HashAggregationWithExprOperator::Close()
 {
     hashAggOperator->Close();
+    return OMNI_STATUS_NORMAL;
+}
+
+OmniStatus HashAggregationWithExprOperator::Init(const std::vector<type::DataTypeId> &dataTypeIds)
+{
+    oneRowAdaptor.Init(dataTypeIds);
     return OMNI_STATUS_NORMAL;
 }
 }
