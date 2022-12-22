@@ -2931,6 +2931,7 @@ TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoin)
     VectorHelper::FreeVecBatch(expectedVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
 }
 
 TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoinWithCharFilter)
