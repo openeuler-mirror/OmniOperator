@@ -596,6 +596,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     auto probeHashColsCount = env->GetArrayLength(jProbeHashCols);
     auto probeHashColsArr = env->GetIntArrayElements(jProbeHashCols, JNI_FALSE);
     auto buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+    auto buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
     auto buildOutputTypesCharPtr = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
     auto probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
 
@@ -621,7 +622,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     JNI_METHOD_START
     lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeDataTypes,
         probeOutputColsArr, probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr,
-        buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
+        buildOutputColsCount, buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, { filterExpr }, overflowConfig)
     Expr::DeleteExprs({ filterExpr });
     delete overflowConfig;
@@ -767,6 +768,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     std::string probeHashKeysArr[probeHashKeysCount];
     GetExpressions(env, jProbeHashKeys, probeHashKeysArr, probeHashKeysCount);
     auto buildOutputCols = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+    auto buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
     auto buildOutputTypesChars = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
     jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
 
@@ -800,7 +802,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_START
     operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
         probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
-        buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
+        buildOutputColsCount, buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
     JNI_METHOD_END_WITH_MULTI_EXPRS_OVERFLOW(0L, { filterExpr }, probeHashKeysArrExprs, overflowConfig)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(probeHashKeysArrExprs);
