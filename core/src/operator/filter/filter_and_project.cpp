@@ -247,5 +247,42 @@ OmniStatus FilterAndProjectOperator::Close()
     }
     return OMNI_STATUS_NORMAL;
 }
+
+/**
+ * Process one row for fusion operator
+ * @param valueAddrs contains value address of each column
+ * @param rowLens contains null or length of each column. rowLens[i] == -1 means i-th value is null; rowLens[i] >= 0
+ * represents the i-th values's length.
+ * @return true(filter pass) or false(filter fail)
+ */
+bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t rowLens[])
+{
+    // Construct nullsAddrs and offsetsAddrs from rowLens
+    for (int i = 0; i < vecCount; ++i) {
+        if (rowLens[i] == -1) {
+            reinterpret_cast<bool *>(nullsAddrs[i])[0] = true;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[0] = 0;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[1] = 0;
+        } else {
+            reinterpret_cast<bool *>(nullsAddrs[i])[0] = false;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[0] = 0;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[1] = rowLens[i];
+        }
+    }
+
+    const int rowCount = 1;
+    int32_t selectedRows[rowCount];
+    int32_t numSelectedRows = this->filter->apply(valueAddrs, rowCount, selectedRows, nullsAddrs, offsetsAddrs,
+        reinterpret_cast<int64_t>(context), dictsAddrs);
+
+    if (context->HasError()) {
+        context->GetArena()->Reset();
+        string errorMessage = context->GetError();
+        throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+    }
+    context->GetArena()->Reset();
+
+    return numSelectedRows == 1;
+}
 } // end of op
 } // end of omniruntime

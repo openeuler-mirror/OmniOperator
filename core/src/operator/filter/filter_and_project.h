@@ -133,16 +133,37 @@ public:
     {
         this->context = context;
         this->context->GetArena()->SetAllocator(vecAllocator);
+
+        dictsAddrs = new int64_t[vecCount];
+        offsetsAddrs = new int64_t[vecCount];
+        nullsAddrs = new int64_t[vecCount];
+        for (int i = 0; i < vecCount; ++i) {
+            dictsAddrs[i] = 0; // Spark's TableScan will not produce dictionary.
+            auto null = new bool[1];
+            nullsAddrs[i] = reinterpret_cast<int64_t>(null);
+            auto offset = new int32_t[2]; // offset[1] - offset[0] = length
+            offsetsAddrs[i] = reinterpret_cast<int64_t>(offset);
+        }
     }
 
     ~FilterAndProjectOperator() override
     {
         delete context;
+
+        for (int i = 0; i < vecCount; ++i) {
+            delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
+            delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
+        }
+        delete[] dictsAddrs;
+        delete[] nullsAddrs;
+        delete[] offsetsAddrs;
     }
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
+
+    bool ProcessRow(int64_t valueAddrs[], const int32_t rowLens[]);
 
     OmniStatus Close() override;
 
@@ -153,6 +174,9 @@ private:
     const int32_t *inputTypes;
     int32_t vecCount;
     omniruntime::vec::VectorBatch *projectedVecs;
+    int64_t *dictsAddrs;
+    int64_t *offsetsAddrs;
+    int64_t *nullsAddrs;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
