@@ -26,12 +26,12 @@ if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
 
   cd jemalloc
   sudo ./autogen.sh --disable-initial-exec-tls
-  sudo make -j4 && sudo make install
+  sudo make -j8 && sudo make install
 
   mkdir ../json/build
   cd ../json/build
   sudo cmake ../
-  sudo make -j4 && sudo make install
+  sudo make -j8 && sudo make install
 
   cd ../../../../boost
   sudo chmod -R 755 ./tools
