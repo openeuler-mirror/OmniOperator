@@ -289,12 +289,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobal
     return globalVectorAllocatorAddr;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative(JNIEnv *env, jclass jcls,
-    jlong jNativeAllocator)
-{
-    return TransformAllocator(jNativeAllocator)->GetPeakAllocated();
-}
-
 jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *env, jclass jcls,
     jlongArray jVectorAddresses, jint rRowCount)
 {

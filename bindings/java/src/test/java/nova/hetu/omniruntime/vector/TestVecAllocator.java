@@ -44,7 +44,6 @@ public class TestVecAllocator {
         assertEquals(subVecAllocator1.getAllocatedMemory(), 72);
         // add the two capacities 40 + 72
         assertEquals(vecAllocator.getAllocatedMemory(), 0); // subVecAllocator size just unTracked
-        assertEquals(vecAllocator.getPeakAllocated(), 0);
 
         intVec.close();
         assertEquals(subVecAllocator2.getAllocatedMemory(), 0);
