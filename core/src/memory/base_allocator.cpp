@@ -33,8 +33,6 @@ int64_t BaseAllocator::OperatorAllocatedBytesInternal(int64_t size)
 
     bool beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
     int64_t resultLimit = (size > 0 && beyondLimit) ? allocationLimit.load() : parentLimit;
-    // set peakAllocated
-    UpdatePeak();
     return resultLimit;
 }
 
@@ -55,18 +53,7 @@ int64_t BaseAllocator::AllocatedBytesInternal(int64_t size)
 
     bool beyondLimit = (allocationLimit != UNLIMIT) && (newAllocated > allocationLimit);
     int64_t resultLimit = (size > 0 && beyondLimit) ? allocationLimit.load() : parentLimit;
-    // set peakAllocated
-    UpdatePeak();
     return resultLimit;
-}
-
-void BaseAllocator::UpdatePeak()
-{
-    int64_t newAllocated = allocatedBytes.load(std::memory_order_relaxed);
-    int64_t oldPeakAllocated = peakAllocated;
-    while (oldPeakAllocated < newAllocated && !peakAllocated.compare_exchange_weak(oldPeakAllocated, newAllocated)) {
-        oldPeakAllocated = peakAllocated;
-    }
 }
 
 void BaseAllocator::Close()

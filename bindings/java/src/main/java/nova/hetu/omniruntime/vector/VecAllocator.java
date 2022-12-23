@@ -116,15 +116,6 @@ public class VecAllocator implements AutoCloseable {
     }
 
     /**
-     * get peak allocated memory of current allocator
-     *
-     * @return peak allocated memory in bytes
-     */
-    public long getPeakAllocated() {
-        return getPeakAllocatedNative(nativeAllocator);
-    }
-
-    /**
      * get current allocator parent
      *
      * @return allocator
@@ -171,6 +162,4 @@ public class VecAllocator implements AutoCloseable {
     private static native long[] getChildAllocatorsNative(long nativeAllocator);
 
     private static native long getGlobalVectorAllocator();
-
-    private static native long getPeakAllocatedNative(long nativeAllocator);
 }
