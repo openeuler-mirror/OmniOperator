@@ -37,6 +37,8 @@ JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes
     int32_t eachRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
     this->JoinFilterCodeGen(overflowConfig);
+    ASSERT(leftTableOutputTypes.GetSize() < leftTablePagesIndex->GetTypesCount() &&
+        rightTableOutputTypes.GetSize() < rightTablePagesIndex->GetTypesCount())
 }
 
 void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
@@ -294,15 +296,17 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
     bool nulls[allColsCount];
     int32_t lengths[allColsCount];
 
+    leftTablePagesIndex->CacheBatch(leftBatchId);
+    rightTablePagesIndex->CacheBatch(rightBatchId);
     for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes.GetSize(); leftColIdx++) {
-        auto leftVector = leftTablePagesIndex->GetColumns(leftBatchId, leftColIdx);
+        auto leftVector = leftTablePagesIndex->GetColumnsFormCache(leftColIdx);
         nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
         values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
     }
 
     for (int32_t rightColIdx = 0; rightColIdx < rightTableOutputTypes.GetSize(); rightColIdx++) {
         int32_t colIdx = leftTableOutputTypes.GetSize() + rightColIdx;
-        auto rightVector = rightTablePagesIndex->GetColumns(rightBatchId, rightColIdx);
+        auto rightVector = rightTablePagesIndex->GetColumnsFormCache(rightColIdx);
         nulls[colIdx] = rightVector->IsValueNull(rightRowId);
         values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
     }
