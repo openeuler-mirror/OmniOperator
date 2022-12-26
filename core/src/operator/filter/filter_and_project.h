@@ -163,7 +163,7 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
-    bool ProcessRow(int64_t valueAddrs[], const int32_t rowLens[]);
+    bool ProcessRow(int64_t valueAddrs[], const int32_t inputLens[], int64_t outValueAddrs[], int32_t outLens[]);
 
     OmniStatus Close() override;
 
