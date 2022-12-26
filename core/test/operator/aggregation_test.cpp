@@ -3123,7 +3123,7 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = {resultVec, emptyVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci18_6Vec);
@@ -3187,7 +3187,7 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = {resultVec, emptyVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci25_8Vec);
@@ -3251,7 +3251,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = {resultVec, emptyVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci38_0Vec);
@@ -3315,7 +3315,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = {resultVec, emptyVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci38_0Vec);

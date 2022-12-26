@@ -10,6 +10,7 @@
 #include "operator/projection/projection.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "type/data_types.h"
+#include "one_row_adaptor.h"
 
 namespace omniruntime {
 namespace op {
@@ -26,6 +27,9 @@ public:
     Operator *CreateOperator() override;
 
 private:
+    // originalSourceTypes is used to store raw input type which is not handled by projection function
+    std::unique_ptr<DataTypes> originalSourceTypes;
+    // sourceTypes is used to store input type which has been handled by projection function
     std::unique_ptr<DataTypes> sourceTypes;
     std::unique_ptr<DataTypes> groupByTypes;
     std::vector<std::unique_ptr<DataTypes>> aggTypes;
@@ -48,7 +52,12 @@ public:
 
     OmniStatus Close() override;
 
+    void ProcessRow(uintptr_t rowValues[], int32_t lens[]);
+
+    OmniStatus Init(const std::vector<type::DataTypeId> &dataTypeIds);
+
 private:
+    OneRowAdaptor oneRowAdaptor;
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<RowProjFunc> projectFuncs;
