@@ -124,7 +124,7 @@ TEST(FilterTest, LessThanProcessRow)
     int32_t dataCol[numRows] = {0};
 
     int64_t valueAddrs[numCols] = {reinterpret_cast<int64_t>(dataCol)};
-    int32_t rowLens[numCols]= {0};
+    int32_t inputLens[numCols]= {0};
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
     const int32_t projectCount = 1;
@@ -136,16 +136,20 @@ TEST(FilterTest, LessThanProcessRow)
         new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
     auto *op = dynamic_cast<FilterAndProjectOperator *>(factory->CreateOperator());
 
-    bool filterPass = op->ProcessRow(valueAddrs, rowLens);
+    int64_t outValueAddrs[projectCount];
+    int32_t outLens[projectCount];
+    bool filterPass = op->ProcessRow(valueAddrs, inputLens, outValueAddrs, outLens);
     EXPECT_TRUE(filterPass);
+    EXPECT_EQ(outValueAddrs[0], valueAddrs[0]);
+    EXPECT_EQ(outLens[0], 0);
 
     dataCol[0] = 2000;
-    filterPass = op->ProcessRow(valueAddrs, rowLens);
+    filterPass = op->ProcessRow(valueAddrs, inputLens, outValueAddrs, outLens);
     EXPECT_FALSE(filterPass);
 
     dataCol[0] = 1000;
-    rowLens[0] = -1;
-    filterPass = op->ProcessRow(valueAddrs, rowLens);
+    inputLens[0] = -1;
+    filterPass = op->ProcessRow(valueAddrs, inputLens, outValueAddrs, outLens);
     EXPECT_FALSE(filterPass);
 
     Expr::DeleteExprs({ filterExpr });
