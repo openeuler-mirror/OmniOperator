@@ -128,7 +128,8 @@ VectorBatchUnit *VectorBatchSpiller::Next()
             }
         }
         delete vecBatchWithPosition;
-    } while (rowIndex++ < rowCount && merger->HasNext());
+        rowIndex++;
+    } while (rowIndex < rowCount && merger->HasNext());
 
     remainingRowCount -= rowCount;
     return new VectorBatchUnit(output);
