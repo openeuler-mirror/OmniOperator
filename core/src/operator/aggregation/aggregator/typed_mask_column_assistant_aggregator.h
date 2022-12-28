@@ -213,12 +213,12 @@ protected:
             static_cast<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> *>(realAggregator.release()));
     }
 
-    ALWAYS_INLINE void ProcessSingleInternal(
+    void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    ALWAYS_INLINE void ProcessGroupInternal(
+    void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}

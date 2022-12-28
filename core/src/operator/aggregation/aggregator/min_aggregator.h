@@ -79,123 +79,14 @@ public:
     ~MinAggregator() override = default;
 
 #ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        auto vector = vectorBatch->GetVector(this->channels[0]);
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 
-        auto vectorValues = vector->GetValues();
-        auto positionOffset = vector->GetPositionOffset();
-        auto rowCount = vector->GetSize();
-        auto inputTypeId = inputTypes.GetType(0)->GetId();
-        auto outputTypeId = outputTypes.GetType(0)->GetId();
-
-        HmppResult result = HMPP_STS_NO_ERR;
-        auto minVal = reinterpret_cast<InType *>(this->executionContext->GetArena()->Allocate(sizeof(InType)));
-        switch (inputTypeId) {
-            case OMNI_SHORT: {
-                LogDebug("HMPP-Agg-min");
-                result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<int16_t *>(minVal));
-                if (outputTypeId == OMNI_LONG) {
-                    *minVal = *reinterpret_cast<int16_t *>(minVal);
-                }
-                break;
-            }
-            case OMNI_INT:
-            case OMNI_DATE32: {
-                LogDebug("HMPP-Agg-min");
-                result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<int32_t *>(minVal));
-                if (outputTypeId == OMNI_LONG) {
-                    *minVal = *reinterpret_cast<int32_t *>(minVal);
-                }
-                break;
-            }
-            case OMNI_LONG:
-            case OMNI_DECIMAL64: {
-                LogDebug("HMPP-Agg-min");
-                result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<int64_t *>(minVal));
-                break;
-            }
-            case OMNI_DOUBLE: {
-                LogDebug("HMPP-Agg-min");
-                result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<double *>(minVal));
-                break;
-            }
-            case OMNI_DECIMAL128: {
-                LogDebug("HMPP-Agg-min");
-                result = HMPPS_Min_decimal(
-                    static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<HmppDecimal128 *>(minVal));
-                break;
-            }
-            default: {
-                throw OmniException("NOT SUPPORT", "Unsupported input type for min aggregate");
-                break;
-            }
-        }
-
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "min failed for hmpp error");
-        }
-        if (state.val == nullptr) {
-            state.val = minVal;
-        } else {
-            auto preMinVal = static_cast<InType *>(state.val);
-            *static_cast<InType *>(state.val) = (Compare(*preMinVal, *minVal) == -1) ? *preMinVal : *minVal;
-        }
-        // hmpp only works on not nullable columns, so it always find min
-        state.count = 1;
-    }
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        // just support raw input data and must no null inpout
-        if constexpr (!RAW_IN) {
-            return false;
-        } else {
-            if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
-                return false;
-            }
-            // not accept dictionnary vector
-            if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                return false;
-            }
-            // type check with whitelist for min
-            auto inputTypeId = this->inputTypes->GetType(0)->GetId();
-            return AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(inputTypeId);
-        }
-    }
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 #endif
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
-    {
-        int32_t offset;
-        auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
-        if (state.count == 0 || (state.count > 0 && state.val == nullptr)) {
-            v->SetValueNull(offset);
-            return;
-        }
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
-        bool overflow = state.count < 0;
-        OutType result = this->template CastWithOverflow<ResultType, OutType>(
-            *reinterpret_cast<ResultType *>(state.val), overflow);
-        v->SetValue(offset, result);
-        if (overflow) {
-            this->SetNullOrThrowException(v, offset, "min_aggregator overflow.");
-        } else if (state.count == 0 || state.val == nullptr) {
-            v->SetValueNull(offset);
-        }
-    }
-
-    void InitState(AggregateState &state) override
-    {
-        state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-        *reinterpret_cast<ResultType *>(state.val) = getMax<ResultType>();
-        state.count = 0;
-    }
+    void InitState(AggregateState &state) override;
 
     static std::unique_ptr<Aggregator> Create(
         const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
@@ -228,60 +119,13 @@ protected:
             OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
     {}
 
-    ALWAYS_INLINE void ProcessSingleInternal(
+    void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        if (state.val == nullptr) {
-            InitState(state);
-        }
-        ResultType *res = reinterpret_cast<ResultType *>(state.val);
+        const uint8_t *nullMap, const int32_t *indexMap) override;
 
-        InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
-        if (indexMap == nullptr) {
-            ptr += rowOffset;
-            if (nullMap == nullptr) {
-                add<InType, ResultType, minOp<InType, ResultType>>(res, state.count, ptr, rowCount);
-            } else {
-                addConditional<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
-                    res, state.count, ptr, rowCount, nullMap);
-            }
-        } else {
-            if (nullMap == nullptr) {
-                addDict<InType, ResultType, minOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
-            } else {
-                addDictConditional<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
-                    res, state.count, ptr, rowCount, nullMap, indexMap);
-            }
-        }
-    }
-
-    ALWAYS_INLINE void ProcessGroupInternal(
+    void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
-        if (indexMap == nullptr) {
-            ptr += rowOffset;
-            if (nullMap == nullptr) {
-                addUseRowIndex<InType, ResultType, minOp<InType, ResultType>>(rowStates, aggIdx, ptr);
-            } else {
-                addConditionalUseRowIndex<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
-                    rowStates, aggIdx, ptr, nullMap);
-            }
-        } else {
-            if (nullMap == nullptr) {
-                addDictUseRowIndex<InType, ResultType, minOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
-            } else {
-                addDictConditionalUseRowIndex<InType, ResultType, minConditionalOp<InType, ResultType, false>>(
-                    rowStates, aggIdx, ptr, nullMap, indexMap);
-            }
-        }
-    }
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 };
 }
 }

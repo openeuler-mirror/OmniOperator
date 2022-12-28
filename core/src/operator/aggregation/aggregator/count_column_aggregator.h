@@ -49,12 +49,7 @@ class CountColumnAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_O
 public:
     ~CountColumnAggregator() override = default;
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
-    {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-        static_cast<LongVector *>(vector)->SetValue(offset, state.count);
-    }
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
     static std::unique_ptr<Aggregator> Create(
         const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
@@ -89,89 +84,13 @@ protected:
             aggregateType, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
     {}
 
-    ALWAYS_INLINE void ProcessSingleInternal(
+    void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        if constexpr (RAW_IN) {
-            if (nullMap == nullptr) {
-                state.count += rowCount;
-            } else {
-                addConditionalCountRaw<false>(state.count, rowCount, nullMap);
-            }
-        } else {
-            int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-            ptr += vector->GetPositionOffset();
+        const uint8_t *nullMap, const int32_t *indexMap) override;
 
-            int64_t noUsed {};
-
-            if (indexMap == nullptr) {
-                ptr += rowOffset;
-                if (nullMap == nullptr) {
-                    add<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount);
-                } else {
-                    addConditional<int64_t, int64_t, countAllConditionalOp<false>>(
-                        &(state.count), noUsed, ptr, rowCount, nullMap);
-                }
-            } else {
-                if (nullMap == nullptr) {
-                    addDict<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
-                } else {
-                    addDictConditional<int64_t, int64_t, countAllConditionalOp<false>>(
-                        &(state.count), noUsed, ptr, rowCount, nullMap, indexMap);
-                }
-            }
-        }
-    }
-
-    ALWAYS_INLINE void ProcessGroupInternal(
+    void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        if constexpr (RAW_IN) {
-            if (nullMap == nullptr) {
-                for (AggregateState *states : rowStates) {
-                    states[aggIdx].count++;
-                }
-            } else {
-                size_t rowCount = rowStates.size();
-                for (size_t i = 0; i < rowCount; ++i) {
-                    if (!nullMap[i]) {
-                        rowStates[i][aggIdx].count++;
-                    }
-                }
-            }
-        } else {
-            int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-            ptr += vector->GetPositionOffset();
-            size_t rowCount = rowStates.size();
-            int64_t unsedFlag = 0;
-
-            if (indexMap == nullptr) {
-                ptr += rowOffset;
-                if (nullMap == nullptr) {
-                    for (size_t i = 0; i < rowCount; ++i) {
-                        countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL);
-                    }
-                } else {
-                    for (size_t i = 0; i < rowCount; ++i) {
-                        countAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL, nullMap[i]);
-                    }
-                }
-            } else {
-                if (nullMap == nullptr) {
-                    for (size_t i = 0; i < rowCount; ++i) {
-                        countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
-                    }
-                } else {
-                    for (size_t i = 0; i < rowCount; ++i) {
-                        countAllConditionalOp<false>(
-                            &(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL, nullMap[i]);
-                    }
-                }
-            }
-        }
-    }
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 };
 }
 }

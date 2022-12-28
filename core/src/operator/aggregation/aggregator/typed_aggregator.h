@@ -173,11 +173,11 @@ protected:
         : Aggregator(aggregateType, inputTypes, outputTypes, channels, RAW_IN, PARTIAL_OUT, NULL_OVERFLOW)
     {}
 
-    virtual ALWAYS_INLINE void ProcessSingleInternal(
+    virtual void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual ALWAYS_INLINE void ProcessGroupInternal(
+    virtual void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 

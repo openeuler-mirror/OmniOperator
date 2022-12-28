@@ -6,9 +6,6 @@
 #define OMNI_RUNTIME_SUM_AGGREGATOR_H
 
 #include "typed_aggregator.h"
-#ifdef ENABLE_HMPP
-#include "HMPP/hmpps.h"
-#endif
 
 namespace omniruntime {
 namespace op {
@@ -117,122 +114,14 @@ public:
     ~SumAggregator() override = default;
 
 #ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        auto vector = vectorBatch->GetVector(this->channels[0]);
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 
-        auto vectorValues = vector->GetValues();
-        auto positionOffset = vector->GetPositionOffset();
-        auto rowCount = vector->GetSize();
-        auto nullAddr = vector->GetValueNulls();
-        bool overflow = false;
-
-        HmppResult result = HMPP_STS_NO_ERR;
-        if constexpr (IN_ID == OMNI_LONG) {
-            LogDebug("HMPP-Agg-sum");
-            long sumVal = 0;
-            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
-
-            if (result != HMPP_STS_NO_ERR) {
-                throw OmniException("HMPP ERROR", "sum failed for hmpp error");
-            }
-
-            ResultType res = static_cast<ResultType>(sumVal);
-            if (state.val == nullptr) {
-                auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-                *reinterpret_cast<ResultType *>(valPtr) = res;
-                state.val = valPtr;
-            } else {
-                *(reinterpret_cast<ResultType *>(state.val)) += res;
-            }
-        } else if constexpr (IN_ID == OMNI_DECIMAL128) {
-            LogDebug("HMPP-Agg-sum");
-            HmppDecimal128 sumVal {};
-            result = HMPPS_Sum_decimal128(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
-
-            if (result != HMPP_STS_NO_ERR) {
-                throw OmniException("HMPP ERROR", "sum failed for hmpp error");
-            }
-
-            if (state.val == nullptr) {
-                state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
-                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
-            } else {
-                Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
-                preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
-                overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
-            }
-        } else {
-            throw OmniException("NOT SUPPORT", "Unsupported input type for sum aggregate");
-        }
-
-        if (overflow) {
-            state.count = -1;
-        } else if (state.count >= 0) {
-            state.count++;
-        }
-    }
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        // not accept dictionnary vector
-        if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            return false;
-        }
-
-        // only OMNI_LONG or OMNI_DECIMAL128 type input support
-        if (this->inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128) {
-            // just support row Raw data for decimal128
-            return RAW_IN;
-        } else if (this->inputTypes.GetType(0)->GetId() == OMNI_LONG) {
-            return true;
-        }
-        return false;
-    }
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 #endif
 
-    virtual void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
-    {
-        int32_t offset;
-        auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+    virtual void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
-        OutType result {};
-        bool overflow = state.count < 0;
-
-        if constexpr (OUT_ID == OMNI_VARCHAR) {
-            if (state.count > 0 && state.val != nullptr) {
-                result.sum = this->template CastWithOverflow<Decimal128, Decimal128>(
-                    *reinterpret_cast<Decimal128 *>(state.val), overflow);
-            }
-            result.count = overflow ? 0 : state.count;
-            v->SetValue(offset, reinterpret_cast<uint8_t *>(&result), sizeof(OutType));
-            if (overflow && !this->IsOverflowAsNull()) {
-                throw OmniException("OPERATOR_RUNTIME_ERROR", "sum_aggregator overflow.");
-            }
-        } else {
-            if (state.count > 0 && state.val != nullptr) {
-                result = this->template CastWithOverflow<ResultType, OutType>(
-                    *reinterpret_cast<ResultType *>(state.val), overflow);
-            }
-
-            v->SetValue(offset, result);
-            if (overflow) {
-                this->SetNullOrThrowException(v, offset, "sum_aggregator overflow.");
-            } else if (state.count == 0 || state.val == nullptr) {
-                v->SetValueNull(offset);
-            }
-        }
-    }
-
-    void InitState(AggregateState &state) override
-    {
-        state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-        *reinterpret_cast<ResultType *>(state.val) = ResultType {};
-        state.count = 0;
-    }
+    void InitState(AggregateState &state) override;
 
     static std::unique_ptr<Aggregator> Create(
         const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
@@ -282,65 +171,13 @@ protected:
             aggregateType, inputTypes, outputTypes, channels)
     {}
 
-    ALWAYS_INLINE void ProcessSingleInternal(
+    void ProcessSingleInternal(
         AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        if (state.val == nullptr) {
-            this->InitState(state);
-        }
-        ResultType *res = reinterpret_cast<ResultType *>(state.val);
+        const uint8_t *nullMap, const int32_t *indexMap) override;
 
-        InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
-        if (indexMap == nullptr) {
-            ptr += rowOffset;
-            if (nullMap == nullptr) {
-                add<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, rowCount);
-            } else {
-                if constexpr (std::is_floating_point_v<InType>) {
-                    sumConditionalFloat<InType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
-                } else {
-                    addConditional<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                        res, state.count, ptr, rowCount, nullMap);
-                }
-            }
-        } else {
-            if (nullMap == nullptr) {
-                addDict<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
-            } else {
-                addDictConditional<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                    res, state.count, ptr, rowCount, nullMap, indexMap);
-            }
-        }
-    }
-
-    ALWAYS_INLINE void ProcessGroupInternal(
+    void ProcessGroupInternal(
         std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
-    {
-        InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
-        if (indexMap == nullptr) {
-            ptr += rowOffset;
-            if (nullMap == nullptr) {
-                addUseRowIndex<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr);
-            } else {
-                // Reza: can we use customize float operation similar to sumConditionalFloat
-                addConditionalUseRowIndex<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                    rowStates, aggIdx, ptr, nullMap);
-            }
-        } else {
-            if (nullMap == nullptr) {
-                addDictUseRowIndex<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
-            } else {
-                addDictConditionalUseRowIndex<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                    rowStates, aggIdx, ptr, nullMap, indexMap);
-            }
-        }
-    }
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
     static bool CheckTypes(const std::string &aggName,
         const DataTypes &inputTypes, const DataTypes &outputTypes, const DataTypeId inId, const DataTypeId outId)
@@ -350,12 +187,11 @@ protected:
             return false;
         }
 
-        constexpr int32_t partialWidth = sizeof(DecimalPartialResult);
         if constexpr (IN_ID == OMNI_VARCHAR) {
-            static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->SetWidth(partialWidth);
+            static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->SetWidth(sizeof(DecimalPartialResult));
         }
         if constexpr (OUT_ID == OMNI_VARCHAR) {
-            static_cast<VarcharDataType *>(outputTypes.GetType(0).get())->SetWidth(partialWidth);
+            static_cast<VarcharDataType *>(outputTypes.GetType(0).get())->SetWidth(sizeof(DecimalPartialResult));
         }
 
         return true;
