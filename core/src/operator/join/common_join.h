@@ -26,7 +26,7 @@ enum class SortMergeJoinAddInputCode {
     SMJ_NEED_BUFFER_TBL_INFO = 1,
     SMJ_NEED_ADD_STREAM_TBL_DATA = 2,
     SMJ_NEED_ADD_BUFFER_TBL_DATA = 3,
-    SMJ_NO_RESULT = 4,
+    SMJ_SCAN_FINISH = 4,
     SMJ_FETCH_JOIN_DATA = 5
 };
 }

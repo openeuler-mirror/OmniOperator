@@ -11,6 +11,8 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createBlankVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.decodeFetchFlag;
+import static nova.hetu.omniruntime.util.TestUtils.decodeAddFlag;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
@@ -70,20 +72,20 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedDatas1);
         OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
         int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         Object[][] bufferedDatas1 = {{6006L, 5005L, 4004L, 3003L, 2002L, 1001L}, {0, 1, 2, 3, 4, 5}};
         VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedDatas1);
         intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         VecBatch bufferedVecBatchEof = createBlankVecBatch(bufferedTypes);
         intputResult = bufferedTableOperator.addInput(bufferedVecBatchEof);
-        assertEquals(intputResult, 2);
+        assertEquals(decodeAddFlag(intputResult), 2);
 
         VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
         intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
-        assertEquals(intputResult, 5);
+        assertEquals(decodeFetchFlag(intputResult), 5);
 
         Iterator<VecBatch> results = bufferedTableOperator.getOutput();
         VecBatch resultVecBatch = results.next();
@@ -199,21 +201,21 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedDatas1); // 0, 1, 2, 2, 2, 3, 4, 5
         OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
         int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         Object[][] bufferedDatas1 = {{8008L, 7007L, 6006L, 5005L, 4004L, 3003L, 2002L, 1001L},
                 {0, 1, 2, 2, 3, 3, 4, 5}};
         VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedDatas1); // 0, 1, 2, 2, 3, 3, 4, 5
         intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         VecBatch bufferedVecBatchEof = createBlankVecBatch(bufferedTypes);
         intputResult = bufferedTableOperator.addInput(bufferedVecBatchEof);
-        assertEquals(intputResult, 2);
+        assertEquals(decodeAddFlag(intputResult), 2);
 
         VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
         intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
-        assertEquals(intputResult, 5);
+        assertEquals(decodeFetchFlag(intputResult), 5);
 
         Iterator<VecBatch> results = bufferedTableOperator.getOutput();
         VecBatch resultVecBatch = results.next();
@@ -255,16 +257,16 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedDatas1);
         OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
         int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         Object[][] bufferedDatas1 = {{3, 3, 4, 4}, {3.3, 3.5, 4.4, 4.5}};
         VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedDatas1);
         intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
-        assertEquals(intputResult, 2);
+        assertEquals(decodeAddFlag(intputResult), 2);
 
         VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
         intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
-        assertEquals(intputResult, 5);
+        assertEquals(decodeFetchFlag(intputResult), 5);
 
         Iterator<VecBatch> results = bufferedTableOperator.getOutput();
         VecBatch resultVecBatch = results.next();

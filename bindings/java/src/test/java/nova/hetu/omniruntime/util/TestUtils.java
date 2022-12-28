@@ -826,4 +826,24 @@ public class TestUtils {
                 "{\"exprType\":\"FUNCTION\",\"returnType\":%d,\"function_name\":\"%s\",\"arguments\":[%s]}", returnType,
                 function, arguments);
     }
+
+    /**
+     * get the corresponding addFlag enumerated value in resultCode.
+     *
+     * @param resultCode the resultCode
+     * @return the corresponding addFlag enumerated value in resultCode
+     */
+    public static int decodeAddFlag(int resultCode) {
+        return resultCode >> 16;
+    }
+
+    /**
+     * get the corresponding fetchFlag enumerated value in resultCode.
+     *
+     * @param resultCode the resultCode
+     * @return the corresponding fetchFlag enumerated value in resultCode
+     */
+    public static int decodeFetchFlag(int resultCode) {
+        return resultCode & Short.MAX_VALUE;
+    }
 }

@@ -175,6 +175,10 @@ int64_t *MakeLongs(const int32_t size, const int64_t start = 0);
 double *MakeDoubles(const int32_t size, const double start = 0);
 
 int16_t *MakeShorts(const int32_t size, const int16_t start = 0);
+
+int32_t DecodeAddFlag(int32_t resultCode);
+
+int32_t DecodeFetchFlag(int32_t resultCode);
 }
 
 #endif
