@@ -79,7 +79,7 @@ TEST(SpillTest, TestSpiller)
 
     VectorBatchUnitIter memoryIter(TestUtil::CreateVectorBatch(sourceTypes, dataSize, data4, data5, data6));
     spiller.MergeFromDiskAndMemory(memoryIter);
-    if (spiller.HasNext()) {
+    while (spiller.HasNext()) {
         int32_t expectedDataSize = 2 * dataSize;
         int32_t expectedData1[] = {-9, -7, -5, -3, -1, 1, 3, 5, 7, 9};
         int64_t expectedData2[] = {-2, 6, 0, 8, -4, 4, -8, 0, -6, 2};
@@ -103,7 +103,7 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
     int16_t data3[dataSize] = {-5, -3, 0, 2, 4};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType()}));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType() }));
     VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     std::vector<int32_t> sortCols = { 0, 1, 2 };

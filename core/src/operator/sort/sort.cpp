@@ -63,12 +63,14 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
     this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
+    maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
 }
 
 SortOperator::~SortOperator() = default;
 
 int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 {
+    totalRowCount += vecBatch->GetRowCount();
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
@@ -84,14 +86,24 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 // return error code
 int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
+    // input data is empty, or all data has been returned.
+    if (totalRowCount == 0 || totalRowCount == rowCountOutputted) {
+        pagesIndex->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
+    }
     if (spiller == nullptr) {
         GetOutputFromMemory(outputPages);
     } else {
         MergeFromDiskAndMemory(outputPages);
     }
 
-    pagesIndex->Clear();
-    SetStatus(OMNI_STATUS_FINISHED);
+    // through the reference counting mechanism, can vecBatch be released early?
+    if (totalRowCount == rowCountOutputted) { // all result have been generated
+        pagesIndex->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
+    }
     return 0;
 }
 
@@ -156,38 +168,58 @@ void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesF
     pagesIndex->GetSortedVecBatches(vecAllocator, outputCols, vecBatchesForSpill);
 }
 
-void SortOperator::GetOutputFromMemory(vector<VectorBatch *> &outputPages)
+void SortOperator::PrepareOutput()
 {
-    if (pagesIndex->GetRowCount() <= 0) {
+    if (pagesIndex->GetRowCount() <= 0 || hasSorted) {
         return;
     }
-
     pagesIndex->Prepare();
     // first step, sort
     Sort();
+    hasSorted = true;
+}
+
+void SortOperator::GetOutputFromMemory(vector<VectorBatch *> &outputPages)
+{
+    // first if has not sorted,need to sort first.
+    PrepareOutput();
     // second step, get sorted vector batches
-    pagesIndex->GetSortedVecBatches(vecAllocator, outputCols, outputPages);
+    int32_t rowCountToOutput =
+        static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
+
+    auto *result = new VectorBatch(outputCols.size(), rowCountToOutput);
+    pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
+        rowCountToOutput, vecAllocator);
+    rowCountOutputted += rowCountToOutput;
+    outputPages.emplace_back(result);
 }
 
 void SortOperator::MergeFromDiskAndMemory(vector<VectorBatch *> &outputPages)
 {
-    std::vector<VectorBatch *> vecBatchesForSpill;
-    if (pagesIndex->GetRowCount() > 0) {
-        pagesIndex->Prepare();
-        // first step, sort
-        Sort();
-        // second step, get sorted vector batches
-        GetVecBatchesForSpill(vecBatchesForSpill);
-    }
+    if (!hasSorted) {
+        std::vector<VectorBatch *> vecBatchesForSpill;
+        if (pagesIndex->GetRowCount() > 0) {
+            pagesIndex->Prepare();
+            // first step, sort
+            Sort();
+            // second step, get sorted vector batches
+            GetVecBatchesForSpill(vecBatchesForSpill);
+        }
 
-    // third step, merge data from disk and memory
-    VectorBatchUnitIter memoryIter(vecBatchesForSpill);
-    spiller->MergeFromDiskAndMemory(memoryIter);
-    while (spiller->HasNext()) {
-        VectorBatchUnit *vectorBatchUnit = static_cast<VectorBatchUnit *>(spiller->Next());
-        outputPages.push_back(vectorBatchUnit->GetVectorBatch());
+        // third step, merge data from disk and memory
+        VectorBatchUnitIter memoryIter(vecBatchesForSpill);
+        spiller->MergeFromDiskAndMemory(memoryIter);
+        hasSorted = true;
+        hasNext = spiller->HasNext();
+    }
+    if (hasNext) {
+        auto *vectorBatchUnit = static_cast<VectorBatchUnit *>(spiller->Next());
+        auto *result = vectorBatchUnit->GetVectorBatch();
+        outputPages.push_back(result);
+        rowCountOutputted += result->GetRowCount();
         delete vectorBatchUnit;
     }
+    hasNext = spiller->HasNext();
 }
 } // end of namespace op
 } // end of namespace omniruntime

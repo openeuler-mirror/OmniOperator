@@ -84,9 +84,9 @@ int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 
 int32_t SortWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
 {
-    sortOperator->GetOutput(outputVecBatches);
-    SetStatus(OMNI_STATUS_FINISHED);
-    return 0;
+    int32_t status = sortOperator->GetOutput(outputVecBatches);
+    SetStatus(sortOperator->GetStatus());
+    return status;
 }
 
 OmniStatus SortWithExprOperator::Close()
