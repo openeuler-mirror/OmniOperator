@@ -240,6 +240,75 @@ public class OmniSortWithExprOperatorTest {
     }
 
     /**
+     * Test Sort spill with return multi batch
+     */
+    @Test
+    public void testSortSpillWithReturnMultiBatch() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
+        int[] outputCols = {0, 1};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(1, 1)};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts,
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 100 * 1024 * 1024, 10000)));
+        OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
+
+        int maxRowCntPerBatch = 131072; // 1M / (4+4)
+        Object[][] sourceDatas1 = new Object[2][];
+        sourceDatas1[0] = new Object[maxRowCntPerBatch];
+        sourceDatas1[1] = new Object[maxRowCntPerBatch];
+        for (int i = 0; i < maxRowCntPerBatch; i++) {
+            sourceDatas1[0][maxRowCntPerBatch - i - 1] = i;
+            sourceDatas1[1][maxRowCntPerBatch - i - 1] = i;
+        }
+        VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
+        sortWithExprOperator.addInput(vecBatch1);
+
+        Object[][] sourceDatas2 = new Object[2][];
+        sourceDatas2[0] = new Object[maxRowCntPerBatch];
+        sourceDatas2[1] = new Object[maxRowCntPerBatch];
+        for (int i = 0; i < maxRowCntPerBatch; i++) {
+            sourceDatas2[0][maxRowCntPerBatch - i - 1] = maxRowCntPerBatch + i;
+            sourceDatas2[1][maxRowCntPerBatch - i - 1] = maxRowCntPerBatch + i;
+        }
+
+        VecBatch vecBatch2 = createVecBatch(sourceTypes, sourceDatas2);
+        sortWithExprOperator.addInput(vecBatch2);
+
+        Object[][] sourceDatas3 = new Object[2][];
+        sourceDatas3[0] = new Object[maxRowCntPerBatch];
+        sourceDatas3[1] = new Object[maxRowCntPerBatch];
+        for (int i = 0; i < maxRowCntPerBatch; i++) {
+            sourceDatas3[0][maxRowCntPerBatch - i - 1] = maxRowCntPerBatch * 2 + i;
+            sourceDatas3[1][maxRowCntPerBatch - i - 1] = maxRowCntPerBatch * 2 + i;
+        }
+        VecBatch vecBatch3 = createVecBatch(sourceTypes, sourceDatas3);
+        sortWithExprOperator.addInput(vecBatch3);
+        Iterator<VecBatch> results = sortWithExprOperator.getOutput();
+
+        int baseValue = 0;
+        while (results.hasNext()) {
+            VecBatch resultVecBatch = results.next();
+            assertEquals(resultVecBatch.getRowCount(), maxRowCntPerBatch);
+
+            Object[][] expectedDatas = new Object[2][];
+            expectedDatas[0] = new Object[maxRowCntPerBatch];
+            expectedDatas[1] = new Object[maxRowCntPerBatch];
+            for (int i = 0; i < maxRowCntPerBatch; i++) {
+                expectedDatas[0][i] = baseValue + i;
+                expectedDatas[1][i] = baseValue + i;
+            }
+            baseValue += maxRowCntPerBatch;
+            assertVecBatchEquals(resultVecBatch, expectedDatas);
+            freeVecBatch(resultVecBatch);
+        }
+
+        sortWithExprOperator.close();
+        sortWithExprOperatorFactory.close();
+    }
+
+    /**
      * Test Sort spill with one record
      */
     @Test

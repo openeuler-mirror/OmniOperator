@@ -16,7 +16,12 @@ namespace omniruntime {
 namespace op {
 class Operator {
 public:
-    Operator() : sourceTypes(nullptr), vecAllocator(vec::GetProcessGlobalVecAllocator()), context(nullptr), status(0) {}
+    Operator()
+        : sourceTypes(nullptr),
+          vecAllocator(vec::GetProcessGlobalVecAllocator()),
+          context(nullptr),
+          status(OMNI_STATUS_NORMAL)
+    {}
 
     virtual ~Operator() {}
 
@@ -30,7 +35,7 @@ public:
         delete op;
     }
 
-    int GetStatus()
+    OmniStatus GetStatus()
     {
         return status;
     }
@@ -69,7 +74,7 @@ protected:
     ExecutionContext *context;
 
 private:
-    int32_t status;
+    OmniStatus status;
 };
 }
 }
