@@ -7,6 +7,8 @@
 #include <memory>
 #include "vector/vector_common.h"
 #include "operator/projection/projection.h"
+#include "operator/execution_context.h"
+#include "operator/filter/filter_and_project.h"
 
 namespace omniruntime {
 namespace op {
@@ -219,9 +221,14 @@ public:
         const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
 
     static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
+        const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
+        VectorAllocator *allocator);
+    static bool IsAggPositionEligible(int32_t rowId, VectorBatch *inputVecBatch,SimpleFilter *aggSimpleFilters,ExecutionContext *executionContext);
+    static VectorBatch *HashAggProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
+                                                      const std::vector<ProjFunc> &projectFuncs,
+                                                      const std::vector<int32_t> &projectCols,int32_t aggFilterNum, VectorAllocator *allocator);
 
-private:
+        private:
     static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<ProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);

@@ -10,6 +10,8 @@
 #include "operator/util/operator_util.h"
 #include "util/type_util.h"
 #include "util/debug.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "expression/jsonparser/jsonparser.h"
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
 #include "operator/hmpp_hash_util.h"
@@ -581,26 +583,58 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     // aggNum > 0
     std::vector<AggregateState *> rowStates(rowCount);
     AggregateState *currentGroupStates = nullptr;
-    for (int32_t i = 0; i < rowCount; ++i) {
-        auto ret = emplaceKey->InsertValueToHashmap(i, &groupVectors, *executionContext);
-        if (ret.IsInsert()) {
-            currentGroupStates = reinterpret_cast<AggregateState *>(
-                executionContext->GetArena()->Allocate(aggNum * sizeof(AggregateState)));
-            for (size_t j = 0; j < aggNum; ++j) {
-                aggregators[j]->InitState(currentGroupStates[j]);
+
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark){
+        for (int32_t i = 0; i < rowCount; ++i) {
+            if (static_cast<BooleanVector *>(vecBatch->GetVector(vecBatch->GetVectorCount() - aggNum + i))
+                    ->GetValue(actualIdx)){
+                auto ret = emplaceKey->InsertValueToHashmap(i, &groupVectors, *executionContext);
+                if (ret.IsInsert()) {
+                    currentGroupStates = reinterpret_cast<AggregateState *>(
+                            executionContext->GetArena()->Allocate(aggNum * sizeof(AggregateState)));
+                    for (size_t j = 0; j < aggNum; ++j) {
+                        aggregators[j]->InitState(currentGroupStates[j]);
+                    }
+                    ret.SetValue(currentGroupStates);
+                } else {
+                    currentGroupStates = ret.GetValue();
+                    executionContext->GetArena()->RollBackContinualMem();
+                }
+                rowStates[i] = currentGroupStates;
             }
-            ret.SetValue(currentGroupStates);
-        } else {
-            currentGroupStates = ret.GetValue();
-            executionContext->GetArena()->RollBackContinualMem();
         }
+    }else{
+        for (int32_t i = 0; i < rowCount; ++i) {
+            auto ret = emplaceKey->InsertValueToHashmap(i, &groupVectors, *executionContext);
+            if (ret.IsInsert()) {
+                currentGroupStates = reinterpret_cast<AggregateState *>(
+                        executionContext->GetArena()->Allocate(aggNum * sizeof(AggregateState)));
+                for (size_t j = 0; j < aggNum; ++j) {
+                    aggregators[j]->InitState(currentGroupStates[j]);
+                }
+                ret.SetValue(currentGroupStates);
+            } else {
+                currentGroupStates = ret.GetValue();
+                executionContext->GetArena()->RollBackContinualMem();
+            }
 
-        rowStates[i] = currentGroupStates;
+            rowStates[i] = currentGroupStates;
+        }
     }
 
-    for (size_t i = 0; i < aggNum; ++i) {
-        aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark){
+        for (size_t i = 0; i < aggNum; ++i) {
+            if(static_cast<BooleanVector *>(vecBatch->GetVector(vecBatch->GetVectorCount() - aggNum + i))
+                    ->GetValue(i)){
+                aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+            }
+        }
+    }else{
+        for (size_t i = 0; i < aggNum; ++i) {
+            aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+        }
     }
+
 }
 
 void HashAggregationOperator::FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result)
