@@ -48,10 +48,14 @@ append_options()
               echo "-- Disable CPU checker"
               options="$options -DDISABLE_CPU_CHECKER=ON"
             elif [ "$i" = '--enable-dt' ]; then
+              if [ "$1" != 'coverage' ]; then
+                echo "-- Please use coverage with --enable-dt"
+                exit
+              fi
               echo "-- Enable DT checker"
               options="$options -DENABLE_DT=ON -DCOVERAGE=ON"
             elif [ "$i" = '--enable-hmpp' ]; then
-              echo " --Enable using hmpp library"
+              echo "-- Enable using hmpp library"
               options="$options -DENABLE_HMPP=ON"
             fi
         fi

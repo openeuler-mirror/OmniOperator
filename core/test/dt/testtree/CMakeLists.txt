@@ -9,7 +9,6 @@ set(TEST_CONFIG_FILE dtframe.cfg)
 set(INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dist)
 set(ENABLE_COVERAGE ON)
 set(AUTO_GEN_DIR registration)
-set(WRAPPER_DIR wrapper)
 
 set(TARGET ${BUSINESS_LIB}_dt)
 #project(${TARGET})
@@ -25,8 +24,8 @@ execute_process(
 )
 
 ## build test target
-file(GLOB_RECURSE SOURCE_FILES ${AUTO_GEN_DIR}/*.cpp ${WRAPPER_DIR}/*.cpp)
-include_directories(${PROJECT_SOURCE_DIR}/test/dt/sourcetree)
+file(GLOB_RECURSE SOURCE_FILES ${AUTO_GEN_DIR}/*.cpp)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../sourcetree)
 
 add_library(${TARGET} SHARED ${SOURCE_FILES})
 
@@ -39,6 +38,7 @@ install(TARGETS ${TARGET}
 set(CMAKE_MODULE_PATH ${DTFRAME_DIR_ROOT}/cmake)
 # for coverage
 include(codecoverage)
+setup_coverage_flags()
 ### lcov report
 add_project_coverage_report_with_lcov(
         NAME "coverage_lcov_${BUSINESS_LIB}"

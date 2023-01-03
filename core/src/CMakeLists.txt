@@ -1,3 +1,10 @@
+if (DEFINED ENABLE_DT)
+    if (${ENABLE_DT} STREQUAL "ON")
+        message(STATUS "ENABLE_DT ON: enable -fsanitize=address -fsanitize=undefined -fsanitize-coverage=trace-pc")
+        add_compile_options(-fprofile-arcs -ftest-coverage -fdump-rtl-expand)
+    endif ()
+endif ()
+
 add_subdirectory(jni)
 add_subdirectory(memory)
 add_subdirectory(operator)
