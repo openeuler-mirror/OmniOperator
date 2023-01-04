@@ -37,8 +37,6 @@ JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes
     int32_t eachRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
     this->JoinFilterCodeGen(overflowConfig);
-    ASSERT(leftTableOutputTypes.GetSize() < leftTablePagesIndex->GetTypesCount() &&
-        rightTableOutputTypes.GetSize() < rightTablePagesIndex->GetTypesCount())
 }
 
 void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
