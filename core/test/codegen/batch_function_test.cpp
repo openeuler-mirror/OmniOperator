@@ -1852,3 +1852,33 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
     }
     delete context;
 }
+
+TEST(FunctionTest, CastStringToDate)
+{
+    // year-month-day
+    std::string engineType("Spark");
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> srcStr { "1970-01-03", "1969-12-31", "1453-05-29", "   1453-05-29   ",
+        "   1 453-05-29   " };
+    bool isNull[] = { false, false, false, false, false };
+    std::vector<int32_t> expected { 2, -1, -188682, -188682, 0 };
+    int32_t rowCnt = 5;
+    std::vector<int32_t> output(rowCnt);
+
+    std::vector<int32_t> strLen(rowCnt);
+    std::vector<uint8_t *> srcAddr(rowCnt);
+    for (int32_t row = 0; row < rowCnt; row++) {
+        strLen[row] = static_cast<int32_t>(srcStr[row].length());
+        srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
+    }
+    BatchCastStringToDate(contextPtr, srcAddr.data(), strLen.data(), isNull, output.data(), rowCnt);
+    AssertEquals(expected, output);
+
+    BatchCastStringToDateRetNull(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
+    AssertEquals(expected, output);
+    engineType = "OLK";
+    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    delete context;
+}

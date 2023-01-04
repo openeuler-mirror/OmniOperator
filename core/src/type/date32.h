@@ -7,6 +7,7 @@
 
 #include <type_traits>
 #include <cstdint>
+#include <string>
 
 #include "date_base.h"
 
@@ -44,6 +45,12 @@ public:
     bool operator <= (const Date32 &right) const;
 
     bool operator >= (const Date32 &right) const;
+
+    static int StringToTm(const char *s, int32_t strLen, tm &r);
+
+    static int StringToDate32(const char *s, int32_t strLen, int32_t &result);
+
+    static constexpr double SECOND_OF_DAY = 86400.0;
 
     int32_t Value() const
     {

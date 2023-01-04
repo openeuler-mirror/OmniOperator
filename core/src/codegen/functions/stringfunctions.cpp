@@ -9,6 +9,7 @@
 #include <huawei_secure_c/include/securec.h>
 #include "context_helper.h"
 #include "codegen/functions/decimalfunctions.h"
+#include "type/date32.h"
 #include "util/engine.h"
 #include "stringfunctions.h"
 #include "type/data_operations.h"
@@ -147,27 +148,18 @@ extern DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *str, i
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    string regexToMatch = "\\d{4}-\\d{2}-\\d{2}$";
-    regex re = regex(regexToMatch);
-    string s = string(str, strLen);
-    if (!regex_match(s, re)) {
+    int32_t result;
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    std::string s(str, strLen);
+    if (engineType != EngineType::Spark && !regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
         SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
         return -1;
     }
-
-    int32_t i1 = 5;
-    int32_t i2 = 8;
-    int base = static_cast<int32_t>('0');
-    int yr =
-        THOUSANDS * (str[THOU] - base) + HUNDREDS * (str[HUN] - base) + TENS * (str[TEN] - base) + (str[ONE] - base);
-    int mnth = TENS * (str[i1] - base) + (str[i1 + 1] - base); // compute month
-    int day = TENS * (str[i2] - base) + (str[i2 + 1] - base);  // compute day
-
-    struct std::tm epoch = { 0, 0, 0, 1, 1, 70 };
-    struct std::tm t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
-    std::time_t epochTime = std::mktime(&epoch);
-    std::time_t desiredTime = std::mktime(&t);
-    return static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
+    if (Date32::StringToDate32(str, strLen, result) == -1) {
+        SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
+        return -1;
+    }
+    return result;
 }
 
 extern DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
@@ -567,28 +559,18 @@ extern DLLEXPORT int32_t CastStringToDateRetNull(bool *isNull, const char *str, 
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    string regexToMatch = "\\d{4}-\\d{2}-\\d{2}$";
-    regex re = regex(regexToMatch);
-    string s = string(str, strLen);
-    if (!regex_match(s, re)) {
+    int32_t result;
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    std::string s(str, strLen);
+    if (engineType != EngineType::Spark && !regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
         *isNull = true;
         return -1;
     }
-
-    *isNull = false;
-    int32_t i1 = 5;
-    int32_t i2 = 8;
-    int base = static_cast<int32_t>('0');
-    int yr =
-        THOUSANDS * (str[THOU] - base) + HUNDREDS * (str[HUN] - base) + TENS * (str[TEN] - base) + (str[ONE] - base);
-    int mnth = TENS * (str[i1] - base) + (str[i1 + 1] - base); // compute month
-    int day = TENS * (str[i2] - base) + (str[i2 + 1] - base);  // compute day
-
-    struct std::tm epoch = { 0, 0, 0, 1, 1, 70 };
-    struct std::tm t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
-    std::time_t epochTime = std::mktime(&epoch);
-    std::time_t desiredTime = std::mktime(&t);
-    return static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
+    if (Date32::StringToDate32(str, strLen, result) == -1) {
+        *isNull = true;
+        return -1;
+    }
+    return result;
 }
 
 extern DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value, int32_t *outLen)
