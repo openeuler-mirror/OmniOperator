@@ -84,11 +84,11 @@ int32_t VecBatchWithPositionComparator::CompareTo(VectorBatch *leftVectorBatch, 
         Vector *rightVector = rightVectorBatch->GetVector(sortCol);
 
         int32_t compare =
-            OperatorUtil::CompareNull(leftVector, leftPosition, rightVector, rightPosition, sortNullFirsts[sortCol]);
+            OperatorUtil::CompareNull(leftVector, leftPosition, rightVector, rightPosition, sortNullFirsts[i]);
         if (compare == OperatorUtil::COMPARE_STATUS_OTHER) {
             // neither the left nor the right is NULL
             compare = sortCompareFuncs[i](leftVector, leftPosition, rightVector, rightPosition);
-            if (sortAscendings[sortCol] == 0) {
+            if (sortAscendings[i] == 0) {
                 compare = -compare;
             }
         }
