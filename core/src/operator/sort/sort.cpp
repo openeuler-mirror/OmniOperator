@@ -71,6 +71,7 @@ SortOperator::~SortOperator() = default;
 int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 {
     totalRowCount += vecBatch->GetRowCount();
+    pagesIndex->AddVecBatch(vecBatch);
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
@@ -78,8 +79,6 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
     }
-
-    pagesIndex->AddVecBatch(vecBatch);
     return 0;
 }
 

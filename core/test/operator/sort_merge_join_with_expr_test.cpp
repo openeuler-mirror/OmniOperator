@@ -3627,7 +3627,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinWithStreamedNullFi
     ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
 
     // check the join result
-    int resultCol1[] =  {NULL,  1,  2,  3};
+    int resultCol1[] =  {0,  1,  2,  3};
     long resultCol2[] =  {40,  25,  35,  30};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
