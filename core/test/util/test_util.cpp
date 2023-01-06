@@ -9,6 +9,7 @@
 #include <cstdarg>
 #include <gtest/gtest.h>
 #include "vector/vector_helper.h"
+#include "type/decimal_operations.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
@@ -850,6 +851,20 @@ void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int3
     }
 }
 
+void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
+
+void AssertBoolEquals(std::vector<bool> &expected, bool *result)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
+
 int32_t *MakeInts(const int32_t size, const int32_t start)
 {
     if (size > 0) {
@@ -936,5 +951,171 @@ int32_t DecodeAddFlag(int32_t resultCode)
 int32_t DecodeFetchFlag(int32_t resultCode)
 {
     return resultCode & SHRT_MAX;
+}
+
+void PrintNotMatchBatches(VectorBatch *outputPages, VectorBatch *expectPage)
+{
+    printf("================ Expected Vector Batch ==================\n");
+    VectorHelper::PrintVecBatch(expectPage);
+    printf("================= Result Vector Batch ===================\n");
+    VectorHelper::PrintVecBatch(outputPages);
+}
+
+template <typename D, typename V>
+bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector, const double error) {
+    std::multiset<D> resRows;
+    std::multiset<D> expectedRows;
+    size_t resNullCount = 0;
+    size_t expNullCount = 0;
+    for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
+        auto leftVector = static_cast<V*>(resultVector);
+        auto rightVector = static_cast<V*>(expectedVector);
+        if (leftVector->IsValueNull(i)) {
+            resNullCount++;
+        } else {
+            resRows.emplace(leftVector->GetValue(i));
+        }
+        if (rightVector->IsValueNull(i)) {
+            expNullCount++;
+        } else {
+            expectedRows.emplace(rightVector->GetValue(i));
+        }
+    }
+
+    if (resNullCount != expNullCount) {
+        return false;
+    }
+
+    if (resRows.size() != expectedRows.size()) {
+        return false;
+    }
+
+    auto it1 = resRows.begin();
+    auto it2 = expectedRows.begin();
+    for (; it1 != resRows.end(); ++it1, ++it2) {
+        if constexpr (std::is_same_v<D, double>) {
+            if (fabs(*it1 - *it2) > error) {
+                return false;
+            }
+        } else if constexpr (std::is_same_v<D, Decimal128>) {
+            Decimal128Wrapper left(*it1);
+            Decimal128Wrapper right(*it2);
+            if (left.Subtract(right).Abs() > Decimal128Wrapper(static_cast<int64_t>(error))) {
+                return false;
+            }
+        } else {
+            if (abs(*it1 - *it2) > static_cast<D>(error)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool ColumnMatchIgnoreOrder(Vector *resultVector, Vector *expectedVector, const double error)
+{
+    auto resType = resultVector->GetTypeId();
+    bool isMatched = true;
+    switch (resType) {
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            isMatched = CompareUnorderedRows<int32_t, IntVector>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_SHORT: {
+            isMatched = CompareUnorderedRows<int16_t, ShortVector>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_DOUBLE: {
+            isMatched = CompareUnorderedRows<double, DoubleVector>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_LONG:
+        case OMNI_DECIMAL64: {
+            isMatched = CompareUnorderedRows<int64_t, LongVector>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_BOOLEAN: {
+            isMatched = CompareUnorderedRows<bool, BooleanVector>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_DECIMAL128: {
+            isMatched = CompareUnorderedRows<Decimal128, Decimal128Vector>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_CHAR:
+        case OMNI_VARCHAR: {
+            isMatched = CompareUnorderedStringRows(
+                    static_cast<VarcharVector*>(resultVector), static_cast<VarcharVector*>(expectedVector));
+            break;
+        }
+        case OMNI_CONTAINER: {
+            int32_t fieldCount = static_cast<ContainerVector *>(resultVector)->GetVectorCount();
+            for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
+                auto *actualFieldCol =
+                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(resultVector)->GetValue(colIdx));
+                auto *expectFieldCol =
+                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectedVector)->GetValue(colIdx));
+                isMatched = ColumnMatchIgnoreOrder(actualFieldCol, expectFieldCol, error);
+                if (!isMatched) {
+                    break;
+                }
+            }
+            break;
+        }
+        default: {
+            return false;
+        }
+    }
+    return isMatched;
+}
+
+bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBatch, const double error)
+{
+    if (resultBatch->GetRowCount() != expectedBatch->GetRowCount()) {
+        printf("Invalid row count. Expected=%d, actual=%d\n", expectedBatch->GetRowCount(), resultBatch->GetRowCount());
+        PrintNotMatchBatches(resultBatch, expectedBatch);
+        return false;
+    }
+
+    int32_t columnNumber = resultBatch->GetVectorCount();
+    if (columnNumber != expectedBatch->GetVectorCount()) {
+        printf("Invalid vector count. Expected=%d, actual=%d\n",
+               expectedBatch->GetVectorCount(), resultBatch->GetVectorCount());
+        PrintNotMatchBatches(resultBatch, expectedBatch);
+        return false;
+    }
+    for (int32_t i = 0; i < columnNumber; ++i) {
+        if (resultBatch->GetVector(i)->GetEncoding() != expectedBatch->GetVector(i)->GetEncoding()) {
+            printf("Encoding of column %d not match\n", i);
+            PrintNotMatchBatches(resultBatch, expectedBatch);
+            return false;
+        }
+    }
+
+    for (int32_t i = 0; i < columnNumber; i++) {
+        if (resultBatch->GetVectorTypeIds()[i] != expectedBatch->GetVectorTypeIds()[i]) {
+            printf("Column %d types do not match\n", i);
+            PrintNotMatchBatches(resultBatch, expectedBatch);
+            return false;
+        }
+    }
+
+    // validate data
+    if (!ColumnMatchIgnoreOrder(resultBatch->GetVector(0), expectedBatch->GetVector(0), error)) {
+        printf("Vector 0 (data vector) not matched\n");
+        PrintNotMatchBatches(resultBatch, expectedBatch);
+        return false;
+    }
+
+    //validate count
+    if (!ColumnMatchIgnoreOrder(resultBatch->GetVector(1), expectedBatch->GetVector(1), 0)) {
+        printf("Vector 1 (count vector) not matched\n");
+        PrintNotMatchBatches(resultBatch, expectedBatch);
+        return false;
+    }
+
+    return true;
 }
 }

@@ -15,60 +15,64 @@ template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, D
 void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
     AggregateState &state, VectorBatch *vectorBatch)
 {
-    auto vector = vectorBatch->GetVector(this->channels[0]);
-
-    auto vectorValues = vector->GetValues();
-    auto positionOffset = vector->GetPositionOffset();
-    auto rowCount = vector->GetSize();
-    auto nullAddr = vector->GetValueNulls();
-    bool overflow = false;
-
-    HmppResult result = HMPP_STS_NO_ERR;
-    if constexpr (IN_ID == OMNI_LONG) {
-        LogDebug("HMPP-Agg-sum");
-        long sumVal = 0;
-        result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-            rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
-
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "sum failed for hmpp error");
-        }
-
-        ResultType res = static_cast<ResultType>(sumVal);
-        if (state.val == nullptr) {
-            auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-            *reinterpret_cast<ResultType *>(valPtr) = res;
-            state.val = valPtr;
-        } else {
-            *(reinterpret_cast<ResultType *>(state.val)) += res;
-        }
-    } else if constexpr (IN_ID == OMNI_DECIMAL128) {
-        LogDebug("HMPP-Agg-sum");
-        HmppDecimal128 sumVal {};
-        result = HMPPS_Sum_decimal128(
-            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-            rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
-
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "sum failed for hmpp error");
-        }
-
-        if (state.val == nullptr) {
-            state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
-            *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
-        } else {
-            Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
-            preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
-            overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
-        }
-    } else {
+    if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
         throw OmniException("NOT SUPPORT", "Unsupported input type for sum aggregate");
-    }
+    } else {
+        auto vector = vectorBatch->GetVector(this->channels[0]);
 
-    if (overflow) {
-        state.count = -1;
-    } else if (state.count >= 0) {
-        state.count++;
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto nullAddr = vector->GetValueNulls();
+        bool overflow = false;
+
+        HmppResult result = HMPP_STS_NO_ERR;
+
+        if constexpr (IN_ID == OMNI_LONG) {
+            LogDebug("HMPP-Agg-sum");
+            long sumVal = 0;
+            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
+
+            if (result != HMPP_STS_NO_ERR) {
+                throw OmniException("HMPP ERROR", "sum failed for hmpp error");
+            }
+
+            ResultType res = static_cast<ResultType>(sumVal);
+            if (state.val == nullptr) {
+                auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
+                *reinterpret_cast<ResultType *>(valPtr) = res;
+                state.val = valPtr;
+            } else {
+                *(reinterpret_cast<ResultType *>(state.val)) += res;
+            }
+        } else {
+            // IN_ID == OMNI_DECIMAL128
+            LogDebug("HMPP-Agg-sum");
+            HmppDecimal128 sumVal {};
+            result = HMPPS_Sum_decimal128(
+                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
+
+            if (result != HMPP_STS_NO_ERR) {
+                throw OmniException("HMPP ERROR", "sum failed for hmpp error");
+            }
+
+            if (state.val == nullptr) {
+                state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
+                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
+            } else {
+                Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
+                preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
+                overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
+            }
+        }
+
+        if (overflow) {
+            state.count = -1;
+        } else if (state.count >= 0) {
+            state.count++;
+        }
     }
 }
 
@@ -198,6 +202,10 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
 }
 
 // Explicit template instantiation
+// Defining templated aggregators in header file consume a lot of memory during compilation
+// since, compiler needs to generate each individual template instance wherever aggregator header is include
+// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
+// and used explicit template instantiation to generate template instances
 template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_SHORT>;
 template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_SHORT>;
 template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_SHORT>;

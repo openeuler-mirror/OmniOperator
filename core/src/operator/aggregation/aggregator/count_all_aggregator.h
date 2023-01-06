@@ -19,11 +19,11 @@ public:
     {
         if constexpr (OUT_ID != OMNI_LONG) {
             LogError("Error in count all aggregator: Expecting long output type. Got %s",
-                TypeUtil::TypeToString(OUT_ID).c_str());
+                TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else if constexpr (!RAW_IN && IN_ID != OMNI_LONG) {
             LogError("Error in count all aggregator: Expecting long intput type for partial input. Got %s",
-                TypeUtil::TypeToString(IN_ID).c_str());
+                TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else {
             if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(

@@ -236,14 +236,14 @@ protected:
 
         if (!CheckType(inputTypes.GetType(0)->GetId(), inId)) {
             LogError("Error in %s aggregator: Expecting %s input type. Got %s",
-                aggName.c_str(), TypeUtil::TypeToString(inId).c_str(),
-                TypeUtil::TypeToString(inputTypes.GetType(0)->GetId()).c_str());
+                aggName.c_str(), TypeUtil::TypeToStringLog(inId).c_str(),
+                TypeUtil::TypeToStringLog(inputTypes.GetType(0)->GetId()).c_str());
             return false;
         }
         if (!CheckType(outputTypes.GetType(0)->GetId(), outId)) {
             LogError("Error in %s aggregator: Expecting %s input type. Got %s",
-                aggName.c_str(), TypeUtil::TypeToString(outId).c_str(),
-                TypeUtil::TypeToString(outputTypes.GetType(0)->GetId()).c_str());
+                aggName.c_str(), TypeUtil::TypeToStringLog(outId).c_str(),
+                TypeUtil::TypeToStringLog(outputTypes.GetType(0)->GetId()).c_str());
             return false;
         }
 

@@ -17,63 +17,67 @@ template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, D
 void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
     AggregateState &state, VectorBatch *vectorBatch)
 {
-    auto vector = vectorBatch->GetVector(this->channels[0]);
-
-    auto vectorValues = vector->GetValues();
-    auto positionOffset = vector->GetPositionOffset();
-    auto rowCount = vector->GetSize();
-    auto nullAddr = vector->GetValueNulls();
-    bool overflow = false;
-    int32_t count = 0;
-
-    HmppResult result = HMPP_STS_NO_ERR;
-    if constexpr (IN_ID == OMNI_LONG) {
-        LogDebug("HMPP-Agg-avg");
-        double sumVal = 0;
-        result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-            rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
-            &sumVal, &count);
-
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "avg failed for hmpp error");
-        }
-
-        if (state.val == nullptr) {
-            auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-            *reinterpret_cast<ResultType *>(valPtr) = static_cast<ResultType>(sumVal);
-            state.val = valPtr;
-            state.count = static_cast<int64_t>(count);
-        } else {
-            *(reinterpret_cast<ResultType *>(state.val)) += static_cast<ResultType>(sumVal);
-            state.count += static_cast<int64_t>(count);
-        }
-    } else if constexpr (IN_ID == OMNI_DECIMAL128) {
-        LogDebug("HMPP-Agg-avg");
-        HmppDecimal128 sumVal {};
-        result = HMPPS_Mean_decimal128(
-            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-            rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
-            &sumVal, &count);
-
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "avg failed for hmpp error");
-        }
-
-        if (state.val == nullptr) {
-            state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
-            *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
-        } else {
-            Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
-            preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
-            overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
-        }
-        if (overflow) {
-            state.count = -1;
-        } else if (state.count >= 0) {
-            state.count += static_cast<int64_t>(count);
-        }
-    } else {
+    if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
         throw OmniException("NOT SUPPORT", "Unsupported input type for avg aggregate");
+    } else {
+        auto vector = vectorBatch->GetVector(this->channels[0]);
+
+        auto vectorValues = vector->GetValues();
+        auto positionOffset = vector->GetPositionOffset();
+        auto rowCount = vector->GetSize();
+        auto nullAddr = vector->GetValueNulls();
+        bool overflow = false;
+        int32_t count = 0;
+
+        HmppResult result = HMPP_STS_NO_ERR;
+
+        if constexpr (IN_ID == OMNI_LONG) {
+            LogDebug("HMPP-Agg-avg");
+            double sumVal = 0;
+            result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
+                &sumVal, &count);
+
+            if (result != HMPP_STS_NO_ERR) {
+                throw OmniException("HMPP ERROR", "avg failed for hmpp error");
+            }
+
+            if (state.val == nullptr) {
+                auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
+                *reinterpret_cast<ResultType *>(valPtr) = static_cast<ResultType>(sumVal);
+                state.val = valPtr;
+                state.count = static_cast<int64_t>(count);
+            } else {
+                *(reinterpret_cast<ResultType *>(state.val)) += static_cast<ResultType>(sumVal);
+                state.count += static_cast<int64_t>(count);
+            }
+        } else  {
+            // IN_ID == OMNI_DECIMAL128
+            LogDebug("HMPP-Agg-avg");
+            HmppDecimal128 sumVal {};
+            result = HMPPS_Mean_decimal128(
+                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
+                &sumVal, &count);
+
+            if (result != HMPP_STS_NO_ERR) {
+                throw OmniException("HMPP ERROR", "avg failed for hmpp error");
+            }
+
+            if (state.val == nullptr) {
+                state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
+                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
+            } else {
+                Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
+                preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
+                overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
+            }
+            if (overflow) {
+                state.count = -1;
+            } else if (state.count >= 0) {
+                state.count += static_cast<int64_t>(count);
+            }
+        }
     }
 }
 
@@ -103,7 +107,7 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Extra
     if constexpr (PARTIAL_OUT) {
         if constexpr (OUT_ID == OMNI_VARCHAR) {
             SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
-            state, vectors, rowIndex);
+                state, vectors, rowIndex);
         } else if constexpr (OUT_ID == OMNI_CONTAINER) {
             int32_t offset;
             OutType result {};
@@ -247,371 +251,111 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
 }
 
 // Explicit template instantiation
-// template class AverageAggregator<false, false, false, OMNI_SHORT, OMNI_DOUBLE>;
-// template class AverageAggregator<false, false, true, OMNI_SHORT, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_SHORT, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_SHORT, OMNI_DOUBLE>;
+// Defining templated aggregators in header file consume a lot of memory during compilation
+// since, compiler needs to generate each individual template instance wherever aggregator header is include
+// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
+// and used explicit template instantiation to generate template instances
 template class AverageAggregator<true, false, false, OMNI_SHORT, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, true, OMNI_SHORT, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_SHORT, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_SHORT, OMNI_DOUBLE>;
 
-// template class AverageAggregator<false, false, false, OMNI_SHORT, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, false, true, OMNI_SHORT, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_SHORT, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_SHORT, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, false, OMNI_SHORT, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, true, OMNI_SHORT, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_SHORT, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_SHORT, OMNI_DECIMAL128>;
 
-// template class AverageAggregator<false, false, false, OMNI_SHORT, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, false, true, OMNI_SHORT, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_SHORT, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_SHORT, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, false, OMNI_SHORT, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, true, OMNI_SHORT, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_SHORT, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_SHORT, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, false, OMNI_SHORT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, true, OMNI_SHORT, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_SHORT, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_SHORT, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_SHORT, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_SHORT, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_SHORT, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_SHORT, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, false, OMNI_SHORT, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, true, OMNI_SHORT, OMNI_CONTAINER>;
 
 
-// template class AverageAggregator<false, false, false, OMNI_INT, OMNI_DOUBLE>;
-// template class AverageAggregator<false, false, true, OMNI_INT, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_INT, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_INT, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, false, OMNI_INT, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, true, OMNI_INT, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_INT, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_INT, OMNI_DOUBLE>;
 
-// template class AverageAggregator<false, false, false, OMNI_INT, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, false, true, OMNI_INT, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_INT, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_INT, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, false, OMNI_INT, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, true, OMNI_INT, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_INT, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_INT, OMNI_DECIMAL128>;
 
-// template class AverageAggregator<false, false, false, OMNI_INT, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, false, true, OMNI_INT, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_INT, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_INT, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, false, OMNI_INT, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, true, OMNI_INT, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_INT, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_INT, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, false, OMNI_INT, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, true, OMNI_INT, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_INT, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_INT, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_INT, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_INT, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_INT, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_INT, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, false, OMNI_INT, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, true, OMNI_INT, OMNI_CONTAINER>;
 
 
-// template class AverageAggregator<false, false, false, OMNI_LONG, OMNI_DOUBLE>;
-// template class AverageAggregator<false, false, true, OMNI_LONG, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_LONG, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_LONG, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, false, OMNI_LONG, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, true, OMNI_LONG, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_LONG, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_LONG, OMNI_DOUBLE>;
 
-// template class AverageAggregator<false, false, false, OMNI_LONG, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, false, true, OMNI_LONG, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_LONG, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_LONG, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, false, OMNI_LONG, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, true, OMNI_LONG, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_LONG, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_LONG, OMNI_DECIMAL128>;
 
-// template class AverageAggregator<false, false, false, OMNI_LONG, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, false, true, OMNI_LONG, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_LONG, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_LONG, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, false, OMNI_LONG, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, true, OMNI_LONG, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_LONG, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_LONG, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, false, OMNI_LONG, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, true, OMNI_LONG, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_LONG, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_LONG, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_LONG, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_LONG, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_LONG, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_LONG, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, false, OMNI_LONG, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, true, OMNI_LONG, OMNI_CONTAINER>;
 
 
-// template class AverageAggregator<false, false, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-// template class AverageAggregator<false, false, true, OMNI_DOUBLE, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_DOUBLE, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, false, OMNI_DOUBLE, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, true, OMNI_DOUBLE, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_DOUBLE, OMNI_DOUBLE>;
 
-// template class AverageAggregator<false, false, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, false, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
 
-// template class AverageAggregator<false, false, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, false, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_DOUBLE, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_DOUBLE, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_DOUBLE, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, false, OMNI_DOUBLE, OMNI_CONTAINER>;
 template class AverageAggregator<true, true, true, OMNI_DOUBLE, OMNI_CONTAINER>;
 
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
 template class AverageAggregator<true, true, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
 template class AverageAggregator<true, true, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
 
-
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
 template class AverageAggregator<true, false, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
 template class AverageAggregator<true, false, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
 template class AverageAggregator<true, false, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
 template class AverageAggregator<true, true, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
 template class AverageAggregator<true, true, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
 
 
 template class AverageAggregator<false, false, false, OMNI_VARCHAR, OMNI_DOUBLE>;
 template class AverageAggregator<false, false, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-// template class AverageAggregator<true, false, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-// template class AverageAggregator<true, false, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_VARCHAR, OMNI_DOUBLE>;
 
 template class AverageAggregator<false, false, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
 template class AverageAggregator<false, false, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, false, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, false, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
 
 template class AverageAggregator<false, false, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
 template class AverageAggregator<false, false, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, false, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, false, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
 template class AverageAggregator<false, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
 template class AverageAggregator<false, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<false, true, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, true, OMNI_VARCHAR, OMNI_CONTAINER>;
 
 
 template class AverageAggregator<false, false, false, OMNI_CONTAINER, OMNI_DOUBLE>;
 template class AverageAggregator<false, false, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-// template class AverageAggregator<false, true, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-// template class AverageAggregator<true, false, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-// template class AverageAggregator<true, false, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-// template class AverageAggregator<true, true, true, OMNI_CONTAINER, OMNI_DOUBLE>;
 
 template class AverageAggregator<false, false, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
 template class AverageAggregator<false, false, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-// template class AverageAggregator<false, true, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, false, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, false, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-// template class AverageAggregator<true, true, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
 
 template class AverageAggregator<false, false, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
 template class AverageAggregator<false, false, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-// template class AverageAggregator<false, true, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, false, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, false, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-// template class AverageAggregator<true, true, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
 
-// template class AverageAggregator<false, false, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<false, false, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<false, true, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<true, false, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-// template class AverageAggregator<true, true, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-
-// template class AverageAggregator<false, false, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-// template class AverageAggregator<false, false, true, OMNI_CONTAINER, OMNI_CONTAINER>;
 template class AverageAggregator<false, true, false, OMNI_CONTAINER, OMNI_CONTAINER>;
 template class AverageAggregator<false, true, true, OMNI_CONTAINER, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-// template class AverageAggregator<true, false, true, OMNI_CONTAINER, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-// template class AverageAggregator<true, true, true, OMNI_CONTAINER, OMNI_CONTAINER>;
 }
 }

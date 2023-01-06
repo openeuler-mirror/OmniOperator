@@ -11,8 +11,8 @@
 #endif
 #include "operator/aggregation/definitions.h"
 
-constexpr int64_t updateFlag = 0x0000000100000000LL;
-constexpr int64_t valueFlag  = 0x00000000FFFFFFFFLL;
+constexpr int64_t UPDATE_FLAG = 0x0000000100000000LL;
+constexpr int64_t VALUE_FLAG  = 0x00000000FFFFFFFFLL;
 
 namespace omniruntime {
 namespace op {
@@ -20,11 +20,11 @@ inline uint8_t *minCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector
 {
     uint8_t *curVal = nullptr;
     int32_t curLen = vector->GetValue(idx, &curVal);
-    int32_t len = static_cast<int32_t>(lenAndFlag & valueFlag);
+    int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
     auto result = memcmp(res, curVal, std::min(len, curLen));
     if (result > 0 || (result == 0 && len > curLen)) {
         lenAndFlag = curLen;
-        lenAndFlag |= updateFlag;
+        lenAndFlag |= UPDATE_FLAG;
         return curVal;
     } else {
         return res;
@@ -43,7 +43,7 @@ inline void addChar(AggregateState &state, const VarcharVector *vector, const in
 
         if (state.val == nullptr || state.count == 0) {
             state.count = vector->GetValue(idx++, &res);
-            state.count |= updateFlag;
+            state.count |= UPDATE_FLAG;
         }
         while (idx < end) {
             res = OP(res, state.count, vector, idx++);
@@ -70,7 +70,7 @@ inline void addDictChar(AggregateState &state, const VarcharVector *vector, cons
 
         if (state.val == nullptr || state.count == 0) {
             state.count = vector->GetValue(indexMap[idx++], &res);
-            state.count |= updateFlag;
+            state.count |= UPDATE_FLAG;
         }
         while (idx < rowCount) {
             res = OP(res, state.count, vector, indexMap[idx++]);
@@ -98,7 +98,7 @@ inline void addConditionalChar(AggregateState &state, const VarcharVector *vecto
             while (idx < end) {
                 if (!(*condition)) {
                     state.count = vector->GetValue(idx, &res);
-                    state.count |= updateFlag;
+                    state.count |= UPDATE_FLAG;
                     ++condition;
                     ++idx;
                     break;
@@ -143,7 +143,7 @@ inline void addDictConditionalChar(AggregateState &state, const VarcharVector *v
             while (idx < rowCount) {
                 if (!condition[idx]) {
                     state.count = vector->GetValue(indexMap[idx], &res);
-                    state.count |= updateFlag;
+                    state.count |= UPDATE_FLAG;
                     ++idx;
                     break;
                 }
@@ -174,7 +174,7 @@ inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const s
             if (state.val == nullptr || state.count == 0) {
                 uint8_t *res = nullptr;
                 state.count = vector->GetValue(rowIdx, &res);
-                state.count |= updateFlag;
+                state.count |= UPDATE_FLAG;
                 state.val = res;
             } else {
                 state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, rowIdx);
@@ -203,7 +203,7 @@ inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, con
             if (state.val == nullptr || state.count == 0) {
                 uint8_t *res = nullptr;
                 state.count = vector->GetValue(indexMap[i], &res);
-                state.count |= updateFlag;
+                state.count |= UPDATE_FLAG;
                 state.val = res;
             } else {
                 state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, indexMap[i]);
@@ -233,7 +233,7 @@ inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStat
                 if (state.val == nullptr || state.count == 0) {
                     uint8_t *res = nullptr;
                     state.count = vector->GetValue(rowIdx, &res);
-                    state.count |= updateFlag;
+                    state.count |= UPDATE_FLAG;
                     state.val = res;
                 } else {
                     state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, rowIdx);
@@ -270,7 +270,7 @@ inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &row
                 if (state.val == nullptr || state.count == 0) {
                     uint8_t *res = nullptr;
                     state.count = vector->GetValue(indexMap[i], &res);
-                    state.count |= updateFlag;
+                    state.count |= UPDATE_FLAG;
                     state.val = res;
                 } else {
                     state.val = OP(reinterpret_cast<uint8_t *>(state.val), state.count, vector, indexMap[i]);
@@ -297,14 +297,17 @@ public:
         const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
     {
         if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
-            LogError("Error in min_varchar aggregator: Unsupported input type %s", TypeUtil::TypeToString(IN_ID).c_str());
+            LogError("Error in min_varchar aggregator: Unsupported input type %s",
+                TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else if constexpr (!(OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)) {
-            LogError("Error in min_varchar aggregator: Unsupported output type %s", TypeUtil::TypeToString(OUT_ID).c_str());
+            LogError("Error in min_varchar aggregator: Unsupported output type %s",
+                TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else if constexpr (IN_ID != OUT_ID) {
-            LogError("Error in min_varchar aggregator: Expecting same input output type. Got %s input and %s output types",
-                TypeUtil::TypeToString(IN_ID).c_str(), TypeUtil::TypeToString(OUT_ID).c_str());
+            LogError(
+                "Error in min_varchar aggregator: Expecting same input output type. Got %s input and %s output types",
+                TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
             if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(

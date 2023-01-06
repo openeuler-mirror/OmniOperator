@@ -13,11 +13,11 @@ inline uint8_t *maxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector
 {
     uint8_t *curVal = nullptr;
     int32_t curLen = vector->GetValue(idx, &curVal);
-    int32_t len = static_cast<int32_t>(lenAndFlag & valueFlag);
+    int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
     auto result = memcmp(res, curVal, std::min(len, curLen));
     if (result < 0 || (result == 0 && len < curLen)) {
         lenAndFlag = curLen;
-        lenAndFlag |= updateFlag;
+        lenAndFlag |= UPDATE_FLAG;
         return curVal;
     } else {
         return res;
@@ -41,14 +41,17 @@ public:
         const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
     {
         if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
-            LogError("Error in max_varchar aggregator: Unsupported input type %s", TypeUtil::TypeToString(IN_ID).c_str());
+            LogError("Error in max_varchar aggregator: Unsupported input type %s",
+                TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else if constexpr (!(OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)) {
-            LogError("Error in max_varchar aggregator: Unsupported output type %s", TypeUtil::TypeToString(OUT_ID).c_str());
+            LogError("Error in max_varchar aggregator: Unsupported output type %s",
+                TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else if constexpr (IN_ID != OUT_ID) {
-            LogError("Error in max_varchar aggregator: Expecting same input output type. Got %s input and %s output types",
-                TypeUtil::TypeToString(IN_ID).c_str(), TypeUtil::TypeToString(OUT_ID).c_str());
+            LogError(
+                "Error in max_varchar aggregator: Expecting same input output type. Got %s input and %s output types",
+                TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
             if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(

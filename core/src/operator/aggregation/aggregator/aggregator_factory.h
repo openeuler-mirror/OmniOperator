@@ -113,7 +113,7 @@ protected:
                 return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_CHAR>(
                     std::move(inputTypes), std::move(outputTypes), channels);
             default:
-                LogError("Unsupported output type %s", TypeUtil::TypeToString(outputTypeId).c_str());
+                LogError("Unsupported output type %s", TypeUtil::TypeToStringLog(outputTypeId).c_str());
                 return nullptr;
         }
     }
@@ -166,7 +166,7 @@ protected:
                 return T<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_INVALID, OUT_ID>::Create(
                     std::move(inputTypes), std::move(outputTypes), channels);
             default:
-                LogError("Unsupported input type %s", TypeUtil::TypeToString(inputTypeId).c_str());
+                LogError("Unsupported input type %s", TypeUtil::TypeToStringLog(inputTypeId).c_str());
                 return nullptr;
         }
     }

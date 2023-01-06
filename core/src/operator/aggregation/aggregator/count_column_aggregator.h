@@ -25,25 +25,6 @@ void countAllConditionalOp(
     *res += (in & mask);
 }
 
-template<bool addIf>
-VECTORIZE_LOOP NO_INLINE
-void addConditionalCountRaw(int64_t &res, const size_t rowCount, const uint8_t * __restrict condition)
-{
-    if (rowCount > 0) {
-#ifdef DEBUG
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalCountRaw]: ConditionMap pointer NOT aligned");
-        }
-#endif
-
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-
-        for (size_t i = 0; i < rowCount; ++i) {
-            res += (condition[i] == addIf);
-        }
-    }
-}
-
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 class CountColumnAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
 public:
@@ -56,11 +37,11 @@ public:
     {
         if constexpr (OUT_ID != OMNI_LONG) {
             LogError("Error in count column aggregator: Expecting long output type. Got %s",
-                TypeUtil::TypeToString(OUT_ID).c_str());
+                TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else if constexpr (!RAW_IN && IN_ID != OMNI_LONG) {
             LogError("Error in count column aggregator: Expecting long intput type for partial input. Got %s",
-                TypeUtil::TypeToString(IN_ID).c_str());
+                TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else {
             if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(

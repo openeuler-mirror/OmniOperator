@@ -18,7 +18,7 @@
 namespace omniruntime {
 namespace op {
 template<typename T>
-T getMin()
+T GetMin()
 {
     if constexpr (std::is_same_v<T, int8_t>) {
         return 0x81;
@@ -96,11 +96,12 @@ public:
                 inputTypes, outputTypes, channels);
         } else if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE
             || IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
-            LogError("Error in max aggregator: Unsupported input type %s", TypeUtil::TypeToString(IN_ID).c_str());
+            LogError("Error in max aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
-        } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG || OUT_ID == OMNI_DOUBLE
-            || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_BOOLEAN)) {
-            LogError("Error in max aggregator: Unsupported output type %s", TypeUtil::TypeToString(OUT_ID).c_str());
+        } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG
+            || OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64
+            || OUT_ID == OMNI_BOOLEAN)) {
+            LogError("Error in max aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
             if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
@@ -109,7 +110,8 @@ public:
             }
 
             return std::unique_ptr<MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
-                new MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(inputTypes, outputTypes, channels));
+                new MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(
+                    inputTypes, outputTypes, channels));
         }
     }
 

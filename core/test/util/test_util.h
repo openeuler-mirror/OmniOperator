@@ -52,6 +52,9 @@ omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<o
 bool ColumnMatch(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
 bool ColumnMatchIgnoreOrder(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
 
+bool VecBatchMatchIgnoreOrder(omniruntime::vec::VectorBatch *resultBatch, omniruntime::vec::VectorBatch *expectedBatch,
+    const double error);
+
 class Timer {
 public:
     Timer() : wallElapsed(0), cpuElapsed(0) {}

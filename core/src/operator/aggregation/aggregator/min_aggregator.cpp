@@ -133,7 +133,7 @@ template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, D
 void MinAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-    *reinterpret_cast<ResultType *>(state.val) = getMax<ResultType>();
+    *reinterpret_cast<ResultType *>(state.val) = GetMax<ResultType>();
     state.count = 0;
 }
 
@@ -195,6 +195,10 @@ void MinAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
 }
 
 // Explicit template instantiation
+// Defining templated aggregators in header file consume a lot of memory during compilation
+// since, compiler needs to generate each individual template instance wherever aggregator header is include
+// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
+// and used explicit template instantiation to generate template instances
 template class MinAggregator<false, false, false, OMNI_BOOLEAN, OMNI_BOOLEAN>;
 template class MinAggregator<false, false, true, OMNI_BOOLEAN, OMNI_BOOLEAN>;
 template class MinAggregator<false, true, false, OMNI_BOOLEAN, OMNI_BOOLEAN>;

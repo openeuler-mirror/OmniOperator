@@ -39,10 +39,7 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
         auto preMaxVal = reinterpret_cast<char *>(state.val);
 
         int32_t result = memcmp(
-                preMaxVal,
-                reinterpret_cast<char *>(maxVal),
-                std::min(state.count, static_cast<int64_t>(maxLen))
-        );
+            preMaxVal, reinterpret_cast<char *>(maxVal), std::min(state.count, static_cast<int64_t>(maxLen)));
         if (result < 0 || (result == 0 && state.count < maxLen)) {
             state.val = maxVal;
             state.count = maxLen;
@@ -133,11 +130,11 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::SaveState(AggregateState &state)
 {
-    if ((state.count & updateFlag) == 0) {
+    if ((state.count & UPDATE_FLAG) == 0) {
         return;
     }
 
-    int32_t len = static_cast<int32_t>(state.count & valueFlag);
+    int32_t len = static_cast<int32_t>(state.count & VALUE_FLAG);
     if (state.val == nullptr || len == 0) {
         state.val = nullptr;
         state.count = 0;
@@ -151,6 +148,10 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Sa
 }
 
 // Explicit template instantiation
+// Defining templated aggregators in header file consume a lot of memory during compilation
+// since, compiler needs to generate each individual template instance wherever aggregator header is include
+// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
+// and used explicit template instantiation to generate template instances
 template class MaxVarcharAggregator<false, false, false, OMNI_CHAR, OMNI_CHAR>;
 template class MaxVarcharAggregator<false, false, true, OMNI_CHAR, OMNI_CHAR>;
 template class MaxVarcharAggregator<false, true, false, OMNI_CHAR, OMNI_CHAR>;

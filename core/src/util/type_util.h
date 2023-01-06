@@ -35,6 +35,9 @@ public:
     // Helper function for debugging DataType
     static std::string TypeToString(omniruntime::type::DataTypeId id);
 
+    // used in info/error logs
+    static std::string TypeToStringLog(omniruntime::type::DataTypeId id);
+
     static bool IsStringType(omniruntime::type::DataTypeId id);
 
     static bool IsDecimalType(omniruntime::type::DataTypeId type);

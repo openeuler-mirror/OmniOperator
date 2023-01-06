@@ -7,6 +7,25 @@
 
 namespace omniruntime {
 namespace op {
+template<bool addIf>
+VECTORIZE_LOOP NO_INLINE
+void addConditionalCountRaw(int64_t &res, const size_t rowCount, const uint8_t * __restrict condition)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addConditionalCountRaw]: ConditionMap pointer NOT aligned");
+        }
+#endif
+
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            res += (condition[i] == addIf);
+        }
+    }
+}
+
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
     const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex)
@@ -103,6 +122,10 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
 }
 
 // Explicit template instantiation
+// Defining templated aggregators in header file consume a lot of memory during compilation
+// since, compiler needs to generate each individual template instance wherever aggregator header is include
+// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
+// and used explicit template instantiation to generate template instances
 template class CountColumnAggregator<false, false, false, OMNI_NONE, OMNI_LONG>;
 template class CountColumnAggregator<false, false, true, OMNI_NONE, OMNI_LONG>;
 template class CountColumnAggregator<false, true, false, OMNI_NONE, OMNI_LONG>;

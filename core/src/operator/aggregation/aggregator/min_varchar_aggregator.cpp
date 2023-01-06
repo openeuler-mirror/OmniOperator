@@ -14,7 +14,7 @@ namespace op {
 #ifdef ENABLE_HMPP
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch) override
+    AggregateState &state, VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
 
@@ -38,10 +38,7 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
         auto preMinVal = reinterpret_cast<char *>(state.val);
 
         int32_t result = memcmp(
-                preMinVal,
-                reinterpret_cast<char *>(minVal),
-                std::min(state.count, static_cast<int64_t>(minLen))
-        );
+            preMinVal, reinterpret_cast<char *>(minVal), std::min(state.count, static_cast<int64_t>(minLen)));
         if (result > 0 || (result == 0 && state.count > minLen)) {
             state.val = minVal;
             state.count = minLen;
@@ -133,11 +130,11 @@ template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, D
 ALWAYS_INLINE void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::SaveState(
     AggregateState &state)
 {
-    if ((state.count & updateFlag) == 0) {
+    if ((state.count & UPDATE_FLAG) == 0) {
         return;
     }
 
-    int32_t len = static_cast<int32_t>(state.count & valueFlag);
+    int32_t len = static_cast<int32_t>(state.count & VALUE_FLAG);
     if (state.val == nullptr || len == 0) {
         state.val = nullptr;
         state.count = 0;
@@ -151,6 +148,10 @@ ALWAYS_INLINE void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_I
 }
 
 // Explicit template instantiation
+// Defining templated aggregators in header file consume a lot of memory during compilation
+// since, compiler needs to generate each individual template instance wherever aggregator header is include
+// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
+// and used explicit template instantiation to generate template instances
 template class MinVarcharAggregator<false, false, false, OMNI_CHAR, OMNI_CHAR>;
 template class MinVarcharAggregator<false, false, true, OMNI_CHAR, OMNI_CHAR>;
 template class MinVarcharAggregator<false, true, false, OMNI_CHAR, OMNI_CHAR>;
