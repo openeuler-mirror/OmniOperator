@@ -711,4 +711,14 @@ int16_t *MakeShorts(const int32_t size, const int16_t start)
         return nullptr;
     }
 }
+
+int32_t DecodeAddFlag(int32_t resultCode)
+{
+    return resultCode >> 16;
+}
+
+int32_t DecodeFetchFlag(int32_t resultCode)
+{
+    return resultCode & SHRT_MAX;
+}
 }

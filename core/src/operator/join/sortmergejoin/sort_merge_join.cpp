@@ -47,10 +47,12 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
 {
     streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes);
     bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes);
-    bool onlyBufferedFirstMatch = (joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) && filter.empty();
+    bool onlyBufferedFirstMatch =
+        (joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) && filter.empty();
 
     smjScanner = new SortMergeJoinScanner(*streamedTypes, streamedKeysCols.data(), streamedKeysCols.size(),
-        streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType, onlyBufferedFirstMatch);
+        streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType,
+        onlyBufferedFirstMatch);
 
     joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
         streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
@@ -58,26 +60,26 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
 }
 
 int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPagesIndex,
-    DynamicPagesIndex *bufferedTblPagesIndex, JoinType joinType)
+    DynamicPagesIndex *bufferedTblPagesIndex, JoinType joinType, int32_t resultCode)
 {
     switch (joinType) {
         case JoinType::OMNI_JOIN_TYPE_INNER:
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI: {
             if (streamedTblPagesIndex->IsEmptyBatch() || bufferedTblPagesIndex->IsEmptyBatch()) {
-                return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+                return SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
             }
             break;
         }
         case JoinType::OMNI_JOIN_TYPE_LEFT:
         case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI: {
             if (streamedTblPagesIndex->IsEmptyBatch()) {
-                return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+                return SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
             }
             break;
         }
         case JoinType::OMNI_JOIN_TYPE_FULL: {
             if (streamedTblPagesIndex->IsEmptyBatch() && bufferedTblPagesIndex->IsEmptyBatch()) {
-                return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT);
+                return SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
             }
             break;
         }
@@ -90,26 +92,45 @@ int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPages
 
 int32_t SortMergeJoinOperator::GetJoinResult()
 {
+    // the resultCode consists of two parts, the first 16bits indicate whether to add data,
+    // and the last 16 bits indicate whether to fetch data.
+    // NeedDataFlag has 3 values: 2, 3, 4
+    // 2 -> add streamTable data
+    // 3 -> add buffedTable data
+    // 4 -> streamTable and buffedTable scan is finished
+    // FetchDataFlag has 2 values: 0, 5
+    // 0 -> init status code, it means no result to fetch
+    // 5 -> operator produced the result data, we should fetch data
+    int32_t resultCode = 0;
     if (streamedTypes == nullptr) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_STREAM_TBL_INFO);
+        resultCode =
+            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_STREAM_TBL_INFO), resultCode);
+        return resultCode;
     }
 
     if (bufferedTypes == nullptr) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_BUFFER_TBL_INFO);
+        resultCode =
+            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_BUFFER_TBL_INFO), resultCode);
+        return resultCode;
     }
 
     // check streamed table have input, if not return data need to add input
     if (streamedTblPagesIndex->GetPositionCount() == 0 && !streamedTblPagesIndex->IsDataFinish()) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA);
+        resultCode =
+            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA), resultCode);
+        return resultCode;
     }
 
     // check buffered table have input, if not return data need to add input
     if (bufferedTblPagesIndex->GetPositionCount() == 0 && !bufferedTblPagesIndex->IsDataFinish()) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA);
+        resultCode =
+            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA), resultCode);
+        return resultCode;
     }
 
     // check  SMJ_NO_RESULT situation
-    int32_t handResult = HandleSortMergeJoinNoResultSituation(streamedTblPagesIndex, bufferedTblPagesIndex, joinType);
+    int32_t handResult =
+        HandleSortMergeJoinNoResultSituation(streamedTblPagesIndex, bufferedTblPagesIndex, joinType, resultCode);
     if (handResult != -1) {
         return handResult;
     }
@@ -131,19 +152,25 @@ int32_t SortMergeJoinOperator::GetJoinResult()
         smjScanner->Clear();
         if (joinResultBuilderRet == 1) {
             joinResultBuilder->GetOutput(returnVectorBatchs);
+            resultCode =
+                SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
         }
     }
 
     // 2)check need to add data for streamed table
     auto streamedRet = DecodeStreamedTblResult(joinScannerRet);
     if (static_cast<JoinTableCode>(streamedRet) == JoinTableCode::NEED_DATA) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA);
+        resultCode =
+            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA), resultCode);
+        return resultCode;
     }
 
-    // 3)check need to add data for streamed table
+    // 3)check need to add data for buffered table
     auto bufferedRet = DecodeBufferedTblResult(joinScannerRet);
     if (static_cast<JoinTableCode>(bufferedRet) == JoinTableCode::NEED_DATA) {
-        return static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA);
+        resultCode =
+            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA), resultCode);
+        return resultCode;
     }
 
     // 4) scan finished, need to get last builder result
@@ -153,12 +180,13 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     }
 
     // 5)finish the join scan
-    SortMergeJoinAddInputCode returnCode = returnVectorBatchs.empty() ? SortMergeJoinAddInputCode::SMJ_NO_RESULT :
-                                                                        SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA;
-    if (returnCode == SortMergeJoinAddInputCode::SMJ_NO_RESULT) {
+    resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
+    if (returnVectorBatchs.empty()) {
         joinResultBuilder->Finish();
+    } else {
+        resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
     }
-    return static_cast<int32_t>(returnCode);
+    return resultCode;
 }
 
 int32_t SortMergeJoinOperator::AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch)
