@@ -87,12 +87,12 @@ public:
      * true overflow as null value, false throw exception, default value as false.
      *
      */
-    Aggregator(FunctionType aggregateType, DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    Aggregator(FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
         const std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false)
         : type(aggregateType),
-          inputTypes(std::move(inputTypes)),
-          outputTypes(std::move(outputTypes)),
+          inputTypes(inputTypes),
+          outputTypes(outputTypes),
           inputRaw(inputRaw),
           outputPartial(outputPartial),
           isOverflowAsNull(isOverflowAsNull),
@@ -142,12 +142,12 @@ public:
         return type;
     }
 
-    virtual const DataTypesPtr &GetInputTypes() const
+    virtual const DataTypes &GetInputTypes() const
     {
         return inputTypes;
     }
 
-    virtual const DataTypesPtr &GetOutputTypes() const
+    virtual const DataTypes &GetOutputTypes() const
     {
         return outputTypes;
     }
@@ -168,8 +168,8 @@ public:
 
 protected:
     FunctionType type;
-    DataTypesPtr inputTypes;
-    DataTypesPtr outputTypes;
+    const DataTypes inputTypes;
+    const DataTypes outputTypes;
     bool inputRaw;
     bool outputPartial;
     bool isOverflowAsNull;

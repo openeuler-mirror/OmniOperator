@@ -11,12 +11,12 @@ namespace omniruntime {
 namespace op {
 class CountColumnAggregator : public Aggregator {
 public:
-    CountColumnAggregator(DataTypesPtr outputTypes, std::vector<int32_t> &channels)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, DataTypes::NoneDataTypesInstance(), outputTypes, channels)
+    CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
     {}
 
-    CountColumnAggregator(DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, DataTypes::NoneDataTypesInstance(), outputTypes, channels,
+    CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, *DataTypes::NoneDataTypesInstance(), outputTypes, channels,
         inputRaw, outputPartial)
     {}
 

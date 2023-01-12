@@ -12,10 +12,10 @@ namespace op {
 template <typename RawInputVectorType, typename IntermediateVectorType, typename ResultType>
 class SumFlatIMAggregator : public Aggregator {
 public:
-    SumFlatIMAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
     {}
-    SumFlatIMAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)

@@ -15,11 +15,11 @@ namespace omniruntime {
 namespace op {
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    SumLongDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
     {}
 
-    SumLongDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    SumLongDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -75,7 +75,7 @@ public:
             return false;
         }
         // only OMNI_DECIMAL128 type input support
-        return (inputTypes->GetType(0)->GetId() == OMNI_DECIMAL128);
+        return (inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128);
     }
 #endif
 

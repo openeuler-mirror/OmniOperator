@@ -13,11 +13,11 @@ namespace omniruntime {
 namespace op {
 template <typename RawInputVectorType, typename ResultType = double> class AverageFlatIMAggregator : public Aggregator {
 public:
-    AverageFlatIMAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
     {}
 
-    AverageFlatIMAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)

@@ -15,11 +15,11 @@ namespace omniruntime {
 namespace op {
 template <typename InputVectorType, typename ResultType = double> class AverageAggregator : public Aggregator {
 public:
-    AverageAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
     {}
 
-    AverageAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw,
+    AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw,
         bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -39,7 +39,7 @@ public:
         auto sumVal = reinterpret_cast<double *>(executionContext->GetArena()->Allocate(sizeof(double)));
         int32_t count = 0;
 
-        auto inputTypeId = inputTypes->GetType(0)->GetId();
+        auto inputTypeId = inputTypes.GetType(0)->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         switch (inputTypeId) {
             case OMNI_LONG: {
@@ -78,7 +78,7 @@ public:
             return false;
         }
         // only long type input support
-        return (inputTypes->GetType(0)->GetId() == OMNI_LONG);
+        return (inputTypes.GetType(0)->GetId() == OMNI_LONG);
     }
 #endif
 

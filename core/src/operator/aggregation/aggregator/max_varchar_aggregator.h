@@ -14,11 +14,11 @@ namespace omniruntime {
 namespace op {
 class MaxVarcharAggregator : public Aggregator {
 public:
-    MaxVarcharAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels)
     {}
 
-    MaxVarcharAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -32,7 +32,7 @@ public:
 
         auto offsets =
             static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
-        auto width = static_cast<VarcharDataType *>(inputTypes->GetType(0).get())->GetWidth();
+        auto width = static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->GetWidth();
         int32_t maxLen = 0;
         uint8_t *maxVal = executionContext->GetArena()->Allocate(3 * width);
 

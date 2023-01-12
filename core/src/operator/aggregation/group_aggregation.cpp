@@ -4,8 +4,6 @@
  */
 #include "group_aggregation.h"
 #include <cmath>
-
-#include "vector/vector_common.h"
 #include "vector/vector_helper.h"
 #include "vector/container_vector.h"
 #include "operator/status.h"
@@ -142,7 +140,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
 
         auto inputTypes = DataTypes(inputDataTypesPtr).Instance();
         auto outputTypes = aggOutputTypes[i].Instance();
-        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputTypes, outputTypes, aggInputColIdxVec,
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
             throw OmniException("create group aggregation operator", "return nullptr when create aggregator");
@@ -178,10 +176,6 @@ OmniStatus HashAggregationOperator::Init()
     executionContext->GetArena()->SetAllocator(vecAllocator);
     return OMNI_STATUS_NORMAL;
 }
-
-void HashAggregationOperator::PreLoop(VectorBatch *vecBatch) {}
-
-void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
 
 static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t colNum,
     uint64_t *combinedHashVal)
@@ -241,6 +235,7 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
     }
     return -1;
 }
+
 void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *groupByColIdx,
     int32_t groupByColNum, int32_t aggNum)
 {
@@ -289,7 +284,6 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    this->PreLoop(vecBatch);
     auto groupColNum = this->groupByCols.size();
     auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
     auto aggNum = this->aggregators.size();
@@ -301,7 +295,6 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     uint32_t rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
     this->InLoop(vecBatch, rowCount, groupByColIdx.get(), groupColNum, aggNum);
 
-    this->PostLoop(vecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
