@@ -87,12 +87,12 @@ public:
         return realAggregator->GetType();
     }
 
-    const DataTypesPtr &GetInputTypes() const override
+    const DataTypes &GetInputTypes() const override
     {
         return realAggregator->GetInputTypes();
     }
 
-    const DataTypesPtr &GetOutputTypes() const override
+    const DataTypes &GetOutputTypes() const override
     {
         return realAggregator->GetOutputTypes();
     }

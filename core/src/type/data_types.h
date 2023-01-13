@@ -61,18 +61,16 @@ public:
         return std::make_shared<DataTypes>(dataTypes);
     }
 
-    static std::shared_ptr<DataTypes> NoneDataTypesInstance()
+    static std::unique_ptr<DataTypes> NoneDataTypesInstance()
     {
-        static std::shared_ptr<DataTypes> types =
-            std::make_shared<DataTypes>(std::vector<DataTypePtr> { NoneDataType::Instance() });
-        return types;
+        return std::make_unique<DataTypes>(std::vector<DataTypePtr> { NoneDataType::Instance() });
     }
 
-    static std::shared_ptr<DataTypes> GenerateDataTypes(DataTypePtr dataTypePtr)
+    static std::unique_ptr<DataTypes> GenerateDataTypes(DataTypePtr dataTypePtr)
     {
         std::vector<DataTypePtr> singleDataType;
         singleDataType.push_back(dataTypePtr);
-        return std::make_shared<DataTypes>(singleDataType);
+        return std::make_unique<DataTypes>(singleDataType);
     }
 
 private:
