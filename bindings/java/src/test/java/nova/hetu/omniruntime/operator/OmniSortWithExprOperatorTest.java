@@ -12,7 +12,6 @@ import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -49,6 +48,8 @@ import java.util.concurrent.TimeUnit;
  * @since 2021-10-16
  */
 public class OmniSortWithExprOperatorTest {
+    private final long MAX_SPILL_BYTES = 100 * 1024 * 1024;
+
     private String generateSpillPath() {
         Path path = Paths.get("");
         return path.toAbsolutePath() + File.separator + System.currentTimeMillis();
@@ -211,7 +212,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 1024, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceData1 = {{23, 23, 23, 23, 23, 23, 23, 23, 23, 23}, {1, 1, 1, 2, 1, 1, 1, 1, 2, 2},
@@ -260,7 +261,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 1024, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceData1 = {{23, 23, 23, 23, 23, 23, 23, 23, 23, 23}, {1, 1, 1, 2, 1, 1, 1, 1, 2, 2},
@@ -309,7 +310,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 1024, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5, 3, 2, 6, 1}, {5L, 3L, 2L, 6L, 1L}};
@@ -349,7 +350,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 100 * 1024 * 1024, 10000)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 10000)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         int maxRowCntPerBatch = 131072; // 1M / (4+4)
@@ -418,7 +419,7 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), 1024, 1)));
+                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 1)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5}, {3L}};
