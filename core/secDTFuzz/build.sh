@@ -10,7 +10,7 @@ SRC_ROOT="$(cd $SCRIPT_DIR/../..;pwd)"
 
 echo ${SRC_ROOT}
 mkdir ${SRC_ROOT}/tools
-cp -rf /SecDTFUZZ/DTFrame ${SRC_ROOT}/tools/
+cp -rf /SecDTFuzz/DTFrame ${SRC_ROOT}/tools/
 
 cd ${SRC_ROOT}/tools/DTFrame
 cd build

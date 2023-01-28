@@ -274,13 +274,14 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     int32_t probeHashColsCount = 1;
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t buildOutputCols[1] = {2};
+    int32_t buildOutputColsCount = 1;
 
     auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
     auto overflowConfig = new OverflowConfig();
 
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
-        JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, overflowConfig);
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount,
+        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, overflowConfig);
     auto *lookupJoinOperator = lookupJoinFactory->CreateOperator();
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
