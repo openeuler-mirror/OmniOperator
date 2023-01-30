@@ -110,8 +110,6 @@ public:
 
     OmniStatus Close() override;
 
-    void InLoop(VectorBatch *vecBatch, VectorBatch &groupVectors);
-
     template <typename Serialize> void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, VectorBatch &groupVectors);
 
 private:

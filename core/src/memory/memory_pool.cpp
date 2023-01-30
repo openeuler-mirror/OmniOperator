@@ -136,7 +136,7 @@ public:
         }
 
         uint32_t bits = 63 - __builtin_clzll(size);
-        size_t lower = 1U << bits;
+        size_t lower = 1ULL << bits;
         // Size is a power of 2.
         if (lower == size) {
             return size;

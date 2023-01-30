@@ -69,6 +69,11 @@ public:
         availBytes = totalBytes = chunks.at(0)->GetSizeInBytes();
     }
 
+    void RollBackContinualMem() {
+        availBuf -= continuousUsedMemoryBytes;
+        availBytes += continuousUsedMemoryBytes;
+    }
+
     int64_t TotalBytes()
     {
         return totalBytes;

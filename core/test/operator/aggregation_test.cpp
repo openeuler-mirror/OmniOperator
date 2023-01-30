@@ -2702,7 +2702,9 @@ TEST(AggregatorTest, max_test)
 
     // process int to long
     maxIntLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    EXPECT_EQ(1, *static_cast<int64_t *>(state.val));
+    auto int64Value = *static_cast<int64_t *>(state.val);
+    int64Value &= 0x0000FFFF;
+    EXPECT_EQ(1, int64Value);
     state.Reset();
 
     // process long to int

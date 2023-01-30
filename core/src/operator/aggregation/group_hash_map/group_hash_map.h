@@ -22,7 +22,7 @@
  * group_hashmap contains 8 requirements to notice:
  * 1 hashmap use slot as basic unit, every slot contains (key, value ,hash value of key)
  * 2 the key and value of hashmap must support movable ,
- *   the value must have default constructor and must support copy assign function or move assign function
+ * the value must have default constructor and must support copy assign function or move assign function
  * 3 the key must overload operator== function or it is a POD structure
  * 4 the hash function will use std::hash by default if user didn't set hash function in group_hasher.h
  * 5 the user-defined NullValueTypeTraits function in null_key_traits.h is used to
@@ -62,11 +62,9 @@ public:
         kv.first = key_;
     }
 
-    GroupByHashSlot(KeyType &&key_) : isAssigned(true), kv(std::move(key_),ValueType{})
-    {
-    }
+    GroupByHashSlot(KeyType &&key_) : isAssigned(true), kv(std::move(key_), ValueType {}) {}
 
-    GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)),  hashVal(o.hashVal)
+    GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)), hashVal(o.hashVal)
     {
         isAssigned = true;
         o.hashVal = 0;
@@ -135,9 +133,10 @@ public:
     }
 
 private:
+    bool isAssigned = false;
     std::pair<KeyType, ValueType> kv;
     size_t hashVal;
-    /**
+    /* *
      * isAssigned indicates whether the class is constructed.
      * the usage of this class in Hashmap is divided into two phases:
      * memory initialization and object construction.
@@ -145,7 +144,7 @@ private:
      * and the obtained value is false if caller attempts to get value of isAssigned.
      * when the constructor function is invoked, the value of isAssigned is set to true.
      */
-    bool isAssigned = false;
+
 };
 
 /**
@@ -167,21 +166,17 @@ public:
 
     int Allocate(uint64_t size, uint8_t **buffer)
     {
-        auto ret = pool->alloc(static_cast<int64_t>(size));
-        *buffer = static_cast<uint8_t*>(ret);
-        if(ret == nullptr){
-            throw exception::OmniException("allocate in OmniHashmapAllocator","allocate memory fail");
-        }
-        auto err = memset_s(*buffer, size, 0, size);
-        if (err != EOK) {
-            throw exception::OmniException("allocate in OmniHashmapAllocator","memset_sp 0 fail");
+        auto ret = pool->alloc(static_cast<int64_t>(size),true);
+        *buffer = static_cast<uint8_t *>(ret);
+        if (ret == nullptr) {
+            throw exception::OmniException("allocate in OmniHashmapAllocator", "allocate memory fail");
         }
         return size;
     }
 
     void Release(uint8_t *buffer, uint64_t size)
     {
-        pool->free((void*)buffer,size);
+        pool->free((void *)buffer, size);
     }
 
     ~OmniHashmapAllocator() = default;
@@ -237,7 +232,9 @@ private:
 class Grower {
 public:
     static constexpr short enlargeThreshold = 23;
-    Grower(uint8_t degree) : degree(degree) {}
+    Grower(uint8_t degree) : degree(degree) {
+        CalculateThreshHold();
+    }
     /* *
      * the way to grow the size of hashmap
      * @return
@@ -245,24 +242,29 @@ public:
     uint64_t GrowSize()
     {
         degree += (degree >= enlargeThreshold ? 1 : 2);
-        return 1 << degree;
+        CalculateThreshHold();
+        return 1ULL << degree;
     }
     /* *
      * @return allocate byte of hashmap
      */
     uint64_t GetCurrentSize()
     {
-        return 1 << degree;
+        return 1ULL << degree;
     }
 
     uint64_t GetThreshHold()
     {
-        return 1 << (degree - 1);
+        return threshHold;
     }
 
     ~Grower() = default;
 
 private:
+    void CalculateThreshHold(){
+        threshHold = std::ceil((1ULL<<(degree-1)));
+    }
+    uint64_t threshHold = 0;
     uint8_t degree;
 };
 
@@ -276,8 +278,8 @@ private:
  */
 
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
-    std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType>
-                    &&(std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)>* = nullptr>
+    std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType> &&
+    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)> * = nullptr>
 class GroupByHashMap {
 public:
     using Slot = GroupByHashSlot<KeyType, ValueType>;
@@ -340,8 +342,8 @@ public:
      * caller can use this Emplace to Update data too. just call get value by call GetValue function of InsertResult
      * InsertResult's GetValue function will return value reference, and caller can update the value
      */
-    template<typename T,std::enable_if_t<
-            std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>,KeyType>>* = nullptr>
+    template <typename T,
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>> * = nullptr>
     InsertResult<ValueType> Emplace(T &&key)
     {
         if (NeedRehash()) {
@@ -390,13 +392,13 @@ public:
 
     ~GroupByHashMap()
     {
-        //add constexpr
+        // add constexpr
         if constexpr (not std::is_trivially_destructible<Slot>::value) {
             DeconstructAllSlot();
         }
         allocator.Release(address, GetCapacity());
-        if(nullSlot != nullptr){
-            allocator.Release(reinterpret_cast<uint8_t*>(nullSlot), sizeof(Slot));
+        if (nullSlot != nullptr) {
+            allocator.Release(reinterpret_cast<uint8_t *>(nullSlot), sizeof(Slot));
         }
     }
 
@@ -459,17 +461,16 @@ private:
         return NullValueTypeTraits<KeyType>::IsNullValue(key);
     }
 
-    //no need to check T
-    template<typename T>
-    InsertResult<ValueType> EmplaceNullValue(T&& key)
+    // no need to check T
+    template <typename T> InsertResult<ValueType> EmplaceNullValue(T &&key)
     {
         if (nullSlot == nullptr) {
             ++elementsSize;
             allocator.Allocate(sizeof(Slot), reinterpret_cast<uint8_t **>(&nullSlot));
-            new(nullSlot) Slot(std::forward<T>(key));
-            return InsertResult<ValueType> {nullSlot->GetValue(), true };
+            new (nullSlot)Slot(std::forward<T>(key));
+            return InsertResult<ValueType> { nullSlot->GetValue(), true };
         } else {
-            return InsertResult<ValueType> {nullSlot->GetValue(), false };
+            return InsertResult<ValueType> { nullSlot->GetValue(), false };
         }
     }
 

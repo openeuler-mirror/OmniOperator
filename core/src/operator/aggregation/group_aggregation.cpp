@@ -214,18 +214,6 @@ OmniStatus HashAggregationOperator::Init()
     return OMNI_STATUS_NORMAL;
 }
 
-void HashAggregationOperator::InLoop(VectorBatch *vecBatch, VectorBatch &groupVectors)
-{
-    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
-        Emplace(serialize, vecBatch, groupVectors);
-    } else {
-        // only serialize method are used now
-        LogError("can not support groupByColumnsHandleType : %d.", groupByColumnsHandleType);
-        throw OmniException("no t supported operation", "groupByColumnsHandleType error");
-        return;
-    }
-}
-
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto groupColNum = this->groupByCols.size();
@@ -235,7 +223,13 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         groupVectors.SetVector(i, vecBatch->GetVector(this->groupByCols[i].idx));
     }
 
-    this->InLoop(vecBatch, groupVectors);
+    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
+        Emplace(serialize, vecBatch, groupVectors);
+    } else {
+        // only serialize method are used now
+        LogError("can not support groupByColumnsHandleType : %d.", groupByColumnsHandleType);
+        throw OmniException("no t supported operation", "groupByColumnsHandleType error");
+    }
 
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
@@ -603,6 +597,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
             ret.SetValue(currentGroupStates);
         } else {
             currentGroupStates = ret.GetValue();
+            executionContext->GetArena()->RollBackContinualMem();
         }
 
         rowStates[i] = currentGroupStates;
