@@ -124,7 +124,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     // loop body
     builder->SetInsertPoint(loopBody);
     // Get the value of the current row index to process.
-    curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
+    curIndexVal = builder->CreateLoad(llvmTypes->I32Type(), indexStore, "CUR_INDEX");
 
     builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthAllocaInst);
     builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
@@ -140,15 +140,16 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
-    ret = static_cast<CallInst *>(builder->CreateAnd(builder->CreateNot(builder->CreateLoad(isNullPtr)), ret));
+    ret = static_cast<CallInst *>(
+        builder->CreateAnd(builder->CreateNot(builder->CreateLoad(llvmTypes->I1Type(), isNullPtr)), ret));
     // If true, add row index to selected array, otherwise, process next row.
     builder->CreateCondBr(ret, filterPassed, incrementCounter);
     // Add row index to results array
     builder->SetInsertPoint(filterPassed);
     // Get value of selected index.
-    selectedIndexVal = builder->CreateLoad(selectedIndexStore, "SELECTED_INDEX");
+    selectedIndexVal = builder->CreateLoad(llvmTypes->I32Type(), selectedIndexStore, "SELECTED_INDEX");
     // Get address of selected index.
-    selectedAddress = builder->CreateGEP(resultsArray, selectedIndexVal, "SELECTED_ADDRESS");
+    selectedAddress = builder->CreateGEP(llvmTypes->I32Type(), resultsArray, selectedIndexVal, "SELECTED_ADDRESS");
     // Set the selected value to the current row index.
     builder->CreateStore(curIndexVal, selectedAddress);
     // Increment the selected index.
@@ -167,7 +168,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     builder->SetInsertPoint(endBlock);
 
-    nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
+    nextSelectedIndexVal = builder->CreateLoad(llvmTypes->I32Type(), selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
     llvmEngine->OptimizeFunctionsAndModule();
 
@@ -178,5 +179,5 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     rt = resTracker;
 
     auto sym = eoe(jit->lookup("FILTER_WRAPPER"));
-    return sym.getAddress();
+    return sym.getValue();
 }

@@ -105,5 +105,5 @@ int64_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
     llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
     auto sym = eoe(jit->lookup("BATCH_FILTER_WRAPPER"));
-    return sym.getAddress();
+    return sym.getValue();
 }

@@ -257,9 +257,9 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
     Value *rowIdxArray = this->batchCodegenContext->rowIdxArray;
 
     Value *colIdx = llvmTypes->CreateConstantInt(fExpr.colVal);
-    Value *gep = builder->CreateGEP(vecBatch, colIdx);
-    auto dictionaryVectorGEP = builder->CreateGEP(dictionaryVectors, colIdx);
-    Value *dictionaryVectorPtr = builder->CreateLoad(dictionaryVectorGEP);
+    Value *gep = builder->CreateGEP(llvmTypes->I64Type(), vecBatch, colIdx);
+    auto dictionaryVectorGEP = builder->CreateGEP(llvmTypes->I64Type(), dictionaryVectors, colIdx);
+    Value *dictionaryVectorPtr = builder->CreateLoad(llvmTypes->I64Type(), dictionaryVectorGEP);
     auto condition = builder->CreateIsNotNull(dictionaryVectorPtr);
 
     BasicBlock *trueBlock = BasicBlock::Create(*context, "DICTIONARY_NOT_NULL", func);
@@ -276,13 +276,13 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
 
     func->getBasicBlockList().push_back(falseBlock);
     builder->SetInsertPoint(falseBlock);
-    Value *elementAddr = builder->CreateLoad(gep);
+    Value *elementAddr = builder->CreateLoad(llvmTypes->I64Type(), gep);
     AllocaInst *lengthArray = nullptr;
     Value *dataArrayPtr = nullptr;
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
         lengthArray = builder->CreateAlloca(llvmTypes->I32Type(), rowCnt, "varchar_length");
-        auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
-        Value *offsetPtr = builder->CreateLoad(offsetsGEP);
+        auto offsetsGEP = builder->CreateGEP(llvmTypes->I64Type(), offsets, colIdx);
+        Value *offsetPtr = builder->CreateLoad(llvmTypes->I64Type(), offsetsGEP);
         offsetPtr = builder->CreateIntToPtr(offsetPtr, llvmTypes->I32PtrType());
         dataArrayPtr =
             this->GetVectorValue(*(fExpr.GetReturnType()), rowIdxArray, rowCnt, elementAddr, offsetPtr, lengthArray);
@@ -309,8 +309,8 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
     }
 
     // Get isNull value
-    auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
-    Value *nullArrayPtr = builder->CreateLoad(bitmapGEP);
+    auto bitmapGEP = builder->CreateGEP(llvmTypes->I64Type(), bitmap, colIdx);
+    Value *nullArrayPtr = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
     nullArrayPtr = builder->CreateIntToPtr(nullArrayPtr, llvmTypes->I1PtrType());
     auto dstNullArray = GetResultArray(OMNI_BOOLEAN, rowCnt);
     llvmEngine->CallExternFunction("batch_copy_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
@@ -1268,9 +1268,9 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetHiveUdfArgValues(const Fun
             return argVals;
         }
 
-        auto valuePtr = builder->CreateGEP(valueAddrArray, llvmTypes->CreateConstantInt(i));
-        auto nullPtr = builder->CreateGEP(nullAddrArray, llvmTypes->CreateConstantInt(i));
-        auto lengthPtr = builder->CreateGEP(lengthAddrArray, llvmTypes->CreateConstantInt(i));
+        auto valuePtr = builder->CreateGEP(llvmTypes->I64Type(), valueAddrArray, llvmTypes->CreateConstantInt(i));
+        auto nullPtr = builder->CreateGEP(llvmTypes->I64Type(), nullAddrArray, llvmTypes->CreateConstantInt(i));
+        auto lengthPtr = builder->CreateGEP(llvmTypes->I64Type(), lengthAddrArray, llvmTypes->CreateConstantInt(i));
         builder->CreateStore(argExprResult->data, valuePtr);
         builder->CreateStore(argExprResult->isNull, nullPtr);
         auto length = TypeUtil::IsStringType(argExpr->GetReturnTypeId()) ? argExprResult->length :
@@ -1289,7 +1289,7 @@ Value *BatchExpressionCodeGen::CreateHiveUdfArgTypes(const FuncExpr &fExpr)
     auto elementSize = static_cast<int32_t>(fExpr.arguments.size());
     auto alloca = builder->CreateAlloca(llvmTypes->I32Type(), llvmTypes->CreateConstantInt(elementSize));
     for (int32_t i = 0; i < elementSize; i++) {
-        auto ptr = builder->CreateGEP(alloca, llvmTypes->CreateConstantInt(i));
+        auto ptr = builder->CreateGEP(llvmTypes->I32Type(), alloca, llvmTypes->CreateConstantInt(i));
         builder->CreateStore(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnTypeId()), ptr);
     }
     return alloca;
@@ -1573,10 +1573,11 @@ void BatchExpressionCodeGen::Visit(const InExpr &inExpr)
     auto cmpValues = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size - 1));
     auto cmpBools = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size - 1));
     for (int i = 0; i < size - 1; ++i) {
-        Value *gep = builder->CreateGEP(cmpValues, llvmTypes->CreateConstantInt(i), "cmp_value_address");
+        Value *gep =
+            builder->CreateGEP(llvmTypes->I64Type(), cmpValues, llvmTypes->CreateConstantInt(i), "cmp_value_address");
         builder->CreateStore(cmps[i]->data, gep);
 
-        gep = builder->CreateGEP(cmpBools, llvmTypes->CreateConstantInt(i), "cmp_null_address");
+        gep = builder->CreateGEP(llvmTypes->I64Type(), cmpBools, llvmTypes->CreateConstantInt(i), "cmp_null_address");
         builder->CreateStore(cmps[i]->isNull, gep);
     }
 
@@ -1604,7 +1605,8 @@ void BatchExpressionCodeGen::Visit(const InExpr &inExpr)
         case OMNI_VARCHAR: {
             auto cmpLengths = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size - 1));
             for (int i = 0; i < size - 1; ++i) {
-                Value *gep = builder->CreateGEP(cmpLengths, llvmTypes->CreateConstantInt(i), "cmp_length_address");
+                Value *gep = builder->CreateGEP(llvmTypes->I64Type(), cmpLengths, llvmTypes->CreateConstantInt(i),
+                    "cmp_length_address");
                 builder->CreateStore(cmps[i]->length, gep);
             }
             args = { llvmTypes->CreateConstantInt(size - 1),
@@ -1662,16 +1664,19 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     auto resultNulls = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size));
 
     for (int i = 0; i < size; ++i) {
-        Value *gep = builder->CreateGEP(whenClauses, llvmTypes->CreateConstantInt(i), "when_value_address");
+        Value *gep = builder->CreateGEP(llvmTypes->I64Type(), whenClauses, llvmTypes->CreateConstantInt(i),
+            "when_value_address");
         builder->CreateStore(conditions[i]->data, gep);
 
-        gep = builder->CreateGEP(whenBools, llvmTypes->CreateConstantInt(i), "when_null_address");
+        gep = builder->CreateGEP(llvmTypes->I64Type(), whenBools, llvmTypes->CreateConstantInt(i), "when_null_address");
         builder->CreateStore(conditions[i]->isNull, gep);
 
-        gep = builder->CreateGEP(resultValues, llvmTypes->CreateConstantInt(i), "result_value_address");
+        gep = builder->CreateGEP(llvmTypes->I64Type(), resultValues, llvmTypes->CreateConstantInt(i),
+            "result_value_address");
         builder->CreateStore(results[i]->data, gep);
 
-        gep = builder->CreateGEP(resultNulls, llvmTypes->CreateConstantInt(i), "result_null_address");
+        gep = builder->CreateGEP(llvmTypes->I64Type(), resultNulls, llvmTypes->CreateConstantInt(i),
+            "result_null_address");
         builder->CreateStore(results[i]->isNull, gep);
     }
 
@@ -1726,8 +1731,8 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         case OMNI_VARCHAR: {
             auto resultLengths = GetResultArray(OMNI_LONG, llvmTypes->CreateConstantInt(size));
             for (int i = 0; i < size; ++i) {
-                Value *gep =
-                    builder->CreateGEP(resultLengths, llvmTypes->CreateConstantInt(i), "result_length_address");
+                Value *gep = builder->CreateGEP(llvmTypes->I64Type(), resultLengths, llvmTypes->CreateConstantInt(i),
+                    "result_length_address");
                 builder->CreateStore(results[i]->length, gep);
             }
             AllocaInst *finalLength = GetResultArray(OMNI_INT, this->batchCodegenContext->rowCnt);

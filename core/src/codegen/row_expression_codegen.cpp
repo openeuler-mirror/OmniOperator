@@ -42,26 +42,27 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fiel
 
     Value *colIdx = llvmTypes->CreateConstantInt(fieldExpr.colVal);
     // Find address of this column in the addresses array argument.
-    Value *gep = builder->CreateGEP(data, colIdx);
+    Value *gep = builder->CreateGEP(llvmTypes->I64Type(), data, colIdx);
     // Load the address value.
-    Value *elementAddr = builder->CreateLoad(gep);
+    Value *elementAddr = builder->CreateLoad(llvmTypes->I64Type(), gep);
     Value *elementPtr = GetIntToPtr(fieldExpr.GetReturnTypeId(), elementAddr);
 
+    Type *ty = llvmTypes->VectorToLLVMType(*(fieldExpr.GetReturnType()));
     Value *dataValue = nullptr;
     Value *length = nullptr;
     if (TypeUtil::IsStringType(fieldExpr.GetReturnTypeId())) {
         // Get length for varchar/char type
-        auto lengthGEP = builder->CreateGEP(lengths, colIdx);
-        length = builder->CreateLoad(lengthGEP);
+        auto lengthGEP = builder->CreateGEP(llvmTypes->I32Type(), lengths, colIdx);
+        length = builder->CreateLoad(llvmTypes->I32Type(), lengthGEP);
         // For varchar, only need to get the pointer
         dataValue = elementPtr;
     } else {
-        dataValue = builder->CreateLoad(elementPtr);
+        dataValue = builder->CreateLoad(ty, elementPtr);
     }
 
     // Get isNull value
-    auto isNullGEP = builder->CreateGEP(isNulls, colIdx);
-    Value *isNull = builder->CreateLoad(isNullGEP);
+    auto isNullGEP = builder->CreateGEP(llvmTypes->I1Type(), isNulls, colIdx);
+    Value *isNull = builder->CreateLoad(llvmTypes->I1Type(), isNullGEP);
 
     if (TypeUtil::IsDecimalType(fieldExpr.GetReturnTypeId())) {
         Value *precision = llvmTypes->CreateConstantInt(
@@ -147,13 +148,15 @@ Function *RowExpressionCodeGen::CreateFunction()
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(outputLengthIndex);
-        Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        Value *lengthGep = builder->CreateGEP(llvmTypes->I32Type(), outputLength, llvmTypes->CreateConstantInt(0),
+            "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 
     int32_t outputNullIndex = 3;
     Argument *isResultNull = this->func->getArg(outputNullIndex);
-    Value *nullGep = builder->CreateGEP(isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
+    Value *nullGep =
+        builder->CreateGEP(llvmTypes->I1Type(), isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
     builder->CreateStore(result->isNull, nullGep);
 
     // Return value
@@ -189,5 +192,5 @@ int64_t RowExpressionCodeGen::GetFunction()
     rt = resTracker;
 
     auto sym = eoe(jit->lookup(FUNCTION_NAME));
-    return sym.getAddress();
+    return sym.getValue();
 }
