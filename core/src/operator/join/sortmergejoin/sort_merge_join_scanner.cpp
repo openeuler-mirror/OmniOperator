@@ -53,16 +53,20 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
 }
 
 int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatched,
-    std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses)
+    std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
+    std::vector<bool> &isBufferedKeyMatched)
 {
     isMatched.insert(isMatched.end(), isPreKeyMatched.begin(), isPreKeyMatched.end());
     streamedTblValueAddresses.insert(streamedTblValueAddresses.end(), streamedValueAddress.begin(),
         streamedValueAddress.end());
     bufferedTblValueAddresses.insert(bufferedTblValueAddresses.end(), bufferedValueAddress.begin(),
         bufferedValueAddress.end());
+    isBufferedKeyMatched.insert(isBufferedKeyMatched.end(), isSameBufferedKeyMatched.begin(),
+        isSameBufferedKeyMatched.end());
     isPreKeyMatched.clear();
     streamedValueAddress.clear();
     bufferedValueAddress.clear();
+    isSameBufferedKeyMatched.clear();
     return 0;
 }
 

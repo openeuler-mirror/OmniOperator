@@ -34,7 +34,9 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -277,6 +279,168 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
+        bufferedTableOperator.close();
+        bufferedWithExprOperatorFactory.close();
+        streamedTableOperator.close();
+        streamedBuilderWithExprOperatorFactory.close();
+    }
+
+    private void buildAddInputData(Object[][] streamedData1, Object[][] bufferedData1, Object[][] streamedData2,
+            Object[][] bufferedData2, int tableSize) {
+        for (int i = 0; i < tableSize; i++) {
+            streamedData1[0][i] = i;
+            streamedData2[0][i] = i + tableSize;
+            for (int j = 1; j < streamedData1.length; j++) {
+                streamedData1[j][i] = i + 1001L;
+                streamedData2[j][i] = i + 1001L + tableSize;
+            }
+
+            bufferedData1[bufferedData1.length - 1][i] = i;
+            bufferedData2[bufferedData2.length - 1][i] = i + tableSize;
+            for (int k = 0; k < bufferedData1.length - 1; k++) {
+                bufferedData1[k][i] = i + 1003L;
+                bufferedData2[k][i] = i + 1003L + tableSize;
+            }
+        }
+    }
+
+    private void buildExpectedData(Object[][] expectedData1, Object[][] expectedData2, Object[][] expectedData3,
+            Object[][] expectedData4, int maxRowCount, int remainCount) {
+        for (int i = 0; i < maxRowCount; i++) {
+            for (int j = 0; j < 4; j++) {
+                expectedData1[j][i] = i + 1001L;
+                expectedData1[j + 4][i] = i + 1003L;
+                expectedData3[j][i] = i + 1001L + maxRowCount + remainCount;
+                expectedData3[j + 4][i] = i + 1003L + maxRowCount + remainCount;
+            }
+        }
+
+        for (int i = 0; i < remainCount; i++) {
+            for (int j = 0; j < 4; j++) {
+                expectedData2[j][i] = i + 1001L + maxRowCount;
+                expectedData4[j][i] = i + 1001L + 2 * maxRowCount + remainCount;
+                expectedData2[j + 4][i] = i + 1003L + maxRowCount;
+                expectedData4[j + 4][i] = i + 1003L + 2 * maxRowCount + remainCount;
+            }
+        }
+        for (int j = 0; j < 4; j++) {
+            expectedData4[j][remainCount] = remainCount + 1001L + 2 * maxRowCount + remainCount;
+            expectedData4[j + 4][remainCount] = remainCount + 1003L + 2 * maxRowCount + remainCount;
+        }
+    }
+
+    /**
+     * Test smj iterative getOutput.
+     */
+    @Test
+    public void testSmjIterativeGetOutput() {
+        DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                LongDataType.LONG};
+
+        String[] streamedKeyExps = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
+        int[] streamedOutputCols = {1, 2, 3, 4};
+        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory =
+                new OmniSmjStreamedTableWithExprOperatorFactory(streamedTypes, streamedKeyExps, streamedOutputCols,
+                OMNI_JOIN_TYPE_INNER, Optional.empty());
+
+        DataType[] bufferedTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG,
+                IntDataType.INTEGER};
+
+        int[] bufferedOutputCols = {0, 1, 2, 3};
+
+        String[] bufferedKeyExps = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 4), getOmniJsonLiteral(1, false, 5))};
+        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory =
+                new OmniSmjBufferedTableWithExprOperatorFactory(bufferedTypes, bufferedKeyExps, bufferedOutputCols,
+                streamedBuilderWithExprOperatorFactory);
+        OmniOperator bufferedTableOperator = bufferedWithExprOperatorFactory.createOperator();
+
+        // construct addInput data
+        int tableSize = 20000;
+        Object[][] streamedData1 = new Object[5][tableSize];
+        Object[][] bufferedData1 = new Object[5][tableSize];
+        Object[][] streamedData2 = new Object[5][tableSize];
+        Object[][] bufferedData2 = new Object[5][tableSize];
+        buildAddInputData(streamedData1, bufferedData1, streamedData2, bufferedData2, tableSize);
+
+        // start to add input
+        VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedData1);
+        OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
+        int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
+        assertEquals(decodeAddFlag(intputResult), 3);
+
+        VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedData1);
+        intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
+        assertEquals(decodeAddFlag(intputResult), 3);
+        assertEquals(decodeFetchFlag(intputResult), 5);
+
+        Iterator<VecBatch> results = bufferedTableOperator.getOutput();
+        VecBatch resultVecBatch = null;
+
+        List<VecBatch> result = new ArrayList<>();
+        while (results.hasNext()) {
+            resultVecBatch = results.next();
+            result.add(resultVecBatch);
+        }
+
+        VecBatch bufferedVecBatch2 = createVecBatch(bufferedTypes, bufferedData2);
+        intputResult = bufferedTableOperator.addInput(bufferedVecBatch2);
+        assertEquals(decodeAddFlag(intputResult), 2);
+
+        VecBatch streamedVecBatch2 = createVecBatch(streamedTypes, streamedData2);
+        intputResult = streamedTableOperator.addInput(streamedVecBatch2);
+        assertEquals(decodeAddFlag(intputResult), 3);
+        assertEquals(decodeFetchFlag(intputResult), 5);
+
+        results = streamedTableOperator.getOutput();
+        while (results.hasNext()) {
+            resultVecBatch = results.next();
+            result.add(resultVecBatch);
+        }
+
+        VecBatch bufferedVecBatchEof = createBlankVecBatch(bufferedTypes);
+        intputResult = bufferedTableOperator.addInput(bufferedVecBatchEof);
+        assertEquals(decodeAddFlag(intputResult), 2);
+
+        VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
+        intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
+        assertEquals(decodeFetchFlag(intputResult), 5);
+
+        results = bufferedTableOperator.getOutput();
+
+        while (results.hasNext()) {
+            resultVecBatch = results.next();
+            result.add(resultVecBatch);
+        }
+
+        int rowCount = 0;
+        for (int i = 0; i < result.size(); i++) {
+            rowCount += result.get(i).getRowCount();
+        }
+
+        assertEquals(rowCount, 2 * tableSize);
+
+        int maxRowCount = 16384; // 1M / (8 * 8)
+        int remainCount = tableSize - maxRowCount - 1;
+        // construct expected data
+        Object[][] expectedData1 = new Object[8][maxRowCount];
+        Object[][] expectedData2 = new Object[8][remainCount];
+        Object[][] expectedData3 = new Object[8][maxRowCount];
+        Object[][] expectedData4 = new Object[8][remainCount + 1];
+        buildExpectedData(expectedData1, expectedData2, expectedData3, expectedData4, maxRowCount, remainCount);
+        Object[][] expectedData5 = {{41000L}, {41000L}, {41000L}, {41000L}, {41002L}, {41002L}, {41002L}, {41002L}};
+
+        assertVecBatchEquals(result.get(0), expectedData1);
+        assertVecBatchEquals(result.get(1), expectedData2);
+        assertVecBatchEquals(result.get(2), expectedData3);
+        assertVecBatchEquals(result.get(3), expectedData4);
+        assertVecBatchEquals(result.get(4), expectedData5);
+
+        for (int i = 0; i < result.size(); i++) {
+            freeVecBatch(result.get(i));
+        }
+
         bufferedTableOperator.close();
         bufferedWithExprOperatorFactory.close();
         streamedTableOperator.close();

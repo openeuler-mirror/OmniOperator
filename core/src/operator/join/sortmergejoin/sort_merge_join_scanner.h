@@ -67,17 +67,8 @@ public:
     int64_t FindNextJoinRows();
 
     int32_t GetMatchedValueAddresses(std::vector<bool> &isPreKeyMatched,
-        std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses);
-
-    std::vector<bool> &GetMatchedBufferedKeyFlag()
-    {
-        return isSameBufferedKeyMatched;
-    }
-
-    void Clear()
-    {
-        isSameBufferedKeyMatched.clear();
-    }
+        std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
+        std::vector<bool> &isSameBufferedKeyMatched);
 
     ~SortMergeJoinScanner();
 
