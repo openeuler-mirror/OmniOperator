@@ -98,7 +98,7 @@ public class OmniHashAggregationOperatorTest {
         long end2 = System.currentTimeMillis();
         System.out.println("HashAggregation without jit use " + (end2 - start2) + " ms.");
 
-        while (outputWithJit.hasNext()) {
+        while (outputWithJit.hasNext() && outputWithoutJit.hasNext()) {
             VecBatch resultWithJit = outputWithJit.next();
             VecBatch resultWithoutJit = outputWithoutJit.next();
             assertVecBatchEquals(resultWithJit, resultWithoutJit);

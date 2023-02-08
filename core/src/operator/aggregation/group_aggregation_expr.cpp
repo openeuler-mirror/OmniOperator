@@ -133,9 +133,9 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 
 int32_t HashAggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
 {
-    hashAggOperator->GetOutput(outputVecBatches);
-    SetStatus(OMNI_STATUS_FINISHED);
-    return 0;
+    int32_t status = hashAggOperator->GetOutput(outputVecBatches);
+    SetStatus(hashAggOperator->GetStatus());
+    return status;
 }
 
 OmniStatus HashAggregationWithExprOperator::Close()

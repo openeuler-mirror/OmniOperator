@@ -174,6 +174,15 @@ OmniStatus HashAggregationOperator::Init()
     }
     executionContext = std::make_unique<ExecutionContext>();
     executionContext->GetArena()->SetAllocator(vecAllocator);
+
+    uint32_t aggOutputColSize = 0;
+    for (auto oneAggOutputTypes : aggOutputTypes) {
+        aggOutputColSize += oneAggOutputTypes.GetSize();
+    }
+    colsCount = groupByColsSize + aggOutputColSize;
+    int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
+    rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
+
     return OMNI_STATUS_NORMAL;
 }
 
@@ -267,6 +276,7 @@ void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, c
                     DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualIdx, executionContext.get());
                 }
                 bucket.push_back(groupByTuple);
+                totalRowCount++;
                 size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggNum; ++i) {
                     aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], vecBatch,
@@ -307,16 +317,16 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
  * All the output data types are determined in this function. Following allocation for output vectors and filling
  * value should use the 'types' parameter instead of using input vector types.
  */
-int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types, int32_t columnCount)
+int32_t HashAggregationOperator::InitMaxRowCountAndOutputTypes()
 {
     int32_t rowSize = 0;
     for (auto &i : groupByCols) {
-        types.push_back(i.input);
+        outputTypes.push_back(i.input);
         rowSize += OperatorUtil::GetTypeSize(i.input);
     }
     for (auto &singleAgg : aggOutputTypes) {
         for (int32_t i = 0; i < singleAgg.GetSize(); i++) {
-            types.push_back(singleAgg.GetType(i));
+            outputTypes.push_back(singleAgg.GetType(i));
             rowSize += OperatorUtil::GetTypeSize(singleAgg.GetType(i));
         }
     }
@@ -359,72 +369,68 @@ void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const s
     }
 }
 
-
 int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
-    uint32_t groupByColSize = groupByCols.size();
-    uint32_t aggOutputColSize = 0;
-    for (auto oneAggOutputTypes : aggOutputTypes) {
-        aggOutputColSize += oneAggOutputTypes.GetSize();
-    }
-    uint32_t colCount = groupByColSize + aggOutputColSize;
-    std::vector<DataTypePtr> types;
-    int32_t rowByteSize = GetRowSizeAndOutputTypes(types, colCount);
-
-    // accumulate whole row count first
-    int32_t totalRowCount = 0;
-    for (auto it = groupedRows.begin(); it != groupedRows.end(); ++it) {
-        totalRowCount += static_cast<int32_t>(it->second.size());
+    // check whether the output is complete
+    if (totalRowCount == 0 || totalRowCount == rowCountOutputted) {
+        SetStatus(OMNI_STATUS_FINISHED);
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        iteratorHasInitialized = false;
+        return result.size();
     }
 
-    if (totalRowCount == 0) {
-        return 0;
+    if (!iteratorHasInitialized) {
+        vecBatchFirstBucket = groupedRows.begin();
+        vecBatchFirstGroup = vecBatchFirstBucket->second.begin();
+        iteratorHasInitialized = true;
     }
 
-    auto rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
-    auto expectedBatchSize = OperatorUtil::GetVecBatchCount(totalRowCount, rowsPerBatch);
-    auto leftRowCount = totalRowCount;
+    auto leftRowCount = static_cast<int32_t>(totalRowCount - rowCountOutputted);
+    auto rowCount = std::min(rowsPerBatch, leftRowCount);
+    auto vecBatch = new VectorBatch(colsCount, rowCount);
+    SetVectors(this->vecAllocator, vecBatch, outputTypes, rowCount);
+    result.push_back(vecBatch);
 
-    // create all output vector batches
-    for (int32_t batchId = 0; batchId < expectedBatchSize; ++batchId) {
-        auto rowCount = std::min(rowsPerBatch, leftRowCount);
-        auto vecBatch = new VectorBatch(colCount, rowCount);
-        SetVectors(this->vecAllocator, vecBatch, types, rowCount);
-        result.push_back(vecBatch);
-        leftRowCount -= rowsPerBatch;
+    FillOutputSingleVecBatch(result);
+
+    if (totalRowCount == rowCountOutputted) {
+        SetStatus(OMNI_STATUS_FINISHED);
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        iteratorHasInitialized = false;
     }
-
-    // collect all groups
-    std::vector<ChainIterator> allGroups(totalRowCount);
-    int32_t groupCount = 0;
-    for (auto bucket = groupedRows.begin(); bucket != groupedRows.end(); ++bucket) {
-        for (auto group = bucket->second.begin(); group != bucket->second.end(); ++group) {
-            allGroups[groupCount++] = group;
-        }
-    }
-    FillOutputVecBatch(result, groupByColSize, colCount, rowsPerBatch, allGroups);
-
-    // set finished.
-    SetStatus(OMNI_STATUS_FINISHED);
-    return expectedBatchSize;
+    return result.size();
 }
 
-void HashAggregationOperator::FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize,
-    uint32_t colCount, int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups)
+void HashAggregationOperator::FillOutputSingleVecBatch(std::vector<VectorBatch *> &result)
 {
-    // fill groups to vecbatch
-    int32_t filledRowSize = 0;
+    // fill groups to vecbatch, only fill single vecBatch
     VectorBatch *batchToFill = result[0];
-    int32_t batchIndex = 0;
-    for (auto &group : allGroups) {
-        if (filledRowSize >= rowsPerBatch) {
-            batchIndex++;
-            batchToFill = result[batchIndex];
-            filledRowSize = 0;
+    auto rowCount = batchToFill->GetRowCount();
+    int32_t rowIndex = 0;
+
+    auto bucket = vecBatchFirstBucket;
+    auto group = vecBatchFirstGroup;
+    auto groupByColsSize = groupByCols.size();
+    while (bucket != groupedRows.end()) {
+        while (group != bucket->second.end()) {
+            FillGroupByVectors(batchToFill, 0, groupByColsSize, group, rowIndex);
+            FillAggVectors(batchToFill, groupByColsSize, colsCount, group, rowIndex);
+            ++group;
+            ++rowCountOutputted;
+            ++rowIndex;
+            if (rowIndex == rowCount) {
+                // save the iterator state for the next fill vecBatch
+                vecBatchFirstBucket = bucket;
+                vecBatchFirstGroup = group;
+                return;
+            }
         }
-        FillGroupByVectors(batchToFill, 0, groupByColSize, group, filledRowSize);
-        FillAggVectors(batchToFill, groupByColSize, colCount, group, filledRowSize);
-        filledRowSize++;
+        ++bucket;
+        if (bucket != groupedRows.end()) {
+            group = bucket->second.begin();
+        }
     }
 }
 
