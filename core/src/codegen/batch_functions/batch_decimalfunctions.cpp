@@ -6,8 +6,8 @@
 #include <cmath>
 #include <iomanip>
 #include "codegen/functions/context_helper.h"
-#include "util/engine.h"
 #include "type/decimal_operations.h"
+#include "util/config_util.h"
 
 using namespace omniruntime::type;
 const std::string DECIMAL_OVERFLOW { "Decimal overflow" };
@@ -588,7 +588,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToInt(int64_t contextPtr, int64_t *x
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     int32_t result;
     OpStatus status;
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int64_t scaledValue = 0;
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
@@ -638,7 +638,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToInt(int64_t contextPtr, int64_t *x
 extern "C" DLLEXPORT void BatchCastDecimal64ToLong(int64_t *x, int32_t precision, int32_t scale, bool *isAnyNull,
     int64_t *output, int32_t rowCnt)
 {
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
                 output[i] = 1;
@@ -666,7 +666,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToDouble(const int64_t *x, int32_t p
     bool *isAnyNull, double *output, int32_t rowCnt)
 {
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetCastDecimalToDoubleRule() == CastDecimalToDoubleRule::CONVERT_WITH_STRING) {
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
                 output[i] = 1.0;
@@ -694,7 +694,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToInt(int64_t contextPtr, Decimal12
     int32_t result;
     OpStatus statusDecimal;
     OpStatus statusInt;
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
                 output[i] = 1;
@@ -741,7 +741,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLong(int64_t contextPtr, Decimal1
 {
     Decimal128 outDecimal(0, 0);
     OpStatus status;
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; ++i) {
             if (isAnyNull[i]) {
                 output[i] = 1;
@@ -1037,7 +1037,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToIntRetNull(bool *isNull, int64_t *
     int64_t tenToScale = static_cast<int64_t>(DecimalOperations::TenToScale(scale).LowBits());
     OpStatus status;
 
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int64_t scaledValue = 0;
         for (int i = 0; i < rowCnt; ++i) {
             DecimalOperations::Rescale64RoundToZero(x[i], -scale, scaledValue);
@@ -1065,7 +1065,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToIntRetNull(bool *isNull, int64_t *
 extern "C" DLLEXPORT void BatchCastDecimal64ToLongRetNull(bool *isNull, int64_t *x, int32_t precision, int32_t scale,
     int64_t *output, int32_t rowCnt)
 {
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; ++i) {
             DecimalOperations::Rescale64RoundToZero(x[i], -scale, output[i]);
         }
@@ -1094,7 +1094,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToIntRetNull(bool *isNull, Decimal1
     int32_t *output, int32_t rowCnt)
 {
     Decimal128 outDecimal(0, 0);
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int32_t result;
         for (int i = 0; i < rowCnt; ++i) {
             DecimalOperations::Rescale128RoundToZero(x[i], -scale, outDecimal);
@@ -1125,7 +1125,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLongRetNull(bool *isNull, Decimal
     Decimal128 outDecimal(0, 0);
     int64_t result;
     OpStatus status;
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; ++i) {
             DecimalOperations::Rescale128RoundToZero(x[i], -scale, outDecimal);
             result = static_cast<int64_t>(outDecimal.LowBits());

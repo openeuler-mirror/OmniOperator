@@ -6,7 +6,7 @@
 #include <iomanip>
 #include "context_helper.h"
 #include "type/decimal_operations.h"
-#include "util/engine.h"
+#include "util/config_util.h"
 #include "decimalfunctions.h"
 
 using namespace omniruntime::type;
@@ -76,8 +76,7 @@ extern "C" DLLEXPORT void RoundDecimal128(int64_t contextPtr, int64_t xHigh, uin
 }
 
 extern "C" DLLEXPORT void RoundDecimal128WithoutRound(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t xPrecision,
-    int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    int32_t xPrecision, int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
     uint64_t *outLowPtr)
 {
     Decimal128 result(0);
@@ -89,8 +88,8 @@ extern "C" DLLEXPORT void RoundDecimal128WithoutRound(int64_t contextPtr, int64_
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t RoundDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision,
-    int32_t xScale, int32_t round, bool isNull, int32_t outPrecision, int32_t outScale)
+extern "C" DLLEXPORT int64_t RoundDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision, int32_t xScale,
+    int32_t round, bool isNull, int32_t outPrecision, int32_t outScale)
 {
     int64_t result;
     if (DecimalOperations::Round(x, xScale, outPrecision, outScale, round, result) != type::SUCCESS) {
@@ -1134,7 +1133,7 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
     if (isNull) {
         return 0;
     }
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int64_t scaledValue = 0;
         OpStatus status = DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
         if (status == type::OP_OVERFLOW || scaledValue < INT_MIN || scaledValue > INT_MAX) {
@@ -1168,7 +1167,7 @@ extern "C" DLLEXPORT int64_t CastDecimal64ToLong(int64_t x, int32_t precision, i
     if (isNull) {
         return 0;
     }
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int64_t scaledValue = 0;
         DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
         return scaledValue;
@@ -1186,7 +1185,7 @@ extern "C" DLLEXPORT double CastDecimal64ToDouble(int64_t x, int32_t precision, 
     if (isNull) {
         return 0;
     }
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetCastDecimalToDoubleRule() == CastDecimalToDoubleRule::CONVERT_WITH_STRING) {
         string doubleString = DecimalOperations::ScaleOfDecimal(to_string(x), scale);
         return stod(doubleString);
     }
@@ -1203,7 +1202,7 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHi
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
 
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
     } else {
         DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
@@ -1232,7 +1231,7 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
 
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
     } else {
         DecimalOperations::Rescale128(inputDecimal, -scale, outDecimal);
@@ -1262,8 +1261,7 @@ extern "C" DLLEXPORT double CastDecimal128ToDouble(int64_t high, uint64_t low, i
 }
 
 extern "C" DLLEXPORT void RoundDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
-    int32_t xScale, int32_t round, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
-    uint64_t *outLowPtr)
+    int32_t xScale, int32_t round, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     Decimal128 result(0);
     if (DecimalOperations::Round(Decimal128(xHigh, xLow), xScale, outPrecision, outScale, round, result) !=
@@ -2195,7 +2193,7 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128RetNull(bool *isNull, double x, 
 
 extern "C" DLLEXPORT int32_t CastDecimal64ToIntRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
 {
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int64_t scaledValue = 0;
         DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
         return static_cast<int32_t>(scaledValue);
@@ -2218,7 +2216,7 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToIntRetNull(bool *isNull, int64_t x, 
 
 extern "C" DLLEXPORT int64_t CastDecimal64ToLongRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
 {
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         int64_t scaledValue = 0;
         DecimalOperations::Rescale64RoundToZero(x, -scale, scaledValue);
         return scaledValue;
@@ -2243,7 +2241,7 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xH
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
 
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
         int32_t result = static_cast<int32_t>(outDecimal.LowBits());
         return outDecimal.HighBits() < 0 ? -result : result;
@@ -2267,7 +2265,7 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t x
     Decimal128 inputDecimal(xHigh, xLow);
     Decimal128 outDecimal(0, 0);
 
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         DecimalOperations::Rescale128RoundToZero(inputDecimal, -scale, outDecimal);
         int64_t result = static_cast<int64_t>(outDecimal.LowBits());
         return outDecimal.HighBits() < 0 ? -result : result;

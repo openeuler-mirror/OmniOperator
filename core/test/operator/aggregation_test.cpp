@@ -810,7 +810,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector , int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(DoubleType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
@@ -990,8 +990,8 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channal1, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channal1,
+        false, false));
     aggs1.push_back(
         std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
@@ -1382,11 +1382,13 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
     aggs1.push_back(
         std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
-    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
         *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel1, true, true));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(ContainerType()), channel2, true, true));
-    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
         *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel3, true, true));
     std::vector<DataTypePtr> partialOutputTypes { LongType(), SUM_IMMEDIATE_VARBINARY,
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), AVG_IMMEDIATE_VARBINARY };
@@ -1505,13 +1507,17 @@ TEST(AggregationOperatorTest, hmpp_decimal128)
         *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel3, true, true));
 
-    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel4, true, true));
-    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel5, true, true));
-    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel6, true, true));
-    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel7, true, true));
 
     std::vector<DataTypePtr> partialOutputTypes { Decimal128Type(38, 0),   Decimal128Type(38, 0),
@@ -1822,8 +1828,8 @@ TEST(AggregationOperatorTest, verify_correctness)
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(DoubleType()), channel1, false, false));
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2,
+        false, false));
     aggs1.push_back(
         std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, false, false));
@@ -1922,8 +1928,8 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel0,
+        false, false));
     aggs1.push_back(
         std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel1, false, false));
@@ -2407,7 +2413,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
     VectorHelper::PrintVecBatch(resultFromFinal[0]);
-    std::cout<<"------expect---------"<<std::endl;
+    std::cout << "------expect---------" << std::endl;
     VectorHelper::PrintVecBatch(expectVecBatch);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
 

@@ -5,9 +5,9 @@
 #include "batch_mathfunctions.h"
 #include <iostream>
 #include <cfloat>
-#include "util/engine.h"
 #include "codegen/functions/context_helper.h"
 #include "codegen/functions/mathfunctions.h"
+#include "util/config_util.h"
 
 
 #ifdef _WIN32
@@ -50,8 +50,7 @@ extern "C" DLLEXPORT void BatchCastInt64ToDouble(int64_t *x, bool *resIsNull, do
 
 extern "C" DLLEXPORT void BatchCastDoubleToInt32(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; i++) {
             output[i] = static_cast<int32_t>(x[i]);
         }
@@ -64,8 +63,7 @@ extern "C" DLLEXPORT void BatchCastDoubleToInt32(double *x, bool *resIsNull, int
 
 extern "C" DLLEXPORT void BatchCastDoubleToInt64(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
+    if (ConfigUtil::GetPolicy()->GetRoundingRule() == RoundingRule::DOWN) {
         for (int i = 0; i < rowCnt; i++) {
             output[i] = static_cast<int64_t>(x[i]);
         }
