@@ -9,7 +9,8 @@
 
 namespace omniruntime {
 namespace op {
-template <typename RawInputVectorType, typename IntermediateVectorType, typename ResultType>
+template <bool INPUT_RAW, bool OUTPUT_PARTIAL, typename RawInputVectorType, typename IntermediateVectorType,
+    typename ResultType>
 class SumFlatIMAggregator : public Aggregator {
 public:
     SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
@@ -33,7 +34,7 @@ public:
             InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             *(static_cast<ResultType *>(state.val)) += (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
         } else {
             *(static_cast<ResultType *>(state.val)) +=
@@ -48,7 +49,7 @@ public:
         if (vector->IsValueNull(offset)) {
             return;
         }
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             auto curVal = (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = curVal;

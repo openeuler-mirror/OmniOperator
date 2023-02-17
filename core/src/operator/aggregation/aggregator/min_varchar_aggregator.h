@@ -12,7 +12,7 @@
 #include "operator/aggregation/definitions.h"
 
 constexpr int64_t UPDATE_FLAG = 0x0000000100000000LL;
-constexpr int64_t VALUE_FLAG  = 0x00000000FFFFFFFFLL;
+constexpr int64_t VALUE_FLAG = 0x00000000FFFFFFFFLL;
 
 namespace omniruntime {
 namespace op {
@@ -31,9 +31,8 @@ inline uint8_t *minCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
     const int32_t rowCount)
 {
     if (rowCount > 0) {
@@ -52,10 +51,9 @@ inline void addChar(AggregateState &state, const VarcharVector *vector, const in
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addDictChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
-    const int32_t * __restrict indexMap)
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addDictChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
+    const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -79,10 +77,9 @@ inline void addDictChar(AggregateState &state, const VarcharVector *vector, cons
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addConditionalChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const uint8_t * __restrict condition)
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addConditionalChar(AggregateState &state, const VarcharVector *vector,
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
         if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
@@ -119,10 +116,9 @@ inline void addConditionalChar(AggregateState &state, const VarcharVector *vecto
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addDictConditionalChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
-    const uint8_t * __restrict condition, const int32_t * __restrict indexMap)
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addDictConditionalChar(AggregateState &state, const VarcharVector *vector,
+    const int32_t rowCount, const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -161,9 +157,8 @@ inline void addDictConditionalChar(AggregateState &state, const VarcharVector *v
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const VarcharVector *vector, const int32_t rowOffset)
 {
     const size_t rowCount = rowStates.size();
@@ -184,10 +179,9 @@ inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const s
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    const VarcharVector *vector, const int32_t * __restrict indexMap)
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    const VarcharVector *vector, const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -212,10 +206,9 @@ inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, con
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    const VarcharVector *vector, const int32_t rowOffset, const uint8_t * __restrict condition)
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    const VarcharVector *vector, const int32_t rowOffset, const uint8_t *__restrict condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -245,11 +238,10 @@ inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStat
     }
 }
 
-template<uint8_t * (*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP
-inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    const VarcharVector *vector, const uint8_t * __restrict condition,
-    const int32_t * __restrict indexMap)
+template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
+VECTORIZE_LOOP inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, const VarcharVector *vector, const uint8_t *__restrict condition,
+    const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -293,8 +285,8 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
-    static std::unique_ptr<Aggregator> Create(
-        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels)
     {
         if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
             LogError("Error in min_varchar aggregator: Unsupported input type %s",
@@ -310,25 +302,24 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
-                "min_varchar", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes("min_varchar", inputTypes, outputTypes,
+                IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
             return std::unique_ptr<MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
-                new MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(
-                    inputTypes, outputTypes, channels));
+                new MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(inputTypes, outputTypes,
+                channels));
         }
     }
 
 protected:
     MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes,
+        channels)
     {}
 
-    void ProcessSingleInternal(
-        AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,

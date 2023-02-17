@@ -21,63 +21,58 @@ using namespace omniruntime::type;
 constexpr int32_t maxVarcharLength = 128;
 constexpr int32_t vecBatchNum = 10;
 constexpr int32_t rowSize = 2000;
-inline static std::map<std::string, FunctionType> aggFuncs = {
-    { "sum", OMNI_AGGREGATION_TYPE_SUM },
-    { "avg", OMNI_AGGREGATION_TYPE_AVG },
-    { "min", OMNI_AGGREGATION_TYPE_MIN },
-    { "max", OMNI_AGGREGATION_TYPE_MAX }};
+inline static std::map<std::string, FunctionType> aggFuncs = { { "sum", OMNI_AGGREGATION_TYPE_SUM },
+                                                               { "avg", OMNI_AGGREGATION_TYPE_AVG },
+                                                               { "min", OMNI_AGGREGATION_TYPE_MIN },
+                                                               { "max", OMNI_AGGREGATION_TYPE_MAX } };
 
-inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum {
-    {OMNI_BOOLEAN,    {}},
-    {OMNI_SHORT,      {OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_INT,        {OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_LONG,       {OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DOUBLE,     {OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DECIMAL64,  {OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DECIMAL128, {OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_CHAR,       {}},
-    {OMNI_VARCHAR,    {}}
-};
+inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum{ { OMNI_BOOLEAN, {} },
+    { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_INT, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_LONG, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DOUBLE, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DECIMAL64, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DECIMAL128, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_CHAR, {} },
+    { OMNI_VARCHAR, {} } };
 
-inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForAvg {
-    {OMNI_BOOLEAN,    {}},
-    {OMNI_SHORT,      {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_INT,        {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_LONG,       {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DOUBLE,     {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DECIMAL64,  {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DECIMAL128, {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_CHAR,       {}},
-    {OMNI_VARCHAR,    {}}
-};
+inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForAvg{ { OMNI_BOOLEAN, {} },
+    { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_INT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_LONG, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DOUBLE, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DECIMAL64, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DECIMAL128, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_CHAR, {} },
+    { OMNI_VARCHAR, {} } };
 
-inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForMin {
-    {OMNI_BOOLEAN,    {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_SHORT,      {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_INT,        {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_LONG,       {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DOUBLE,     {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DECIMAL64,  {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_DECIMAL128, {OMNI_CHAR, OMNI_VARCHAR}},
-    {OMNI_CHAR,       {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR}},
-    {OMNI_VARCHAR,    {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR}}
-};
+inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForMin{ { OMNI_BOOLEAN,
+    { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_SHORT, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_INT, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_LONG, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DOUBLE, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DECIMAL64, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DECIMAL128, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_CHAR,
+    { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR } },
+    { OMNI_VARCHAR,
+    { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR } } };
 
-inline static std::map<std::string, std::map<DataTypeId, std::vector<DataTypeId>>> unsupported {
-    { "sum", unsupportedForSum },
+inline static std::map<std::string, std::map<DataTypeId, std::vector<DataTypeId>>> unsupported{ { "sum",
+    unsupportedForSum },
     { "avg", unsupportedForAvg },
     { "min", unsupportedForMin },
-    { "max", unsupportedForMin }
-};
+    { "max", unsupportedForMin } };
 
-inline static std::vector<std::string> aggFuncName__ {"sum", "min", "max", "avg"};
-inline static  std::vector<DataTypeId> dataTypes__ {OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE,
-    OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR, OMNI_VARCHAR};
-inline static  std::vector<int32_t> nullPercent__ {0, 25, 100};
-inline static  std::vector<bool> isDict__ {false, true};
-inline static  std::vector<bool> hasMask__ {false, true};
-inline static  std::vector<bool> nullWhenOverflow__ {false, true};
-inline static  std::vector<bool> groupby__ {false, true};
+inline static std::vector<std::string> aggFuncName__{ "sum", "min", "max", "avg" };
+inline static std::vector<DataTypeId> dataTypes__{ OMNI_BOOLEAN,   OMNI_SHORT,      OMNI_INT,  OMNI_LONG,   OMNI_DOUBLE,
+    OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR, OMNI_VARCHAR };
+inline static std::vector<int32_t> nullPercent__{ 0, 25, 100 };
+inline static std::vector<bool> isDict__{ false, true };
+inline static std::vector<bool> hasMask__{ false, true };
+inline static std::vector<bool> nullWhenOverflow__{ false, true };
+inline static std::vector<bool> groupby__{ false, true };
 
 inline bool CheckSupported(const std::string &aggFuncName, const DataTypeId inId, const DataTypeId outId)
 {
@@ -89,8 +84,8 @@ inline bool CheckSupported(const std::string &aggFuncName, const DataTypeId inId
 }
 
 template <DataTypeId TYPE_ID>
-Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nRows,
-    const int32_t nullPercent, const int32_t range, const bool isDict)
+Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nRows, const int32_t nullPercent,
+    const int32_t range, const bool isDict)
 {
     using V = typename NativeAndVectorType<TYPE_ID>::vector;
     using T = typename NativeAndVectorType<TYPE_ID>::type;
@@ -156,14 +151,14 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
     }
 }
 
-inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32_t nRows,
-    const int32_t nullPercent, const int32_t range, const bool isDict)
+inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32_t nRows, const int32_t nullPercent,
+    const int32_t range, const bool isDict)
 {
     uint8_t charBuffer[maxVarcharLength];
     if (isDict) {
         int32_t valueStartIdx = nullPercent > 0 ? 1 : 0;
-        VarcharVector *vector = new VarcharVector(
-            vectorAllocator, maxVarcharLength * (range + valueStartIdx), range + valueStartIdx);
+        VarcharVector *vector =
+            new VarcharVector(vectorAllocator, maxVarcharLength * (range + valueStartIdx), range + valueStartIdx);
         if (nullPercent > 0) {
             vector->SetValueNull(0);
         }
@@ -209,14 +204,13 @@ inline std::vector<int32_t> SplitString(const std::string &str, const char &deli
     std::vector<int32_t> result;
     std::string token;
     std::stringstream ss(str);
-    while(std::getline(ss, token, delim)) {
+    while (std::getline(ss, token, delim)) {
         result.push_back(atoi(token.c_str()));
     }
     return result;
 }
 
-template <typename IN, typename OUT>
-inline bool doCast(OUT &result, const IN &cur_)
+template <typename IN, typename OUT> inline bool doCast(OUT &result, const IN &cur_)
 {
     if constexpr (std::is_same_v<IN, Decimal128>) {
         if constexpr (std::is_same_v<OUT, Decimal128>) {
@@ -265,10 +259,9 @@ inline bool doCast(OUT &result, const IN &cur_)
     return true;
 }
 
-template <typename IN, typename OUT>
-inline bool minFunc(OUT &result, const IN &cur, const bool isFirst)
+template <typename IN, typename OUT> inline bool minFunc(OUT &result, const IN &cur, const bool isFirst)
 {
-    OUT casted {};
+    OUT casted{};
     if (!doCast(casted, cur)) {
         return false;
     }
@@ -279,10 +272,9 @@ inline bool minFunc(OUT &result, const IN &cur, const bool isFirst)
     return true;
 }
 
-template <typename IN, typename OUT>
-inline bool maxFunc(OUT &result, const IN &cur, const bool isFirst)
+template <typename IN, typename OUT> inline bool maxFunc(OUT &result, const IN &cur, const bool isFirst)
 {
-    OUT casted {};
+    OUT casted{};
     if (!doCast(casted, cur)) {
         return false;
     }
@@ -293,10 +285,9 @@ inline bool maxFunc(OUT &result, const IN &cur, const bool isFirst)
     return true;
 }
 
-template <typename IN, typename OUT>
-inline bool sumFunc(OUT &result, const IN &cur, const bool isFirst)
+template <typename IN, typename OUT> inline bool sumFunc(OUT &result, const IN &cur, const bool isFirst)
 {
-    OUT casted {};
+    OUT casted{};
     if (!doCast(casted, cur)) {
         return false;
     }
@@ -343,8 +334,8 @@ inline uint8_t *maxCharFunc(uint8_t *res, int32_t &len, uint8_t *curVal, const i
     }
 }
 
-inline bool ValidateOverflow(const std::string &stageName, const int32_t valueColIdx,
-    VectorBatch *expectedResult, VectorBatch *actualResult)
+inline bool ValidateOverflow(const std::string &stageName, const int32_t valueColIdx, VectorBatch *expectedResult,
+    VectorBatch *actualResult)
 {
     std::set<int32_t> matchRows;
     for (int32_t i = 0; i < expectedResult->GetRowCount(); ++i) {
@@ -355,9 +346,9 @@ inline bool ValidateOverflow(const std::string &stageName, const int32_t valueCo
                 if (matchRows.find(j) != matchRows.end()) {
                     continue;
                 }
-                if (expectedCount == static_cast<LongVector *>(actualResult->GetVector(valueColIdx + 1))->GetValue(j)
-                    && actualResult->GetVector(valueColIdx)->IsValueNull(j)) {
-                        matchRows.insert(j);
+                if (expectedCount == static_cast<LongVector *>(actualResult->GetVector(valueColIdx + 1))->GetValue(j) &&
+                    actualResult->GetVector(valueColIdx)->IsValueNull(j)) {
+                    matchRows.insert(j);
                     found = true;
                     break;
                 }
@@ -409,11 +400,13 @@ inline DataTypePtr GetType(DataTypeId typeId)
     }
 }
 
-inline bool allMatchFilter(const int32_t *filterValue, VectorBatch *vb, const int32_t colIdx, const int32_t rowIdx) {
+inline bool allMatchFilter(const int32_t *filterValue, VectorBatch *vb, const int32_t colIdx, const int32_t rowIdx)
+{
     return true;
 }
 
-inline bool groupByFilter(const int32_t *filterValue, VectorBatch *vb, const int32_t colIdx, const int32_t rowIdx) {
+inline bool groupByFilter(const int32_t *filterValue, VectorBatch *vb, const int32_t colIdx, const int32_t rowIdx)
+{
     Vector *v = vb->GetVector(colIdx);
     if (filterValue == nullptr) {
         return v->IsValueNull(rowIdx);
@@ -443,12 +436,11 @@ public:
     virtual int32_t GetValueColumnIndex() = 0;
 };
 
-template <bool (FilterFunc)(const int32_t *, VectorBatch *, const int32_t, const int32_t),
-    uint8_t * (UpdateFunc)(uint8_t *, int32_t &, uint8_t *, const int32_t)>
-uint8_t *GenerateExpectedResultVarchar(
-    std::vector<VectorBatch *> &vvb, const int32_t valueIndex, const int32_t maskIndex,
-    int64_t &count, int32_t &resultLen,
-    const int32_t *filterValue = nullptr, const int32_t groupbyColIdx = -1)
+template <bool(FilterFunc)(const int32_t *, VectorBatch *, const int32_t, const int32_t),
+    uint8_t *(UpdateFunc)(uint8_t *, int32_t &, uint8_t *, const int32_t)>
+uint8_t *GenerateExpectedResultVarchar(std::vector<VectorBatch *> &vvb, const int32_t valueIndex,
+    const int32_t maskIndex, int64_t &count, int32_t &resultLen, const int32_t *filterValue = nullptr,
+    const int32_t groupbyColIdx = -1)
 {
     count = 0;
     uint8_t *result = nullptr;
@@ -468,8 +460,8 @@ uint8_t *GenerateExpectedResultVarchar(
                 if (maskVector->IsValueNull(i)) {
                     valid = false;
                 } else {
-                    BooleanVector *v = static_cast<BooleanVector *>(
-                        VectorHelper::ExpandVectorAndIndex(maskVector, i, orgIdx));
+                    BooleanVector *v =
+                        static_cast<BooleanVector *>(VectorHelper::ExpandVectorAndIndex(maskVector, i, orgIdx));
                     valid = v->GetValue(orgIdx);
                 }
             }
@@ -493,12 +485,11 @@ uint8_t *GenerateExpectedResultVarchar(
     return result;
 }
 
-template <bool (FilterFunc)(const int32_t *, VectorBatch *, const int32_t, const int32_t),
-    DataTypeId IN, typename T_OUT, typename ResultType, typename UpdateFunc>
-bool GenerateExpectedResultNumeric(
-    std::vector<VectorBatch *> &vvb, const int32_t valueIndex, const int32_t maskIndex,
-    UpdateFunc updateFunc, int64_t &count, T_OUT &result,
-    const int32_t *filterValue = nullptr, const int32_t groupbyColIdx = -1)
+template <bool(FilterFunc)(const int32_t *, VectorBatch *, const int32_t, const int32_t), DataTypeId IN, typename T_OUT,
+    typename ResultType, typename UpdateFunc>
+bool GenerateExpectedResultNumeric(std::vector<VectorBatch *> &vvb, const int32_t valueIndex, const int32_t maskIndex,
+    UpdateFunc updateFunc, int64_t &count, T_OUT &result, const int32_t *filterValue = nullptr,
+    const int32_t groupbyColIdx = -1)
 {
     using V_IN = typename NativeAndVectorType<IN>::vector;
     count = 0;
@@ -506,7 +497,7 @@ bool GenerateExpectedResultNumeric(
     int32_t orgIdx;
     Vector *orgVector;
     bool valid;
-    ResultType midRes {};
+    ResultType midRes{};
     bool overflow = false;
 
     for (VectorBatch *vb : vvb) {
@@ -519,8 +510,8 @@ bool GenerateExpectedResultNumeric(
                 if (maskVector->IsValueNull(i)) {
                     valid = false;
                 } else {
-                    BooleanVector *v = static_cast<BooleanVector *>(
-                        VectorHelper::ExpandVectorAndIndex(maskVector, i, orgIdx));
+                    BooleanVector *v =
+                        static_cast<BooleanVector *>(VectorHelper::ExpandVectorAndIndex(maskVector, i, orgIdx));
                     valid = v->GetValue(orgIdx);
                 }
             }
@@ -546,23 +537,20 @@ bool GenerateExpectedResultNumeric(
     return overflow;
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-class AggregatorTesterTemplate : public AggregatorTester {
+template <DataTypeId IN_ID, DataTypeId OUT_ID> class AggregatorTesterTemplate : public AggregatorTester {
 public:
-    AggregatorTesterTemplate(const std::string aggFuncName_, const int32_t nullPercent_,
-        const bool isDict_, const bool hasMask_, const bool nullWhenOverflow_)
-        : aggFunc(aggFuncs[aggFuncName_]), nullPercent(nullPercent_), isDict(isDict_),
-        hasMask(hasMask_), nullWhenOverflow(nullWhenOverflow_)
+    AggregatorTesterTemplate(const std::string aggFuncName_, const int32_t nullPercent_, const bool isDict_,
+        const bool hasMask_, const bool nullWhenOverflow_)
+        : aggFunc(aggFuncs[aggFuncName_]),
+          nullPercent(nullPercent_),
+          isDict(isDict_),
+          hasMask(hasMask_),
+          nullWhenOverflow(nullWhenOverflow_)
     {
-        vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
-            "AggregatorCompleteTest_" + aggFuncName_ + "_"
-                + TypeUtil::TypeToStringLog(IN_ID) + "_"
-                + TypeUtil::TypeToStringLog(OUT_ID) + "_"
-                + std::to_string(nullPercent_) + "_"
-                + (isDict_ ? "dict_" : "flat_")
-                + (hasMask_ ? "withMask_" : "noMask_")
-                + (nullWhenOverflow_ ? "overflowNull_" : "overflowExcep_")
-                + "noGroupBy");
+        vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorCompleteTest_" +
+            aggFuncName_ + "_" + TypeUtil::TypeToStringLog(IN_ID) + "_" + TypeUtil::TypeToStringLog(OUT_ID) + "_" +
+            std::to_string(nullPercent_) + "_" + (isDict_ ? "dict_" : "flat_") + (hasMask_ ? "withMask_" : "noMask_") +
+            (nullWhenOverflow_ ? "overflowNull_" : "overflowExcep_") + "noGroupBy");
     }
 
     virtual ~AggregatorTesterTemplate() override
@@ -586,44 +574,45 @@ public:
 
             switch (IN_ID) {
                 case OMNI_BOOLEAN:
-                    vector = CreateFixedSizeVector<OMNI_BOOLEAN>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_BOOLEAN>(this->vectorAllocator, rowPerVecBatch,
+                        this->nullPercent, 256, this->isDict);
                     break;
                 case OMNI_SHORT:
-                    vector = CreateFixedSizeVector<OMNI_SHORT>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_SHORT>(this->vectorAllocator, rowPerVecBatch, this->nullPercent,
+                        256 * 256, this->isDict);
                     break;
                 case OMNI_INT:
-                    vector = CreateFixedSizeVector<OMNI_INT>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_INT>(this->vectorAllocator, rowPerVecBatch, this->nullPercent,
+                        256 * 256 * 256, this->isDict);
                     break;
                 case OMNI_DECIMAL64:
                 case OMNI_LONG:
-                    vector = CreateFixedSizeVector<OMNI_LONG>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_LONG>(this->vectorAllocator, rowPerVecBatch, this->nullPercent,
+                        256 * 256 * 256, this->isDict);
                     break;
                 case OMNI_DOUBLE:
-                    vector = CreateFixedSizeVector<OMNI_DOUBLE>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_DOUBLE>(this->vectorAllocator, rowPerVecBatch,
+                        this->nullPercent, 256 * 256 * 256, this->isDict);
                     break;
                 case OMNI_DECIMAL128:
-                    vector = CreateFixedSizeVector<OMNI_DECIMAL128>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_DECIMAL128>(this->vectorAllocator, rowPerVecBatch,
+                        this->nullPercent, 256 * 256 * 256, this->isDict);
                     break;
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
-                    vector = CreateVarcharVector(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256, this->isDict);
+                    vector = CreateVarcharVector(this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256,
+                        this->isDict);
                     break;
                 default:
-                    throw OmniException("Invalid Arguement", "Unexpected input type "
-                        + TypeUtil::TypeToStringLog(IN_ID));
+                    throw OmniException("Invalid Arguement",
+                        "Unexpected input type " + TypeUtil::TypeToStringLog(IN_ID));
             }
             vecBatch->SetVector(this->GetValueColumnIndex(), vector);
 
             if (this->hasMask) {
-                Vector *maskVector = CreateFixedSizeVector<OMNI_BOOLEAN>(
-                        this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256, this->isDict);;
+                Vector *maskVector = CreateFixedSizeVector<OMNI_BOOLEAN>(this->vectorAllocator, rowPerVecBatch,
+                    this->nullPercent, 256, this->isDict);
+                ;
                 vecBatch->SetVector(this->GetMaskColumnIndex(), maskVector);
             }
 
@@ -650,12 +639,11 @@ public:
             const int32_t valueIndex = this->GetValueColumnIndex();
             const int32_t maskIndex = this->GetMaskColumnIndex();
 
-            if (TypeUtil::IsDecimalType(IN_ID)
-                && (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
-
-                Decimal128 result {};
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, Decimal128, Decimal128>(
-                    vvb, valueIndex, maskIndex, sumFunc<T_IN, Decimal128>, count, result);
+            if (TypeUtil::IsDecimalType(IN_ID) &&
+                (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
+                Decimal128 result{};
+                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, Decimal128, Decimal128>(vvb, valueIndex,
+                    maskIndex, sumFunc<T_IN, Decimal128>, count, result);
 
                 static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
                 if (overflow || count == 0) {
@@ -666,9 +654,9 @@ public:
 
                 return overflow;
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                double result {};
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, double, double>(
-                    vvb, valueIndex, maskIndex, sumFunc<T_IN, double>, count, result);
+                double result{};
+                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, double, double>(vvb, valueIndex,
+                    maskIndex, sumFunc<T_IN, double>, count, result);
 
                 static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
                 if (overflow || count == 0) {
@@ -678,21 +666,21 @@ public:
                 }
 
                 return overflow;
-            } else  {
+            } else {
                 using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
                 using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-                T_OUT result {};
+                T_OUT result{};
 
                 if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
                     using T_MID = std::conditional_t<std::is_floating_point_v<T_IN>, double, int64_t>;
-                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_MID>(
-                        vvb, valueIndex, maskIndex, sumFunc<T_IN, T_MID>, count, result);
+                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
+                        maskIndex, sumFunc<T_IN, T_MID>, count, result);
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MIN) {
-                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_IN>(
-                        vvb, valueIndex, maskIndex, minFunc<T_IN, T_IN>, count, result);
+                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex,
+                        maskIndex, minFunc<T_IN, T_IN>, count, result);
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MAX) {
-                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_IN>(
-                        vvb, valueIndex, maskIndex, maxFunc<T_IN, T_IN>, count, result);
+                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex,
+                        maskIndex, maxFunc<T_IN, T_IN>, count, result);
                 } else {
                     throw OmniException("Invalid Arguement",
                         "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
@@ -715,8 +703,8 @@ public:
     virtual bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = new VectorBatch(2);
-        (*expectedResult)->SetVector(0, VectorHelper::CreateFlatVector(
-            this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
+        (*expectedResult)
+            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
         (*expectedResult)->SetVector(1, new LongVector(this->vectorAllocator, 1));
 
         int64_t count = 0;
@@ -736,20 +724,20 @@ public:
         } else {
             using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
             using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-            T_OUT result {};
+            T_OUT result{};
             int64_t validCount = 0;
             bool overflow;
             const int32_t valueIndex = this->GetValueColumnIndex();
             // no mask for final aggregation
             const int32_t maskIndex = -1;
 
-            if (TypeUtil::IsDecimalType(IN_ID)
-                && (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
+            if (TypeUtil::IsDecimalType(IN_ID) &&
+                (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
                 if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
-                    overflow = GenerateExpectedResultNumeric<allMatchFilter, OMNI_DECIMAL128, T_OUT, Decimal128>(
-                        vvb, valueIndex, maskIndex, sumFunc<Decimal128, Decimal128>, validCount, result);
+                    overflow = GenerateExpectedResultNumeric<allMatchFilter, OMNI_DECIMAL128, T_OUT, Decimal128>(vvb,
+                        valueIndex, maskIndex, sumFunc<Decimal128, Decimal128>, validCount, result);
                 } else {
-                    Decimal128 result128 {};
+                    Decimal128 result128{};
                     overflow = GenerateExpectedResultNumeric<allMatchFilter, OMNI_DECIMAL128, Decimal128, Decimal128>(
                         vvb, valueIndex, maskIndex, sumFunc<Decimal128, Decimal128>, validCount, result128);
                     if (!overflow && validCount > 0) {
@@ -760,21 +748,21 @@ public:
                 }
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
                 using T_MID = std::conditional_t<std::is_floating_point_v<T_OUT>, double, int64_t>;
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, OUT_ID, T_OUT, T_MID>(
-                    vvb, valueIndex, maskIndex, sumFunc<T_OUT, T_MID>, validCount, result);
+                overflow = GenerateExpectedResultNumeric<allMatchFilter, OUT_ID, T_OUT, T_MID>(vvb, valueIndex,
+                    maskIndex, sumFunc<T_OUT, T_MID>, validCount, result);
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                double resultDouble {};
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, OMNI_DOUBLE, double, double>(
-                    vvb, valueIndex, maskIndex, sumFunc<double, double>, validCount, resultDouble);
+                double resultDouble{};
+                overflow = GenerateExpectedResultNumeric<allMatchFilter, OMNI_DOUBLE, double, double>(vvb, valueIndex,
+                    maskIndex, sumFunc<double, double>, validCount, resultDouble);
                 if (!overflow && validCount > 0) {
                     overflow = !doCast<double, T_OUT>(result, resultDouble /= count);
                 }
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MIN) {
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, OUT_ID, T_OUT, T_OUT>(
-                    vvb, valueIndex, maskIndex, minFunc<T_OUT, T_OUT>, validCount, result);
+                overflow = GenerateExpectedResultNumeric<allMatchFilter, OUT_ID, T_OUT, T_OUT>(vvb, valueIndex,
+                    maskIndex, minFunc<T_OUT, T_OUT>, validCount, result);
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MAX) {
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, OUT_ID, T_OUT, T_OUT>(
-                    vvb, valueIndex, maskIndex, maxFunc<T_OUT, T_OUT>, validCount, result);
+                overflow = GenerateExpectedResultNumeric<allMatchFilter, OUT_ID, T_OUT, T_OUT>(vvb, valueIndex,
+                    maskIndex, maxFunc<T_OUT, T_OUT>, validCount, result);
             } else {
                 VectorHelper::FreeVecBatches(vvb);
                 throw OmniException("Invalid Arguement",
@@ -839,17 +827,16 @@ protected:
 
     virtual std::unique_ptr<OperatorFactory> CreateFactory(std::vector<uint32_t> &aggFuncVec,
         std::vector<DataTypePtr> &inputTypeVec, std::vector<DataTypePtr> &outputTypeVec,
-        std::vector<uint32_t> &aggColIdxVec, std::vector<uint32_t> &aggMaskVec,
-        const bool inputRaw, const bool outputPartial)
+        std::vector<uint32_t> &aggColIdxVec, std::vector<uint32_t> &aggMaskVec, const bool inputRaw,
+        const bool outputPartial)
     {
         DataTypes inputTypes(inputTypeVec);
         auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggColIdxVec);
         auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(DataTypes(outputTypeVec));
         auto inputRawWrap = AggregatorUtil::WrapWithVector(inputRaw, 2);
         auto outputPartialWrap = AggregatorUtil::WrapWithVector(outputPartial, 2);
-        auto factory = std::make_unique<AggregationOperatorFactory>(
-            inputTypes, aggFuncVec, aggInputColsWrap, aggMaskVec, aggOutputTypesWrap,
-            inputRawWrap, outputPartialWrap, this->nullWhenOverflow);
+        auto factory = std::make_unique<AggregationOperatorFactory>(inputTypes, aggFuncVec, aggInputColsWrap,
+            aggMaskVec, aggOutputTypesWrap, inputRawWrap, outputPartialWrap, this->nullWhenOverflow);
 
         if (factory == nullptr) {
             return nullptr;
@@ -889,15 +876,14 @@ protected:
 
         switch (this->aggFunc) {
             case OMNI_AGGREGATION_TYPE_SUM:
-                outputTypeVector[0] = TypeUtil::IsDecimalType(IN_ID)
-                    ? VarcharType(sizeof(DecimalPartialResult))
-                    : GetType(OUT_ID);
+                outputTypeVector[0] =
+                    TypeUtil::IsDecimalType(IN_ID) ? VarcharType(sizeof(DecimalPartialResult)) : GetType(OUT_ID);
                 break;
             case OMNI_AGGREGATION_TYPE_AVG:
                 if (TypeUtil::IsDecimalType(IN_ID)) {
                     outputTypeVector[0] = VarcharType(sizeof(DecimalPartialResult));
                 } else {
-                    std::vector<DataTypePtr> fieldTypes {DoubleType(), LongType()};
+                    std::vector<DataTypePtr> fieldTypes{ DoubleType(), LongType() };
                     outputTypeVector[0] = ContainerType(fieldTypes);
                 }
                 break;
@@ -912,11 +898,10 @@ protected:
         }
     }
 
-    bool SetFinalAggregateFactoryParams(std::vector<uint32_t> &aggFuncVector,
-        std::vector<DataTypePtr> &inputTypeVector, std::vector<DataTypePtr> &outputTypeVector,
-        std::vector<uint32_t> &aggColIdxVector, std::vector<uint32_t> &aggMask)
+    bool SetFinalAggregateFactoryParams(std::vector<uint32_t> &aggFuncVector, std::vector<DataTypePtr> &inputTypeVector,
+        std::vector<DataTypePtr> &outputTypeVector, std::vector<uint32_t> &aggColIdxVector,
+        std::vector<uint32_t> &aggMask)
     {
-
         aggFuncVector.resize(2);
         aggFuncVector[0] = static_cast<uint32_t>(this->aggFunc);
         aggFuncVector[1] = static_cast<uint32_t>(OMNI_AGGREGATION_TYPE_COUNT_COLUMN);
@@ -938,15 +923,14 @@ protected:
 
         switch (this->aggFunc) {
             case OMNI_AGGREGATION_TYPE_SUM:
-                inputTypeVector[0] = TypeUtil::IsDecimalType(IN_ID)
-                    ? VarcharType(sizeof(DecimalPartialResult))
-                    : GetType(OUT_ID);
+                inputTypeVector[0] =
+                    TypeUtil::IsDecimalType(IN_ID) ? VarcharType(sizeof(DecimalPartialResult)) : GetType(OUT_ID);
                 break;
             case OMNI_AGGREGATION_TYPE_AVG:
                 if (TypeUtil::IsDecimalType(IN_ID)) {
                     inputTypeVector[0] = VarcharType(sizeof(DecimalPartialResult));
                 } else {
-                    std::vector<DataTypePtr> fieldTypes {DoubleType(), LongType()};
+                    std::vector<DataTypePtr> fieldTypes{ DoubleType(), LongType() };
                     inputTypeVector[0] = ContainerType(fieldTypes);
                 }
                 break;
@@ -971,11 +955,11 @@ protected:
         const int32_t valueIndex = this->GetValueColumnIndex();
 
         if (this->aggFunc == OMNI_AGGREGATION_TYPE_MIN) {
-            result = GenerateExpectedResultVarchar<allMatchFilter, minCharFunc>(
-                vvb, valueIndex, maskIndex, count, resultLen);
+            result = GenerateExpectedResultVarchar<allMatchFilter, minCharFunc>(vvb, valueIndex, maskIndex, count,
+                resultLen);
         } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MAX) {
-            result = GenerateExpectedResultVarchar<allMatchFilter, maxCharFunc>(
-                vvb, valueIndex, maskIndex, count, resultLen);
+            result = GenerateExpectedResultVarchar<allMatchFilter, maxCharFunc>(vvb, valueIndex, maskIndex, count,
+                resultLen);
         } else {
             throw OmniException("Invalid Arguement",
                 "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)) + " for Varchar input");
@@ -1005,14 +989,14 @@ private:
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
             expectedResult->SetVector(0, new VarcharVector(this->vectorAllocator, maxVarcharLength, 1));
         } else {
-            if (TypeUtil::IsDecimalType(IN_ID)
-                && (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
+            if (TypeUtil::IsDecimalType(IN_ID) &&
+                (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
                 expectedResult->SetVector(0, new Decimal128Vector(this->vectorAllocator, 1));
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
                 expectedResult->SetVector(0, new DoubleVector(this->vectorAllocator, 1));
             } else {
-                expectedResult->SetVector(0, VectorHelper::CreateFlatVector(
-                    this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
+                expectedResult->SetVector(0,
+                    VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
             }
         }
 

@@ -82,8 +82,7 @@ void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex
 void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 
-template <typename V, typename D>
-void FillValueImpl(Vector *vector, int32_t rowIndex, const AggregateState &state);
+template <typename V, typename D> void FillValueImpl(Vector *vector, int32_t rowIndex, const AggregateState &state);
 
 void FillVarcharValue(Vector *vector, int32_t rowIndex, const AggregateState &state);
 
@@ -91,7 +90,8 @@ class HashAggregationOperator : public AggregationCommonOperator {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<std::vector<int32_t>> &aggInputCols,
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
-        std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws, std::vector<bool> &outputPartials)
+        std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
+        std::vector<bool> &outputPartials)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -139,8 +139,8 @@ private:
     void FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result);
 
     template <typename Deserialize>
-    void TraverseHashmapToGetResults(
-        Deserialize &deserializeHashmap, const int32_t groupByColSize, std::vector<VectorBatch *> &result);
+    void TraverseHashmapToGetResults(Deserialize &deserializeHashmap, const int32_t groupByColSize,
+        std::vector<VectorBatch *> &result);
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

@@ -112,20 +112,20 @@ public:
     virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
     {
         throw OmniException("Not implemented",
-            "InitiateGroup(AggregateState &, VectorBatch *, int32_t) not implemented for "
-            + std::to_string(as_integer(type)));
+            "InitiateGroup(AggregateState &, VectorBatch *, int32_t) not implemented for " +
+            std::to_string(as_integer(type)));
     }
 
     virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
     {
         throw OmniException("Not implemented",
-            "ProcessGroup(AggregateState &, VectorBatch *, int32_t) not implemented for "
-            + std::to_string(as_integer(type)));
+            "ProcessGroup(AggregateState &, VectorBatch *, int32_t) not implemented for " +
+            std::to_string(as_integer(type)));
     }
 
     // for no groupby aggregation
-    virtual void ProcessGroup(
-        AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount)
+    virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+        const int32_t rowCount)
     {
 #ifdef DEBUG
         LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
@@ -137,8 +137,8 @@ public:
     }
 
     // for groupby hash aggregation
-    virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        VectorBatch *vectorBatch, const int32_t rowOffset)
+    virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+        const int32_t rowOffset)
     {
 #ifdef DEBUG
         LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));

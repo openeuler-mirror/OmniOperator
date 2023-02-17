@@ -145,9 +145,8 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
-            throw OmniException("OPERATOR_RUNTIME_ERROR",
-                "Unable to create aggregator " +
-                std::to_string(i) + " / " + std::to_string(this->aggregatorFactories.size()));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "Unable to create aggregator " + std::to_string(i) + " / " +
+                std::to_string(this->aggregatorFactories.size()));
         }
         aggs.push_back(std::move(aggregator));
     }
@@ -546,7 +545,7 @@ void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnInd
     std::vector<uintptr_t> vectorAddresses(op::AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
     auto containerVector =
         new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, dataTypes);
     vecBatch->SetVector(columnIndex, containerVector);

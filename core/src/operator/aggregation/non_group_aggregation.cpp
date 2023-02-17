@@ -65,9 +65,8 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
-            throw OmniException("OPERATOR_RUNTIME_ERROR",
-                "Unable to create aggregator " +
-                std::to_string(i) + " / " + std::to_string(this->aggregatorFactories.size()));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "Unable to create aggregator " + std::to_string(i) + " / " +
+                std::to_string(this->aggregatorFactories.size()));
         }
         aggs.push_back(std::move(aggregator));
     }

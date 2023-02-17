@@ -16,10 +16,9 @@ void countAllOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t
     *res += in;
 }
 
-template<bool addIf>
-SIMD_ALWAYS_INLINE
-void countAllConditionalOp(
-    int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2, const uint8_t &condition)
+template <bool addIf>
+SIMD_ALWAYS_INLINE void countAllConditionalOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2,
+    const uint8_t &condition)
 {
     const int64_t mask = (!condition == addIf) - 1;
     *res += (in & mask);
@@ -32,8 +31,8 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
-    static std::unique_ptr<Aggregator> Create(
-        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels)
     {
         if constexpr (OUT_ID != OMNI_LONG) {
             LogError("Error in count column aggregator: Expecting long output type. Got %s",
@@ -44,8 +43,8 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
-                "count column", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes("count column", inputTypes,
+                outputTypes, IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
@@ -56,21 +55,19 @@ public:
 
 protected:
     CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            OMNI_AGGREGATION_TYPE_COUNT_COLUMN, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+        *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
     {}
 
     CountColumnAggregator(FunctionType aggregateType, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            aggregateType, *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(aggregateType, *DataTypes::NoneDataTypesInstance(),
+        outputTypes, channels)
     {}
 
-    void ProcessSingleInternal(
-        AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternal(
-        std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 };
 }

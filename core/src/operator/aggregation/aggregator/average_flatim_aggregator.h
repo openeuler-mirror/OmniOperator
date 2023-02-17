@@ -11,7 +11,8 @@
 
 namespace omniruntime {
 namespace op {
-template <typename RawInputVectorType, typename ResultType = double> class AverageFlatIMAggregator : public Aggregator {
+template <bool INPUT_RAW, bool OUT_PARTIAL, typename RawInputVectorType, typename ResultType = double>
+class AverageFlatIMAggregator : public Aggregator {
 public:
     AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
@@ -38,7 +39,7 @@ public:
             return;
         }
 
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             auto currentVal = static_cast<ResultType *>(state.val);
             *reinterpret_cast<ResultType *>(state.val) =
                 (static_cast<RawInputVectorType *>(vector))->GetValue(offset) + *currentVal;
@@ -69,7 +70,7 @@ public:
         }
 
         // for partial aggregation
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             auto rowVal = (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = rowVal;
@@ -95,7 +96,7 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
-        if (outputPartial) {
+        if constexpr (OUT_PARTIAL) {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
                 VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, avgValOffset));

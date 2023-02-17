@@ -11,11 +11,10 @@
 
 namespace omniruntime {
 namespace op {
-
 #ifdef ENABLE_HMPP
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
+    VectorBatch *vectorBatch)
 {
     if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
         throw OmniException("NOT SUPPORT", "Unsupported input type for avg aggregate");
@@ -34,9 +33,9 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
         if constexpr (IN_ID == OMNI_LONG) {
             LogDebug("HMPP-Agg-avg");
             double sumVal = 0;
-            result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
-                &sumVal, &count);
+            result =
+                HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
+                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal, &count);
 
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "avg failed for hmpp error");
@@ -51,14 +50,13 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
                 *(reinterpret_cast<ResultType *>(state.val)) += static_cast<ResultType>(sumVal);
                 state.count += static_cast<int64_t>(count);
             }
-        } else  {
+        } else {
             // IN_ID == OMNI_DECIMAL128
             LogDebug("HMPP-Agg-avg");
-            HmppDecimal128 sumVal {};
+            HmppDecimal128 sumVal{};
             result = HMPPS_Mean_decimal128(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow,
-                &sumVal, &count);
+                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
+                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal, &count);
 
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "avg failed for hmpp error");
@@ -82,8 +80,8 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+bool AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+    VectorBatch *vectorBatch)
 {
     // just support raw input data
     if constexpr (!RAW_IN) {
@@ -94,25 +92,24 @@ bool AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanPr
             return false;
         }
         // only long or decimal128 type input support
-        return this->inputTypes.GetType(0)->GetId() == OMNI_LONG
-            || this->inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128;
+        return this->inputTypes.GetType(0)->GetId() == OMNI_LONG ||
+            this->inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128;
     }
 }
 #endif
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
-    const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex)
+void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+    std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     if constexpr (PARTIAL_OUT) {
         if constexpr (OUT_ID == OMNI_VARCHAR) {
-            SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
-                state, vectors, rowIndex);
+            SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(state, vectors, rowIndex);
         } else if constexpr (OUT_ID == OMNI_CONTAINER) {
             int32_t offset;
-            OutType result {};
-            ContainerVector *vector = static_cast<ContainerVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+            OutType result{};
+            ContainerVector *vector =
+                static_cast<ContainerVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
             OutVector *doubleVector = reinterpret_cast<OutVector *>(vector->GetValue(0));
             LongVector *longVector = reinterpret_cast<LongVector *>(vector->GetValue(1));
 
@@ -129,23 +126,22 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Extra
                 throw OmniException("OPERATOR_RUNTIME_ERROR", "average_aggregator overflow.");
             }
         } else {
-            throw OmniException("Unreachable code",
-                "Reached unreachable code in average aggregator extract partial");
+            throw OmniException("Unreachable code", "Reached unreachable code in average aggregator extract partial");
         }
     } else {
         int32_t offset;
-        OutType result {};
+        OutType result{};
         auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
         bool overflow = state.count < 0;
         if (state.count > 0 && state.val != nullptr) {
             if constexpr (std::is_same_v<ResultType, Decimal128>) {
                 Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val))
-                    .Divide(Decimal128Wrapper(state.count), 0);
+                                                  .Divide(Decimal128Wrapper(state.count), 0);
                 result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
             } else {
                 // Result type is either double or int64, which for both cases we generate double avgResult;
-                double avgResult = static_cast<double>(*reinterpret_cast<ResultType *>(state.val))
-                    / static_cast<double>(state.count);
+                double avgResult =
+                    static_cast<double>(*reinterpret_cast<ResultType *>(state.val)) / static_cast<double>(state.count);
                 result = this->template CastWithOverflow<double, OutType>(avgResult, overflow);
             }
         }
@@ -160,9 +156,8 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Extra
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-    const uint8_t *nullMap, const int32_t *indexMap)
+void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
+    Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if constexpr (IN_ID == OMNI_CONTAINER) {
         if (state.val == nullptr) {
@@ -187,32 +182,31 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
                 addAvg<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount);
             } else {
                 if constexpr (std::is_floating_point_v<InType>) {
-                    avgConditionalFloat<InType, ResultType, false>(
-                        res, state.count, ptr, cntPtr, rowCount, nullMap);
+                    avgConditionalFloat<InType, ResultType, false>(res, state.count, ptr, cntPtr, rowCount, nullMap);
                 } else {
-                    addConditionalAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                        res, state.count, ptr, cntPtr, rowCount, nullMap);
+                    addConditionalAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(res, state.count,
+                        ptr, cntPtr, rowCount, nullMap);
                 }
             }
         } else {
             if (nullMap == nullptr) {
-                addDictAvg<InType, ResultType, sumOp<InType, ResultType>>(
-                    res, state.count, ptr, cntPtr, rowCount, indexMap);
+                addDictAvg<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount,
+                    indexMap);
             } else {
-                addDictConditionalAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                    res, state.count, ptr, cntPtr, rowCount, nullMap, indexMap);
+                addDictConditionalAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(res, state.count,
+                    ptr, cntPtr, rowCount, nullMap, indexMap);
             }
         }
     } else {
-        SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-            state, vector, rowOffset, rowCount, nullMap, indexMap);
+        SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(state, vector,
+            rowOffset, rowCount, nullMap, indexMap);
     }
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-    const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     if constexpr (IN_ID == OMNI_CONTAINER) {
         // when input is not raw, vector is container with <double, long> columns for <sum, count>
@@ -232,21 +226,21 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
                 addUseRowIndexAvg<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr);
             } else {
                 // Reza: can we use customize float operation similar to sumConditionalFloat
-                addConditionalUseRowIndexAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
-                    rowStates, aggIdx, ptr, cntPtr, nullMap);
+                addConditionalUseRowIndexAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(rowStates,
+                    aggIdx, ptr, cntPtr, nullMap);
             }
         } else {
             if (nullMap == nullptr) {
-                addDictUseRowIndexAvg<InType, ResultType, sumOp<InType, ResultType>>(
-                    rowStates, aggIdx, ptr, cntPtr, indexMap);
+                addDictUseRowIndexAvg<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr,
+                    indexMap);
             } else {
                 addDictConditionalUseRowIndexAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
                     rowStates, aggIdx, ptr, cntPtr, nullMap, indexMap);
             }
         }
     } else {
-        SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-            rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
+        SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx,
+            vector, rowOffset, nullMap, indexMap);
     }
 }
 

@@ -38,8 +38,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     } else {
         auto preMaxVal = reinterpret_cast<char *>(state.val);
 
-        int32_t result = memcmp(
-            preMaxVal, reinterpret_cast<char *>(maxVal), std::min(state.count, static_cast<int64_t>(maxLen)));
+        int32_t result =
+            memcmp(preMaxVal, reinterpret_cast<char *>(maxVal), std::min(state.count, static_cast<int64_t>(maxLen)));
         if (result < 0 || (result == 0 && state.count < maxLen)) {
             state.val = maxVal;
             state.count = maxLen;
@@ -48,8 +48,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+bool MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+    VectorBatch *vectorBatch)
 {
     // must no null inpout
     if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
@@ -64,8 +64,8 @@ bool MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ca
 #endif
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
-    const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex)
+void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+    std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -79,8 +79,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ex
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
-    const uint8_t *nullMap, const int32_t *indexMap)
+    AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
 {
     VarcharVector *vector = static_cast<VarcharVector *>(v);
 
@@ -103,8 +103,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
-    const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     VarcharVector *vector = static_cast<VarcharVector *>(v);
 

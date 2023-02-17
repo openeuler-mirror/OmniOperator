@@ -9,9 +9,8 @@
 
 namespace omniruntime {
 namespace op {
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void add(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const size_t rowCount)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void add(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t rowCount)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -30,10 +29,9 @@ void add(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const size_t rowC
     }
 }
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addDict(OUT *res_, int64_t &flag_,
-    const IN * __restrict ptr, const size_t rowCount, const int32_t * __restrict indexMap)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addDict(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const size_t rowCount, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -56,10 +54,9 @@ void addDict(OUT *res_, int64_t &flag_,
     }
 }
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addConditional(OUT *res_, int64_t &flag_,
-    const IN * __restrict ptr, const size_t rowCount, const uint8_t * __restrict condition)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addConditional(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const size_t rowCount, const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -83,11 +80,9 @@ void addConditional(OUT *res_, int64_t &flag_,
     }
 }
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addDictConditional(OUT *res_, int64_t &flag_,
-    const IN * __restrict ptr, const size_t rowCount, const uint8_t * __restrict condition,
-    const int32_t * __restrict indexMap)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addDictConditional(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const size_t rowCount, const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -116,10 +111,9 @@ void addDictConditional(OUT *res_, int64_t &flag_,
 }
 
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const int64_t * __restrict cntPtr,
-    const size_t rowCount)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addAvg(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const int64_t *__restrict cntPtr, const size_t rowCount)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -142,10 +136,9 @@ void addAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const int64_t 
     }
 }
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addDictAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const int64_t * __restrict cntPtr,
-    const size_t rowCount, const int32_t * __restrict indexMap)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addDictAvg(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const int64_t *__restrict cntPtr, const size_t rowCount, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -173,10 +166,9 @@ void addDictAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const int6
     }
 }
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addConditionalAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const int64_t * __restrict cntPtr,
-    const size_t rowCount,const uint8_t * __restrict condition)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addConditionalAvg(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const int64_t *__restrict cntPtr, const size_t rowCount, const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -204,10 +196,10 @@ void addConditionalAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, con
     }
 }
 
-template<typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE
-void addDictConditionalAvg(OUT *res_, int64_t &flag_, const IN * __restrict ptr, const int64_t * __restrict cntPtr,
-    const size_t rowCount, const uint8_t * __restrict condition, const int32_t * __restrict indexMap)
+template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void addDictConditionalAvg(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+    const int64_t *__restrict cntPtr, const size_t rowCount, const uint8_t *__restrict condition,
+    const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG

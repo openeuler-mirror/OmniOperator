@@ -37,8 +37,8 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
-    static std::unique_ptr<Aggregator> Create(
-        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels)
     {
         if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
             LogError("Error in max_varchar aggregator: Unsupported input type %s",
@@ -54,25 +54,24 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
-                "max_varchar", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes("max_varchar", inputTypes, outputTypes,
+                IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
             return std::unique_ptr<MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
-                new MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(
-                    inputTypes, outputTypes, channels));
+                new MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(inputTypes, outputTypes,
+                channels));
         }
     }
 
 protected:
     MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes,
+        channels)
     {}
 
-    void ProcessSingleInternal(
-        AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,

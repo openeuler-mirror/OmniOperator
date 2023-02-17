@@ -15,94 +15,91 @@ using namespace omniruntime::op;
 using namespace omniruntime::type;
 using namespace TestUtil;
 
-class MultiStageCompleteTest
-    : public ::testing::TestWithParam<std::tuple<std::string, DataTypeId, DataTypeId, int32_t, bool, bool, bool, bool>> {
-};
+class MultiStageCompleteTest : public ::testing::TestWithParam<
+    std::tuple<std::string, DataTypeId, DataTypeId, int32_t, bool, bool, bool, bool>> {};
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-static std::unique_ptr<AggregatorTester> CreateKnowInputOutput(const std::string aggFuncName,
-    const int32_t nullPercent, const bool isDict, const bool hasMask, const bool nullWhenOverflow, const bool groupby)
+static std::unique_ptr<AggregatorTester> CreateKnowInputOutput(const std::string aggFuncName, const int32_t nullPercent,
+    const bool isDict, const bool hasMask, const bool nullWhenOverflow, const bool groupby)
 {
     if (groupby) {
-        return std::make_unique<HashAggregatorTesterTemplate<IN_ID, OUT_ID>>(
-            aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow);
+        return std::make_unique<HashAggregatorTesterTemplate<IN_ID, OUT_ID>>(aggFuncName, nullPercent, isDict, hasMask,
+            nullWhenOverflow);
     } else {
-        return std::make_unique<AggregatorTesterTemplate<IN_ID, OUT_ID>>(
-            aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow);
+        return std::make_unique<AggregatorTesterTemplate<IN_ID, OUT_ID>>(aggFuncName, nullPercent, isDict, hasMask,
+            nullWhenOverflow);
     }
 }
 
 template <DataTypeId IN_ID>
-static std::unique_ptr<AggregatorTester> CreateKnowInput(const DataTypeId outId,
-    const std::string aggFuncName, const int32_t nullPercent, const bool isDict, const bool hasMask,
-    const bool nullWhenOverflow, const bool groupby)
+static std::unique_ptr<AggregatorTester> CreateKnowInput(const DataTypeId outId, const std::string aggFuncName,
+    const int32_t nullPercent, const bool isDict, const bool hasMask, const bool nullWhenOverflow, const bool groupby)
 {
     switch (outId) {
         case OMNI_BOOLEAN:
-            return CreateKnowInputOutput<IN_ID, OMNI_BOOLEAN>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_BOOLEAN>(aggFuncName, nullPercent, isDict, hasMask,
+                nullWhenOverflow, groupby);
         case OMNI_SHORT:
-            return CreateKnowInputOutput<IN_ID, OMNI_SHORT>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_SHORT>(aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_INT:
-            return CreateKnowInputOutput<IN_ID, OMNI_INT>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_INT>(aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_LONG:
-            return CreateKnowInputOutput<IN_ID, OMNI_LONG>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_LONG>(aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_DOUBLE:
-            return CreateKnowInputOutput<IN_ID, OMNI_DOUBLE>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_DOUBLE>(aggFuncName, nullPercent, isDict, hasMask,
+                nullWhenOverflow, groupby);
         case OMNI_DECIMAL64:
-            return CreateKnowInputOutput<IN_ID, OMNI_DECIMAL64>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_DECIMAL64>(aggFuncName, nullPercent, isDict, hasMask,
+                nullWhenOverflow, groupby);
         case OMNI_DECIMAL128:
-            return CreateKnowInputOutput<IN_ID, OMNI_DECIMAL128>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_DECIMAL128>(aggFuncName, nullPercent, isDict, hasMask,
+                nullWhenOverflow, groupby);
         case OMNI_VARCHAR:
-            return CreateKnowInputOutput<IN_ID, OMNI_VARCHAR>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_VARCHAR>(aggFuncName, nullPercent, isDict, hasMask,
+                nullWhenOverflow, groupby);
         case OMNI_CHAR:
-            return CreateKnowInputOutput<IN_ID, OMNI_CHAR>(
-                aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInputOutput<IN_ID, OMNI_CHAR>(aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         default:
             throw OmniException("Invalid Argument", "Invalid type " + TypeUtil::TypeToStringLog(outId));
     }
 }
 
-static std::unique_ptr<AggregatorTester> CreateAggregatorTester(
-    const std::string aggFuncName, const DataTypeId inId, const DataTypeId outId,
-    const int32_t nullPercent, const bool isDict, const bool hasMask, const bool nullWhenOverflow,
-    const bool groupby)
+static std::unique_ptr<AggregatorTester> CreateAggregatorTester(const std::string aggFuncName, const DataTypeId inId,
+    const DataTypeId outId, const int32_t nullPercent, const bool isDict, const bool hasMask,
+    const bool nullWhenOverflow, const bool groupby)
 {
     switch (inId) {
         case OMNI_BOOLEAN:
-            return CreateKnowInput<OMNI_BOOLEAN>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_BOOLEAN>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_SHORT:
-            return CreateKnowInput<OMNI_SHORT>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_SHORT>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_INT:
-            return CreateKnowInput<OMNI_INT>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_INT>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_LONG:
-            return CreateKnowInput<OMNI_LONG>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_LONG>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_DOUBLE:
-            return CreateKnowInput<OMNI_DOUBLE>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_DOUBLE>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_DECIMAL64:
-            return CreateKnowInput<OMNI_DECIMAL64>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_DECIMAL64>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_DECIMAL128:
-            return CreateKnowInput<OMNI_DECIMAL128>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_DECIMAL128>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_VARCHAR:
-            return CreateKnowInput<OMNI_VARCHAR>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_VARCHAR>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         case OMNI_CHAR:
-            return CreateKnowInput<OMNI_CHAR>(
-                outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow, groupby);
+            return CreateKnowInput<OMNI_CHAR>(outId, aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow,
+                groupby);
         default:
             throw OmniException("Invalid Argument", "Invalid type " + TypeUtil::TypeToStringLog(inId));
     }
@@ -128,7 +125,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         }
         throw e;
     }
-    EXPECT_TRUE (aggPartial1 != nullptr);
+    EXPECT_TRUE(aggPartial1 != nullptr);
 
     Operator *aggPartial2;
     try {
@@ -140,7 +137,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         }
         throw e;
     }
-    EXPECT_TRUE (aggPartial2 != nullptr);
+    EXPECT_TRUE(aggPartial2 != nullptr);
 
 
     Operator *aggFinal;
@@ -158,7 +155,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
 
     // operator 1 (partial)
     std::vector<VectorBatch *> input1 = tester->BuildAggInput(vecBatchNum, rowSize);
-    EXPECT_TRUE (input1.size() > 0);
+    EXPECT_TRUE(input1.size() > 0);
     VectorBatch *expectedResult1 = nullptr;
     bool overflow1 = tester->GeneratePartialExpectedResult(&expectedResult1, input1);
 
@@ -192,13 +189,13 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
 
     // operator 2 (partial)
     std::vector<VectorBatch *> input2 = tester->BuildAggInput(vecBatchNum, rowSize);
-    EXPECT_TRUE (input2.size() > 0);
+    EXPECT_TRUE(input2.size() > 0);
     VectorBatch *expectedResult2 = nullptr;
     bool overflow2 = tester->GeneratePartialExpectedResult(&expectedResult2, input2);
 
     aggPartial2->Init();
     for (VectorBatch *input : input2) {
-         aggPartial2->AddInput(input);
+        aggPartial2->AddInput(input);
     }
 
     std::vector<VectorBatch *> result2;
@@ -298,35 +295,28 @@ TEST_P(MultiStageCompleteTest, verify_correctness)
     printf("Random seed: %d\n", randSeed);
     srand(randSeed);
 
-    RunAggregatorTest(
-        std::move(
-            CreateAggregatorTester(aggFuncName, inId, outId, nullPercent, isDict, hasMask, nullWhenOverflow, groupby)
-        ), CheckSupported(aggFuncName, inId, outId), error);
-
+    RunAggregatorTest(std::move(
+        CreateAggregatorTester(aggFuncName, inId, outId, nullPercent, isDict, hasMask, nullWhenOverflow, groupby)),
+        CheckSupported(aggFuncName, inId, outId), error);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    AggregatorTest,
-    MultiStageCompleteTest,
-    ::testing::Combine(
-        ::testing::Values("sum", "min", "max", "avg"),
-        ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR, OMNI_VARCHAR),
-        ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR, OMNI_VARCHAR),
-        ::testing::Values(0, 25, 100),                                // nullPercent
-        ::testing::Bool(),                                            // isDict
-        ::testing::Bool(),                                            // hasMask
-        ::testing::Bool(),                                            // nullWhenOverflow
-        ::testing::Bool()                                             // groupby
+INSTANTIATE_TEST_CASE_P(AggregatorTest, MultiStageCompleteTest,
+    ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
+    OMNI_CHAR, OMNI_VARCHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
+    OMNI_CHAR, OMNI_VARCHAR),
+    ::testing::Values(0, 25, 100), // nullPercent
+    ::testing::Bool(),             // isDict
+    ::testing::Bool(),             // hasMask
+    ::testing::Bool(),             // nullWhenOverflow
+    ::testing::Bool()              // groupby
     ),
-    [](const testing::TestParamInfo<MultiStageCompleteTest::ParamType>& info) {
-        return std::get<0>(info.param) + "_"
-            + TypeUtil::TypeToStringLog(std::get<1>(info.param)) + "_"
-            + TypeUtil::TypeToStringLog(std::get<2>(info.param)) + "_"
-            + std::to_string(std::get<3>(info.param)) + "_"
-            + (std::get<4>(info.param) ? "dict_" : "flat_")
-            + (std::get<5>(info.param) ? "withMask_" : "noMask_")
-            + (std::get<6>(info.param) ? "overflowNull_" : "overflowExcep_")
-            + (std::get<7>(info.param) ? "withGroupBy" : "noGroupBy");
+    [](const testing::TestParamInfo<MultiStageCompleteTest::ParamType> &info) {
+        return std::get<0>(info.param) + "_" + TypeUtil::TypeToStringLog(std::get<1>(info.param)) + "_" +
+            TypeUtil::TypeToStringLog(std::get<2>(info.param)) + "_" + std::to_string(std::get<3>(info.param)) + "_" +
+            (std::get<4>(info.param) ? "dict_" : "flat_") + (std::get<5>(info.param) ? "withMask_" : "noMask_") +
+            (std::get<6>(info.param) ? "overflowNull_" : "overflowExcep_") +
+            (std::get<7>(info.param) ? "withGroupBy" : "noGroupBy");
     });
 }
-

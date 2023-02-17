@@ -27,7 +27,7 @@ static constexpr int32_t SPARK_DECIMAL_SUM_STATE_LENGTH = sizeof(SparkDecimalSum
  * middle: decimal+boolean(isEmpty)
  * final: decimal
  */
-class SumSparkDecimalAggregator : public Aggregator {
+template <bool INPUT_RAW, bool OUTPUT_PARTIAL> class SumSparkDecimalAggregator : public Aggregator {
 public:
     SumSparkDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
@@ -55,7 +55,7 @@ public:
 
         // The inputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
         int32_t inputType = inputTypes.GetIds()[0];
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             // For decimal type, the initial value of `sum` is 0. We need to keep `sum` unchanged if
             // the input is null, as SUM function ignores null input. The `sum` can only be null if
             // overflow happens under non-ansi mode.
@@ -123,7 +123,7 @@ public:
 
         // The inputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
         int32_t inputType = inputTypes.GetIds()[0];
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             if (vector->IsValueNull(offset)) {
                 state.val = executionContext->GetArena()->Allocate(SPARK_DECIMAL_SUM_STATE_LENGTH);
                 EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), 0, false, true);
@@ -177,12 +177,11 @@ public:
         int32_t scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
             static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
         // rescale dividend and divisor to output scale
-        isOverflow =
-                isOverflow || MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
+        isOverflow = isOverflow || MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
 
         // The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
         int32_t outputType = outputTypes.GetIds()[0];
-        if (outputPartial) {
+        if constexpr (OUTPUT_PARTIAL) {
             if (isOverflow) {
                 // partial output vector is sum, it will be set to NULL if overflowed.
                 vector->SetValueNull(rowIndex);
@@ -217,8 +216,7 @@ private:
         vector->SetValueNull(index);
     }
 
-    void EncodeSumState(SparkDecimalSumState *statePtr, const int128 &val, const bool isOverflow,
-        const bool isEmpty)
+    void EncodeSumState(SparkDecimalSumState *statePtr, const int128 &val, const bool isOverflow, const bool isEmpty)
     {
         statePtr->val = val;
         statePtr->isOverflow = isOverflow;

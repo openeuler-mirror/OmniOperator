@@ -13,8 +13,8 @@ namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
+    VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
 
@@ -62,8 +62,8 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
         case OMNI_DECIMAL128: {
             LogDebug("HMPP-Agg-max");
             result = HMPPS_Max_decimal(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<HmppDecimal128 *>(maxVal));
+                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
+                reinterpret_cast<HmppDecimal128 *>(maxVal));
             break;
         }
         default: {
@@ -86,8 +86,8 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+bool MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+    VectorBatch *vectorBatch)
 {
     // just support raw input data and must no null inpout
     if constexpr (!RAW_IN) {
@@ -108,8 +108,8 @@ bool MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProces
 #endif
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
-    const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex)
+void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+    std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -119,8 +119,8 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractVa
     }
 
     bool overflow = state.count < 0;
-    OutType result = this->template CastWithOverflow<ResultType, OutType>(
-        *reinterpret_cast<ResultType *>(state.val), overflow);
+    OutType result =
+        this->template CastWithOverflow<ResultType, OutType>(*reinterpret_cast<ResultType *>(state.val), overflow);
 
     v->SetValue(offset, result);
     if (overflow) {
@@ -139,9 +139,8 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::InitState
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-    const uint8_t *nullMap, const int32_t *indexMap)
+void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
+    Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         InitState(state);
@@ -156,23 +155,23 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSi
         if (nullMap == nullptr) {
             add<InType, ResultType, maxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
         } else {
-            addConditional<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(
-                res, state.count, ptr, rowCount, nullMap);
+            addConditional<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+                rowCount, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
             addDict<InType, ResultType, maxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
         } else {
-            addDictConditional<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(
-                res, state.count, ptr, rowCount, nullMap, indexMap);
+            addDictConditional<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+                rowCount, nullMap, indexMap);
         }
     }
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-    const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
     ptr += vector->GetPositionOffset();
@@ -182,15 +181,15 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
         if (nullMap == nullptr) {
             addUseRowIndex<InType, ResultType, maxOp<InType, ResultType>>(rowStates, aggIdx, ptr);
         } else {
-            addConditionalUseRowIndex<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(
-                rowStates, aggIdx, ptr, nullMap);
+            addConditionalUseRowIndex<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(rowStates,
+                aggIdx, ptr, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
             addDictUseRowIndex<InType, ResultType, maxOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
         } else {
-            addDictConditionalUseRowIndex<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(
-                rowStates, aggIdx, ptr, nullMap, indexMap);
+            addDictConditionalUseRowIndex<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(rowStates,
+                aggIdx, ptr, nullMap, indexMap);
         }
     }
 }

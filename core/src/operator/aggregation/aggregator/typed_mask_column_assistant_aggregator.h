@@ -10,7 +10,7 @@
 namespace omniruntime {
 namespace op {
 // mask not null, agg vec not null
-inline uint8_t addMask(uint8_t * __restrict nullMap, const size_t length, const uint8_t * __restrict maskPtr)
+inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -21,8 +21,8 @@ inline uint8_t addMask(uint8_t * __restrict nullMap, const size_t length, const 
     return nonZero;
 }
 
-inline uint8_t addDictMask(uint8_t * __restrict nullMap, const size_t length,
-    const uint8_t * __restrict maskPtr, const int32_t * __restrict indexMap)
+inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -35,8 +35,8 @@ inline uint8_t addDictMask(uint8_t * __restrict nullMap, const size_t length,
 
 // mask nullable, agg vec not null OR
 // mask not null, agg vec nullable: in this case maskNullMap is actually agg vec nullMap
-inline uint8_t addMask(uint8_t * __restrict nullMap, const size_t length,
-    const uint8_t * __restrict maskPtr, const uint8_t * __restrict maskNullMap)
+inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const uint8_t *__restrict maskNullMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -47,8 +47,8 @@ inline uint8_t addMask(uint8_t * __restrict nullMap, const size_t length,
     return nonZero;
 }
 
-inline uint8_t addDictMask(uint8_t * __restrict nullMap, const size_t length,
-    const uint8_t * __restrict maskPtr, const uint8_t * __restrict maskNullMap, const int32_t * __restrict indexMap)
+inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const uint8_t *__restrict maskNullMap, const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -60,8 +60,8 @@ inline uint8_t addDictMask(uint8_t * __restrict nullMap, const size_t length,
 }
 
 // mask nullable, agg vec nullable
-inline uint8_t addMask(uint8_t * __restrict nullMap, const size_t length,
-    const uint8_t * __restrict maskPtr, const uint8_t * __restrict maskNullMap, const uint8_t * __restrict vecNullMap)
+inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const uint8_t *__restrict maskNullMap, const uint8_t *__restrict vecNullMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -72,9 +72,8 @@ inline uint8_t addMask(uint8_t * __restrict nullMap, const size_t length,
     return nonZero;
 }
 
-inline uint8_t addDictMask(uint8_t * __restrict nullMap, const size_t length,
-    const uint8_t * __restrict maskPtr, const uint8_t * __restrict maskNullMap, const uint8_t * __restrict vecNullMap,
-    const int32_t * __restrict indexMap)
+inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const uint8_t *__restrict maskNullMap, const uint8_t *__restrict vecNullMap, const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -102,8 +101,8 @@ public:
     }
 #endif
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch,
-        const int32_t rowOffset, const int32_t rowCount) override
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+        const int32_t rowCount) override
     {
         AggregatorBuffer<uint8_t> nullMap;
         GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
@@ -118,16 +117,16 @@ public:
             vector = vectorBatch->GetVector(aggChannels[0]);
             if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
                 indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(
-                    rowOffset, rowCount, indexMap.data);
+                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
+                    indexMap.data);
             }
         }
 
         realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
     }
 
-    void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        VectorBatch *vectorBatch, const int32_t rowOffset) override
+    void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+        const int32_t rowOffset) override
     {
         const size_t rowCount = rowStates.size();
         AggregatorBuffer<uint8_t> nullMap;
@@ -143,8 +142,8 @@ public:
             vector = vectorBatch->GetVector(aggChannels[0]);
             if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
                 indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(
-                    rowOffset, rowCount, indexMap.data);
+                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
+                    indexMap.data);
             }
         }
 
@@ -204,38 +203,33 @@ public:
 
 protected:
     TypedMaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(
-            realAggregator->GetType(), realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(),
-            realAggregator->GetInputChannels()),
-        maskColumnId(maskColumnId)
+        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(realAggregator->GetType(),
+        realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(), realAggregator->GetInputChannels()),
+          maskColumnId(maskColumnId)
     {
         this->realAggregator = std::unique_ptr<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>>(
             static_cast<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> *>(realAggregator.release()));
     }
 
-    void ProcessSingleInternal(
-        AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    void ProcessGroupInternal(
-        std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
 private:
-    void GenerateNullMap(
-        AggregatorBuffer<uint8_t> &nullMap, VectorBatch *vectorBatch, const int32_t rowOffset, const size_t rowCount)
+    void GenerateNullMap(AggregatorBuffer<uint8_t> &nullMap, VectorBatch *vectorBatch, const int32_t rowOffset,
+        const size_t rowCount)
     {
         if (maskColumnId < 0 || maskColumnId >= vectorBatch->GetVectorCount()) {
-            throw OmniException("Illegal Arguement",
-                "Aggregator maskColumnId " + std::to_string(maskColumnId) + " out of range [0, "
-                    + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
+            throw OmniException("Illegal Arguement", "Aggregator maskColumnId " + std::to_string(maskColumnId) +
+                " out of range [0, " + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
         }
         auto maskVector = vectorBatch->GetVector(maskColumnId);
-        uint8_t *maskNullMap = maskVector->MayHaveNull()
-                ? reinterpret_cast<uint8_t *>(maskVector->GetValueNulls())
-                : nullptr;
+        uint8_t *maskNullMap =
+            maskVector->MayHaveNull() ? reinterpret_cast<uint8_t *>(maskVector->GetValueNulls()) : nullptr;
         if (maskNullMap != nullptr) {
             maskNullMap += maskVector->GetPositionOffset() + rowOffset;
         }
@@ -245,14 +239,12 @@ private:
         if (aggChannels.size() > 0) {
             auto aggColumnId = aggChannels[0];
             if (aggColumnId >= vectorBatch->GetVectorCount()) {
-                throw OmniException("Illegal Arguement",
-                    "Aggregator columnId " + std::to_string(aggColumnId) + " out of range [0, "
-                        + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
+                throw OmniException("Illegal Arguement", "Aggregator columnId " + std::to_string(aggColumnId) +
+                    " out of range [0, " + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
             } else if (aggColumnId >= 0) {
                 auto aggVector = vectorBatch->GetVector(aggColumnId);
-                aggNullMap = aggVector->MayHaveNull()
-                        ? reinterpret_cast<uint8_t *>(aggVector->GetValueNulls())
-                        : nullptr;
+                aggNullMap =
+                    aggVector->MayHaveNull() ? reinterpret_cast<uint8_t *>(aggVector->GetValueNulls()) : nullptr;
                 if (aggNullMap != nullptr) {
                     aggNullMap += aggVector->GetPositionOffset() + rowOffset;
                 }
@@ -273,15 +265,13 @@ private:
         }
     }
 
-    bool GenerateNullMapDict(
-        AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
+    bool GenerateNullMapDict(AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
         Vector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;
         AggregatorBuffer<int32_t> indexMap(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
         BooleanVector *orgVector = static_cast<BooleanVector *>(
-            static_cast<DictionaryVector *>(maskVector)->ExtractDictionaryAndIds(rowOffset, rowCount, indexMap.data)
-        );
+            static_cast<DictionaryVector *>(maskVector)->ExtractDictionaryAndIds(rowOffset, rowCount, indexMap.data));
         uint8_t *maskPtr = reinterpret_cast<uint8_t *>(orgVector->GetValues());
         maskPtr += orgVector->GetPositionOffset();
 
@@ -302,8 +292,7 @@ private:
         return hasValidRows != 0;
     }
 
-    bool GenerateNullMapFlat(
-        AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
+    bool GenerateNullMapFlat(AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
         Vector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;

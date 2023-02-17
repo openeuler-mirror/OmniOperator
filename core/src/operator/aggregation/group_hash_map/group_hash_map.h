@@ -62,7 +62,7 @@ public:
         kv.first = key_;
     }
 
-    GroupByHashSlot(KeyType &&key_) : isAssigned(true), kv(std::move(key_), ValueType {}) {}
+    GroupByHashSlot(KeyType &&key_) : isAssigned(true), kv(std::move(key_), ValueType{}) {}
 
     GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)), hashVal(o.hashVal)
     {
@@ -144,7 +144,6 @@ private:
      * and the obtained value is false if caller attempts to get value of isAssigned.
      * when the constructor function is invoked, the value of isAssigned is set to true.
      */
-
 };
 
 /**
@@ -166,7 +165,7 @@ public:
 
     int Allocate(uint64_t size, uint8_t **buffer)
     {
-        auto ret = pool->alloc(static_cast<int64_t>(size),true);
+        auto ret = pool->alloc(static_cast<int64_t>(size), true);
         *buffer = static_cast<uint8_t *>(ret);
         if (ret == nullptr) {
             throw exception::OmniException("allocate in OmniHashmapAllocator", "allocate memory fail");
@@ -232,7 +231,8 @@ private:
 class Grower {
 public:
     static constexpr short enlargeThreshold = 23;
-    Grower(uint8_t degree) : degree(degree) {
+    Grower(uint8_t degree) : degree(degree)
+    {
         CalculateThreshHold();
     }
     /* *
@@ -261,8 +261,9 @@ public:
     ~Grower() = default;
 
 private:
-    void CalculateThreshHold(){
-        threshHold = std::ceil((1ULL<<(degree-1)));
+    void CalculateThreshHold()
+    {
+        threshHold = std::ceil((1ULL << (degree - 1)));
     }
     uint64_t threshHold = 0;
     uint8_t degree;
@@ -468,9 +469,9 @@ private:
             ++elementsSize;
             allocator.Allocate(sizeof(Slot), reinterpret_cast<uint8_t **>(&nullSlot));
             new (nullSlot)Slot(std::forward<T>(key));
-            return InsertResult<ValueType> { nullSlot->GetValue(), true };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), true };
         } else {
-            return InsertResult<ValueType> { nullSlot->GetValue(), false };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), false };
         }
     }
 

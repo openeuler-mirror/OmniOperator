@@ -23,25 +23,26 @@ using namespace omniruntime::type;
 // have 'numValues' entries.
 static const int32_t numValues = 15;
 
-static std::vector<int32_t> channel { 0 };
+static std::vector<int32_t> channel{ 0 };
 
 class AggregatorCastTestClass : public TypedAggregator<true, false, false> {
 public:
     AggregatorCastTestClass(DataTypes &inTypes, DataTypes &outTypes)
-        : TypedAggregator<true, false, false>(OMNI_AGGREGATION_TYPE_SUM,
-            std::move(inTypes), std::move(outTypes), channel)
+        : TypedAggregator<true, false, false>(OMNI_AGGREGATION_TYPE_SUM, std::move(inTypes), std::move(outTypes),
+        channel)
     {}
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override {}
+        const uint8_t *nullMap, const int32_t *indexMap) override
+    {}
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override {}
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
+    {}
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, const int32_t rowIndex) override {}
 
-    template<typename InType, typename OutType>
-    OutType TestCastWithOverflow(const InType val, bool &overflow)
+    template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)
     {
         return TypedAggregator<true, false, false>::CastWithOverflow<InType, OutType>(val, overflow);
     }
@@ -57,13 +58,10 @@ public:
     }
 };
 
-template<typename T>
-struct R {
-    R() : v (T {}), overflow(true)
-    {}
+template <typename T> struct R {
+    R() : v(T{}), overflow(true) {}
 
-    R(T v_) : v (v_), overflow(false)
-    {}
+    R(T v_) : v(v_), overflow(false) {}
 
     const T v;
     const bool overflow;
@@ -75,10 +73,14 @@ struct Results {
         const std::vector<R<int64_t>> &out64_, const std::vector<R<double>> &outDouble_,
         const std::vector<R<int64_t>> &outDecimal64_, const std::vector<R<Decimal128>> &outDecimal128_,
         const std::vector<R<Decimal128>> &outVarchar_)
-        : out16 (out16_), out32 (out32_), out64 (out64_), outDouble (outDouble_),
-          outDecimal64 (outDecimal64_), outDecimal128( outDecimal128_), outVarchar(outVarchar_)
-    {
-    }
+        : out16(out16_),
+          out32(out32_),
+          out64(out64_),
+          outDouble(outDouble_),
+          outDecimal64(outDecimal64_),
+          outDecimal128(outDecimal128_),
+          outVarchar(outVarchar_)
+    {}
     const std::vector<R<int16_t>> out16;
     const std::vector<R<int32_t>> out32;
     const std::vector<R<int64_t>> out64;
@@ -154,7 +156,7 @@ static void SetDecimalInputWithScale(AggregatorCastTestClass &agg, const int32_t
     agg.SetInputType(*DataTypes(dataTypeVector).Instance());
 }
 
-template<typename InType, typename OutType>
+template <typename InType, typename OutType>
 static std::vector<R<OutType>> ConvertValues(const std::vector<R<InType>> &in, const int32_t scale = 0)
 {
     std::vector<R<OutType>> result;
@@ -178,7 +180,7 @@ static std::vector<R<OutType>> ConvertValues(const std::vector<R<InType>> &in, c
     return result;
 }
 
-template<typename T>
+template <typename T>
 static std::vector<R<T>> ConcatinateValues(const std::vector<R<T>> &in1, const std::vector<R<T>> &in2)
 {
     std::vector<R<T>> result;
@@ -192,8 +194,7 @@ static std::vector<R<T>> ConcatinateValues(const std::vector<R<T>> &in1, const s
     return result;
 }
 
-template<typename T>
-static std::vector<R<T>> RepeatVector(const std::vector<R<T>> &in, const int32_t reps)
+template <typename T> static std::vector<R<T>> RepeatVector(const std::vector<R<T>> &in, const int32_t reps)
 {
     std::vector<R<T>> result;
     result.reserve(in.size() * reps);
@@ -206,236 +207,183 @@ static std::vector<R<T>> RepeatVector(const std::vector<R<T>> &in, const int32_t
 }
 
 // test data
-static std::vector<R<int16_t>> in16 {
-    R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123),
-    R<int16_t>(12345), R<int16_t>(-12345),
-    R<int16_t>(32767), R<int16_t>(-32767),
-    R<int16_t>(32766), R<int16_t>(-32768),
-    R<int16_t>(1363), R<int16_t>(-1363),
-    R<int16_t>(1984), R<int16_t>(-1984),
-    R<int16_t>(13631), R<int16_t>(-13631)
-};
-static Results in16Results(
-    in16,
-    ConvertValues<int16_t, int32_t>(in16),
-    ConvertValues<int16_t, int64_t>(in16),
+static std::vector<R<int16_t>> in16{ R<int16_t>(0),      R<int16_t>(123),   R<int16_t>(-123),   R<int16_t>(12345),
+    R<int16_t>(-12345), R<int16_t>(32767), R<int16_t>(-32767), R<int16_t>(32766),
+    R<int16_t>(-32768), R<int16_t>(1363),  R<int16_t>(-1363),  R<int16_t>(1984),
+    R<int16_t>(-1984),  R<int16_t>(13631), R<int16_t>(-13631) };
+static Results in16Results(in16, ConvertValues<int16_t, int32_t>(in16), ConvertValues<int16_t, int64_t>(in16),
     ConvertValues<int16_t, double>(in16),
     ConcatinateValues<int64_t>(ConvertValues<int16_t, int64_t>(in16), ConvertValues<int16_t, int64_t>(in16, 2)),
-    ConcatinateValues<Decimal128>(ConvertValues<int16_t, Decimal128>(in16), ConvertValues<int16_t, Decimal128>(in16, 2)),
-    ConvertValues<int16_t, Decimal128>(in16)
-);
+    ConcatinateValues<Decimal128>(ConvertValues<int16_t, Decimal128>(in16),
+    ConvertValues<int16_t, Decimal128>(in16, 2)),
+    ConvertValues<int16_t, Decimal128>(in16));
 
-static std::vector<R<int32_t>> in32 {
-    R<int32_t>(0), R<int32_t>(123), R<int32_t>(-123),
-    R<int32_t>(12345), R<int32_t>(-12345),
-    R<int32_t>(32767), R<int32_t>(-32767),
-    R<int32_t>(32768), R<int32_t>(-32768),
-    R<int32_t>(13630126), R<int32_t>(-13630126),
-    R<int32_t>(2147483647), R<int32_t>(-2147483647),
-    R<int32_t>(2147483646), R<int32_t>(-2147483648)
-};
-static Results in32Results(
-    std::vector<R<int16_t>> {
-        R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123),
-        R<int16_t>(12345), R<int16_t>(-12345),
-        R<int16_t>(32767), R<int16_t>(-32767),
-        R<int16_t>(), R<int16_t>(-32768),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>()
-    },
-    in32,
-    ConvertValues<int32_t, int64_t>(in32),
-    ConvertValues<int32_t, double>(in32),
+static std::vector<R<int32_t>> in32{ R<int32_t>(0),           R<int32_t>(123),        R<int32_t>(-123),
+    R<int32_t>(12345),       R<int32_t>(-12345),     R<int32_t>(32767),
+    R<int32_t>(-32767),      R<int32_t>(32768),      R<int32_t>(-32768),
+    R<int32_t>(13630126),    R<int32_t>(-13630126),  R<int32_t>(2147483647),
+    R<int32_t>(-2147483647), R<int32_t>(2147483646), R<int32_t>(-2147483648) };
+static Results in32Results(std::vector<R<int16_t>>{ R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123), R<int16_t>(12345),
+    R<int16_t>(-12345), R<int16_t>(32767), R<int16_t>(-32767), R<int16_t>(), R<int16_t>(-32768), R<int16_t>(),
+    R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>() },
+    in32, ConvertValues<int32_t, int64_t>(in32), ConvertValues<int32_t, double>(in32),
     ConcatinateValues<int64_t>(ConvertValues<int32_t, int64_t>(in32), ConvertValues<int32_t, int64_t>(in32, 2)),
-    ConcatinateValues<Decimal128>(ConvertValues<int32_t, Decimal128>(in32), ConvertValues<int32_t, Decimal128>(in32, 2)),
-    ConvertValues<int32_t, Decimal128>(in32)
-);
+    ConcatinateValues<Decimal128>(ConvertValues<int32_t, Decimal128>(in32),
+    ConvertValues<int32_t, Decimal128>(in32, 2)),
+    ConvertValues<int32_t, Decimal128>(in32));
 
-static std::vector<R<int64_t>> in64 {
-    R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123),
-    R<int64_t>(12345), R<int64_t>(-12345),
-    R<int64_t>(1234567890123LL), R<int64_t>(-1234567890123LL),
-    R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
-    R<int64_t>(1363), R<int64_t>(-1363),
-    R<int64_t>(1984), R<int64_t>(-1984),
-    R<int64_t>(13630126LL), R<int64_t>(-13630126LL)
-};
-static Results in64Results(
-    std::vector<R<int16_t>> {
-        R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123),
-        R<int16_t>(12345), R<int16_t>(-12345),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(1363), R<int16_t>(-1363),
-        R<int16_t>(1984), R<int16_t>(-1984),
-        R<int16_t>(), R<int16_t>()
-    },
-    std::vector<R<int32_t>> {
-        R<int32_t>(0), R<int32_t>(123), R<int32_t>(-123),
-        R<int32_t>(12345), R<int32_t>(-12345),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(1363), R<int32_t>(-1363),
-        R<int32_t>(1984), R<int32_t>(-1984),
-        R<int32_t>(13630126), R<int32_t>(-13630126)
-    },
+static std::vector<R<int64_t>> in64{ R<int64_t>(0),
+    R<int64_t>(123),
+    R<int64_t>(-123),
+    R<int64_t>(12345),
+    R<int64_t>(-12345),
+    R<int64_t>(1234567890123LL),
+    R<int64_t>(-1234567890123LL),
+    R<int64_t>(123456789012345678LL),
+    R<int64_t>(-123456789012345678LL),
+    R<int64_t>(1363),
+    R<int64_t>(-1363),
+    R<int64_t>(1984),
+    R<int64_t>(-1984),
+    R<int64_t>(13630126LL),
+    R<int64_t>(-13630126LL) };
+static Results in64Results(std::vector<R<int16_t>>{ R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123), R<int16_t>(12345),
+    R<int16_t>(-12345), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(1363), R<int16_t>(-1363),
+    R<int16_t>(1984), R<int16_t>(-1984), R<int16_t>(), R<int16_t>() },
+    std::vector<R<int32_t>>{ R<int32_t>(0), R<int32_t>(123), R<int32_t>(-123), R<int32_t>(12345), R<int32_t>(-12345),
+    R<int32_t>(), R<int32_t>(), R<int32_t>(), R<int32_t>(), R<int32_t>(1363), R<int32_t>(-1363), R<int32_t>(1984),
+    R<int32_t>(-1984), R<int32_t>(13630126), R<int32_t>(-13630126) },
     in64,
-    std::vector<R<double>> {
-        R<double>(0.0), R<double>(123.0), R<double>(-123.0),
-        R<double>(12345.0), R<double>(-12345.0),
-        R<double>(1234567890123.0), R<double>(-1234567890123.0),
-        R<double>(123456789012345678.0), R<double>(-123456789012345678.0),
-        R<double>(1363.0), R<double>(-1363.0),
-        R<double>(1984.0), R<double>(-1984.0),
-        R<double>(13630126.0), R<double>(-13630126.0)
-    },
-    std::vector<R<int64_t>> {
-        // scale = 0
-        R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123),
-        R<int64_t>(12345), R<int64_t>(-12345),
-        R<int64_t>(1234567890123LL), R<int64_t>(-1234567890123LL),
-        R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
-        R<int64_t>(1363), R<int64_t>(-1363),
-        R<int64_t>(1984), R<int64_t>(-1984),
-        R<int64_t>(13630126), R<int64_t>(-13630126),
-        // scale = 2
-        R<int64_t>(0), R<int64_t>(12300), R<int64_t>(-12300), R<int64_t>(1234500), R<int64_t>(-1234500),
-        R<int64_t>(123456789012300LL), R<int64_t>(-123456789012300LL), R<int64_t>(), R<int64_t>(),
-        R<int64_t>(136300), R<int64_t>(-136300), R<int64_t>(198400), R<int64_t>(-198400),
-        R<int64_t>(1363012600), R<int64_t>(-1363012600)
-    },
-    std::vector<R<Decimal128>> {
-        // scale = 0
-        R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("123")), R<Decimal128>(Decimal128("-123")),
-        R<Decimal128>(Decimal128("12345")), R<Decimal128>(Decimal128("-12345")),
-        R<Decimal128>(Decimal128("1234567890123")), R<Decimal128>(Decimal128("-1234567890123")),
-        R<Decimal128>(Decimal128("123456789012345678")), R<Decimal128>(Decimal128("-123456789012345678")),
-        R<Decimal128>(Decimal128("1363")), R<Decimal128>(Decimal128("-1363")),
-        R<Decimal128>(Decimal128("1984")), R<Decimal128>(Decimal128("-1984")),
-        R<Decimal128>(Decimal128("13630126")), R<Decimal128>(Decimal128("-13630126")),
-        // scale = 2
-        R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("12300")), R<Decimal128>(Decimal128("-12300")),
-        R<Decimal128>(Decimal128("1234500")), R<Decimal128>(Decimal128("-1234500")),
-        R<Decimal128>(Decimal128("123456789012300")), R<Decimal128>(Decimal128("-123456789012300")),
-        R<Decimal128>(Decimal128("12345678901234567800")), R<Decimal128>(Decimal128("-12345678901234567800")),
-        R<Decimal128>(Decimal128("136300")), R<Decimal128>(Decimal128("-136300")),
-        R<Decimal128>(Decimal128("198400")), R<Decimal128>(Decimal128("-198400")),
-        R<Decimal128>(Decimal128("1363012600")), R<Decimal128>(Decimal128("-1363012600"))
-    },
-    std::vector<R<Decimal128>> {
-        R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("123")), R<Decimal128>(Decimal128("-123")),
-        R<Decimal128>(Decimal128("12345")), R<Decimal128>(Decimal128("-12345")),
-        R<Decimal128>(Decimal128("1234567890123")), R<Decimal128>(Decimal128("-1234567890123")),
-        R<Decimal128>(Decimal128("123456789012345678")), R<Decimal128>(Decimal128("-123456789012345678")),
-        R<Decimal128>(Decimal128("1363")), R<Decimal128>(Decimal128("-1363")),
-        R<Decimal128>(Decimal128("1984")), R<Decimal128>(Decimal128("-1984")),
-        R<Decimal128>(Decimal128("13630126")), R<Decimal128>(Decimal128("-13630126")),
-    }
-);
+    std::vector<R<double>>{ R<double>(0.0), R<double>(123.0), R<double>(-123.0), R<double>(12345.0),
+    R<double>(-12345.0), R<double>(1234567890123.0), R<double>(-1234567890123.0), R<double>(123456789012345678.0),
+    R<double>(-123456789012345678.0), R<double>(1363.0), R<double>(-1363.0), R<double>(1984.0), R<double>(-1984.0),
+    R<double>(13630126.0), R<double>(-13630126.0) },
+    std::vector<R<int64_t>>{ // scale = 0
+    R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123), R<int64_t>(12345), R<int64_t>(-12345),
+    R<int64_t>(1234567890123LL), R<int64_t>(-1234567890123LL), R<int64_t>(123456789012345678LL),
+    R<int64_t>(-123456789012345678LL), R<int64_t>(1363), R<int64_t>(-1363), R<int64_t>(1984), R<int64_t>(-1984),
+    R<int64_t>(13630126), R<int64_t>(-13630126),
+    // scale = 2
+    R<int64_t>(0), R<int64_t>(12300), R<int64_t>(-12300), R<int64_t>(1234500), R<int64_t>(-1234500),
+    R<int64_t>(123456789012300LL), R<int64_t>(-123456789012300LL), R<int64_t>(), R<int64_t>(), R<int64_t>(136300),
+    R<int64_t>(-136300), R<int64_t>(198400), R<int64_t>(-198400), R<int64_t>(1363012600), R<int64_t>(-1363012600) },
+    std::vector<R<Decimal128>>{ // scale = 0
+    R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("123")), R<Decimal128>(Decimal128("-123")),
+    R<Decimal128>(Decimal128("12345")), R<Decimal128>(Decimal128("-12345")), R<Decimal128>(Decimal128("1234567890123")),
+    R<Decimal128>(Decimal128("-1234567890123")), R<Decimal128>(Decimal128("123456789012345678")),
+    R<Decimal128>(Decimal128("-123456789012345678")), R<Decimal128>(Decimal128("1363")),
+    R<Decimal128>(Decimal128("-1363")), R<Decimal128>(Decimal128("1984")), R<Decimal128>(Decimal128("-1984")),
+    R<Decimal128>(Decimal128("13630126")), R<Decimal128>(Decimal128("-13630126")),
+    // scale = 2
+    R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("12300")), R<Decimal128>(Decimal128("-12300")),
+    R<Decimal128>(Decimal128("1234500")), R<Decimal128>(Decimal128("-1234500")),
+    R<Decimal128>(Decimal128("123456789012300")), R<Decimal128>(Decimal128("-123456789012300")),
+    R<Decimal128>(Decimal128("12345678901234567800")), R<Decimal128>(Decimal128("-12345678901234567800")),
+    R<Decimal128>(Decimal128("136300")), R<Decimal128>(Decimal128("-136300")), R<Decimal128>(Decimal128("198400")),
+    R<Decimal128>(Decimal128("-198400")), R<Decimal128>(Decimal128("1363012600")),
+    R<Decimal128>(Decimal128("-1363012600")) },
+    std::vector<R<Decimal128>>{
+    R<Decimal128>(Decimal128("0")),
+    R<Decimal128>(Decimal128("123")),
+    R<Decimal128>(Decimal128("-123")),
+    R<Decimal128>(Decimal128("12345")),
+    R<Decimal128>(Decimal128("-12345")),
+    R<Decimal128>(Decimal128("1234567890123")),
+    R<Decimal128>(Decimal128("-1234567890123")),
+    R<Decimal128>(Decimal128("123456789012345678")),
+    R<Decimal128>(Decimal128("-123456789012345678")),
+    R<Decimal128>(Decimal128("1363")),
+    R<Decimal128>(Decimal128("-1363")),
+    R<Decimal128>(Decimal128("1984")),
+    R<Decimal128>(Decimal128("-1984")),
+    R<Decimal128>(Decimal128("13630126")),
+    R<Decimal128>(Decimal128("-13630126")),
+    });
 
-static std::vector<R<double>> inDouble {
-    R<double>(0.0), R<double>(12.3), R<double>(-12.3),
-    R<double>(12.345), R<double>(-12.345),
-    R<double>(123456.789), R<double>(-123456.789),
-    R<double>(123456789012345.678), R<double>(-123456789012345.678),
-    R<double>(1234567890123456.789), R<double>(-1234567890123456.789),
-    R<double>(12345678901234567.891), R<double>(-12345678901234567.891),
-    R<double>(12345678901234567890.123), R<double>(-12345678901234567890.123)
-};
-static Results inDoubleResults(
-    std::vector<R<int16_t>> {
-        R<int16_t>(0), R<int16_t>(12), R<int16_t>(-12),
-        R<int16_t>(12), R<int16_t>(-12),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>()
-    },
-    std::vector<R<int32_t>> {
-        R<int32_t>(0), R<int32_t>(12), R<int32_t>(-12),
-        R<int32_t>(12), R<int32_t>(-12),
-        R<int32_t>(123457), R<int32_t>(-123457),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>()
-    },
-    std::vector<R<int64_t>> {
-        R<int64_t>(0), R<int64_t>(12), R<int64_t>(-12),
-        R<int64_t>(12), R<int64_t>(-12),
-        R<int64_t>(123457), R<int64_t>(-123457),
-        R<int64_t>(123456789012346), R<int64_t>(-123456789012346),
-        R<int64_t>(1234567890123457), R<int64_t>(-1234567890123457),
-        R<int64_t>(12345678901234568), R<int64_t>(-12345678901234568),
-        R<int64_t>(), R<int64_t>()
-    },
+static std::vector<R<double>> inDouble{ R<double>(0.0),
+    R<double>(12.3),
+    R<double>(-12.3),
+    R<double>(12.345),
+    R<double>(-12.345),
+    R<double>(123456.789),
+    R<double>(-123456.789),
+    R<double>(123456789012345.678),
+    R<double>(-123456789012345.678),
+    R<double>(1234567890123456.789),
+    R<double>(-1234567890123456.789),
+    R<double>(12345678901234567.891),
+    R<double>(-12345678901234567.891),
+    R<double>(12345678901234567890.123),
+    R<double>(-12345678901234567890.123) };
+static Results inDoubleResults(std::vector<R<int16_t>>{ R<int16_t>(0), R<int16_t>(12), R<int16_t>(-12), R<int16_t>(12),
+    R<int16_t>(-12), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(),
+    R<int16_t>(), R<int16_t>(), R<int16_t>() },
+    std::vector<R<int32_t>>{ R<int32_t>(0), R<int32_t>(12), R<int32_t>(-12), R<int32_t>(12), R<int32_t>(-12),
+    R<int32_t>(123457), R<int32_t>(-123457), R<int32_t>(), R<int32_t>(), R<int32_t>(), R<int32_t>(), R<int32_t>(),
+    R<int32_t>(), R<int32_t>(), R<int32_t>() },
+    std::vector<R<int64_t>>{ R<int64_t>(0), R<int64_t>(12), R<int64_t>(-12), R<int64_t>(12), R<int64_t>(-12),
+    R<int64_t>(123457), R<int64_t>(-123457), R<int64_t>(123456789012346), R<int64_t>(-123456789012346),
+    R<int64_t>(1234567890123457), R<int64_t>(-1234567890123457), R<int64_t>(12345678901234568),
+    R<int64_t>(-12345678901234568), R<int64_t>(), R<int64_t>() },
     inDouble,
-    std::vector<R<int64_t>> {
-        // scale = 0
-        R<int64_t>(0), R<int64_t>(12), R<int64_t>(-12),
-        R<int64_t>(12), R<int64_t>(-12),
-        R<int64_t>(123457), R<int64_t>(-123457),
-        R<int64_t>(123456789012346), R<int64_t>(-123456789012346),
-        R<int64_t>(1234567890123457), R<int64_t>(-1234567890123457),
-        R<int64_t>(12345678901234568), R<int64_t>(-12345678901234568),
-        R<int64_t>(), R<int64_t>(),
-        // scale = 2
-        R<int64_t>(0), R<int64_t>(1230), R<int64_t>(-1230),
-        R<int64_t>(1235), R<int64_t>(-1235),
-        R<int64_t>(12345679), R<int64_t>(-12345679),
-        // 123456789012345.678 changes to 123456789012345.671875
-        R<int64_t>(12345678901234567), R<int64_t>(-12345678901234567),
-        // 1234567890123456.789 changes to 1234567890123456.750000
-        R<int64_t>(123456789012345675), R<int64_t>(-123456789012345675),
-        // 12345678901234567.891 changes to 12345678901234568.000000
-        R<int64_t>(1234567890123456800), R<int64_t>(-1234567890123456800),
-        R<int64_t>(), R<int64_t>()
-    },
-    std::vector<R<Decimal128>> {
-        // scale = 0
-        R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")),
-        R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")),
-        R<Decimal128>(Decimal128("123457")), R<Decimal128>(Decimal128("-123457")),
-        R<Decimal128>(Decimal128("123456789012346")), R<Decimal128>(Decimal128("-123456789012346")),
-        R<Decimal128>(Decimal128("1234567890123457")), R<Decimal128>(Decimal128("-1234567890123457")),
-        R<Decimal128>(Decimal128("12345678901234568")), R<Decimal128>(Decimal128("-12345678901234568")),
-        // 12345678901234567890.123 changes to 12345678901234567168.000000
-        R<Decimal128>(Decimal128("12345678901234567168")), R<Decimal128>(Decimal128("-12345678901234567168")),
-        // scale = 2
-        R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("1230")), R<Decimal128>(Decimal128("-1230")),
-        R<Decimal128>(Decimal128("1235")), R<Decimal128>(Decimal128("-1235")),
-        R<Decimal128>(Decimal128("12345679")), R<Decimal128>(Decimal128("-12345679")),
-        // 123456789012345.678 changes to 123456789012345.671875
-        R<Decimal128>(Decimal128("12345678901234567")), R<Decimal128>(Decimal128("-12345678901234567")),
-        // 1234567890123456.789 changes to 1234567890123456.750000
-        R<Decimal128>(Decimal128("123456789012345675")), R<Decimal128>(Decimal128("-123456789012345675")),
-        // 12345678901234567.891 changes to 12345678901234568.000000
-        R<Decimal128>(Decimal128("1234567890123456800")), R<Decimal128>(Decimal128("-1234567890123456800")),
-        // 12345678901234567890.123 changes to 12345678901234567168.000000
-        R<Decimal128>(Decimal128("1234567890123456716800")), R<Decimal128>(Decimal128("-1234567890123456716800"))
-    },
-    std::vector<R<Decimal128>> {
-        R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")),
-        R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")),
-        R<Decimal128>(Decimal128("123457")), R<Decimal128>(Decimal128("-123457")),
-        R<Decimal128>(Decimal128("123456789012346")), R<Decimal128>(Decimal128("-123456789012346")),
-        R<Decimal128>(Decimal128("1234567890123457")), R<Decimal128>(Decimal128("-1234567890123457")),
-        R<Decimal128>(Decimal128("12345678901234568")), R<Decimal128>(Decimal128("-12345678901234568")),
-        R<Decimal128>(Decimal128("12345678901234567168")), R<Decimal128>(Decimal128("-12345678901234567168"))
-    }
-);
+    std::vector<R<int64_t>>{ // scale = 0
+    R<int64_t>(0), R<int64_t>(12), R<int64_t>(-12), R<int64_t>(12), R<int64_t>(-12), R<int64_t>(123457),
+    R<int64_t>(-123457), R<int64_t>(123456789012346), R<int64_t>(-123456789012346), R<int64_t>(1234567890123457),
+    R<int64_t>(-1234567890123457), R<int64_t>(12345678901234568), R<int64_t>(-12345678901234568), R<int64_t>(),
+    R<int64_t>(),
+    // scale = 2
+    R<int64_t>(0), R<int64_t>(1230), R<int64_t>(-1230), R<int64_t>(1235), R<int64_t>(-1235), R<int64_t>(12345679),
+    R<int64_t>(-12345679),
+    // 123456789012345.678 changes to 123456789012345.671875
+    R<int64_t>(12345678901234567), R<int64_t>(-12345678901234567),
+    // 1234567890123456.789 changes to 1234567890123456.750000
+    R<int64_t>(123456789012345675), R<int64_t>(-123456789012345675),
+    // 12345678901234567.891 changes to 12345678901234568.000000
+    R<int64_t>(1234567890123456800), R<int64_t>(-1234567890123456800), R<int64_t>(), R<int64_t>() },
+    std::vector<R<Decimal128>>{ // scale = 0
+    R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")),
+    R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")), R<Decimal128>(Decimal128("123457")),
+    R<Decimal128>(Decimal128("-123457")), R<Decimal128>(Decimal128("123456789012346")),
+    R<Decimal128>(Decimal128("-123456789012346")), R<Decimal128>(Decimal128("1234567890123457")),
+    R<Decimal128>(Decimal128("-1234567890123457")), R<Decimal128>(Decimal128("12345678901234568")),
+    R<Decimal128>(Decimal128("-12345678901234568")),
+    // 12345678901234567890.123 changes to 12345678901234567168.000000
+    R<Decimal128>(Decimal128("12345678901234567168")), R<Decimal128>(Decimal128("-12345678901234567168")),
+    // scale = 2
+    R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("1230")), R<Decimal128>(Decimal128("-1230")),
+    R<Decimal128>(Decimal128("1235")), R<Decimal128>(Decimal128("-1235")), R<Decimal128>(Decimal128("12345679")),
+    R<Decimal128>(Decimal128("-12345679")),
+    // 123456789012345.678 changes to 123456789012345.671875
+    R<Decimal128>(Decimal128("12345678901234567")), R<Decimal128>(Decimal128("-12345678901234567")),
+    // 1234567890123456.789 changes to 1234567890123456.750000
+    R<Decimal128>(Decimal128("123456789012345675")), R<Decimal128>(Decimal128("-123456789012345675")),
+    // 12345678901234567.891 changes to 12345678901234568.000000
+    R<Decimal128>(Decimal128("1234567890123456800")), R<Decimal128>(Decimal128("-1234567890123456800")),
+    // 12345678901234567890.123 changes to 12345678901234567168.000000
+    R<Decimal128>(Decimal128("1234567890123456716800")), R<Decimal128>(Decimal128("-1234567890123456716800")) },
+    std::vector<R<Decimal128>>{ R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("12")),
+    R<Decimal128>(Decimal128("-12")), R<Decimal128>(Decimal128("12")), R<Decimal128>(Decimal128("-12")),
+    R<Decimal128>(Decimal128("123457")), R<Decimal128>(Decimal128("-123457")),
+    R<Decimal128>(Decimal128("123456789012346")), R<Decimal128>(Decimal128("-123456789012346")),
+    R<Decimal128>(Decimal128("1234567890123457")), R<Decimal128>(Decimal128("-1234567890123457")),
+    R<Decimal128>(Decimal128("12345678901234568")), R<Decimal128>(Decimal128("-12345678901234568")),
+    R<Decimal128>(Decimal128("12345678901234567168")), R<Decimal128>(Decimal128("-12345678901234567168")) });
 
-static std::vector<R<int64_t>> inDec64 {
-    R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123),
-    R<int64_t>(12345), R<int64_t>(-12345),
-    R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
-    R<int64_t>(32768), R<int64_t>(-32768),
-    R<int64_t>(123456789012LL), R<int64_t>(-123456789012LL),
-    R<int64_t>(2147483647LL), R<int64_t>(-2147483647LL),
-    R<int64_t>(2147483648LL), R<int64_t>(-2147483648LL)
-};
+static std::vector<R<int64_t>> inDec64{ R<int64_t>(0),
+    R<int64_t>(123),
+    R<int64_t>(-123),
+    R<int64_t>(12345),
+    R<int64_t>(-12345),
+    R<int64_t>(123456789012345678LL),
+    R<int64_t>(-123456789012345678LL),
+    R<int64_t>(32768),
+    R<int64_t>(-32768),
+    R<int64_t>(123456789012LL),
+    R<int64_t>(-123456789012LL),
+    R<int64_t>(2147483647LL),
+    R<int64_t>(-2147483647LL),
+    R<int64_t>(2147483648LL),
+    R<int64_t>(-2147483648LL) };
 static Results inDec64Results(
     std::vector<R<int16_t>> {
         // scale = 0
@@ -654,15 +602,21 @@ static Results inDec64Results(
     )
 );
 
-static std::vector<R<Decimal128>> inDec128 {
-    R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("123")), R<Decimal128>(Decimal128("-123")),
-    R<Decimal128>(Decimal128("12345")), R<Decimal128>(Decimal128("-12345")),
-    R<Decimal128>(Decimal128("12345678")), R<Decimal128>(Decimal128("-12345678")),
-    R<Decimal128>(Decimal128("123456789012345678")), R<Decimal128>(Decimal128("-123456789012345678")),
-    R<Decimal128>(Decimal128("1234567890123456789")), R<Decimal128>(Decimal128("-1234567890123456789")),
-    R<Decimal128>(Decimal128("12345678901234567891")), R<Decimal128>(Decimal128("-12345678901234567891")),
-    R<Decimal128>(Decimal128("12345678901234567890123")), R<Decimal128>(Decimal128("-12345678901234567890123"))
-};
+static std::vector<R<Decimal128>> inDec128{ R<Decimal128>(Decimal128("0")),
+    R<Decimal128>(Decimal128("123")),
+    R<Decimal128>(Decimal128("-123")),
+    R<Decimal128>(Decimal128("12345")),
+    R<Decimal128>(Decimal128("-12345")),
+    R<Decimal128>(Decimal128("12345678")),
+    R<Decimal128>(Decimal128("-12345678")),
+    R<Decimal128>(Decimal128("123456789012345678")),
+    R<Decimal128>(Decimal128("-123456789012345678")),
+    R<Decimal128>(Decimal128("1234567890123456789")),
+    R<Decimal128>(Decimal128("-1234567890123456789")),
+    R<Decimal128>(Decimal128("12345678901234567891")),
+    R<Decimal128>(Decimal128("-12345678901234567891")),
+    R<Decimal128>(Decimal128("12345678901234567890123")),
+    R<Decimal128>(Decimal128("-12345678901234567890123")) };
 static Results inDec128Results(
     std::vector<R<int16_t>> {
         // scale = 0
@@ -881,82 +835,78 @@ static Results inDec128Results(
     )
 );
 
-static std::vector<R<Decimal128>> inVarchar {
-    R<Decimal128>(Decimal128("0")), R<Decimal128>(Decimal128("123")), R<Decimal128>(Decimal128("-123")),
-    R<Decimal128>(Decimal128("12345")), R<Decimal128>(Decimal128("-12345")),
-    R<Decimal128>(Decimal128("12345678")), R<Decimal128>(Decimal128("-12345678")),
-    R<Decimal128>(Decimal128("123456789012345678")), R<Decimal128>(Decimal128("-123456789012345678")),
-    R<Decimal128>(Decimal128("1234567890123456789")), R<Decimal128>(Decimal128("-1234567890123456789")),
-    R<Decimal128>(Decimal128("12345678901234567891")), R<Decimal128>(Decimal128("-12345678901234567891")),
-    R<Decimal128>(Decimal128("12345678901234567890123")), R<Decimal128>(Decimal128("-12345678901234567890123"))
-};
-static Results inVarcharResults(
-    std::vector<R<int16_t>> {
-        R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123),
-        R<int16_t>(12345), R<int16_t>(-12345),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>(),
-        R<int16_t>(), R<int16_t>()
+static std::vector<R<Decimal128>> inVarchar{ R<Decimal128>(Decimal128("0")),
+    R<Decimal128>(Decimal128("123")),
+    R<Decimal128>(Decimal128("-123")),
+    R<Decimal128>(Decimal128("12345")),
+    R<Decimal128>(Decimal128("-12345")),
+    R<Decimal128>(Decimal128("12345678")),
+    R<Decimal128>(Decimal128("-12345678")),
+    R<Decimal128>(Decimal128("123456789012345678")),
+    R<Decimal128>(Decimal128("-123456789012345678")),
+    R<Decimal128>(Decimal128("1234567890123456789")),
+    R<Decimal128>(Decimal128("-1234567890123456789")),
+    R<Decimal128>(Decimal128("12345678901234567891")),
+    R<Decimal128>(Decimal128("-12345678901234567891")),
+    R<Decimal128>(Decimal128("12345678901234567890123")),
+    R<Decimal128>(Decimal128("-12345678901234567890123")) };
+static Results inVarcharResults(std::vector<R<int16_t>>{ R<int16_t>(0), R<int16_t>(123), R<int16_t>(-123),
+    R<int16_t>(12345), R<int16_t>(-12345), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(),
+    R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>(), R<int16_t>() },
+    std::vector<R<int32_t>>{ R<int32_t>(0), R<int32_t>(123), R<int32_t>(-123), R<int32_t>(12345), R<int32_t>(-12345),
+    R<int32_t>(12345678), R<int32_t>(-12345678), R<int32_t>(), R<int32_t>(), R<int32_t>(), R<int32_t>(), R<int32_t>(),
+    R<int32_t>(), R<int32_t>(), R<int32_t>() },
+    std::vector<R<int64_t>>{ R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123), R<int64_t>(12345), R<int64_t>(-12345),
+    R<int64_t>(12345678), R<int64_t>(-12345678), R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
+    R<int64_t>(1234567890123456789LL), R<int64_t>(-1234567890123456789LL), R<int64_t>(), R<int64_t>(), R<int64_t>(),
+    R<int64_t>() },
+    std::vector<R<double>>{ R<double>(0.0), R<double>(123.0), R<double>(-123.0), R<double>(12345.0),
+    R<double>(-12345.0), R<double>(12345678.0), R<double>(-12345678.0), R<double>(123456789012345678.0),
+    R<double>(-123456789012345678.0), R<double>(1234567890123456789.0), R<double>(-1234567890123456789.0),
+    R<double>(12345678901234567891.0), R<double>(-12345678901234567891.0), R<double>(12345678901234567890123.0),
+    R<double>(-12345678901234567890123.0) },
+    std::vector<R<int64_t>>{
+    // scale = 0
+    R<int64_t>(0),
+    R<int64_t>(123),
+    R<int64_t>(-123),
+    R<int64_t>(12345),
+    R<int64_t>(-12345),
+    R<int64_t>(12345678),
+    R<int64_t>(-12345678),
+    R<int64_t>(123456789012345678LL),
+    R<int64_t>(-123456789012345678LL),
+    R<int64_t>(1234567890123456789LL),
+    R<int64_t>(-1234567890123456789LL),
+    R<int64_t>(),
+    R<int64_t>(),
+    R<int64_t>(),
+    R<int64_t>(),
+    // scale = 2
+    R<int64_t>(0),
+    R<int64_t>(123),
+    R<int64_t>(-123),
+    R<int64_t>(12345),
+    R<int64_t>(-12345),
+    R<int64_t>(12345678),
+    R<int64_t>(-12345678),
+    R<int64_t>(123456789012345678LL),
+    R<int64_t>(-123456789012345678LL),
+    R<int64_t>(1234567890123456789LL),
+    R<int64_t>(-1234567890123456789LL),
+    R<int64_t>(),
+    R<int64_t>(),
+    R<int64_t>(),
+    R<int64_t>(),
     },
-    std::vector<R<int32_t>> {
-        R<int32_t>(0), R<int32_t>(123), R<int32_t>(-123),
-        R<int32_t>(12345), R<int32_t>(-12345),
-        R<int32_t>(12345678), R<int32_t>(-12345678),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>(),
-        R<int32_t>(), R<int32_t>()
-    },
-    std::vector<R<int64_t>> {
-        R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123),
-        R<int64_t>(12345), R<int64_t>(-12345),
-        R<int64_t>(12345678), R<int64_t>(-12345678),
-        R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
-        R<int64_t>(1234567890123456789LL), R<int64_t>(-1234567890123456789LL),
-        R<int64_t>(), R<int64_t>(),
-        R<int64_t>(), R<int64_t>()
-    },
-    std::vector<R<double>> {
-        R<double>(0.0), R<double>(123.0), R<double>(-123.0),
-        R<double>(12345.0), R<double>(-12345.0),
-        R<double>(12345678.0), R<double>(-12345678.0),
-        R<double>(123456789012345678.0), R<double>(-123456789012345678.0),
-        R<double>(1234567890123456789.0), R<double>(-1234567890123456789.0),
-        R<double>(12345678901234567891.0), R<double>(-12345678901234567891.0),
-        R<double>(12345678901234567890123.0), R<double>(-12345678901234567890123.0)
-    },
-    std::vector<R<int64_t>> {
-        // scale = 0
-        R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123),
-        R<int64_t>(12345), R<int64_t>(-12345),
-        R<int64_t>(12345678), R<int64_t>(-12345678),
-        R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
-        R<int64_t>(1234567890123456789LL), R<int64_t>(-1234567890123456789LL),
-        R<int64_t>(), R<int64_t>(),
-        R<int64_t>(), R<int64_t>(),
-        // scale = 2
-        R<int64_t>(0), R<int64_t>(123), R<int64_t>(-123),
-        R<int64_t>(12345), R<int64_t>(-12345),
-        R<int64_t>(12345678), R<int64_t>(-12345678),
-        R<int64_t>(123456789012345678LL), R<int64_t>(-123456789012345678LL),
-        R<int64_t>(1234567890123456789LL), R<int64_t>(-1234567890123456789LL),
-        R<int64_t>(), R<int64_t>(),
-        R<int64_t>(), R<int64_t>(),
-    },
-    ConcatinateValues<Decimal128>(inVarchar, inVarchar),
-    inVarchar
-);
+    ConcatinateValues<Decimal128>(inVarchar, inVarchar), inVarchar);
 
-class AggregatorCastTest
-    : public ::testing::TestWithParam<std::tuple<DataTypeId, int32_t, DataTypeId>> {
-};
+class AggregatorCastTest : public ::testing::TestWithParam<std::tuple<DataTypeId, int32_t, DataTypeId>> {};
 
 // test execution functions
 template <typename InType, typename OutType>
-static void TestNumericInputNumericOutput(AggregatorCastTestClass &agg,
-    const InType &inValue, const R<OutType> &expected)
+static void TestNumericInputNumericOutput(AggregatorCastTestClass &agg, const InType &inValue,
+    const R<OutType> &expected)
 {
     bool overflow = false;
     OutType result = agg.TestCastWithOverflow<InType, OutType>(inValue, overflow);
@@ -971,8 +921,8 @@ static void TestNumericInputNumericOutput(AggregatorCastTestClass &agg,
 }
 
 template <typename InType, typename OutType>
-static void TestNumericInputDecimalOutput(AggregatorCastTestClass &agg,
-    const InType &inValue, const int32_t valueIndex, const std::vector<R<OutType>> &expected)
+static void TestNumericInputDecimalOutput(AggregatorCastTestClass &agg, const InType &inValue, const int32_t valueIndex,
+    const std::vector<R<OutType>> &expected)
 {
     int32_t expectedIndex = valueIndex;
     bool overflow = false;
@@ -1038,8 +988,8 @@ static void TestNumericInput(AggregatorCastTestClass &agg, const int32_t valueIn
 }
 
 template <typename InType, typename OutType>
-static void TestDecimalInputNumericOutput(AggregatorCastTestClass &agg,
-    const InType &inValue, const int32_t valueIndex, const std::vector<R<OutType>> &expected)
+static void TestDecimalInputNumericOutput(AggregatorCastTestClass &agg, const InType &inValue, const int32_t valueIndex,
+    const std::vector<R<OutType>> &expected)
 {
     int32_t expectedIndex = valueIndex;
     bool overflow = false;
@@ -1085,8 +1035,8 @@ static void TestDecimalInputNumericOutput(AggregatorCastTestClass &agg,
 }
 
 template <typename InType, typename OutType>
-static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg,
-    const InType &inValue, const int32_t valueIndex, const std::vector<R<OutType>> &expected)
+static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg, const InType &inValue, const int32_t valueIndex,
+    const std::vector<R<OutType>> &expected)
 {
     int32_t expectedIndex = valueIndex;
     bool overflow = false;
@@ -1242,20 +1192,13 @@ TEST_P(AggregatorCastTest, verify_cast)
     }
 }
 
-static std::vector<DataTypeId> testTypes { OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE,
+static std::vector<DataTypeId> testTypes{ OMNI_SHORT,     OMNI_INT,        OMNI_LONG,   OMNI_DOUBLE,
     OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR };
 
-INSTANTIATE_TEST_CASE_P(
-    AggregatorTest,
-    AggregatorCastTest,
-    ::testing::Combine(
-        ::testing::ValuesIn(testTypes),
-        ::testing::Range(0, numValues),
-        ::testing::ValuesIn(testTypes)
-    ),
-    [](const testing::TestParamInfo<AggregatorCastTest::ParamType>& info) {
-        return TypeUtil::TypeToStringLog(std::get<0>(info.param)) + "_"
-            + std::to_string(std::get<1>(info.param)) + "_"
-            + TypeUtil::TypeToStringLog(std::get<2>(info.param));
+INSTANTIATE_TEST_CASE_P(AggregatorTest, AggregatorCastTest,
+    ::testing::Combine(::testing::ValuesIn(testTypes), ::testing::Range(0, numValues), ::testing::ValuesIn(testTypes)),
+    [](const testing::TestParamInfo<AggregatorCastTest::ParamType> &info) {
+        return TypeUtil::TypeToStringLog(std::get<0>(info.param)) + "_" + std::to_string(std::get<1>(info.param)) +
+            "_" + TypeUtil::TypeToStringLog(std::get<2>(info.param));
     });
 }

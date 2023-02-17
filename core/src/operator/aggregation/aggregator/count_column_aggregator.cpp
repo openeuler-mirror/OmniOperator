@@ -7,9 +7,9 @@
 
 namespace omniruntime {
 namespace op {
-template<bool addIf>
-VECTORIZE_LOOP NO_INLINE
-void addConditionalCountRaw(int64_t &res, const size_t rowCount, const uint8_t * __restrict condition)
+template <bool addIf>
+VECTORIZE_LOOP NO_INLINE void addConditionalCountRaw(int64_t &res, const size_t rowCount,
+    const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -37,8 +37,8 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::E
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-    const uint8_t *nullMap, const int32_t *indexMap)
+    AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
 {
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
@@ -50,22 +50,22 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
         int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
         ptr += vector->GetPositionOffset();
 
-        int64_t noUsed {};
+        int64_t noUsed{};
 
         if (indexMap == nullptr) {
             ptr += rowOffset;
             if (nullMap == nullptr) {
                 add<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount);
             } else {
-                addConditional<int64_t, int64_t, countAllConditionalOp<false>>(
-                    &(state.count), noUsed, ptr, rowCount, nullMap);
+                addConditional<int64_t, int64_t, countAllConditionalOp<false>>(&(state.count), noUsed, ptr, rowCount,
+                    nullMap);
             }
         } else {
             if (nullMap == nullptr) {
                 addDict<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
             } else {
-                addDictConditional<int64_t, int64_t, countAllConditionalOp<false>>(
-                    &(state.count), noUsed, ptr, rowCount, nullMap, indexMap);
+                addDictConditional<int64_t, int64_t, countAllConditionalOp<false>>(&(state.count), noUsed, ptr,
+                    rowCount, nullMap, indexMap);
             }
         }
     }
@@ -73,8 +73,8 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-    const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
@@ -113,8 +113,8 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
                 }
             } else {
                 for (size_t i = 0; i < rowCount; ++i) {
-                    countAllConditionalOp<false>(
-                        &(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL, nullMap[i]);
+                    countAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL,
+                        nullMap[i]);
                 }
             }
         }

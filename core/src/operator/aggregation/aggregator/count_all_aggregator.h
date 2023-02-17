@@ -14,8 +14,8 @@ class CountAllAggregator : public CountColumnAggregator<RAW_IN, PARTIAL_OUT, NUL
 public:
     ~CountAllAggregator() override = default;
 
-    static std::unique_ptr<Aggregator> Create(
-        const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels)
     {
         if constexpr (OUT_ID != OMNI_LONG) {
             LogError("Error in count all aggregator: Expecting long output type. Got %s",
@@ -26,8 +26,8 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes(
-                "count all", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes("count all", inputTypes, outputTypes,
+                IN_ID, OUT_ID)) {
                 return nullptr;
             }
             return std::unique_ptr<CountAllAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
@@ -37,8 +37,8 @@ public:
 
 protected:
     CountAllAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(
-            OMNI_AGGREGATION_TYPE_COUNT_ALL, outputTypes, channels)
+        : CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(OMNI_AGGREGATION_TYPE_COUNT_ALL,
+        outputTypes, channels)
     {}
 
     virtual ALWAYS_INLINE Vector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
@@ -49,8 +49,8 @@ protected:
             indexMap.Release();
             return nullptr;
         } else {
-            return TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::GetVector(
-                vectorBatch, rowOffset, rowCount, nullMap, indexMap, channelIdx);
+            return TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::GetVector(vectorBatch, rowOffset, rowCount,
+                nullMap, indexMap, channelIdx);
         }
     }
 };

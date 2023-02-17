@@ -37,8 +37,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     } else {
         auto preMinVal = reinterpret_cast<char *>(state.val);
 
-        int32_t result = memcmp(
-            preMinVal, reinterpret_cast<char *>(minVal), std::min(state.count, static_cast<int64_t>(minLen)));
+        int32_t result =
+            memcmp(preMinVal, reinterpret_cast<char *>(minVal), std::min(state.count, static_cast<int64_t>(minLen)));
         if (result > 0 || (result == 0 && state.count > minLen)) {
             state.val = minVal;
             state.count = minLen;
@@ -47,8 +47,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 }
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+bool MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+    VectorBatch *vectorBatch)
 {
     // must no null inpout
     if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
@@ -63,8 +63,8 @@ bool MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ca
 #endif
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
-    const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex)
+void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+    std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -78,8 +78,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ex
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
-    const uint8_t *nullMap, const int32_t *indexMap)
+    AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
 {
     VarcharVector *vector = static_cast<VarcharVector *>(v);
 
@@ -102,8 +102,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 
 template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
-    const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     VarcharVector *vector = static_cast<VarcharVector *>(v);
 

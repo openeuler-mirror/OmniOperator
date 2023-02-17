@@ -18,24 +18,22 @@ enum class GroupByFieldHandleType {
     onlyOneKey
 };
 
-template <typename Hashmap>
-class GroupbyColumnSerializeHandler {
+template <typename Hashmap> class GroupbyColumnSerializeHandler {
 public:
     Hashmap hashmap;
     using Result = typename Hashmap::ResultType;
 
-    type::StringRef
-    HandleOneRow(size_t rowId, VectorBatch *groupVectors, ExecutionContext &executionContext)
+    type::StringRef HandleOneRow(size_t rowId, VectorBatch *groupVectors, ExecutionContext &executionContext)
     {
         const uint8_t *ptr = nullptr;
         uint32_t len = 0;
-        for (int i = 0; i<groupVectors->GetVectorCount(); i++) {
+        for (int i = 0; i < groupVectors->GetVectorCount(); i++) {
             auto *curVector = groupVectors->GetVector(i);
             auto strRef = curVector->SerializeValue(rowId, *executionContext.GetArena(), ptr);
-            len += strRef.size ;
+            len += strRef.size;
         }
 
-        return {ptr, len};
+        return { ptr, len };
     }
 
     Result InsertValueToHashmap(size_t rowId, VectorBatch *groupVectors, ExecutionContext &executionContext)
@@ -44,8 +42,8 @@ public:
         return hashmap.Emplace(emplaceKey);
     }
 
-    static void ParseKeyToCols(
-        const StringRef &key, VectorBatch *vectorBatch, const int32_t start, const int32_t length, const int rowId)
+    static void ParseKeyToCols(const StringRef &key, VectorBatch *vectorBatch, const int32_t start,
+        const int32_t length, const int rowId)
     {
         auto *pos = reinterpret_cast<const uint8_t *>(key.data);
         const int32_t end = start + length;
