@@ -230,7 +230,11 @@ TEST(NativeOmniJoinTest, TestComparePerf)
     EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
 
     std::vector<VectorBatch *> lookupJoinOutputWithoutJit;
-    lookupJoinOperatorWithoutJit->GetOutput(lookupJoinOutputWithoutJit);
+    while (lookupJoinOperatorWithoutJit->GetStatus() != OMNI_STATUS_FINISHED) {
+        std::vector<VectorBatch *> result;
+        lookupJoinOperatorWithoutJit->GetOutput(result);
+        lookupJoinOutputWithoutJit.push_back(result[0]);
+    }
 
     timer.CalculateElapse();
     wallElapsed = timer.GetWallElapse();
@@ -269,7 +273,11 @@ TEST(NativeOmniJoinTest, TestComparePerf)
     EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
 
     std::vector<VectorBatch *> lookupJoinOutputWithJit;
-    lookupJoinOperatorWithJit->GetOutput(lookupJoinOutputWithJit);
+    while (lookupJoinOperatorWithJit->GetStatus() != OMNI_STATUS_FINISHED) {
+        std::vector<VectorBatch *> result;
+        lookupJoinOperatorWithJit->GetOutput(result);
+        lookupJoinOutputWithJit.push_back(result[0]);
+    }
 
     timer.CalculateElapse();
     wallElapsed = timer.GetWallElapse();

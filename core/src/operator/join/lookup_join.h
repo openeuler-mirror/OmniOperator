@@ -125,7 +125,22 @@ public:
     void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
         std::vector<VectorBatch *> &outputVecBatches);
 
+    bool HasNext()
+    {
+        return positionReturned < static_cast<int32_t>(probeIndex.size());
+    }
+
+    void Clear()
+    {
+        isSequentialProbeIndices = true;
+        probeIndex.clear();
+        buildIndex.clear();
+        positionReturned = 0;
+    }
+
 private:
+    int32_t positionReturned = 0;
+    int32_t maxRowCount = 0;
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
     int32_t *buildOutputCols;
