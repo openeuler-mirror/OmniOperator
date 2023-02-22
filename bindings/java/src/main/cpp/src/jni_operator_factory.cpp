@@ -1027,6 +1027,11 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
     vector<uint32_t> aggFuncTypes;
     GetIntVector(env, jAggFuncType, aggFuncTypes);
+
+    auto aggFilterCount = env->GetArrayLength(jAggChannelsFilter);
+    std::string aggFilterArr[aggFilterCount];
+    GetExpressions(env, jAggChannelsFilter, aggFilterArr, aggFilterCount);
+
     vector<uint32_t> maskColumns;
     GetIntVector(env, jMaskCols, maskColumns);
 
@@ -1081,7 +1086,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFactory_createAggregationWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jobjectArray jAggChannelsFilter, jstring jSourceType,
     jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws,
     jbooleanArray jOutputPartials, jstring jOperatorConfig)
 {
@@ -1138,11 +1143,17 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
         aggKeysExprsVector.push_back(aggKeysExprs);
         JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, aggKeysExprs)
     }
-
+    // parse the filter expressions
+    auto aggChannelsFilterLength = static_cast<int32_t>(env->GetArrayLength(jAggChannelsFilter));
+    vector<omniruntime::expressions::Expr *> aggFilterExprs;
+    JNI_METHOD_START
+    // parse the expressions
+    GetFilterExprsFromJson(aggFilterArr, aggChannelsFilterLength, aggFilterExprs);
+    JNI_METHOD_END_WITH_EXPRS_OVERFLOW(0L, aggFilterExprs, overflowConfig)
     AggregationWithExprOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
     nativeOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprsVector,
-        sourceDataTypes, outDataTypes, aggFuncTypes, maskColumns, inputRaws, outputPartials, *overflowConfig);
+        sourceDataTypes, outDataTypes, aggFuncTypes, aggFilterExprs,maskColumns, inputRaws, outputPartials, *overflowConfig);
     JNI_METHOD_END_WITH_MULTI_EXPRS(0L, groupByKeysExprs, aggKeysExprsVector)
 
     Expr::DeleteExprs(groupByKeysExprs);

@@ -7,7 +7,7 @@
 #define NON_GROUP_AGGREGATION_EXPR_H
 
 #include "operator/operator_factory.h"
-#include "operator/projection/projection.h"
+#include "operator/filter/filter_and_project.h"
 #include "operator/aggregation/non_group_aggregation.h"
 #include "type/data_types.h"
 
@@ -17,7 +17,7 @@ class AggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     AggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
         std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
-        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<omniruntime::expressions::Expr *> &aggFilterExprs,std::vector<uint32_t> &maskColumns,
         std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OverflowConfig &overflowConfig);
 
     ~AggregationWithExprOperatorFactory() override;
@@ -29,13 +29,15 @@ private:
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<Projection>> projections;
     std::vector<ProjFunc> projectFuncs;
+    int32_t aggFilterNum;
+    std::vector<SimpleFilter *> aggSimpleFilters;
     AggregationOperatorFactory *aggOperatorFactory;
 };
 
 class AggregationWithExprOperator : public Operator {
 public:
     AggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, AggregationOperator *AggOperator);
+        std::vector<ProjFunc> &projectFuncs, int32_t &aggFilterNum,std::vector<SimpleFilter *> aggSimpleFilters, AggregationOperator *AggOperator);
 
     ~AggregationWithExprOperator() override;
 
@@ -49,6 +51,8 @@ private:
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<ProjFunc> projectFuncs;
+    int32_t aggFilterNum;
+    std::vector<SimpleFilter *> aggSimpleFilters;
     AggregationOperator *aggOperator;
 };
 }

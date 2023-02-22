@@ -77,19 +77,44 @@ Operator *AggregationOperatorFactory::CreateOperator()
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto aggCount = aggregators.size();
-    for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
-        auto aggregator = aggregators[aggIdx].get();
-        auto &state = aggsStates[aggIdx];
+    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark){
+        for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
+            auto aggregator = aggregators[aggIdx].get();
+            auto &state = aggsStates[aggIdx];
 
 #ifdef ENABLE_HMPP
-        if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
+            if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
+                aggregator->ProcessGroupWithHMPP(state, vecBatch);
+            } else {
+                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                    aggregator->ProcessGroup(state, vecBatch, rowIdx);
+                }
+            }
+#else
+
+            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                if (static_cast<BooleanVector *>(vecBatch->GetVector(vecBatch->GetVectorCount() - aggCount + aggIdx))
+                        ->GetValue(rowIdx)) {
+                    aggregator->ProcessGroup(state, vecBatch, rowIdx);
+                }
+            }
+#endif
+        }
+    }else{
+        for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
+            auto aggregator = aggregators[aggIdx].get();
+            auto &state = aggsStates[aggIdx];
+
+#ifdef ENABLE_HMPP
+            if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
         } else {
             aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }
 #else
-        aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
+            aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
 #endif
+        }
     }
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;

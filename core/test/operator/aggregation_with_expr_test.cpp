@@ -63,8 +63,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(0);
     auto *hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -142,8 +142,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     aggFilters.reserve(0);
 
     auto hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -208,8 +208,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     aggFilters.reserve(0);
 
     auto hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -287,8 +287,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
 
 
     auto *hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters,sourceTypes, aggsOutputTypes,
-        aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggsOutputTypes, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
@@ -363,8 +363,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
     aggFilters.push_back(nullptr);
 
     auto *hashAggWithExprFinalOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters,sourceTypes, aggsOutputTypes,
-        aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggsOutputTypes, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *hashAggWithExprFinalOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprFinalOperatorFactory));
 
@@ -429,8 +429,15 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_expr)
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
     auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
     auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
-    auto *aggWithExprOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys,
-        sourceTypes, aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
+
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    aggFilters.reserve(2);
+    aggFilters.push_back(nullptr);
+    aggFilters.push_back(nullptr);
+
+    auto *aggWithExprOperatorFactory =
+        new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggOutputTypesWrap,
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
     auto *aggWithExprOperator =
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
 
@@ -484,8 +491,14 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
     auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
     auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
-    auto *aggWithExprOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys,
-        sourceTypes, aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    aggFilters.reserve(2);
+    aggFilters.push_back(nullptr);
+    aggFilters.push_back(nullptr);
+
+    auto *aggWithExprOperatorFactory =
+        new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggOutputTypesWrap,
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
     auto *aggWithExprOperator =
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
 
@@ -622,8 +635,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
     aggFilters.reserve(0);
 
     auto hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *hashAggWithExprOperator =
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
     uintptr_t dataAddress[colSize];
@@ -666,65 +679,74 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
 }
 
 TEST(AggregationWithExprOperatorTest, test_agg_sum_exprFilter)
-    {
-        const int32_t dataSize = 8;
-        const int32_t groupByNum = 0;
-        const int32_t expectDataSize = 1;
+{
+    char sparkEngine[] = "Spark";
+    EngineUtil::GetInstance().SetEngineType(sparkEngine);
 
-        // prepare data
-        // sum(c1*5), sum(c3) group by c0%3, c2 => 2, 10, 180, 36
-        int64_t data1[] = {2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}; // c0
-        int64_t data2[] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};      // c1
-        int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};              // c2
-        int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};              // c3
+    const int32_t dataSize = 8;
+    const int32_t groupByNum = 0;
+    const int32_t expectDataSize = 1;
 
-        DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
-        DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
-        VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    // prepare data
+    // sum(c1*5), sum(c3) group by c0%3, c2 => 2, 10, 180, 36
+    int64_t data1[] = {2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}; // c0
+    int64_t data2[] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};      // c1
+    int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};              // c2
+    int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};              // c3
 
-
-        std::vector<Expr *> groupByKeys = {};
-
-        // aggKeys
-        LiteralExpr *mulRight = new LiteralExpr(5, LongType());
-        mulRight->longVal = 5;
-        BinaryExpr *mulExpr =
-                new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(1, LongType()), mulRight, LongType());
-        std::vector<Expr *> aggKeys1 = { mulExpr };
-        std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1 };
-
-        std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM };
-        std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1) };
-
-        auto overflowConfig = new OverflowConfig();
-
-        auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-        auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-        auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
-        auto *aggWithExprOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys,
-                                                                                  sourceTypes, aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
-        auto *aggWithExprOperator =
-                static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
-
-        aggWithExprOperator->AddInput(vecBatch);
-        std::vector<VectorBatch *> outputVecBatchs;
-        aggWithExprOperator->GetOutput(outputVecBatchs);
-
-        int64_t expData1[] = {180};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
 
-        DataTypes expectTypes(std::vector<DataTypePtr>({ LongType() }));
-        VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
+    std::vector<Expr *> groupByKeys = {};
 
-        VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-        EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    // aggKeys
+    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
+    mulRight->longVal = 5;
+    BinaryExpr *mulExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(1, LongType()), mulRight, LongType());
+    std::vector<Expr *> aggKeys1 = { mulExpr };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1 };
 
-        Expr::DeleteExprs(groupByKeys);
-        Expr::DeleteExprs(aggAllKeys);
-        omniruntime::op::Operator::DeleteOperator(aggWithExprOperator);
-        DeleteOperatorFactory(aggWithExprOperatorFactory);
-        VectorHelper::FreeVecBatch(expectVecorBatch);
-        VectorHelper::FreeVecBatches(outputVecBatchs);
-        delete overflowConfig;
-    }
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM };
+    std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1) };
+
+    auto overflowConfig = new OverflowConfig();
+
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+
+    std::vector<omniruntime::expressions::Expr *> aggFilters;
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+                                      new LiteralExpr(2000, IntType()), BooleanType());
+
+    aggFilters.push_back(filterExpr);
+    auto *aggWithExprOperatorFactory =
+        new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggOutputTypesWrap,
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
+    auto *aggWithExprOperator =
+        static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
+
+    aggWithExprOperator->AddInput(vecBatch);
+    std::vector<VectorBatch *> outputVecBatchs;
+    aggWithExprOperator->GetOutput(outputVecBatchs);
+
+    int64_t expData1[] = {180};
+
+    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType() }));
+    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
+
+    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(aggWithExprOperator);
+    DeleteOperatorFactory(aggWithExprOperatorFactory);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecBatchs);
+    delete overflowConfig;
+}
 }

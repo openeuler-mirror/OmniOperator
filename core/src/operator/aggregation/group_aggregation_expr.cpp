@@ -31,7 +31,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     // do groupByKeys and aggsKeys expression handle, and get new sourceTypes, groupby and agg columnar index
     uint32_t projectColNum = groupByNum + aggColNum;
-    //    uint32_t projectColNum = groupByNum + aggColNum +aggFilterNum;
+    //    uint32_t projectColNum = groupByNum + aggColNum ;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         projectKeys[i] = groupByKeys.at(i);
