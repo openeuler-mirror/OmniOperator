@@ -32,8 +32,8 @@ T GetMax()
         return FLT_MAX;
     } else if constexpr (std::is_same_v<T, double>) {
         return DBL_MAX;
-    } else if constexpr (std::is_same_v<T, Int128>) {
-        return std::numeric_limits<Int128>::max();
+    } else if constexpr (std::is_same_v<T, int128>) {
+        return std::numeric_limits<int128>::max();
     } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
         return omniruntime::type::Decimal128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
     } else {

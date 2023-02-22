@@ -27,7 +27,7 @@ public:
 
     static std::vector<bool> WrapWithVector(bool value, int num);
 
-    static std::vector<std::vector<uint32_t>> WrapWithVector(std::vector<uint32_t> &value);
+    static std::vector<std::vector<uint32_t>> WrapWithVector(const std::vector<uint32_t> &value);
 
     static std::vector<std::vector<int32_t>> WrapWithVector(std::vector<int32_t> &value);
 

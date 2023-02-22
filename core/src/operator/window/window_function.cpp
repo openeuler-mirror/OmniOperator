@@ -155,9 +155,7 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         vector = new LongVector(allocator, rowCount);
         inputVecBatchForAgg->SetVector(0, vector);
-        for (int32_t position = start; position <= end; ++position) {
-            aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, position - start);
-        }
+        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, start, rowCount);
         delete vector;
         vector = nullptr;
         return;
@@ -173,7 +171,8 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
             inputVecBatchForAgg->SetVector(0, vector);
         }
         uint32_t vectorPosition = DecodePosition(sliceAddress);
-        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, static_cast<int32_t>(vectorPosition));
+        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg,
+                                 static_cast<int32_t>(vectorPosition), 1);
     }
 }
 }

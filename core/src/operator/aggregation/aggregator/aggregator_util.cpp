@@ -34,7 +34,7 @@ std::vector<bool> AggregatorUtil::WrapWithVector(bool value, int num)
     return retVector;
 }
 
-std::vector<std::vector<uint32_t>> AggregatorUtil::WrapWithVector(std::vector<uint32_t> &values)
+std::vector<std::vector<uint32_t>> AggregatorUtil::WrapWithVector(const std::vector<uint32_t> &values)
 {
     std::vector<std::vector<uint32_t>> twoLayerVectors;
     twoLayerVectors.reserve(values.size());

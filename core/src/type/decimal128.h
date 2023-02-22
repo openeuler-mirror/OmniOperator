@@ -11,6 +11,7 @@
 #include <cstring>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "decimal_base.h"
+#include "width_integer.h"
 
 namespace omniruntime {
 namespace type {

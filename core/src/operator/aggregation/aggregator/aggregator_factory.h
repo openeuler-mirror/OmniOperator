@@ -424,14 +424,14 @@ static std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType a
 {
     switch (aggType) {
         case OMNI_AGGREGATION_TYPE_SUM: {
-            if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NotSupport) {
+            if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
                 return std::make_unique<SumSparkAggregatorFactory>();
             } else {
                 return std::make_unique<SumAggregatorFactory>();
             }
         }
         case OMNI_AGGREGATION_TYPE_AVG: {
-            if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NotSupport) {
+            if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
                 return std::make_unique<AverageSparkAggregatorFactory>();
             } else {
                 return std::make_unique<AverageAggregatorFactory>();

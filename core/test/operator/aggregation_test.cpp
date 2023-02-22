@@ -9,7 +9,6 @@
 #include <mutex>
 #include <cstdarg>
 #include <gtest/gtest.h>
-#include "operator/aggregation/aggregator/aggregator_factory_impl.h"
 #include "operator/aggregation/aggregator/all_aggregators.h"
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/group_aggregation.h"
@@ -2867,7 +2866,7 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     Decimal128 expected1("99999999999999999.99999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
-    EXPECT_FALSE(emptyVec->GetValue(0));
+    EXPECT_FALSE(isOverflowVec->GetValue(0));
 
     auto sumDeciAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()), channal0, false, false);

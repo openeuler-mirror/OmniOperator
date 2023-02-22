@@ -100,4 +100,5 @@ std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
     std::vector<omniruntime::type::DataTypePtr> &&fieldTypes);
 }
 }
+
 #endif // OMNI_RUNTIME_TYPE_INFER_H
