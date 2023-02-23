@@ -9,6 +9,7 @@
 #include "operator/operator_factory.h"
 #include "operator/filter/filter_and_project.h"
 #include "operator/aggregation/non_group_aggregation.h"
+#include "operator/projection/projection.h"
 #include "type/data_types.h"
 
 namespace omniruntime {
@@ -17,8 +18,9 @@ class AggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     AggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
         std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
-        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<omniruntime::expressions::Expr *> &aggFilterExprs,std::vector<uint32_t> &maskColumns,
-        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OverflowConfig &overflowConfig);
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+        std::vector<omniruntime::expressions::Expr *> &aggFilterExprs, std::vector<uint32_t> &maskColumns,
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig &overflowConfig);
 
     ~AggregationWithExprOperatorFactory() override;
 
@@ -37,7 +39,8 @@ private:
 class AggregationWithExprOperator : public Operator {
 public:
     AggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, int32_t &aggFilterNum,std::vector<SimpleFilter *> aggSimpleFilters, AggregationOperator *AggOperator);
+        std::vector<ProjFunc> &projectFuncs, std::vector<SimpleFilter *> &aggSimpleFilters,
+        AggregationOperator *AggOperator);
 
     ~AggregationWithExprOperator() override;
 

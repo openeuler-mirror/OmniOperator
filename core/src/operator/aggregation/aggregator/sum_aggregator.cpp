@@ -47,7 +47,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         } else {
             // IN_ID == OMNI_DECIMAL128
             LogDebug("HMPP-Agg-sum");
-            HmppDecimal128 sumVal {};
+            HmppDecimal128 sumVal{};
             result = HMPPS_Sum_decimal128(
                 static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
@@ -100,7 +100,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
     int32_t offset;
     auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
 
-    OutType result {};
+    OutType result{};
     bool overflow = state.count < 0;
 
     if constexpr (OUT_ID == OMNI_VARCHAR) {
@@ -131,7 +131,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-    *reinterpret_cast<ResultType *>(state.val) = ResultType {};
+    *reinterpret_cast<ResultType *>(state.val) = ResultType{};
     state.count = 0;
 }
 
@@ -170,6 +170,44 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *vector,
+    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    if (state.val == nullptr) {
+        this->InitState(state);
+    }
+    ResultType *res = reinterpret_cast<ResultType *>(state.val);
+
+    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
+    ptr += vector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        ptr += rowOffset;
+        if (nullMap == nullptr) {
+            AddFilter<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, boolPtr);
+        } else {
+            if constexpr (std::is_floating_point_v<InType>) {
+                SumConditionalFloat<InType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
+            } else {
+                AddConditionalFilter<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count,
+                    ptr, rowCount, nullMap, boolPtr);
+            }
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictFilter<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap,
+                boolPtr);
+        } else {
+            AddDictConditionalFilter<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count,
+                ptr, rowCount, nullMap, indexMap, boolPtr);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -191,6 +229,36 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         } else {
             AddDictConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap, indexMap);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
+    ptr += vector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        ptr += rowOffset;
+        if (nullMap == nullptr) {
+            AddUseRowIndexFilter<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, boolPtr);
+        } else {
+            // Reza: can we use customize float operation similar to sumConditionalFloat
+            AddConditionalUseRowIndexFilter<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
+                aggIdx, ptr, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictUseRowIndexFilter<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap,
+                boolPtr);
+        } else {
+            AddDictConditionalUseRowIndexFilter<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
+                rowStates, aggIdx, ptr, nullMap, indexMap, boolPtr);
         }
     }
 }

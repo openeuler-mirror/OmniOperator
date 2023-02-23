@@ -44,8 +44,8 @@ private:
 class HashAggregationWithExprOperator : public Operator {
 public:
     HashAggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, int32_t &aggFilterNum, HashAggregationOperator *hashAggOperator,
-        std::vector<SimpleFilter *> aggSimpleFilters);
+        std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator,
+        std::vector<SimpleFilter *> &aggSimpleFilters);
 
     ~HashAggregationWithExprOperator() override;
 

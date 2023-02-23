@@ -15,6 +15,7 @@
 #include "operator/execution_context.h"
 #include "operator/util/function_type.h"
 #include "util/type_util.h"
+#include "src/util/config_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -136,6 +137,36 @@ public:
         }
     }
 
+    // for no groupby aggregation  with filter
+    virtual void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+        const int32_t filterIndex)
+    {
+#ifdef DEBUG
+        LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
+#endif
+
+        int32_t rowEnd = rowOffset + vectorBatch->GetRowCount();
+        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterIndex));
+        bool needFilterJude = false;
+        for (int32_t start = 0, end = rowEnd - 1; start <= end; ++start, --end) {
+            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
+                needFilterJude = true;
+                break;
+            }
+        }
+        if (needFilterJude) {
+            for (int32_t i = rowOffset; i < rowEnd; ++i) {
+                if (booleanVector->GetValue(i)) {
+                    ProcessGroup(state, vectorBatch, i);
+                }
+            }
+        } else {
+            for (int32_t i = rowOffset; i < rowEnd; ++i) {
+                ProcessGroup(state, vectorBatch, i);
+            }
+        }
+    }
+
     // for groupby hash aggregation
     virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset)
@@ -143,10 +174,46 @@ public:
 #ifdef DEBUG
         LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
 #endif
+
         int32_t rowIndex = rowOffset;
         size_t rowCount = rowStates.size();
+
         for (size_t i = 0; i < rowCount; ++i) {
             ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+        }
+    }
+
+    // for groupby hash aggregation
+    virtual void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+        VectorBatch *vectorBatch, const int32_t filterStart, const int32_t rowOffset)
+    {
+#ifdef DEBUG
+        LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
+#endif
+        int32_t rowIndex = rowOffset;
+        size_t rowCount = rowStates.size();
+        bool needFilterJude = false;
+
+        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterStart + aggIdx));
+        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
+            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
+                needFilterJude = true;
+                break;
+            }
+        }
+
+        if (needFilterJude) {
+            for (size_t i = 0; i < rowCount; ++i) {
+                if (booleanVector->GetValue(i)) {
+                    ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+                    continue;
+                }
+                rowIndex++;
+            }
+        } else {
+            for (size_t i = 0; i < rowCount; ++i) {
+                ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+            }
         }
     }
 

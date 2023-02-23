@@ -48,6 +48,10 @@ public:
 
     static StringToDateFormatRule GetStringToDateFormatRule();
 
+    static void SetSupportExprFilterRule(SupportExprFilterRule rule);
+
+    static SupportExprFilterRule GetSupportExprFilterRule();
+
     static Policy *GetPolicy();
 
     static bool IsEnableHMPP();
@@ -77,6 +81,8 @@ private:
     static void InitSupportContainerVecRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitStringToDateFormatRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitSupportExprFilterRule(Policy *policy, const std::string &ruleValueStr);
 
     static Policy *InitializePolicy();
 };

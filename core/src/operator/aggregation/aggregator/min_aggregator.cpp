@@ -149,6 +149,40 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *vector,
+    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    if (state.val == nullptr) {
+        InitState(state);
+    }
+    ResultType *res = reinterpret_cast<ResultType *>(state.val);
+
+    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
+    ptr += vector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        ptr += rowOffset;
+        if (nullMap == nullptr) {
+            AddFilter<InType, ResultType, MinOp<InType, ResultType>>(res, state.count, ptr, rowCount, boolPtr);
+        } else {
+            AddConditionalFilter<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+                rowCount, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictFilter<InType, ResultType, MinOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap,
+                boolPtr);
+        } else {
+            AddDictConditionalFilter<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(res, state.count,
+                ptr, rowCount, nullMap, indexMap, boolPtr);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -169,6 +203,36 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         } else {
             AddDictConditionalUseRowIndex<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap, indexMap);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
+    ptr += vector->GetPositionOffset();
+
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        ptr += rowOffset;
+        if (nullMap == nullptr) {
+            AddUseRowIndexFilter<InType, ResultType, MinOp<InType, ResultType>>(rowStates, aggIdx, ptr, boolPtr);
+        } else {
+            AddConditionalUseRowIndexFilter<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(rowStates,
+                aggIdx, ptr, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictUseRowIndexFilter<InType, ResultType, MinOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap,
+                boolPtr);
+        } else {
+            AddDictConditionalUseRowIndexFilter<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(
+                rowStates, aggIdx, ptr, nullMap, indexMap, boolPtr);
         }
     }
 }

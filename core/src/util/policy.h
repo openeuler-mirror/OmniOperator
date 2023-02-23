@@ -17,6 +17,15 @@ enum class RoundingRule {
     DOWN
 };
 
+
+enum class SupportExprFilterRule {
+    // NO_EXPR means vectorbach does not contain a filter column
+    NO_EXPR = 0,
+
+    // EXPR_FILTER means vectorbach contain a filter column
+    EXPR_FILTER
+};
+
 /**
  * Defines the differences in Decimal math function between different engines.
  */
@@ -109,19 +118,22 @@ public:
     Policy()
         : Policy(RoundingRule::HALF_UP, CheckReScaleRule::NOT_CHECK_RESCALE, EmptySearchStrReplaceRule::REPLACE,
         CastDecimalToDoubleRule::CAST, NegativeStartIndexOutOfBoundsRule::EMPTY_STRING,
-        SupportContainerVecRule::SUPPORT, StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION) {};
+        SupportContainerVecRule::SUPPORT, StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION,
+        SupportExprFilterRule::NO_EXPR) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
         NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule,
-        SupportContainerVecRule supportContainerVecRule, StringToDateFormatRule stringToDateFormatRule)
+        SupportContainerVecRule supportContainerVecRule, StringToDateFormatRule stringToDateFormatRule,
+        SupportExprFilterRule supportExprFilterRule)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
           castDecimalToDoubleRule(castDecimalToDoubleRule),
           negativeStartIndexOutOfBoundsRule(negativeStartIndexOutOfBoundsRule),
           supportContainerVecRule(supportContainerVecRule),
-          stringToDateFormatRule(stringToDateFormatRule) {};
+          stringToDateFormatRule(stringToDateFormatRule),
+          supportExprFilterRule(supportExprFilterRule) {};
 
     RoundingRule GetRoundingRule()
     {
@@ -193,6 +205,18 @@ public:
         stringToDateFormatRule = rule;
     }
 
+    SupportExprFilterRule GetSupportExprFilterRule() const
+    {
+        return supportExprFilterRule;
+    }
+
+
+    void SetSupportExprFilterRule(SupportExprFilterRule rule)
+    {
+        supportExprFilterRule = rule;
+    }
+
+
 protected:
     RoundingRule roundingRule;
     CheckReScaleRule checkReScaleRule;
@@ -201,6 +225,7 @@ protected:
     NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule;
     SupportContainerVecRule supportContainerVecRule;
     StringToDateFormatRule stringToDateFormatRule;
+    SupportExprFilterRule supportExprFilterRule;
 };
 
 #endif // OMNI_RUNTIME_POLICY_H

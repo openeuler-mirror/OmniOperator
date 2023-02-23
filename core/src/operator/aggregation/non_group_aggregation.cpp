@@ -6,6 +6,7 @@
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "util/type_util.h"
+#include "agg_util.h"
 #ifdef ENABLE_HMPP
 #include "util/config_util.h"
 #endif
@@ -76,45 +77,27 @@ Operator *AggregationOperatorFactory::CreateOperator()
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    auto aggCount = aggregators.size();
-    if (EngineUtil::GetInstance().GetEngineType() == EngineType::Spark){
-        for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
-            auto aggregator = aggregators[aggIdx].get();
-            auto &state = aggsStates[aggIdx];
+    uint32_t aggCount = aggregators.size();
+    int32_t filterIndex = vecBatch->GetVectorCount() - aggCount; // rowCount-aggNum
+    for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
+        auto aggregator = aggregators[aggIdx].get();
+        auto &state = aggsStates[aggIdx];
 
 #ifdef ENABLE_HMPP
-            if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
-                aggregator->ProcessGroupWithHMPP(state, vecBatch);
-            } else {
-                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-                    aggregator->ProcessGroup(state, vecBatch, rowIdx);
-                }
-            }
-#else
-
-            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-                if (static_cast<BooleanVector *>(vecBatch->GetVector(vecBatch->GetVectorCount() - aggCount + aggIdx))
-                        ->GetValue(rowIdx)) {
-                    aggregator->ProcessGroup(state, vecBatch, rowIdx);
-                }
-            }
-#endif
-        }
-    }else{
-        for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
-            auto aggregator = aggregators[aggIdx].get();
-            auto &state = aggsStates[aggIdx];
-
-#ifdef ENABLE_HMPP
-            if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
+        if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
         } else {
             aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }
 #else
+        if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
+            aggregator->ProcessGroupFilter(state, vecBatch, 0, filterIndex);
+            filterIndex++;
+        } else {
             aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-#endif
         }
+
+#endif
     }
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;

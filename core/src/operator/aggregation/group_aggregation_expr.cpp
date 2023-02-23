@@ -4,8 +4,7 @@
  */
 
 #include "group_aggregation_expr.h"
-
-#include <utility>
+#include "agg_util.h"
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 
@@ -31,7 +30,6 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     // do groupByKeys and aggsKeys expression handle, and get new sourceTypes, groupby and agg columnar index
     uint32_t projectColNum = groupByNum + aggColNum;
-    //    uint32_t projectColNum = groupByNum + aggColNum ;
     omniruntime::expressions::Expr *projectKeys[projectColNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         projectKeys[i] = groupByKeys.at(i);
@@ -47,12 +45,11 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     // do aggSimpleFilters
     for (int i = 0; i < aggFilterNum; ++i) {
-        SimpleFilter *simpleFilter = nullptr;
         if (aggFilters[i] == nullptr) {
             aggSimpleFilters.push_back(nullptr);
             continue;
         }
-        simpleFilter = new SimpleFilter(*aggFilters[i]);
+        auto simpleFilter = new SimpleFilter(*aggFilters[i]);
         simpleFilter->Initialize(overflowConfig);
         aggSimpleFilters.push_back(simpleFilter);
     }
@@ -109,13 +106,18 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory()
 {
     delete hashAggOperatorFactory;
+    for (auto it : aggSimpleFilters) {
+        delete it;
+        it = nullptr;
+    }
+    aggSimpleFilters.clear();
 }
 
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    auto *op = new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, aggFilterNum,
-        hashAggOperator, aggSimpleFilters);
+    auto *op =
+        new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, hashAggOperator, aggSimpleFilters);
     std::vector<type::DataTypeId> dataTypeIds;
     for (int32_t i = 0; i < originalSourceTypes->GetSize(); ++i) {
         dataTypeIds.push_back(originalSourceTypes->GetType(i)->GetId());
@@ -125,14 +127,13 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,
-    std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs, int32_t &aggFilterNum,
-    HashAggregationOperator *hashAggOperator, std::vector<SimpleFilter *> aggSimpleFilters)
+    std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator,
+    std::vector<SimpleFilter *> &aggSimpleFilters)
     : sourceTypes(sourceTypes),
       projectCols(projectCols),
       projectFuncs(projectFuncs),
-      aggFilterNum(aggFilterNum),
       hashAggOperator(hashAggOperator),
-      aggSimpleFilters(std::move(aggSimpleFilters))
+      aggSimpleFilters(aggSimpleFilters)
 {}
 
 HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
@@ -142,22 +143,12 @@ HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::HashAggProjectRequiredVectors(inputVecBatch, sourceTypes,
-        projectFuncs, projectCols, aggFilterNum, vecAllocator);
-
+    auto aggFilterNum = aggSimpleFilters.size();
+    VectorBatch *newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, sourceTypes, projectFuncs,
+        projectCols, aggFilterNum, vecAllocator);
     // do filter and update newInputVecBatch
     // if is true not filter
-    for (int i = 0; i < aggFilterNum; ++i) {
-        BooleanVector *booleanVector = new BooleanVector(vecAllocator, inputVecBatch->GetRowCount());
-        for (int j = 0; j < inputVecBatch->GetRowCount(); ++j) {
-            if (OperatorUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilters[i], context)) {
-                booleanVector->SetValue(j, true);
-                continue;
-            }
-            booleanVector->SetValue(j, false);
-        }
-        newInputVecBatch->SetVector(projectCols.size() + i, booleanVector);
-    }
+    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, vecAllocator, aggSimpleFilters, context);
     hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

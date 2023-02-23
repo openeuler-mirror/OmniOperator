@@ -41,6 +41,19 @@
     }                                                                                 \
     // macro end
 
+#define JNI_METHOD_END_WITH_THREE_EXPRS(fallBackExpr, toDeleteExprs1, toDeleteExprs2, toDeleteExprs3) \
+    }                                                                                                 \
+    catch (const std::exception &e)                                                                   \
+    {                                                                                                 \
+        Expr::DeleteExprs(toDeleteExprs1);                                                            \
+        Expr::DeleteExprs(toDeleteExprs2);                                                            \
+        Expr::DeleteExprs(toDeleteExprs3);                                                            \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());                                           \
+        return fallBackExpr;                                                                          \
+    }                                                                                                 \
+    // macro end
+
+
 #define JNI_METHOD_END_WITH_OVERFLOW(fallBackExpr, overflowConfig) \
     }                                                              \
     catch (const std::exception &e)                                \

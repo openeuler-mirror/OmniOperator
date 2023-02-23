@@ -30,6 +30,7 @@ public class OmniHashAggregationWithExprOperatorFactory
      *
      * @param groupByChanel the group by chanel
      * @param aggChannels the agg channels
+     * @param aggChannelsFilter the agg filter Expr
      * @param sourceTypes the source types
      * @param aggFunctionTypes the agg function types
      * @param aggOutputTypes the agg output types
@@ -50,6 +51,7 @@ public class OmniHashAggregationWithExprOperatorFactory
      *
      * @param groupByChanel the group by chanel
      * @param aggChannels the agg channels
+     * @param aggChannelsFilter the agg filter Expr
      * @param sourceTypes the source types
      * @param aggFunctionTypes the agg function types
      * @param maskChannels mask channel list for aggregators
@@ -72,6 +74,7 @@ public class OmniHashAggregationWithExprOperatorFactory
      *
      * @param groupByChanel the group by chanel
      * @param aggChannels the agg channels
+     * @param aggChannelsFilter the agg filter Expr
      * @param sourceTypes the source types
      * @param aggFunctionTypes the agg function types
      * @param aggOutputTypes the agg output types
@@ -132,6 +135,7 @@ public class OmniHashAggregationWithExprOperatorFactory
          *
          * @param groupByChanel the group by chanel
          * @param aggChannels the agg channels
+         * @param aggChannelsFilter the agg filter Expr
          * @param sourceTypes the source types
          * @param aggFunctionTypes the agg function types
          * @param maskChannels mask channel list for aggregators
@@ -156,18 +160,12 @@ public class OmniHashAggregationWithExprOperatorFactory
             this.operatorConfig = operatorConfig;
         }
 
-        String[] checkAggChannelsFilter(String[] aggChannelsFilter) {
-            for (int i = 0; i < aggChannelsFilter.length; i++) {
-                aggChannelsFilter[i] = aggChannelsFilter[i] == null ? "" : aggChannelsFilter[i];
-            }
-            return aggChannelsFilter;
-        }
-
         /**
          * Instantiates a new Context.
          *
          * @param groupByChanel the group by chanel
          * @param aggChannels the agg channels
+         * @param aggChannelsFilter the agg filter Expr
          * @param sourceTypes the source types
          * @param aggFunctionTypes the agg function types
          * @param aggOutputTypes the agg output types
@@ -183,6 +181,14 @@ public class OmniHashAggregationWithExprOperatorFactory
                     operatorConfig);
         }
 
+
+        private static String[] checkAggChannelsFilter(String[] aggChannelsFilter) {
+            for (int i = 0; i < aggChannelsFilter.length; i++) {
+                aggChannelsFilter[i] = aggChannelsFilter[i] == null ? "" : aggChannelsFilter[i];
+            }
+            return aggChannelsFilter;
+        }
+
         private static int[] getDefaultMaskChannel(FunctionType[] aggFunctionTypes) {
             int[] maskChannelArray = new int[aggFunctionTypes.length]; // one mask channel for each function
             Arrays.fill(maskChannelArray, INVALID_MASK_CHANNEL);
@@ -192,8 +198,8 @@ public class OmniHashAggregationWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(groupByChanel), Arrays.deepHashCode(aggChannels),
-                    Arrays.hashCode(sourceTypes), Arrays.hashCode(aggFunctionTypes), Arrays.hashCode(maskChannels),
-                    Arrays.deepHashCode(aggOutputTypes), Arrays.hashCode(isInputRaws),
+                    Arrays.hashCode(aggChannelsFilter), Arrays.hashCode(sourceTypes), Arrays.hashCode(aggFunctionTypes),
+                    Arrays.hashCode(maskChannels), Arrays.deepHashCode(aggOutputTypes), Arrays.hashCode(isInputRaws),
                     Arrays.hashCode(isOutputPartials), operatorConfig);
         }
 
@@ -207,6 +213,7 @@ public class OmniHashAggregationWithExprOperatorFactory
             }
             FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(groupByChanel, that.groupByChanel) && Arrays.deepEquals(aggChannels, that.aggChannels)
+                    && Arrays.equals(aggChannelsFilter, that.aggChannelsFilter)
                     && Arrays.equals(sourceTypes, that.sourceTypes)
                     && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes)
                     && Arrays.equals(maskChannels, that.maskChannels)

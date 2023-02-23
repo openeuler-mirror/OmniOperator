@@ -98,6 +98,31 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *v,
+    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    VarcharVector *vector = static_cast<VarcharVector *>(v);
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        if (nullMap == nullptr) {
+            AddCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, boolPtr);
+        } else {
+            AddConditionalCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictCharFilter<MaxCharOp>(state, vector, rowCount, indexMap, boolPtr);
+        } else {
+            AddDictConditionalCharFilter<MaxCharOp>(state, vector, rowCount, nullMap, indexMap, boolPtr);
+        }
+    }
+    SaveState(state);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, Vector *v, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -114,6 +139,35 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
             AddDictUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, indexMap);
         } else {
             AddDictConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+        }
+    }
+
+    for (AggregateState *states : rowStates) {
+        SaveState(states[aggIdx]);
+    }
+}
+
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, Vector *v, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    VarcharVector *vector = static_cast<VarcharVector *>(v);
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        if (nullMap == nullptr) {
+            AddUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, boolPtr);
+        } else {
+            AddConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, indexMap, boolPtr);
+        } else {
+            AddDictConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap, boolPtr);
         }
     }
 

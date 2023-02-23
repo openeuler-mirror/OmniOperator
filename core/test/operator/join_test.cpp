@@ -1363,8 +1363,6 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     int32_t buildData0[dataSize] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
     int32_t buildData1[dataSize] = {35709, 31904, 35709, 31904, 35709, 31904, 35709, 31904, 35709, 31904};
     auto buildVecBatch = CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1);
-    std::cout<<"input:***********"<<std::endl;
-    VectorHelper::PrintVecBatch(buildVecBatch);
 
     int32_t buildJoinCols[1] = {0};
     int32_t joinColsCount = 1;
