@@ -6,6 +6,7 @@
 #include <string>
 
 #include "murmur3_hash.h"
+#include "util/compiler_util.h"
 
 using namespace std;
 
@@ -46,12 +47,12 @@ static const uint32_t REVERSE_AND_D = 0xff000000;
 
 static const uint32_t MM3_HALFWORD_INIT = 0;
 
-uint32_t RotateLeft(uint32_t i, uint32_t distance)
+uint32_t ALWAYS_INLINE RotateLeft(uint32_t i, uint32_t distance)
 {
     return (i << distance) | (i >> (MM3_BITS_INT - distance));
 }
 
-uint32_t MixK1(uint32_t k1)
+uint32_t ALWAYS_INLINE MixK1(uint32_t k1)
 {
     k1 *= MM3_C1;
     k1 = RotateLeft(k1, MIXK1_ROTATE_LEFT_NUM);
@@ -59,7 +60,7 @@ uint32_t MixK1(uint32_t k1)
     return k1;
 }
 
-uint32_t MixH1(uint32_t h1, uint32_t k1)
+uint32_t ALWAYS_INLINE MixH1(uint32_t h1, uint32_t k1)
 {
     h1 ^= k1;
     h1 = RotateLeft(h1, MIXH1_ROTATE_LEFT_NUM);
@@ -67,7 +68,7 @@ uint32_t MixH1(uint32_t h1, uint32_t k1)
     return h1;
 }
 
-uint32_t Fmix(uint32_t h1, uint32_t length)
+uint32_t ALWAYS_INLINE Fmix(uint32_t h1, uint32_t length)
 {
     h1 ^= length;
     h1 ^= h1 >> FMIX_RIGHT_SHIFT_M;
@@ -78,7 +79,7 @@ uint32_t Fmix(uint32_t h1, uint32_t length)
     return h1;
 }
 
-bool IsBigEndian()
+bool ALWAYS_INLINE IsBigEndian()
 {
     union {
         uint32_t m;
@@ -92,13 +93,13 @@ bool IsBigEndian()
     }
 }
 
-uint32_t ReverseBytes(uint32_t x)
+uint32_t ALWAYS_INLINE ReverseBytes(uint32_t x)
 {
     return ((x >> REVERSE_SHIFT_M) & REVERSE_AND_A) | ((x << REVERSE_SHIFT_N) & REVERSE_AND_B) |
         ((x >> REVERSE_SHIFT_N) & REVERSE_AND_C) | ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
 }
 
-uint32_t HashBytesByInt(const string &base, uint32_t lengthInBytes, uint32_t seed)
+uint32_t ALWAYS_INLINE HashBytesByInt(const string &base, uint32_t lengthInBytes, uint32_t seed)
 {
     uint32_t h1 = seed;
     for (uint i = 0; i < lengthInBytes; i += MM3_SIZE_INT) {
