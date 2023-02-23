@@ -5,8 +5,8 @@
 #include <iostream>
 #include <regex>
 #include "type/data_operations.h"
-#include "batch_stringfunctions.h"
 #include "type/date32.h"
+#include "batch_stringfunctions.h"
 
 #ifdef _WIN32
 #else
@@ -377,8 +377,8 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
     }
 }
 
-extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int32_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int32_t *output, int32_t rowCnt)
 {
     int32_t result;
     std::string s;
@@ -405,8 +405,8 @@ extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str
     }
 }
 
-extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int64_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int64_t *output, int32_t rowCnt)
 {
     int64_t result;
     std::string s;
@@ -433,8 +433,8 @@ extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **st
     }
 }
 
-extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, double *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    double *output, int32_t rowCnt)
 {
     double result;
     std::string s;
@@ -1017,14 +1017,14 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
-            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t * {
+            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t *{
                 outLen[i] = strLen[i];
                 return str[i];
             });
     } else {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
             output, outLen, rowCnt,
-            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
+            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t *{
                 auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
                     strLen[index], reinterpret_cast<const char *>(replaceStr[index]), replaceLen[index], hasErr,
                     outLen + index);
@@ -1039,13 +1039,13 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
-            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
+            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t *{
                 outLen[index] = strLen[index];
                 return str[index];
             });
     } else {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
-            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t * {
+            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t *{
                 auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
                     strLen[index], reinterpret_cast<const char *>(EMPTY), 0, hasErr, outLen + index);
                 return reinterpret_cast<uint8_t *>(const_cast<char *>(result));

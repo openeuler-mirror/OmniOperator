@@ -12,6 +12,9 @@ import nova.hetu.omniruntime.type.VarcharDataType;
  * @since 2021-07-17
  */
 public class VarcharVec extends VariableWidthVec {
+    /**
+     * The default capacity in bytes.
+     */
     public static final int INIT_CAPACITY_IN_BYTES = 32 * 1024; // 32K
     private static final int EXPAND_FACTOR = 2;
 

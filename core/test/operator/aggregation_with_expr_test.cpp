@@ -531,7 +531,7 @@ TEST(HashAggregationWithExprOperatorTest, adaptor_header_with_null)
     }
 
     {
-        uintptr_t addresses[2] = {0,0};
+        uintptr_t addresses[2] = {0, 0};
         int32_t lens[2] = {-1, -1};
         auto vecBatch1 = adaptor.Trans2VectorBatch(addresses, lens);
         auto v0 = reinterpret_cast<IntVector *>(vecBatch1->GetVector(0));

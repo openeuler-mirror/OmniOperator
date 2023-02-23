@@ -11,8 +11,8 @@
 #include "codegen/functions/decimalfunctions.h"
 #include "type/date32.h"
 #include "util/engine.h"
-#include "stringfunctions.h"
 #include "type/data_operations.h"
+#include "stringfunctions.h"
 
 #ifdef _WIN32
 #else

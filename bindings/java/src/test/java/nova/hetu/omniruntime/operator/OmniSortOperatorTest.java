@@ -10,7 +10,6 @@ import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -29,7 +28,6 @@ import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.DictionaryVec;
-import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;

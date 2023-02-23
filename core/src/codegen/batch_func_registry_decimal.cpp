@@ -122,10 +122,10 @@ std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
             INPUT_DATA),
 
         // Decimal Cast Function Return Null
-        Function(reinterpret_cast<void *>(BatchRoundDecimal128RetNull), roundNullFnStr, {}, { OMNI_DECIMAL128, OMNI_INT },
-            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(BatchRoundDecimal128RetNull), roundNullFnStr, {}, { OMNI_DECIMAL64, OMNI_INT },
-            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchRoundDecimal128RetNull), roundNullFnStr, {},
+                 { OMNI_DECIMAL128, OMNI_INT }, OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchRoundDecimal128RetNull), roundNullFnStr, {},
+                 { OMNI_DECIMAL64, OMNI_INT }, OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(BatchCastDecimal64To64RetNull), castNullFnStr, {}, { OMNI_DECIMAL64 },
             OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),

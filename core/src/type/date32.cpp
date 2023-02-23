@@ -65,7 +65,7 @@ int Date32::StringToTm(const char *s, int32_t len, tm &r)
     while (s[offset] == ' ') {
         offset++;
     }
-    while (s[len-1] == ' ') {
+    while (s[len - 1] == ' ') {
         len--;
     }
     // year

@@ -129,14 +129,14 @@ public:
           projectVecCount(projectVecCount),
           inputTypes(inputDataTypes),
           vecCount(vecCount),
-          projectedVecs(nullptr)
+          projectedVecs(nullptr),
+          dictsAddrs(new int64_t[vecCount]),
+          offsetsAddrs(new int64_t[vecCount]),
+          nullsAddrs(new int64_t[vecCount])
     {
         this->context = context;
         this->context->GetArena()->SetAllocator(vecAllocator);
 
-        dictsAddrs = new int64_t[vecCount];
-        offsetsAddrs = new int64_t[vecCount];
-        nullsAddrs = new int64_t[vecCount];
         for (int i = 0; i < vecCount; ++i) {
             dictsAddrs[i] = 0; // Spark's TableScan will not produce dictionary.
             auto null = new bool[1];

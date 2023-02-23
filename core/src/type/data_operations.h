@@ -13,7 +13,6 @@ namespace omniruntime {
 namespace type {
 inline int StringToInt(const std::string &s, int32_t &result)
 {
-
     if (!regex_match(s, std::regex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*"))) {
         return -1;
     }
@@ -28,7 +27,6 @@ inline int StringToInt(const std::string &s, int32_t &result)
 
 inline int StringToLong(const std::string &s, int64_t &result)
 {
-
     if (!regex_match(s, std::regex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*"))) {
         return -1;
     }
@@ -43,7 +41,6 @@ inline int StringToLong(const std::string &s, int64_t &result)
 
 inline int StringToDouble(const std::string &s, double &result)
 {
-
     if (!regex_match(s,
         std::regex("[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*"))) {
         return -1;
@@ -58,4 +55,4 @@ inline int StringToDouble(const std::string &s, double &result)
 }
 }
 }
-#endif //OMNI_RUNTIME_DATA_OPERATIONS_H
+#endif // OMNI_RUNTIME_DATA_OPERATIONS_H

@@ -98,7 +98,8 @@ public:
         return isColumnProjection;
     }
 
-    int GetColumnProjectionIndex() const {
+    int32_t GetColumnProjectionIndex() const
+    {
         return columnProjectionIndex;
     }
 
