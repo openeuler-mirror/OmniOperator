@@ -123,7 +123,7 @@ public:
 
 private:
     std::vector<BucketIterator> FindBuckets(uint64_t *hash, int32_t blockSize);
-    int32_t GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types, int32_t columnCount);
+    int32_t InitMaxRowCountAndOutputTypes();
 
     void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
         int32_t rowIndex);
@@ -144,8 +144,17 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
 
-    void FillOutputVecBatch(std::vector<VectorBatch *> &result, uint32_t groupByColSize, uint32_t colCount,
-        int32_t rowsPerBatch, std::vector<ChainIterator> &allGroups);
+    void FillOutputSingleVecBatch(std::vector<VectorBatch *> &result);
+
+    // for output single vecBatch
+    size_t totalRowCount = 0;
+    size_t rowCountOutputted = 0;
+    uint32_t colsCount;
+    int32_t rowsPerBatch;
+    std::vector<DataTypePtr> outputTypes;
+    BucketIterator vecBatchFirstBucket;
+    ChainIterator vecBatchFirstGroup;
+    bool iteratorHasInitialized = false;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
