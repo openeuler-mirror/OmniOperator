@@ -74,12 +74,15 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     } else {
         retCode = smjOperator->AddStreamedTableInput(vecBatch);
     }
+    SetStatus(smjOperator->GetStatus());
     return retCode;
 }
 
 int32_t StreamedTableWithExprOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
-    return smjOperator->GetOutput(outputPages);
+    int32_t retCode = smjOperator->GetOutput(outputPages);
+    SetStatus(smjOperator->GetStatus());
+    return retCode;
 }
 
 OmniStatus StreamedTableWithExprOperator::Close()
@@ -149,12 +152,15 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     } else {
         retCode = smjOperator->AddBufferedTableInput(vecBatch);
     }
+    SetStatus(smjOperator->GetStatus());
     return retCode;
 }
 
 int32_t BufferedTableWithExprOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
-    return smjOperator->GetOutput(outputPages);
+    int32_t retCode = smjOperator->GetOutput(outputPages);
+    SetStatus(smjOperator->GetStatus());
+    return retCode;
 }
 
 OmniStatus BufferedTableWithExprOperator::Close()
