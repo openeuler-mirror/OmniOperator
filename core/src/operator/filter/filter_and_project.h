@@ -44,7 +44,7 @@ using SimpleRowExprEvalFunc = bool (*)(int64_t *, bool *, int32_t *, bool *, int
  */
 class SimpleFilter {
 public:
-    /* *
+    /**
      * Simple Filter constructor
      *
      * @param expression the filter expression, must return evaluates to boolean type
@@ -53,21 +53,21 @@ public:
 
     ~SimpleFilter();
 
-    /* *
+    /**
      * Initialize the filter, this method must be called after the construct
      *
      * @return if the expression and types can be supported or not
      */
     bool Initialize(OverflowConfig *overflowConfig);
 
-    /* *
+    /**
      * Get all the vector indexes used in the expression
      *
      * @return set including the indexes, or empty set if filter not supported or initialized
      */
     std::set<int32_t> GetVectorIndexes();
 
-    /* *
+    /**
      * Evaluate the filter
      *
      * To make it consistent and simplify the evaluation logic, please make sure

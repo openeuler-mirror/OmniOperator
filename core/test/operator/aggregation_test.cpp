@@ -461,6 +461,7 @@ void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input,
 
 TEST(HashAggregationOperatorTest, verify_correctness)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     // create 10 pages
     const int vecBatchNum = 10;
     const int rowSize = 2000;
@@ -628,6 +629,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     delete[] input2;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(result3);
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
 }
 
 TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
@@ -810,7 +812,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        std::make_unique<SumAggregator<LongVector , int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(DoubleType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
@@ -990,8 +992,8 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channal1,
-        false, false));
+    aggs1.push_back(
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channal1, false, false));
     aggs1.push_back(
         std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
@@ -1382,13 +1384,11 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
     aggs1.push_back(
         std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
-    aggs1.push_back(
-        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
         *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel1, true, true));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(ContainerType()), channel2, true, true));
-    aggs1.push_back(
-        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
         *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel3, true, true));
     std::vector<DataTypePtr> partialOutputTypes { LongType(), SUM_IMMEDIATE_VARBINARY,
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), AVG_IMMEDIATE_VARBINARY };
@@ -1507,17 +1507,13 @@ TEST(AggregationOperatorTest, hmpp_decimal128)
         *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel3, true, true));
 
-    aggs1.push_back(
-        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel4, true, true));
-    aggs1.push_back(
-        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel5, true, true));
-    aggs1.push_back(
-        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel6, true, true));
-    aggs1.push_back(
-        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
         *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel7, true, true));
 
     std::vector<DataTypePtr> partialOutputTypes { Decimal128Type(38, 0),   Decimal128Type(38, 0),
@@ -1735,6 +1731,7 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(resBatch);
+    ConfigUtil::SetEnableHMPP(false);
 }
 
 TEST(AggregationOperatorTest, verify_correctness)
@@ -1828,8 +1825,8 @@ TEST(AggregationOperatorTest, verify_correctness)
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
     aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(DoubleType()), channel1, false, false));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2,
-        false, false));
+    aggs1.push_back(
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2, false, false));
     aggs1.push_back(
         std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, false, false));
@@ -1928,8 +1925,8 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel0,
-        false, false));
+    aggs1.push_back(
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
     aggs1.push_back(
         std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         *AggregatorUtil::WrapWithDataTypes(LongType()), channel1, false, false));
@@ -2316,6 +2313,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
 TEST(HashAggregationOperatorTest, multi_stage)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     std::vector<DataTypePtr> groupTypes = { LongType(), LongType() };
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType(), Decimal64Type(7, 2), Decimal64Type(7, 2) };
     VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
@@ -2413,7 +2411,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
     VectorHelper::PrintVecBatch(resultFromFinal[0]);
-    std::cout << "------expect---------" << std::endl;
+    std::cout<<"------expect---------"<<std::endl;
     VectorHelper::PrintVecBatch(expectVecBatch);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
 
@@ -2421,6 +2419,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     delete[] input2;
     VectorHelper::FreeVecBatches(resultFromFinal);
     VectorHelper::FreeVecBatch(expectVecBatch);
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
 }
 
 TEST(HashAggregationOperatorTest, supported_type_test)
@@ -2638,10 +2637,10 @@ TEST(AggregatorTest, sum_test)
             sumShortDecimal->ProcessGroup(state, vecBatch, i);
         }
     }
-    Decimal128 actual;
+    int128 actual;
     int64_t overflow;
     DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), actual, overflow);
-    Decimal128 expected(200L);
+    int128 expected(200L);
     EXPECT_EQ(0, overflow);
     EXPECT_EQ(expected, actual);
     state.val = nullptr;
@@ -3142,10 +3141,7 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("999999999999.999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
@@ -3158,10 +3154,8 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
 
     sumDeciAggFinal->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected2 = 0;
-    int32_t precision2 = 0;
-    int32_t scale2 = 0;
-    DecimalOperations::StringToDecimal128("2999999999999.999997", expected2, precision2, scale2);
+    auto expected2 = Decimal128Wrapper("2999999999999999997");
+
     EXPECT_EQ(expected2.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected2, resultVec->GetValue(0));
 
@@ -3180,14 +3174,11 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_decimal128_normal");
-    Decimal128 deci = 0;
-    int32_t inputPrec = 0;
-    int32_t inputScale = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999.99999999", deci, inputPrec, inputScale);
+    auto deci = Decimal128Wrapper("9999999999999999999999999");
     auto *deci25_8Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci25_8Vec->SetValue(0, deci);
-    deci25_8Vec->SetValue(1, deci);
-    deci25_8Vec->SetValue(2, deci);
+    deci25_8Vec->SetValue(0, deci.ToDecimal128());
+    deci25_8Vec->SetValue(1, deci.ToDecimal128());
+    deci25_8Vec->SetValue(2, deci.ToDecimal128());
 
     auto *emptyVec = new BooleanVector(vectorAllocator, 3);
     emptyVec->SetValue(0, false);
@@ -3206,13 +3197,9 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999.99999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("9999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
-    EXPECT_EQ(expected1, resultVec->GetValue(0));
     EXPECT_FALSE(emptyVec->GetValue(0));
 
     auto sumDeciAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
@@ -3222,10 +3209,8 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 2);
     sumDeciAggFinal->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected2 = 0;
-    int32_t precision2 = 0;
-    int32_t scale2 = 0;
-    DecimalOperations::StringToDecimal128("299999999999999999.99999997", expected2, precision2, scale2);
+    auto expected2 = Decimal128Wrapper("29999999999999999999999997");
+
     EXPECT_EQ(expected2.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected2, resultVec->GetValue(0));
 
@@ -3244,14 +3229,11 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_sum_decimal128_overflow_throw_exception_when_isOverflowAsNull_is_false");
-    Decimal128 deci = 0;
-    int32_t inputPrec = 0;
-    int32_t inputScale = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", deci, inputPrec, inputScale);
+    auto deci=Decimal128Wrapper("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci38_0Vec->SetValue(0, deci);
-    deci38_0Vec->SetValue(1, deci);
-    deci38_0Vec->SetValue(2, deci);
+    deci38_0Vec->SetValue(0, deci.ToDecimal128());
+    deci38_0Vec->SetValue(1, deci.ToDecimal128());
+    deci38_0Vec->SetValue(2, deci.ToDecimal128());
 
     auto *emptyVec = new BooleanVector(vectorAllocator, 3);
     emptyVec->SetValue(0, false);
@@ -3270,10 +3252,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("99999999999999999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
@@ -3308,14 +3287,11 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_sum_decimal128_overflow_return_null_when_isOverflowAsNull_is_true");
-    Decimal128 deci = 0;
-    int32_t inputPrec = 0;
-    int32_t inputScale = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", deci, inputPrec, inputScale);
+    auto deci = Decimal128Wrapper("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci38_0Vec->SetValue(0, deci);
-    deci38_0Vec->SetValue(1, deci);
-    deci38_0Vec->SetValue(2, deci);
+    deci38_0Vec->SetValue(0, deci.ToDecimal128());
+    deci38_0Vec->SetValue(1, deci.ToDecimal128());
+    deci38_0Vec->SetValue(2, deci.ToDecimal128());
 
     auto *emptyVec = new BooleanVector(vectorAllocator, 3);
     emptyVec->SetValue(0, false);
@@ -3334,10 +3310,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("99999999999999999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
@@ -3389,13 +3362,9 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
     avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     avgDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("999999999999.999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
-    EXPECT_EQ(expected1, resultVec->GetValue(0));
 
     avgDeciAggPartial->ProcessGroup(state, vecBatch, 1);
     avgDeciAggPartial->ProcessGroup(state, vecBatch, 2);
@@ -3406,12 +3375,8 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
 
     avgDeciAggFinal->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected2 = 0;
-    int32_t precision2 = 0;
-    int32_t scale2 = 0;
-    DecimalOperations::StringToDecimal128("999999999999.9999990000", expected2, precision2, scale2);
+    auto expected2 = Decimal128Wrapper("9999999999999999990000");
     EXPECT_EQ(expected2.ToString(), resultVec->GetValue(0).ToString());
-    EXPECT_EQ(expected2, resultVec->GetValue(0));
 
     state.val = nullptr;
     VectorHelper::FreeVecBatch(vecBatch);
@@ -3428,14 +3393,11 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_decimal128_normal");
-    Decimal128 deci = 0;
-    int32_t inputPrec = 0;
-    int32_t inputScale = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999.99999999", deci, inputPrec, inputScale);
+    auto deci = Decimal128Wrapper("9999999999999999999999999");
     auto *deci25_8Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci25_8Vec->SetValue(0, deci);
-    deci25_8Vec->SetValue(1, deci);
-    deci25_8Vec->SetValue(2, deci);
+    deci25_8Vec->SetValue(0, deci.ToDecimal128());
+    deci25_8Vec->SetValue(1, deci.ToDecimal128());
+    deci25_8Vec->SetValue(2, deci.ToDecimal128());
 
     auto *avgCountVec = new LongVector(vectorAllocator, 3);
     avgCountVec->SetValue(0, 1);
@@ -3454,13 +3416,9 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
     avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     avgDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999.99999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("9999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
-    EXPECT_EQ(expected1, resultVec->GetValue(0));
 
     auto avgDeciAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
         *AggregatorUtil::WrapWithDataTypes(Decimal128Type(29, 12)), channal0, false, false);
@@ -3469,12 +3427,9 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 2);
     avgDeciAggFinal->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected2 = 0;
-    int32_t precision2 = 0;
-    int32_t scale2 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999.999999990000", expected2, precision2, scale2);
+    auto expected2 = Decimal128Wrapper("99999999999999999999999990000");
+
     EXPECT_EQ(expected2.ToString(), resultVec->GetValue(0).ToString());
-    EXPECT_EQ(expected2, resultVec->GetValue(0));
 
     state.val = nullptr;
     VectorHelper::FreeVecBatch(vecBatch);
@@ -3491,14 +3446,11 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_avg_decimal128_overflow_throw_exception_when_isOverflowAsNull_is_false");
-    Decimal128 deci = 0;
-    int32_t inputPrec = 0;
-    int32_t inputScale = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", deci, inputPrec, inputScale);
+    auto deci = Decimal128Wrapper("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci38_0Vec->SetValue(0, deci);
-    deci38_0Vec->SetValue(1, deci);
-    deci38_0Vec->SetValue(2, deci);
+    deci38_0Vec->SetValue(0, deci.ToDecimal128());
+    deci38_0Vec->SetValue(1, deci.ToDecimal128());
+    deci38_0Vec->SetValue(2, deci.ToDecimal128());
 
     auto *avgCountVec = new LongVector(vectorAllocator, 3);
     avgCountVec->SetValue(0, 1);
@@ -3517,10 +3469,7 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
     avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     avgDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("99999999999999999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
@@ -3554,14 +3503,11 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_avg_decimal128_overflow_return_null_when_isOverflowAsNull_is_true");
-    Decimal128 deci = 0;
-    int32_t inputPrec = 0;
-    int32_t inputScale = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", deci, inputPrec, inputScale);
+    auto deci = Decimal128Wrapper("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci38_0Vec->SetValue(0, deci);
-    deci38_0Vec->SetValue(1, deci);
-    deci38_0Vec->SetValue(2, deci);
+    deci38_0Vec->SetValue(0, deci.ToDecimal128());
+    deci38_0Vec->SetValue(1, deci.ToDecimal128());
+    deci38_0Vec->SetValue(2, deci.ToDecimal128());
 
     auto *avgCountVec = new LongVector(vectorAllocator, 3);
     avgCountVec->SetValue(0, 1);
@@ -3580,10 +3526,7 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
     avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     avgDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected1 = 0;
-    int32_t precision1 = 0;
-    int32_t scale1 = 0;
-    DecimalOperations::StringToDecimal128("99999999999999999999999999999999999999", expected1, precision1, scale1);
+    auto expected1 = Decimal128Wrapper("99999999999999999999999999999999999999");
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
@@ -3612,23 +3555,14 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "spark_avg_decimal128_count_cast_to_wider_type_overflow_return_null_when_isOverflowAsNull_is_true");
 
-    Decimal128 deci1 = 0;
-    int32_t inputPrec1 = 0;
-    int32_t inputScale1 = 0;
-    DecimalOperations::StringToDecimal128("-0.99999999999999999999999999999999999999", deci1, inputPrec1, inputScale1);
-    Decimal128 deci2 = 0;
-    int32_t inputPrec2 = 0;
-    int32_t inputScale2 = 0;
-    DecimalOperations::StringToDecimal128("0.14159265354378240000000000000000000000", deci2, inputPrec2, inputScale2);
-    Decimal128 deci3 = 0;
-    int32_t inputPrec3 = 0;
-    int32_t inputScale3 = 0;
-    DecimalOperations::StringToDecimal128("0.00000000000000000000000000000000000000", deci3, inputPrec3, inputScale3);
+    auto deci1 = Decimal128Wrapper("-0.99999999999999999999999999999999999999");
+    auto deci2 = Decimal128Wrapper("0.14159265354378240000000000000000000000");
+    auto deci3 = Decimal128Wrapper("0.00000000000000000000000000000000000000");
 
     auto *deci38_38Vec = new Decimal128Vector(vectorAllocator, 3);
-    deci38_38Vec->SetValue(0, deci1);
-    deci38_38Vec->SetValue(1, deci2);
-    deci38_38Vec->SetValue(2, deci3);
+    deci38_38Vec->SetValue(0, deci1.ToDecimal128());
+    deci38_38Vec->SetValue(1, deci2.ToDecimal128());
+    deci38_38Vec->SetValue(2, deci3.ToDecimal128());
 
     auto *avgCountVec = new LongVector(vectorAllocator, 3);
     avgCountVec->SetValue(0, 1);
@@ -3671,18 +3605,12 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "spark_avg_decimal128_normal_when_inputRaw_is_true_and_outputPartial_is_false");
 
-    Decimal128 deci1 = 0;
-    int32_t inputPrec1 = 0;
-    int32_t inputScale1 = 0;
-    DecimalOperations::StringToDecimal128("1234567890123456789012", deci1, inputPrec1, inputScale1);
-    Decimal128 deci2 = 0;
-    int32_t inputPrec2 = 0;
-    int32_t inputScale2 = 0;
-    DecimalOperations::StringToDecimal128("9999999999999999999999", deci2, inputPrec2, inputScale2);
+    auto deci1 = Decimal128Wrapper("1234567890123456789012");
+    auto deci2 = Decimal128Wrapper("9999999999999999999999");
 
     auto *deci22_0Vec = new Decimal128Vector(vectorAllocator, 2);
-    deci22_0Vec->SetValue(0, deci1);
-    deci22_0Vec->SetValue(1, deci2);
+    deci22_0Vec->SetValue(0, deci1.ToDecimal128());
+    deci22_0Vec->SetValue(1, deci2.ToDecimal128());
 
     auto *avgCountVec = new LongVector(vectorAllocator, 2);
     avgCountVec->SetValue(0, 1);
@@ -3701,10 +3629,7 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
     avgDeciWindow->ProcessGroup(state, vecBatch, 1);
     avgDeciWindow->ExtractValues(state, extractVec, 0);
 
-    Decimal128 expected = 0;
-    int32_t precision = 0;
-    int32_t scale = 0;
-    DecimalOperations::StringToDecimal128("5617283945061728394505.5000", expected, precision, scale);
+    auto expected = Decimal128Wrapper("56172839450617283945055000");
 
     EXPECT_EQ(expected.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected, resultVec->GetValue(0));

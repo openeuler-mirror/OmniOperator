@@ -14,7 +14,7 @@ class AggregatorFactory {
 public:
     AggregatorFactory() {}
     virtual ~AggregatorFactory() {}
-    /* *
+    /**
      * This interface is for creating aggregators. You have to specify the data type for both input and output data.
      * Also the phase of the aggregator to be created is determined by 'inputRaw' and 'outputPartial'.
      * @param inputTypes
@@ -100,7 +100,7 @@ public:
                 return std::make_unique<SumAggregator<DoubleVector, double, double>>(inputTypes, outputTypes, channels,
                     inputRaw, outputPartial);
             }
-            /* *                             input type
+            /**                             input type
              * -------------------------------------------
              * |          | Decimal64 | Varbinary      |
              * -------------------------------------------

@@ -46,12 +46,12 @@ public:
         int64_t otherOverflow = 0;
         static_cast<VarcharVector *>(vector)->GetValue(offset, &otherState);
         // 2. decode current state and intermediate state
-        Decimal128 leftVal;
-        Decimal128 curVal;
+        int128 leftVal;
+        int128 curVal;
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
         DecimalOperations::DecodeSumDecimal(reinterpret_cast<DecimalSumState *>(otherState), curVal, otherOverflow);
         // 3. do calculation
-        int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
+        int64_t newOverflow = static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
         oldOverflow += newOverflow;
         // 4. encode to state
         DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
@@ -72,7 +72,7 @@ public:
         state.val = executionContext->GetArena()->Allocate(length);
         memcpy_s(state.val, length, otherState, length);
 
-        Decimal128 curVal;
+        int128 curVal = 0;
         int64_t oldOverflow = 0;
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), curVal, oldOverflow);
     }
@@ -88,14 +88,13 @@ public:
 
         // write decimal if not overflow. otherwise throw exception
         int64_t isOverflow = 0;
-        Decimal128 result;
+        int128 result;
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), result, isOverflow);
         if (isOverflow != 0) {
             throw OmniException("Decimal overflow", "Sum aggregate exceeds maximum.");
         }
-        DecimalOperations::ThrowIfOverflows(result);
 
-        static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, result);
+        static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, Decimal128(result));
     }
 };
 }

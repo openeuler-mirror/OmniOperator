@@ -51,14 +51,15 @@ public:
             state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
             int64_t newOverflow = overflow ? 1 : 0;
             DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val),
-                Decimal128(sumVal->high, sumVal->low), newOverflow);
+                CreateInt128(sumVal->high, sumVal->low), newOverflow);
         } else {
-            Decimal128 preSumVal;
+            int128 preSumVal;
             int64_t oldOverflow = 0;
             DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
 
-            auto currSumVal = Decimal128(sumVal->high, sumVal->low);
-            int64_t newOverflow = overflow ? 1 : DecimalOperations::AddWithOverflow(preSumVal, currSumVal, preSumVal);
+            auto currSumVal = CreateInt128(sumVal->high, sumVal->low);
+            int64_t
+                newOverflow = overflow ? 1 : static_cast<int64_t>(AddCheckedOverflow(preSumVal, currSumVal, preSumVal));
             oldOverflow += newOverflow;
             DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), preSumVal, oldOverflow);
         }
@@ -93,12 +94,12 @@ public:
         // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
         // 1. get a new value
         int64_t oldOverflow = 0;
-        Decimal128 curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
-        Decimal128 leftVal;
+        int128 curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
+        int128 leftVal;
         // 2. decode current state
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
         // 3. do calculation
-        int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
+        int64_t newOverflow = static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
         oldOverflow += newOverflow;
         // 4. encode to state
         DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
@@ -112,12 +113,11 @@ public:
             return;
         }
         // input vector is expected as LongVec
-        auto curVal = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
+        int128 curVal = (static_cast<Decimal128Vector *>(vector))->GetValue(offset).ToInt128();
 
         state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
         int64_t overflow = 0;
-        Decimal128 initState(curVal);
-        DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), initState, overflow);
+        DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), curVal, overflow);
     }
 
     void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
@@ -131,19 +131,18 @@ public:
 
         // write decimal if not overflow. otherwise throw exception
         int64_t isOverflow = 0;
-        Decimal128 result;
+        int128 result;
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), result, isOverflow);
         if (isOverflow != 0) {
             throw OmniException("Decimal overflow", "Sum aggregate exceeds maximum.");
         }
-        DecimalOperations::ThrowIfOverflows(result);
 
         if (outputPartial) {
             static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
                 PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
             // this branch is for window operator
-            static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, result);
+            static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, Decimal128(result));
         }
     }
 };

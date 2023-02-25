@@ -20,7 +20,7 @@ class Function {
 public:
     Function() = default;
 
-    /* *
+    /**
      * Constructs an omni-runtime Function object that contains the functionality and attributes of an omni-runtime
      * function
      *

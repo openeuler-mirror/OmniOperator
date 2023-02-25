@@ -5,7 +5,7 @@
 
 #include "dictionaryfunctions.h"
 #include "vector/dictionary_vector.h"
-#include "context_helper.h"
+#include "codegen/context_helper.h"
 
 using namespace omniruntime::vec;
 using namespace std;

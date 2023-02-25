@@ -41,12 +41,12 @@ public:
         // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
         // 1. get a new value
         int64_t oldOverflow = 0;
-        Decimal128 curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
-        Decimal128 leftVal;
+        int128 curVal = static_cast<LongVector *>(vector)->GetValue(offset);
+        int128 leftVal;
         // 2. decode current state
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
         // 3. do calculation
-        int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
+        int64_t newOverflow = static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
         oldOverflow += newOverflow;
         // 4. encode to state
         DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), leftVal, oldOverflow);
@@ -63,7 +63,7 @@ public:
         auto curVal = (static_cast<LongVector *>(vector))->GetValue(offset);
 
         state.val = executionContext->GetArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
-        Decimal128 initState = DecimalOperations::UnscaledDecimal(curVal);
+        int128 initState = curVal;
         DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), initState, 0);
     }
 
@@ -78,19 +78,18 @@ public:
 
         // write decimal if not overflow. otherwise throw exception
         int64_t isOverflow = 0;
-        Decimal128 result;
+        int128 result;
         DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), result, isOverflow);
         if (isOverflow != 0) {
             throw OmniException("Decimal overflow", "Sum aggregate exceeds maximum.");
         }
-        DecimalOperations::ThrowIfOverflows(result);
 
         if (outputPartial) {
             static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
                 PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
             // this branch is for window operator
-            static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, result);
+            static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, Decimal128(result));
         }
     }
 };

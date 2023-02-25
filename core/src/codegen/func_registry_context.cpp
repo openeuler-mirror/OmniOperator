@@ -3,7 +3,7 @@
  * Description: Context Helper Functions Registry
  */
 #include "func_registry_context.h"
-#include "functions/context_helper.h"
+#include "context_helper.h"
 using namespace omniruntime::type;
 using namespace omniruntime;
 using namespace omniruntime::codegen;

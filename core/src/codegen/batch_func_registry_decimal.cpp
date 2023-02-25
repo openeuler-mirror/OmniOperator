@@ -3,7 +3,8 @@
  * Description: Batch Decimal Function Registry
  */
 #include "batch_func_registry_decimal.h"
-#include "batch_functions/batch_decimalfunctions.h"
+#include "batch_functions/batch_decimal_arithmetic_functions.h"
+#include "batch_functions/batch_decimal_cast_functions.h"
 
 using namespace omniruntime;
 using namespace omniruntime::type;

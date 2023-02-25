@@ -21,6 +21,9 @@ enum class RoundingRule {
  * Defines the differences in Decimal math function between different engines.
  */
 enum class CheckReScaleRule {
+    /**
+    * Whether to Check Overflow when decimal operations result is return.
+    */
     NOT_CHECK_RESCALE = 0,
     CHECK_RESCALE
 };
@@ -29,13 +32,13 @@ enum class CheckReScaleRule {
  * Defines the differences that engines treat empty SearchStr while replacing string.
  */
 enum class EmptySearchStrReplaceRule {
-    /* *
+    /**
      * If SearchStr is "", each location between characters will be replaced with ReplaceStr.
      * e.g., InputStr="apple", ReplaceStr="*", SearchStr="", OutputStr="*a*p*p*l*e*"
      */
     REPLACE = 0,
 
-    /* *
+    /**
      * If SearchStr is "", replace nothing.
      * e.g., InputStr="apple", ReplaceStr="*", SearchStr="", OutputStr="apple"
      */
@@ -57,14 +60,14 @@ enum class CastDecimalToDoubleRule {
  * Defines the difference that SubStr function returns the result if the negative startIndex exceeds the bounds.
  */
 enum class NegativeStartIndexOutOfBoundsRule {
-    /* *
+    /**
      * Directly return an empty string.
      * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="".
      * Note: The index from left to right starts from 1. The index from right to left starts from -1.
      */
     EMPTY_STRING = 0,
 
-    /* *
+    /**
      * Intercept substring from beyond.
      * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="a".
      */
@@ -85,14 +88,14 @@ enum class SupportContainerVecRule {
  * Defines the string format when the engine cast string to date.
  */
 enum class StringToDateFormatRule {
-    /* *
+    /**
      * This means the date string must be completely written in the extended format of ISO Calendar dates.
      * A two-digit mouth and a two-digit day cannot be omitted.
      * e.g., 1996-02-28.
      */
     NOT_ALLOW_REDUCED_PRECISION = 0,
 
-    /* *
+    /**
      * This means the date string can be written with reduced precision in the extended format of ISO Calendar dates.
      * Mouth or day can be omitted.
      * e.g., 1996-02-28, 1996-02, 1996.

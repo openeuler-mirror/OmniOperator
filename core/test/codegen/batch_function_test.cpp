@@ -7,7 +7,8 @@
 #include "gtest/gtest.h"
 #include "codegen/batch_functions/batch_mathfunctions.h"
 #include "codegen/batch_functions/batch_murmur3_hash.h"
-#include "codegen/batch_functions/batch_decimalfunctions.h"
+#include "codegen/batch_functions/batch_decimal_arithmetic_functions.h"
+#include "codegen/batch_functions/batch_decimal_cast_functions.h"
 #include "operator/execution_context.h"
 #include "codegen/batch_functions/batch_stringfunctions.h"
 #include "util/test_util.h"
@@ -29,6 +30,9 @@ template <typename T> bool CmpArray(T *x, T *y, int32_t rowCnt)
 
 TEST(BatchFunctionTest, CastBasicTypes)
 {
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
+    ConfigUtil::SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule::REPLACE);
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     int32_t rowCnt = 2;
     int32_t col1[2] = {-10, 10};
     int64_t col2[2] = {-20L, 20L};
@@ -533,6 +537,7 @@ TEST(BatchFunctionTest, CastBasicTypeToDecimal)
     delete context;
 }
 
+// Return null function only adapt to Truncation Rule. Because only spark call this function.
 TEST(BatchFunctionTest, CastDecimalToBasicType)
 {
     int32_t rowCnt = 1;
@@ -562,9 +567,9 @@ TEST(BatchFunctionTest, CastDecimalToBasicType)
     EXPECT_EQ(outputDouble[0], INT64_MAX / (double)100);
 
     BatchCastDecimal64ToIntRetNull(overflowNull, decimal64Val, 7, 2, outputInt, rowCnt);
-    EXPECT_EQ(outputInt[0], 12346);
+    EXPECT_EQ(outputInt[0], 12345);
     BatchCastDecimal64ToLongRetNull(overflowNull, decimal64Val, 7, 2, outputLong, rowCnt);
-    EXPECT_EQ(outputLong[0], 12346L);
+    EXPECT_EQ(outputLong[0], 12345L);
     BatchCastDecimal64ToDoubleRetNull(overflowNull, decimal64Val, 7, 2, outputDouble, rowCnt);
     EXPECT_EQ(outputDouble[0], 12345.67);
 
@@ -976,7 +981,7 @@ TEST(BatchFunctionTest, DecimalDivideRetNull)
     EXPECT_FALSE(overflowNull[1]);
     EXPECT_EQ(decimal64Val1[1], -57'833'850'629UL);
 
-    BatchDivDec128Dec64Dec64RetNull(overflowNull, decimal128Val1, 38, 0, decimal64Val2, 7, 2, 7, 4, rowCnt);
+    BatchDivDec128Dec64Dec64RetNull(overflowNull, decimal128Val1, 38, 0, decimal64Val2, 7, 2, 17, 4, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val2[0], 81000);
     EXPECT_FALSE(overflowNull[1]);
