@@ -113,7 +113,7 @@ public:
     template <typename Serialize> void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, VectorBatch &groupVectors);
 
 private:
-    int32_t GetRowSizeAndOutputTypes(std::vector<DataTypePtr> &types);
+    int32_t InitMaxRowCountAndOutputTypes();
 
     void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<DataTypePtr> &types,
         int32_t rowCount);
@@ -136,11 +136,21 @@ private:
     std::unique_ptr<GroupbyColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
     bool isInited = false;
 
+    OutputState outputState;
+
     void FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result);
+    void FillSingleResultVector(int32_t remainRowCount, VectorBatch *&result);
 
     template <typename Deserialize>
     void TraverseHashmapToGetResults(Deserialize &deserializeHashmap, const int32_t groupByColSize,
         std::vector<VectorBatch *> &result);
+
+    template <typename Deserialize>
+    void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, const int32_t groupByColSize,
+        VectorBatch *result);
+
+    std::vector<DataTypePtr> outputTypes;
+    int32_t rowsPerBatch;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

@@ -31,7 +31,6 @@ public:
             static Chunk *ZERO_CHUNK = Chunk::NewChunk(allocator, 0);
             return static_cast<uint8_t *>(ZERO_CHUNK->GetAddress());
         }
-
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(sizeInBytes, minChunkSize));
         }
@@ -41,17 +40,19 @@ public:
         availBytes -= sizeInBytes;
         return ret;
     }
+
     uint8_t *AllocateContinue(int64_t sizeInBytes, const uint8_t *&start)
     {
-        /*null means a new begin of allocate*/
-        if(start == nullptr){
+        // null means a new begin of allocate
+        if (start == nullptr) {
             uint8_t *ret = (Allocate(sizeInBytes));
             start = (ret);
             return ret;
-        }else {
-            return (AllocateContinueNotNull(sizeInBytes,start));
+        } else {
+            return (AllocateContinueNotNull(sizeInBytes, start));
         }
     }
+
     void Reset()
     {
         if (chunks.size() == 0) {
@@ -69,7 +70,8 @@ public:
         availBytes = totalBytes = chunks.at(0)->GetSizeInBytes();
     }
 
-    void RollBackContinualMem() {
+    void RollBackContinualMem()
+    {
         availBuf -= continuousUsedMemoryBytes;
         availBytes += continuousUsedMemoryBytes;
     }

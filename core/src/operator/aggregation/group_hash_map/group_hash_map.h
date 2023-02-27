@@ -133,9 +133,6 @@ public:
     }
 
 private:
-    bool isAssigned = false;
-    std::pair<KeyType, ValueType> kv;
-    size_t hashVal;
     /* *
      * isAssigned indicates whether the class is constructed.
      * the usage of this class in Hashmap is divided into two phases:
@@ -144,6 +141,9 @@ private:
      * and the obtained value is false if caller attempts to get value of isAssigned.
      * when the constructor function is invoked, the value of isAssigned is set to true.
      */
+    bool isAssigned = false;
+    std::pair<KeyType, ValueType> kv;
+    size_t hashVal;
 };
 
 /**
@@ -269,6 +269,21 @@ private:
     uint8_t degree;
 };
 
+struct OutputState {
+    uint32_t outputHashmapPos = 0;
+    uint32_t hasBeenOutputNum = 0;
+
+    void UpdateState(OutputState &o)
+    {
+        outputHashmapPos = o.outputHashmapPos;
+        hasBeenOutputNum += o.hasBeenOutputNum;
+    }
+
+    OutputState(uint32_t outputHashmapPos = 0, uint32_t hasBeenOutputNum = 0)
+        : outputHashmapPos(outputHashmapPos), hasBeenOutputNum(hasBeenOutputNum)
+    {}
+};
+
 /**
  * design for group by
  * @tparam KeyType must have default constructor , must support move-assign function or copy-assign function
@@ -277,7 +292,6 @@ private:
  * @tparam GrowStrategy Rehash when size exceed totalSize / 2
  * @tparam Allocator memory pool
  */
-
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
     std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType> &&
     (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)> * = nullptr>
@@ -511,6 +525,63 @@ private:
     uint64_t capacity;
     static constexpr uint8_t defaultDegreeSize = 8;
     GrowStrategy grower;
+
+public:
+    class HashmapIteratorOutput {
+    private:
+        Slot *slotIterator;
+        GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *groupByHashMapPtr;
+        uint32_t remainSlot = 0;
+
+        void FindNext()
+        {
+            while (not slotIterator->IsAssigned()) {
+                slotIterator++;
+            }
+        }
+
+        void MoveToNext()
+        {
+            ++slotIterator;
+        }
+
+    public:
+        HashmapIteratorOutput(GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *mapPtr,
+            uint32_t pos, uint32_t hasBeenOutputCount)
+            : groupByHashMapPtr(mapPtr)
+        {
+            remainSlot =
+                groupByHashMapPtr->GetElementsSize() - (groupByHashMapPtr->HasNullCell() ? 1 : 0) - hasBeenOutputCount;
+
+            slotIterator = groupByHashMapPtr->slots + pos;
+        }
+
+        template <class Func> OutputState HandleElements(uint32_t expectSize, Func func)
+        {
+            uint32_t remainHandleSize = expectSize;
+            while (remainSlot && remainHandleSize) {
+                FindNext();
+                --remainSlot;
+                --remainHandleSize;
+                func(slotIterator->GetKey(), slotIterator->GetValue());
+                // value in cur pos has been assigned , so we need to plus one
+                MoveToNext();
+            }
+            if (remainHandleSize == 0) {
+                return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize);
+            }
+            if (groupByHashMapPtr->HasNullCell()) {
+                --remainHandleSize;
+                func(groupByHashMapPtr->nullSlot->GetKey(), groupByHashMapPtr->nullSlot->GetValue());
+            }
+            return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize - remainHandleSize);
+        }
+    };
+
+    HashmapIteratorOutput GetOutputMachine(uint32_t pos = 0, uint32_t hasBeenOutputCount = 0)
+    {
+        return HashmapIteratorOutput(this, pos, hasBeenOutputCount);
+    }
 };
 
 
