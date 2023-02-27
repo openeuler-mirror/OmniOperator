@@ -78,6 +78,7 @@ int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
     } else {
         lookupJoinOperator->AddInput(vecBatch);
     }
+    SetStatus(lookupJoinOperator->GetStatus());
     return 0;
 }
 
