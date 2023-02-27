@@ -810,10 +810,10 @@ public:
         if (signum < right.signum) {
             return -1;
         }
-        int32_t scale = GetResultScale(scale, right.scale, Op::SUBTRACT);
+        int32_t newScale = GetResultScale(scale, right.scale, Op::SUBTRACT);
         Decimal128Wrapper x = *this;
         Decimal128Wrapper y = right;
-        Decimal128Wrapper r = x.ReScale(scale).Subtract(y.ReScale(scale));
+        Decimal128Wrapper r = x.ReScale(newScale).Subtract(y.ReScale(newScale));
         return r.signum;
     }
 
@@ -1130,10 +1130,10 @@ public:
 
     int32_t Compare(const Decimal64 &right) const
     {
-        int32_t scale = GetResultScale(scale, right.scale, Op::SUBTRACT);
+        int32_t newScale = GetResultScale(scale, right.scale, Op::SUBTRACT);
         Decimal64 x = *this;
         Decimal64 y = right;
-        Decimal64 r = x.ReScale(scale).Subtract(y.ReScale(scale));
+        Decimal64 r = x.ReScale(newScale).Subtract(y.ReScale(newScale));
         if (r.val > 0) {
             return 1;
         } else if (r.val == 0) {
