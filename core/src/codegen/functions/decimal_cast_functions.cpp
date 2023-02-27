@@ -140,9 +140,8 @@ extern "C" DLLEXPORT void CastIntToDecimal128(int64_t contextPtr, int32_t x, boo
     Decimal128Wrapper result(x);
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
-        ReSetErrorMessage();
-        errorMessage << "Cannot cast INTEGER '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        SetError(contextPtr, errorMessage.str());
+        SetError(contextPtr,
+            CastErrorMessage(OMNI_INT, OMNI_DECIMAL128, x, OpStatus::OP_OVERFLOW, outPrecision, outScale));
         return;
     }
     *outHighPtr = result.HighBits();
@@ -153,16 +152,13 @@ extern "C" DLLEXPORT void CastLongToDecimal128(int64_t contextPtr, int64_t x, bo
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     if (isNull) {
-        *outHighPtr = 0;
-        *outLowPtr = 0;
         return;
     }
     Decimal128Wrapper result(x);
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
-        ReSetErrorMessage();
-        errorMessage << "Cannot cast BIGINT '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        SetError(contextPtr, errorMessage.str());
+        SetError(contextPtr,
+            CastErrorMessage(OMNI_LONG, OMNI_DECIMAL128, x, OpStatus::OP_OVERFLOW, outPrecision, outScale));
         return;
     }
     *outHighPtr = result.HighBits();
@@ -180,28 +176,21 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128(int64_t contextPtr, double x, b
     Decimal128Wrapper result(x);
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
-        ReSetErrorMessage();
-        errorMessage.precision(DOUBLE_MAX_PRECISION);
-        errorMessage << "Cannot cast DOUBLE '" << x << "' to DECIMAL(" << outPrecision << "," << outScale << ")";
-        SetError(contextPtr, errorMessage.str());
-        *outHighPtr = 0;
-        *outLowPtr = 0;
+        SetError(contextPtr,
+            CastErrorMessage(OMNI_DOUBLE, OMNI_DECIMAL128, x, OpStatus::OP_OVERFLOW, outPrecision, outScale));
         return;
     }
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
 }
 
-extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
+extern "C" DLLEXPORT int32_t CastDecimal64ToIntHalfUp(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
     bool isNull)
 {
     if (isNull) {
         return 0;
     }
 
-    if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-        return static_cast<int32_t>(Decimal64(x).ReScale(-scale, RoundingMode::ROUND_FLOOR).GetValue());
-    }
     int32_t result;
     try {
         result = static_cast<int32_t>(Decimal64(x).SetScale(scale));
@@ -212,33 +201,17 @@ extern "C" DLLEXPORT int32_t CastDecimal64ToInt(int64_t contextPtr, int64_t x, i
     return result;
 }
 
-extern "C" DLLEXPORT int64_t CastDecimal64ToLong(int64_t x, int32_t precision, int32_t scale, bool isNull)
+extern "C" DLLEXPORT double CastDecimal64ToDoubleHalfUp(int64_t x, int32_t precision, int32_t scale, bool isNull)
 {
     if (isNull) {
         return 0;
-    }
-    if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-        int64_t scaledValue = Decimal64(x).SetScale(scale).ReScale(0, RoundingMode::ROUND_FLOOR).GetValue();
-        return scaledValue;
-    }
-    int64_t result = static_cast<int64_t>(Decimal64(x).SetScale(scale));
-    return result;
-}
-
-extern "C" DLLEXPORT double CastDecimal64ToDouble(int64_t x, int32_t precision, int32_t scale, bool isNull)
-{
-    if (isNull) {
-        return 0;
-    }
-    if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-        std::string doubleString = Decimal64(x).SetScale(scale).ToString();
-        return stod(doubleString);
     }
     double result = static_cast<double>(Decimal64(x).SetScale(scale));
     return result;
 }
 
-extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t precision,
+extern "C" DLLEXPORT int32_t CastDecimal128ToIntHalfUp(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
+    int32_t precision,
     int32_t scale, bool isNull)
 {
     if (isNull) {
@@ -246,23 +219,17 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToInt(int64_t contextPtr, int64_t xHi
     }
     int32_t result;
     try {
-        if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-            result = static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
-                RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
-        } else {
-            result = static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow).SetScale(scale));
-        }
+        result = static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow).SetScale(scale));
     } catch (std::overflow_error &e) {
-        ReSetErrorMessage();
-        errorMessage << "Cannot cast '" << Decimal128Wrapper(xHigh, xLow).SetScale(scale).ToString() <<
-            "' to  INTEGER";
-        SetError(contextPtr, errorMessage.str());
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_INT, (uint128_t(xHigh) << 64 + xLow),
+            OpStatus::OP_OVERFLOW, precision, scale));
         return 0;
     }
     return result;
 }
 
-extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t precision,
+extern "C" DLLEXPORT int64_t CastDecimal128ToLongHalfUp(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
+    int32_t precision,
     int32_t scale, bool isNull)
 {
     if (isNull) {
@@ -270,34 +237,109 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
     }
     int64_t result;
     try {
-        if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-            result = static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
-                RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
-        } else {
-            result = static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow).SetScale(scale));
-        }
+        result = static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow).SetScale(scale));
     } catch (std::overflow_error &e) {
-        ReSetErrorMessage();
-        errorMessage << "Cannot cast '" << Decimal128Wrapper(xHigh, xLow).SetScale(scale).ToString() <<
-            "' to  INTEGER";
-        SetError(contextPtr, errorMessage.str());
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_LONG, (uint128_t(xHigh) << 64 + xLow),
+            OpStatus::OP_OVERFLOW, precision, scale));
         return 0;
     }
     return result;
 }
 
-extern "C" DLLEXPORT double CastDecimal128ToDouble(int64_t high, uint64_t low, int32_t precision, int32_t scale,
+extern "C" DLLEXPORT double CastDecimal128ToDoubleHalfUp(int64_t high, uint64_t low, int32_t precision, int32_t scale,
     bool isNull)
 {
     if (isNull) {
         return 0.0;
     }
     Decimal128Wrapper input(high, low);
-    if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-        return (double)input / DOUBLE_10_POW[scale];
-    }
 
     return (double)input.SetScale(scale);
+}
+
+extern "C" DLLEXPORT int32_t CastDecimal64ToIntDown(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,
+    bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    return static_cast<int32_t>(Decimal64(x).ReScale(-scale, RoundingMode::ROUND_FLOOR).GetValue());
+}
+
+extern "C" DLLEXPORT int64_t CastDecimal64ToLongDown(int64_t x, int32_t precision, int32_t scale, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    int64_t scaledValue = Decimal64(x).SetScale(scale).ReScale(0, RoundingMode::ROUND_FLOOR).GetValue();
+    return scaledValue;
+}
+
+
+extern "C" DLLEXPORT int64_t CastDecimal64ToLongHalfUp(int64_t x, int32_t precision, int32_t scale, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    int64_t result = static_cast<int64_t>(Decimal64(x).SetScale(scale));
+    return result;
+}
+
+extern "C" DLLEXPORT double CastDecimal64ToDoubleDown(int64_t x, int32_t precision, int32_t scale, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    std::string doubleString = Decimal64(x).SetScale(scale).ToString();
+    return stod(doubleString);
+}
+
+extern "C" DLLEXPORT int32_t CastDecimal128ToIntDown(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
+    int32_t precision,
+    int32_t scale, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    int32_t result;
+    try {
+        result = static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
+            RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
+    } catch (std::overflow_error &e) {
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_INT, (uint128_t(xHigh) << 64 + xLow),
+            OpStatus::OP_OVERFLOW, precision, scale));
+        return 0;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT int64_t CastDecimal128ToLongDown(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
+    int32_t precision,
+    int32_t scale, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    int64_t result;
+    try {
+        result = static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
+            RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
+    } catch (std::overflow_error &e) {
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_LONG, (uint128_t(xHigh) << 64 + xLow),
+            OpStatus::OP_OVERFLOW, precision, scale));
+        return 0;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT double CastDecimal128ToDoubleDown(int64_t high, uint64_t low, int32_t precision, int32_t scale,
+    bool isNull)
+{
+    if (isNull) {
+        return 0.0;
+    }
+    Decimal128Wrapper input(high, low);
+    return (double)input / DOUBLE_10_POW[scale];
 }
 
 // Cast Function

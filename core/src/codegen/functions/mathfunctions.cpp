@@ -38,22 +38,24 @@ extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
     return static_cast<double>(x);
 }
 
-extern "C" DLLEXPORT int32_t CastDoubleToInt32(double x)
+extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x)
 {
-    if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-        return static_cast<int32_t>(x);
-    } else {
-        return static_cast<int32_t>(Round(x, 0));
-    }
+    return static_cast<int32_t>(x);
 }
 
-extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x)
+extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x)
 {
-    if (ConfigUtil::GetRoundingRule() == RoundingRule::DOWN) {
-        return static_cast<int64_t>(x);
-    } else {
-        return static_cast<int64_t>(Round(x, 0));
-    }
+    return static_cast<int64_t>(x);
+}
+
+extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x)
+{
+    return static_cast<int32_t>(Round(x, 0));
+}
+
+extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x)
+{
+    return static_cast<int64_t>(Round(x, 0));
 }
 
 // double functions

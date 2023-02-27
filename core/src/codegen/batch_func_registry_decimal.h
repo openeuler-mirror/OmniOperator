@@ -13,6 +13,26 @@ class BatchDecimalFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
+
+class BatchDecimalFunctionRegistryDown : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchDecimalFunctionRegistryHalfUp : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchDecimalFunctionRegistryReScale : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchDecimalFunctionRegistryNotReScale : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_BATCH_FUNC_REGISTRY_DECIMAL_H

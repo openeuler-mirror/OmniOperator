@@ -369,27 +369,27 @@ TEST(FunctionTest, CastDoubleToInt32)
     double test4 = 113.1313;
     double test5 = -2000.989;
     int32_t baseline = 1;
-    auto result = CastDoubleToInt32(test1);
+    auto result = CastDoubleToInt32HalfUp(test1);
     bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(10, result);
 
-    result = CastDoubleToInt32(test2);
+    result = CastDoubleToInt32HalfUp(test2);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(-24, result);
 
-    result = CastDoubleToInt32(test3);
+    result = CastDoubleToInt32HalfUp(test3);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(0, result);
 
-    result = CastDoubleToInt32(test4);
+    result = CastDoubleToInt32HalfUp(test4);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(113, result);
 
-    result = CastDoubleToInt32(test5);
+    result = CastDoubleToInt32HalfUp(test5);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(-2001, result);
@@ -403,27 +403,27 @@ TEST(FunctionTest, CastDoubleToInt64)
     double test4 = 113.1313;
     double test5 = -2000.989;
     int64_t baseline = 1;
-    auto result = CastDoubleToInt64(test1);
+    auto result = CastDoubleToInt64HalfUp(test1);
     bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(10, result);
 
-    result = CastDoubleToInt64(test2);
+    result = CastDoubleToInt64HalfUp(test2);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(-24, result);
 
-    result = CastDoubleToInt64(test3);
+    result = CastDoubleToInt64HalfUp(test3);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(0, result);
 
-    result = CastDoubleToInt64(test4);
+    result = CastDoubleToInt64HalfUp(test4);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(113, result);
 
-    result = CastDoubleToInt64(test5);
+    result = CastDoubleToInt64HalfUp(test5);
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(-2001, result);
@@ -586,32 +586,32 @@ TEST(FunctionTest, Substr)
     const char *result;
     std::string actual;
 
-    result = Substr(contextptr, str.c_str(), strlen, 1, strlen, false, &outlen);
+    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 1, strlen, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outlen, strlen);
 
-    result = Substr(contextptr, str.c_str(), strlen, 1, 5, false, &outlen);
+    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 1, 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "Magic");
     EXPECT_EQ(outlen, 5);
 
-    result = Substr(contextptr, str.c_str(), strlen, 10, 10, false, &outlen);
+    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 10, 10, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "nson 123@#");
     EXPECT_EQ(outlen, 10);
 
-    result = Substr(contextptr, str.c_str(), strlen, -5, 7, false, &outlen);
+    result = SubstrEmptyString(contextptr, str.c_str(), strlen, -5, 7, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "23@#$");
     EXPECT_EQ(outlen, 5);
 
-    result = Substr(contextptr, str.c_str(), strlen, 0, 0, false, &outlen);
+    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 0, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = Substr(contextptr, str.c_str(), strlen, strlen, strlen + 5, false, &outlen);
+    result = SubstrEmptyString(contextptr, str.c_str(), strlen, strlen, strlen + 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$");
     EXPECT_EQ(outlen, 1);
@@ -628,42 +628,42 @@ TEST(FunctionTest, SubstrZh)
     const char *result;
     std::string actual;
 
-    result = Substr(contextPtr, str.c_str(), strLen, 1, 37, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 1, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 1, 5, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 1, 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯");
     EXPECT_EQ(outLen, 15);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 10, 10, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 10, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "hello! 回复哦");
     EXPECT_EQ(outLen, 16);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -5, 7, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, -5, 7, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "色的圣诞袜");
     EXPECT_EQ(outLen, 15);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 0, 0, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 0, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = Substr(contextPtr, str.c_str(), strLen, 37, strLen + 5, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 37, strLen + 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -38, 10, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, -38, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -37, 37, false, &outLen);
+    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, -37, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -682,32 +682,32 @@ TEST(FunctionTest, SubstrChar)
     const char *result;
     std::string actual;
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, strlen, false, &outlen);
+    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 1, strlen, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "Magic Johnson 123@#$");
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 1, 5, false, &outlen);
+    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 1, 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "Magic");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 10, 10, false, &outlen);
+    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 10, 10, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "nson 123@#");
     EXPECT_EQ(outlen, 10);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, -5, 7, false, &outlen);
+    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, -5, 7, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "23@#$");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, 0, 0, false, &outlen);
+    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 0, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = SubstrChar(contextptr, str.c_str(), width, strlen, strlen, strlen + 5, false, &outlen);
+    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, strlen, strlen + 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$");
     EXPECT_EQ(outlen, 1);
@@ -726,42 +726,42 @@ TEST(FunctionTest, SubstrCharZh)
     const char *result;
     std::string actual;
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 1, 37, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 1, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 1, 5, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 1, 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 10, 10, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 10, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "hello! 回复哦");
     EXPECT_EQ(outLen, 16);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -5, 7, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, -5, 7, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "色的圣诞袜");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 0, 0, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 0, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, 37, strLen + 5, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 37, strLen + 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -38, 10, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, -38, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrChar(contextPtr, str.c_str(), width, strLen, -37, 37, false, &outLen);
+    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, -37, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -779,22 +779,22 @@ TEST(FunctionTest, SubstrWithStart)
     const char *result;
     std::string actual;
 
-    result = SubstrWithStart(contextptr, str.c_str(), strlen, 1, false, &outlen);
+    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, 1, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrWithStart(contextptr, str.c_str(), strlen, 9, false, &outlen);
+    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, 9, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "123 $%^");
     EXPECT_EQ(outlen, 7);
 
-    result = SubstrWithStart(contextptr, str.c_str(), strlen, -3, false, &outlen);
+    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, -3, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$%^");
     EXPECT_EQ(outlen, 3);
 
-    result = SubstrWithStart(contextptr, str.c_str(), strlen, 0, false, &outlen);
+    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -812,37 +812,37 @@ TEST(FunctionTest, SubstrWithZh)
     const char *result;
     std::string actual;
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 1, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 1, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 9, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 9, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
     EXPECT_EQ(outLen, 53);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -3, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, -3, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "圣诞袜");
     EXPECT_EQ(outLen, 9);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 0, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, 37, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -38, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, -38, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -37, false, &outLen);
+    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, -37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -861,37 +861,39 @@ TEST(FunctionTest, SubstrWithZhForSpark)
     const char *result;
     std::string actual;
 
-    result = SubstrWithStart(contextPtr, str.c_str(), strLen, -15, false, &outLen);
+    result = SubstrWithStartInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 5, false, &outLen);
+    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 6, false, &outLen);
+    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 6, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时");
     EXPECT_EQ(outLen, 3);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 14, false, &outLen);
+    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 14, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯侧后解 ");
     EXPECT_EQ(outLen, 25);
 
-    result = Substr(contextPtr, str.c_str(), strLen, -15, 20, false, &outLen);
+    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 20, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯侧后解 h");
     EXPECT_EQ(outLen, 26);
 
     std::string strEn = "apple";
-    result = Substr(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, 3, false, &outLen);
+    result = SubstrInterceptFromBeyond(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, 3, false,
+        &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "a");
 
-    result = SubstrWithStart(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, false, &outLen);
+    result = SubstrWithStartInterceptFromBeyond(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7,
+        false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "apple");
 
@@ -910,22 +912,22 @@ TEST(FunctionTest, SubstrCharWithStart)
     const char *result;
     std::string actual;
 
-    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 1, false, &outlen);
+    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, 1, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "ABC efg 123 $%^");
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 9, false, &outlen);
+    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, 9, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "123 $%^");
     EXPECT_EQ(outlen, 7);
 
-    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, -3, false, &outlen);
+    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, -3, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$%^");
     EXPECT_EQ(outlen, 3);
 
-    result = SubstrCharWithStart(contextptr, str.c_str(), width, strlen, 0, false, &outlen);
+    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -943,37 +945,37 @@ TEST(FunctionTest, SubstrCharWithStartZh)
     const char *result;
     std::string actual;
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 1, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 1, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 9, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 9, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
     EXPECT_EQ(outLen, 53);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -3, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, -3, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "圣诞袜");
     EXPECT_EQ(outLen, 9);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 0, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, 37, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -38, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, -38, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharWithStart(contextPtr, str.c_str(), width, strLen, -37, false, &outLen);
+    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, -37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -1103,44 +1105,44 @@ TEST(FunctionTest, CastStringToDate)
     // year-month-day
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    int32_t result = CastStringToDate(contextPtr, "1970-01-03", 10, false);
+    int32_t result = CastStringToDateAllowReducePrecison(contextPtr, "1970-01-03", 10, false);
     EXPECT_EQ(result, 2);
-    result = CastStringToDate(contextPtr, "1969-12-31", 10, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1969-12-31", 10, false);
     EXPECT_EQ(result, -1);
-    result = CastStringToDate(contextPtr, "1980-01-01", 10, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-01-01", 10, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980-01-01 12345", 16, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-01-01 12345", 16, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980-1-1", 8, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-1-1", 8, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980-1-01", 9, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-1-01", 9, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980-1-1 123", 12, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-1-1 123", 12, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980-01-1", 9, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-01-1", 9, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980-01", 7, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980-01", 7, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1980", 4, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1980", 4, false);
     EXPECT_EQ(result, 3652);
-    result = CastStringToDate(contextPtr, "1453-05-29", 10, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1453-05-29", 10, false);
     EXPECT_EQ(result, -188682);
-    result = CastStringToDate(contextPtr, "   1453-05-29   ", 16, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "   1453-05-29   ", 16, false);
     EXPECT_EQ(result, -188682);
-    result = CastStringToDate(contextPtr, "   1 453-05-29   ", 16, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "   1 453-05-29   ", 16, false);
     EXPECT_EQ(result, -1);
 
-    result = CastStringToDate(contextPtr, "1996-09  ", 9, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1996-09  ", 9, false);
     EXPECT_EQ(result, 9740);
-    result = CastStringToDate(contextPtr, "1996-09-30", 10, false);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "1996-09-30", 10, false);
     EXPECT_EQ(result, 9769);
 
     bool isNull = false;
-    result = CastStringToDateRetNull(&isNull, "   1453- 05-29    ", 16);
+    result = CastStringToDateRetNullAllowReducePrecison(&isNull, "   1453- 05-29    ", 16);
     EXPECT_EQ(result, -1);
-    result = CastStringToDateRetNull(&isNull, "1453-05-29", 10);
+    result = CastStringToDateRetNullAllowReducePrecison(&isNull, "1453-05-29", 10);
     EXPECT_EQ(result, -188682);
-    result = CastStringToDateRetNull(&isNull, "   1453-05-29   ", 16);
+    result = CastStringToDateRetNullAllowReducePrecison(&isNull, "   1453-05-29   ", 16);
     EXPECT_EQ(result, -188682);
     ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
     delete context;
@@ -1177,7 +1179,8 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     std::string str = "operator1";
     std::string searchStr = "o";
     std::string replaceStr = "**";
-    auto result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+    auto result = ReplaceStrStrStrWithRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(),
         replaceStr.c_str(), replaceStr.length(), false, &outLen);
     std::string expected = "**perat**r1";
     EXPECT_EQ(outLen, 11);
@@ -1186,7 +1189,8 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     str = "operator2";
     searchStr = "";
     replaceStr = "*";
-    result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+    result = ReplaceStrStrStrWithRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(),
         replaceStr.c_str(), replaceStr.length(), false, &outLen);
     expected = "*o*p*e*r*a*t*o*r*2*";
     EXPECT_EQ(outLen, 19);
@@ -1195,7 +1199,8 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     str = "operator3";
     searchStr = "era";
     replaceStr = "ER";
-    result = ReplaceStrStrStrWithRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+    result = ReplaceStrStrStrWithRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(),
         replaceStr.c_str(), replaceStr.length(), false, &outLen);
     expected = "opERtor3";
     EXPECT_EQ(outLen, 8);
@@ -1211,7 +1216,8 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
 
     std::string str = "operator1";
     std::string searchStr = "o";
-    auto result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+    auto result = ReplaceStrStrWithoutRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(),
         false, &outLen);
     std::string expected = "peratr1";
     EXPECT_EQ(outLen, 7);
@@ -1219,7 +1225,8 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
 
     str = "operator2";
     searchStr = "";
-    result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+    result = ReplaceStrStrWithoutRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(),
         false, &outLen);
     expected = "operator2";
     EXPECT_EQ(outLen, 9);
@@ -1227,7 +1234,8 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
 
     str = "operator3";
     searchStr = "era";
-    result = ReplaceStrStrWithoutRep(contextPtr, str.c_str(), str.length(), searchStr.c_str(), searchStr.length(),
+    result = ReplaceStrStrWithoutRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
+        searchStr.length(),
         false, &outLen);
     expected = "optor3";
     EXPECT_EQ(outLen, 6);
@@ -1249,7 +1257,7 @@ TEST(FunctionTest, ReplaceStrCharStr)
     std::string expected[] = { "", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7" };
 
     for (int32_t i = 0; i < 7; i++) {
-        auto result = ReplaceStrStrStrWithRep(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
+        auto result = ReplaceStrStrStrWithRepReplace(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
             searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), false, &outLen);
         EXPECT_EQ(outLen, resultLen[i]);
         EXPECT_EQ(std::string(result, outLen), expected[i]);
@@ -1274,7 +1282,7 @@ TEST(FunctionTest, ReplaceCharCharChar)
         { "          ", " char200  ", "          ", "char400   ", "char500   ", "char600   ", "char700   " };
 
     for (int32_t i = 0; i < 7; i++) {
-        auto result = ReplaceStrStrStrWithRep(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
+        auto result = ReplaceStrStrStrWithRepReplace(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),
             searchStr[i].length(), replaceStr[i].c_str(), replaceStr[i].length(), false, &outLen);
         EXPECT_EQ(outLen, resultLen[i]);
         EXPECT_EQ(std::string(result, outLen), expected[i]);
@@ -1292,43 +1300,43 @@ TEST(FunctionTest, ReplaceStrStrStrZh)
     std::vector<std::string> searchStr { "", "粉色", "pp", "de圣" };
     std::vector<std::string> replaceStr { "", "黑色", "*w*", "*的*" };
 
-    auto result1 = ReplaceStrStrStrWithRep(contextPtr, str[2].c_str(), str[2].length(), searchStr[0].c_str(),
+    auto result1 = ReplaceStrStrStrWithRepReplace(contextPtr, str[2].c_str(), str[2].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
     std::string expected = "*w*a*w*p*w*p*w*l*w*e*w*";
     EXPECT_EQ(outLen, 23);
     EXPECT_EQ(std::string(result1, outLen), expected);
 
-    auto result2 = ReplaceStrStrStrWithRep(contextPtr, str[1].c_str(), str[1].length(), searchStr[0].c_str(),
+    auto result2 = ReplaceStrStrStrWithRepReplace(contextPtr, str[1].c_str(), str[1].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
     expected = "*w*粉*w*色*w*的*w*圣*w*诞*w*袜*w*";
     EXPECT_EQ(outLen, 39);
     EXPECT_EQ(std::string(result2, outLen), expected);
 
-    auto result3 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
+    auto result3 = ReplaceStrStrStrWithRepReplace(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
     expected = "*w*粉*w*色*w*d*w*e*w*圣*w*诞*w*袜*w*";
     EXPECT_EQ(outLen, 41);
     EXPECT_EQ(std::string(result3, outLen), expected);
 
-    auto result4 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
+    auto result4 = ReplaceStrStrStrWithRepReplace(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[3].c_str(), replaceStr[3].length(), false, &outLen);
     expected = "*的*粉*的*色*的*d*的*e*的*圣*的*诞*的*袜*的*";
     EXPECT_EQ(outLen, 57);
     EXPECT_EQ(std::string(result4, outLen), expected);
 
-    auto result5 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[3].c_str(),
+    auto result5 = ReplaceStrStrStrWithRepReplace(contextPtr, str[3].c_str(), str[3].length(), searchStr[3].c_str(),
         searchStr[3].length(), replaceStr[3].c_str(), replaceStr[3].length(), false, &outLen);
     expected = "粉色*的*诞袜";
     EXPECT_EQ(outLen, 17);
     EXPECT_EQ(std::string(result5, outLen), expected);
 
-    auto result6 = ReplaceStrStrStrWithRep(contextPtr, str[0].c_str(), str[0].length(), searchStr[0].c_str(),
+    auto result6 = ReplaceStrStrStrWithRepReplace(contextPtr, str[0].c_str(), str[0].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), false, &outLen);
     expected = "";
     EXPECT_EQ(outLen, 0);
     EXPECT_EQ(std::string(result6, outLen), expected);
 
-    auto result7 = ReplaceStrStrStrWithRep(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
+    auto result7 = ReplaceStrStrStrWithRepReplace(contextPtr, str[3].c_str(), str[3].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[0].c_str(), replaceStr[0].length(), false, &outLen);
     expected = "粉色de圣诞袜";
     EXPECT_EQ(outLen, 17);

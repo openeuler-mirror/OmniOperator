@@ -17,6 +17,36 @@ class StringFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
+
+class StringFunctionRegistryNotAllowReducePrecison : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistryAllowReducePrecison : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistryNotReplace : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistryReplace : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistryReplaceEmptyString : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistryReplaceInterceptFromBeyond : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_STRING_H

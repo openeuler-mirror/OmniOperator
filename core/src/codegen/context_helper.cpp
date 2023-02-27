@@ -35,11 +35,17 @@ extern "C" DLLEXPORT
         return true;
     }
 
+    bool HasError(int64_t contextPtr)
+    {
+        auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
+        return context->HasError();
+    }
+
     std::string GetDataString(DataTypeId type, int count, ...)
     {
         va_list v;
         va_start(v, count);
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         switch (type) {
             case OMNI_CHAR:
             case OMNI_VARCHAR:

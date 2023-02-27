@@ -13,6 +13,16 @@ class BatchMathFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
+
+class BatchMathFunctionRegistryHalfUp : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchMathFunctionRegistryDown : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_BATCH_FUNC_REGISTRY_MATH_H

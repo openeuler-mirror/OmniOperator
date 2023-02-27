@@ -35,16 +35,20 @@ extern "C" DLLEXPORT void BatchCastDecimal64To128(int64_t contextPtr, int64_t *x
 extern "C" DLLEXPORT void BatchCastDecimal128To64(int64_t contextPtr, Decimal128 *x, int32_t precision, int32_t scale,
     const bool *isAnyNull, int64_t *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastIntToDecimal64(int64_t contextPtr, int32_t *x, const bool *isAnyNull, int64_t *output,
+extern "C" DLLEXPORT void BatchCastIntToDecimal64(int64_t contextPtr, int32_t *x, const bool *isAnyNull,
+    int64_t *output,
     int32_t precision, int32_t scale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastLongToDecimal64(int64_t contextPtr, int64_t *x, const bool *isAnyNull, int64_t *output,
+extern "C" DLLEXPORT void BatchCastLongToDecimal64(int64_t contextPtr, int64_t *x, const bool *isAnyNull,
+    int64_t *output,
     int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDoubleToDecimal64(int64_t contextPtr, double *x, const bool *isAnyNull, int64_t *output,
+extern "C" DLLEXPORT void BatchCastDoubleToDecimal64(int64_t contextPtr, double *x, const bool *isAnyNull,
+    int64_t *output,
     int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastIntToDecimal128(int64_t contextPtr, int32_t *x, const bool *isAnyNull, Decimal128 *output,
+extern "C" DLLEXPORT void BatchCastIntToDecimal128(int64_t contextPtr, int32_t *x, const bool *isAnyNull,
+    Decimal128 *output,
     int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastLongToDecimal128(int64_t contextPtr, int64_t *x, const bool *isAnyNull,
@@ -54,13 +58,25 @@ extern "C" DLLEXPORT void BatchCastLongToDecimal128(int64_t contextPtr, int64_t 
 extern "C" DLLEXPORT void BatchCastDoubleToDecimal128(int64_t contextPtr, double *x, bool *isAnyNull,
     Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDecimal64ToInt(int64_t contextPtr, int64_t *x, int32_t precision, int32_t scale,
+extern "C" DLLEXPORT void BatchCastDecimal64ToIntDown(int64_t contextPtr, int64_t *x, int32_t precision, int32_t scale,
     const bool *isAnyNull, int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDecimal64ToLong(int64_t *x, int32_t precision, int32_t scale, const bool *isAnyNull,
+extern "C" DLLEXPORT void BatchCastDecimal64ToLongDown(int64_t *x, int32_t precision, int32_t scale,
+    const bool *isAnyNull,
     int64_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDecimal64ToDouble(const int64_t *x, int32_t precision, int32_t scale,
+extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleDown(const int64_t *x, int32_t precision, int32_t scale,
+    const bool *isAnyNull, double *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal64ToIntHalfUp(int64_t contextPtr, int64_t *x, int32_t precision,
+    int32_t scale,
+    const bool *isAnyNull, int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal64ToLongHalfUp(int64_t *x, int32_t precision, int32_t scale,
+    const bool *isAnyNull,
+    int64_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleHalfUp(const int64_t *x, int32_t precision, int32_t scale,
     const bool *isAnyNull, double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastDecimal128ToInt(int64_t contextPtr, Decimal128 *x, int32_t precision, int32_t scale,
@@ -70,7 +86,12 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLong(int64_t contextPtr, Decimal1
     int32_t scale,
     const bool *isAnyNull, int64_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDecimal128ToDouble(Decimal128 *x, int32_t precision, int32_t scale, const bool *isAnyNull,
+extern "C" DLLEXPORT void BatchCastDecimal128ToDoubleDown(Decimal128 *x, int32_t precision, int32_t scale,
+    const bool *isAnyNull,
+    double *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastDecimal128ToDoubleHalfUp(Decimal128 *x, int32_t precision, int32_t scale,
+    const bool *isAnyNull,
     double *output, int32_t rowCnt);
 
 // Cast Function Return Null
@@ -113,7 +134,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToLongRetNull(bool *isNull, int64_t 
 extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleRetNull(bool *isNull, const int64_t *x, int32_t precision,
     int32_t scale, double *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDecimal128ToIntRetNull(bool *isNull, Decimal128 *x, int32_t precision,int32_t scale,
+extern "C" DLLEXPORT void BatchCastDecimal128ToIntRetNull(bool *isNull, Decimal128 *x, int32_t precision, int32_t scale,
     int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastDecimal128ToLongRetNull(bool *isNull, Decimal128 *x, int32_t precision,

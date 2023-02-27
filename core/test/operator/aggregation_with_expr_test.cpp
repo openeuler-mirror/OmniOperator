@@ -19,6 +19,8 @@ using namespace omniruntime::expressions;
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
     const int32_t expectDataSize = 1;

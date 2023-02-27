@@ -46,31 +46,36 @@ if (dividend == 0) {                                                \
 }
 
 #define CHECK_OVERFLOW_RETURN_NULL(DECIMAL, PRECISION)              \
-if (DECIMAL.IsOverflow(PRECISION) != OpStatus::SUCCESS) {           \
+if ((DECIMAL).IsOverflow(PRECISION) != OpStatus::SUCCESS) {         \
     *isNull = true;                                                 \
     return 0;                                                       \
 }
 
-#define CHECK_OVERFLOW_VOID_RETURN_NULL(DECIMAL, PRECISION)         \
-if (DECIMAL.IsOverflow(PRECISION) != OpStatus::SUCCESS) {           \
+#define CHECK_OVERFLOW_VOID_RETURN_NULL(DECIMAL, PRECISION)  \
+if ((DECIMAL).IsOverflow(PRECISION) != OpStatus::SUCCESS) {      \
     *isNull = true;                                                 \
     return;                                                         \
 }
 
-static std::ostringstream errorMessage;
+#define CHECK_OVERFLOW_CONTINUE_NULL(DECIMAL, PRECISION)            \
+if ((DECIMAL).IsOverflow(PRECISION) != OpStatus::SUCCESS) {          \
+    isNull[i] = true;                                               \
+    continue;                                                       \
+}
 
-static void ReSetErrorMessage()
-{
-    errorMessage.clear();
-    errorMessage.str("");
+#define CHECK_OVERFLOW_CONTINUE(DECIMAL, PRECISION)                 \
+if (DECIMAL.IsOverflow(PRECISION) != OpStatus::SUCCESS && !HasError(contextPtr)) {           \
+    SetError(contextPtr, DECIMAL_OVERFLOW);                         \
+    continue;                                                       \
 }
 
 extern "C" DLLEXPORT
 {
-    char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
-    bool ArenaAllocatorReset(int64_t contextPtr);
-    bool SetError(int64_t contextPtr, std::string errorMessage);
-    std::string GetDataString(DataTypeId type, int count, ...);
+char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
+bool ArenaAllocatorReset(int64_t contextPtr);
+bool SetError(int64_t contextPtr, std::string errorMessage);
+bool HasError(int64_t contextPtr);
+std::string GetDataString(DataTypeId type, int count, ...);
 }
 
 template<typename T>
@@ -78,7 +83,7 @@ std::string CastErrorMessage(DataTypeId from, DataTypeId to, T value, OpStatus r
 {
     va_list v;
     va_start(v, reason);
-    ReSetErrorMessage();
+    std::ostringstream errorMessage;
     if (from == OMNI_DECIMAL128 || from == OMNI_DECIMAL64) {
         int32_t precision = va_arg(v, int32_t);
         int32_t scale = va_arg(v, int32_t);

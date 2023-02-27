@@ -11,7 +11,6 @@
 #include "config_util.h"
 
 std::map<std::string, std::string> ConfigUtil::configMap;
-Properties g_properties = ConfigUtil::CreateProperties();
 
 static void Trim(std::string &value)
 {
@@ -245,13 +244,13 @@ Policy *ConfigUtil::InitializePolicy()
 {
     static Policy policy;
     std::map<const char *, std::function<void(Policy *, std::string)>> initFunctionMap = { { "RoundingRule",
-                                                                                             InitRoundingRule },
-                                                                                           { "CheckReScaleRule", InitCheckReScaleRule },
-                                                                                           { "EmptySearchStrReplaceRule", InitEmptySearchStrReplaceRule },
-                                                                                           { "CastDecimalToDoubleRule", InitCastDecimalToDoubleRule },
-                                                                                           { "NegativeStartIndexOutOfBoundsRule", InitNegativeStartIndexOutOfBoundsRule },
-                                                                                           { "SupportContainerVecRule", InitSupportContainerVecRule },
-                                                                                           { "StringToDateFormatRule", InitStringToDateFormatRule } };
+        InitRoundingRule },
+        { "CheckReScaleRule", InitCheckReScaleRule },
+        { "EmptySearchStrReplaceRule", InitEmptySearchStrReplaceRule },
+        { "CastDecimalToDoubleRule", InitCastDecimalToDoubleRule },
+        { "NegativeStartIndexOutOfBoundsRule", InitNegativeStartIndexOutOfBoundsRule },
+        { "SupportContainerVecRule", InitSupportContainerVecRule },
+        { "StringToDateFormatRule", InitStringToDateFormatRule } };
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
         const char *ruleKeyStr = item.first;
