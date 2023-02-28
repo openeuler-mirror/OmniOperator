@@ -72,13 +72,16 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
       probeHashColTypes(probeHashColTypes),
       buildOutputCols(buildOutputCols),
       buildOutputTypes(buildOutputTypes),
-      probeOnOuterSide(joinType == JoinType::OMNI_JOIN_TYPE_LEFT || joinType == JoinType::OMNI_JOIN_TYPE_FULL),
+      probeOnOuterSide(joinType == JoinType::OMNI_JOIN_TYPE_LEFT || joinType == JoinType::OMNI_JOIN_TYPE_FULL ||
+    joinType == JoinType::OMNI_JOIN_TYPE_LEFT_ANTI),
       needTrackPosition(joinType == JoinType::OMNI_JOIN_TYPE_FULL || joinType == JoinType::OMNI_JOIN_TYPE_RIGHT),
-      onlyBuildSideFirstMatch(joinType == JoinType::OMNI_JOIN_TYPE_LEFT_SEMI),
+      onlyBuildSideFirstMatch(joinType == JoinType::OMNI_JOIN_TYPE_LEFT_SEMI ||
+    joinType == JoinType::OMNI_JOIN_TYPE_LEFT_ANTI),
       currentProbePositionProducedRow(false),
       hashTables(hashTables),
       joinProbe(nullptr),
-      partitionedJoinPosition(INVALID_PARTITION_POSITION)
+      partitionedJoinPosition(INVALID_PARTITION_POSITION),
+      onlyProbeOnBuildSideInvalid(joinType == JoinType::OMNI_JOIN_TYPE_LEFT_ANTI)
 {
     this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols.data(), probeOutputCols.size(),
         buildOutputCols.data(), buildOutputCols.size(), buildOutputTypes, outputRowSize);
@@ -160,7 +163,9 @@ void LookupJoinOperator::JoinCurrentPosition()
         while (partitionedJoinPosition != INVALID_PARTITION_POSITION) {
             // handle data of build
             currentProbePositionProducedRow = true;
-            outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            if (!onlyProbeOnBuildSideInvalid) {
+                outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            }
             if (onlyBuildSideFirstMatch) {
                 break;
             }
@@ -183,7 +188,9 @@ void LookupJoinOperator::JoinCurrentPositionWithFilter()
             joinProbe->GetProbeAllColumns(), joinProbe->GetProbeAllColsCount(), executionContext)) {
             // handle data of build
             currentProbePositionProducedRow = true;
-            outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            if (!onlyProbeOnBuildSideInvalid) {
+                outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+            }
             if (needTrackPosition) {
                 hashTables->PositionVisited(partitionedJoinPosition);
             }

@@ -78,6 +78,8 @@ private:
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
     ExecutionContext *executionContext = nullptr;
     omniruntime::vec::VectorBatch *input = nullptr;
+    // for left anti
+    bool onlyProbeOnBuildSideInvalid = false;
 };
 
 class JoinProbe {
