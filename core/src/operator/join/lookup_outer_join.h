@@ -56,7 +56,15 @@ private:
     DataTypes buildOutputTypes;
     JoinHashTables *hashTables;
     LookupOuterPositionIterator *iterator;
-    int32_t outputRowSize;
+    int32_t outputColsCount = 0;
+    int32_t maxRowCount = 0;
+    int32_t totalRowCount = 0;
+    int32_t outputtedRowCount = 0;
+
+    bool HasNext()
+    {
+        return outputtedRowCount < totalRowCount;
+    }
 };
 
 class LookupOuterPositionIterator {

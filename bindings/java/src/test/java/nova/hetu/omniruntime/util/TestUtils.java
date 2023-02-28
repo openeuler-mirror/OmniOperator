@@ -510,6 +510,17 @@ public class TestUtils {
     }
 
     /**
+     * free the vecBatches.
+     *
+     * @param vecBatches vecBatch list.
+     */
+    public static void freeVecBatches(List<VecBatch> vecBatches) {
+        for (int i = 0; i < vecBatches.size(); i++) {
+            freeVecBatch(vecBatches.get(i));
+        }
+    }
+
+    /**
      * Vec batch free
      *
      * @param vecBatch vecBatch
