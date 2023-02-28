@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Max aggregate
  */
 
@@ -153,16 +153,16 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSi
     if (indexMap == nullptr) {
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            add<InType, ResultType, maxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
+            Add<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
         } else {
-            addConditional<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+            AddConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                 rowCount, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDict<InType, ResultType, maxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+            AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
         } else {
-            addDictConditional<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+            AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                 rowCount, nullMap, indexMap);
         }
     }
@@ -179,16 +179,16 @@ void MaxAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
     if (indexMap == nullptr) {
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            addUseRowIndex<InType, ResultType, maxOp<InType, ResultType>>(rowStates, aggIdx, ptr);
+            AddUseRowIndex<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr);
         } else {
-            addConditionalUseRowIndex<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(rowStates,
+            AddConditionalUseRowIndex<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDictUseRowIndex<InType, ResultType, maxOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
+            AddDictUseRowIndex<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
         } else {
-            addDictConditionalUseRowIndex<InType, ResultType, maxConditionalOp<InType, ResultType, false>>(rowStates,
+            AddDictConditionalUseRowIndex<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap, indexMap);
         }
     }

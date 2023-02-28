@@ -1,10 +1,9 @@
-#pragma once
-
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Inner supported aggregators header
  */
 
+#pragma once
 #include "aggregator.h"
 #include "operations_hash_aggregator.h"
 #include "operations_aggregator.h"
@@ -138,7 +137,7 @@ public:
     ~TypedAggregator() override = default;
 
     // for no groupby aggregation
-    virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {
         AggregatorBuffer<int32_t> indexMap;
@@ -149,7 +148,7 @@ public:
     }
 
     // for groupby hash aggregation
-    virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+    void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
         AggregatorBuffer<int32_t> indexMap;

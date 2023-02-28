@@ -122,5 +122,5 @@ message(STATUS "Option Enable DT: ${ENABLE_DT}")
 option(ENABLE_HMPP "Using HMPP library" OFF)
 message(STATUS "Option ENABLE_HMPP: ${ENABLE_HMPP}")
 
-option(ENABLE_AGGREGATOR_TESTS "Enable Aggregator tests" OFF)
+option(ENABLE_AGGREGATOR_TESTS "Enable Aggregator tests" ON)
 message(STATUS "Option ENABLE_AGGREGATOR_TESTS: ${ENABLE_AGGREGATOR_TESTS}")

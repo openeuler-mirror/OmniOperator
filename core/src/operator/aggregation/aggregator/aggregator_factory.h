@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Aggregate factories
  */
 #ifndef OMNI_RUNTIME_AGGREGATOR_FACTORY_H
@@ -76,39 +76,39 @@ protected:
         auto outputTypeId = outputTypes.GetType(0)->GetId();
         switch (outputTypeId) {
             case OMNI_BOOLEAN:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_BOOLEAN>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_BOOLEAN>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_SHORT:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_SHORT>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_SHORT>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_DATE32:
             case OMNI_TIME32:
             case OMNI_INT:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_INT>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_INT>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_LONG:
             case OMNI_DATE64:
             case OMNI_TIME64:
             case OMNI_TIMESTAMP:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_LONG>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_LONG>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_DOUBLE:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_DOUBLE>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_DOUBLE>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_DECIMAL64:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_DECIMAL64>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_DECIMAL64>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_DECIMAL128:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_DECIMAL128>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_DECIMAL128>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_CONTAINER:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_CONTAINER>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_CONTAINER>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_VARCHAR:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_VARCHAR>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_VARCHAR>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             case OMNI_CHAR:
-                return fromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_CHAR>(std::move(inputTypes),
+                return FromKnownOutput<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, OMNI_CHAR>(std::move(inputTypes),
                     std::move(outputTypes), channels);
             default:
                 LogError("Unsupported output type %s", TypeUtil::TypeToStringLog(outputTypeId).c_str());
@@ -117,7 +117,7 @@ protected:
     }
 
     template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId OUT_ID>
-    std::unique_ptr<Aggregator> fromKnownOutput(const DataTypes &inputTypes, const DataTypes &outputTypes,
+    std::unique_ptr<Aggregator> FromKnownOutput(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels)
     {
         auto inputTypeId = inputTypes.GetType(0)->GetId();

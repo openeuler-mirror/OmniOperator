@@ -1,10 +1,8 @@
-#pragma once
-
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Inner supported aggregators header
  */
-
+#pragma once
 #include "operator/aggregation/definitions.h"
 
 namespace omniruntime {
@@ -16,7 +14,7 @@ namespace op {
 //       For this reason we add '__attribute__((optimize("no-tree-vectorize")))' attribute to this function so that
 //       compiler does not vectorize it
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP NO_INLINE void addUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP NO_INLINE void AddUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const IN *__restrict ptr)
 {
     const size_t rowCount = rowStates.size();
@@ -36,7 +34,7 @@ VECTORIZE_LOOP NO_INLINE void addUseRowIndex(std::vector<AggregateState *> &rowS
 }
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP NO_INLINE void addDictUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const IN *__restrict ptr, const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
@@ -60,7 +58,7 @@ VECTORIZE_LOOP NO_INLINE void addDictUseRowIndex(std::vector<AggregateState *> &
 }
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP NO_INLINE void addConditionalUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const IN *__restrict ptr, const uint8_t *__restrict condition)
 {
     const size_t rowCount = rowStates.size();
@@ -84,7 +82,7 @@ VECTORIZE_LOOP NO_INLINE void addConditionalUseRowIndex(std::vector<AggregateSta
 }
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP NO_INLINE void addDictConditionalUseRowIndex(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndex(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, const IN *__restrict ptr, const uint8_t *__restrict condition,
     const int32_t *__restrict indexMap)
 {
@@ -114,7 +112,7 @@ VECTORIZE_LOOP NO_INLINE void addDictConditionalUseRowIndex(std::vector<Aggregat
 
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP NO_INLINE void addUseRowIndexAvg(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP NO_INLINE void AddUseRowIndexAvg(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const IN *__restrict ptr, const int64_t *__restrict cntPtr)
 {
     const size_t rowCount = rowStates.size();
@@ -138,7 +136,7 @@ VECTORIZE_LOOP NO_INLINE void addUseRowIndexAvg(std::vector<AggregateState *> &r
 }
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &)>
-VECTORIZE_LOOP NO_INLINE void addDictUseRowIndexAvg(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexAvg(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const IN *__restrict ptr, const int64_t *__restrict cntPtr, const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
@@ -167,7 +165,7 @@ VECTORIZE_LOOP NO_INLINE void addDictUseRowIndexAvg(std::vector<AggregateState *
 }
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP NO_INLINE void addConditionalUseRowIndexAvg(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexAvg(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, const IN *__restrict ptr, const int64_t *__restrict cntPtr,
     const uint8_t *__restrict condition)
 {
@@ -196,7 +194,7 @@ VECTORIZE_LOOP NO_INLINE void addConditionalUseRowIndexAvg(std::vector<Aggregate
 }
 
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t &, const uint8_t &)>
-VECTORIZE_LOOP NO_INLINE void addDictConditionalUseRowIndexAvg(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexAvg(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, const IN *__restrict ptr, const int64_t *__restrict cntPtr,
     const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
 {

@@ -48,9 +48,8 @@ public:
             uint8_t *ret = (Allocate(sizeInBytes));
             start = (ret);
             return ret;
-        } else {
-            return (AllocateContinueNotNull(sizeInBytes, start));
         }
+        return (AllocateContinueNotNull(sizeInBytes, start));
     }
 
     void Reset()
@@ -130,7 +129,7 @@ private:
         auto newSpace = continuousUsedMemoryBytes + sizeInBytes;
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(newSpace, minChunkSize));
-            memcpy(availBuf, start, continuousUsedMemoryBytes);
+            std::copy(start, start + continuousUsedMemoryBytes, availBuf);
             start = availBuf;
             availBuf += continuousUsedMemoryBytes;
             availBytes -= continuousUsedMemoryBytes;

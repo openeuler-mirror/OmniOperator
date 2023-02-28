@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  */
 
 #include <vector>
@@ -56,13 +56,24 @@ public:
         resPtr = nullptr;
     }
     ValueWithResource(const ValueWithResource &o) = delete;
+
     ValueWithResource &operator = (const ValueWithResource &o) = delete;
+
     ValueWithResource(ValueWithResource &&o) noexcept
     {
         this->curSize = o.curSize;
         o.curSize = 0;
         this->resPtr = o.resPtr;
         o.resPtr = nullptr;
+    }
+
+    ValueWithResource& operator = (ValueWithResource &&o) noexcept
+    {
+        this->curSize = o.curSize;
+        o.curSize = 0;
+        this->resPtr = o.resPtr;
+        o.resPtr = nullptr;
+        return *this;
     }
 
     explicit ValueWithResource(uint32_t size) : curSize(size)
@@ -95,9 +106,7 @@ private:
  */
 class NotPodSharedClass {
 public:
-    explicit NotPodSharedClass(size_t i = 0, double j = 0, float k = false) : d(i, j, k)
-    {
-    }
+    explicit NotPodSharedClass(size_t i = 0, double j = 0, float k = false) : d(i, j, k) {}
 
     NotPodSharedClass(const NotPodSharedClass &data)
     {
@@ -106,7 +115,8 @@ public:
         this->d = data.d;
     }
 
-    void SetResource(){
+    void SetResource()
+    {
         copyCounter = new int(1);
         ResourceInfoCollector::GetInstance() += ResourceUsedBytes;
     }
@@ -128,7 +138,7 @@ public:
             this->d = data.d;
             data.copyCounter = nullptr;
         }
-    };
+    }
 
     NotPodSharedClass &operator = (NotPodSharedClass &&data) noexcept
     {
@@ -142,7 +152,7 @@ public:
 
     ~NotPodSharedClass()
     {
-        if(copyCounter != nullptr){
+        if (copyCounter != nullptr) {
             --(*copyCounter);
             if (*copyCounter == 0) {
                 ResourceInfoCollector::GetInstance() -= ResourceUsedBytes;
@@ -151,23 +161,21 @@ public:
         }
     }
 
-    MUST_CARE_RET size_t get0() const
+    MUST_CARE_RET size_t Get0() const
     {
         return std::get<0>(d);
     }
-    MUST_CARE_RET double get1() const
+    MUST_CARE_RET double Get1() const
     {
         return std::get<1>(d);
     }
-    MUST_CARE_RET bool get2() const
+    MUST_CARE_RET bool Get2() const
     {
         return std::get<2>(d);
     }
     bool operator == (const NotPodSharedClass &o) const
     {
-        return get0() == o.get0()
-        && get1() - o.get1() < 0.0000001f
-        && get2() == o.get2();
+        return Get0() == o.Get0() && Get1() - o.Get1() < DBL_EPSILON && Get2() == o.Get2();
     }
 
 private:
@@ -227,7 +235,7 @@ public:
             free(maxState);
             ResourceInfoCollector::GetInstance() -= StateResourceUsedBytes;
         }
-    };
+    }
 
 private:
     static constexpr uint8_t StateResourceUsedBytes = sizeof(uint32_t);
@@ -243,6 +251,7 @@ template <> struct NullValueTypeTraits<uint32_t> {
         return value == 0;
     }
 };
+
 // in unit test, we think value is null when uint32_t value equal to zero .
 template <typename T> struct NullValueTypeTraits<std::unique_ptr<T>> {
     static bool IsNullValue(const std::unique_ptr<T> &value)
@@ -250,6 +259,7 @@ template <typename T> struct NullValueTypeTraits<std::unique_ptr<T>> {
         return NullValueTypeTraits<T>::IsNullValue(*value);
     }
 };
+
 // in unit test, we think string is null when string.length() equal to zero .
 template <> struct NullValueTypeTraits<std::string> {
     static bool IsNullValue(const std::string &str)
@@ -262,12 +272,13 @@ template <> struct NullValueTypeTraits<std::string> {
 template <> struct GroupbyHashCalculator<HashMapTest::NotPodSharedClass> {
     size_t operator () (const HashMapTest::NotPodSharedClass &data) const
     {
-        auto value = std::hash<int>()(data.get0());
-        value = omniruntime::op::HashUtil::CombineHash(value, std::hash<double>()(data.get1()));
-        value = omniruntime::op::HashUtil::CombineHash(value, std::hash<bool>()(data.get2()));
+        auto value = std::hash<int>()(data.Get0());
+        value = omniruntime::op::HashUtil::CombineHash(value, std::hash<double>()(data.Get1()));
+        value = omniruntime::op::HashUtil::CombineHash(value, std::hash<bool>()(data.Get2()));
         return value;
     }
 };
+
 // in unit test, use combine hash to generate NotPodClass's hash.
 template <typename T> struct GroupbyHashCalculator<std::unique_ptr<T>> {
     size_t operator () (const std::unique_ptr<T> &data) const
@@ -399,7 +410,7 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
                     ret.SetValue(std::move(s));
                 }
                 currentBytes += 8 * 2;
-                EXPECT_EQ(ResourceInfoCollector::GetInstance().GetState(),currentBytes);
+                EXPECT_EQ(ResourceInfoCollector::GetInstance().GetState(), currentBytes);
             }
         }
 
@@ -427,7 +438,7 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
         // verify every cell's maxValue;
         EXPECT_EQ(hashMap.GetElementsSize(), total * total * 2);
         hashMap.ForEachKV([minMaxValue](const NotPodSharedClass &key, const MaxState &state) {
-            EXPECT_EQ(state.GetResult() , key.get0() * key.get1() + minMaxValue);
+            EXPECT_EQ(state.GetResult(), key.Get0() * key.Get1() + minMaxValue);
         });
     }
 

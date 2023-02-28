@@ -1,16 +1,14 @@
-#pragma once
-
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Count aggregate
  */
-
+#pragma once
 #include "typed_aggregator.h"
 
 namespace omniruntime {
 namespace op {
 // mask not null, agg vec not null
-inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr)
+inline uint8_t AddMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -21,7 +19,7 @@ inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const u
     return nonZero;
 }
 
-inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
     const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
@@ -35,7 +33,7 @@ inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, con
 
 // mask nullable, agg vec not null OR
 // mask not null, agg vec nullable: in this case maskNullMap is actually agg vec nullMap
-inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+inline uint8_t AddMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
     const uint8_t *__restrict maskNullMap)
 {
     uint8_t nonZero = 0;
@@ -47,7 +45,7 @@ inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const u
     return nonZero;
 }
 
-inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
     const uint8_t *__restrict maskNullMap, const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
@@ -60,7 +58,7 @@ inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, con
 }
 
 // mask nullable, agg vec nullable
-inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+inline uint8_t AddMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
     const uint8_t *__restrict maskNullMap, const uint8_t *__restrict vecNullMap)
 {
     uint8_t nonZero = 0;
@@ -72,7 +70,7 @@ inline uint8_t addMask(uint8_t *__restrict nullMap, const size_t length, const u
     return nonZero;
 }
 
-inline uint8_t addDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
     const uint8_t *__restrict maskNullMap, const uint8_t *__restrict vecNullMap, const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
@@ -277,15 +275,15 @@ private:
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
-                hasValidRows = addDictMask(nullMap.data, rowCount, maskPtr, indexMap.data);
+                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, indexMap.data);
             } else {
-                hasValidRows = addDictMask(nullMap.data, rowCount, maskPtr, aggNullMap, indexMap.data);
+                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, aggNullMap, indexMap.data);
             }
         } else {
             if (aggNullMap == nullptr) {
-                hasValidRows = addDictMask(nullMap.data, rowCount, maskPtr, maskNullMap, indexMap.data);
+                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, maskNullMap, indexMap.data);
             } else {
-                hasValidRows = addDictMask(nullMap.data, rowCount, maskPtr, maskNullMap, aggNullMap, indexMap.data);
+                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, maskNullMap, aggNullMap, indexMap.data);
             }
         }
 
@@ -301,15 +299,15 @@ private:
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
-                hasValidRows = addMask(nullMap.data, rowCount, maskPtr);
+                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr);
             } else {
-                hasValidRows = addMask(nullMap.data, rowCount, maskPtr, aggNullMap);
+                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr, aggNullMap);
             }
         } else {
             if (aggNullMap == nullptr) {
-                hasValidRows = addMask(nullMap.data, rowCount, maskPtr, maskNullMap);
+                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr, maskNullMap);
             } else {
-                hasValidRows = addMask(nullMap.data, rowCount, maskPtr, maskNullMap, aggNullMap);
+                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr, maskNullMap, aggNullMap);
             }
         }
 

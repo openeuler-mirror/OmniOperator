@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Hash Aggregation Header
  */
 #ifndef GROUP_AGGREGATION_H
@@ -156,7 +156,18 @@ private:
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
-
+    /*
+     * @param groupByCol      the col index which is used as group column in VectorBatch
+     * @param groupInputTypes all the group types
+     * @param aggsCols        aggsCols contains all aggregators 's all agg col index
+     * @param aggInputTypes   input types of all aggregators
+     * @param aggOutputTypes  output types of all aggregators
+     * @param aggFuncTypes    func types of aggregators
+     * @param maskColsVector  mask col index in VectorBatch
+     * @param inputRaws       whether the input VectorBatch is raw, the input raw is true in the first stage
+     * @param outputPartials  whether the output VectorBatch is paritial result
+     * @param overflowAsNull  determine throw exception or set null when catch overflow result
+     */
     HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
         std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,

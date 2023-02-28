@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Sum aggregator
  */
 #ifndef OMNI_RUNTIME_SUM_AGGREGATOR_H
@@ -10,7 +10,7 @@
 namespace omniruntime {
 namespace op {
 template <typename IN, typename MID>
-SIMD_ALWAYS_INLINE void sumOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt)
+SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt)
 {
     if constexpr (std::is_same_v<MID, Decimal128>) {
         if (flag >= 0) {
@@ -45,12 +45,12 @@ SIMD_ALWAYS_INLINE void sumOp(MID *res, int64_t &flag, const IN &in, const int64
 }
 
 template <typename IN, typename MID, bool addIf>
-SIMD_ALWAYS_INLINE void sumConditionalOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt,
+SIMD_ALWAYS_INLINE void SumConditionalOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt,
     const uint8_t &condition)
 {
     if constexpr (std::is_same_v<MID, Decimal128> || std::is_same_v<IN, int64_t> || std::is_floating_point_v<IN>) {
         if (condition == addIf) {
-            sumOp<IN, MID>(res, flag, in, cnt);
+            SumOp<IN, MID>(res, flag, in, cnt);
         }
     } else {
         const IN mask = (!condition == addIf) - 1;
@@ -61,10 +61,10 @@ SIMD_ALWAYS_INLINE void sumConditionalOp(MID *res, int64_t &flag, const IN &in, 
 }
 
 template <typename IN, typename MID, bool addIf>
-FAST_MATH NO_INLINE void sumConditionalFloat(MID *res, int64_t &flag, const IN *__restrict ptr, const int32_t rowCount,
+FAST_MATH NO_INLINE void SumConditionalFloat(MID *res, int64_t &flag, const IN *__restrict ptr, const int32_t rowCount,
     const uint8_t *__restrict condition)
 {
-    static_assert(std::is_floating_point_v<IN>, "Not floating point input passed to sumConditionalFloat");
+    static_assert(std::is_floating_point_v<IN>, "Not floating point input passed to SumConditionalFloat");
 #ifdef DEBUG
     if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
         LogWarn("[sumConditionalFloat] Data pointer NOT aligned");
@@ -85,10 +85,12 @@ FAST_MATH NO_INLINE void sumConditionalFloat(MID *res, int64_t &flag, const IN *
     while (ptr < endPtr) {
         equivalent_integer iValue;
         // Note: using memcpy_s hugely degrades performance
-        memcpy(&iValue, ptr, len);
+        std::copy(reinterpret_cast<const uint8_t *>(ptr), reinterpret_cast<const uint8_t *>(ptr) + len,
+            reinterpret_cast<uint8_t *>(&iValue));
         iValue &= (!*condition == addIf) - 1;
         IN fValue;
-        memcpy(&fValue, &iValue, len);
+        std::copy(reinterpret_cast<const uint8_t *>(&iValue), reinterpret_cast<const uint8_t *>(&iValue) + len,
+            reinterpret_cast<uint8_t *>(&fValue));
         *res += fValue;
 
         flag += *condition == addIf;

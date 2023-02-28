@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Inner supported aggregators header
  */
 #ifndef AGGREGATOR_H
@@ -60,7 +60,7 @@ using FirstState = struct FirstState {
     bool valueSet;
 };
 
-template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
+template <typename T> static int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
 }

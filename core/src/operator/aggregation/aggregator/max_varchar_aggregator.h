@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Max aggregate for varchar
  */
 #ifndef OMNI_RUNTIME_MAX_VARCHAR_AGGREGATOR_H
@@ -9,7 +9,7 @@
 
 namespace omniruntime {
 namespace op {
-inline uint8_t *maxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
+inline uint8_t *MaxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
 {
     uint8_t *curVal = nullptr;
     int32_t curLen = vector->GetValue(idx, &curVal);
@@ -76,7 +76,6 @@ protected:
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
-
 
 private:
     void SaveState(AggregateState &state);

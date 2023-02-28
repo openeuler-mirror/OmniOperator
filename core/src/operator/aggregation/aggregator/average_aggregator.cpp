@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: Average aggregate
  */
 
@@ -36,7 +36,6 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
             result =
                 HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal, &count);
-
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "avg failed for hmpp error");
             }
@@ -57,7 +56,6 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
             result = HMPPS_Mean_decimal128(
                 static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal, &count);
-
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "avg failed for hmpp error");
             }
@@ -136,7 +134,7 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Extra
         if (state.count > 0 && state.val != nullptr) {
             if constexpr (std::is_same_v<ResultType, Decimal128>) {
                 Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val))
-                                                  .Divide(Decimal128Wrapper(state.count), 0);
+                                              .Divide(Decimal128Wrapper(state.count), 0);
                 result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
             } else {
                 // Result type is either double or int64, which for both cases we generate double avgResult;
@@ -179,21 +177,21 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
             ptr += rowOffset;
             cntPtr += rowOffset;
             if (nullMap == nullptr) {
-                addAvg<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount);
+                AddAvg<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount);
             } else {
                 if constexpr (std::is_floating_point_v<InType>) {
-                    avgConditionalFloat<InType, ResultType, false>(res, state.count, ptr, cntPtr, rowCount, nullMap);
+                    AvgConditionalFloat<InType, ResultType, false>(res, state.count, ptr, cntPtr, rowCount, nullMap);
                 } else {
-                    addConditionalAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(res, state.count,
+                    AddConditionalAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count,
                         ptr, cntPtr, rowCount, nullMap);
                 }
             }
         } else {
             if (nullMap == nullptr) {
-                addDictAvg<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount,
+                AddDictAvg<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount,
                     indexMap);
             } else {
-                addDictConditionalAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(res, state.count,
+                AddDictConditionalAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count,
                     ptr, cntPtr, rowCount, nullMap, indexMap);
             }
         }
@@ -223,18 +221,18 @@ void AverageAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Proce
             ptr += rowOffset;
             cntPtr += rowOffset;
             if (nullMap == nullptr) {
-                addUseRowIndexAvg<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr);
+                AddUseRowIndexAvg<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr);
             } else {
                 // Reza: can we use customize float operation similar to sumConditionalFloat
-                addConditionalUseRowIndexAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(rowStates,
+                AddConditionalUseRowIndexAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
                     aggIdx, ptr, cntPtr, nullMap);
             }
         } else {
             if (nullMap == nullptr) {
-                addDictUseRowIndexAvg<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr,
+                AddDictUseRowIndexAvg<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr,
                     indexMap);
             } else {
-                addDictConditionalUseRowIndexAvg<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(
+                AddDictConditionalUseRowIndexAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
                     rowStates, aggIdx, ptr, cntPtr, nullMap, indexMap);
             }
         }

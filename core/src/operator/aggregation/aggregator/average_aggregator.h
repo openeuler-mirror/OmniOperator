@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: Average aggregate
  */
 #ifndef OMNI_RUNTIME_AVERAGE_AGGREGATOR_H
@@ -10,10 +10,10 @@
 namespace omniruntime {
 namespace op {
 template <typename IN, typename MID, bool addIf>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void avgConditionalFloat(MID *res, int64_t &flag, const IN *__restrict ptr,
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &flag, const IN *__restrict ptr,
     const int64_t *__restrict cntPtr, const size_t rowCount, const uint8_t *__restrict condition)
 {
-    static_assert(std::is_floating_point_v<IN>, "Not floating point input passed to avgConditionalFloat");
+    static_assert(std::is_floating_point_v<IN>, "Not floating point input passed to AvgConditionalFloat");
 #ifdef DEBUG
     if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
         LogWarn("[avgConditionalFloat] Data pointer NOT aligned");
@@ -37,10 +37,12 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void avgConditionalFloat(MID *res, int64_t &f
 
         int64_t iValue;
         // Note: using memcpy_s hugely degrades performance
-        memcpy(&iValue, &ptr[i], len);
+        std::copy(reinterpret_cast<const uint8_t *>(&ptr[i]), reinterpret_cast<const uint8_t *>(&ptr[i]) + len,
+            reinterpret_cast<uint8_t *>(&iValue));
         iValue &= mask;
         IN fValue;
-        memcpy(&fValue, &iValue, len);
+        std::copy(reinterpret_cast<const uint8_t *>(&iValue), reinterpret_cast<const uint8_t *>(&iValue) + len,
+            reinterpret_cast<uint8_t *>(&fValue));
         *res += fValue;
 
         flag += (cntPtr[i] & mask);

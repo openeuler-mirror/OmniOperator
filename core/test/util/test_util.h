@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Type Util Class
  */
 #ifndef __TEST_UTIL_H__
@@ -23,7 +23,8 @@ bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec:
 bool VecBatchMatchIgnoreOrder(omniruntime::vec::VectorBatch *resultBatch, omniruntime::vec::VectorBatch *expectedBatch);
 bool VecBatchMatches(std::vector<omniruntime::vec::VectorBatch *> &outputPages,
     std::vector<omniruntime::vec::VectorBatch *> &expectPage);
-bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches, std::vector<omniruntime::vec::VectorBatch *> &expectedBatches);
+bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
+    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches);
 omniruntime::vec::VectorBatch *CreateVectorBatch(const omniruntime::type::DataTypes &types, int32_t rowCount, ...);
 omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
 omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataType &type, std::string *values,
@@ -162,8 +163,7 @@ void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t 
 void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
     std::vector<uint8_t *> &result, std::vector<int32_t> &outLen);
 
-template<typename T>
-void AssertEquals(const std::vector<T> &expected, const std::vector<T> &result)
+template <typename T> void AssertEquals(const std::vector<T> &expected, const std::vector<T> &result)
 {
     for (size_t i = 0; i < expected.size(); i++) {
         EXPECT_EQ(result[i], expected[i]);

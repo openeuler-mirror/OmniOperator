@@ -19,7 +19,7 @@ template <DataTypeId TYPE_ID> class VariableWidthVector : public Vector {
 public:
     static const int32_t initCapacityInBytes = 32 * 1024; // 32K
 
-    VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {};
+    VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset){};
 
     VariableWidthVector(VectorAllocator *pAllocator, int capacityInBytes, int size)
         : Vector(pAllocator, capacityInBytes, size, TYPE_ID)
@@ -195,7 +195,7 @@ public:
         const uint8_t *&begin) override final
     {
         T *str = nullptr;
-        StringRef res {};
+        StringRef res{};
         int stringLen;
         auto isNull = Vector::IsValueNull((int)rowId);
         if (not isNull) {
@@ -206,10 +206,11 @@ public:
             res.size = sizeof(stringLen);
         }
         auto *pos = arenaAllocator.AllocateContinue(res.size, begin);
-        memcpy(pos, &stringLen, sizeof(stringLen));
+        std::copy(reinterpret_cast<uint8_t *>(&stringLen),
+                  reinterpret_cast<uint8_t *>(&stringLen) + sizeof(stringLen), pos);
         if (stringLen > 0) {
-            memcpy(pos + sizeof(stringLen), str, stringLen);
-            res.data = reinterpret_cast<char*>(pos);
+            std::copy(str, str + stringLen, pos + sizeof(stringLen));
+            res.data = reinterpret_cast<char *>(pos);
         }
         return res;
     }
@@ -217,7 +218,7 @@ public:
     const uint8_t *DeserializeValueIntoThis(size_t rowId, const uint8_t *pos) override final
     {
         int stringSize = 0;
-        memcpy((void *)&stringSize, pos, sizeof(int));
+        std::copy(pos, pos + sizeof(int), reinterpret_cast<uint8_t *>(&stringSize));
         pos += sizeof(stringSize);
 
         if (stringSize >= 0) {

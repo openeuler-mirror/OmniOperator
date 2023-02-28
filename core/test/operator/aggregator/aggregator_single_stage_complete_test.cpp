@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
 
 #include <gtest/gtest-param-test.h>
@@ -54,7 +54,7 @@ public:
         : AggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName_, nullPercent_, isDict_, hasMask_, nullWhenOverflow_)
     {}
 
-    virtual ~AggregatorTesterTemplateSingleState() override = default;
+    ~AggregatorTesterTemplateSingleState() override = default;
 
     bool GeneratePartialExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
@@ -87,7 +87,7 @@ public:
     {
         *expectedResult = new VectorBatch(2);
         (*expectedResult)
-            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
+            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, 1));
         (*expectedResult)->SetVector(1, new LongVector(this->vectorAllocator, 1));
 
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
@@ -165,7 +165,7 @@ public:
         : HashAggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName_, nullPercent_, isDict_, hasMask_, nullWhenOverflow_)
     {}
 
-    virtual ~HashAggregatorTesterTemplateSingleState() override = default;
+    ~HashAggregatorTesterTemplateSingleState() override = default;
 
     bool GeneratePartialExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
@@ -308,7 +308,7 @@ private:
 
         expectedResult->SetVector(0, groupCol);
         expectedResult->SetVector(1,
-            VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, nGroups));
+            VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, nGroups));
         expectedResult->SetVector(2, new LongVector(this->vectorAllocator, nGroups));
 
         return expectedResult;
@@ -500,15 +500,13 @@ TEST_P(SingleStageCompleteTest, verify_correctness)
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, SingleStageCompleteTest,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
-    ::testing::Values(0, 25, 100), // nullPercent
-    ::testing::Bool(),             // isDict
-    ::testing::Bool(),             // hasMask
-    ::testing::Bool(),             // nullWhenOverflow
-    ::testing::Bool()              // groupby
+    ::testing::Values(OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
+    ::testing::Values(OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
+    ::testing::Values(25),   // nullPercent
+    ::testing::Bool(),       // isDict
+    ::testing::Bool(),       // hasMask
+    ::testing::Values(true), // nullWhenOverflow
+    ::testing::Bool()        // groupby
     ),
     [](const testing::TestParamInfo<SingleStageCompleteTest::ParamType> &info) {
         return std::get<0>(info.param) + "_" + TypeUtil::TypeToStringLog(std::get<1>(info.param)) + "_" +

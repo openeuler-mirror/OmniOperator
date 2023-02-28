@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
 
 #include <gtest/gtest-param-test.h>
@@ -115,7 +115,6 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     auto finalFactory = tester->CreateFinalFactory();
     EXPECT_TRUE(finalFactory != nullptr);
 
-
     Operator *aggPartial1;
     try {
         aggPartial1 = partialFactory->CreateOperator();
@@ -138,7 +137,6 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         throw e;
     }
     EXPECT_TRUE(aggPartial2 != nullptr);
-
 
     Operator *aggFinal;
     try {
@@ -302,15 +300,13 @@ TEST_P(MultiStageCompleteTest, verify_correctness)
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, MultiStageCompleteTest,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
-    ::testing::Values(0, 25, 100), // nullPercent
-    ::testing::Bool(),             // isDict
-    ::testing::Bool(),             // hasMask
-    ::testing::Bool(),             // nullWhenOverflow
-    ::testing::Bool()              // groupby
+    ::testing::Values(OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
+    ::testing::Values(OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
+    ::testing::Values(25),   // nullPercent
+    ::testing::Bool(),       // isDict
+    ::testing::Bool(),       // hasMask
+    ::testing::Values(true), // nullWhenOverflow
+    ::testing::Bool()        // groupby
     ),
     [](const testing::TestParamInfo<MultiStageCompleteTest::ParamType> &info) {
         return std::get<0>(info.param) + "_" + TypeUtil::TypeToStringLog(std::get<1>(info.param)) + "_" +

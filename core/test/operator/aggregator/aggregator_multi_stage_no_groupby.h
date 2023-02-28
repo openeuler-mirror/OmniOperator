@@ -1,9 +1,7 @@
-#pragma once
-
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
-
+#pragma once
 #include <set>
 
 #include "operator/aggregation/aggregator/all_aggregators.h"
@@ -18,9 +16,9 @@ using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace omniruntime::type;
 
-constexpr int32_t maxVarcharLength = 128;
-constexpr int32_t vecBatchNum = 10;
-constexpr int32_t rowSize = 2000;
+constexpr int32_t MAX_VARCHAR_LENGTH = 128;
+constexpr int32_t VEC_BATCH_NUM  = 10;
+constexpr int32_t ROW_SIZE = 2000;
 inline static std::map<std::string, FunctionType> aggFuncs = { { "sum", OMNI_AGGREGATION_TYPE_SUM },
                                                                { "avg", OMNI_AGGREGATION_TYPE_AVG },
                                                                { "min", OMNI_AGGREGATION_TYPE_MIN },
@@ -154,17 +152,17 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
 inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32_t nRows, const int32_t nullPercent,
     const int32_t range, const bool isDict)
 {
-    uint8_t charBuffer[maxVarcharLength];
+    uint8_t charBuffer[MAX_VARCHAR_LENGTH];
     if (isDict) {
         int32_t valueStartIdx = nullPercent > 0 ? 1 : 0;
         VarcharVector *vector =
-            new VarcharVector(vectorAllocator, maxVarcharLength * (range + valueStartIdx), range + valueStartIdx);
+            new VarcharVector(vectorAllocator, MAX_VARCHAR_LENGTH * (range + valueStartIdx), range + valueStartIdx);
         if (nullPercent > 0) {
             vector->SetValueNull(0);
         }
 
         for (int32_t r = valueStartIdx; r < vector->GetSize(); ++r) {
-            const auto valLen = (rand() % (maxVarcharLength - 1)) + 1;
+            const auto valLen = (rand() % (MAX_VARCHAR_LENGTH - 1)) + 1;
             for (int32_t i = 0; i < valLen; ++i) {
                 charBuffer[i] = rand() % 95 + 32;
             }
@@ -183,12 +181,12 @@ inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32
         delete vector;
         return dictVector;
     } else {
-        VarcharVector *vector = new VarcharVector(vectorAllocator, maxVarcharLength * nRows, nRows);
+        VarcharVector *vector = new VarcharVector(vectorAllocator, MAX_VARCHAR_LENGTH * nRows, nRows);
         for (int32_t r = 0; r < nRows; ++r) {
             if ((rand() % 100) < nullPercent) {
                 vector->SetValueNull(r);
             } else {
-                const auto valLen = (rand() % (maxVarcharLength - 1)) + 1;
+                const auto valLen = (rand() % (MAX_VARCHAR_LENGTH - 1)) + 1;
                 for (int32_t i = 0; i < valLen; ++i) {
                     charBuffer[i] = rand() % 95 + 32;
                 }
@@ -394,7 +392,7 @@ inline DataTypePtr GetType(DataTypeId typeId)
             return Decimal128Type();
         case OMNI_VARCHAR:
         case OMNI_CHAR:
-            return VarcharType(maxVarcharLength);
+            return VarcharType(MAX_VARCHAR_LENGTH);
         default:
             throw OmniException("Invalid Argument", "Invalid type " + TypeUtil::TypeToStringLog(typeId));
     }
@@ -466,7 +464,6 @@ uint8_t *GenerateExpectedResultVarchar(std::vector<VectorBatch *> &vvb, const in
                 }
             }
             valid &= !vector->IsValueNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
-
             if (valid) {
                 orgVector = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vector, i, orgIdx));
                 uint8_t *curVal = nullptr;
@@ -516,13 +513,11 @@ bool GenerateExpectedResultNumeric(std::vector<VectorBatch *> &vvb, const int32_
                 }
             }
             valid &= !vector->IsValueNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
-
             if (valid) {
                 if (overflow) {
                     count++;
                     continue;
                 }
-
                 orgVector = VectorHelper::ExpandVectorAndIndex(vector, i, orgIdx);
                 overflow |= !updateFunc(midRes, static_cast<V_IN *>(orgVector)->GetValue(orgIdx), count == 0);
                 count++;
@@ -553,7 +548,7 @@ public:
             (nullWhenOverflow_ ? "overflowNull_" : "overflowExcep_") + "noGroupBy");
     }
 
-    virtual ~AggregatorTesterTemplate() override
+    ~AggregatorTesterTemplate() override
     {
         delete vectorAllocator;
     }
@@ -564,7 +559,7 @@ public:
     }
 
     // functions to build input data and generate expected results
-    virtual std::vector<VectorBatch *> BuildAggInput(const int32_t vecBatchNum, const int32_t rowPerVecBatch) override
+    std::vector<VectorBatch *> BuildAggInput(const int32_t vecBatchNum, const int32_t rowPerVecBatch) override
     {
         std::vector<VectorBatch *> input(vecBatchNum);
 
@@ -622,7 +617,7 @@ public:
         return input;
     }
 
-    virtual bool GeneratePartialExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
+    bool GeneratePartialExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = this->InitializeExpectedPartialResult(vvb);
 
@@ -700,11 +695,11 @@ public:
         throw OmniException("Unreachable code", "Unreachable code");
     }
 
-    virtual bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
+    bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = new VectorBatch(2);
         (*expectedResult)
-            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
+            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, 1));
         (*expectedResult)->SetVector(1, new LongVector(this->vectorAllocator, 1));
 
         int64_t count = 0;
@@ -784,7 +779,7 @@ public:
     }
 
     // functions to generate aggregator factories
-    virtual std::unique_ptr<OperatorFactory> CreatePartialFactory() override
+    std::unique_ptr<OperatorFactory> CreatePartialFactory() override
     {
         std::vector<uint32_t> aggFuncVec;
         std::vector<DataTypePtr> inputTypeVec;
@@ -795,7 +790,7 @@ public:
         return this->CreateFactory(aggFuncVec, inputTypeVec, outputTypeVec, aggColIdxVec, aggMaskVec, true, true);
     }
 
-    virtual std::unique_ptr<OperatorFactory> CreateFinalFactory() override
+    std::unique_ptr<OperatorFactory> CreateFinalFactory() override
     {
         std::vector<uint32_t> aggFuncVec;
         std::vector<DataTypePtr> inputTypeVec;
@@ -987,7 +982,7 @@ private:
         expectedResult->SetVector(1, new LongVector(this->vectorAllocator, 1));
 
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
-            expectedResult->SetVector(0, new VarcharVector(this->vectorAllocator, maxVarcharLength, 1));
+            expectedResult->SetVector(0, new VarcharVector(this->vectorAllocator, MAX_VARCHAR_LENGTH, 1));
         } else {
             if (TypeUtil::IsDecimalType(IN_ID) &&
                 (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
@@ -996,7 +991,7 @@ private:
                 expectedResult->SetVector(0, new DoubleVector(this->vectorAllocator, 1));
             } else {
                 expectedResult->SetVector(0,
-                    VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, 1));
+                    VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, 1));
             }
         }
 

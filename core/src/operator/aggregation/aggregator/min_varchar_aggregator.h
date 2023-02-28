@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Min aggregate for varchar
  */
 #ifndef OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
@@ -16,7 +16,7 @@ constexpr int64_t VALUE_FLAG = 0x00000000FFFFFFFFLL;
 
 namespace omniruntime {
 namespace op {
-inline uint8_t *minCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
+inline uint8_t *MinCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
 {
     uint8_t *curVal = nullptr;
     int32_t curLen = vector->GetValue(idx, &curVal);
@@ -32,7 +32,7 @@ inline uint8_t *minCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
+VECTORIZE_LOOP inline void AddChar(AggregateState &state, const VarcharVector *vector, const int32_t rowOffset,
     const int32_t rowCount)
 {
     if (rowCount > 0) {
@@ -52,7 +52,7 @@ VECTORIZE_LOOP inline void addChar(AggregateState &state, const VarcharVector *v
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addDictChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
+VECTORIZE_LOOP inline void AddDictChar(AggregateState &state, const VarcharVector *vector, const int32_t rowCount,
     const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
@@ -78,12 +78,12 @@ VECTORIZE_LOOP inline void addDictChar(AggregateState &state, const VarcharVecto
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addConditionalChar(AggregateState &state, const VarcharVector *vector,
+VECTORIZE_LOOP inline void AddConditionalChar(AggregateState &state, const VarcharVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
         if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalChar]: ConditionMap pointer NOT aligned");
+            LogWarn("[AddConditionalChar]: ConditionMap pointer NOT aligned");
         }
         condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
@@ -117,7 +117,7 @@ VECTORIZE_LOOP inline void addConditionalChar(AggregateState &state, const Varch
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addDictConditionalChar(AggregateState &state, const VarcharVector *vector,
+VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState &state, const VarcharVector *vector,
     const int32_t rowCount, const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
@@ -158,7 +158,7 @@ VECTORIZE_LOOP inline void addDictConditionalChar(AggregateState &state, const V
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP inline void AddUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const VarcharVector *vector, const int32_t rowOffset)
 {
     const size_t rowCount = rowStates.size();
@@ -180,7 +180,7 @@ VECTORIZE_LOOP inline void addUseRowIndexChar(std::vector<AggregateState *> &row
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP inline void AddDictUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const VarcharVector *vector, const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
@@ -207,7 +207,7 @@ VECTORIZE_LOOP inline void addDictUseRowIndexChar(std::vector<AggregateState *> 
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     const VarcharVector *vector, const int32_t rowOffset, const uint8_t *__restrict condition)
 {
     const size_t rowCount = rowStates.size();
@@ -239,7 +239,7 @@ VECTORIZE_LOOP inline void addConditionalUseRowIndexChar(std::vector<AggregateSt
 }
 
 template <uint8_t *(*OP)(uint8_t *, int64_t &, const VarcharVector *, const int32_t)>
-VECTORIZE_LOOP inline void addDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
+VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, const VarcharVector *vector, const uint8_t *__restrict condition,
     const int32_t *__restrict indexMap)
 {

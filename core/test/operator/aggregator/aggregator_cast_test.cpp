@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
 
 #include <gtest/gtest-param-test.h>
@@ -8,7 +8,7 @@
 
 #include "operator/aggregation/aggregator/typed_aggregator.h"
 
-#include "../../util/test_util.h"
+#include "test/util/test_util.h"
 
 #include "aggregator_multi_stage_no_groupby.h"
 
@@ -19,17 +19,17 @@ using namespace omniruntime::type;
 
 // helper classes and functions
 
-// test runs for 'numValues' different values, so 'inXXX' which is list of values for each type should at least
-// have 'numValues' entries.
-static const int32_t numValues = 15;
+// test runs for 'NUM_VALUES' different values, so 'inXXX' which is list of values for each type should at least
+// have 'NUM_VALUES' entries.
+static const int32_t NUM_VALUES = 15;
 
-static std::vector<int32_t> channel{ 0 };
+static std::vector<int32_t> CHANNEL{0 };
 
 class AggregatorCastTestClass : public TypedAggregator<true, false, false> {
 public:
     AggregatorCastTestClass(DataTypes &inTypes, DataTypes &outTypes)
         : TypedAggregator<true, false, false>(OMNI_AGGREGATION_TYPE_SUM, std::move(inTypes), std::move(outTypes),
-        channel)
+                                              CHANNEL)
     {}
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
@@ -61,7 +61,7 @@ public:
 template <typename T> struct R {
     R() : v(T{}), overflow(true) {}
 
-    R(T v_) : v(v_), overflow(false) {}
+    explicit R(T v_) : v(v_), overflow(false) {}
 
     const T v;
     const bool overflow;
@@ -598,8 +598,7 @@ static Results inDec64Results(
             R<Decimal128>(Decimal128("123456789012")), R<Decimal128>(Decimal128("-123456789012")),
             R<Decimal128>(Decimal128("2147483647")), R<Decimal128>(Decimal128("-2147483647")),
             R<Decimal128>(Decimal128("2147483648")), R<Decimal128>(Decimal128("-2147483648"))
-        }, 3
-    )
+        }, 3)
 );
 
 static std::vector<R<Decimal128>> inDec128{ R<Decimal128>(Decimal128("0")),
@@ -831,8 +830,7 @@ static Results inDec128Results(
             R<Decimal128>(Decimal128("1234567890123456789")), R<Decimal128>(Decimal128("-1234567890123456789")),
             R<Decimal128>(Decimal128("12345678901234567891")), R<Decimal128>(Decimal128("-12345678901234567891")),
             R<Decimal128>(Decimal128("12345678901234567890123")), R<Decimal128>(Decimal128("-12345678901234567890123"))
-        }, 3
-    )
+        }, 3)
 );
 
 static std::vector<R<Decimal128>> inVarchar{ R<Decimal128>(Decimal128("0")),
@@ -901,7 +899,19 @@ static Results inVarcharResults(std::vector<R<int16_t>>{ R<int16_t>(0), R<int16_
     },
     ConcatinateValues<Decimal128>(inVarchar, inVarchar), inVarchar);
 
-class AggregatorCastTest : public ::testing::TestWithParam<std::tuple<DataTypeId, int32_t, DataTypeId>> {};
+class AggregatorCastTest : public ::testing::TestWithParam<std::tuple<DataTypeId, int32_t, DataTypeId>> {
+public:
+protected:
+    virtual void SetUp()
+    {
+        ConfigUtil::SetCheckReScaleRule(CheckReScaleRule::NOT_CHECK_RESCALE);
+        ConfigUtil::SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule::REPLACE);
+        ConfigUtil::SetCastDecimalToDoubleRule(CastDecimalToDoubleRule::CAST);
+        ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+        ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
+        ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
+    }
+};
 
 // test execution functions
 template <typename InType, typename OutType>
@@ -940,7 +950,7 @@ static void TestNumericInputDecimalOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalOutputWithScale(agg, 2);
     result = agg.TestCastWithOverflow<InType, OutType>(inValue, overflow);
@@ -1007,7 +1017,7 @@ static void TestDecimalInputNumericOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 1);
     result = agg.TestCastWithOverflow<InType, OutType>(inValue, overflow);
@@ -1020,7 +1030,7 @@ static void TestDecimalInputNumericOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 3);
     result = agg.TestCastWithOverflow<InType, OutType>(inValue, overflow);
@@ -1055,7 +1065,7 @@ static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 0);
     SetDecimalOutputWithScale(agg, 2);
@@ -1069,7 +1079,7 @@ static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 1);
     SetDecimalOutputWithScale(agg, 0);
@@ -1083,7 +1093,7 @@ static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 1);
     SetDecimalOutputWithScale(agg, 2);
@@ -1097,7 +1107,7 @@ static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 3);
     SetDecimalOutputWithScale(agg, 0);
@@ -1111,7 +1121,7 @@ static void TestDecimalInputDecimalOutput(AggregatorCastTestClass &agg, const In
         }
     }
 
-    expectedIndex += numValues;
+    expectedIndex += NUM_VALUES;
     overflow = false;
     SetDecimalInputWithScale(agg, 3);
     SetDecimalOutputWithScale(agg, 2);
@@ -1196,7 +1206,7 @@ static std::vector<DataTypeId> testTypes{ OMNI_SHORT,     OMNI_INT,        OMNI_
     OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR };
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, AggregatorCastTest,
-    ::testing::Combine(::testing::ValuesIn(testTypes), ::testing::Range(0, numValues), ::testing::ValuesIn(testTypes)),
+    ::testing::Combine(::testing::ValuesIn(testTypes), ::testing::Range(0, NUM_VALUES), ::testing::ValuesIn(testTypes)),
     [](const testing::TestParamInfo<AggregatorCastTest::ParamType> &info) {
         return TypeUtil::TypeToStringLog(std::get<0>(info.param)) + "_" + std::to_string(std::get<1>(info.param)) +
             "_" + TypeUtil::TypeToStringLog(std::get<2>(info.param));

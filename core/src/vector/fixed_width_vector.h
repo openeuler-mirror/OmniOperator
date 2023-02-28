@@ -121,13 +121,15 @@ public:
         res.size = sizeof(bool) + sizeof(T);
         auto *pos = arenaAllocator.AllocateContinue(res.size, begin);
         bool isNull = IsValueNull(rowId);
-        memcpy(pos, &isNull, sizeof(bool));
+        std::copy(reinterpret_cast<uint8_t*>(&isNull),
+                  reinterpret_cast<uint8_t*>(&isNull) + sizeof(bool), pos);
 
         if (not isNull) {
             auto value = GetValue(rowId);
-            memcpy(pos + sizeof(bool), &value, BYTES);
+            std::copy(reinterpret_cast<uint8_t*>(&value), reinterpret_cast<uint8_t*>(&value) + BYTES,
+                      pos + sizeof(bool));
         } else {
-            memset(pos + sizeof(bool), 0, BYTES);
+            memset_sp(pos + sizeof(bool), BYTES, 0, BYTES);
         }
         res.data = reinterpret_cast<char*>(pos);
         return res;

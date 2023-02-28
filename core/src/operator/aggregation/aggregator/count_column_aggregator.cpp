@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Count aggregate
  */
 
@@ -8,7 +8,7 @@
 namespace omniruntime {
 namespace op {
 template <bool addIf>
-VECTORIZE_LOOP NO_INLINE void addConditionalCountRaw(int64_t &res, const size_t rowCount,
+VECTORIZE_LOOP NO_INLINE void AddConditionalCountRaw(int64_t &res, const size_t rowCount,
     const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
@@ -44,7 +44,7 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
         if (nullMap == nullptr) {
             state.count += rowCount;
         } else {
-            addConditionalCountRaw<false>(state.count, rowCount, nullMap);
+            AddConditionalCountRaw<false > (state.count, rowCount, nullMap);
         }
     } else {
         int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
@@ -55,16 +55,16 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
         if (indexMap == nullptr) {
             ptr += rowOffset;
             if (nullMap == nullptr) {
-                add<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount);
+                Add<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount);
             } else {
-                addConditional<int64_t, int64_t, countAllConditionalOp<false>>(&(state.count), noUsed, ptr, rowCount,
+                AddConditional<int64_t, int64_t, CountAllConditionalOp<false>>(&(state.count), noUsed, ptr, rowCount,
                     nullMap);
             }
         } else {
             if (nullMap == nullptr) {
-                addDict<int64_t, int64_t, countAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
+                AddDict<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
             } else {
-                addDictConditional<int64_t, int64_t, countAllConditionalOp<false>>(&(state.count), noUsed, ptr,
+                AddDictConditional<int64_t, int64_t, CountAllConditionalOp<false>>(&(state.count), noUsed, ptr,
                     rowCount, nullMap, indexMap);
             }
         }
@@ -99,21 +99,21 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
             ptr += rowOffset;
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
-                    countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL);
+                    CountAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL);
                 }
             } else {
                 for (size_t i = 0; i < rowCount; ++i) {
-                    countAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL, nullMap[i]);
+                    CountAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[i], 0LL, nullMap[i]);
                 }
             }
         } else {
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
-                    countAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
+                    CountAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
                 }
             } else {
                 for (size_t i = 0; i < rowCount; ++i) {
-                    countAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL,
+                    CountAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL,
                         nullMap[i]);
                 }
             }

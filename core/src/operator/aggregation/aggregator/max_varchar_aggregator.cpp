@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Max aggregate for varchar
  */
 
@@ -86,18 +86,17 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
-            addChar<maxCharOp>(state, vector, rowOffset, rowCount);
+            AddChar<MaxCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            addConditionalChar<maxCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            AddConditionalChar<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDictChar<maxCharOp>(state, vector, rowCount, indexMap);
+            AddDictChar<MaxCharOp>(state, vector, rowCount, indexMap);
         } else {
-            addDictConditionalChar<maxCharOp>(state, vector, rowCount, nullMap, indexMap);
+            AddDictConditionalChar<MaxCharOp>(state, vector, rowCount, nullMap, indexMap);
         }
     }
-
     SaveState(state);
 }
 
@@ -110,15 +109,15 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
-            addUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, rowOffset);
+            AddUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, rowOffset);
         } else {
-            addConditionalUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap);
+            AddConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDictUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, indexMap);
+            AddDictUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, indexMap);
         } else {
-            addDictConditionalUseRowIndexChar<maxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+            AddDictConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
         }
     }
 
@@ -142,7 +141,7 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Sa
     }
 
     uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
-    memcpy(ptr, state.val, len);
+    std::copy(reinterpret_cast<uint8_t *>(state.val), reinterpret_cast<uint8_t *>(state.val) + len, ptr);
     state.val = ptr;
     state.count = len;
 }

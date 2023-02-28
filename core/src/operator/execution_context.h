@@ -40,15 +40,7 @@ public:
     {
         hasError = false;
     }
-    uint8_t *AllocContinue(size_t totalBytes, const uint8_t *& start) {
-        if(start == nullptr){
-            auto *ret = arena.Allocate(totalBytes);
-            start = ret;
-            return ret;
-        }else {
-            return arena.AllocateContinue(totalBytes,start);
-        }
-    }
+
 private:
     mem::SimpleArenaAllocator arena;
     bool hasError = false;

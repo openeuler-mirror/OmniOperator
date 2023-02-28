@@ -63,8 +63,9 @@ Decimal128::Decimal128(const std::string &s)
 
 Decimal128::Decimal128(const char *input)
 {
+    std::regex localRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?");
     std::string s = std::string(input);
-    if (!regex_match(s, decimalRegex)) {
+    if (!regex_match(s, localRegex)) {
         throw std::invalid_argument(s);
     }
     bool isNegative = s[0] == '-';

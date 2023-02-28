@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Count aggregate
  */
 #ifndef OMNI_RUNTIME_COUNT_COLUMN_AGGREGATOR_H
@@ -11,13 +11,13 @@
 namespace omniruntime {
 namespace op {
 SIMD_ALWAYS_INLINE
-void countAllOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2)
+void CountAllOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2)
 {
     *res += in;
 }
 
 template <bool addIf>
-SIMD_ALWAYS_INLINE void countAllConditionalOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2,
+SIMD_ALWAYS_INLINE void CountAllConditionalOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2,
     const uint8_t &condition)
 {
     const int64_t mask = (!condition == addIf) - 1;

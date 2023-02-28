@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
 
 #include <vector>
@@ -510,8 +510,6 @@ std::unique_ptr<AggregationOperatorFactory> CreateAggregationOperatorFactory(con
     if (aggMask_.size() != 0) {
         EXPECT_EQ(numAgg, aggMask_.size());
     }
-
-
     auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(DataTypes(aggOutputTypes));
     std::vector<uint32_t> aggMask;

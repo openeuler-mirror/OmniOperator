@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Max aggregate
  */
 #ifndef OMNI_RUNTIME_MAX_AGGREGATOR_H
@@ -41,7 +41,7 @@ template <typename T> T GetMin()
 }
 
 template <typename IN, typename OUT>
-SIMD_ALWAYS_INLINE void maxOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
+SIMD_ALWAYS_INLINE void MaxOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
 {
     const OUT cur = static_cast<OUT>(in);
     if (*res < cur) {
@@ -51,7 +51,7 @@ SIMD_ALWAYS_INLINE void maxOp(OUT *res, int64_t &flag, const IN &in, const int64
 }
 
 template <typename IN, typename OUT, bool addIf>
-SIMD_ALWAYS_INLINE void maxConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed,
+SIMD_ALWAYS_INLINE void MaxConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed,
     const uint8_t &condition)
 {
     if (condition == addIf) {

@@ -57,12 +57,12 @@ public:
 
     ~GroupByHashSlot() = default;
 
-    GroupByHashSlot(const KeyType &key_) : isAssigned(true)
+    explicit GroupByHashSlot(const KeyType &keyParam) : isAssigned(true)
     {
-        kv.first = key_;
+        kv.first = keyParam;
     }
 
-    GroupByHashSlot(KeyType &&key_) : isAssigned(true), kv(std::move(key_), ValueType{}) {}
+    explicit GroupByHashSlot(KeyType &&keyParam) : isAssigned(true), kv(std::move(keyParam), ValueType{}) {}
 
     GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)), hashVal(o.hashVal)
     {
@@ -127,6 +127,13 @@ public:
         return *this;
     }
 
+    GroupByHashSlot(const GroupByHashSlot &o)
+    {
+        kv = o.kv;
+        SetHashVal(o.GetHashVal());
+        isAssigned = true;
+    }
+
     bool IsAssigned() const noexcept
     {
         return isAssigned;
@@ -186,7 +193,7 @@ private:
 
 template <typename ValueType> class InsertResult {
 public:
-    InsertResult(ValueType &emplaceValue, bool ins = false) : emplaceValue(emplaceValue), inserted(ins) {}
+    explicit InsertResult(ValueType &emplaceValue, bool ins = false) : emplaceValue(emplaceValue), inserted(ins) {}
 
     ~InsertResult() = default;
 
@@ -231,7 +238,9 @@ private:
 class Grower {
 public:
     static constexpr short enlargeThreshold = 23;
-    Grower(uint8_t degree) : degree(degree)
+    static constexpr short expandFactoryOne = 1;
+    static constexpr short expandFactoryTwo = 2;
+    explicit Grower(uint8_t degree) : degree(degree)
     {
         CalculateThreshHold();
     }
@@ -241,7 +250,7 @@ public:
      */
     uint64_t GrowSize()
     {
-        degree += (degree >= enlargeThreshold ? 1 : 2);
+        degree += (degree >= enlargeThreshold ? expandFactoryOne : expandFactoryTwo);
         CalculateThreshHold();
         return 1ULL << degree;
     }
@@ -279,7 +288,7 @@ struct OutputState {
         hasBeenOutputNum += o.hasBeenOutputNum;
     }
 
-    OutputState(uint32_t outputHashmapPos = 0, uint32_t hasBeenOutputNum = 0)
+    explicit OutputState(uint32_t outputHashmapPos = 0, uint32_t hasBeenOutputNum = 0)
         : outputHashmapPos(outputHashmapPos), hasBeenOutputNum(hasBeenOutputNum)
     {}
 };
@@ -294,7 +303,7 @@ struct OutputState {
  */
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
     std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType> &&
-    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)> * = nullptr>
+    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)>* = nullptr>
 class GroupByHashMap {
 public:
     using Slot = GroupByHashSlot<KeyType, ValueType>;
@@ -358,7 +367,7 @@ public:
      * InsertResult's GetValue function will return value reference, and caller can update the value
      */
     template <typename T,
-        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>> * = nullptr>
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
     InsertResult<ValueType> Emplace(T &&key)
     {
         if (NeedRehash()) {
@@ -415,6 +424,61 @@ public:
         if (nullSlot != nullptr) {
             allocator.Release(reinterpret_cast<uint8_t *>(nullSlot), sizeof(Slot));
         }
+    }
+
+    class HashmapIteratorOutput {
+    public:
+        HashmapIteratorOutput(GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *mapPtr,
+            uint32_t pos, uint32_t hasBeenOutputCount)
+            : groupByHashMapPtr(mapPtr)
+        {
+            remainSlot =
+                groupByHashMapPtr->GetElementsSize() - (groupByHashMapPtr->HasNullCell() ? 1 : 0) - hasBeenOutputCount;
+
+            slotIterator = groupByHashMapPtr->slots + pos;
+        }
+
+        template <class Func> OutputState HandleElements(uint32_t expectSize, Func func)
+        {
+            uint32_t remainHandleSize = expectSize;
+            while (remainSlot && remainHandleSize) {
+                FindNext();
+                --remainSlot;
+                --remainHandleSize;
+                func(slotIterator->GetKey(), slotIterator->GetValue());
+                // value in cur pos has been assigned , so we need to plus one
+                MoveToNext();
+            }
+            if (remainHandleSize == 0) {
+                return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize);
+            }
+            if (groupByHashMapPtr->HasNullCell()) {
+                --remainHandleSize;
+                func(groupByHashMapPtr->nullSlot->GetKey(), groupByHashMapPtr->nullSlot->GetValue());
+            }
+            return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize - remainHandleSize);
+        }
+    private:
+        Slot *slotIterator;
+        GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *groupByHashMapPtr;
+        uint32_t remainSlot = 0;
+
+        void FindNext()
+        {
+            while (not slotIterator->IsAssigned()) {
+                slotIterator++;
+            }
+        }
+
+        void MoveToNext()
+        {
+            ++slotIterator;
+        }
+    };
+
+    HashmapIteratorOutput GetOutputMachine(uint32_t pos = 0, uint32_t hasBeenOutputCount = 0)
+    {
+        return HashmapIteratorOutput(this, pos, hasBeenOutputCount);
     }
 
 private:
@@ -525,63 +589,6 @@ private:
     uint64_t capacity;
     static constexpr uint8_t defaultDegreeSize = 8;
     GrowStrategy grower;
-
-public:
-    class HashmapIteratorOutput {
-    private:
-        Slot *slotIterator;
-        GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *groupByHashMapPtr;
-        uint32_t remainSlot = 0;
-
-        void FindNext()
-        {
-            while (not slotIterator->IsAssigned()) {
-                slotIterator++;
-            }
-        }
-
-        void MoveToNext()
-        {
-            ++slotIterator;
-        }
-
-    public:
-        HashmapIteratorOutput(GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *mapPtr,
-            uint32_t pos, uint32_t hasBeenOutputCount)
-            : groupByHashMapPtr(mapPtr)
-        {
-            remainSlot =
-                groupByHashMapPtr->GetElementsSize() - (groupByHashMapPtr->HasNullCell() ? 1 : 0) - hasBeenOutputCount;
-
-            slotIterator = groupByHashMapPtr->slots + pos;
-        }
-
-        template <class Func> OutputState HandleElements(uint32_t expectSize, Func func)
-        {
-            uint32_t remainHandleSize = expectSize;
-            while (remainSlot && remainHandleSize) {
-                FindNext();
-                --remainSlot;
-                --remainHandleSize;
-                func(slotIterator->GetKey(), slotIterator->GetValue());
-                // value in cur pos has been assigned , so we need to plus one
-                MoveToNext();
-            }
-            if (remainHandleSize == 0) {
-                return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize);
-            }
-            if (groupByHashMapPtr->HasNullCell()) {
-                --remainHandleSize;
-                func(groupByHashMapPtr->nullSlot->GetKey(), groupByHashMapPtr->nullSlot->GetValue());
-            }
-            return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize - remainHandleSize);
-        }
-    };
-
-    HashmapIteratorOutput GetOutputMachine(uint32_t pos = 0, uint32_t hasBeenOutputCount = 0)
-    {
-        return HashmapIteratorOutput(this, pos, hasBeenOutputCount);
-    }
 };
 
 

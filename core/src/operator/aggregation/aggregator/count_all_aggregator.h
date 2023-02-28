@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Count aggregate
  */
 #ifndef OMNI_RUNTIME_COUNT_ALL_AGGREGATOR_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Hash Aggregation Source File
  */
 #include "group_aggregation.h"
@@ -230,6 +230,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         Emplace(serialize, vecBatch, groupVectors);
     } else {
         // only serialize method are used now
+        VectorHelper::FreeVecBatch(vecBatch);
         LogError("can not support groupByColumnsHandleType : %d.", groupByColumnsHandleType);
         throw OmniException("no t supported operation", "groupByColumnsHandleType error");
     }
@@ -754,7 +755,7 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, std::ve
         SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
         return 0;
     }
-    //The iteration output only contains one result.
+    // The iteration output only contains one result.
     result.resize(1);
     int32_t curRemainHandleOutput = totalRowCount - outputState.hasBeenOutputNum;
     FillSingleResultVector(curRemainHandleOutput, result[0]);

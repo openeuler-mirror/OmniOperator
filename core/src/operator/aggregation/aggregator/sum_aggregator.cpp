@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Sum aggregator
  */
 
@@ -33,7 +33,6 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
             long sumVal = 0;
             result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
                 rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
-
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "sum failed for hmpp error");
             }
@@ -53,7 +52,6 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
             result = HMPPS_Sum_decimal128(
                 static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
-
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "sum failed for hmpp error");
             }
@@ -154,20 +152,20 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSi
     if (indexMap == nullptr) {
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            add<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, rowCount);
+            Add<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount);
         } else {
             if constexpr (std::is_floating_point_v<InType>) {
-                sumConditionalFloat<InType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
+                SumConditionalFloat<InType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
             } else {
-                addConditional<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+                AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                     rowCount, nullMap);
             }
         }
     } else {
         if (nullMap == nullptr) {
-            addDict<InType, ResultType, sumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+            AddDict<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
         } else {
-            addDictConditional<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+            AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                 rowCount, nullMap, indexMap);
         }
     }
@@ -184,17 +182,17 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
     if (indexMap == nullptr) {
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            addUseRowIndex<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr);
+            AddUseRowIndex<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr);
         } else {
             // Reza: can we use customize float operation similar to sumConditionalFloat
-            addConditionalUseRowIndex<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(rowStates,
+            AddConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDictUseRowIndex<InType, ResultType, sumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
+            AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
         } else {
-            addDictConditionalUseRowIndex<InType, ResultType, sumConditionalOp<InType, ResultType, false>>(rowStates,
+            AddDictConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap, indexMap);
         }
     }

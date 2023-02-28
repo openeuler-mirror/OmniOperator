@@ -1,9 +1,7 @@
-#pragma once
-
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
-
+#pragma once
 #include "aggregator_multi_stage_no_groupby.h"
 #include "operator/aggregation/group_aggregation.h"
 
@@ -75,8 +73,7 @@ public:
         : AggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName_, nullPercent_, isDict_, hasMask_, nullWhenOverflow_)
     {}
 
-
-    virtual ~HashAggregatorTesterTemplate() override = default;
+    ~HashAggregatorTesterTemplate() override = default;
 
     int32_t GetValueColumnIndex() override
     {
@@ -98,7 +95,7 @@ public:
         return inputs;
     }
 
-    virtual bool GeneratePartialExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
+    bool GeneratePartialExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = this->InitializeExpectedPartialResult(vvb);
 
@@ -205,7 +202,7 @@ public:
         throw OmniException("Unreachable code", "Unreachable code");
     }
 
-    virtual bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
+    bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = this->InitializeExpectedFinalResult(vvb);
         Vector *groups = (*expectedResult)->GetVector(0);
@@ -407,7 +404,7 @@ private:
         expectedResult->SetVector(0, groupCol);
         expectedResult->SetVector(2, new LongVector(this->vectorAllocator, nGroups));
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
-            expectedResult->SetVector(1, new VarcharVector(this->vectorAllocator, maxVarcharLength, nGroups));
+            expectedResult->SetVector(1, new VarcharVector(this->vectorAllocator, MAX_VARCHAR_LENGTH, nGroups));
         } else {
             if (TypeUtil::IsDecimalType(IN_ID) &&
                 (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
@@ -416,7 +413,7 @@ private:
                 expectedResult->SetVector(1, new DoubleVector(this->vectorAllocator, nGroups));
             } else {
                 expectedResult->SetVector(1,
-                    VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, nGroups));
+                    VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, nGroups));
             }
         }
 
@@ -451,7 +448,7 @@ private:
 
         expectedResult->SetVector(0, groupCol);
         expectedResult->SetVector(1,
-            VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, maxVarcharLength, nGroups));
+            VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, nGroups));
         expectedResult->SetVector(2, new LongVector(this->vectorAllocator, nGroups));
 
         return expectedResult;

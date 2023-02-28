@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Min aggregate for varchar
  */
 
@@ -85,15 +85,15 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
-            addChar<minCharOp>(state, vector, rowOffset, rowCount);
+            AddChar<MinCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            addConditionalChar<minCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            AddConditionalChar<MinCharOp>(state, vector, rowOffset, rowCount, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDictChar<minCharOp>(state, vector, rowCount, indexMap);
+            AddDictChar<MinCharOp>(state, vector, rowCount, indexMap);
         } else {
-            addDictConditionalChar<minCharOp>(state, vector, rowCount, nullMap, indexMap);
+            AddDictConditionalChar<MinCharOp>(state, vector, rowCount, nullMap, indexMap);
         }
     }
 
@@ -109,15 +109,15 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
-            addUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, rowOffset);
+            AddUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, rowOffset);
         } else {
-            addConditionalUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap);
+            AddConditionalUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap);
         }
     } else {
         if (nullMap == nullptr) {
-            addDictUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, indexMap);
+            AddDictUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, indexMap);
         } else {
-            addDictConditionalUseRowIndexChar<minCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+            AddDictConditionalUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
         }
     }
 
@@ -142,7 +142,7 @@ ALWAYS_INLINE void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_I
     }
 
     uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
-    memcpy(ptr, state.val, len);
+    std::copy(reinterpret_cast<uint8_t *>(state.val), reinterpret_cast<uint8_t *>(state.val) + len, ptr);
     state.val = ptr;
     state.count = len;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Type Util Class
  */
 
@@ -36,8 +36,8 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 
     int32_t columnNumber = outputPages->GetVectorCount();
     if (columnNumber != expectPage->GetVectorCount()) {
-        printf("Invalid vector count. Expected=%d, actual=%d\n",
-            expectPage->GetVectorCount(), outputPages->GetVectorCount());
+        printf("Invalid vector count. Expected=%d, actual=%d\n", expectPage->GetVectorCount(),
+            outputPages->GetVectorCount());
         printNotMatchBatches(outputPages, expectPage);
         return false;
     }
@@ -58,15 +58,15 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
-template <typename D, typename V>
-bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector) {
+template <typename D, typename V> bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector)
+{
     multiset<D> resRows;
     multiset<D> expectedRows;
     size_t resNullCount = 0;
     size_t expNullCount = 0;
     for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
-        auto leftVector = static_cast<V*>(resultVector);
-        auto rightVector = static_cast<V*>(expectedVector);
+        auto leftVector = static_cast<V *>(resultVector);
+        auto rightVector = static_cast<V *>(expectedVector);
         if (leftVector->IsValueNull(i)) {
             resNullCount++;
         } else {
@@ -103,7 +103,8 @@ bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector) {
     }
 }
 
-bool CompareUnorderedStringRows(VarcharVector *resultVector, VarcharVector *expectedVector) {
+bool CompareUnorderedStringRows(VarcharVector *resultVector, VarcharVector *expectedVector)
+{
     size_t rowCount = resultVector->GetSize();
     std::multiset<std::string> resRows;
     std::multiset<std::string> expectedRows;
@@ -166,16 +167,17 @@ bool ColumnMatchIgnoreOrder(Vector *resultVector, Vector *expectedVector)
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
-            isMatched = CompareUnorderedStringRows(static_cast<VarcharVector*>(resultVector), static_cast<VarcharVector*>(expectedVector));
+            isMatched = CompareUnorderedStringRows(static_cast<VarcharVector *>(resultVector),
+                static_cast<VarcharVector *>(expectedVector));
             break;
         }
         case OMNI_CONTAINER: {
             int32_t fieldCount = static_cast<ContainerVector *>(resultVector)->GetVectorCount();
             for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
                 auto *actualFieldCol =
-                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(resultVector)->GetValue(colIdx));
+                    reinterpret_cast<Vector *>(static_cast<ContainerVector *>(resultVector)->GetValue(colIdx));
                 auto *expectFieldCol =
-                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectedVector)->GetValue(colIdx));
+                    reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectedVector)->GetValue(colIdx));
                 isMatched = ColumnMatchIgnoreOrder(actualFieldCol, expectFieldCol);
                 if (not isMatched) {
                     break;
@@ -200,8 +202,8 @@ bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBat
 
     int32_t columnNumber = resultBatch->GetVectorCount();
     if (columnNumber != expectedBatch->GetVectorCount()) {
-        printf("Invalid vector count. Expected=%d, actual=%d\n",
-            expectedBatch->GetVectorCount(), resultBatch->GetVectorCount());
+        printf("Invalid vector count. Expected=%d, actual=%d\n", expectedBatch->GetVectorCount(),
+            resultBatch->GetVectorCount());
         printNotMatchBatches(resultBatch, expectedBatch);
         return false;
     }
@@ -233,8 +235,8 @@ bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBat
 bool VecBatchesIgnoreOrderMatch(std::vector<VectorBatch *> &resultBatches, std::vector<VectorBatch *> &expectedBatches)
 {
     if (resultBatches.size() != expectedBatches.size()) {
-        printf("List of VectorBatches not match. Expecting %ld, got %ld\n",
-            expectedBatches.size(), resultBatches.size());
+        printf("List of VectorBatches not match. Expecting %ld, got %ld\n", expectedBatches.size(),
+            resultBatches.size());
         printf("================ Expected Vector Batch (%ld) ==================\n", expectedBatches.size());
         for (size_t i = 0; i < expectedBatches.size(); ++i) {
             printf("    ---------- Expected Vector Batch %ld / %ld ----------\n", i, expectedBatches.size());
@@ -962,14 +964,15 @@ void PrintNotMatchBatches(VectorBatch *outputPages, VectorBatch *expectPage)
 }
 
 template <typename D, typename V>
-bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector, const double error) {
+bool CompareUnorderedRows(Vector *resultVector, Vector *expectedVector, const double error)
+{
     std::multiset<D> resRows;
     std::multiset<D> expectedRows;
     size_t resNullCount = 0;
     size_t expNullCount = 0;
     for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
-        auto leftVector = static_cast<V*>(resultVector);
-        auto rightVector = static_cast<V*>(expectedVector);
+        auto leftVector = static_cast<V *>(resultVector);
+        auto rightVector = static_cast<V *>(expectedVector);
         if (leftVector->IsValueNull(i)) {
             resNullCount++;
         } else {
@@ -1046,17 +1049,17 @@ bool ColumnMatchIgnoreOrder(Vector *resultVector, Vector *expectedVector, const 
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
-            isMatched = CompareUnorderedStringRows(
-                    static_cast<VarcharVector*>(resultVector), static_cast<VarcharVector*>(expectedVector));
+            isMatched = CompareUnorderedStringRows(static_cast<VarcharVector *>(resultVector),
+                static_cast<VarcharVector *>(expectedVector));
             break;
         }
         case OMNI_CONTAINER: {
             int32_t fieldCount = static_cast<ContainerVector *>(resultVector)->GetVectorCount();
             for (int32_t colIdx = 0; colIdx < fieldCount; colIdx++) {
                 auto *actualFieldCol =
-                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(resultVector)->GetValue(colIdx));
+                    reinterpret_cast<Vector *>(static_cast<ContainerVector *>(resultVector)->GetValue(colIdx));
                 auto *expectFieldCol =
-                        reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectedVector)->GetValue(colIdx));
+                    reinterpret_cast<Vector *>(static_cast<ContainerVector *>(expectedVector)->GetValue(colIdx));
                 isMatched = ColumnMatchIgnoreOrder(actualFieldCol, expectFieldCol, error);
                 if (!isMatched) {
                     break;
@@ -1081,8 +1084,8 @@ bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBat
 
     int32_t columnNumber = resultBatch->GetVectorCount();
     if (columnNumber != expectedBatch->GetVectorCount()) {
-        printf("Invalid vector count. Expected=%d, actual=%d\n",
-               expectedBatch->GetVectorCount(), resultBatch->GetVectorCount());
+        printf("Invalid vector count. Expected=%d, actual=%d\n", expectedBatch->GetVectorCount(),
+            resultBatch->GetVectorCount());
         PrintNotMatchBatches(resultBatch, expectedBatch);
         return false;
     }
@@ -1109,7 +1112,7 @@ bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBat
         return false;
     }
 
-    //validate count
+    // validate count
     if (!ColumnMatchIgnoreOrder(resultBatch->GetVector(1), expectedBatch->GetVector(1), 0)) {
         printf("Vector 1 (count vector) not matched\n");
         PrintNotMatchBatches(resultBatch, expectedBatch);
