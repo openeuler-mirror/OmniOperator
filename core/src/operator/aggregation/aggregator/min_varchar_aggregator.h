@@ -14,11 +14,11 @@ namespace omniruntime {
 namespace op {
 class MinVarcharAggregator : public Aggregator {
 public:
-    MinVarcharAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
     {}
 
-    MinVarcharAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -32,7 +32,7 @@ public:
 
         auto offsets =
             static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
-        auto width = static_cast<VarcharDataType *>(inputTypes->GetType(0).get())->GetWidth();
+        auto width = static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->GetWidth();
         int32_t minLen = 3 * width;
         uint8_t *minVal = executionContext->GetArena()->Allocate(3 * width);
 

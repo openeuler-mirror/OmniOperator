@@ -15,11 +15,11 @@ namespace omniruntime {
 namespace op {
 template <typename InputVecType, typename OutputVecType, typename ResultType> class MinAggregator : public Aggregator {
 public:
-    MinAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels)
     {}
 
-    MinAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw,
+    MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw,
         bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -34,8 +34,8 @@ public:
         auto vectorValues = vector->GetValues();
         auto positionOffset = vector->GetPositionOffset();
         auto rowCount = vector->GetSize();
-        auto inputTypeId = inputTypes->GetType(0)->GetId();
-        auto outputTypeId = outputTypes->GetType(0)->GetId();
+        auto inputTypeId = inputTypes.GetType(0)->GetId();
+        auto outputTypeId = outputTypes.GetType(0)->GetId();
 
         HmppResult result = HMPP_STS_NO_ERR;
         auto minVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
@@ -107,7 +107,7 @@ public:
             return false;
         }
         // type check with whitelist for min
-        auto inputTypeId = inputTypes->GetType(0)->GetId();
+        auto inputTypeId = inputTypes.GetType(0)->GetId();
         return AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(inputTypeId);
     }
 #endif

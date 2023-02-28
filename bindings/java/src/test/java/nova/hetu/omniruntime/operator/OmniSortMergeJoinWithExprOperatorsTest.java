@@ -5,23 +5,26 @@
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
+import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT_ANTI;
+import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT_SEMI;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createBlankVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.decodeAddFlag;
+import static nova.hetu.omniruntime.util.TestUtils.decodeFetchFlag;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.join.OmniSmjBufferedTableWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniSmjStreamedTableWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
@@ -67,20 +70,20 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedDatas1);
         OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
         int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         Object[][] bufferedDatas1 = {{6006L, 5005L, 4004L, 3003L, 2002L, 1001L}, {0, 1, 2, 3, 4, 5}};
         VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedDatas1);
         intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
-        assertEquals(intputResult, 3);
+        assertEquals(decodeAddFlag(intputResult), 3);
 
         VecBatch bufferedVecBatchEof = createBlankVecBatch(bufferedTypes);
         intputResult = bufferedTableOperator.addInput(bufferedVecBatchEof);
-        assertEquals(intputResult, 2);
+        assertEquals(decodeAddFlag(intputResult), 2);
 
         VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
         intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
-        assertEquals(intputResult, 5);
+        assertEquals(decodeFetchFlag(intputResult), 5);
 
         Iterator<VecBatch> results = bufferedTableOperator.getOutput();
         VecBatch resultVecBatch = results.next();
@@ -168,5 +171,113 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         assertEquals(bufferedWithExprOperatorFactory2, bufferedWithExprOperatorFactory1);
         assertEquals(bufferedWithExprOperatorFactory1, bufferedWithExprOperatorFactory1);
         assertNotEquals(bufferedWithExprOperatorFactory3, bufferedWithExprOperatorFactory1);
+    }
+
+    /**
+     * Test left semi join one column 1.
+     */
+    @Test
+    public void testSmjOneTimeEqualConditionForLeftSemiJoin() {
+        DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
+        String[] streamedKeyExps = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
+        int[] streamedOutputCols = {0, 1};
+        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory = new OmniSmjStreamedTableWithExprOperatorFactory(
+                streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_LEFT_SEMI, Optional.empty());
+
+        DataType[] bufferedTypes = {LongDataType.LONG, IntDataType.INTEGER};
+        int[] bufferedOutputCols = {};
+        String[] bufferedKeyExps = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 1), getOmniJsonLiteral(1, false, 5))};
+        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory = new OmniSmjBufferedTableWithExprOperatorFactory(
+                bufferedTypes, bufferedKeyExps, bufferedOutputCols, streamedBuilderWithExprOperatorFactory);
+        OmniOperator bufferedTableOperator = bufferedWithExprOperatorFactory.createOperator();
+
+        // start to add input
+        Object[][] streamedDatas1 = {{0, 1, 2, 2, 2, 3, 4, 5},
+                {8800L, 7700L, 6600L, 5500L, 4400L, 3300L, 2200L, 1100L}};
+        VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedDatas1); // 0, 1, 2, 2, 2, 3, 4, 5
+        OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
+        int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
+        assertEquals(decodeAddFlag(intputResult), 3);
+
+        Object[][] bufferedDatas1 = {{8008L, 7007L, 6006L, 5005L, 4004L, 3003L, 2002L, 1001L},
+                {0, 1, 2, 2, 3, 3, 4, 5}};
+        VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedDatas1); // 0, 1, 2, 2, 3, 3, 4, 5
+        intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
+        assertEquals(decodeAddFlag(intputResult), 3);
+
+        VecBatch bufferedVecBatchEof = createBlankVecBatch(bufferedTypes);
+        intputResult = bufferedTableOperator.addInput(bufferedVecBatchEof);
+        assertEquals(decodeAddFlag(intputResult), 2);
+
+        VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
+        intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
+        assertEquals(decodeFetchFlag(intputResult), 5);
+
+        Iterator<VecBatch> results = bufferedTableOperator.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        int len = resultVecBatch.getRowCount();
+        assertEquals(len, 8);
+        Object[][] expectedDatas = {{0, 1, 2, 2, 2, 3, 4, 5}, {8800L, 7700L, 6600L, 5500L, 4400L, 3300L, 2200L, 1100L}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+
+        freeVecBatch(resultVecBatch);
+        bufferedTableOperator.close();
+        bufferedWithExprOperatorFactory.close();
+        streamedTableOperator.close();
+        streamedBuilderWithExprOperatorFactory.close();
+    }
+
+    /**
+     * Test left anti join one column 1.
+     */
+    @Test
+    public void testSmjOneTimeEqualConditionForLeftAntiJoin() {
+        DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
+        String[] streamedKeyExps = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
+        int[] streamedOutputCols = {0, 1};
+        OmniSmjStreamedTableWithExprOperatorFactory streamedBuilderWithExprOperatorFactory = new OmniSmjStreamedTableWithExprOperatorFactory(
+                streamedTypes, streamedKeyExps, streamedOutputCols, OMNI_JOIN_TYPE_LEFT_ANTI, Optional.empty());
+
+        DataType[] bufferedTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
+        int[] bufferedOutputCols = {};
+        String[] bufferedKeyExps = {
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 1), getOmniJsonLiteral(1, false, 5))};
+        OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory = new OmniSmjBufferedTableWithExprOperatorFactory(
+                bufferedTypes, bufferedKeyExps, bufferedOutputCols, streamedBuilderWithExprOperatorFactory);
+        OmniOperator bufferedTableOperator = bufferedWithExprOperatorFactory.createOperator();
+
+        // start to add input
+        Object[][] streamedDatas1 = {{1, 1, 2, 3}, {40L, 25L, 35L, 30L}};
+        VecBatch streamedVecBatch1 = createVecBatch(streamedTypes, streamedDatas1);
+        OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
+        int intputResult = streamedTableOperator.addInput(streamedVecBatch1);
+        assertEquals(decodeAddFlag(intputResult), 3);
+
+        Object[][] bufferedDatas1 = {{3, 3, 4, 4}, {3.3, 3.5, 4.4, 4.5}};
+        VecBatch bufferedVecBatch1 = createVecBatch(bufferedTypes, bufferedDatas1);
+        intputResult = bufferedTableOperator.addInput(bufferedVecBatch1);
+        assertEquals(decodeAddFlag(intputResult), 2);
+
+        VecBatch streamedVecBatchEof = createBlankVecBatch(streamedTypes);
+        intputResult = streamedTableOperator.addInput(streamedVecBatchEof);
+        assertEquals(decodeFetchFlag(intputResult), 5);
+
+        Iterator<VecBatch> results = bufferedTableOperator.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        int len = resultVecBatch.getRowCount();
+        assertEquals(len, 4);
+        Object[][] expectedDatas = {{1, 1, 2, 3}, {40L, 25L, 35L, 30L}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+
+        freeVecBatch(resultVecBatch);
+        bufferedTableOperator.close();
+        bufferedWithExprOperatorFactory.close();
+        streamedTableOperator.close();
+        streamedBuilderWithExprOperatorFactory.close();
     }
 }

@@ -81,11 +81,6 @@ public:
         return childs;
     }
 
-    int64_t GetPeakAllocated()
-    {
-        return peakAllocated;
-    }
-
     int64_t GetUnTrackedBytes()
     {
         return unTrackedBytes;
@@ -194,7 +189,6 @@ private:
 
     std::atomic<int64_t> allocatedBytes { 0 };
     std::atomic<int64_t> allocationLimit { UNLIMIT };
-    std::atomic<int64_t> peakAllocated { 0 };
     std::atomic<int64_t> reservation { 0 };
 
     BaseAllocator *parentAllocator;

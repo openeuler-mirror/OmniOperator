@@ -1141,4 +1141,116 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemoryWithSpill)
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
+
+TEST(NativeOmniSortTest, TestSortAscendingWithSpill)
+{
+    const int32_t dataSize = 10;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
+    int32_t sourceData10[dataSize] = {23, 23, 23, 23, 23, 23, 23, 23, 23, 23};
+    int32_t sourceData11[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData12[dataSize] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12};
+    auto sourceVecBatch1 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData10, sourceData11, sourceData12);
+
+    int32_t sourceData20[dataSize] = {45, 45, 45, 45, 45, 45, 45, 45, 45, 45};
+    int32_t sourceData21[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData22[dataSize] = {24, 24, 24, 24, 24, 24, 24, 24, 24, 24};
+    auto sourceVecBatch2 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData20, sourceData21, sourceData22);
+
+    int32_t sourceData30[dataSize] = {67, 67, 67, 67, 67, 67, 67, 67, 67, 67};
+    int32_t sourceData31[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData32[dataSize] = {36, 36, 36, 36, 36, 36, 36, 36, 36, 36};
+    auto sourceVecBatch3 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData30, sourceData31, sourceData32);
+
+    int32_t sourceData40[dataSize] = {89, 89, 89, 89, 89, 89, 89, 89, 89, 89};
+    int32_t sourceData41[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData42[dataSize] = {48, 48, 48, 48, 48, 48, 48, 48, 48, 48};
+    auto sourceVecBatch4 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData40, sourceData41, sourceData42);
+
+    int32_t outputCols[] = {0, 1, 2};
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {1};
+    int32_t nullFirsts[] = {0};
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
+    OperatorConfig operatorConfig(spillConfig);
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 3, sortCols,
+        ascendings, nullFirsts, 1, operatorConfig);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+
+    sortOperator->AddInput(sourceVecBatch1);
+    sortOperator->AddInput(sourceVecBatch2);
+    sortOperator->AddInput(sourceVecBatch3);
+    sortOperator->AddInput(sourceVecBatch4);
+    std::vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    int32_t expectData0[] = {23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 45, 45,
+                             45, 45, 45, 45, 45, 23, 89, 45, 23, 89, 45, 23, 89, 67, 45, 67, 67};
+    int32_t expectData1[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+    int32_t expectData2[] = {12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 24, 24,
+                             24, 24, 24, 24, 24, 12, 48, 24, 12, 48, 24, 12, 48, 36, 24, 36, 36};
+    auto expectVecBatch = TestUtil::CreateVectorBatch(sourceTypes, 40, expectData0, expectData1, expectData2);
+    ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortDescendingWithSpill)
+{
+    const int32_t dataSize = 10;
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
+    int32_t sourceData10[dataSize] = {23, 23, 23, 23, 23, 23, 23, 23, 23, 23};
+    int32_t sourceData11[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData12[dataSize] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12};
+    auto sourceVecBatch1 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData10, sourceData11, sourceData12);
+
+    int32_t sourceData20[dataSize] = {45, 45, 45, 45, 45, 45, 45, 45, 45, 45};
+    int32_t sourceData21[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData22[dataSize] = {24, 24, 24, 24, 24, 24, 24, 24, 24, 24};
+    auto sourceVecBatch2 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData20, sourceData21, sourceData22);
+
+    int32_t sourceData30[dataSize] = {67, 67, 67, 67, 67, 67, 67, 67, 67, 67};
+    int32_t sourceData31[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData32[dataSize] = {36, 36, 36, 36, 36, 36, 36, 36, 36, 36};
+    auto sourceVecBatch3 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData30, sourceData31, sourceData32);
+
+    int32_t sourceData40[dataSize] = {89, 89, 89, 89, 89, 89, 89, 89, 89, 89};
+    int32_t sourceData41[dataSize] = {1, 1, 1, 2, 1, 1, 1, 1, 2, 2};
+    int32_t sourceData42[dataSize] = {48, 48, 48, 48, 48, 48, 48, 48, 48, 48};
+    auto sourceVecBatch4 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData40, sourceData41, sourceData42);
+
+    int32_t outputCols[] = {0, 1, 2};
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {0};
+    int32_t nullFirsts[] = {0};
+    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
+    OperatorConfig operatorConfig(spillConfig);
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 3, sortCols,
+        ascendings, nullFirsts, 1, operatorConfig);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+
+    sortOperator->AddInput(sourceVecBatch1);
+    sortOperator->AddInput(sourceVecBatch2);
+    sortOperator->AddInput(sourceVecBatch3);
+    sortOperator->AddInput(sourceVecBatch4);
+    std::vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    int32_t expectData0[] = {23, 67, 89, 23, 67, 89, 23, 67, 89, 45, 45, 45, 67, 23, 45, 67, 23, 45, 67, 23, 45, 67, 23,
+                             45, 67, 23, 45, 67, 23, 45, 67, 23, 89, 45, 89, 89, 89, 89, 89, 89};
+    int32_t expectData1[] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                             1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    int32_t expectData2[] = {12, 36, 48, 12, 36, 48, 12, 36, 48, 24, 24, 24, 36, 12, 24, 36, 12, 24, 36, 12, 24, 36, 12,
+                             24, 36, 12, 24, 36, 12, 24, 36, 12, 48, 24, 48, 48, 48, 48, 48, 48};
+    auto expectVecBatch = TestUtil::CreateVectorBatch(sourceTypes, 40, expectData0, expectData1, expectData2);
+    ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteOperatorFactory(operatorFactory);
+}
 }

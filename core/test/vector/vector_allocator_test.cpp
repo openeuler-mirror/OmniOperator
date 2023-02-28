@@ -242,7 +242,6 @@ TEST(VectorAllocator, basic)
     int64_t allocatedBytes = vectorAllocator->GetAllocatedMemory() +
             subAllocator1->GetUnTrackedBytes() + subAllocator2->GetUnTrackedBytes();
     EXPECT_EQ(allocatedBytes, 184);
-    EXPECT_EQ(vectorAllocator->GetPeakAllocated(), vectorAllocator->GetAllocatedMemory());
 
     delete longVector;
     EXPECT_EQ(subAllocator1->GetAllocatedMemory(), 0);

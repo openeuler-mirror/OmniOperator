@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Type Operator Factory Header
  */
 #ifndef JNI_OPERATOR_FACTORY_H
@@ -89,7 +89,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels,
     jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
-    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels, jstring jOperatorConfig);
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels,
+    jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory
@@ -176,7 +177,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
  * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[ILjava/lang/String;J)J
  */
 JNIEXPORT jlong JNICALL
-    Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFactory_createLookupOuterJoinWithExprOperatorFactory(
+Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFactory_createLookupOuterJoinWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
     jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory);
 
@@ -211,9 +212,15 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
-        JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
-        jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws, jbooleanArray jOutputPartials,
-        jstring jOperatorConfig);
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
+    jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws,
+    jbooleanArray jOutputPartials, jstring jOperatorConfig);
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFactory_createAggregationWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannels, jstring jSourceType,
+    jintArray jAggFuncType, jintArray jMaskCols, jobjectArray jOutputType, jbooleanArray jInputRaws,
+    jbooleanArray jOutputPartials, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory
@@ -275,6 +282,15 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprVerify(JNIEnv *env, jclass jObj,
     jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections, jint jProjectLength,
     jint jParseFormat);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_fusion_OmniFusionOperatorFactory
+ * Method:    createFusionOperatorFactory
+ * Signature: ([J[ILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_fusion_OmniFusionOperatorFactory_createFusionOperatorFactory(JNIEnv *env,
+    jclass jObj, jlongArray jOperatorFactories, jintArray jOperatorTypes, jstring jOperatorConfig);
 
 #ifdef __cplusplus
 }

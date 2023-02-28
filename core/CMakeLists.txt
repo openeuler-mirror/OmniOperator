@@ -14,7 +14,7 @@ set(OMNI_RUNTIME_SO boostkit-omniop-runtime-${OMNI_RUNTIME_VERSION}-${OS_ARCHITE
 set(OMNI_VECTOR_SO boostkit-omniop-vector-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 
 # configure cmake
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER "g++")
 
 # this is used to generate LLVM IR for jitting
@@ -23,6 +23,9 @@ set(IR_COMPILER "clang++-12")
 if (DEFINED COVERAGE)
     if (${COVERAGE} STREQUAL "ON")
         set(DEBUG_COMPILE_LEVEL "-O2 -fsanitize=address -fsanitize-recover=address,all -static-libasan")
+        if (DEFINED ENABLE_DT AND ENABLE_DT STREQUAL "ON")
+            set(DEBUG_COMPILE_LEVEL "-fsanitize-coverage=trace-pc")
+        endif ()
     else ()
         set(DEBUG_COMPILE_LEVEL "-O0")
     endif ()

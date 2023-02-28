@@ -634,20 +634,6 @@ void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int3
     }
 }
 
-void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result)
-{
-    for (size_t i = 0; i < expected.size(); i++) {
-        EXPECT_EQ(result[i], expected[i]);
-    }
-}
-
-void AssertBoolEquals(std::vector<bool> &expected, bool *result)
-{
-    for (size_t i = 0; i < expected.size(); i++) {
-        EXPECT_EQ(result[i], expected[i]);
-    }
-}
-
 int32_t *MakeInts(const int32_t size, const int32_t start)
 {
     if (size > 0) {
@@ -724,5 +710,15 @@ int16_t *MakeShorts(const int32_t size, const int16_t start)
     } else {
         return nullptr;
     }
+}
+
+int32_t DecodeAddFlag(int32_t resultCode)
+{
+    return resultCode >> 16;
+}
+
+int32_t DecodeFetchFlag(int32_t resultCode)
+{
+    return resultCode & SHRT_MAX;
 }
 }

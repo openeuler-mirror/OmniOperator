@@ -26,7 +26,9 @@ std::vector<Function> BatchHashFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchMm3Decimal64), batchMm3fnStr, {}, { OMNI_DECIMAL64, OMNI_INT }, retType,
             INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(BatchMm3Decimal128), batchMm3fnStr, {}, { OMNI_DECIMAL128, OMNI_INT },
-            retType, INPUT_DATA_AND_NULL) };
+            retType, INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(BatchMm3Boolean), batchMm3fnStr, {}, { OMNI_BOOLEAN, OMNI_INT }, retType,
+            INPUT_DATA_AND_NULL) };
 
     return batchHashFunctions;
 }

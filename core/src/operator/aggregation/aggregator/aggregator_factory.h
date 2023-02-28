@@ -24,7 +24,7 @@ public:
      * @param overflowAsNull  defalut overflow will throw exception
      * @return
      */
-    virtual std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    virtual std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) = 0;
 };
@@ -33,7 +33,7 @@ class SumSparkAggregatorFactory : public AggregatorFactory {
 public:
     SumSparkAggregatorFactory() {}
     ~SumSparkAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = true) override
     {
@@ -41,27 +41,27 @@ public:
         // spark rule for sum function input type:
         //    timestamp/sting: cast as double
         //    boolean, date, binnary: not support
-        auto inputTypeId = inputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
         switch (inputTypeId) {
             case OMNI_SHORT: {
-                return std::make_unique<SumFlatIMAggregator<ShortVector, LongVector, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<SumFlatIMAggregator<ShortVector, LongVector, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_INT: {
-                return std::make_unique<SumFlatIMAggregator<IntVector, LongVector, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<SumFlatIMAggregator<IntVector, LongVector, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_LONG: {
-                return std::make_unique<SumFlatIMAggregator<LongVector, LongVector, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<SumFlatIMAggregator<LongVector, LongVector, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<SumFlatIMAggregator<DoubleVector, DoubleVector, double>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<SumFlatIMAggregator<DoubleVector, DoubleVector, double>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_DECIMAL64:
             case OMNI_DECIMAL128: {
-                return std::make_unique<SumSparkDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<SumSparkDecimalAggregator>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             default: {
@@ -76,29 +76,29 @@ class SumAggregatorFactory : public AggregatorFactory {
 public:
     SumAggregatorFactory() {}
     ~SumAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
         // fetch first inputTypes id as aggregator input type and map to type
-        auto inputTypeId = inputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32: {
-                return std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_SHORT: {
-                return std::make_unique<SumAggregator<ShortVector, int16_t, int32_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<SumAggregator<ShortVector, int16_t, int32_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_LONG: {
-                return std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<SumAggregator<DoubleVector, double, double>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<SumAggregator<DoubleVector, double, double>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             /* *                             input type
              * -------------------------------------------
@@ -110,16 +110,16 @@ public:
              *                              */
             // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
             case OMNI_DECIMAL64: {
-                return std::make_unique<SumShortDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<SumShortDecimalAggregator>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             case OMNI_DECIMAL128: {
-                return std::make_unique<SumLongDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<SumLongDecimalAggregator>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             // Final stage
             case OMNI_VARCHAR: {
-                return std::make_unique<SumFinalDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<SumFinalDecimalAggregator>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             default: {
@@ -134,7 +134,7 @@ class AverageSparkAggregatorFactory : public AggregatorFactory {
 public:
     AverageSparkAggregatorFactory() = default;
     ~AverageSparkAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = true) override
     {
@@ -142,27 +142,27 @@ public:
         // spark rule for average function input type:
         //    timestamp/sting: cast as double
         //    boolean, date, binnary: not support
-        auto inputTypeId = inputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
         switch (inputTypeId) {
             case OMNI_SHORT: {
-                return std::make_unique<AverageFlatIMAggregator<ShortVector>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<AverageFlatIMAggregator<ShortVector>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_INT: {
-                return std::make_unique<AverageFlatIMAggregator<IntVector>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<AverageFlatIMAggregator<IntVector>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_LONG: {
-                return std::make_unique<AverageFlatIMAggregator<LongVector>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<AverageFlatIMAggregator<LongVector>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<AverageFlatIMAggregator<DoubleVector>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<AverageFlatIMAggregator<DoubleVector>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_DECIMAL64:
             case OMNI_DECIMAL128: {
-                return std::make_unique<AverageSparkDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<AverageSparkDecimalAggregator>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             default: {
@@ -177,35 +177,35 @@ class AverageAggregatorFactory : public AggregatorFactory {
 public:
     AverageAggregatorFactory() = default;
     ~AverageAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
         // fetch first inputTypes id as aggregator input type and map to type
-        auto inputTypeId = inputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
             case OMNI_CONTAINER: {
-                return std::make_unique<AverageAggregator<IntVector>>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<AverageAggregator<IntVector>>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             case OMNI_SHORT: {
-                return std::make_unique<AverageAggregator<ShortVector>>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<AverageAggregator<ShortVector>>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             case OMNI_LONG: {
-                return std::make_unique<AverageAggregator<LongVector>>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<AverageAggregator<LongVector>>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<AverageAggregator<DoubleVector>>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<AverageAggregator<DoubleVector>>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             case OMNI_DECIMAL64:
             case OMNI_DECIMAL128:
             case OMNI_VARCHAR: {
-                return std::make_unique<AverageDecimalAggregator>(std::move(inputTypes), std::move(outputTypes),
+                return std::make_unique<AverageDecimalAggregator>(inputTypes, outputTypes,
                     channels, inputRaw, outputPartial);
             }
             default: {
@@ -220,71 +220,71 @@ class MinAggregatorFactory : public AggregatorFactory {
 public:
     MinAggregatorFactory() = default;
     ~MinAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
         // fetch first inputTypes/outputTypes id as aggregator type and map to type
-        auto inputTypeId = inputTypes->GetIds()[0];
-        auto outputTypeId = outputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
+        auto outputTypeId = outputTypes.GetIds()[0];
         // Adapt to openLooKeng, openLooKeng converts the output type to bigint in the partial stage,
         // and reverts it to the original input type in the final stage.
         if (inputTypeId == OMNI_INT && outputTypeId == OMNI_LONG) {
-            return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_INT) {
-            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_DATE32 && outputTypeId == OMNI_LONG) {
-            return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MinAggregator<IntVector, LongVector, int64_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_DATE32) {
-            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MinAggregator<LongVector, IntVector, int32_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         // adapt to SQL of min(short) + group by(short)
         if (inputTypeId == OMNI_SHORT && outputTypeId == OMNI_LONG) {
-            return std::make_unique<MinAggregator<ShortVector, LongVector, int64_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MinAggregator<ShortVector, LongVector, int64_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_SHORT) {
-            return std::make_unique<MinAggregator<LongVector, ShortVector, int16_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MinAggregator<LongVector, ShortVector, int16_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32: {
-                return std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MinAggregator<IntVector, IntVector, int32_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_SHORT: {
-                return std::make_unique<MinAggregator<ShortVector, ShortVector, int16_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MinAggregator<ShortVector, ShortVector, int16_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                return std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MinAggregator<DoubleVector, DoubleVector, double>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_DECIMAL128: {
                 return std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-                    std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial);
+                    inputTypes, outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                return std::make_unique<MinVarcharAggregator>(std::move(inputTypes), std::move(outputTypes), channels,
+                return std::make_unique<MinVarcharAggregator>(inputTypes, outputTypes, channels,
                     inputRaw, outputPartial);
             }
             case OMNI_BOOLEAN: {
-                return std::make_unique<MinAggregator<BooleanVector, BooleanVector, bool>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MinAggregator<BooleanVector, BooleanVector, bool>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for min aggregate", inputTypeId);
@@ -298,71 +298,71 @@ class MaxAggregatorFactory : public AggregatorFactory {
 public:
     MaxAggregatorFactory() = default;
     ~MaxAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
         // fetch first inputTypes/outputTypes id as aggregator type and map to type
-        auto inputTypeId = inputTypes->GetIds()[0];
-        auto outputTypeId = outputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
+        auto outputTypeId = outputTypes.GetIds()[0];
         // Adapt to openLooKeng, openLooKeng converts the output type to bigint in the partial stage,
         // and reverts it to the original input type in the final stage.
         if (inputTypeId == OMNI_INT && outputTypeId == OMNI_LONG) {
-            return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_INT) {
-            return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_DATE32 && outputTypeId == OMNI_LONG) {
-            return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MaxAggregator<IntVector, LongVector, int64_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_DATE32) {
-            return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MaxAggregator<LongVector, IntVector, int32_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         // adapt to SQL of max(short) + group by(short)
         if (inputTypeId == OMNI_SHORT && outputTypeId == OMNI_LONG) {
-            return std::make_unique<MaxAggregator<ShortVector, LongVector, int64_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MaxAggregator<ShortVector, LongVector, int64_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         if (inputTypeId == OMNI_LONG && outputTypeId == OMNI_SHORT) {
-            return std::make_unique<MaxAggregator<LongVector, ShortVector, int16_t>>(std::move(inputTypes),
-                std::move(outputTypes), channels, inputRaw, outputPartial);
+            return std::make_unique<MaxAggregator<LongVector, ShortVector, int16_t>>(inputTypes,
+                outputTypes, channels, inputRaw, outputPartial);
         }
         switch (inputTypeId) {
             case OMNI_INT:
             case OMNI_DATE32: {
-                return std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MaxAggregator<IntVector, IntVector, int32_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_SHORT: {
-                return std::make_unique<MaxAggregator<ShortVector, ShortVector, int16_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MaxAggregator<ShortVector, ShortVector, int16_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                return std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MaxAggregator<DoubleVector, DoubleVector, double>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_DECIMAL128: {
                 return std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-                    std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial);
+                    inputTypes, outputTypes, channels, inputRaw, outputPartial);
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                return std::make_unique<MaxVarcharAggregator>(std::move(inputTypes), std::move(outputTypes), channels,
+                return std::make_unique<MaxVarcharAggregator>(inputTypes, outputTypes, channels,
                     inputRaw, outputPartial);
             }
             case OMNI_BOOLEAN: {
-                return std::make_unique<MaxAggregator<BooleanVector, BooleanVector, bool>>(std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial);
+                return std::make_unique<MaxAggregator<BooleanVector, BooleanVector, bool>>(inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for min aggregate", inputTypeId);
@@ -376,11 +376,11 @@ class CountColumnAggregatorFactory : public AggregatorFactory {
 public:
     CountColumnAggregatorFactory() = default;
     ~CountColumnAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
-        return std::make_unique<CountColumnAggregator>(std::move(outputTypes), channels, inputRaw, outputPartial);
+        return std::make_unique<CountColumnAggregator>(outputTypes, channels, inputRaw, outputPartial);
     }
 };
 
@@ -388,11 +388,11 @@ class CountAllAggregatorFactory : public AggregatorFactory {
 public:
     CountAllAggregatorFactory() = default;
     ~CountAllAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
-        return std::make_unique<CountAllAggregator>(std::move(outputTypes), channels, inputRaw, outputPartial);
+        return std::make_unique<CountAllAggregator>(outputTypes, channels, inputRaw, outputPartial);
     }
 };
 
@@ -400,12 +400,12 @@ template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
     explicit MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
     ~MaskAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
-        std::unique_ptr<Aggregator> realAggregator = realFactory->CreateAggregator(std::move(inputTypes),
-            std::move(outputTypes), channels, inputRaw, outputPartial);
+        std::unique_ptr<Aggregator> realAggregator = realFactory->CreateAggregator(inputTypes,
+            outputTypes, channels, inputRaw, outputPartial);
         return std::make_unique<MaskColAggregator>(maskColumnId, std::move(realAggregator));
     }
 
@@ -418,40 +418,40 @@ class FirstAggregatorFactory : public AggregatorFactory {
 public:
     explicit FirstAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}
     ~FirstAggregatorFactory() override = default;
-    std::unique_ptr<Aggregator> CreateAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes,
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = false) override
     {
         // fetch first inputTypes id as aggregator input type and map to type
         // spark rule for first function input type:
         //    binnary/sting: run with SortAggregateExec, so current not implemented
-        auto inputTypeId = inputTypes->GetIds()[0];
+        auto inputTypeId = inputTypes.GetIds()[0];
         switch (inputTypeId) {
             case OMNI_BOOLEAN: {
-                return std::make_unique<FirstAggregator<BooleanVector, bool>>(aggregateType, std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<FirstAggregator<BooleanVector, bool>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_SHORT: {
-                return std::make_unique<FirstAggregator<ShortVector, int16_t>>(aggregateType, std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<FirstAggregator<ShortVector, int16_t>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_INT:
             case OMNI_DATE32: {
-                return std::make_unique<FirstAggregator<IntVector, int32_t>>(aggregateType, std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<FirstAggregator<IntVector, int32_t>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                return std::make_unique<FirstAggregator<LongVector, int64_t>>(aggregateType, std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<FirstAggregator<LongVector, int64_t>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_DOUBLE: {
-                return std::make_unique<FirstAggregator<DoubleVector, double>>(aggregateType, std::move(inputTypes),
-                    std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                return std::make_unique<FirstAggregator<DoubleVector, double>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             case OMNI_DECIMAL128: {
                 return std::make_unique<FirstAggregator<Decimal128Vector, Decimal128>>(aggregateType,
-                    std::move(inputTypes), std::move(outputTypes), channels, inputRaw, outputPartial, isOverflowAsNull);
+                    inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
             }
             default: {
                 LogError("Unsupported input type %d for first aggregate", inputTypeId);

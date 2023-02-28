@@ -24,12 +24,12 @@ namespace op {
 // final: InputType
 template <typename InputVecType, typename InputType> class FirstAggregator : public Aggregator {
 public:
-    FirstAggregator(FunctionType aggregateType, DataTypesPtr in, DataTypesPtr out, std::vector<int32_t> &channels)
+    FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out, std::vector<int32_t> &channels)
         : Aggregator(aggregateType, in, out, channels),
           isIgnoreNull(aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL)
     {}
 
-    FirstAggregator(FunctionType aggregateType, DataTypesPtr in, DataTypesPtr out, std::vector<int32_t> &channels,
+    FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : Aggregator(aggregateType, in, out, channels, inputRaw, outputPartial, isOverflowAsNull),
           isIgnoreNull(aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL)
@@ -47,6 +47,10 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        if (state.val == nullptr) {
+            InitiateGroup(state, vectorBatch, rowIndex);
+            return;
+        }
         int32_t offset;
         auto firstState = static_cast<FirstState *>(state.val);
         if (inputRaw) {
@@ -84,9 +88,15 @@ public:
     void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
+        auto firstVector =
+                reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+        if (state.val == nullptr) {
+            firstVector->SetValueNull(rowIndex);
+            return;
+        }
         auto firstState = static_cast<FirstState *>(state.val);
         if (outputPartial) {
-            auto firstVector =
+             firstVector =
                 reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
 
             if (firstState->valIsNull) {

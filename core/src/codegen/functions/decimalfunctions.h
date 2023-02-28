@@ -25,6 +25,20 @@ extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int
 extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale, bool isNull,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
+extern "C" DLLEXPORT void RoundDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, int32_t round, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void RoundDecimal128WithoutRound(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
+    int32_t xPrecision, int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t RoundDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision,
+    int32_t xScale, int32_t round, bool isNull, int32_t outPrecision, int32_t outScale);
+
+extern "C" DLLEXPORT int64_t RoundDecimal64WithoutRound(int64_t contextPtr, int64_t x, int32_t xPrecision,
+    int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale);
+
 extern "C" DLLEXPORT int32_t Decimal64Compare(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
     int32_t yPrecision, int32_t yScale, bool isNull);
 
@@ -189,6 +203,13 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLong(int64_t contextPtr, int64_t xH
 
 extern "C" DLLEXPORT double CastDecimal128ToDouble(int64_t high, uint64_t low, int32_t precision, int32_t scale,
     bool isNull);
+
+extern "C" DLLEXPORT void RoundDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, int32_t round, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT int64_t RoundDecimal64RetNull(bool *isNull, int64_t x, int32_t xPrecision, int32_t xScale,
+    int32_t round, int32_t outPrecision, int32_t outScale);
 
 // Return Null
 extern "C" DLLEXPORT int64_t AddDec64Dec64Dec64RetNull(bool *isNull, int64_t x, int32_t xPrecision, int32_t xScale,

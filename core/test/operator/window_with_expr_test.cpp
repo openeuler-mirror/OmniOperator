@@ -893,6 +893,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
+
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);

@@ -12,11 +12,11 @@ namespace omniruntime {
 namespace op {
 class AverageSparkDecimalAggregator : public Aggregator {
 public:
-    AverageSparkDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    AverageSparkDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
     {}
 
-    AverageSparkDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    AverageSparkDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)
@@ -42,10 +42,10 @@ public:
         } else {
             // get value from containerVector
             Decimal128 curVal;
-            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 curVal = DecimalOperations::UnscaledDecimal(
                     reinterpret_cast<LongVector *>(vectorBatch->GetVector(channels[0]))->GetValue(offset));
-            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
                 curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset);
             }
             int32_t avgCountOffset;
@@ -85,9 +85,9 @@ public:
         }
         if (inputRaw) {
             Decimal128 initState;
-            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 initState = DecimalOperations::UnscaledDecimal((static_cast<LongVector *>(vector))->GetValue(offset));
-            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
                 initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
             }
 
@@ -96,9 +96,9 @@ public:
         } else {
             // get value from containerVector
             Decimal128 curVal;
-            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 curVal = DecimalOperations::UnscaledDecimal(reinterpret_cast<LongVector *>(vector)->GetValue(offset));
-            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
                 curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset);
             }
 
@@ -128,8 +128,8 @@ public:
             overflowAccumulator, count);
         Decimal128 countDec = count;
 
-        auto outputDecimalType = static_cast<DecimalDataType *>(outputTypes->GetType(0).get());
-        auto inputDecimalType = static_cast<DecimalDataType *>(inputTypes->GetType(0).get());
+        auto outputDecimalType = static_cast<DecimalDataType *>(outputTypes.GetType(0).get());
+        auto inputDecimalType = static_cast<DecimalDataType *>(inputTypes.GetType(0).get());
 
         if (overflowAccumulator > 0) {
             SetNullOrThrowException(vector, rowIndex);
@@ -144,7 +144,7 @@ public:
             // So, it can not be overflowed.
             DecimalOperations::Rescale128(decodedDec, scaleDiff, resultDec);
 
-            if (outputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 auto longVector = reinterpret_cast<LongVector *>(vector);
                 int64_t low = resultDec.LowBits();
                 int64_t shortResult = DecimalOperations::IsNegative(resultDec) ? -low : low;
@@ -164,7 +164,7 @@ public:
                 SetNullOrThrowException(vector, rowIndex);
                 return;
             }
-            if (outputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 int64_t low = finalResultDec.LowBits();
                 int64_t shortResult = DecimalOperations::IsNegative(finalResultDec) ? -low : low;
                 static_cast<LongVector *>(vector)->SetValue(rowIndex, shortResult);
@@ -183,9 +183,9 @@ private:
         int64_t oldOverflow = 0;
         int64_t oldCount = 0;
         Decimal128 curVal;
-        if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+        if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
             curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
-        } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+        } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
             curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
         }
         Decimal128 leftVal;

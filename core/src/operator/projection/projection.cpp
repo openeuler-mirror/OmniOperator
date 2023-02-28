@@ -174,7 +174,6 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
 
     DataTypeId outTypeId = this->GetOutputType().GetId();
     Vector *outVec = nullptr;
-    int32_t avgStringLength = 200;
     switch (outTypeId) {
         case type::OMNI_DATE32:
         case type::OMNI_INT:
@@ -188,11 +187,10 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             outVec = new DoubleVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_CHAR:
-            outVec = new VarcharVector(vecAllocator,
-                numSelectedRows * static_cast<CharDataType &>(this->GetOutputType()).GetWidth(), numSelectedRows);
+            outVec = new VarcharVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_VARCHAR:
-            outVec = new VarcharVector(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
+            outVec = new VarcharVector(vecAllocator, numSelectedRows);
             break;
         case type::OMNI_DECIMAL128:
             outVec = new Decimal128Vector(vecAllocator, numSelectedRows);

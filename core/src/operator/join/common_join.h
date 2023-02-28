@@ -17,6 +17,8 @@ enum JoinType {
     OMNI_JOIN_TYPE_LEFT,
     OMNI_JOIN_TYPE_RIGHT,
     OMNI_JOIN_TYPE_FULL,
+    OMNI_JOIN_TYPE_LEFT_SEMI,
+    OMNI_JOIN_TYPE_LEFT_ANTI
 };
 
 enum class SortMergeJoinAddInputCode {
@@ -24,7 +26,7 @@ enum class SortMergeJoinAddInputCode {
     SMJ_NEED_BUFFER_TBL_INFO = 1,
     SMJ_NEED_ADD_STREAM_TBL_DATA = 2,
     SMJ_NEED_ADD_BUFFER_TBL_DATA = 3,
-    SMJ_NO_RESULT = 4,
+    SMJ_SCAN_FINISH = 4,
     SMJ_FETCH_JOIN_DATA = 5
 };
 }

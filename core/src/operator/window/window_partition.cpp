@@ -38,7 +38,7 @@ WindowPartition::WindowPartition(const type::DataTypes &sourceTypes, PagesIndex 
 
 WindowPartition::~WindowPartition() = default;
 
-void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index)
+void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index)
 {
     int32_t channel = outputChannelsCount;
 
@@ -49,8 +49,8 @@ void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index)
 
     for (auto &windowFunction : windowFunctions) {
         unique_ptr<Range> range = GetFrameRange(windowFunction->GetWindowFrameInfo());
-        windowFunction->ProcessRow(vecBatch->GetVector(channel), index, peerGroupStart - partitionStart,
-            peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
+        windowFunction->ProcessRow(inputVecBatchForAgg, outputVecBatch->GetVector(channel), index,
+            peerGroupStart - partitionStart, peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
         channel++;
     }
 

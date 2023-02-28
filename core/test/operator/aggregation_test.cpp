@@ -485,18 +485,18 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], true, true));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols1Wrap[1], true, true));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols1Wrap[1], true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols1Wrap[2], true, true));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[3], true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[3], true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[4], true, true));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[4], true, true));
 
     auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
     auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
@@ -531,18 +531,18 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     auto aggInputCols2Wrap = AggregatorUtil::WrapWithVector(aggInputCols2);
     aggs1.clear();
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[0], true, true));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols2Wrap[1], true, true));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[0], true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols2Wrap[1], true, true));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols2Wrap[2], true, true));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[3], true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[3], true, true));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[4], true, true));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols2Wrap[4], true, true));
 
     auto aggInputTypes2Wrap = AggregatorUtil::WrapWithVector(aggInputTypes2);
     auto aggOutputTypes2Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes2);
@@ -575,18 +575,18 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     auto aggInputCols3Wrap = AggregatorUtil::WrapWithVector(aggInputCols3);
 
     aggs2.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[0], false, false));
-    aggs2.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols3Wrap[1], false, false));
-    aggs2.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[0], false, false));
+    aggs2.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), aggInputCols3Wrap[1], false, false));
+    aggs2.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols3Wrap[2], false, false));
     aggs2.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[3], false, false));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[3], false, false));
     aggs2.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[4], false, false));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols3Wrap[4], false, false));
 
     auto aggInputTypes3Wrap = AggregatorUtil::WrapWithVector(aggInputTypes3);
     auto aggOutputTypes3Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes3);
@@ -658,12 +658,12 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
 
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
-        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
-        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
     auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
@@ -728,12 +728,12 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(CharType()),
-        AggregatorUtil::WrapWithDataTypes(CharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(CharType()),
-        AggregatorUtil::WrapWithDataTypes(CharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(CharType()),
+        *AggregatorUtil::WrapWithDataTypes(CharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(CharType()),
+        *AggregatorUtil::WrapWithDataTypes(CharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
     auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
@@ -810,18 +810,18 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[3], INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[3], INPUT_MODE, OUTPUT_MODE));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[4], INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputCols1Wrap[4], INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
     auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
@@ -882,11 +882,11 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     std::vector<std::unique_ptr<Aggregator>> aggs;
     auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[0], INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[0], INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[1], INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[1], INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
@@ -953,22 +953,22 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
     std::vector<std::unique_ptr<Aggregator>> aggs;
     auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
     std::unique_ptr<Aggregator> aggregator =
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal1, true, true);
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channal1, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(6, std::move(aggregator)));
     aggregator =
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, true);
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(7, std::move(aggregator)));
-    aggregator = std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), channal3, true, true);
+    aggregator = std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), channal3, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(8, std::move(aggregator)));
     aggregator =
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, true);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(9, std::move(aggregator)));
     aggregator =
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, true);
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(10, std::move(aggregator)));
 
     std::vector<DataTypePtr> partialOutputTypes { LongType(), LongType(), ContainerType(), LongType(), LongType() };
@@ -990,19 +990,19 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channal1,
+        false, false));
     aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channal1, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3, false, false));
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3, false, false));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal4, false, false));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, false, false));
-    aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, false, false));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal5, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), LongType(), DoubleType(), LongType(), LongType() };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
 
@@ -1201,10 +1201,10 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar)
     std::vector<int32_t> channal1 = { 1 };
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal0, true, true));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal1, true, true));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal0, true, true));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal1, true, true));
 
     std::vector<DataTypePtr> partialOutputTypes { VarcharType(100), VarcharType(100) };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
@@ -1221,10 +1221,10 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
-    aggs2.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal0, false, false));
-    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal1, false, false));
+    aggs2.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal0, false, false));
+    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channal1, false, false));
 
     std::vector<DataTypePtr> finalOutputTypes { VarcharType(100), VarcharType(100) };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
@@ -1291,10 +1291,10 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar_without_nulls)
     std::vector<int32_t> channel1 = { 1 };
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel0, true, true));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel1, true, true));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel0, true, true));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel1, true, true));
 
 
     DataTypes aggPartialOutputTypes(std::vector<DataTypePtr> { VarcharType(100), VarcharType(100) });
@@ -1311,10 +1311,10 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar_without_nulls)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
-    aggs2.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel0, false, false));
-    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel1, false, false));
+    aggs2.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel0, false, false));
+    aggs2.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(100)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(100)), channel1, false, false));
 
 
     DataTypes aggFinalOutputTypes(std::vector<DataTypePtr> { VarcharType(100), VarcharType(100) });
@@ -1380,14 +1380,16 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
-    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
-        AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel1, true, true));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), channel2, true, true));
-    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
-        AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel3, true, true));
+        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel1, true, true));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), channel2, true, true));
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)),
+        *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel3, true, true));
     std::vector<DataTypePtr> partialOutputTypes { LongType(), SUM_IMMEDIATE_VARBINARY,
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), AVG_IMMEDIATE_VARBINARY };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
@@ -1407,16 +1409,16 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
     aggs2.push_back(
-        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
+        std::make_unique<SumAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
     aggs2.push_back(
-        std::make_unique<SumFinalDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channel1, false, false));
-    aggs2.push_back(std::make_unique<AverageAggregator<IntVector>>(AggregatorUtil::WrapWithDataTypes(ContainerType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channel2, false, false));
+        std::make_unique<SumFinalDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channel1, false, false));
+    aggs2.push_back(std::make_unique<AverageAggregator<IntVector>>(*AggregatorUtil::WrapWithDataTypes(ContainerType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channel2, false, false));
     aggs2.push_back(
-        std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channel3, false, false));
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(20, 5)), channel3, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), Decimal128Type(20, 5), DoubleType(),
         Decimal128Type(20, 5) };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
@@ -1493,26 +1495,30 @@ TEST(AggregationOperatorTest, hmpp_decimal128)
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel0, true, true));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel0, true, true));
     aggs1.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel1, true, true));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel1, true, true));
     aggs1.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel2, true, true));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel2, true, true));
     aggs1.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel3, true, true));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel3, true, true));
 
-    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel4, true, true));
-    aggs1.push_back(std::make_unique<SumLongDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel5, true, true));
-    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel6, true, true));
-    aggs1.push_back(std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel7, true, true));
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel4, true, true));
+    aggs1.push_back(
+        std::make_unique<SumLongDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY), channel5, true, true));
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel6, true, true));
+    aggs1.push_back(
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY), channel7, true, true));
 
     std::vector<DataTypePtr> partialOutputTypes { Decimal128Type(38, 0),   Decimal128Type(38, 0),
         Decimal128Type(38, 0),   Decimal128Type(38, 0),
@@ -1535,31 +1541,31 @@ TEST(AggregationOperatorTest, hmpp_decimal128)
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs2;
     aggs2.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel0, false, false));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel0, false, false));
     aggs2.push_back(std::make_unique<MinAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel1, false, false));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel1, false, false));
     aggs2.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel2, false, false));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel2, false, false));
     aggs2.push_back(std::make_unique<MaxAggregator<Decimal128Vector, Decimal128Vector, Decimal128>>(
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel3, false, false));
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel3, false, false));
 
 
     aggs2.push_back(
-        std::make_unique<SumFinalDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel4, false, false));
+        std::make_unique<SumFinalDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel4, false, false));
     aggs2.push_back(
-        std::make_unique<SumFinalDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel5, false, false));
+        std::make_unique<SumFinalDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(SUM_IMMEDIATE_VARBINARY),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel5, false, false));
     aggs2.push_back(
-        std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel6, false, false));
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel6, false, false));
     aggs2.push_back(
-        std::make_unique<AverageDecimalAggregator>(AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel7, false, false));
+        std::make_unique<AverageDecimalAggregator>(*AggregatorUtil::WrapWithDataTypes(AVG_IMMEDIATE_VARBINARY),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channel7, false, false));
 
     std::vector<DataTypePtr> finalOutputTypes { Decimal128Type(38, 0), Decimal128Type(38, 0), Decimal128Type(38, 0),
         Decimal128Type(38, 0), Decimal128Type(38, 0), Decimal128Type(38, 0),
@@ -1626,11 +1632,11 @@ TEST(HashAggregationOperatorTest, hmpp_group_by_agg_same_cols)
     std::vector<std::unique_ptr<Aggregator>> aggs;
     auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[0], INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[0], INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[1], INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), aggInputColsWrap[1], INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
@@ -1683,12 +1689,12 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     std::vector<ColumnIndex> groupByColumns1 = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     auto aggInputCols1Wrap = AggregatorUtil::WrapWithVector(aggInputCols1);
-    aggs1.push_back(std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()),
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()),
         aggInputCols1Wrap[0], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
-        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
-    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType()),
-        AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[1], INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType()), aggInputCols1Wrap[2], INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
     auto aggOutputTypes1Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes1);
@@ -1751,18 +1757,18 @@ TEST(AggregationOperatorTest, verify_correctness)
     std::vector<int32_t> channel3 = { 3 };
     std::vector<int32_t> channel4 = { 4 };
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
-    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), channel1, true, true));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
+    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), channel1, true, true));
     aggs.push_back(
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channel2, true, true));
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2, true, true));
     aggs.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel3, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, true, true));
     aggs.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel4, true, true));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel4, true, true));
     std::vector<DataTypePtr> partialOutputTypes { LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType(), LongType() };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
@@ -1786,18 +1792,18 @@ TEST(AggregationOperatorTest, verify_correctness)
     ASSERT(!(input2 == nullptr));
     aggs.clear();
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
-    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), channel1, true, true));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true));
+    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), channel1, true, true));
     aggs.push_back(
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channel2, true, true));
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2, true, true));
     aggs.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel3, true, true));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, true, true));
     aggs.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel4, true, true));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel4, true, true));
     std::vector<DataTypePtr> partialOutputTypes2 { LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType(), LongType() };
     DataTypes aggPartialOutputTypes2(partialOutputTypes2);
@@ -1818,18 +1824,18 @@ TEST(AggregationOperatorTest, verify_correctness)
     // Second stage
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channel1, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channel1, false, false));
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel2,
+        false, false));
     aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channel2, false, false));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, false, false));
     aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel3, false, false));
-    aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel4, false, false));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel4, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), DoubleType(), LongType(), LongType(), LongType() };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
     auto aggFinalOutputTypesWrap = AggregatorUtil::WrapWithVector(aggFinalOutputTypes);
@@ -1887,22 +1893,22 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
     // STAGE1:
     std::vector<std::unique_ptr<Aggregator>> aggs;
     std::unique_ptr<Aggregator> aggregator =
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true);
+        std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel0, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(5, std::move(aggregator)));
     aggregator =
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel1, true, true);
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel1, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(6, std::move(aggregator)));
-    aggregator = std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(ContainerType()), channel2, true, true);
+    aggregator = std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(ContainerType()), channel2, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(7, std::move(aggregator)));
     aggregator =
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel3, true, true);
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(8, std::move(aggregator)));
     aggregator =
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel4, true, true);
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel4, true, true);
     aggs.push_back(std::make_unique<MaskColAggregator>(9, std::move(aggregator)));
 
     DataTypes aggPartialOutputTypes(std::vector<DataTypePtr> { LongType(), LongType(),
@@ -1922,19 +1928,19 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     // STAGE2:
     std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<CountColumnAggregator>(*AggregatorUtil::WrapWithDataTypes(LongType()), channel0,
+        false, false));
     aggs1.push_back(
-        std::make_unique<CountColumnAggregator>(AggregatorUtil::WrapWithDataTypes(LongType()), channel0, false, false));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel1, false, false));
+    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channel2, false, false));
     aggs1.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel1, false, false));
-    aggs1.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channel2, false, false));
+        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel3, false, false));
     aggs1.push_back(
-        std::make_unique<MaxAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel3, false, false));
-    aggs1.push_back(
-        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channel4, false, false));
+        std::make_unique<MinAggregator<LongVector, LongVector, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channel4, false, false));
     std::vector<DataTypePtr> finalOutputTypes { LongType(), LongType(), DoubleType(), LongType(), LongType() };
     DataTypes aggFinalOutputTypes(finalOutputTypes);
 
@@ -1987,8 +1993,8 @@ TEST(AggregationOperatorTest, avg_correctness_test)
     std::vector<ColumnIndex> aggregateColumns = { c0 };
     std::vector<std::unique_ptr<Aggregator>> aggs;
     std::vector<int32_t> channal0 = { 0 };
-    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0));
+    aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0));
     std::vector<DataTypePtr> outputTypes { DoubleType() };
     DataTypes aggOutputTypes(outputTypes);
 
@@ -2025,10 +2031,10 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     std::vector<int32_t> channel1 = { 1 };
 
     std::vector<std::unique_ptr<Aggregator>> aggs;
-    aggs.push_back(std::make_unique<MinVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(10)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(10)), channel0));
-    aggs.push_back(std::make_unique<MaxVarcharAggregator>(AggregatorUtil::WrapWithDataTypes(VarcharType(10)),
-        AggregatorUtil::WrapWithDataTypes(VarcharType(10)), channel1));
+    aggs.push_back(std::make_unique<MinVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(10)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(10)), channel0));
+    aggs.push_back(std::make_unique<MaxVarcharAggregator>(*AggregatorUtil::WrapWithDataTypes(VarcharType(10)),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType(10)), channel1));
 
     std::vector<DataTypePtr> partialOutputTypes { VarcharType(10), VarcharType(10) };
     DataTypes aggPartialOutputTypes(partialOutputTypes);
@@ -2406,6 +2412,9 @@ TEST(HashAggregationOperatorTest, multi_stage)
     int64_t expectData6[CARDINALITY] = {1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
+    VectorHelper::PrintVecBatch(resultFromFinal[0]);
+    std::cout << "------expect---------" << std::endl;
+    VectorHelper::PrintVecBatch(expectVecBatch);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
 
     delete[] input1;
@@ -2437,11 +2446,11 @@ TEST(HashAggregationOperatorTest, supported_type_test)
 
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal3, INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
@@ -2482,11 +2491,11 @@ TEST(HashAggregationOperatorTest, supported_type_test)
 
     groupByColumns = { c0, c1 };
     aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(
-        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()),
-        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()), channal2, INPUT_MODE, OUTPUT_MODE));
+        *AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()),
+        *AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()), channal2, INPUT_MODE, OUTPUT_MODE));
     aggs.push_back(std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(
-        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()),
-        AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()), channal3, INPUT_MODE, OUTPUT_MODE));
+        *AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()),
+        *AggregatorUtil::WrapWithDataTypes(Date32DataType::Instance()), channal3, INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputCols2Wrap = AggregatorUtil::WrapWithVector(aggInputCols);
     auto aggInputTypes1Wrap = AggregatorUtil::WrapWithVector(aggInputTypes1);
@@ -2536,8 +2545,8 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     DataTypes aggOutputTypes2(outputTypes2);
     groupByColumns = { c0 };
     aggs.push_back(
-        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal1, INPUT_MODE, OUTPUT_MODE));
+        std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal1, INPUT_MODE, OUTPUT_MODE));
 
     auto aggInputCols3Wrap = AggregatorUtil::WrapWithVector(aggInputCols);
     auto aggInputTypes2Wrap = AggregatorUtil::WrapWithVector(aggInputTypes2);
@@ -2572,12 +2581,12 @@ TEST(AggregatorTest, sum_test)
     std::vector<int32_t> channal0 = { 0 };
     std::vector<int32_t> channal3 = { 3 };
     // sum test types : long + decimal + dictionary + null
-    auto sumLong = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
-    auto sumShortDecimal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(SHORT_DECIMAL_TYPE),
-        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal0, true, false);
-    auto sumNull = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal3, true, false);
+    auto sumLong = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto sumShortDecimal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(SHORT_DECIMAL_TYPE),
+        *AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal0, true, false);
+    auto sumNull = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal3, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_sum_test");
@@ -2648,10 +2657,10 @@ TEST(AggregatorTest, count_column_test)
     std::vector<int32_t> channal0 = { 0 };
     std::vector<int32_t> channal2 = { 2 };
     // count test types : long + dictionary + null
-    auto countLong = countFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
-    auto countNull = countFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, false);
+    auto countLong = countFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto countNull = countFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_column_test");
@@ -2704,10 +2713,10 @@ TEST(AggregatorTest, count_all_test)
     auto countAllFactory = new CountAllAggregatorFactory();
     std::vector<int32_t> channal0 = { -1 };
 
-    auto countLong = countAllFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(NoneType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
-    auto countNull = countAllFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(NoneType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto countLong = countAllFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(NoneType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto countNull = countAllFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(NoneType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_all_test");
@@ -2759,20 +2768,20 @@ TEST(AggregatorTest, min_test)
     std::vector<int32_t> channal5 = { 5 };
     std::vector<int32_t> channal6 = { 6 };
     // min test types : long + decimal + varchar + dictionary + null
-    auto minLong = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
-    auto minDecimal = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
-        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal3, true, false);
-    auto minVarchar = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(VarcharType()),
-        AggregatorUtil::WrapWithDataTypes(VarcharType()), channal4, true, false);
-    auto minNull = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, false);
-    auto minIntLong = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, false);
-    auto minLongInt = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, false);
-    auto minBoolean = minFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(BooleanType()),
-        AggregatorUtil::WrapWithDataTypes(BooleanType()), channal6, true, false);
+    auto minLong = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto minDecimal = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
+        *AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal3, true, false);
+    auto minVarchar = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType()), channal4, true, false);
+    auto minNull = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, true, false);
+    auto minIntLong = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(IntType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, false);
+    auto minLongInt = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, false);
+    auto minBoolean = minFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(BooleanType()),
+        *AggregatorUtil::WrapWithDataTypes(BooleanType()), channal6, true, false);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation_minTest");
     auto longInputVec = BuildAggregateInput(vectorAllocator, LongType(), rowPerVecBatch);
@@ -2894,20 +2903,20 @@ TEST(AggregatorTest, max_test)
     std::vector<int32_t> channal5 = { 5 };
     std::vector<int32_t> channal6 = { 6 };
     // max test types : long + decimal + varchar + dictionary + null
-    auto maxLong = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
-    auto maxDecimal = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
-        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal1, true, false);
-    auto maxVarchar = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(VarcharType()),
-        AggregatorUtil::WrapWithDataTypes(VarcharType()), channal2, true, false);
-    auto maxNull = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, false);
-    auto maxIntLong = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, false);
-    auto maxLongInt = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, false);
-    auto maxBoolean = maxFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(BooleanType()),
-        AggregatorUtil::WrapWithDataTypes(BooleanType()), channal6, true, false);
+    auto maxLong = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, false);
+    auto maxDecimal = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
+        *AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal1, true, false);
+    auto maxVarchar = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(VarcharType()),
+        *AggregatorUtil::WrapWithDataTypes(VarcharType()), channal2, true, false);
+    auto maxNull = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal4, true, false);
+    auto maxIntLong = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(IntType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal5, true, false);
+    auto maxLongInt = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, false);
+    auto maxBoolean = maxFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(BooleanType()),
+        *AggregatorUtil::WrapWithDataTypes(BooleanType()), channal6, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_count_max_test1");
@@ -3040,12 +3049,12 @@ TEST(AggregatorTest, avg_test)
     std::vector<int32_t> channal1 = { 1 };
     std::vector<int32_t> channal3 = { 3 };
     // avg test types : long + decimal + dictionary + null
-    auto avgLong = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, false);
-    auto avgDecimal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
-        AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal1, true, false);
-    auto avgNull = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3, true, false);
+    auto avgLong = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, false);
+    auto avgDecimal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE),
+        *AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE), channal1, true, false);
+    auto avgNull = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal3, true, false);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_avg_test");
@@ -3106,8 +3115,8 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumDeciAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 6)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)), channal0, true, true);
+    auto sumDeciAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 6)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)), channal0, true, true);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_decimal64_normal");
@@ -3116,18 +3125,18 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
     deci18_6Vec->SetValue(1, 999999999999999999L);
     deci18_6Vec->SetValue(2, 999999999999999999L);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci18_6Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3140,12 +3149,12 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
     sumDeciAggPartial->ProcessGroup(state, vecBatch, 1);
     sumDeciAggPartial->ProcessGroup(state, vecBatch, 2);
-    auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)), channal0, false, false);
+    auto sumDeciAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)), channal0, false, false);
 
     sumDeciAggFinal->ExtractValues(state, extractVec, 0);
 
@@ -3166,8 +3175,8 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumDeciAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, true, true);
+    auto sumDeciAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, true, true);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_decimal128_normal");
@@ -3180,18 +3189,18 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     deci25_8Vec->SetValue(1, deci);
     deci25_8Vec->SetValue(2, deci);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci25_8Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3204,10 +3213,10 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
-    auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, false, false);
+    auto sumDeciAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, false, false);
 
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3230,8 +3239,8 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumDeciAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, false);
+    auto sumDeciAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, false);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_sum_decimal128_overflow_throw_exception_when_isOverflowAsNull_is_false");
@@ -3244,18 +3253,18 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
     deci38_0Vec->SetValue(1, deci);
     deci38_0Vec->SetValue(2, deci);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci38_0Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3268,10 +3277,10 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
-    auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, false, false, false);
+    auto sumDeciAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, false, false, false);
 
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3294,8 +3303,8 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumDeciAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, true);
+    auto sumDeciAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, true);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_sum_decimal128_overflow_return_null_when_isOverflowAsNull_is_true");
@@ -3308,18 +3317,18 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     deci38_0Vec->SetValue(1, deci);
     deci38_0Vec->SetValue(2, deci);
 
-    auto *isOverflowVec = new BooleanVector(vectorAllocator, 3);
-    isOverflowVec->SetValue(0, false);
-    isOverflowVec->SetValue(1, false);
-    isOverflowVec->SetValue(2, false);
+    auto *emptyVec = new BooleanVector(vectorAllocator, 3);
+    emptyVec->SetValue(0, false);
+    emptyVec->SetValue(1, false);
+    emptyVec->SetValue(2, false);
 
     auto *resultVec = new Decimal128Vector(vectorAllocator, 1);
 
-    std::vector<Vector *> extractVec = { resultVec, isOverflowVec };
+    std::vector<Vector *> extractVec = { resultVec, emptyVec };
 
     auto *vecBatch = new VectorBatch(2);
     vecBatch->SetVector(0, deci38_0Vec);
-    vecBatch->SetVector(1, isOverflowVec);
+    vecBatch->SetVector(1, emptyVec);
 
     AggregateState state { nullptr };
     sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
@@ -3332,10 +3341,10 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
-    EXPECT_FALSE(isOverflowVec->GetValue(0));
+    EXPECT_FALSE(emptyVec->GetValue(0));
 
-    auto sumDeciAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, false, false, true);
+    auto sumDeciAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, false, false, true);
 
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3353,8 +3362,8 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDeciAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 6)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)), channal0, true, true);
+    auto avgDeciAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 6)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)), channal0, true, true);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_decimal64_normal");
@@ -3390,8 +3399,8 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
 
     avgDeciAggPartial->ProcessGroup(state, vecBatch, 1);
     avgDeciAggPartial->ProcessGroup(state, vecBatch, 2);
-    auto avgDeciAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 10)), channal0, false, false);
+    auto avgDeciAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 10)), channal0, false, false);
 
     EXPECT_EQ(3, static_cast<DecimalAverageState *>(state.val)->count);
 
@@ -3414,8 +3423,8 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDeciAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, true, true);
+    auto avgDeciAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)), channal0, true, true);
 
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_decimal128_normal");
@@ -3453,8 +3462,8 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
 
-    auto avgDeciAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(29, 12)), channal0, false, false);
+    auto avgDeciAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(29, 12)), channal0, false, false);
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3477,8 +3486,8 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDeciAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, false);
+    auto avgDeciAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, false);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_avg_decimal128_overflow_throw_exception_when_isOverflowAsNull_is_false");
@@ -3516,8 +3525,8 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
 
-    auto avgDeciAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)), channal0, false, false, false);
+    auto avgDeciAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)), channal0, false, false, false);
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3540,8 +3549,8 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDeciAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, true);
+    auto avgDeciAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)), channal0, true, true, true);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "AggregatorTest_spark_avg_decimal128_overflow_return_null_when_isOverflowAsNull_is_true");
@@ -3579,8 +3588,8 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
     EXPECT_EQ(expected1.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
 
-    auto avgDeciAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)), channal0, false, false, true);
+    auto avgDeciAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)), channal0, false, false, true);
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3597,8 +3606,8 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDeciAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)), channal0, true, true, true);
+    auto avgDeciAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)), channal0, true, true, true);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "spark_avg_decimal128_count_cast_to_wider_type_overflow_return_null_when_isOverflowAsNull_is_true");
@@ -3638,8 +3647,8 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
     avgDeciAggPartial->InitiateGroup(state, vecBatch, 0);
     avgDeciAggPartial->ExtractValues(state, extractVec, 0);
 
-    auto avgDeciAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)), channal0, false, false, true);
+    auto avgDeciAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)), channal0, false, false, true);
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1);
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 2);
@@ -3656,8 +3665,8 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDeciWindow = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 0)),
-        AggregatorUtil::WrapWithDataTypes(Decimal128Type(26, 4)), channal0, true, false, true);
+    auto avgDeciWindow = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 0)),
+        *AggregatorUtil::WrapWithDataTypes(Decimal128Type(26, 4)), channal0, true, false, true);
 
     VectorAllocator *vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "spark_avg_decimal128_normal_when_inputRaw_is_true_and_outputPartial_is_false");
@@ -3710,8 +3719,8 @@ TEST(AggregatorTest, spark_sum_short_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumShortAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(ShortType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
+    auto sumShortAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(ShortType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_short_normal");
 
@@ -3734,8 +3743,8 @@ TEST(AggregatorTest, spark_sum_short_normal)
     sumShortAggPartial->ProcessGroup(state, vecBatch, 1);
     sumShortAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto sumShortAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
+    auto sumShortAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
     sumShortAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(48141, resultVec->GetValue(0));
 
@@ -3749,8 +3758,8 @@ TEST(AggregatorTest, spark_sum_int_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumIntAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
+    auto sumIntAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(IntType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_int_normal");
 
@@ -3773,8 +3782,8 @@ TEST(AggregatorTest, spark_sum_int_normal)
     sumIntAggPartial->ProcessGroup(state, vecBatch, 1);
     sumIntAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto sumIntAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
+    auto sumIntAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
     sumIntAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(4514814681, resultVec->GetValue(0));
 
@@ -3788,8 +3797,8 @@ TEST(AggregatorTest, spark_sum_long_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumLongAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
+    auto sumLongAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_long_normal");
 
@@ -3812,8 +3821,8 @@ TEST(AggregatorTest, spark_sum_long_normal)
     sumLongAggPartial->ProcessGroup(state, vecBatch, 1);
     sumLongAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto sumLongAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
+    auto sumLongAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
     sumLongAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(7037035803703703592, resultVec->GetValue(0));
 
@@ -3827,8 +3836,8 @@ TEST(AggregatorTest, spark_sum_long_overflow)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumLongAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
+    auto sumLongAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_long_overflow");
 
@@ -3851,8 +3860,8 @@ TEST(AggregatorTest, spark_sum_long_overflow)
     sumLongAggPartial->ProcessGroup(state, vecBatch, 1);
     sumLongAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto sumLongAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
+    auto sumLongAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, false, false);
     sumLongAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(9223372036854772805, resultVec->GetValue(0));
 
@@ -3866,8 +3875,8 @@ TEST(AggregatorTest, spark_sum_double_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto sumDoubleAggPartial = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
+    auto sumDoubleAggPartial = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_sum_double_normal");
 
@@ -3890,8 +3899,8 @@ TEST(AggregatorTest, spark_sum_double_normal)
     sumDoubleAggPartial->ProcessGroup(state, vecBatch, 1);
     sumDoubleAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto sumDoubleAggFinal = sumFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
+    auto sumDoubleAggFinal = sumFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
     sumDoubleAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(7.037035803703704E11, resultVec->GetValue(0));
 
@@ -3906,8 +3915,8 @@ TEST(AggregatorTest, spark_avg_short_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgShortAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(ShortType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
+    auto avgShortAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(ShortType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_short_normal");
 
@@ -3936,8 +3945,8 @@ TEST(AggregatorTest, spark_avg_short_normal)
     avgShortAggPartial->ProcessGroup(state, vecBatch, 1);
     avgShortAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto avgShortAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
+    auto avgShortAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
     avgShortAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(16047.0, resultVec->GetValue(0));
 
@@ -3951,8 +3960,8 @@ TEST(AggregatorTest, spark_avg_int_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgIntAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
+    auto avgIntAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(IntType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_int_normal");
 
@@ -3981,8 +3990,8 @@ TEST(AggregatorTest, spark_avg_int_normal)
     avgIntAggPartial->ProcessGroup(state, vecBatch, 1);
     avgIntAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto avgIntAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
+    auto avgIntAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
     avgIntAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(1.504938227E9, resultVec->GetValue(0));
 
@@ -3996,8 +4005,8 @@ TEST(AggregatorTest, spark_avg_long_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgLongAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
+    auto avgLongAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_long_normal");
 
@@ -4026,8 +4035,8 @@ TEST(AggregatorTest, spark_avg_long_normal)
     avgLongAggPartial->ProcessGroup(state, vecBatch, 1);
     avgLongAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto avgLongAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
+    auto avgLongAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
     avgLongAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(9.2233720368547748E18, resultVec->GetValue(0));
 
@@ -4041,8 +4050,8 @@ TEST(AggregatorTest, spark_avg_double_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
-    auto avgDoubleAggPartial = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
+    auto avgDoubleAggPartial = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorTest_spark_avg_double_normal");
 
@@ -4071,8 +4080,8 @@ TEST(AggregatorTest, spark_avg_double_normal)
     avgDoubleAggPartial->ProcessGroup(state, vecBatch, 1);
     avgDoubleAggPartial->ProcessGroup(state, vecBatch, 2);
 
-    auto avgDoubleAggFinal = avgFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(DoubleType()),
-        AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
+    auto avgDoubleAggFinal = avgFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(DoubleType()),
+        *AggregatorUtil::WrapWithDataTypes(DoubleType()), channal0, false, false);
     avgDoubleAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(2.345678601234568E11, resultVec->GetValue(0));
 
@@ -4088,8 +4097,8 @@ TEST(AggregatorTest, first_short_ignorenull_test)
     auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
     std::vector<int32_t> channal0 = { 0 };
     auto firstIgnoreNullIntAggPartial =
-        firstIgnoreNullFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(ShortType()),
-        AggregatorUtil::WrapWithDataTypes(ShortType()), channal0, true, true);
+        firstIgnoreNullFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(ShortType()),
+        *AggregatorUtil::WrapWithDataTypes(ShortType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("first_short_ignorenull_test");
 
@@ -4170,8 +4179,8 @@ TEST(AggregatorTest, first_int_ignorenull_test)
     auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
     std::vector<int32_t> channal0 = { 0 };
     auto firstIgnoreNullIntAggPartial =
-        firstIgnoreNullFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
-        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, true);
+        firstIgnoreNullFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(IntType()),
+        *AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("first_int_ignorenull_test");
 
@@ -4252,8 +4261,8 @@ TEST(AggregatorTest, first_int_includenull_test)
     auto firstWithNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL);
     std::vector<int32_t> channal0 = { 0 };
     auto firstWithNullIntAggPartial =
-        firstWithNullFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(IntType()),
-        AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, true);
+        firstWithNullFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(IntType()),
+        *AggregatorUtil::WrapWithDataTypes(IntType()), channal0, true, true);
     VectorAllocator *vectorAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("first_int_includenull_test");
 
@@ -4314,8 +4323,8 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
 
     std::vector<int32_t> channal0 = { 0 };
     auto firstIgnoreNullIntAggPartial =
-        firstIgnoreNullFactory->CreateAggregator(AggregatorUtil::WrapWithDataTypes(LongType()),
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
+        firstIgnoreNullFactory->CreateAggregator(*AggregatorUtil::WrapWithDataTypes(LongType()),
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal0, true, true);
 
     auto *inputLongVec1 = new LongVector(vectorAllocator, 2);
     inputLongVec1->SetValueNull(0);
@@ -4347,8 +4356,8 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     DataTypesPtr inputTypes = std::make_unique<DataTypes>(vector);
 
     std::vector<int32_t> channal2 = { 0, 1 };
-    auto firstIgnoreNullIntAggFinal = firstIgnoreNullFactory->CreateAggregator(inputTypes,
-        AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false);
+    auto firstIgnoreNullIntAggFinal = firstIgnoreNullFactory->CreateAggregator(*inputTypes,
+        *AggregatorUtil::WrapWithDataTypes(LongType()), channal2, false, false);
 
     auto *inputLongVec2 = new LongVector(vectorAllocator, 4);
     inputLongVec2->SetValueNull(0);

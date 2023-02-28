@@ -123,10 +123,24 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(AbsDecimal64), "abs", {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64,
             INPUT_DATA),
 
+        Function(reinterpret_cast<void *>(RoundDecimal128), "round", {}, { OMNI_DECIMAL128, OMNI_INT }, retType128,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(RoundDecimal64), "round", {}, { OMNI_DECIMAL64, OMNI_INT }, retType64,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(RoundDecimal128WithoutRound), "round", {}, { OMNI_DECIMAL128 }, retType128,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(RoundDecimal64WithoutRound), "round", {}, { OMNI_DECIMAL64 }, retType64,
+            INPUT_DATA, true),
+
         Function(reinterpret_cast<void *>(Decimal64Compare), "Decimal64Compare", {}, paramTypes64, OMNI_INT),
         Function(reinterpret_cast<void *>(Decimal128Compare), "Decimal128Compare", {}, paramTypes128, OMNI_INT),
 
         // Return Null
+        Function(reinterpret_cast<void *>(RoundDecimal128RetNull), "round_null", {}, { OMNI_DECIMAL128, OMNI_INT },
+            retType128, INPUT_DATA),
+        Function(reinterpret_cast<void *>(RoundDecimal64RetNull), "round_null", {}, { OMNI_DECIMAL64, OMNI_INT },
+            retType64, INPUT_DATA),
+
         Function(reinterpret_cast<void *>(AddDec64Dec64Dec64RetNull), "Add_decimal64_null", {}, paramTypes64, retType64,
             INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(AddDec64Dec64Dec128RetNull), "Add_decimal64_null", {}, paramTypes64,

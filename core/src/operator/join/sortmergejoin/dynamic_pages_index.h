@@ -69,6 +69,19 @@ public:
         return this->columnsDeque[vectorBatchIndex][columnIndex];
     }
 
+    omniruntime::vec::Vector *GetColumnsFormCache(int32_t columnIndex) const
+    {
+        return this->cacheBatch[columnIndex];
+    }
+
+    void CacheBatch(int32_t vectorBatchIndex)
+    {
+        if (vectorBatchIndex != cacheBatchId) {
+            this->cacheBatchId = vectorBatchIndex;
+            this->cacheBatch = this->columnsDeque[vectorBatchIndex];
+        }
+    }
+
     // free vecBatch until vecBatchIdx
     void FreeBeforeVecBatch(int32_t vecBatchIdx);
 
@@ -79,6 +92,8 @@ private:
     int32_t typesCount;
     int32_t lastFreedVecBatchIdx = -1;
 
+    int32_t cacheBatchId = -1;
+    std::deque<omniruntime::vec::Vector *> cacheBatch;
     // vector  first Level：vectorBatch second Level: columnar vector
     std::deque<std::deque<omniruntime::vec::Vector *>> columnsDeque;
     std::deque<int64_t> valueAddressesDeque; // row

@@ -116,6 +116,49 @@ bool Filter7(VectorBatch *t, int32_t index)
     return Decimal128(val.HighBits(), val.LowBits()) <= n;
 }
 
+TEST(FilterTest, LessThanProcessRow)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numCols = 1;
+    const int32_t numRows = 1;
+    int32_t dataCol[numRows] = {0};
+
+    int64_t valueAddrs[numCols] = {reinterpret_cast<int64_t>(dataCol)};
+    int32_t inputLens[numCols]= {0};
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
+    const int32_t projectCount = 1;
+    std::vector<Expr *> projections = { new FieldExpr(0, IntType()) };
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
+        new LiteralExpr(2000, IntType()), BooleanType());
+    auto *overflowConfig = new OverflowConfig();
+    OperatorFactory *factory =
+        new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount, overflowConfig);
+    auto *op = dynamic_cast<FilterAndProjectOperator *>(factory->CreateOperator());
+
+    int64_t outValueAddrs[projectCount];
+    int32_t outLens[projectCount];
+    bool filterPass = op->ProcessRow(valueAddrs, inputLens, outValueAddrs, outLens);
+    EXPECT_TRUE(filterPass);
+    EXPECT_EQ(outValueAddrs[0], valueAddrs[0]);
+    EXPECT_EQ(outLens[0], 0);
+
+    dataCol[0] = 2000;
+    filterPass = op->ProcessRow(valueAddrs, inputLens, outValueAddrs, outLens);
+    EXPECT_FALSE(filterPass);
+
+    dataCol[0] = 1000;
+    inputLens[0] = -1;
+    filterPass = op->ProcessRow(valueAddrs, inputLens, outValueAddrs, outLens);
+    EXPECT_FALSE(filterPass);
+
+    Expr::DeleteExprs({ filterExpr });
+    Expr::DeleteExprs(projections);
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+    delete overflowConfig;
+}
+
 TEST(FilterTest, LessThan)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);

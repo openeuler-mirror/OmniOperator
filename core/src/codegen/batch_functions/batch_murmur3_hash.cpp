@@ -86,6 +86,16 @@ extern "C" DLLEXPORT void BatchMm3Decimal128(Decimal128 *x, int32_t precision, i
     }
 }
 
+extern "C" DLLEXPORT void BatchMm3Boolean(bool *val, bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull,
+    int32_t *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        seed[i] = isSeedNull[i] ? 0 : seed[i];
+        output[i] = static_cast<int32_t>(
+            HashInt(static_cast<uint32_t>((val[i] ? 1 : 0) * !isValNull[i]), static_cast<uint32_t>(seed[i])));
+    }
+}
+
 extern "C" DLLEXPORT void BatchCombineHash(int64_t *prevHashVal, bool *isPrevHashValNull, int64_t *val, bool *isValNull,
     bool *resIsNull, int64_t *output, int32_t rowCnt)
 {

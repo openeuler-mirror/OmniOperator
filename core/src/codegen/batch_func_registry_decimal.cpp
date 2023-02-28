@@ -12,6 +12,8 @@ using namespace omniruntime::codegen;
 std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
 {
     std::string absFnStr = "batch_abs";
+    std::string roundFnStr = "batch_round";
+    std::string roundNullFnStr = "batch_round_null";
     std::string castFnStr = "batch_CAST";
     std::string castNullFnStr = "batch_CAST_null";
     std::string addFnStr = "batch_add";
@@ -46,6 +48,15 @@ std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchDecimal64Compare), "batch_Decimal64Compare", {}, paramTypes64, OMNI_INT),
         Function(reinterpret_cast<void *>(BatchAbsDecimal64), absFnStr, {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64,
             INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(BatchRoundDecimal128), roundFnStr, {}, { OMNI_DECIMAL128, OMNI_INT },
+            OMNI_DECIMAL64, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchRoundDecimal64), roundFnStr, {}, { OMNI_DECIMAL64, OMNI_INT },
+            OMNI_DECIMAL64, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchRoundDecimal128WithoutRound), roundFnStr, {}, { OMNI_DECIMAL128 },
+            OMNI_DECIMAL64, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchRoundDecimal64WithoutRound), roundFnStr, {}, { OMNI_DECIMAL64 },
+            OMNI_DECIMAL64, INPUT_DATA, true),
 
         // decimal64 compare
         Function(reinterpret_cast<void *>(BatchLessThanDecimal64), lessThanFnStr, {}, paramTypes64, OMNI_BOOLEAN,
@@ -111,6 +122,11 @@ std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
             INPUT_DATA),
 
         // Decimal Cast Function Return Null
+        Function(reinterpret_cast<void *>(BatchRoundDecimal128RetNull), roundNullFnStr, {},
+                 { OMNI_DECIMAL128, OMNI_INT }, OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchRoundDecimal128RetNull), roundNullFnStr, {},
+                 { OMNI_DECIMAL64, OMNI_INT }, OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+
         Function(reinterpret_cast<void *>(BatchCastDecimal64To64RetNull), castNullFnStr, {}, { OMNI_DECIMAL64 },
             OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(BatchCastDecimal128To128RetNull), castNullFnStr, {}, { OMNI_DECIMAL128 },

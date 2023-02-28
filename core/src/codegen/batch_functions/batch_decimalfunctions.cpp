@@ -130,6 +130,70 @@ extern "C" DLLEXPORT void BatchAbsDecimal128(Decimal128 *x, int32_t xPrecision, 
     }
 }
 
+extern "C" DLLEXPORT void BatchRoundDecimal128(int64_t contextPtr, Decimal128 *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, bool *isNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    Decimal128 result(0);
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        if (DecimalOperations::Round(x[i], xScale, outPrecision, outScale, round[i], result) != type::SUCCESS) {
+            SetError(contextPtr, DECIMAL_OVERFLOW);
+            return;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchRoundDecimal64(int64_t contextPtr, int64_t *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    int64_t result = 0;
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        if (DecimalOperations::Round(x[i], xScale, outPrecision, outScale, round[i], result) != type::SUCCESS) {
+            SetError(contextPtr, DECIMAL_OVERFLOW);
+            return;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchRoundDecimal128WithoutRound(int64_t contextPtr, Decimal128 *x, int32_t xPrecision,
+    int32_t xScale, bool *isNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    Decimal128 result(0);
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        if (DecimalOperations::Round(x[i], xScale, outPrecision, outScale, 0, result) != type::SUCCESS) {
+            SetError(contextPtr, DECIMAL_OVERFLOW);
+            return;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchRoundDecimal64WithoutRound(int64_t contextPtr, int64_t *x, int32_t xPrecision,
+    int32_t xScale, bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    int64_t result = 0;
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        if (DecimalOperations::Round(x[i], xScale, outPrecision, outScale, 0, result) != type::SUCCESS) {
+            SetError(contextPtr, DECIMAL_OVERFLOW);
+            return;
+        }
+        output[i] = result;
+    }
+}
+
 // decimal64 arith functions
 extern "C" DLLEXPORT void BatchDecimal64Compare(int64_t *x, int32_t xPrecision, int32_t xScale, int64_t *y,
     int32_t yPrecision, int32_t yScale, int32_t *output, int32_t rowCnt)
@@ -726,6 +790,38 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToDouble(Decimal128 *x, int32_t pre
         }
         doubleString = DecimalOperations::ScaleOfDecimal(x[i].ToString(), scale);
         output[i] = stod(doubleString);
+    }
+}
+
+extern "C" DLLEXPORT void BatchRoundDecimal128RetNull(bool *isNull, Decimal128 *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    Decimal128 result(0);
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        if (DecimalOperations::Round(x[i], xScale, outPrecision, outScale, round[i], result) != type::SUCCESS) {
+            isNull[i] = true;
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchRoundDecimal64RetNull(bool *isNull, int64_t *x, int32_t xPrecision, int32_t xScale,
+    int32_t *round, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    int64_t result = 0;
+    for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
+        if (DecimalOperations::Round(x[i], xScale, outPrecision, outScale, round[i], result) != type::SUCCESS) {
+            isNull[i] = true;
+            continue;
+        }
+        output[i] = result;
     }
 }
 

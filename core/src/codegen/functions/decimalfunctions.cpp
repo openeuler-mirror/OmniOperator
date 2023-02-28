@@ -61,6 +61,55 @@ extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int32_t xP
     *outLowPtr = result.LowBits();
 }
 
+extern "C" DLLEXPORT void RoundDecimal128(int64_t contextPtr, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, int32_t round, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr)
+{
+    Decimal128 result(0);
+    if (DecimalOperations::Round(Decimal128(xHigh, xLow), xScale, outPrecision, outScale, round, result) !=
+        type::SUCCESS) {
+        SetError(contextPtr, DECIMAL_OVERFLOW);
+        return;
+    }
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
+}
+
+extern "C" DLLEXPORT void RoundDecimal128WithoutRound(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
+    int32_t xPrecision,
+    int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr)
+{
+    Decimal128 result(0);
+    if (DecimalOperations::Round(Decimal128(xHigh, xLow), xScale, outPrecision, outScale, 0, result) != type::SUCCESS) {
+        SetError(contextPtr, DECIMAL_OVERFLOW);
+        return;
+    }
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
+}
+
+extern "C" DLLEXPORT int64_t RoundDecimal64(int64_t contextPtr, int64_t x, int32_t xPrecision,
+    int32_t xScale, int32_t round, bool isNull, int32_t outPrecision, int32_t outScale)
+{
+    int64_t result;
+    if (DecimalOperations::Round(x, xScale, outPrecision, outScale, round, result) != type::SUCCESS) {
+        SetError(contextPtr, DECIMAL_OVERFLOW);
+        return 0;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT int64_t RoundDecimal64WithoutRound(int64_t contextPtr, int64_t x, int32_t xPrecision,
+    int32_t xScale, bool isNull, int32_t outPrecision, int32_t outScale)
+{
+    int64_t result;
+    if (DecimalOperations::Round(x, xScale, outPrecision, outScale, 0, result) != type::SUCCESS) {
+        SetError(contextPtr, DECIMAL_OVERFLOW);
+        return 0;
+    }
+    return result;
+}
 // decimal64 arithmetical functions
 extern "C" DLLEXPORT int32_t Decimal64Compare(int64_t x, int32_t xPrecision, int32_t xScale, int64_t y,
     int32_t yPrecision, int32_t yScale, bool isNull)
@@ -1210,6 +1259,33 @@ extern "C" DLLEXPORT double CastDecimal128ToDouble(int64_t high, uint64_t low, i
     Decimal128 input(high, low);
     string doubleString = DecimalOperations::ScaleOfDecimal(input.ToString(), scale);
     return stod(doubleString);
+}
+
+extern "C" DLLEXPORT void RoundDecimal128RetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t xPrecision,
+    int32_t xScale, int32_t round, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr,
+    uint64_t *outLowPtr)
+{
+    Decimal128 result(0);
+    if (DecimalOperations::Round(Decimal128(xHigh, xLow), xScale, outPrecision, outScale, round, result) !=
+        type::SUCCESS) {
+        *isNull = true;
+        return;
+    }
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
+    *isNull = false;
+}
+
+extern "C" DLLEXPORT int64_t RoundDecimal64RetNull(bool *isNull, int64_t x, int32_t xPrecision, int32_t xScale,
+    int32_t round, int32_t outPrecision, int32_t outScale)
+{
+    int64_t result;
+    if (DecimalOperations::Round(x, xScale, outPrecision, outScale, round, result) != type::SUCCESS) {
+        *isNull = true;
+        return 0;
+    }
+    *isNull = false;
+    return result;
 }
 
 // return null

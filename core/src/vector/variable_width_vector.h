@@ -17,6 +17,8 @@ template <DataTypeId TYPE_ID> class VariableWidthVector : public Vector {
     using VariableWidthVectorImpl = VariableWidthVector<TYPE_ID>;
 
 public:
+    static const int32_t initCapacityInBytes = 32 * 1024; // 32K
+
     VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {};
 
     VariableWidthVector(VectorAllocator *pAllocator, int capacityInBytes, int size)
@@ -181,8 +183,6 @@ public:
     }
 
 private:
-    static const int32_t initCapacityInBytes = 32 * 1024; // 32K
-
     static const int32_t expandFactor = 2;
 
     void CheckCapacity(int32_t needCapacityInBytes)

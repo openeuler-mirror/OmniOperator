@@ -135,6 +135,7 @@ public:
     }
 
 private:
+    void PrepareOutput();
     ErrorCode SpillToDisk();
     void Sort();
     void GetVecBatchesForSpill(std::vector<omniruntime::vec::VectorBatch *> &vecBatchesForSpill);
@@ -147,11 +148,16 @@ private:
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
     std::unique_ptr<PagesIndex> pagesIndex;
+    int32_t maxRowCountPerBatch = 0;
+    size_t totalRowCount = 0;
+    size_t rowCountOutputted = 0;
+    bool hasSorted = false;
 
     // for spill
     OperatorConfig operatorConfig;
     VecBatchWithPositionComparator *comparator = nullptr;
     Spiller *spiller = nullptr;
+    bool hasNext = true;
 };
 } // end of namespace op
 } // end of namespace omniruntime

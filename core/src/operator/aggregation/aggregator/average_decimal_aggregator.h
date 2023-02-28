@@ -14,11 +14,11 @@ namespace omniruntime {
 namespace op {
 class AverageDecimalAggregator : public Aggregator {
 public:
-    AverageDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    AverageDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
     {}
 
-    AverageDecimalAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels,
+    AverageDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -37,7 +37,7 @@ public:
         bool overflow = false;
         int32_t count = 0;
 
-        auto inputTypeId = inputTypes->GetType(0)->GetId();
+        auto inputTypeId = inputTypes.GetType(0)->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         auto sumVal =
             reinterpret_cast<HmppDecimal128 *>(executionContext->GetArena()->Allocate(sizeof(HmppDecimal128)));
@@ -92,7 +92,7 @@ public:
             return false;
         }
         // only OMNI_DECIMAL128 type input support
-        return (inputTypes->GetType(0)->GetId() == OMNI_DECIMAL128);
+        return (inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128);
     }
 #endif
 
@@ -114,9 +114,9 @@ public:
             int64_t oldOverflow = 0;
             int64_t oldCount = 0;
             Decimal128 curVal;
-            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
-            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
                 curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
             }
             Decimal128 leftVal;
@@ -164,9 +164,9 @@ public:
         }
         if (inputRaw) {
             Decimal128 initState;
-            if (inputTypes->GetIds()[0] == OMNI_DECIMAL64) {
+            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 initState = DecimalOperations::UnscaledDecimal((static_cast<LongVector *>(vector))->GetValue(offset));
-            } else if (inputTypes->GetIds()[0] == OMNI_DECIMAL128) {
+            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
                 initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
             }
 
@@ -212,11 +212,11 @@ public:
             int32_t scaleDiff = 0;
             // for spark, input type is always decimal. for olk, input type is varbinary and the precision
             // and scale are zero.
-            auto outType = outputTypes->GetIds()[0];
-            auto inType = inputTypes->GetIds()[0];
+            auto outType = outputTypes.GetIds()[0];
+            auto inType = inputTypes.GetIds()[0];
             if (inType == OMNI_DECIMAL64 || inType == OMNI_DECIMAL128) {
-                scaleDiff = static_cast<DecimalDataType *>(outputTypes->GetType(0).get())->GetScale() -
-                    static_cast<DecimalDataType *>(inputTypes->GetType(0).get())->GetScale();
+                scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
+                    static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
             }
             Decimal128 rescaledDividend;
             // rescale dividend and divisor to output scale

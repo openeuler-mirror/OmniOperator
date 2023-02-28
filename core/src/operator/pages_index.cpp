@@ -15,8 +15,8 @@ const int32_t QUICK_SORT_STEP_SIZE = 8;
 const int32_t QUICK_SORT_MIDDLE = 2;
 
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
-    int32_t to, int32_t currentCol);
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns,
+    const std::vector<bool> &mayHaveNulls, int32_t from, int32_t to, int32_t currentCol);
 
 void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
@@ -71,6 +71,7 @@ void PagesIndex::Prepare()
 
     this->valueAddresses = new uint64_t[this->positionCount];
     this->columns = new Vector **[columnCount];
+    this->mayHaveNulls.resize(columnCount, false);
     for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
         this->columns[colIdx] = new Vector *[vecBatchCount];
     }
@@ -87,130 +88,146 @@ void PagesIndex::Prepare()
 
         // put vectors to a collector.
         for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
-            this->columns[colIdx][vecBatchIdx] = vecBatch->GetVector(static_cast<int32_t>(colIdx));
+            auto vector = vecBatch->GetVector(static_cast<int32_t>(colIdx));
+            this->columns[colIdx][vecBatchIdx] = vector;
+            if (!this->mayHaveNulls[colIdx] && vector->MayHaveNull()) {
+                this->mayHaveNulls[colIdx] = true;
+            }
         }
     }
 }
 
-template <typename V>
-int32_t CompareTo(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
-    Vector **columns, int32_t leftPosition, int32_t rightPosition)
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+int32_t CompareTo(const int32_t sortNullFirsts, const uint64_t *valueAddresses, Vector **columns, int32_t leftPosition,
+    int32_t rightPosition)
 {
-    return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
-        OperatorUtil::CompareTemplate<V>);
+    return Compare<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, leftPosition,
+        rightPosition, OperatorUtil::CompareTemplate<V>);
 }
 
-int32_t CompareToDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
-    Vector **columns, int32_t leftPosition, int32_t rightPosition)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t CompareToDouble(const int32_t sortNullFirsts, const uint64_t *valueAddresses, Vector **columns,
+    int32_t leftPosition, int32_t rightPosition)
 {
-    return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
-        OperatorUtil::CompareDouble);
+    return Compare<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, leftPosition,
+        rightPosition, OperatorUtil::CompareDouble);
 }
 
-int32_t CompareToVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
-    Vector **columns, int32_t leftPosition, int32_t rightPosition)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t CompareToVarChar(const int32_t sortNullFirsts, const uint64_t *valueAddresses, Vector **columns,
+    int32_t leftPosition, int32_t rightPosition)
 {
-    return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
-        OperatorUtil::CompareVarchar);
+    return Compare<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, leftPosition,
+        rightPosition, OperatorUtil::CompareVarchar);
 }
 
-int32_t CompareToDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, const uint64_t *valueAddresses,
-    Vector **columns, int32_t leftPosition, int32_t rightPosition)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t CompareToDec128(const int32_t sortNullFirsts, const uint64_t *valueAddresses, Vector **columns,
+    int32_t leftPosition, int32_t rightPosition)
 {
-    return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
-        OperatorUtil::CompareDecimal128);
+    return Compare<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, leftPosition,
+        rightPosition, OperatorUtil::CompareDecimal128);
 }
 
-template <typename V>
-void QuickSortColumnSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnSmall(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
     for (int32_t i = from; i < to; i++) {
-        for (int32_t j = i;
-            j > from && (CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0; j--) {
-            Swap(valueAddresses, j, j - 1);
-        }
-    }
-}
-
-void QuickSortColumnDoubleSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
-{
-    for (int32_t i = from; i < to; i++) {
-        for (int32_t j = i;
-            j > from && (CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0; j--) {
-            Swap(valueAddresses, j, j - 1);
-        }
-    }
-}
-
-void QuickSortColumnVarCharSmall(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
-{
-    for (int32_t i = from; i < to; i++) {
-        for (int32_t j = i;
-            j > from && (CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0;
+        for (int32_t j = i; j > from &&
+            (CompareTo<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0;
             j--) {
             Swap(valueAddresses, j, j - 1);
         }
     }
 }
 
-void QuickSortColumnDec128Small(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnDoubleSmall(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
     for (int32_t i = from; i < to; i++) {
-        for (int32_t j = i;
-            j > from && (CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0; j--) {
+        for (int32_t j = i; j > from &&
+            (CompareToDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0;
+            j--) {
             Swap(valueAddresses, j, j - 1);
         }
     }
 }
 
-template <typename V>
-int32_t Median3(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns,
-    int32_t a, int32_t b, int32_t c)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnVarCharSmall(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
-    int32_t ab = CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
-    int32_t ac = CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, a, c);
-    int32_t bc = CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, b, c);
+    for (int32_t i = from; i < to; i++) {
+        for (int32_t j = i; j > from &&
+            (CompareToVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0;
+            j--) {
+            Swap(valueAddresses, j, j - 1);
+        }
+    }
+}
+
+template <bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnDec128Small(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
+{
+    for (int32_t i = from; i < to; i++) {
+        for (int32_t j = i; j > from &&
+            (CompareToDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, j - 1, j)) > 0;
+            j--) {
+            Swap(valueAddresses, j, j - 1);
+        }
+    }
+}
+
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+int32_t Median3(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t a, int32_t b,
+    int32_t c)
+{
+    int32_t ab = CompareTo<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, b);
+    int32_t ac = CompareTo<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, c);
+    int32_t bc = CompareTo<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, c);
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-int32_t Median3Double(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t a, int32_t b, int32_t c)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t Median3Double(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t a, int32_t b,
+    int32_t c)
 {
-    int32_t ab = CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
-    int32_t ac = CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, a, c);
-    int32_t bc = CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, b, c);
+    int32_t ab = CompareToDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, b);
+    int32_t ac = CompareToDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, c);
+    int32_t bc = CompareToDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, c);
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-int32_t Median3VarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t a, int32_t b, int32_t c)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t Median3VarChar(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t a, int32_t b,
+    int32_t c)
 {
-    int32_t ab = CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
-    int32_t ac = CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, a, c);
-    int32_t bc = CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, b, c);
+    int32_t ab = CompareToVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, b);
+    int32_t ac = CompareToVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, c);
+    int32_t bc = CompareToVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, c);
     return (ab < 0 ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-int32_t Median3Dec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t a, int32_t b, int32_t c)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t Median3Dec128(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t a, int32_t b,
+    int32_t c)
 {
-    int32_t ab = CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, a, b);
-    int32_t ac = CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, a, c);
-    int32_t bc = CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, b, c);
+    int32_t ab = CompareToDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, b);
+    int32_t ac = CompareToDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, a, c);
+    int32_t bc = CompareToDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, c);
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-template <typename V>
-void LeftAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns,
-    int32_t c, int32_t &m, int32_t &a, int32_t &b)
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+void LeftAdvance(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t c, int32_t &m,
+    int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
-    while (b <= c &&
-        ((comparison = CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m)) <= 0)) {
+    while (b <= c && ((comparison = CompareTo<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, b, m)) <= 0)) {
         if (comparison == 0) {
             if (a == m) {
                 m = b;
@@ -223,13 +240,13 @@ void LeftAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, uin
     }
 }
 
-template <typename V>
-void RightAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+void RightAdvance(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t b, int32_t &m,
+    int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
-    while (c >= b &&
-        ((comparison = CompareTo<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m)) >= 0)) {
+    while (c >= b && ((comparison = CompareTo<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, c, m)) >= 0)) {
         if (comparison == 0) {
             if (c == m) {
                 m = d;
@@ -242,9 +259,9 @@ void RightAdvance(const int32_t sortAscendings, const int32_t sortNullFirsts, ui
     }
 }
 
-template <typename V>
-int32_t GetMedianPosition(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to, int32_t len)
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+int32_t GetMedianPosition(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_SMALL_LEN) {
@@ -252,36 +269,36 @@ int32_t GetMedianPosition(const int32_t sortAscendings, const int32_t sortNullFi
         int32_t n = to - 1;
         if (len > QUICK_SORT_BIG_LEN) {
             int32_t s = len / QUICK_SORT_STEP_SIZE;
-            l = Median3<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, l, l + s,
+            l = Median3<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, l + s,
                 l + QUICK_SORT_MIDDLE * s);
-            m = Median3<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, m - s, m, m + s);
-            n = Median3<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, n - QUICK_SORT_MIDDLE * s, n - s,
-                n);
+            m = Median3<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, m - s, m, m + s);
+            n = Median3<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns,
+                n - QUICK_SORT_MIDDLE * s, n - s, n);
         }
-        m = Median3<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, l, m, n);
+        m = Median3<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, m, n);
     }
     return m;
 }
 
-template <typename V>
-void QuickSortColumn(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
+template <typename V, bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumn(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from, int32_t to)
 {
     int32_t len = to - from;
     if (len < QUICK_SORT_SMALL_LEN) {
-        QuickSortColumnSmall<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to);
+        QuickSortColumnSmall<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, to);
         return;
     }
 
-    int32_t m = GetMedianPosition<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to, len);
+    int32_t m =
+        GetMedianPosition<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, to, len);
 
     int32_t a = from;
     int32_t b = a;
     int32_t c = to - 1;
     int32_t d = c;
     while (true) {
-        LeftAdvance<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m, a, b);
-        RightAdvance<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m, c, d);
+        LeftAdvance<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, c, m, a, b);
+        RightAdvance<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, m, c, d);
         if (b > c) {
             break;
         }
@@ -303,19 +320,20 @@ void QuickSortColumn(const int32_t sortAscendings, const int32_t sortNullFirsts,
 
     // Recursively sort non-partition-elements
     if ((s = b - a) > 1) {
-        QuickSortColumn<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, from, from + s);
+        QuickSortColumn<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, from + s);
     }
     if ((s = d - c) > 1) {
-        QuickSortColumn<V>(sortAscendings, sortNullFirsts, valueAddresses, columns, n - s, n);
+        QuickSortColumn<V, columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, n - s, n);
     }
 }
 
-void LeftAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t c, int32_t &m, int32_t &a, int32_t &b)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void LeftAdvanceDouble(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t c, int32_t &m,
+    int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
-    while (b <= c &&
-        ((comparison = CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m)) <= 0)) {
+    while (b <= c && ((comparison = CompareToDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, b, m)) <= 0)) {
         if (comparison == 0) {
             if (a == m) {
                 m = b;
@@ -328,12 +346,13 @@ void LeftAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirst
     }
 }
 
-void RightAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void RightAdvanceDouble(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t b, int32_t &m,
+    int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
-    while (c >= b &&
-        ((comparison = CompareToDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m)) >= 0)) {
+    while (c >= b && ((comparison = CompareToDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, c, m)) >= 0)) {
         if (comparison == 0) {
             if (c == m) {
                 m = d;
@@ -346,8 +365,9 @@ void RightAdvanceDouble(const int32_t sortAscendings, const int32_t sortNullFirs
     }
 }
 
-int32_t GetMedianPositionDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to, int32_t len)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t GetMedianPositionDouble(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_SMALL_LEN) {
@@ -355,35 +375,38 @@ int32_t GetMedianPositionDouble(const int32_t sortAscendings, const int32_t sort
         int32_t n = to - 1;
         if (len > QUICK_SORT_BIG_LEN) {
             int32_t s = len / QUICK_SORT_STEP_SIZE;
-            l = Median3Double(sortAscendings, sortNullFirsts, valueAddresses, columns, l, l + s,
+            l = Median3Double<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, l + s,
                 l + QUICK_SORT_MIDDLE * s);
-            m = Median3Double(sortAscendings, sortNullFirsts, valueAddresses, columns, m - s, m, m + s);
-            n = Median3Double(sortAscendings, sortNullFirsts, valueAddresses, columns, n - QUICK_SORT_MIDDLE * s, n - s,
-                n);
+            m = Median3Double<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, m - s, m,
+                m + s);
+            n = Median3Double<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns,
+                n - QUICK_SORT_MIDDLE * s, n - s, n);
         }
-        m = Median3Double(sortAscendings, sortNullFirsts, valueAddresses, columns, l, m, n);
+        m = Median3Double<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, m, n);
     }
     return m;
 }
 
-void QuickSortColumnDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnDouble(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
     int32_t len = to - from;
     if (len < QUICK_SORT_SMALL_LEN) {
-        QuickSortColumnDoubleSmall(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to);
+        QuickSortColumnDoubleSmall<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, to);
         return;
     }
 
-    int32_t m = GetMedianPositionDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to, len);
+    int32_t m = GetMedianPositionDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from,
+        to, len);
 
     int32_t a = from;
     int32_t b = a;
     int32_t c = to - 1;
     int32_t d = c;
     while (true) {
-        LeftAdvanceDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m, a, b);
-        RightAdvanceDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m, c, d);
+        LeftAdvanceDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, c, m, a, b);
+        RightAdvanceDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, m, c, d);
         if (b > c) {
             break;
         }
@@ -405,19 +428,20 @@ void QuickSortColumnDouble(const int32_t sortAscendings, const int32_t sortNullF
 
     // Recursively sort non-partition-elements
     if ((s = b - a) > 1) {
-        QuickSortColumnDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, from, from + s);
+        QuickSortColumnDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, from + s);
     }
     if ((s = d - c) > 1) {
-        QuickSortColumnDouble(sortAscendings, sortNullFirsts, valueAddresses, columns, n - s, n);
+        QuickSortColumnDouble<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, n - s, n);
     }
 }
 
-void LeftAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t c, int32_t &m, int32_t &a, int32_t &b)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void LeftAdvanceVarChar(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t c, int32_t &m,
+    int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
-    while (b <= c &&
-        ((comparison = CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m)) <= 0)) {
+    while (b <= c && ((comparison = CompareToVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, b, m)) <= 0)) {
         if (comparison == 0) {
             if (a == m) {
                 m = b;
@@ -430,12 +454,13 @@ void LeftAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirs
     }
 }
 
-void RightAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void RightAdvanceVarChar(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t b,
+    int32_t &m, int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
-    while (c >= b &&
-        ((comparison = CompareToVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m)) >= 0)) {
+    while (c >= b && ((comparison = CompareToVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, c, m)) >= 0)) {
         if (comparison == 0) {
             if (c == m) {
                 m = d;
@@ -448,8 +473,9 @@ void RightAdvanceVarChar(const int32_t sortAscendings, const int32_t sortNullFir
     }
 }
 
-int32_t GetMedianPositionVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to, int32_t len)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t GetMedianPositionVarChar(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_SMALL_LEN) {
@@ -457,35 +483,38 @@ int32_t GetMedianPositionVarChar(const int32_t sortAscendings, const int32_t sor
         int32_t n = to - 1;
         if (len > QUICK_SORT_BIG_LEN) {
             int32_t s = len / QUICK_SORT_STEP_SIZE;
-            l = Median3VarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, l, l + s,
+            l = Median3VarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, l + s,
                 l + QUICK_SORT_MIDDLE * s);
-            m = Median3VarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, m - s, m, m + s);
-            n = Median3VarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, n - QUICK_SORT_MIDDLE * s,
-                n - s, n);
+            m = Median3VarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, m - s, m,
+                m + s);
+            n = Median3VarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns,
+                n - QUICK_SORT_MIDDLE * s, n - s, n);
         }
-        m = Median3VarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, l, m, n);
+        m = Median3VarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, m, n);
     }
     return m;
 }
 
-void QuickSortColumnVarChar(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnVarChar(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
     int32_t len = to - from;
     if (len < QUICK_SORT_SMALL_LEN) {
-        QuickSortColumnVarCharSmall(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to);
+        QuickSortColumnVarCharSmall<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, to);
         return;
     }
 
-    int32_t m = GetMedianPositionVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to, len);
+    int32_t m = GetMedianPositionVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from,
+        to, len);
 
     int32_t a = from;
     int32_t b = a;
     int32_t c = to - 1;
     int32_t d = c;
     while (true) {
-        LeftAdvanceVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m, a, b);
-        RightAdvanceVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m, c, d);
+        LeftAdvanceVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, c, m, a, b);
+        RightAdvanceVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, m, c, d);
         if (b > c) {
             break;
         }
@@ -507,19 +536,21 @@ void QuickSortColumnVarChar(const int32_t sortAscendings, const int32_t sortNull
 
     // Recursively sort non-partition-elements
     if ((s = b - a) > 1) {
-        QuickSortColumnVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, from, from + s);
+        QuickSortColumnVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from,
+            from + s);
     }
     if ((s = d - c) > 1) {
-        QuickSortColumnVarChar(sortAscendings, sortNullFirsts, valueAddresses, columns, n - s, n);
+        QuickSortColumnVarChar<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, n - s, n);
     }
 }
 
-void LeftAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t c, int32_t &m, int32_t &a, int32_t &b)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void LeftAdvanceDec128(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t c, int32_t &m,
+    int32_t &a, int32_t &b)
 {
     int32_t comparison = 0;
-    while (b <= c &&
-        ((comparison = CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m)) <= 0)) {
+    while (b <= c && ((comparison = CompareToDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, b, m)) <= 0)) {
         if (comparison == 0) {
             if (a == m) {
                 m = b;
@@ -532,12 +563,13 @@ void LeftAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirst
     }
 }
 
-void RightAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t b, int32_t &m, int32_t &c, int32_t &d)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void RightAdvanceDec128(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t b, int32_t &m,
+    int32_t &c, int32_t &d)
 {
     int32_t comparison = 0;
-    while (c >= b &&
-        ((comparison = CompareToDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m)) >= 0)) {
+    while (c >= b && ((comparison = CompareToDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses,
+        columns, c, m)) >= 0)) {
         if (comparison == 0) {
             if (c == m) {
                 m = d;
@@ -550,8 +582,9 @@ void RightAdvanceDec128(const int32_t sortAscendings, const int32_t sortNullFirs
     }
 }
 
-int32_t GetMedianPositionDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to, int32_t len)
+template <bool columnsNullFlag, int32_t sortAscendings>
+int32_t GetMedianPositionDec128(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to, int32_t len)
 {
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_SMALL_LEN) {
@@ -559,33 +592,36 @@ int32_t GetMedianPositionDec128(const int32_t sortAscendings, const int32_t sort
         int32_t n = to - 1;
         if (len > QUICK_SORT_BIG_LEN) {
             int32_t s = len / QUICK_SORT_STEP_SIZE;
-            l = Median3Dec128(sortAscendings, sortNullFirsts, valueAddresses, columns, l, l + s,
+            l = Median3Dec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, l + s,
                 l + QUICK_SORT_MIDDLE * s);
-            m = Median3Dec128(sortAscendings, sortNullFirsts, valueAddresses, columns, m - s, m, m + s);
-            n = Median3Dec128(sortAscendings, sortNullFirsts, valueAddresses, columns, n - QUICK_SORT_MIDDLE * s, n - s,
-                n);
+            m = Median3Dec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, m - s, m,
+                m + s);
+            n = Median3Dec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns,
+                n - QUICK_SORT_MIDDLE * s, n - s, n);
         }
-        m = Median3Dec128(sortAscendings, sortNullFirsts, valueAddresses, columns, l, m, n);
+        m = Median3Dec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, l, m, n);
     }
     return m;
 }
 
-void QuickSortColumnDec128(const int32_t sortAscendings, const int32_t sortNullFirsts, uint64_t *valueAddresses,
-    Vector **columns, int32_t from, int32_t to)
+template <bool columnsNullFlag, int32_t sortAscendings>
+void QuickSortColumnDec128(const int32_t sortNullFirsts, uint64_t *valueAddresses, Vector **columns, int32_t from,
+    int32_t to)
 {
     int32_t len = to - from;
     if (len < QUICK_SORT_SMALL_LEN) {
-        QuickSortColumnDec128Small(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to);
+        QuickSortColumnDec128Small<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, to);
         return;
     }
-    int32_t m = GetMedianPositionDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, from, to, len);
+    int32_t m = GetMedianPositionDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from,
+        to, len);
     int32_t a = from;
     int32_t b = a;
     int32_t c = to - 1;
     int32_t d = c;
     while (true) {
-        LeftAdvanceDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, c, m, a, b);
-        RightAdvanceDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, b, m, c, d);
+        LeftAdvanceDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, c, m, a, b);
+        RightAdvanceDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, b, m, c, d);
         if (b > c) {
             break;
         }
@@ -607,10 +643,10 @@ void QuickSortColumnDec128(const int32_t sortAscendings, const int32_t sortNullF
 
     // Recursively sort non-partition-elements
     if ((s = b - a) > 1) {
-        QuickSortColumnDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, from, from + s);
+        QuickSortColumnDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, from, from + s);
     }
     if ((s = d - c) > 1) {
-        QuickSortColumnDec128(sortAscendings, sortNullFirsts, valueAddresses, columns, n - s, n);
+        QuickSortColumnDec128<columnsNullFlag, sortAscendings>(sortNullFirsts, valueAddresses, columns, n - s, n);
     }
 }
 
@@ -696,12 +732,27 @@ std::vector<std::tuple<int32_t, int32_t>> GetRangesDec128(uint64_t *valueAddress
 
 template <typename V, typename T>
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
-    int32_t to, int32_t currentCol)
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns,
+    const std::vector<bool> &mayHaveNulls, int32_t from, int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
-    QuickSortColumn<V>(sortAscendings[currentCol], sortNullFirsts[currentCol], valueAddresses,
-        columns[sortCols[currentCol]], from, to);
+    if (mayHaveNulls[currentCol]) {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumn<V, true, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]], from,
+                to);
+        } else {
+            QuickSortColumn<V, true, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]], from,
+                to);
+        }
+    } else {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumn<V, false, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumn<V, false, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    }
     // are we the last column ?
     if (currentCol == sortColCount - 1) {
         return;
@@ -712,18 +763,33 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
     // iterate over each range
     for (std::tuple<int32_t, int32_t> t : ranges) {
         ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns,
-            std::get<0>(t), std::get<1>(t), currentCol + 1);
+            mayHaveNulls, std::get<0>(t), std::get<1>(t), currentCol + 1);
     }
 }
 
 
 void ColumnarSortDouble(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
-    int32_t to, int32_t currentCol)
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns,
+    const std::vector<bool> &mayHaveNulls, int32_t from, int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
-    QuickSortColumnDouble(sortAscendings[currentCol], sortNullFirsts[currentCol], valueAddresses,
-        columns[sortCols[currentCol]], from, to);
+    if (mayHaveNulls[currentCol]) {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumnDouble<true, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumnDouble<true, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    } else {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumnDouble<false, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumnDouble<false, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    }
     // are we the last column ?
     if (currentCol == sortColCount - 1) {
         return;
@@ -734,17 +800,32 @@ void ColumnarSortDouble(const int32_t *sortCols, const int32_t *sortColTypes, co
     // iterate over each range
     for (std::tuple<int32_t, int32_t> t : ranges) {
         ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns,
-            std::get<0>(t), std::get<1>(t), currentCol + 1);
+            mayHaveNulls, std::get<0>(t), std::get<1>(t), currentCol + 1);
     }
 }
 
 void ColumnarSortVarChar(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
-    int32_t to, int32_t currentCol)
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns,
+    const std::vector<bool> &mayHaveNulls, int32_t from, int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
-    QuickSortColumnVarChar(sortAscendings[currentCol], sortNullFirsts[currentCol], valueAddresses,
-        columns[sortCols[currentCol]], from, to);
+    if (mayHaveNulls[currentCol]) {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumnVarChar<true, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumnVarChar<true, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    } else {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumnVarChar<false, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumnVarChar<false, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    }
     // are we the last column ?
     if (currentCol == sortColCount - 1) {
         return;
@@ -755,17 +836,32 @@ void ColumnarSortVarChar(const int32_t *sortCols, const int32_t *sortColTypes, c
     // iterate over each range
     for (std::tuple<int32_t, int32_t> t : ranges) {
         ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns,
-            std::get<0>(t), std::get<1>(t), currentCol + 1);
+            mayHaveNulls, std::get<0>(t), std::get<1>(t), currentCol + 1);
     }
 }
 
 void ColumnarSortDec128(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
-    int32_t to, int32_t currentCol)
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns,
+    const std::vector<bool> &mayHaveNulls, int32_t from, int32_t to, int32_t currentCol)
 {
     // sort on specific range on specific column
-    QuickSortColumnDec128(sortAscendings[currentCol], sortNullFirsts[currentCol], valueAddresses,
-        columns[sortCols[currentCol]], from, to);
+    if (mayHaveNulls[currentCol]) {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumnDec128<true, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumnDec128<true, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    } else {
+        if (sortAscendings[currentCol] == 0) {
+            QuickSortColumnDec128<false, 0>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        } else {
+            QuickSortColumnDec128<false, 1>(sortNullFirsts[currentCol], valueAddresses, columns[sortCols[currentCol]],
+                from, to);
+        }
+    }
     // are we the last column ?
     if (currentCol == sortColCount - 1) {
         return;
@@ -776,45 +872,45 @@ void ColumnarSortDec128(const int32_t *sortCols, const int32_t *sortColTypes, co
     // iterate over each range
     for (std::tuple<int32_t, int32_t> t : ranges) {
         ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns,
-            std::get<0>(t), std::get<1>(t), currentCol + 1);
+            mayHaveNulls, std::get<0>(t), std::get<1>(t), currentCol + 1);
     }
 }
 
 void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns, int32_t from,
-    int32_t to, int32_t currentCol)
+    const int32_t *sortNullFirsts, int32_t sortColCount, uint64_t *valueAddresses, Vector ***columns,
+    const std::vector<bool> &mayHaveNulls, int32_t from, int32_t to, int32_t currentCol)
 {
     switch (sortColTypes[currentCol]) {
         case OMNI_INT:
         case OMNI_DATE32:
             ColumnarSort<omniruntime::vec::IntVector, int32_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
-                sortColCount, valueAddresses, columns, from, to, currentCol);
+                sortColCount, valueAddresses, columns, mayHaveNulls, from, to, currentCol);
             break;
         case OMNI_SHORT:
             ColumnarSort<omniruntime::vec::ShortVector, int16_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
-                sortColCount, valueAddresses, columns, from, to, currentCol);
+                sortColCount, valueAddresses, columns, mayHaveNulls, from, to, currentCol);
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
             ColumnarSort<omniruntime::vec::LongVector, int64_t>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
-                sortColCount, valueAddresses, columns, from, to, currentCol);
+                sortColCount, valueAddresses, columns, mayHaveNulls, from, to, currentCol);
             break;
         case OMNI_DOUBLE:
             ColumnarSortDouble(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
-                columns, from, to, currentCol);
+                columns, mayHaveNulls, from, to, currentCol);
             break;
         case OMNI_BOOLEAN:
             ColumnarSort<omniruntime::vec::BooleanVector, bool>(sortCols, sortColTypes, sortAscendings, sortNullFirsts,
-                sortColCount, valueAddresses, columns, from, to, currentCol);
+                sortColCount, valueAddresses, columns, mayHaveNulls, from, to, currentCol);
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
             ColumnarSortVarChar(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
-                columns, from, to, currentCol);
+                columns, mayHaveNulls, from, to, currentCol);
             break;
         case OMNI_DECIMAL128:
             ColumnarSortDec128(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
-                columns, from, to, currentCol);
+                columns, mayHaveNulls, from, to, currentCol);
             break;
         default:
             break;
@@ -824,8 +920,8 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
 void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to) const
 {
-    ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns, from,
-        to, 0);
+    ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns,
+        mayHaveNulls, from, to, 0);
 }
 
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
@@ -943,7 +1039,7 @@ VarcharVector *ConstructVarcharVector(uint64_t *valueAddresses, int32_t offset, 
     uint32_t pageIndex = 0;
     uint32_t position = 0;
 
-    VarcharVector *outputVector = new VarcharVector(vecAllocator, length * width, length);
+    auto *outputVector = new VarcharVector(vecAllocator, length);
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;

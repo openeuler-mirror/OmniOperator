@@ -14,10 +14,10 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename IN, typename ResultType> class SumAggregator : public Aggregator {
 public:
-    SumAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels)
+    SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
     {}
-    SumAggregator(DataTypesPtr inputTypes, DataTypesPtr outputTypes, std::vector<int32_t> &channels, bool inputRaw,
+    SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw,
         bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial)
     {}
@@ -35,7 +35,7 @@ public:
         bool overflow = false;
         auto sumVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
 
-        auto inputTypeId = inputTypes->GetType(0)->GetId();
+        auto inputTypeId = inputTypes.GetType(0)->GetId();
         HmppResult result = HMPP_STS_NO_ERR;
         switch (inputTypeId) {
             case OMNI_LONG: {
@@ -68,7 +68,7 @@ public:
             return false;
         }
         // only OMNI_LONG type input support
-        return (inputTypes->GetType(0)->GetId() == OMNI_LONG);
+        return (inputTypes.GetType(0)->GetId() == OMNI_LONG);
     }
 #endif
 

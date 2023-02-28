@@ -55,7 +55,7 @@ std::vector<std::vector<int32_t>> AggregatorUtil::WrapWithVector(std::vector<int
     return twoLayerVectors;
 }
 
-DataTypesPtr AggregatorUtil::WrapWithDataTypes(DataTypePtr value)
+std::unique_ptr<DataTypes> AggregatorUtil::WrapWithDataTypes(const DataTypePtr &value)
 {
     std::vector<DataTypePtr> vector;
     vector.push_back(value);

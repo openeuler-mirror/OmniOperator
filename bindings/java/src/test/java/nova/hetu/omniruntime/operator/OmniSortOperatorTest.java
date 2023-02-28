@@ -10,7 +10,6 @@ import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -92,7 +91,54 @@ public class OmniSortOperatorTest {
 
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
+
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
+    }
+
+    /**
+     * test return multi batch
+     */
+    @Test
+    public void testSortTwoColumnsWithReturnMultiBatch() {
+        int maxRowCntPerBatch = 131072; // 1M / (4+4)
+        int totalRowCnt = maxRowCntPerBatch * 3;
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
+        Object[][] sourceDatas = new Object[2][];
+        sourceDatas[0] = new Object[totalRowCnt];
+        sourceDatas[1] = new Object[totalRowCnt];
+        for (int i = 0; i < totalRowCnt; i++) {
+            sourceDatas[0][i] = totalRowCnt - i - 1;
+            sourceDatas[1][i] = totalRowCnt - i - 1;
+        }
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
+        int[] outputCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
+        OmniOperator sortOperator = sortOperatorFactory.createOperator();
+        sortOperator.addInput(vecBatch);
+        Iterator<VecBatch> results = sortOperator.getOutput();
+        int baseValue = 0;
+        while (results.hasNext()) {
+            VecBatch resultVecBatch = results.next();
+            assertEquals(resultVecBatch.getRowCount(), maxRowCntPerBatch);
+
+            Object[][] expectedDatas = new Object[2][];
+            expectedDatas[0] = new Object[maxRowCntPerBatch];
+            expectedDatas[1] = new Object[maxRowCntPerBatch];
+            for (int i = 0; i < maxRowCntPerBatch; i++) {
+                expectedDatas[0][i] = baseValue + i;
+                expectedDatas[1][i] = baseValue + i;
+            }
+            baseValue += maxRowCntPerBatch;
+            assertVecBatchEquals(resultVecBatch, expectedDatas);
+            freeVecBatch(resultVecBatch);
+        }
         sortOperator.close();
         sortOperatorFactory.close();
     }
@@ -398,7 +444,7 @@ public class OmniSortOperatorTest {
         end = System.currentTimeMillis();
         System.out.println("Sort with jit use " + (end - start) + " ms.");
 
-        while (outputWithoutJit.hasNext()) {
+        while (outputWithoutJit.hasNext() && outputWithJit.hasNext()) {
             VecBatch resultWithoutJit = outputWithoutJit.next();
             VecBatch resultWithJit = outputWithJit.next();
             assertVecBatchEquals(resultWithoutJit, resultWithJit);

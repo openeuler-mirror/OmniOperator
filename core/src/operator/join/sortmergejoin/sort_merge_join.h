@@ -18,6 +18,7 @@
 
 namespace omniruntime {
 namespace op {
+constexpr uint32_t SHIFT_SIZE_16 = 16;
 class SortMergeJoinOperator : public Operator {
 public:
     SortMergeJoinOperator(JoinType joinType, std::string &filter);
@@ -64,6 +65,16 @@ private:
 
     std::vector<VectorBatch *> returnVectorBatchs;
 };
+
+inline int32_t SetAddFlag(int16_t addFlag, int32_t resultCode)
+{
+    return (addFlag << SHIFT_SIZE_16) | (resultCode & USHRT_MAX);
+}
+
+inline int32_t SetFetchFlag(int16_t fetchFlag, int32_t resultCode)
+{
+    return ((resultCode >> SHIFT_SIZE_16) << SHIFT_SIZE_16) | fetchFlag;
+}
 }
 }
 

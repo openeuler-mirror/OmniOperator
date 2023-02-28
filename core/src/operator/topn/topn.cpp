@@ -309,8 +309,7 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
             continue;
         }
 
-        auto varcharVector = new VarcharVector(vecAllocator,
-            positionCount * static_cast<VarcharDataType *>(dataTypePtr.get())->GetWidth(), positionCount);
+        auto varcharVector = new VarcharVector(vecAllocator, positionCount);
         auto tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
         for (int32_t i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {

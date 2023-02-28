@@ -172,8 +172,7 @@ public:
     ~FixedWidthDataType() override = default;
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<FixedWidthDataType<typeId>> type = std::make_shared<FixedWidthDataType<typeId>>();
-        return type;
+        return std::make_shared<FixedWidthDataType<typeId>>();
     }
 };
 
@@ -232,9 +231,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<Decimal64DataType> type =
-            std::make_shared<Decimal64DataType>(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE);
-        return type;
+        return std::make_shared<Decimal64DataType>(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE);
     }
 
     Decimal64DataType &operator = (const Decimal64DataType &right)
@@ -256,9 +253,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<Decimal128DataType> type =
-            std::make_shared<Decimal128DataType>(DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE);
-        return type;
+        return std::make_shared<Decimal128DataType>(DECIMAL128_DEFAULT_PRECISION, DECIMAL128_DEFAULT_SCALE);
     }
 
     Decimal128DataType &operator = (const Decimal128DataType &right)
@@ -309,8 +304,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<Date32DataType> type = std::make_shared<Date32DataType>(DAY);
-        return type;
+        return std::make_shared<Date32DataType>(DAY);
     }
 
     Date32DataType &operator = (const Date32DataType &right)
@@ -329,8 +323,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<Date64DataType> type = std::make_shared<Date64DataType>(DAY);
-        return type;
+        return std::make_shared<Date64DataType>(DAY);
     }
 
     Date64DataType &operator = (const Date64DataType &right)
@@ -380,8 +373,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<Time32DataType> type = std::make_shared<Time32DataType>(SEC);
-        return type;
+        return std::make_shared<Time32DataType>(SEC);
     }
 
     Time32DataType &operator = (const Time32DataType &right)
@@ -399,8 +391,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<Time64DataType> type = std::make_shared<Time64DataType>(SEC);
-        return type;
+        return std::make_shared<Time64DataType>(SEC);
     }
 
     Time64DataType &operator = (const Time64DataType &right)
@@ -421,8 +412,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<ContainerDataType> type = std::make_shared<ContainerDataType>();
-        return type;
+        return std::make_shared<ContainerDataType>();
     }
 
     std::vector<DataTypePtr> &GetFieldTypes()
@@ -499,8 +489,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<VarcharDataType> type = std::make_shared<VarcharDataType>(INT_MAX);
-        return type;
+        return std::make_shared<VarcharDataType>(INT_MAX);
     }
 
     uint32_t GetWidth() const
@@ -550,8 +539,7 @@ public:
 
     static DataTypePtr Instance()
     {
-        static std::shared_ptr<CharDataType> type = std::make_shared<CharDataType>(CHAR_MAX_WIDTH);
-        return type;
+        return std::make_shared<CharDataType>(CHAR_MAX_WIDTH);
     }
 };
 } // namespace type

@@ -26,7 +26,11 @@ public:
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
         if (value == nullptr) {
-            vector->SetValueNull(index);
+            if (vector->GetTypeId() == OMNI_CHAR || vector->GetTypeId() == OMNI_VARCHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(index);
+            } else {
+                vector->SetValueNull(index);
+            }
             return;
         }
         switch (vector->GetTypeId()) {
@@ -129,7 +133,7 @@ public:
         } else {
             int32_t dataTypeId = dataType.GetId();
             int32_t capacityInBytes = (dataTypeId == type::OMNI_CHAR || dataTypeId == type::OMNI_VARCHAR) ?
-                static_cast<int32_t>(static_cast<VarcharDataType &>(dataType).GetWidth()) * size :
+                VarcharVector::initCapacityInBytes:
                 0;
             return CreateVector(allocator, vectorEncodingId, dataTypeId, capacityInBytes, size);
         }

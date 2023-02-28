@@ -2,9 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch string functions implementation
  */
-#include "batch_stringfunctions.h"
 #include <iostream>
 #include <regex>
+#include "type/data_operations.h"
+#include "type/date32.h"
+#include "batch_stringfunctions.h"
 
 #ifdef _WIN32
 #else
@@ -117,40 +119,39 @@ extern "C" DLLEXPORT void BatchCastStringToDate(int64_t contextPtr, uint8_t **st
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    std::string regexToMatch = R"(\d{4}-\d{2}-\d{2}$)";
-    std::regex re = std::regex(regexToMatch);
-    std::string s;
-    int32_t i1 = 5;
-    int32_t i2 = 8;
-    int yr, mnth, day;
-    int base = static_cast<int32_t>('0');
-    struct std::tm epoch;
-    struct std::tm t;
-    std::time_t epochTime;
-    std::time_t desiredTime;
-
-    for (int i = 0; i < rowCnt; ++i) {
-        if (isAnyNull[i]) {
-            output[i] = 0;
-            continue;
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    int32_t result;
+    if (engineType != EngineType::Spark) {
+        for (int i = 0; i < rowCnt; ++i) {
+            if (isAnyNull[i]) {
+                output[i] = 0;
+                continue;
+            }
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (!regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
+                SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
+                output[i] = 0;
+                continue;
+            }
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                SetError(contextPtr, "Value cannot be cast to date: " + s);
+                continue;
+            }
+            output[i] = result;
         }
-        s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
-        if (!regex_match(s, re)) {
-            SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
-            output[i] = 0;
-            continue;
+    } else {
+        for (int i = 0; i < rowCnt; ++i) {
+            if (isAnyNull[i]) {
+                output[i] = 0;
+                continue;
+            }
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                SetError(contextPtr, "Value cannot be cast to date: " + s);
+                continue;
+            }
+            output[i] = result;
         }
-
-        yr = THOUSANDS * (str[i][THOU] - base) + HUNDREDS * (str[i][HUN] - base) + TENS * (str[i][TEN] - base) +
-            (str[i][ONE] - base);
-        mnth = TENS * (str[i][i1] - base) + (str[i][i1 + 1] - base); // compute month
-        day = TENS * (str[i][i2] - base) + (str[i][i2 + 1] - base);  // compute day
-
-        epoch = { 0, 0, 0, 1, 1, 70 };
-        t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
-        epochTime = std::mktime(&epoch);
-        desiredTime = std::mktime(&t);
-        output[i] = static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
     }
 }
 
@@ -376,43 +377,125 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
     }
 }
 
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int32_t *output, int32_t rowCnt)
+{
+    int32_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        int status = StringToInt(s, result);
+        if (status == -1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        if (status == 1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int64_t *output, int32_t rowCnt)
+{
+    int64_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        int status = StringToLong(s, result);
+        if (status == -1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        if (status == 1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    double *output, int32_t rowCnt)
+{
+    double result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        int status = StringToDouble(s, result);
+        if (status == -1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        if (status == 1) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result;
+    }
+}
+
 extern "C" DLLEXPORT void BatchCastStringToDateRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
     int32_t rowCnt)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    std::string regexToMatch = R"(\d{4}-\d{2}-\d{2}$)";
-    std::regex re = std::regex(regexToMatch);
-    std::string s;
-    int32_t i1 = 5;
-    int32_t i2 = 8;
-    int yr, mnth, day;
-    int base = static_cast<int32_t>('0');
-    struct std::tm epoch;
-    struct std::tm t;
-    std::time_t epochTime;
-    std::time_t desiredTime;
-
-    for (int i = 0; i < rowCnt; ++i) {
-        s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
-        if (!regex_match(s, re)) {
-            output[i] = 0;
-            isNull[i] = true;
-            continue;
+    int32_t result;
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    if (engineType == EngineType::Spark) {
+        for (int i = 0; i < rowCnt; ++i) {
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                output[i] = 0;
+                isNull[i] = true;
+                continue;
+            }
+            output[i] = result;
+            isNull[i] = false;
         }
-
-        yr = THOUSANDS * (str[i][THOU] - base) + HUNDREDS * (str[i][HUN] - base) + TENS * (str[i][TEN] - base) +
-            (str[i][ONE] - base);
-        mnth = TENS * (str[i][i1] - base) + (str[i][i1 + 1] - base); // compute month
-        day = TENS * (str[i][i2] - base) + (str[i][i2 + 1] - base);  // compute day
-
-        epoch = { 0, 0, 0, 1, 1, 70 };
-        t = { 0, 0, 0, day, mnth, yr - BASE_YEAR };
-        epochTime = std::mktime(&epoch);
-        desiredTime = std::mktime(&t);
-        isNull[i] = false;
-        output[i] = static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
+    } else {
+        for (int i = 0; i < rowCnt; ++i) {
+            std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+            if (!regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
+                output[i] = 0;
+                isNull[i] = true;
+                continue;
+            }
+            if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+                output[i] = 0;
+                isNull[i] = true;
+                continue;
+            }
+            output[i] = result;
+            isNull[i] = false;
+        }
     }
 }
 
@@ -578,6 +661,57 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8
             status = DecimalOperations::IsOverflows(result, outPrecision);
         }
         if (status != SUCCESS) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
+    int32_t rowCnt)
+{
+    int32_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (StringToInt(s, result) != 0) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int64_t *output,
+    int32_t rowCnt)
+{
+    int64_t result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (StringToLong(s, result) != 0) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDoubleRetNull(bool *isNull, uint8_t **str, int32_t *strLen, double *output,
+    int32_t rowCnt)
+{
+    double result;
+    std::string s;
+    for (int i = 0; i < rowCnt; ++i) {
+        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (StringToDouble(s, result) != 0) {
             output[i] = 0;
             isNull[i] = true;
             continue;
@@ -883,14 +1017,14 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
-            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t* {
+            output, outLen, rowCnt, [str, strLen, outLen](bool *hasErr, int32_t i) -> uint8_t *{
                 outLen[i] = strLen[i];
                 return str[i];
             });
     } else {
         ReplaceWithReplaceNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr, replaceLen, isAnyNull,
             output, outLen, rowCnt,
-            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+            [contextPtr, str, strLen, replaceStr, replaceLen, outLen](bool *hasErr, int32_t index) -> uint8_t *{
                 auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
                     strLen[index], reinterpret_cast<const char *>(replaceStr[index]), replaceLen[index], hasErr,
                     outLen + index);
@@ -905,13 +1039,13 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8
     EngineType engineType = EngineUtil::GetInstance().GetEngineType();
     if (engineType == EngineType::Spark) {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
-            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+            [str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t *{
                 outLen[index] = strLen[index];
                 return str[index];
             });
     } else {
         ReplaceWithReplaceEmpty(contextPtr, str, strLen, searchStr, searchLen, isAnyNull, output, outLen, rowCnt,
-            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t* {
+            [contextPtr, str, strLen, outLen](bool *hasErr, int32_t index) -> uint8_t *{
                 auto result = StringUtil::ReplaceWithSearchEmpty(contextPtr, reinterpret_cast<const char *>(str[index]),
                     strLen[index], reinterpret_cast<const char *>(EMPTY), 0, hasErr, outLen + index);
                 return reinterpret_cast<uint8_t *>(const_cast<char *>(result));

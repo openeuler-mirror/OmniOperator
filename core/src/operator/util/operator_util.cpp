@@ -38,7 +38,7 @@ void OperatorUtil::CreateProjectFuncs(const DataTypes &inputTypes,
 void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
     omniruntime::expressions::Expr *projectKeys[], int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-    std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig)
+    std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs,  const OverflowConfig &overflowConfig)
 {
     auto &inputTypeVec = inputTypes.Get();
     int32_t newProjectCol = 0;
@@ -60,7 +60,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const DataTypes &inputTypes,
             // expr col
             projectCols.push_back(projectCol);
             allCols.push_back(newProjectCol++);
-            RowProjFunc func = rowProjection->Create(overflowConfig);
+            RowProjFunc func = rowProjection->Create(const_cast<OverflowConfig *>(&overflowConfig));
             projectFuncs.push_back(func);
             DataTypePtr returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(returnType);
@@ -97,8 +97,7 @@ static T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *val
 static VarcharVector *ProjectVarcharVector(const DataTypePtr &type, const RowProjFunc func, int64_t *valuesAddresses,
     int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount, VectorAllocator *allocator)
 {
-    VarcharVector *result =
-        new VarcharVector(allocator, static_cast<VarcharDataType *>(type.get())->GetWidth() * rowCount, rowCount);
+    auto *result = new VarcharVector(allocator,  rowCount);
 
     bool isNull = false;
     int32_t length = 0;

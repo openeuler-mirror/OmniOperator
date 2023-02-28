@@ -24,6 +24,7 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
         case OMNI_DOUBLE:
             return "double";
         case OMNI_DATE32:
+            return "date32";
         case OMNI_INT:
             return "int32";
         case OMNI_SHORT:

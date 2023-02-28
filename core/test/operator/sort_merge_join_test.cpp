@@ -169,28 +169,31 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
 
     // need add buffered table data
     int32_t addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatch1);
-    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     // need add buffered table data
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatch1);
-    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     // add eof flag to buffered table , need add streamed table data
     VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
-    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
     VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
-    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+    ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
     std::vector<omniruntime::vec::VectorBatch *> result;
     smjOp->GetOutput(result);
 
     auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypesVector);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof1);
-    ASSERT_EQ(addInputRetCode, static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NO_RESULT));
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
 
     // check the join result
     int32_t index = 0;
@@ -1375,7 +1378,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
         static_cast<int64_t>(EncodeSyntheticAddress(1, 2)), static_cast<int64_t>(EncodeSyntheticAddress(1, 4))
     };
 
-    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1), 0);
+    std::vector<bool> isSameKey;
+    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1, isSameKey), 0);
 
     std::vector<omniruntime::vec::VectorBatch *> outputPages;
 
@@ -1447,7 +1451,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     std::vector<int64_t> rightAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 2)), static_cast<int64_t>(EncodeSyntheticAddress(0, 4)) };
 
-    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1), 0);
+    std::vector<bool> isSameKey;
+    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(isPreMatched, leftAddress1, rightAddress1, isSameKey), 0);
 
     std::vector<omniruntime::vec::VectorBatch *> outputPages;
 
@@ -1469,5 +1474,105 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     delete leftPagesIndex;
     delete rightPagesIndex;
     VectorHelper::FreeVecBatches(outputPages);
+}
+TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
+{
+    // select t1.b, t2.c from t1, t2 where t1.a = t2.d
+    // streamedTbl t1:  int a, Long b;
+    // bufferedTbl t2: long c, int d;
+    std::string blank = "";
+    SortMergeJoinOperator *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
+
+    std::vector<DataTypePtr> streamTypesVector = { IntType(), LongType() };
+    DataTypes streamedTblTypes(streamTypesVector);
+    std::vector<int32_t> streamedKeysCols;
+    streamedKeysCols.push_back(0);
+    std::vector<int32_t> streamedOutputCols;
+    streamedOutputCols.push_back(1);
+    smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols);
+
+    std::vector<DataTypePtr> bufferTypesVector = { LongType(), IntType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    std::vector<int32_t> bufferedKeysCols;
+    bufferedKeysCols.push_back(1);
+    std::vector<int32_t> bufferedOutputCols;
+    bufferedOutputCols.push_back(0);
+    smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols);
+    smjOp->InitScannerAndResultBuilder(nullptr);
+
+    // construct data
+    const int32_t streamedTblDataSize = 65538;
+    int32_t streamedTblDataCol1[streamedTblDataSize];
+    long streamedTblDataCol2[streamedTblDataSize];
+    for (int32_t i = 0; i < streamedTblDataSize; i++) {
+        streamedTblDataCol1[i] = i;
+        streamedTblDataCol2[i] = i + 1;
+    }
+    VectorBatch *streamedTblVecBatch1 =
+        CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
+
+    const int32_t bufferedTblSize = 65538;
+    long bufferedTblDataCol1[bufferedTblSize];
+    int32_t bufferedTblDataCol2[bufferedTblSize];
+    for (int32_t i = 0; i < streamedTblDataSize; i++) {
+        bufferedTblDataCol1[i] = i + 3;
+        bufferedTblDataCol2[i] = i;
+    }
+    VectorBatch *bufferedTblVecBatch1 =
+        CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
+
+    // need add buffered table data
+    int32_t addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatch1);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+
+    // need add buffered table data
+    addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatch1);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
+    ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    std::vector<omniruntime::vec::VectorBatch *> result;
+    smjOp->GetOutput(result);
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode),
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+
+    // add eof flag to streamed table
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
+    addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
+    ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
+    ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+
+    std::vector<omniruntime::vec::VectorBatch *> result2;
+    smjOp->GetOutput(result2);
+    result.push_back(result2[0]);
+
+    int32_t resultCount = 0;
+    for (int32_t i = 0; i < result.size(); i++) {
+        resultCount += result[i]->GetRowCount();
+    }
+    ASSERT_EQ(resultCount, streamedTblDataSize);
+
+    // check the join result
+    int32_t index = 0;
+    for (uint32_t i = 0; i < result.size(); i++) {
+        ASSERT_EQ(result[i]->GetVectorCount(), 2);
+        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
+        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_LONG);
+        for (auto j = 0; j < result[i]->GetRowCount(); j++) {
+            long longValue1 = (static_cast<LongVector *>(result[i]->GetVector(0)))->GetValue(j);
+            ASSERT_EQ(longValue1, streamedTblDataCol2[index]);
+
+            long longValue2 = (static_cast<LongVector *>(result[i]->GetVector(1)))->GetValue(j);
+            ASSERT_EQ(longValue2, bufferedTblDataCol1[index]);
+            index++;
+        }
+        VectorHelper::FreeVecBatch(result[i]);
+    }
+    omniruntime::op::Operator::DeleteOperator(smjOp);
 }
 }

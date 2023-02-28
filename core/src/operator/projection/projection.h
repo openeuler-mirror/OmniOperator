@@ -93,6 +93,16 @@ public:
         return *(this->outType);
     }
 
+    bool IsColumnProjection() const
+    {
+        return isColumnProjection;
+    }
+
+    int32_t GetColumnProjectionIndex() const
+    {
+        return columnProjectionIndex;
+    }
+
 private:
     const omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };

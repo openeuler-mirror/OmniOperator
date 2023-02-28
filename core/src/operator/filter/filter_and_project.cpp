@@ -247,5 +247,61 @@ OmniStatus FilterAndProjectOperator::Close()
     }
     return OMNI_STATUS_NORMAL;
 }
+
+/**
+ * Process one row for fusion operator
+ * @param valueAddrs contains value address of each column.
+ * @param inputLens contains null or length of each column. inputLens[i] == -1 means i-th value is null; inputLens[i] >=
+ * 0 represents the i-th values's length.
+ * @param outValueAddrs contains output value address of each projection.
+ * @param outLens contains null or length of each projection.
+ * @return true(filter pass) or false(filter fail).
+ */
+bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t inputLens[], int64_t outValueAddrs[],
+    int32_t outLens[])
+{
+    // Construct nullsAddrs and offsetsAddrs from inputLens
+    for (int i = 0; i < vecCount; ++i) {
+        if (inputLens[i] == -1) {
+            reinterpret_cast<bool *>(nullsAddrs[i])[0] = true;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[0] = 0;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[1] = 0;
+        } else {
+            reinterpret_cast<bool *>(nullsAddrs[i])[0] = false;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[0] = 0;
+            reinterpret_cast<int32_t *>(offsetsAddrs[i])[1] = inputLens[i];
+        }
+    }
+
+    const int rowCount = 1;
+    int32_t selectedRows[rowCount];
+    int32_t numSelectedRows = filter->apply(valueAddrs, rowCount, selectedRows, nullsAddrs, offsetsAddrs,
+        reinterpret_cast<int64_t>(context), dictsAddrs);
+
+    if (context->HasError()) {
+        context->GetArena()->Reset();
+        string errorMessage = context->GetError();
+        throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+    }
+
+    if (numSelectedRows <= 0) {
+        context->GetArena()->Reset();
+        return false;
+    }
+
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        if (projections[i]->IsColumnProjection()) {
+            outValueAddrs[i] = valueAddrs[projections[i]->GetColumnProjectionIndex()];
+            outLens[i] = inputLens[projections[i]->GetColumnProjectionIndex()];
+        } else {
+            context->GetArena()->Reset();
+            string errorMessage = "Fusion filter only supports raw column projection!";
+            throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
+    }
+
+    context->GetArena()->Reset();
+    return true;
+}
 } // end of op
 } // end of omniruntime
