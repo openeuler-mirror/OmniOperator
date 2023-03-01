@@ -15,16 +15,13 @@
 #include "util/config_util.h"
 #include "type/data_type.h"
 
+namespace omniruntime::codegen::function {
+// All extern functions go here temporarily
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
 #endif
-
-
-namespace omniruntime::codegen {
-
-using namespace omniruntime::type;
 
 extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
     int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool isNull);

@@ -1,40 +1,22 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * Description: Expression code generator
+ * Description: simple filter code generator
  */
-#include "row_expression_codegen.h"
+#include "simple_filter_codegen.h"
 
-using namespace std;
+namespace omniruntime {
+namespace codegen {
 using namespace llvm;
 using namespace llvm::orc;
 using namespace omniruntime::expressions;
 
 namespace {
-const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
+const std::string FUNCTION_NAME = "WRAPPER_FUNC";
+const int SIMPLE_FILTER_OUTPUT_LENGTH_INDEX = 4;
+const int SIMPLE_FILTER_OUTPUT_IS_NULL_INDEX = 3;
 }
 
-std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(std::string name,
-    const omniruntime::expressions::Expr &expression, omniruntime::op::OverflowConfig *overflowConfig)
-{
-    std::unique_ptr<RowExpressionCodeGen> codegen { new RowExpressionCodeGen(std::move(name), expression,
-        overflowConfig) };
-    LLVMEngine::Create(&(codegen->llvmEngine));
-    codegen->context = codegen->GetContext();
-    codegen->builder = codegen->GetIRBuilder();
-    codegen->module = codegen->GetModule();
-    codegen->jit = codegen->GetJit();
-    codegen->llvmTypes = codegen->GetTypes();
-    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
-    codegen->ExtractVectorIndexes();
-    return codegen;
-}
-
-void RowExpressionCodeGen::Visit(const omniruntime::expressions::LiteralExpr &literalData)
-{
-    this->value.reset(LiteralExprConstantHelper(literalData));
-}
-
-void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fieldExpr)
+void SimpleFilterCodeGen::Visit(const omniruntime::expressions::FieldExpr &fieldExpr)
 {
     Value *data = this->codegenContext->data;
     Value *isNulls = this->codegenContext->nullBitmap;
@@ -45,7 +27,7 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fiel
     Value *gep = builder->CreateGEP(data, colIdx);
     // Load the address value.
     Value *elementAddr = builder->CreateLoad(gep);
-    Value *elementPtr = GetIntToPtr(fieldExpr.GetReturnTypeId(), elementAddr);
+    Value *elementPtr = GetPtrTypeFromInt(fieldExpr.GetReturnTypeId(), elementAddr);
 
     Value *dataValue = nullptr;
     Value *length = nullptr;
@@ -65,16 +47,16 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fiel
 
     if (TypeUtil::IsDecimalType(fieldExpr.GetReturnTypeId())) {
         Value *precision = llvmTypes->CreateConstantInt(
-            static_cast<DecimalDataType *>(fieldExpr.GetReturnType().get())->GetPrecision());
+            dynamic_cast<DecimalDataType *>(fieldExpr.GetReturnType().get())->GetPrecision());
         Value *scale =
-            llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fieldExpr.GetReturnType().get())->GetScale());
-        this->value.reset(new DecimalValue(dataValue, isNull, precision, scale));
+            llvmTypes->CreateConstantInt(dynamic_cast<DecimalDataType *>(fieldExpr.GetReturnType().get())->GetScale());
+        this->value = std::make_shared<DecimalValue>(dataValue, isNull, precision, scale);
     } else {
-        this->value.reset(new CodeGenValue(dataValue, isNull, length));
+        this->value = std::make_shared<CodeGenValue>(dataValue, isNull, length);
     }
 }
 
-bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)
+bool SimpleFilterCodeGen::InitCodegenContext(iterator_range<llvm::Function::arg_iterator> args)
 {
     this->codegenContext = std::make_unique<CodegenContext>();
     for (auto &arg : args) {
@@ -95,28 +77,26 @@ bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg
         }
     }
 
-    codegenContext->print = module->getOrInsertFunction("printf",
+    codegenContext->print = modulePtr->getOrInsertFunction("printf",
         FunctionType::get(IntegerType::getInt32Ty(*context), PointerType::get(Type::getInt8Ty(*context), 0), true));
 
     return true;
 }
 
-Function *RowExpressionCodeGen::CreateFunction()
+llvm::Function *SimpleFilterCodeGen::CreateFunction()
 {
-    int32_t argsSize = 6;
-    std::vector<Type *> args;
-    args.reserve(argsSize);
-    // Values in args vector follow the format:
-    // valueArray*, isNullArray*, lengthArray*, isResultNull*, outputLength*, executionContext
-    args.push_back(llvmTypes->I64PtrType());
-    args.push_back(llvmTypes->I1PtrType());
-    args.push_back(llvmTypes->I32PtrType());
-    args.push_back(llvmTypes->I1PtrType());
-    args.push_back(llvmTypes->I32PtrType());
-    args.push_back(llvmTypes->I64Type());
+    // The args indicates the type of the function parameter list.
+    std::vector<Type *> args {
+        llvmTypes->I64PtrType(), // valueArray*
+        llvmTypes->I1PtrType(),  // isNullArray*
+        llvmTypes->I32PtrType(), // lengthArray*
+        llvmTypes->I1PtrType(),  // isResultNull*
+        llvmTypes->I32PtrType(), // outputLength*
+        llvmTypes->I64Type()     // executionContext
+    };
 
     FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
-    func = Function::Create(prototype, Function::ExternalLinkage, FUNCTION_NAME, module);
+    func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, FUNCTION_NAME, modulePtr);
 
     std::string argNames[] = {
         "data", "isNulls", "lengths", "isResultNull",
@@ -128,12 +108,12 @@ Function *RowExpressionCodeGen::CreateFunction()
         idx++;
     }
 
-    llvmEngine->RecordMainFunction(func);
+    RecordMainFunction(func);
 
     BasicBlock *body = BasicBlock::Create(*context, "FUNC_BODY", func);
     builder->SetInsertPoint(body);
 
-    if (!InitializeCodegenContext(func->args())) {
+    if (!InitCodegenContext(func->args())) {
         return nullptr;
     }
 
@@ -143,29 +123,27 @@ Function *RowExpressionCodeGen::CreateFunction()
         return nullptr;
     }
 
-    int32_t outputLengthIndex = 4;
     // Update final output Length
     if (result->length != nullptr) {
-        Argument *outputLength = func->getArg(outputLengthIndex);
+        Argument *outputLength = func->getArg(SIMPLE_FILTER_OUTPUT_LENGTH_INDEX);
         Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 
-    int32_t outputNullIndex = 3;
-    Argument *isResultNull = this->func->getArg(outputNullIndex);
+    Argument *isResultNull = this->func->getArg(SIMPLE_FILTER_OUTPUT_IS_NULL_INDEX);
     Value *nullGep = builder->CreateGEP(isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
     builder->CreateStore(result->isNull, nullGep);
 
     // Return value
     builder->CreateRet(result->data);
 
-    llvmEngine->OptimizeModule();
+    OptimizeModule();
 
     verifyFunction(*func);
     return func;
 }
 
-int64_t RowExpressionCodeGen::GetFunction()
+intptr_t SimpleFilterCodeGen::GetFunction()
 {
 #ifdef DEBUG
     std::cout << "Row Expression: " << std::endl;
@@ -180,14 +158,9 @@ int64_t RowExpressionCodeGen::GetFunction()
     }
 
 #ifdef DEBUG_LLVM
-    GetModule()->print(errs(), nullptr);
+    modulePtr->print(errs(), nullptr);
 #endif
-    jit->getMainJITDylib().addGenerator(
-        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
-    auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    llvmEngine->MakeThreadSafe(&resTracker);
-    rt = resTracker;
-
-    auto sym = eoe(jit->lookup(FUNCTION_NAME));
-    return sym.getAddress();
+    return Compile();
+}
+}
 }

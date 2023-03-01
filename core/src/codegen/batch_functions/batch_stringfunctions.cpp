@@ -14,7 +14,7 @@
 #define DLLEXPORT
 #endif
 
-using namespace omniruntime::codegen;
+namespace omniruntime::codegen::function {
 
 namespace {
 const int THOUSANDS = 1000;
@@ -1016,4 +1016,5 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRepReplace(int64_t contextPtr
                 strLen[index], reinterpret_cast<const char *>(EMPTY), 0, hasErr, outLen + index);
             return reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         });
+}
 }

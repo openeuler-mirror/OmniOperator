@@ -4,8 +4,7 @@
  */
 #include "decimal_arithmetic_functions.h"
 
-namespace omniruntime::codegen {
-
+namespace omniruntime::codegen::function {
 static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
 const std::string DECIMAL_OVERFLOW { "Decimal overflow" }; /* NOLINT */
 const std::string DIVIDE_ZERO { "Division by zero" }; /* NOLINT */

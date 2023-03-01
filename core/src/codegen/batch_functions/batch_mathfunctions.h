@@ -14,6 +14,7 @@
 #define DLLEXPORT
 #endif
 
+namespace omniruntime::codegen::function {
 template <typename T> extern DLLEXPORT void BatchAbs(T *x, bool *resIsNull, T *output, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
@@ -134,5 +135,5 @@ extern DLLEXPORT void BatchRound(T *num, int32_t *decimals, bool *isAnyNull, T *
         output[i] = std::round(num[i] * factor) / factor;
     }
 }
-
+}
 #endif // OMNI_RUNTIME_BATCH_MATHFUNCTIONS_H

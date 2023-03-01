@@ -7,9 +7,9 @@
 #include "util/debug.h"
 #include "util/config_util.h"
 
+namespace omniruntime::codegen {
 using namespace std;
-using namespace omniruntime;
-using omniruntime::Function;
+
 const std::string INVALID_HIVE_UDF = "";
 
 vector<Function> FunctionRegistry::registeredBatchFunctions = InitializeBatchFunc();
@@ -229,4 +229,5 @@ std::vector<Function> &FunctionRegistry::GetRowFunctions()
 std::vector<Function> &FunctionRegistry::GetBatchFunctions()
 {
     return registeredBatchFunctions;
+}
 }

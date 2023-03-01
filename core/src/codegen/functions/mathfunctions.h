@@ -15,6 +15,7 @@
 #define DLLEXPORT
 #endif
 
+namespace omniruntime::codegen::function {
 // Absolute value
 template<typename T>
 extern DLLEXPORT T Abs(T x)
@@ -122,6 +123,7 @@ extern DLLEXPORT T Round(T num, int32_t decimals)
     }
 
     return std::round(num * factor) / factor;
+}
 }
 
 #endif

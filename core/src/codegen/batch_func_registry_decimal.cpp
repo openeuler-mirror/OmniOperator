@@ -6,9 +6,9 @@
 #include "batch_functions/batch_decimal_arithmetic_functions.h"
 #include "batch_functions/batch_decimal_cast_functions.h"
 
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
-using namespace omniruntime::codegen;
+using namespace function;
 
 namespace {
 const std::string absFnStr = "batch_abs";
@@ -457,4 +457,5 @@ std::vector<Function> BatchDecimalFunctionRegistryNotReScale::GetFunctions()
     };
 
     return batchDecimalFunctions;
+}
 }

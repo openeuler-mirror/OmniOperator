@@ -5,8 +5,10 @@
 
 #include "batch_func_registry_varchar_vector.h"
 #include "batch_functions/batch_varcharVectorfunctions.h"
-using namespace omniruntime;
+
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
 
 std::vector<Function> BatchVarcharVectorFunctionRegistry::GetFunctions()
 {
@@ -14,4 +16,5 @@ std::vector<Function> BatchVarcharVectorFunctionRegistry::GetFunctions()
     std::vector<Function> batchVarcharVectorFnRegistry = { Function(reinterpret_cast<void *>(BatchWrapVarcharVector),
         "batch_WrapVarcharVector", {}, paramTypes, OMNI_INT) };
     return batchVarcharVectorFnRegistry;
+}
 }

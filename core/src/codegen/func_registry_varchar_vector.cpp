@@ -4,8 +4,10 @@
  */
 #include "func_registry_varchar_vector.h"
 #include "functions/varcharVectorfunctions.h"
-using namespace omniruntime;
+
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
 
 std::vector<Function> VarcharVectorFunctionRegistry::GetFunctions()
 {
@@ -13,4 +15,5 @@ std::vector<Function> VarcharVectorFunctionRegistry::GetFunctions()
     std::vector<Function> varcharVectorFnRegistry = { Function(reinterpret_cast<void *>(WrapVarcharVector),
         "WrapVarcharVector", {}, paramTypes, OMNI_INT) };
     return varcharVectorFnRegistry;
+}
 }

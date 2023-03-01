@@ -17,6 +17,7 @@ class ExprVisitor;
 namespace omniruntime {
 namespace expressions {
 using namespace type;
+using namespace codegen;
 
 enum class Operator {
     // Comparison
@@ -241,14 +242,14 @@ class FuncExpr : public Expr {
 public:
     std::string funcName;
     std::vector<Expr *> arguments;
-    const omniruntime::Function *function;
+    const Function *function;
     ExprFunctionType functionType;
 
     FuncExpr();
     ~FuncExpr() override;
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType);
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
-        const omniruntime::Function *function);
+        const Function *function);
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
         ExprFunctionType functionType);
 

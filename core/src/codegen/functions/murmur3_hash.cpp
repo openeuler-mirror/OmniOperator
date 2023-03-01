@@ -10,8 +10,7 @@
 
 using namespace std;
 
-namespace omniruntime {
-namespace codegen {
+namespace omniruntime::codegen::function {
 static const int COMBINE_HASH_VALUE = 31;
 static const uint32_t MM3_C1 = 0xcc9e2d51;
 static const uint32_t MM3_C2 = 0x1b873593;
@@ -236,6 +235,5 @@ extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, bool isPrevHashVal
         val = 0;
     }
     return COMBINE_HASH_VALUE * prevHashVal + val;
-}
 }
 }

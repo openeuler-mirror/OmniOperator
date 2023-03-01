@@ -43,150 +43,160 @@
 #include "expression/expr_printer.h"
 #include "util/debug.h"
 #include "llvm_types.h"
-#include "decimal_ir_builder.h"
 #include "llvm_engine.h"
-#include "operator/config/operator_config.h"
+#include "codegen_base.h"
+#include "vector/vector_batch.h"
+#include "expr_function.h"
 
-
+namespace omniruntime::codegen {
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
-// Given an expression generates the function for it.
-class ExpressionCodeGen : public ExprVisitor {
+class ExpressionCodeGen : public ExprVisitor, public CodegenBase {
 public:
-    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr,
-        omniruntime::op::OverflowConfig *overflowConfig);
+    /**
+     * Method to initialize a ExpressionCodeGen instance
+     * @param name ExpressionCodeGen module name
+     * @param cpExpr the expression to code generation
+     * @param ofConfig config of overflow
+     */
+    ExpressionCodeGen(std::string name, const Expr &cpExpr, op::OverflowConfig *ofConfig);
+
     ~ExpressionCodeGen() override;
 
-    std::string DumpCode();
-    virtual int64_t GetFunction() = 0;
-    // visitor methods
-    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
-    void Visit(const omniruntime::expressions::FieldExpr &e) override;
-    void Visit(const omniruntime::expressions::UnaryExpr &e) override;
-    void Visit(const omniruntime::expressions::BinaryExpr &e) override;
-    void Visit(const omniruntime::expressions::InExpr &e) override;
-    void Visit(const omniruntime::expressions::BetweenExpr &e) override;
-    void Visit(const omniruntime::expressions::IfExpr &e) override;
-    void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
-    void Visit(const omniruntime::expressions::IsNullExpr &e) override;
-    void Visit(const omniruntime::expressions::FuncExpr &e) override;
-    void Visit(const omniruntime::expressions::SwitchExpr &e) override;
+    /**
+     * Method to get function of processing expression
+     * @param inputDataTypes is used to provide data type when preload data
+     * @return the address of function
+     */
+    virtual intptr_t GetFunction(const DataTypes &inputDataTypes)
+    {
+        return 0;
+    }
 
-    // returns llvm value ptr of codegen functions
-    CodeGenValuePtr VisitExpr(const omniruntime::expressions::Expr &e);
-    void ExtractVectorIndexes();
     std::set<int32_t> vectorIndexes;
 
-    std::vector<llvm::Value *> GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::Value **isAnyNull, bool &isInvalidExpr);
-
 protected:
-    // Util functions
-    llvm::Value *GetIntToPtr(omniruntime::type::DataTypeId typeId, llvm::Value *elementAddr);
-    llvm::Constant *CreateStringConstant(std::string s);
-    void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
-    // Helper functions for generating IR for operators and special forms
-    llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
-    void HandleCoalesceDecimals(CodeGenValue &v1, CodeGenValue &v2, llvm::BasicBlock &isNotNullBlock,
-        llvm::BasicBlock &isNullBlock, llvm::PHINode &pn, llvm::PHINode &pnNull);
-    // Helper functions and main function for parsing constant data expressions
-    CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
-    static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
+    /**
+     * Method to get function of processing expression for a single line
+     * @param inputDataTypes is used to provide data type when preload data
+     * @return the address of function
+     */
+    virtual llvm::Function *CreateFunction(const DataTypes &inputDataTypes);
 
-    virtual llvm::Function *CreateFunction();
+    /**
+     * Visitor methods
+     * @param e expression to visit
+     */
+    void Visit(const LiteralExpr &e) override;
 
-    llvm::LLVMContext *GetContext()
-    {
-        return llvmEngine->GetContext();
-    }
+    void Visit(const FieldExpr &e) override;
 
-    llvm::IRBuilder<> *GetIRBuilder()
-    {
-        return llvmEngine->GetIRBuilder();
-    }
+    void Visit(const UnaryExpr &e) override;
 
-    llvm::Module *GetModule()
-    {
-        return llvmEngine->GetModule();
-    }
+    void Visit(const BinaryExpr &e) override;
 
-    llvm::orc::LLJIT *GetJit()
-    {
-        return llvmEngine->GetJit();
-    }
+    void Visit(const InExpr &e) override;
 
-    LLVMTypes *GetTypes()
-    {
-        return llvmEngine->GetTypes();
-    }
+    void Visit(const BetweenExpr &e) override;
 
-    std::unique_ptr<DecimalIRBuilder> GetDecimalIRBuilder()
-    {
-        return std::make_unique<DecimalIRBuilder>(*llvmEngine);
-    }
+    void Visit(const IfExpr &e) override;
 
-    const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<LLVMEngine> llvmEngine;
-    llvm::LLVMContext *context;
-    llvm::IRBuilder<> *builder;
-    llvm::Module *module;
-    llvm::orc::LLJIT *jit;
-    llvm::ExitOnError eoe;
-    LLVMTypes *llvmTypes;
-    std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
-    llvm::orc::ResourceTrackerSP rt;
-    llvm::Function *func = nullptr;
-    CodeGenValuePtr value = nullptr;
-    std::unique_ptr<CodegenContext> codegenContext;
-    int numGlobalValues = 0;
-    omniruntime::op::OverflowConfig *overflowConfig;
+    void Visit(const CoalesceExpr &e) override;
+
+    void Visit(const IsNullExpr &e) override;
+
+    void Visit(const FuncExpr &e) override;
+
+    void Visit(const SwitchExpr &e) override;
+
+    /**
+     * Method to get LLVM value ptr of expression
+     * @param e expression to visit
+     * @return llvm value ptr of expression
+     */
+    CodeGenValuePtr VisitExpr(const Expr &e);
+
+    void ExtractVectorIndexes();
+
+    std::vector<Value *> GetFunctionArgValues(const FuncExpr &fExpr, Value **isAnyNull, bool &isInvalidExpr);
+
+    bool InitializeCodegenContext(iterator_range<llvm::Function::arg_iterator> args);
+
+    Value *GetDictionaryVectorValue(const omniruntime::type::DataType &dataType, Value *rowIdx,
+        Value *dictionaryVectorPtr, AllocaInst *&lengthAllocaInst);
+
+    // Represents the generated expression function
+    std::shared_ptr<ExprFunction> exprFunc;
 
 private:
-    std::string funcName;
-    bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(const omniruntime::type::DataType &dataType, llvm::Value *rowIdx,
-        llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
-    void InExprIntegerHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
-        llvm::Value *&tmpCmpNull);
-    void InExprDecimal64Helper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
-        llvm::Value *&tmpCmpNull, llvm::Type *retType);
-    void InExprDoubleHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
-        llvm::Value *&tmpCmpNull);
-    void InExprStringHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
-        llvm::Value *&tmpCmpNull);
-    void InExprDecimal128Helper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, llvm::Value *&tmpCmpData,
-        llvm::Value *&tmpCmpNull, llvm::Type *retType);
-    llvm::Value *BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprLongHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
-        llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen, llvm::Value *leftIsNull,
-        llvm::Value *rightIsNull);
-    void BinaryExprDecimal64Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
-        DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    void BinaryExprDecimal128Helper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
-        DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    void BinaryExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
-        llvm::PHINode **rightPhi);
-    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
-        const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
-        std::pair<llvm::Value **, llvm::Value **> cmpPair);
+    std::vector<Value *> GetDefaultFunctionArgValues(const FuncExpr &fExpr, Value **isAnyNull, bool &isInvalidExpr);
+
     std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull,
         bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::Value **isAnyNull, bool &isInvalidExpr);
+
     std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr, llvm::Value *overflowNull);
-    std::vector<llvm::Value *> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
+
+    std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
-    void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
+
     llvm::Value *CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr);
+
     std::vector<llvm::Value *> GetHiveUdfArgValues(const omniruntime::expressions::FuncExpr &fExpr, bool &isInvalid);
+
     void CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr);
+
+    void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
+
+    Value *StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen);
+
+    void BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi);
+
+    llvm::Value *BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull);
+
+    Value *BinaryExprLongHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull);
+
+    void BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, DecimalValue &left, DecimalValue &right,
+        Value *leftIsNull, Value *rightIsNull);
+
+    Value *BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull);
+
+    Value *BinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen, Value *rightVal,
+        Value *rightLen, Value *leftIsNull, Value *rightIsNull);
+
+    void BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr, DecimalValue &left, DecimalValue &right,
+        Value *leftIsNull, Value *rightIsNull);
+
+    CodeGenValue *LiteralExprConstantHelper(const LiteralExpr &lExpr);
+
+    bool AreInvalidDataTypes(DataTypeId type1, DataTypeId type2);
+
+    void InExprIntegerHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
+        Value *&tmpCmpNull);
+
+    void InExprDecimal64Helper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
+        Value *&tmpCmpNull, Type *retType);
+
+    void InExprDoubleHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
+        Value *&tmpCmpNull);
+
+    void InExprStringHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
+        Value *&tmpCmpNull);
+
+    void InExprDecimal128Helper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue, Value *&tmpCmpData,
+        Value *&tmpCmpNull, llvm::Type *retType);
+
+    bool VisitBetweenExprHelper(BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
+        const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
+        std::pair<Value **, Value **> cmpPair);
+
+    void CoalesceExprDecimalHelper(CodeGenValue &v1, CodeGenValue &v2, BasicBlock &isNotNullBlock,
+        BasicBlock &isNullBlock, PHINode &pn, PHINode &pnNull);
 };
+}
 
 #endif

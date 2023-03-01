@@ -11,6 +11,7 @@
 #include "util/type_util.h"
 #include "type/data_type.h"
 
+namespace omniruntime::codegen {
 class LLVMTypes {
 public:
     explicit LLVMTypes(llvm::LLVMContext &context);
@@ -74,5 +75,6 @@ private:
     std::map<omniruntime::type::DataTypeId, llvm::Type *> VectorToLLVMTypeMap;
     llvm::LLVMContext &context;
 };
+}
 
 #endif // OMNI_RUNTIME_LLVM_TYPES_H

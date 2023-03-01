@@ -5,8 +5,7 @@
 
 #include "decimal_cast_functions.h"
 
-namespace omniruntime::codegen {
-
+namespace omniruntime::codegen::function {
 static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
 
 // Cast Function

@@ -5,8 +5,10 @@
 #include "batch_func_registry_util.h"
 #include "batch_functions/batch_utilfunctions.h"
 
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
+
 
 std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
 {
@@ -116,4 +118,5 @@ std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
     };
 
     return utilFnRegistry;
+}
 }

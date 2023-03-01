@@ -5,9 +5,10 @@
 
 #include "func_registry_hash.h"
 #include "functions/murmur3_hash.h"
-using namespace omniruntime;
+
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
-using namespace omniruntime::codegen;
+using namespace codegen::function;
 
 std::vector<Function> HashFunctionRegistry::GetFunctions()
 {
@@ -33,4 +34,5 @@ std::vector<Function> HashFunctionRegistry::GetFunctions()
                  retType, INPUT_DATA_AND_NULL)};
 
     return hashRegistry;
+}
 }

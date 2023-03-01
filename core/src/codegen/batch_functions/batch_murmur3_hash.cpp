@@ -9,8 +9,7 @@
 
 using namespace std;
 
-namespace omniruntime {
-namespace codegen {
+namespace omniruntime::codegen::function {
 static const int COMBINE_HASH_VALUE = 31;
 
 extern "C" DLLEXPORT void BatchMm3Int32(int32_t *val, bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull,
@@ -104,6 +103,5 @@ extern "C" DLLEXPORT void BatchCombineHash(int64_t *prevHashVal, bool *isPrevHas
         val[i] = isValNull[i] ? 0 : val[i];
         output[i] = COMBINE_HASH_VALUE * prevHashVal[i] + val[i];
     }
-}
 }
 }

@@ -6,6 +6,8 @@
 #ifndef OMNI_RUNTIME_FUNCTION_TYPE_H
 #define OMNI_RUNTIME_FUNCTION_TYPE_H
 
+namespace omniruntime {
+namespace op {
 using FunctionType = enum FunctionType {
     OMNI_AGGREGATION_TYPE_SUM = 0,
     OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
@@ -20,5 +22,6 @@ using FunctionType = enum FunctionType {
     OMNI_WINDOW_TYPE_ROW_NUMBER,
     OMNI_WINDOW_TYPE_RANK
 };
-
+}
+}
 #endif // OMNI_RUNTIME_FUNCTION_TYPE_H

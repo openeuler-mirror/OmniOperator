@@ -566,7 +566,7 @@ FuncExpr *GetFuncExpr(const std::string &funcName, std::vector<Expr *> args, Dat
         }
     }
     auto signature = FunctionSignature(funcName, argTypes, returnType->GetId());
-    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
+    auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
         return new FuncExpr(funcName, args, returnType, function);
     }
