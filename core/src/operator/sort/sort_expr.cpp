@@ -60,7 +60,9 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<ProjFunc> &projectFuncs, SortOperator *sortOperator)
     : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
-{}
+{
+    outputTypes = sortOperator->GetOutputType();
+}
 
 SortWithExprOperator::~SortWithExprOperator()
 {
@@ -70,7 +72,7 @@ SortWithExprOperator::~SortWithExprOperator()
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols, vecAllocator);
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
     if (newInputVecBatch != nullptr) {
         sortOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);

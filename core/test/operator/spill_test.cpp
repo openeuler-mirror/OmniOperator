@@ -24,29 +24,28 @@ TEST(SpillTest, TestWriteRead)
     int64_t data2[dataSize] = {8, 4, 0, 2, 6};
     int16_t data3[dataSize] = {5, 4, 3, 2, 1};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType() }));
+    std::vector<DataTypePtr> types = { IntType(), LongType(), ShortType() };
+    DataTypes sourceTypes(types);
     VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
     ChildSpillTracker spillTracker(&(GetRootSpillTracker()));
-    VectorBatchWriter writer(&spillTracker);
+    VectorBatchWriter writer(&spillTracker, sourceTypes);
     writer.CreateTempFile(path);
     VectorBatchUnitIter vectorBatchIterator(vecBatch);
     writer.WriteVecBatches(vectorBatchIterator);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("spill_TestWriteRead");
-    VectorBatchReader reader(writer.GetFd(), writer.GetFileLength(), &spillTracker, vecAllocator);
+    VectorBatchReader reader(writer.GetFd(), writer.GetFileLength(), &spillTracker);
     reader.ReadFileTailAndHead();
     while (reader.HasNext()) {
         auto result = reader.Next();
         auto resultVecBatch = result->GetVectorBatch();
-        VectorHelper::PrintVecBatch(resultVecBatch);
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), dataSize, data1, data2, data3);
+        VectorHelper::PrintVecBatch(resultVecBatch, types);
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), dataSize, types, data1, data2, data3);
         VectorHelper::FreeVecBatch(resultVecBatch);
     }
     rmdir(path.c_str());
     VectorHelper::FreeVecBatch(vecBatch);
-    delete vecAllocator;
 }
 
 TEST(SpillTest, TestSpiller)
@@ -56,7 +55,8 @@ TEST(SpillTest, TestSpiller)
     int64_t data2[dataSize] = {6, 8, 4, 0, 2};
     int16_t data3[dataSize] = {-5, -3, 0, 2, 4};
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), ShortType() }));
+    std::vector<DataTypePtr> types = { IntType(), LongType(), ShortType() };
+    DataTypes sourceTypes(types);
     VectorBatch *vecBatch = TestUtil::CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     std::vector<int32_t> sortCols = { 0, 1, 2 };
@@ -87,9 +87,9 @@ TEST(SpillTest, TestSpiller)
         auto result = spiller.Next();
         auto resultVecBatch = result->GetVectorBatch();
         delete result;
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), expectedDataSize, expectedData1,
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), expectedDataSize, types, expectedData1,
             expectedData2, expectedData3);
-        VectorHelper::PrintVecBatch(resultVecBatch);
+        VectorHelper::PrintVecBatch(resultVecBatch, types);
         VectorHelper::FreeVecBatch(resultVecBatch);
     }
     rmdir(path.c_str());

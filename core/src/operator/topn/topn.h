@@ -11,7 +11,7 @@
 #include "unordered_set"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
-#include "vector/vector_common.h"
+#include "vector/vector_batch.h"
 #include "type/data_types.h"
 
 namespace omniruntime {
@@ -23,16 +23,22 @@ public:
 
     ~RowComparator();
 
+    // input column data type
     const int32_t *GetSourceTypes() const;
 
+    // get sort type, ascend or descend
     int32_t *GetSortAscendings() const;
 
+    // is null row put in first when sort
     int32_t *GetSortNullFirsts() const;
 
+    // get sort column num
     int32_t GetSortColCount() const;
 
+    // get sort column id
     int32_t *GetSortCols() const;
 
+    // input page in vector batch
     omniruntime::vec::VectorBatch *GetVecBatch() const;
 
 private:
@@ -87,18 +93,17 @@ private:
     int64_t totalRowCount = 0;
     int64_t outputtedRowCount = 0;
     bool hasFilledResult = false;
-    std::priority_queue<RowComparator, std::vector<RowComparator>, std::less<std::vector<RowComparator>::value_type>>
-        pq;
+    std::priority_queue<RowComparator, std::vector<RowComparator>, std::less<>> pq;
     std::unordered_set<omniruntime::vec::VectorBatch *> singleRowVectorBatchSet;
 
     std::vector<omniruntime::vec::VectorBatch *> resultVectorBatchList;
 
     vec::VectorBatch *CreateSingleRowVecBatch(omniruntime::vec::VectorBatch *vectorBatch, int32_t position) const;
 
-    void SetValueForVectorBatch(int32_t typeId, int64_t index, vec::Vector *pqVector, vec::Vector *tmpVector) const;
+    void SetValueForVectorBatch(int32_t typeId, int64_t index, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
 
-    void SetVarcharValueForVectorBatch(int64_t rowNum, vec::VarcharVector *pqVector,
-        vec::VarcharVector *tmpVector) const;
+    void SetVarcharValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector,
+        vec::BaseVector *tmpVector) const;
 
     void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
         int32_t position) const;

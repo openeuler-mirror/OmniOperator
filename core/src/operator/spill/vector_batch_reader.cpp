@@ -5,16 +5,15 @@
 
 #include <unistd.h>
 #include "util/error_code.h"
-#include "vector/fixed_width_vector.h"
-#include "vector/variable_width_vector.h"
-#include "operator/util/operator_util.h"
 #include "vector_batch_reader.h"
+#include "vector/unsafe_vector.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
-
+using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
 ErrorCode VectorBatchReader::ReadFileTailAndHead()
 {
     // read file tail
@@ -60,52 +59,66 @@ VectorBatchUnit *VectorBatchReader::Next()
     return vectorBatchUnit;
 }
 
-Vector *VectorBatchReader::ReadVarcharVector(int32_t rowCount)
+/**
+ * vector format stored in file column by column, {nulls meta column, offsets meta column, values}
+ * -nulls--offsets--values
+ * 0        0      "aab"
+ * 1        3        -
+ * 0        3      "bbcd"
+ *          7
+ */
+std::unique_ptr<BaseVector> VectorBatchReader::ReadVarcharVector(int32_t rowCount)
 {
-    // read valueNulls and valueOffsets
-    auto nullAndOffsetSize = static_cast<ssize_t>(rowCount + (rowCount + 1) * sizeof(int32_t));
-    auto nullAndOffsets = new int8_t[nullAndOffsetSize];
-    if (read(fd, nullAndOffsets, nullAndOffsetSize) < nullAndOffsetSize) {
-        LogError("Read value nulls and offsets failed.");
-        delete[] nullAndOffsets;
+    auto vector = VectorHelper::CreateStringVector(rowCount);
+
+    // read nulls
+    bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector.get());
+    if (read(fd, nulls, rowCount) < rowCount) {
+        LogError("Read value nulls failed.");
         return nullptr;
     }
 
-    auto valueOffsets = reinterpret_cast<int32_t *>(nullAndOffsets + rowCount);
-    auto length = valueOffsets[rowCount] - valueOffsets[0];
-    auto vector = new VarcharVector(vectorAllocator, length, rowCount);
-    if (memcpy_s(vector->GetValueNulls(), nullAndOffsetSize, nullAndOffsets, nullAndOffsetSize) != EOK) {
-        LogError("Memory copy failed.");
-        delete[] nullAndOffsets;
+    // read offsets
+    auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
+    auto offsets = reinterpret_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector.get(), OMNI_VARCHAR));
+    if (read(fd, offsets, offsetSize) < offsetSize) {
+        LogError("Read value offsets failed.");
         return nullptr;
     }
 
-    delete[] nullAndOffsets;
     // read values
-    if (read(fd, vector->GetValues(), length) < static_cast<ssize_t>(length)) {
+    auto length = offsets[rowCount] - offsets[0];
+    char *valuesBuffer;
+    if  (length <= INITIAL_STRING_SIZE) {
+        valuesBuffer = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector.get()));
+    } else {
+        valuesBuffer =
+                unsafe::UnsafeStringVector::ExpandStringBuffer(reinterpret_cast<VarcharVector *>(vector.get()), length);
+    }
+    if (read(fd, valuesBuffer, length) < static_cast<ssize_t>(length)) {
         LogError("Read values failed.");
-        delete vector;
         return nullptr;
     }
+
     return vector;
 }
 
-template <typename V, typename T> Vector *VectorBatchReader::ReadVector(int32_t rowCount)
+template <typename T> std::unique_ptr<BaseVector> VectorBatchReader::ReadVector(int32_t rowCount)
 {
-    auto vector = new V(vectorAllocator, rowCount);
+    auto vector = std::make_unique<vec::Vector<T>>(rowCount);
 
     // read valueNulls
-    if (read(fd, vector->GetValueNulls(), rowCount) < static_cast<ssize_t>(rowCount)) {
+    bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector.get());
+    if (read(fd, nulls, rowCount) < static_cast<ssize_t>(rowCount)) {
         LogError("Read value nulls failed.");
-        delete vector;
         return nullptr;
     }
 
     // read values
+    T *values = unsafe::UnsafeVector::GetRawValues(vector.get());
     auto length = static_cast<ssize_t>(rowCount * sizeof(T));
-    if (read(fd, vector->GetValues(), length) < length) {
+    if (read(fd, values, length) < length) {
         LogError("Read values failed.");
-        delete vector;
         return nullptr;
     }
 
@@ -120,34 +133,34 @@ VectorBatch *VectorBatchReader::ReadVecBatch()
         return nullptr;
     }
 
-    auto vecBatch = new VectorBatch(vecCount, rowCount);
+    auto vecBatch = new VectorBatch(rowCount);
     for (int32_t vecIndex = 0; vecIndex < vecCount; vecIndex++) {
-        Vector *vector = nullptr;
+        std::unique_ptr<BaseVector> vector = nullptr;
         int32_t typeId = vecTypeIds[vecIndex];
         switch (typeId) {
             case OMNI_BOOLEAN:
-                vector = ReadVector<BooleanVector, bool>(rowCount);
+                vector = ReadVector<bool>(rowCount);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                vector = ReadVector<IntVector, int32_t>(rowCount);
+                vector = ReadVector<int32_t>(rowCount);
                 break;
             case OMNI_SHORT:
-                vector = ReadVector<ShortVector, int16_t>(rowCount);
+                vector = ReadVector<int16_t>(rowCount);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                vector = ReadVector<LongVector, int64_t>(rowCount);
+                vector = ReadVector<int64_t>(rowCount);
                 break;
             case OMNI_DOUBLE:
-                vector = ReadVector<DoubleVector, double>(rowCount);
+                vector = ReadVector<double>(rowCount);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 vector = ReadVarcharVector(rowCount);
                 break;
             case OMNI_DECIMAL128:
-                vector = ReadVector<Decimal128Vector, Decimal128>(rowCount);
+                vector = ReadVector<Decimal128>(rowCount);
                 break;
             default:
                 break;
@@ -156,7 +169,7 @@ VectorBatch *VectorBatchReader::ReadVecBatch()
             VectorHelper::FreeVecBatch(vecBatch);
             return nullptr;
         }
-        vecBatch->SetVector(vecIndex, vector);
+        vecBatch->Append(std::move(vector));
     }
 
     rowOffset += rowCount;

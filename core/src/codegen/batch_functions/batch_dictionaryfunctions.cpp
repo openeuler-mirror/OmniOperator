@@ -4,7 +4,7 @@
  */
 
 #include "batch_dictionaryfunctions.h"
-#include "vector/dictionary_vector.h"
+#include "vector/vector.h"
 #include "codegen/context_helper.h"
 
 using namespace omniruntime::vec;
@@ -13,48 +13,48 @@ namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int32_t *output)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
-        output[i] = dictionaryVectorPtr->GetInt(rowIdxArray[i]);
+        output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
     }
 }
 
 extern "C" DLLEXPORT void BatchGetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int64_t *output)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
-        output[i] = dictionaryVectorPtr->GetLong(rowIdxArray[i]);
+        output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
     }
 }
 
 extern "C" DLLEXPORT void BatchGetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, double *output)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<double>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
-        output[i] = dictionaryVectorPtr->GetDouble(rowIdxArray[i]);
+        output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
     }
 }
 
 extern "C" DLLEXPORT void BatchGetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, bool *output)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<bool>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
-        output[i] = dictionaryVectorPtr->GetBoolean(rowIdxArray[i]);
+        output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
     }
 }
 
 extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr, int64_t dictionaryVectorAddr,
     int32_t *rowIdxArray, int32_t rowCnt, uint8_t **str, int32_t *length)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(dictionaryVectorAddr);
     uint8_t *result = nullptr;
     errno_t err;
     char *ret;
     for (int i = 0; i < rowCnt; ++i) {
-        length[i] = dictionaryVectorPtr->GetVarchar(rowIdxArray[i], &result);
+        length[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]).length();
         if (length[i] == 0) {
             str[i] = (uint8_t *)"";
             continue;
@@ -73,9 +73,9 @@ extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr
 extern "C" DLLEXPORT void BatchGetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, Decimal128 *output)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
-        output[i] = dictionaryVectorPtr->GetDecimal128(rowIdxArray[i]);
+        output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
     }
 }
 

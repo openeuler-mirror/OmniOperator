@@ -10,12 +10,13 @@
 #include "spill_iterator.h"
 #include "vector/vector_batch.h"
 #include "spill_tracker.h"
+#include "type/data_types.h"
 
 namespace omniruntime {
 namespace op {
 class VectorBatchWriter {
 public:
-    VectorBatchWriter(SpillTracker *tracker);
+    VectorBatchWriter(SpillTracker *tracker, const omniruntime::type::DataTypes &sourceTypes);
 
     ~VectorBatchWriter() {}
 
@@ -36,9 +37,9 @@ public:
 private:
     ErrorCode WriteFileHeader(omniruntime::vec::VectorBatch *vectorBatch);
 
-    ErrorCode WriteVarcharVector(omniruntime::vec::Vector *vector, int32_t rowCount);
+    ErrorCode WriteVarcharVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
 
-    template <typename T> ErrorCode WriteVector(omniruntime::vec::Vector *vector, int32_t rowCount);
+    template <typename T> ErrorCode WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
 
     ErrorCode WriteVecBatch(omniruntime::vec::VectorBatch *vectorBatch);
 
@@ -47,6 +48,7 @@ private:
     int32_t fd;
     uint64_t fileLength;
     SpillTracker *tracker;
+    omniruntime::type::DataTypes sourceTypes;
 };
 }
 }

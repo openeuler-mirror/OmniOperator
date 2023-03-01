@@ -70,6 +70,7 @@ setup_dependencies() {
   cp -r ${workspace}/../jemalloc ${open_source_dir}
   cp -r ${workspace}/../json ${open_source_dir}
   cp -r ${workspace}/../llvm-project ${open_source_dir}
+  cp -r ${workspace}/../benchmark ${open_source_dir}
   cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
   cp -r ${workspace}/../boost ${open_source_dir}
 
@@ -85,6 +86,11 @@ setup_dependencies() {
 
   mkdir ${workspace}/${open_source_dir}/json/build
   cd ${workspace}/${open_source_dir}/json/build && sudo cmake ../ && sudo make -j16 && sudo make install
+
+  cd ${workspace}/${open_source_dir}/benchmark
+  cmake -E make_directory "build"
+  cmake -E chdir "build" cmake -DCMAKE_BUILD_TYPE=Release ../
+  sudo cmake --build "build" --config Release --target install
 
   cd ${workspace}/${open_source_dir}/boost
   sudo chmod -R 755 ./tools && dos2unix ./bootstrap.sh && dos2unix ./tools/build/src/engine/build.sh

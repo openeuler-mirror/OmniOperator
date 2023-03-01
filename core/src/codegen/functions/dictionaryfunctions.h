@@ -28,5 +28,6 @@ extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVecto
 
 extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+extern "C" DLLEXPORT uint8_t *GetStringViewValueAndLength(int64_t stringValueAddr, int32_t index, int32_t *length);
 }
 #endif // OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

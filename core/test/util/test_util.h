@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <string>
 #include <gtest/gtest.h>
-#include "vector/vector_common.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "type/data_types.h"
@@ -17,44 +16,179 @@
 #include "codegen/func_signature.h"
 #include "codegen/func_registry.h"
 #include "expression/expressions.h"
+#include "type/data_type.h"
+#include "vector/vector_helper.h"
+#include "vector/large_string_container.h"
 
-namespace TestUtil {
-bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
-bool VecBatchMatchIgnoreOrder(omniruntime::vec::VectorBatch *resultBatch, omniruntime::vec::VectorBatch *expectedBatch);
-bool VecBatchMatches(std::vector<omniruntime::vec::VectorBatch *> &outputPages,
-    std::vector<omniruntime::vec::VectorBatch *> &expectPage);
+namespace omniruntime::TestUtil {
+using namespace omniruntime::expressions;
+
+bool VecBatchMatch(vec::VectorBatch *outputPages, vec::VectorBatch *expectPage, std::vector<type::DataTypePtr> types);
+
 bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
-    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches);
-omniruntime::vec::VectorBatch *CreateVectorBatch(const omniruntime::type::DataTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VectorBatch *CreateEmptyVectorBatch(const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
-omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::type::DataType &type, std::string *values,
-    int32_t length);
-omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
-    int32_t *ids, int32_t idsCount, ...);
-omniruntime::vec::ContainerVector *CreateContainerVector(std::vector<omniruntime::vec::DataTypePtr> &fieldTypes,
-    int32_t rowCount, va_list &args);
-omniruntime::vec::Vector *CreateVector(omniruntime::vec::DataType &dataType, int32_t rowCount, va_list &args);
+    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
 
-void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
-    int32_t expectedRowCount, ...);
-void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *expectedValues);
-void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::string *expectedValues);
+bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn, int32_t typeId);
+
+vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);
+
+std::unique_ptr<omniruntime::vec::BaseVector> CreateVector(type::DataType &dataType, int32_t rowCount, va_list &args);
+
+template <typename T> std::unique_ptr<vec::BaseVector> CreateVector(int32_t length, T *values)
+{
+    std::unique_ptr<vec::Vector<T>> vector = std::make_unique<vec::Vector<T>>(length);
+    for (int32_t i = 0; i < length; i++) {
+        vector->SetValue(i, values[i]);
+    }
+    return vector;
+}
+
+template <omniruntime::type::DataTypeId typeId>
+std::unique_ptr<vec::BaseVector> CreateFlatVector(int32_t length, va_list &args)
+{
+    using namespace omniruntime::type;
+    using T = typename NativeType<typeId>::type;
+    using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
+    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        std::unique_ptr<VarcharVector> vector = std::make_unique<VarcharVector>(length);
+        std::string *str = va_arg(args, std::string *);
+        for (int32_t i = 0; i < length; i++) {
+            std::string_view value(str[i].data(), str[i].length());
+            vector->SetValue(i, value);
+        }
+        return vector;
+    } else {
+        std::unique_ptr<vec::Vector<T>> vector = std::make_unique<vec::Vector<T>>(length);
+        T *value = va_arg(args, T *);
+        for (int32_t i = 0; i < length; i++) {
+            vector->SetValue(i, value[i]);
+        }
+        return vector;
+    }
+}
+
+void SetValue(vec::BaseVector *vector, int32_t index, void *value, int32_t typeId);
+
+template <type::DataTypeId typeId>
+static std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
+{
+    using T = typename type::NativeType<typeId>::type;
+    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        return reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view>> *>(vector)->Slice(offset,
+            length);
+    } else {
+        return reinterpret_cast<vec::Vector<vec::DictionaryContainer<T>> *>(vector)->Slice(offset, length);
+    }
+}
+
+template <type::DataTypeId typeId>
+static std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
+{
+    using T = typename type::NativeType<typeId>::type;
+    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        return reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vector)->Slice(offset,
+            length);
+    } else {
+        return reinterpret_cast<vec::Vector<T> *>(vector)->Slice(offset, length);
+    }
+}
+
+static std::unique_ptr<vec::BaseVector> SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length,
+    int32_t typeId)
+{
+    using namespace omniruntime::type;
+    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+        return DYNAMIC_TYPE_DISPATCH(FlatVectorSlice, typeId, vector, offset, length);
+    } else {
+        return DYNAMIC_TYPE_DISPATCH(DictionaryVectorSlice, typeId, vector, offset, length);
+    }
+}
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
-void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory);
-omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input);
 
-void SetNulls(omniruntime::vec::Vector *vector, std::vector<bool> &nulls);
+bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, type::DataTypeId omniId);
 
-omniruntime::vec::VarcharVector *CreateVarcharVector(std::vector<std::string> &values, std::vector<bool> &nulls);
+bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch,
+    std::vector<type::DataTypePtr> &typeVector);
+omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input,
+    std::vector<type::DataTypePtr> &allTypes);
 
-omniruntime::vec::VectorBatch *CreateVectorBatch(int32_t rowCount, std::vector<omniruntime::vec::Vector *> &vectors);
+void FreeVecBatches(vec::VectorBatch **vecBatches, int32_t vecBatchCount);
 
-bool ColumnMatch(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
-bool ColumnMatchIgnoreOrder(omniruntime::vec::Vector *actualColumn, omniruntime::vec::Vector *expectColumn);
+void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
+    int32_t expectedRowCount, std::vector<type::DataTypePtr> allTypes, ...);
+void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
+void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 
-bool VecBatchMatchIgnoreOrder(omniruntime::vec::VectorBatch *resultBatch, omniruntime::vec::VectorBatch *expectedBatch,
-    const double error);
+std::unique_ptr<vec::BaseVector> CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
+    int32_t *ids, int32_t idsCount, ...);
+
+template <type::DataTypeId typeId>
+std::unique_ptr<vec::BaseVector> CreateDictionary(vec::BaseVector *vector, int32_t *ids, int32_t size)
+{
+    using T = typename type::NativeType<typeId>::type;
+    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        return vec::VectorHelper::CreateStringDictionary(ids, size,
+            reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vector));
+    }
+    return vec::VectorHelper::CreateDictionary(ids, size, reinterpret_cast<vec::Vector<T> *>(vector));
+}
+
+template <typename T, typename E> void AssertVectorEquals(T *vector, E *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        EXPECT_EQ(vector->GetValue(i), expectedValues[i]);
+    }
+}
+
+omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
+
+
+template <typename T> void AssertVectorEquals(vec::BaseVector *vector, T *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsNull(i)) {
+            continue;
+        }
+        EXPECT_EQ(static_cast<vec::Vector<T> *>(vector)->GetValue(i), expectedValues[i]);
+    }
+}
+
+std::unique_ptr<vec::BaseVector> CreateVarcharVector(type::DataType &type, std::string *values, int32_t length);
+
+omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
+    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
+
+void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
+    std::vector<int32_t> &outLen);
+
+void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
+    std::vector<uint8_t *> &result, std::vector<int32_t> &outLen);
+
+void AssertIntEquals(std::vector<int32_t> &expected, std::vector<int32_t> &result);
+
+void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result);
+
+void AssertBoolEquals(std::vector<bool> &expected, bool *result);
+
+std::string GenerateSpillPath();
+
+int32_t *MakeInts(int32_t size, const int32_t start = 0);
+
+int64_t *MakeDecimals(int32_t size, const int32_t start = 0);
+
+int64_t *MakeLongs(int32_t size, const int64_t start = 0);
+
+double *MakeDoubles(int32_t size, const double start = 0);
+
+vec::VectorBatch *CreateEmptyVectorBatch(const DataTypes &dataTypes);
+
+int32_t DecodeAddFlag(int32_t resultCode);
+
+int32_t DecodeFetchFlag(int32_t resultCode);
 
 class Timer {
 public:
@@ -129,62 +263,5 @@ private:
     struct timespec wallEnd;
     const char *title;
 };
-
-template <typename T, typename V> T *CreateVector(V *values, int32_t length)
-{
-    omniruntime::vec::VectorAllocator *vecAllocator = omniruntime::vec::VectorAllocator::GetGlobalAllocator();
-    auto vector = new T(vecAllocator, length);
-    vector->SetValues(0, values, length);
-    return vector;
 }
-
-template <typename T, typename E> void AssertVectorEquals(T *vector, E *expectedValues)
-{
-    for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
-            continue;
-        }
-        EXPECT_EQ(vector->GetValue(i), expectedValues[i]);
-    }
-}
-
-void ToVectorTypes(const int32_t *dataTypeIds, int32_t dataTypeCount,
-    std::vector<omniruntime::vec::DataTypePtr> &dataTypes);
-
-void GetTestTypeIds(omniruntime::type::DataTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
-    std::vector<int32_t> &typeIds, int32_t *projectCols);
-
-omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
-    std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
-
-void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
-    std::vector<int32_t> &outLen);
-
-void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
-    std::vector<uint8_t *> &result, std::vector<int32_t> &outLen);
-
-template <typename T> void AssertEquals(const std::vector<T> &expected, const std::vector<T> &result)
-{
-    for (size_t i = 0; i < expected.size(); i++) {
-        EXPECT_EQ(result[i], expected[i]);
-    }
-}
-
-std::string GenerateSpillPath();
-
-int32_t *MakeInts(const int32_t size, const int32_t start = 0);
-
-int64_t *MakeDecimals(const int32_t size, const int32_t start = 0);
-
-int64_t *MakeLongs(const int32_t size, const int64_t start = 0);
-
-double *MakeDoubles(const int32_t size, const double start = 0);
-
-int16_t *MakeShorts(const int32_t size, const int16_t start = 0);
-
-int32_t DecodeAddFlag(int32_t resultCode);
-
-int32_t DecodeFetchFlag(int32_t resultCode);
-}
-
-#endif
+#endif // __TEST_UTIL_H__

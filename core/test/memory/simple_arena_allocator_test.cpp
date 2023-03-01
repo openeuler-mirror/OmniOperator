@@ -29,6 +29,40 @@ TEST(SimpleArenaAllocator, testAllocate)
     EXPECT_EQ(arena.AvailBytes(), 0);
 }
 
+// allocateContinue small size
+TEST(SimpleArenaAllocator, testAllocateContinueSmallSize)
+{
+    int64_t chunkSize = 4096;
+    SimpleArenaAllocator arena(chunkSize);
+    int64_t smallSize = 100;
+    uint8_t const * start = arena.Allocate(smallSize);
+    EXPECT_NE(start, nullptr);
+    EXPECT_EQ(arena.TotalBytes(), chunkSize);
+    EXPECT_EQ(arena.AvailBytes(), chunkSize - smallSize);
+    char const * p = reinterpret_cast<char *>(arena.AllocateContinue(smallSize, start));
+    EXPECT_NE(p, nullptr);
+    EXPECT_EQ(arena.TotalBytes(), chunkSize);
+    EXPECT_EQ(arena.AvailBytes(), chunkSize - 2 * smallSize);
+}
+
+// allocateContinue large size
+TEST(SimpleArenaAllocator, testAllocateContinueLargeSize)
+{
+    int64_t chunkSize = 4096;
+    SimpleArenaAllocator arena(chunkSize);
+    int64_t smallSize = 100;
+    uint8_t const * start = arena.Allocate(smallSize);
+    EXPECT_NE(start, nullptr);
+    EXPECT_EQ(arena.TotalBytes(), chunkSize);
+    EXPECT_EQ(arena.AvailBytes(), chunkSize - smallSize);
+
+    int64_t largeSize = 100 * chunkSize;
+    start = arena.AllocateContinue(largeSize, start);
+    EXPECT_NE(start, nullptr);
+    EXPECT_EQ(arena.TotalBytes(), chunkSize + smallSize + largeSize);
+    EXPECT_EQ(arena.AvailBytes(), 0);
+}
+
 // small followed by big, then Reset
 TEST(SimpleArenaAllocator, testResetSmallToBig)
 {
@@ -88,10 +122,9 @@ TEST(SimpleArenaAllocator, testAllocateZeroSize)
     auto *arena = new SimpleArenaAllocator();
     int64_t allocatedSize = 1024;
     uint8_t *noZeroAddr = arena->Allocate(allocatedSize);
-    uint8_t *zeroAddr1 = arena->Allocate(0);
-    EXPECT_FALSE(noZeroAddr == zeroAddr1);
-    uint8_t *zeroAddr2 = arena->Allocate(0);
-    EXPECT_TRUE(zeroAddr1 == zeroAddr2);
+    EXPECT_NE(noZeroAddr, nullptr);
+    uint8_t *ZeroAddr = arena->Allocate(0);
+    EXPECT_EQ(ZeroAddr, nullptr);
     delete arena;
 }
 }

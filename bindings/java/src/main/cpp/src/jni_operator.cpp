@@ -43,42 +43,30 @@ void RecordOutputVectorsStack(VectorBatch &outputVecBatch, JNIEnv *env)
 #endif
 }
 
-jobject transform(JNIEnv *env, VectorBatch &result)
+jobject transform(JNIEnv *env, VectorBatch &result, std::vector<DataTypePtr> &outputTypes)
 {
     int32_t vecCount = result.GetVectorCount();
-    // set vector addresses parameter to vector batch construct.
-    jlongArray jVecAddresses = env->NewLongArray(vecCount);
-    env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *)result.GetVectors());
-    long allocators[vecCount];
-    int32_t capacityInBytes[vecCount];
-    int32_t offsets[vecCount];
+    long vecAddresses[vecCount];
     int32_t encodings[vecCount];
+    int32_t dataTypeIds[vecCount];
     long valueBufAddrs[vecCount];
     long nullBufAddrs[vecCount];
-    long offsetBufAddrs[vecCount];
+    long offsetsBufAddrs[vecCount];
     for (int i = 0; i < vecCount; ++i) {
-        Vector *vector = result.GetVector(i);
-        allocators[i] = (long)vector->GetAllocator();
-        capacityInBytes[i] = vector->GetCapacityInBytes();
-        offsets[i] = vector->GetPositionOffset();
+        BaseVector *vector = result.Get(i);
+        vecAddresses[i] = reinterpret_cast<uintptr_t>(vector);
+        dataTypeIds[i] = outputTypes[i]->GetId();
         encodings[i] = vector->GetEncoding();
         // By default, all 3 buf arrays will have a value,
         // if not, it will be 0, which means a null pointer.
-        valueBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValues());
-        nullBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValueNulls());
-        offsetBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValueOffsets());
+        valueBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::GetValues(vector, dataTypeIds[i]));
+        nullBufAddrs[i] = reinterpret_cast<uintptr_t>(UnsafeBaseVector::GetNulls(vector));
+        offsetsBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::GetOffsetsAddr(vector, dataTypeIds[i]));
     }
-    // set vector allocators parameter to vector batch construct.
-    jlongArray jVecAllocatorAddresses = env->NewLongArray(vecCount);
-    env->SetLongArrayRegion(jVecAllocatorAddresses, 0, vecCount, allocators);
 
-    // set vector capacityInBytes parameter to vector batch construct.
-    jintArray jVecCapacityInBytes = env->NewIntArray(vecCount);
-    env->SetIntArrayRegion(jVecCapacityInBytes, 0, vecCount, capacityInBytes);
-
-    // set vector offsets ids parameter to vector batch construct.
-    jintArray jVecOffsets = env->NewIntArray(vecCount);
-    env->SetIntArrayRegion(jVecOffsets, 0, vecCount, offsets);
+    // set vector addresses parameter to vector batch construct.
+    jlongArray jVecAddresses = env->NewLongArray(vecCount);
+    env->SetLongArrayRegion(jVecAddresses, 0, vecCount, vecAddresses);
 
     // set vector encoding
     jintArray jVecEncodingIds = env->NewIntArray(vecCount);
@@ -86,7 +74,7 @@ jobject transform(JNIEnv *env, VectorBatch &result)
 
     // set vector type ids parameter to vector batch construct.
     jintArray jDataTypeIds = env->NewIntArray(vecCount);
-    env->SetIntArrayRegion(jDataTypeIds, 0, vecCount, (const jint *)result.GetVectorTypeIds());
+    env->SetIntArrayRegion(jDataTypeIds, 0, vecCount, dataTypeIds);
 
     // set vector value buf address
     jlongArray jVecValueBufAddrs = env->NewLongArray(vecCount);
@@ -96,14 +84,13 @@ jobject transform(JNIEnv *env, VectorBatch &result)
     jlongArray jVecNullBufAddrs = env->NewLongArray(vecCount);
     env->SetLongArrayRegion(jVecNullBufAddrs, 0, vecCount, nullBufAddrs);
 
-    // set vec offset buf address
-    jlongArray jVecOffsetBufAddrs = env->NewLongArray(vecCount);
-    env->SetLongArrayRegion(jVecOffsetBufAddrs, 0, vecCount, offsetBufAddrs);
+    // set vec offsets buf address
+    jlongArray jVecOffsetsBufAddrs = env->NewLongArray(vecCount);
+    env->SetLongArrayRegion(jVecOffsetsBufAddrs, 0, vecCount, offsetsBufAddrs);
 
     // create vector batch java object.
     jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)(&result)), jVecAddresses,
-        jVecValueBufAddrs, jVecNullBufAddrs, jVecOffsetBufAddrs, jVecAllocatorAddresses, jVecCapacityInBytes,
-        jVecOffsets, jVecEncodingIds, jDataTypeIds, result.GetRowCount());
+        jVecValueBufAddrs, jVecNullBufAddrs, jVecOffsetsBufAddrs, jVecEncodingIds, jDataTypeIds, result.GetRowCount());
     return obj;
 }
 
@@ -136,7 +123,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     jobject result = nullptr;
     if (outputVecBatch) {
         RecordOutputVectorsStack(*outputVecBatch, env);
-        result = transform(env, *outputVecBatch);
+        result = transform(env, *outputVecBatch, nativeOperator->GetOutputType());
     }
     return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->GetStatus());
 }

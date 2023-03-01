@@ -7,14 +7,14 @@
 #define OMNI_RUNTIME_HMPP_HASH_UTIL_H
 
 #include <HMPP/hmpp.h>
-#include "vector/vector_common.h"
+#include "vector/vector_helper.h"
 
-using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
 class HmppHashUtil {
 public:
-    static HmppResult ComputeHash(Vector *vector, int64_t *combinedHash, int64_t start, int64_t rowCount);
+    static HmppResult ComputeHash(vec::BaseVector *vector, type::DataTypeId omniId, int64_t *combinedHash,
+                                  int64_t start, int64_t rowCount);
 };
 }
 }

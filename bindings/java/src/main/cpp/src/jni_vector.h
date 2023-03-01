@@ -13,46 +13,40 @@ extern "C" {
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    newVectorNative
- * Signature: (JIIII)J
+ * Signature: (IIII)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *, jclass, jlong, jint, jint, jint,
-    jint);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *, jclass, jint, jint, jint, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    newDictionaryVectorNative
+ * Signature: (J[III)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *, jclass, jlong,
+    jintArray, jint, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    sliceVectorNative
- * Signature: (JII)J
+ * Signature: (JIII)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(JNIEnv *, jclass, jlong, jint, jint);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(JNIEnv *, jclass, jlong, jint, jint,
+    jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    copyPositionsNative
- * Signature: (J[III)J
+ * Signature: (J[IIII)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNative(JNIEnv *, jclass, jlong, jintArray,
-    jint, jint);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    copyRegionNative
- * Signature: (JII)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyRegionNative(JNIEnv *, jclass, jlong, jint, jint);
+    jint, jint, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    freeVectorNative
- * Signature: (JJ)V
+ * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative(JNIEnv *, jclass, jlong, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    getAllocatorNative
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getAllocatorNative(JNIEnv *, jclass, jlong);
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
@@ -77,24 +71,10 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setSizeNative(JNIEn
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    getOffsetNative
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getOffsetNative(JNIEnv *, jclass, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    getTypeIdNative
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeIdNative(JNIEnv *, jclass, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    getValuesNative
- * Signature: (J)J;
+ * Signature: (JI)J;
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative(JNIEnv *, jclass, jlong, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
@@ -106,10 +86,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNativ
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    appendVectorNative
- * Signature: (JIJI)V
+ * Signature: (JIJII)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative(JNIEnv *, jclass, jlong, jint, jlong,
-    jint);
+    jint, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_ContainerVec
@@ -129,7 +109,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_setDataTyp
 /*
  * Class:     nova_hetu_omniruntime_vector_ContainerVec
  * Method:    getDataTypesNative
- * Signature: (J)[I;
+ * Signature: (J)Ljava/lang/Sting;
  */
 JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getDataTypesNative(JNIEnv *, jclass, jlong);
 
@@ -139,106 +119,36 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getData
  * Signature: (J)J;
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *, jclass,
-    jlong);
+    jlong, jint);
 
 /*
- * Class:     nova_hetu_omniruntime_vector_DictionaryVec
- * Method:    setDictionaryNative
- * Signature: (J)[I
+ * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager
+ * Method:    setGlobalMemoryLimitNative
+ * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictionaryNative(JNIEnv *, jclass, jlong,
-    jlong);
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_setGlobalMemoryLimitNative(JNIEnv *,
+    jclass, jlong);
 
 /*
- * Class:     nova_hetu_omniruntime_vector_LazyVec
- * Method:    setDictionaryNative
- * Signature: (J)[I
+ * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager
+ * Method:    getAllocatedMemoryNative
+ * Signature: (V)J
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *, jclass, jlong, jobject);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_getAllocatedMemoryNative(JNIEnv *,
+    jclass);
 
 /*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    newChildAllocatorNative
- * Signature: (JLjava/lang/String;JJ)J
+ * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager
+ * Method:    memoryClearNative
+ * Signature: (V)V
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newChildAllocatorNative(JNIEnv *, jclass, jlong,
-    jstring, jlong, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    freeAllocatorNative
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_freeAllocatorNative(JNIEnv *, jclass, jlong);
-
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_memoryClearNative(JNIEnv *env,
+    jclass jcls);
 /*
  * Class:     nova_hetu_omniruntime_vector_VecBatch
  * Method:    newVectorBatchNative
- * Signature: (I)J
+ * Signature: ([JI)J
  */
-
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setLimitNative(JNIEnv *, jclass, jlong, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getLimitNative
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getLimitNative(JNIEnv *, jclass, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getScopeNative
- * Signature: (J)Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getScopeNative(JNIEnv *, jclass, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    setRootAllocatorLimitNative
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_setRootAllocatorLimitNative(JNIEnv *, jclass,
-    jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getAllocatedMemoryNative
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getAllocatedMemoryNative(JNIEnv *, jclass,
-    jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getParentAllocator
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getParentAllocator(JNIEnv *, jclass, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getChildAllocatorsNative
- * Signature: (J)[J
- */
-JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getChildAllocatorsNative(JNIEnv *, jclass,
-    jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getGlobalVectorAllocator
- * Signature: ()J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalVectorAllocator(JNIEnv *, jclass);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_VecAllocator
- * Method:    getPeakAllocatedNative
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getPeakAllocatedNative(JNIEnv *, jclass, jlong);
-
-
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *, jclass, jlongArray,
     jint);
 
@@ -252,9 +162,10 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatc
 /*
  * Class:     nova_hetu_omniruntime_vector_DictionaryVec
  * Method:    getDictionaryNative
- * Signature: (J)J
+ * Signature: (JI)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative(JNIEnv *, jclass, jlong,
+    jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
@@ -265,10 +176,10 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNativ
 /*
  * Class:     nova_hetu_omniruntime_vector_VarcharVec
  * Method:    expandDataCapacity
- * Signature: (JI)J
+ * Signature: (JI)J;
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *, jclass, jlong, jint);
-
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *, jclass,
+    jlong, jint);
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    setNullFlagNative
@@ -278,17 +189,11 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(J
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    mayHaveNullNative
+ * Method:    hasNullNative
  * Signature: (J)Z
  */
-JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_mayHaveNullNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_hasNullNative(JNIEnv *, jclass, jlong);
 
-/*
- * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    getNullCountNative
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getNullCountNative(JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus
 }

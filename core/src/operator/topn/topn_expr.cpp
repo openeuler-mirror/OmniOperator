@@ -3,14 +3,9 @@
  */
 
 #include "topn_expr.h"
-#include "operator/util/operator_util.h"
-#include "vector/vector_helper.h"
+#include "../util/operator_util.h"
 
-namespace omniruntime {
-namespace op {
-using namespace omniruntime::vec;
-using namespace std;
-
+namespace omniruntime::op {
 TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
     int32_t sortKeyCount, OverflowConfig *overflowConfig)
@@ -33,10 +28,12 @@ Operator *TopNWithExprOperatorFactory::CreateOperator()
     return pOperator;
 }
 
-TopNWithExprOperator::TopNWithExprOperator(type::DataTypes sourceTypes, std::vector<int32_t> &sortCols,
+TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<ProjFunc> &projectFuncs, TopNOperator *topNOperator)
-    : sourceTypes(std::move(sourceTypes)), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
-{}
+    : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
+{
+    outputTypes = topNOperator->GetOutputType();
+}
 
 TopNWithExprOperator::~TopNWithExprOperator()
 {
@@ -45,8 +42,7 @@ TopNWithExprOperator::~TopNWithExprOperator()
 
 int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols, vecAllocator);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
     if (newInputVecBatch != nullptr) {
         topNOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);
@@ -67,6 +63,5 @@ int32_t TopNWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 OmniStatus TopNWithExprOperator::Close()
 {
     return OMNI_STATUS_NORMAL;
-}
 }
 }

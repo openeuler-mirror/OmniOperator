@@ -22,7 +22,6 @@ public:
           comparator(comparator),
           merger(nullptr),
           tracker(nullptr),
-          vectorAllocator(VectorAllocator::GetGlobalAllocator()),
           totalRowCount(0),
           remainingRowCount(0)
     {
@@ -35,13 +34,12 @@ public:
     }
 
     VectorBatchSpiller(std::string &path, omniruntime::type::DataTypes &sourceTypes, std::vector<int32_t> &outputCols,
-        VecBatchWithPositionComparator *comparator, VectorAllocator *vectorAllocator)
+        VecBatchWithPositionComparator *comparator)
         : path(path),
           sourceTypes(sourceTypes),
           comparator(comparator),
           merger(nullptr),
           tracker(nullptr),
-          vectorAllocator(vectorAllocator),
           totalRowCount(0),
           remainingRowCount(0),
           outputCols(outputCols)
@@ -89,7 +87,6 @@ private:
     VecBatchWithPositionComparator *comparator;
     VectorBatchMerger *merger;
     SpillTracker *tracker;
-    VectorAllocator *vectorAllocator;
     int64_t totalRowCount;
     int64_t remainingRowCount;
     std::vector<int32_t> outputCols;

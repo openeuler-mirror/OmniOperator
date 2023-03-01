@@ -11,7 +11,7 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
-using namespace TestUtil;
+using namespace omniruntime::TestUtil;
 
 namespace UnionTest {
 TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
@@ -53,13 +53,13 @@ TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
     VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, dataSize, expData4, expData5, expData6);
 
     EXPECT_EQ(outputVecBatches.size(), 2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2, types));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(expVecBatch2);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(unionOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(unionOperator);
+    delete operatorFactory;
 }
 }

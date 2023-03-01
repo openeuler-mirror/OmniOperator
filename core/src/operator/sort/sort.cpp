@@ -8,6 +8,7 @@
 #include "vector/vector_helper.h"
 #include "operator/util/operator_util.h"
 #include "operator/spill/vector_batch_spiller.h"
+#include "operator/spill/spill_iterator.h"
 #include "util/omni_exception.h"
 
 using namespace std;
@@ -64,6 +65,10 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->sortNullFirsts = sortNullFirsts;
     this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
+
+    for (int32_t col : outputCols) {
+        this->outputTypes.insert(this->outputTypes.end(), sourceTypes.Get().at(col));
+    }
 }
 
 SortOperator::~SortOperator() = default;
@@ -128,7 +133,7 @@ ErrorCode SortOperator::SpillToDisk()
     if (spiller == nullptr) {
         comparator = new VecBatchWithPositionComparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts);
         spiller = new VectorBatchSpiller(operatorConfig.GetSpillConfig()->GetSpillPath(), sourceTypes, outputCols,
-            comparator, vecAllocator);
+            comparator);
         spiller->SetSpillTracker(GetRootSpillTracker().CreateSpillTracker());
     }
 
@@ -164,7 +169,7 @@ void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesF
         outputCols[i] = i;
     }
 
-    pagesIndex->GetSortedVecBatches(vecAllocator, outputCols, vecBatchesForSpill);
+    pagesIndex->GetSortedVecBatches(outputCols, vecBatchesForSpill);
 }
 
 void SortOperator::PrepareOutput()
@@ -186,9 +191,9 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
     int32_t rowCountToOutput =
         static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
 
-    auto *result = new VectorBatch(outputCols.size(), rowCountToOutput);
+    auto *result = new VectorBatch(rowCountToOutput);
     pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
-        rowCountToOutput, vecAllocator);
+        rowCountToOutput);
     rowCountOutputted += rowCountToOutput;
     *outputVecBatch = result;
 }

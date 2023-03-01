@@ -10,6 +10,7 @@
 #include "operator/window/window.h"
 #include "util/test_util.h"
 #include "vector/vector_helper.h"
+#include "vector/unsafe_vector.h"
 #include "perf_util.h"
 #include "util/config_util.h"
 
@@ -23,27 +24,26 @@ const int32_t DATA_SIZE = 6;
 const int32_t VEC_BATCH_NUM = 10;
 const int32_t ROW_PER_VEC_BATCH = 100000;
 
-Vector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatch)
+BaseVector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatch)
 {
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
     switch (sourceType->GetId()) {
         case OMNI_NONE: {
-            LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<int64_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
-                col->SetValueNull(j);
+                col->SetNull(j);
             }
             return col;
         }
         case OMNI_INT:
         case OMNI_DATE32: {
-            IntVector *col = new IntVector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<int32_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
             return col;
         }
         case OMNI_SHORT: {
-            ShortVector *col = new ShortVector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<int16_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
@@ -51,40 +51,40 @@ Vector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatch)
         }
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
-            LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<int64_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
             return col;
         }
         case OMNI_DOUBLE: {
-            DoubleVector *col = new DoubleVector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<double>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
             return col;
         }
         case OMNI_BOOLEAN: {
-            BooleanVector *col = new BooleanVector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<bool>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, true);
             }
             return col;
         }
         case OMNI_DECIMAL128: {
-            Decimal128Vector *col = new Decimal128Vector(vecAllocator, rowPerVecBatch);
+            auto col = new vec::Vector<Decimal128>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
-                col->SetValue(j, Decimal128(0, 1));
+                Decimal128 decimal128(0, 1);
+                col->SetValue(j, decimal128);
             }
             return col;
         }
         case OMNI_VARCHAR:
         case OMNI_CHAR: {
-            VarcharVector *col = new VarcharVector(vecAllocator,
-                static_cast<VarcharDataType *>(sourceType.get())->GetWidth() * rowPerVecBatch, rowPerVecBatch);
+            auto col = new vec::Vector<LargeStringContainer<std::string_view>>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
-                std::string str = std::to_string(j);
-                col->SetValue(j, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+                auto str = std::string_view(std::to_string(j));
+                col->SetValue(j, str);
             }
             return col;
         }
@@ -96,14 +96,14 @@ Vector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatch)
 }
 
 VectorBatch **BuildWindowInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t windowFunctionNum,
-    const std::vector<DataTypePtr> &sourceTypes)
+                                     const std::vector<DataTypePtr> &sourceTypes)
 {
     VectorBatch **input = new VectorBatch *[vecBatchNum];
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(windowFunctionNum);
         for (int32_t index = 0; index < windowFunctionNum; index++) {
-            Vector *vec = BuildVectorInput(sourceTypes[index], rowPerVecBatch);
-            vecBatch->SetVector(index, vec);
+            auto vec = std::unique_ptr<BaseVector>(BuildVectorInput(sourceTypes[index], rowPerVecBatch));
+            vecBatch->Append(std::move(vec));
         }
         input[i] = vecBatch;
     }
@@ -160,10 +160,10 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -217,10 +217,10 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -275,10 +275,10 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -333,10 +333,10 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -394,10 +394,10 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -411,8 +411,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
-    vecBatch->GetVector(0)->SetValueNull(1);
-    vecBatch->GetVector(0)->SetValueNull(5);
+    vecBatch->Get(0)->SetNull(1);
+    vecBatch->Get(0)->SetNull(5);
 
     int32_t outputCols[4] = {0, 1, 2, 3};
     int32_t sortCols[1] = {1};
@@ -456,13 +456,13 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     int64_t expectData6[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
-    expectVecBatch->GetVector(0)->SetValueNull(4);
-    expectVecBatch->GetVector(0)->SetValueNull(5);
+    expectVecBatch->Get(0)->SetNull(4);
+    expectVecBatch->Get(0)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -476,8 +476,8 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
-    vecBatch->GetVector(0)->SetValueNull(1);
-    vecBatch->GetVector(0)->SetValueNull(5);
+    vecBatch->Get(0)->SetNull(1);
+    vecBatch->Get(0)->SetNull(5);
 
     int32_t outputCols[4] = {0, 1, 2, 3};
     int32_t sortCols[0] = {};
@@ -521,13 +521,13 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     int64_t expectData6[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
-    expectVecBatch->GetVector(0)->SetValueNull(4);
-    expectVecBatch->GetVector(0)->SetValueNull(5);
+    expectVecBatch->Get(0)->SetNull(4);
+    expectVecBatch->Get(0)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -542,10 +542,10 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
 
-    vecBatch->GetVector(0)->SetValueNull(1);
-    vecBatch->GetVector(0)->SetValueNull(5);
+    vecBatch->Get(0)->SetNull(1);
+    vecBatch->Get(0)->SetNull(5);
 
-    vecBatch->GetVector(1)->SetValueNull(3);
+    vecBatch->Get(1)->SetNull(3);
 
     int32_t outputCols[4] = {0, 1, 2, 3};
     int32_t sortCols[1] = {1};
@@ -599,14 +599,14 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     int64_t expectData9[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6, expectData7, expectData8, expectData9);
-    expectVecBatch->GetVector(0)->SetValueNull(4);
-    expectVecBatch->GetVector(0)->SetValueNull(5);
-    expectVecBatch->GetVector(1)->SetValueNull(1);
+    expectVecBatch->Get(0)->SetNull(4);
+    expectVecBatch->Get(0)->SetNull(5);
+    expectVecBatch->Get(1)->SetNull(1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -621,9 +621,9 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     int16_t data3[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3);
 
-    vecBatch->GetVector(0)->SetValueNull(1);
-    vecBatch->GetVector(0)->SetValueNull(5);
-    vecBatch->GetVector(1)->SetValueNull(3);
+    vecBatch->Get(0)->SetNull(1);
+    vecBatch->Get(0)->SetNull(5);
+    vecBatch->Get(1)->SetNull(3);
 
     int32_t outputCols[4] = {0, 1, 2, 3};
     int32_t sortCols[0] = {};
@@ -678,14 +678,14 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     int64_t expectData9[DATA_SIZE] = {8, 8, 4, 2, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6, expectData7, expectData8, expectData9);
-    expectVecBatch->GetVector(0)->SetValueNull(4);
-    expectVecBatch->GetVector(0)->SetValueNull(5);
-    expectVecBatch->GetVector(1)->SetValueNull(1);
+    expectVecBatch->Get(0)->SetNull(4);
+    expectVecBatch->Get(0)->SetNull(5);
+    expectVecBatch->Get(1)->SetNull(1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -834,14 +834,13 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18,
         expectData19, expectData20, expectData21);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
-
 
 TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
 {
@@ -988,16 +987,17 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18,
         expectData19, expectData20, expectData21);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
-
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
         Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
@@ -1016,16 +1016,16 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
     int16_t data10[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
 
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6,
-        data7, data8, data9, data10);
+  data7, data8, data9, data10);
 
     const int32_t colCount = 11;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-        OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-        OMNI_AGGREGATION_TYPE_SUM};
+    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,OMNI_AGGREGATION_TYPE_SUM,
+        OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+        OMNI_AGGREGATION_TYPE_SUM,OMNI_AGGREGATION_TYPE_SUM};
     int32_t windowFrameTypes[8] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
@@ -1096,16 +1096,18 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
         Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
@@ -1200,10 +1202,10 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1343,10 +1345,10 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19, expectData20);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1486,10 +1488,10 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19, expectData20);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1514,7 +1516,7 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     int16_t data10[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
 
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6,
-        data7, data8, data9, data10);
+  data7, data8, data9, data10);
 
     const int32_t colCount = 11;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -1629,10 +1631,10 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19, expectData20);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1651,16 +1653,16 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
 
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5);
 
-    vecBatch->GetVector(1)->SetValueNull(1);
-    vecBatch->GetVector(1)->SetValueNull(2);
-    vecBatch->GetVector(2)->SetValueNull(2);
-    vecBatch->GetVector(2)->SetValueNull(3);
-    vecBatch->GetVector(2)->SetValueNull(4);
-    vecBatch->GetVector(3)->SetValueNull(0);
-    vecBatch->GetVector(4)->SetValueNull(1);
-    vecBatch->GetVector(4)->SetValueNull(5);
-    vecBatch->GetVector(5)->SetValueNull(1);
-    vecBatch->GetVector(5)->SetValueNull(2);
+    vecBatch->Get(1)->SetNull(1);
+    vecBatch->Get(1)->SetNull(2);
+    vecBatch->Get(2)->SetNull(2);
+    vecBatch->Get(2)->SetNull(3);
+    vecBatch->Get(2)->SetNull(4);
+    vecBatch->Get(3)->SetNull(0);
+    vecBatch->Get(4)->SetNull(1);
+    vecBatch->Get(4)->SetNull(5);
+    vecBatch->Get(5)->SetNull(1);
+    vecBatch->Get(5)->SetNull(2);
 
     const int32_t colCount = 6;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5 };
@@ -1737,21 +1739,21 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    expectVecBatch->GetVector(1)->SetValueNull(1);
-    expectVecBatch->GetVector(1)->SetValueNull(2);
-    expectVecBatch->GetVector(2)->SetValueNull(2);
-    expectVecBatch->GetVector(2)->SetValueNull(3);
-    expectVecBatch->GetVector(2)->SetValueNull(4);
-    expectVecBatch->GetVector(3)->SetValueNull(0);
-    expectVecBatch->GetVector(4)->SetValueNull(1);
-    expectVecBatch->GetVector(4)->SetValueNull(5);
-    expectVecBatch->GetVector(5)->SetValueNull(1);
-    expectVecBatch->GetVector(5)->SetValueNull(2);
+    expectVecBatch->Get(1)->SetNull(1);
+    expectVecBatch->Get(1)->SetNull(2);
+    expectVecBatch->Get(2)->SetNull(2);
+    expectVecBatch->Get(2)->SetNull(3);
+    expectVecBatch->Get(2)->SetNull(4);
+    expectVecBatch->Get(3)->SetNull(0);
+    expectVecBatch->Get(4)->SetNull(1);
+    expectVecBatch->Get(4)->SetNull(5);
+    expectVecBatch->Get(5)->SetNull(1);
+    expectVecBatch->Get(5)->SetNull(2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1769,14 +1771,14 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
 
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4);
 
-    vecBatch->GetVector(1)->SetValueNull(1);
-    vecBatch->GetVector(1)->SetValueNull(2);
-    vecBatch->GetVector(2)->SetValueNull(2);
-    vecBatch->GetVector(2)->SetValueNull(3);
-    vecBatch->GetVector(2)->SetValueNull(4);
-    vecBatch->GetVector(3)->SetValueNull(0);
-    vecBatch->GetVector(4)->SetValueNull(1);
-    vecBatch->GetVector(4)->SetValueNull(5);
+    vecBatch->Get(1)->SetNull(1);
+    vecBatch->Get(1)->SetNull(2);
+    vecBatch->Get(2)->SetNull(2);
+    vecBatch->Get(2)->SetNull(3);
+    vecBatch->Get(2)->SetNull(4);
+    vecBatch->Get(3)->SetNull(0);
+    vecBatch->Get(4)->SetNull(1);
+    vecBatch->Get(4)->SetNull(5);
 
     const int32_t colCount = 5;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4 };
@@ -1849,19 +1851,18 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14);
 
-    expectVecBatch->GetVector(1)->SetValueNull(1);
-    expectVecBatch->GetVector(1)->SetValueNull(2);
-    expectVecBatch->GetVector(2)->SetValueNull(2);
-    expectVecBatch->GetVector(2)->SetValueNull(3);
-    expectVecBatch->GetVector(2)->SetValueNull(4);
-    expectVecBatch->GetVector(3)->SetValueNull(0);
-    expectVecBatch->GetVector(4)->SetValueNull(1);
-    expectVecBatch->GetVector(4)->SetValueNull(5);
+    expectVecBatch->Get(1)->SetNull(1);
+    expectVecBatch->Get(1)->SetNull(2);
+    expectVecBatch->Get(2)->SetNull(2);
+    expectVecBatch->Get(2)->SetNull(3);
+    expectVecBatch->Get(2)->SetNull(4);
+    expectVecBatch->Get(3)->SetNull(0);
+    expectVecBatch->Get(4)->SetNull(1);
+    expectVecBatch->Get(4)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
-
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1885,14 +1886,14 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int16_t data9[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
-
+    int32_t valuesCnt = sizeof(ids) / sizeof(ids[0]);
     VectorBatch *vecBatch =
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+
+    void *datas[10] = {data0, data1, data2, data3, data4, data5, data6, data7, data8, data9};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
-        DictionaryVector *dictionaryVector = new DictionaryVector(vecBatch->GetVector(i), ids, DATA_SIZE);
-        // dictionary will slice the vector, we should release original vector
-        delete vecBatch->GetVector(i);
-        vecBatch->SetVector(i, dictionaryVector);
+        DataTypePtr dataType = sourceTypes.GetType(i);
+        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]));
     }
 
     int32_t outputCols[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -1967,10 +1968,10 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -2092,11 +2093,9 @@ TEST(NativeOmniWindowOperatorTest, testWindowPerf)
         EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
     }
 
-    std::vector<VectorBatch *> result;
-    while (windowOperator->GetStatus() != OMNI_STATUS_FINISHED) {
-        VectorBatch *outputVecBatchWithJit = nullptr;
-        windowOperator->GetOutput(&outputVecBatchWithJit);
-        result.push_back(outputVecBatchWithJit);
+    VectorBatch *result = nullptr;
+    while (windowOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        windowOperator->GetOutput(&result);
     }
 
     timer.CalculateElapse();
@@ -2104,11 +2103,11 @@ TEST(NativeOmniWindowOperatorTest, testWindowPerf)
     double cpuElapsed = timer.GetCpuElapse();
     std::cout << "Window with Omni, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    delete operatorFactory;
 
     delete[] input;
-    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(result);
 }
 
 TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
@@ -2220,12 +2219,12 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 
     op::Operator::DeleteOperator(windowOperatorWithJit);
     op::Operator::DeleteOperator(windowOperatorWithoutJit);
-    DeleteOperatorFactory(operatorFactoryWithJit);
-    DeleteOperatorFactory(operatorFactoryWithoutJit);
+    delete operatorFactoryWithJit;
+    delete operatorFactoryWithoutJit;
 
     EXPECT_EQ(resultWithJit.size(), resultWithoutJit.size());
     for (uint32_t i = 0; i < resultWithJit.size(); ++i) {
-        EXPECT_TRUE(VecBatchMatch(resultWithJit[i], resultWithoutJit[i]));
+        EXPECT_TRUE(VecBatchMatch(resultWithJit[i], resultWithoutJit[i], allTypes.Get()));
     }
 
     delete[] input1;
@@ -2290,10 +2289,10 @@ TEST(NativeOmniWindowOperatorTest, testFrameBound)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -2361,10 +2360,10 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -2425,10 +2424,10 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }

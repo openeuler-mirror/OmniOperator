@@ -10,6 +10,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
 using namespace TestUtil;
+using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
 
 const int32_t ROW_SIZE = 1000000;
 const int32_t VAR_LEN = 10;
@@ -27,16 +28,14 @@ static string GetString(int32_t index, int32_t offset, int32_t width)
     return str;
 }
 
-static bool hashagg_equal(Vector *vector1, uint32_t offset1, Vector *vector2, uint32_t offset2)
+static bool hashagg_equal(BaseVector *vector1, uint32_t offset1, BaseVector *vector2, uint32_t offset2)
 {
-    bool isInputNull1 = vector1->IsValueNull(offset1);
-    bool isInputNull2 = vector2->IsValueNull(offset2);
+    bool isInputNull1 = vector1->IsNull(offset1);
+    bool isInputNull2 = vector2->IsNull(offset2);
     if (!isInputNull1 && !isInputNull2) {
-        uint8_t *data1 = nullptr;
-        int32_t valLen1 = static_cast<VarcharVector *>(vector1)->GetValue(offset1, &data1);
-        uint8_t *data2 = nullptr;
-        int32_t valLen2 = static_cast<VarcharVector *>(vector2)->GetValue(offset2, &data2);
-        bool isSame = valLen1 == valLen2 && memcmp(data1, data2, std::min(valLen1, valLen2)) == 0;
+        auto data1 = static_cast<VarcharVector *>(vector1)->GetValue(offset1);
+        auto data2 = static_cast<VarcharVector *>(vector2)->GetValue(offset2);
+        bool isSame = data1.compare(data2) == 0;
         return isSame;
     }
     if (isInputNull1 != isInputNull2) {
@@ -47,17 +46,12 @@ static bool hashagg_equal(Vector *vector1, uint32_t offset1, Vector *vector2, ui
 
 static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVector *rightVector, int32_t rightIndex)
 {
-    uint8_t *leftValue = nullptr;
-    uint8_t *rightValue = nullptr;
-    int32_t leftLength = 0;
-    int32_t rightLength = 0;
-
-    leftLength = leftVector->GetValue(leftIndex, &leftValue);
-    rightLength = rightVector->GetValue(rightIndex, &rightValue);
-    if (leftLength != rightLength) {
+    auto leftValue = leftVector->GetValue(leftIndex);
+    auto rightValue = rightVector->GetValue(rightIndex);
+    if (leftValue.size() != rightValue.size()) {
         return false;
     }
-    if (memcmp(leftValue, rightValue, leftLength) == 0) {
+    if (leftValue.compare(rightValue) == 0) {
         return true;
     } else {
         return false;
@@ -66,14 +60,14 @@ static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVect
 
 TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("varchar");
-    VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
-    VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector1 = new VarcharVector(ROW_SIZE);
+    VarcharVector *vector2 = new VarcharVector(ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 10, VAR_LEN);
-        vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
-        vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string_view value(str);
+        vector1->SetValue(i, value);
+        vector2->SetValue(i, value);
     }
 
     std::cout << "Test times: " << ROW_SIZE << std::endl;
@@ -101,10 +95,11 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     std::cout << "isEqual: " << isEqual << std::endl;
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
 
-    VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 20, VAR_LEN);
-        vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string_view value(str);
+        vector3->SetValue(i, value);
     }
 
     std::cout << "Compare different varchar: " << std::endl;
@@ -128,22 +123,20 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    delete allocator;
 }
 
 TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IsSameNodeFuncVarcharImplPerf");
-    VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
-    VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector1 = new VarcharVector(ROW_SIZE);
+    VarcharVector *vector2 = new VarcharVector(ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 10, VAR_LEN);
-        vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
-        vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
-        vector1->SetValueNotNull(i);
-        vector2->SetValueNotNull(i);
+        std::string_view value(str);
+        vector1->SetValue(i, value);
+        vector2->SetValue(i, value);
+        vector1->SetNotNull(i);
+        vector2->SetNotNull(i);
     }
 
     // Test perf
@@ -172,11 +165,12 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "isEqual: " << isEqual << std::endl;
 
-    VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 20, VAR_LEN);
-        vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
-        vector3->SetValueNotNull(i);
+        std::string_view value(str);
+        vector3->SetValue(i, value);
+        vector3->SetNotNull(i);
     }
 
     std::cout << "Compare different varchar: " << std::endl;
@@ -200,6 +194,5 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    delete allocator;
 }
 }

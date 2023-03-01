@@ -5,6 +5,7 @@
 #include "window_partition.h"
 #include <memory>
 #include "window_function.h"
+#include "operator/pages_hash_strategy.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -38,7 +39,8 @@ WindowPartition::WindowPartition(const type::DataTypes &sourceTypes, PagesIndex 
 
 WindowPartition::~WindowPartition() = default;
 
-void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index)
+void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index,
+    int32_t outputColsCount, std::vector<type::DataTypePtr> &types)
 {
     int32_t channel = outputChannelsCount;
 
@@ -49,8 +51,8 @@ void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBat
 
     for (auto &windowFunction : windowFunctions) {
         unique_ptr<Range> range = GetFrameRange(windowFunction->GetWindowFrameInfo());
-        windowFunction->ProcessRow(inputVecBatchForAgg, outputVecBatch->GetVector(channel), index,
-            peerGroupStart - partitionStart, peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
+        windowFunction->ProcessRow(inputVecBatchForAgg, outputVecBatch->Get(channel), index, peerGroupStart - partitionStart, 
+            peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
         channel++;
     }
 
@@ -203,17 +205,14 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
     int64_t value = 0L;
 
     uint64_t valueAddress = pagesIndex->GetValueAddresses()[this->currentPosition];
-    int32_t vecBatchIndex = static_cast<int32_t>(DecodeSliceIndex(valueAddress));
-    int32_t rowIndex = static_cast<int32_t>(DecodePosition(valueAddress));
+    auto vecBatchIndex = static_cast<int32_t>(DecodeSliceIndex(valueAddress));
+    auto rowIndex = static_cast<int32_t>(DecodePosition(valueAddress));
 
-    Vector ***columnVectors = pagesIndex->GetColumns();
-    Vector *columnVector = columnVectors[channel][vecBatchIndex];
-    int32_t originalRowIndex;
-    Vector *originalVector = nullptr;
+    BaseVector ***columnVectors = pagesIndex->GetColumns();
+    BaseVector *columnVector = columnVectors[channel][vecBatchIndex];
     int32_t typeId = sourceTypes.GetType(channel)->GetId();
 
-    originalVector = VectorHelper::ExpandVectorAndIndex(columnVector, rowIndex, originalRowIndex);
-    if (originalVector->IsValueNull(originalRowIndex)) {
+    if (columnVector->IsNull(rowIndex)) {
         LogError("%s column value is null(position=%d).", valueTypeName.data(), currentPosition);
         return value;
     }
@@ -221,14 +220,26 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
     switch (typeId) {
         case OMNI_INT:
         case OMNI_DATE32:
-            value = static_cast<int64_t>((static_cast<IntVector *>(originalVector))->GetValue(originalRowIndex));
+            if (columnVector->GetEncoding() == OMNI_DICTIONARY) {
+                value = static_cast<Vector<DictionaryContainer<int32_t>> *>(columnVector)->GetValue(rowIndex);
+            } else {
+                value = static_cast<Vector<int32_t> *>(columnVector)->GetValue(rowIndex);
+            }
             break;
         case OMNI_SHORT:
-            value = static_cast<int64_t>((static_cast<ShortVector *>(originalVector))->GetValue(originalRowIndex));
+            if (columnVector->GetEncoding() == OMNI_DICTIONARY) {
+                value = static_cast<Vector<DictionaryContainer<int16_t>> *>(columnVector)->GetValue(rowIndex);
+            } else {
+                value = static_cast<Vector<int16_t> *>(columnVector)->GetValue(rowIndex);
+            }
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
-            value = static_cast<int64_t>((static_cast<LongVector *>(originalVector))->GetValue(originalRowIndex));
+            if (columnVector->GetEncoding() == OMNI_DICTIONARY) {
+                value = static_cast<Vector<DictionaryContainer<int64_t>> *>(columnVector)->GetValue(rowIndex);
+            } else {
+                value = static_cast<Vector<int64_t> *>(columnVector)->GetValue(rowIndex);
+            }
             break;
 
         default:

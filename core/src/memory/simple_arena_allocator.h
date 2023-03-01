@@ -7,7 +7,6 @@
 
 #include <vector>
 #include "chunk.h"
-#include "base_allocator.h"
 
 namespace omniruntime {
 namespace mem {
@@ -15,8 +14,7 @@ namespace mem {
 // such as when dealing with types such as varchar/decimal and so on.
 class SimpleArenaAllocator {
 public:
-    explicit SimpleArenaAllocator(int64_t minChunkSize = 4096,
-        BaseAllocator *allocator = mem::GetProcessRootAllocator())
+    explicit SimpleArenaAllocator(int64_t minChunkSize = 4096, Allocator *allocator = Allocator::GetAllocator())
         : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL), allocator(allocator)
     {}
 
@@ -28,8 +26,8 @@ public:
     uint8_t *Allocate(int64_t sizeInBytes)
     {
         if (sizeInBytes == 0) {
-            static Chunk *ZERO_CHUNK = Chunk::NewChunk(allocator, 0);
-            return static_cast<uint8_t *>(ZERO_CHUNK->GetAddress());
+            LogError("allocate size is zero");
+            return nullptr;
         }
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(sizeInBytes, minChunkSize));
@@ -69,28 +67,23 @@ public:
         availBytes = totalBytes = chunks.at(0)->GetSizeInBytes();
     }
 
-    void RollBackContinualMem()
+    ALWAYS_INLINE void RollBackContinualMem()
     {
         availBuf -= continuousUsedMemoryBytes;
         availBytes += continuousUsedMemoryBytes;
     }
 
-    int64_t TotalBytes()
+    ALWAYS_INLINE int64_t TotalBytes()
     {
         return totalBytes;
     }
 
-    int64_t AvailBytes()
+    ALWAYS_INLINE int64_t AvailBytes()
     {
         return availBytes;
     }
 
-    void SetAllocator(BaseAllocator *allocator)
-    {
-        this->allocator = allocator;
-    }
-
-    BaseAllocator *GetAllocator()
+    ALWAYS_INLINE Allocator *GetAllocator()
     {
         return this->allocator;
     }
@@ -148,7 +141,7 @@ private:
     // Record the size of the memory used continuously.
     uint32_t continuousUsedMemoryBytes;
     std::vector<Chunk *> chunks;
-    BaseAllocator *allocator;
+    Allocator *allocator;
 };
 } // namespace mem
 } // namespace omniruntime

@@ -5,27 +5,24 @@
 #include <memory>
 #include <algorithm>
 #include "vector/vector_helper.h"
-#include "vector/container_vector.h"
 #include "vector/vector_batch.h"
-#include "operator/hash_util.h"
-#include "operator/util/operator_util.h"
 #include "operator/aggregation/group_aggregation.h"
+#include "operator/aggregation/vector_getter.h"
 
 using namespace std;
 using namespace omniruntime::type;
-namespace omniruntime {
-namespace op {
-static void DoubleCheckEqualFuncImp(Vector *inputColVector, const uint32_t rowIndex, const AggregateState &existedRow,
-    bool &isSame)
+namespace omniruntime::op {
+template <typename T>
+static void DoubleCheckEqualFuncImp(BaseVector *inputColVector, const uint32_t rowIndex,
+    const AggregateState &existedRow, bool &isSame)
 {
-    auto *typeVector = static_cast<DoubleVector *>(inputColVector);
+    auto *typeVector = dynamic_cast<T *>(inputColVector);
     if (std::abs(*(static_cast<double *>(existedRow.val)) - typeVector->GetValue(rowIndex)) < __DBL_EPSILON__) {
         isSame = true;
         return;
     }
 
     isSame = false;
-    return;
 }
 
 template <typename VT, typename DT>
@@ -34,12 +31,12 @@ static void FillOutputFuncImp(VectorBatch *outBatch, std::vector<AggregateState>
 {
     // nullptr handle
     if (srcRowVector[colIndex].val == nullptr) {
-        Vector *resultCol = outBatch->GetVector(colIndex);
-        resultCol->SetValueNull(rowIndex);
+        BaseVector *resultCol = outBatch->Get(colIndex);
+        resultCol->SetNull(rowIndex);
         return;
     }
 
-    VT *typeVector = static_cast<VT *>(outBatch->GetVector(colIndex));
+    auto typeVector = static_cast<VT *>(outBatch->Get(colIndex));
     typeVector->SetValue(rowIndex, *(static_cast<DT *>(srcRowVector[colIndex].val)));
 }
 
@@ -48,60 +45,137 @@ static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateSt
 {
     // nullptr handle
     if (rowVector[colIndex].val == nullptr) {
-        Vector *resultCol = resultBatch->GetVector(colIndex);
-        resultCol->SetValueNull(rowIndex);
+        using VarcharVector = NativeAndVectorType<type::DataTypeId::OMNI_VARCHAR>::vector;
+        VarcharVector *resultCol = reinterpret_cast<VarcharVector *>(resultBatch->Get(colIndex));
+        resultCol->SetNull(rowIndex);
         return;
     }
 
-    uint8_t *existedStr = reinterpret_cast<uint8_t *>(rowVector[colIndex].val);
-    auto varcharVector = reinterpret_cast<VarcharVector *>(resultBatch->GetVector(colIndex));
-    varcharVector->SetValue(rowIndex, existedStr, rowVector[colIndex].count);
+    char *existedStr = reinterpret_cast<char *>(rowVector[colIndex].val);
+    std::string_view rowVal(existedStr, rowVector[colIndex].count);
+    auto varcharVector = reinterpret_cast<VarcharVector *>(resultBatch->Get(colIndex));
+    varcharVector->SetValue(rowIndex, rowVal);
 }
 
 static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUNT] = {
-    {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INT, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImpl<IntVector, int32_t>,
-     HashFuncVectImplProxy<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
-     FillOutputFuncImp<IntVector, int32_t>},
-    {OMNI_LONG, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImpl<LongVector, int64_t>,
-     HashFuncVectImplProxy<LongVector, int64_t>,  IsSameNodeFuncImpl<LongVector, int64_t>,
-     FillOutputFuncImp<LongVector, int64_t>
-    },
-    {OMNI_DOUBLE, DuplicateKeyValueImpl<DoubleVector, double>, HashFuncImpl<DoubleVector, double>,
-     HashFuncVectImplProxy<DoubleVector, double>, DoubleCheckEqualFuncImp, FillOutputFuncImp<DoubleVector, double>
-    },
-    {OMNI_BOOLEAN, DuplicateKeyValueImpl<BooleanVector, bool>, HashFuncImpl<BooleanVector, bool>,
-     HashFuncVectImplProxy<BooleanVector, bool>,  IsSameNodeFuncImpl<BooleanVector, bool>,
-     FillOutputFuncImp<BooleanVector, bool>
-    },
-    {OMNI_SHORT, DuplicateKeyValueImpl<ShortVector, int16_t>, HashFuncImpl<ShortVector, int16_t>,
-     HashFuncVectImplProxy<ShortVector, int16_t>, IsSameNodeFuncImpl<ShortVector, int16_t>,
-     FillOutputFuncImp<ShortVector, int16_t>},
-    {
-        OMNI_DECIMAL64, DuplicateKeyValueImpl<LongVector, int64_t>, HashFuncImpl<LongVector, int64_t>,
-        HashFuncVectImplProxy<LongVector, int64_t>,  IsSameNodeFuncImpl<LongVector, int64_t>,
-        FillOutputFuncImp<LongVector, int64_t>
-    },
-    {OMNI_DECIMAL128, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>, HashDecimalFunc,
-     HashDecimalVectFuncProxy, IsSameNodeFuncImpl<Decimal128Vector, Decimal128>,
-     FillOutputFuncImp<Decimal128Vector, Decimal128>
-    },
-    {OMNI_DATE32, DuplicateKeyValueImpl<IntVector, int32_t>, HashFuncImpl<IntVector, int32_t>,
-     HashFuncVectImplProxy<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
-     FillOutputFuncImp<IntVector, int32_t>
-    },
-    {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INTERVAL_MONTHS,   nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VARCHAR, DuplicateVarcharKeyValue, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy,
-     IsSameNodeFuncVarcharImpl, FillVarcharFuncImp
-    },
-    {OMNI_CHAR, DuplicateVarcharKeyValue, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy,
-     IsSameNodeFuncVarcharImpl, FillVarcharFuncImp },
-    {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_INT,
+     DuplicateKeyValueImpl<IntVector, int32_t>,
+     HashFuncImpl<IntVector, int32_t>,
+     HashFuncVectImplProxy<IntVector, int32_t>,
+     IsSameNodeFuncImpl<IntVector, int32_t>,
+     FillOutputFuncImp<IntVector, int32_t>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     HashFuncImpl<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int32_t>>, int32_t>},
+    {OMNI_LONG,
+     DuplicateKeyValueImpl<LongVector, int64_t>,
+     HashFuncImpl<LongVector, int64_t>,
+     HashFuncVectImplProxy<LongVector, int64_t>,
+     IsSameNodeFuncImpl<LongVector, int64_t>,
+     FillOutputFuncImp<LongVector, int64_t>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     HashFuncImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int64_t>>, int64_t>},
+    {OMNI_DOUBLE,
+     DuplicateKeyValueImpl<DoubleVector, double>,
+     HashFuncImpl<DoubleVector, double>,
+     HashFuncVectImplProxy<DoubleVector, double>,
+     DoubleCheckEqualFuncImp<DoubleVector>,
+     FillOutputFuncImp<DoubleVector, double>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<double>>, double>,
+     HashFuncImpl<Vector<DictionaryContainer<double>>, double>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<double>>, double>,
+     DoubleCheckEqualFuncImp<Vector<DictionaryContainer<double>>>,
+     FillOutputFuncImp<Vector<DictionaryContainer<double>>, double>},
+    {OMNI_BOOLEAN,
+     DuplicateKeyValueImpl<BooleanVector, bool>,
+     HashFuncImpl<BooleanVector, bool>,
+     HashFuncVectImplProxy<BooleanVector, bool>,
+     IsSameNodeFuncImpl<BooleanVector, bool>,
+     FillOutputFuncImp<BooleanVector, bool>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int8_t>>, bool>,
+     HashFuncImpl<Vector<DictionaryContainer<int8_t>>, bool>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int8_t>>, bool>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int8_t>>, bool>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int8_t>>, bool>},
+    {OMNI_SHORT,
+     DuplicateKeyValueImpl<ShortVector, int16_t>,
+     HashFuncImpl<ShortVector, int16_t>,
+     HashFuncVectImplProxy<ShortVector, int16_t>,
+     IsSameNodeFuncImpl<ShortVector, int16_t>,
+     FillOutputFuncImp<ShortVector, int16_t>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int16_t>>, int16_t>,
+     HashFuncImpl<Vector<DictionaryContainer<int16_t>>, int16_t>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int16_t>>, int16_t>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int16_t>>, int16_t>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int16_t>>, int16_t>},
+    {OMNI_DECIMAL64,
+     DuplicateKeyValueImpl<LongVector, int64_t>,
+     HashFuncImpl<LongVector, int64_t>,
+     HashFuncVectImplProxy<LongVector, int64_t>,
+     IsSameNodeFuncImpl<LongVector, int64_t>,
+     FillOutputFuncImp<LongVector, int64_t>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     HashFuncImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int64_t>>, int64_t>},
+    {OMNI_DECIMAL128,
+     DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
+     HashDecimalFunc<Decimal128Vector>,
+     HashDecimalVectFuncProxy<Decimal128Vector>,
+     IsSameNodeFuncImpl<Decimal128Vector, Decimal128>,
+     FillOutputFuncImp<Decimal128Vector, Decimal128>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<Decimal128>>, Decimal128>,
+     HashDecimalFunc<Vector<DictionaryContainer<Decimal128>>>,
+     HashDecimalVectFuncProxy<Vector<DictionaryContainer<Decimal128>>>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<Decimal128>>, Decimal128>,
+     FillOutputFuncImp<Vector<DictionaryContainer<Decimal128>>, Decimal128>},
+    {OMNI_DATE32,
+     DuplicateKeyValueImpl<IntVector, int32_t>,
+     HashFuncImpl<IntVector, int32_t>,
+     HashFuncVectImplProxy<IntVector, int32_t>,
+     IsSameNodeFuncImpl<IntVector, int32_t>,
+     FillOutputFuncImp<IntVector, int32_t>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     HashFuncImpl<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int32_t>>, int32_t>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int32_t>>, int32_t>},
+    {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_VARCHAR,
+     DuplicateVarcharKeyValue<op::VarcharVector>,
+     HashVarcharFuncImpl<op::VarcharVector>,
+     HashVarcharVectFuncImplProxy<op::VarcharVector>,
+     IsSameNodeFuncVarcharImpl<op::VarcharVector>,
+     FillVarcharFuncImp,
+     DuplicateVarcharKeyValue<Vector<DictionaryContainer<std::string_view>>>,
+     HashVarcharFuncImpl<Vector<DictionaryContainer<std::string_view>>>,
+     HashVarcharVectFuncImplProxy<Vector<DictionaryContainer<std::string_view>>>,
+     IsSameNodeFuncVarcharImpl<Vector<DictionaryContainer<std::string_view>>>,
+     nullptr},
+    {OMNI_CHAR,
+     DuplicateVarcharKeyValue<op::VarcharVector>,
+     HashVarcharFuncImpl<op::VarcharVector>,
+     HashVarcharVectFuncImplProxy<op::VarcharVector>,
+     IsSameNodeFuncVarcharImpl<op::VarcharVector>,
+     FillVarcharFuncImp,
+     DuplicateVarcharKeyValue<Vector<DictionaryContainer<std::string_view>>>,
+     HashVarcharFuncImpl<Vector<DictionaryContainer<std::string_view>>>,
+     HashVarcharVectFuncImplProxy<Vector<DictionaryContainer<std::string_view>>>,
+     IsSameNodeFuncVarcharImpl<Vector<DictionaryContainer<std::string_view>>>,
+     nullptr},
+    {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
 };
 
 DistinctLimitOperatorFactory::DistinctLimitOperatorFactory(const type::DataTypes &sourceTypes,
@@ -140,30 +214,35 @@ Operator *DistinctLimitOperatorFactory::CreateOperator()
     return new DistinctLimitOperator(sourceTypes, distinctCols, distinctColsCount, hashCol, limit);
 }
 
-void FillPrecomputedHash(Vector **inputVectors, const int32_t *inputTypeIds, const int32_t start, int32_t rowCount,
+void FillPrecomputedHash(VectorBatch *vectorBatch, const int32_t *inputTypeIds, const int32_t start, int32_t rowCount,
     uint64_t *combineHashVal, int32_t preComputedHashCol)
 {
-    int32_t originalRowIndex;
-    Vector *originalVector = nullptr;
-
     switch (inputTypeIds[preComputedHashCol]) {
         case OMNI_INT:
         case OMNI_DATE32: {
             for (int i = 0; i < rowCount; ++i) {
-                originalVector =
-                    VectorHelper::ExpandVectorAndIndex(inputVectors[preComputedHashCol], start + i, originalRowIndex);
-                combineHashVal[i] =
-                    static_cast<uint64_t>((static_cast<IntVector *>(originalVector))->GetValue(originalRowIndex));
+                if (vectorBatch->Get(preComputedHashCol)->GetEncoding() != OMNI_DICTIONARY) {
+                    combineHashVal[i] = static_cast<uint64_t>(
+                        (dynamic_cast<Vector<int32_t> *>(vectorBatch->Get(preComputedHashCol)))->GetValue(start + i));
+                } else {
+                    combineHashVal[i] = static_cast<uint64_t>(
+                        (dynamic_cast<Vector<DictionaryContainer<int32_t>> *>(vectorBatch->Get(preComputedHashCol)))
+                            ->GetValue(start + i));
+                }
             }
             break;
         }
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
             for (int i = 0; i < rowCount; ++i) {
-                originalVector =
-                    VectorHelper::ExpandVectorAndIndex(inputVectors[preComputedHashCol], start + i, originalRowIndex);
-                combineHashVal[i] =
-                    static_cast<uint64_t>((static_cast<LongVector *>(originalVector))->GetValue(originalRowIndex));
+                if (vectorBatch->Get(preComputedHashCol)->GetEncoding() != OMNI_DICTIONARY) {
+                    combineHashVal[i] = static_cast<uint64_t>(
+                        (dynamic_cast<Vector<int64_t> *>(vectorBatch->Get(preComputedHashCol)))->GetValue(start + i));
+                } else {
+                    combineHashVal[i] = static_cast<uint64_t>(
+                        (dynamic_cast<Vector<DictionaryContainer<int64_t>> *>(vectorBatch->Get(preComputedHashCol)))
+                            ->GetValue(start + i));
+                }
             }
             break;
         }
@@ -173,7 +252,7 @@ void FillPrecomputedHash(Vector **inputVectors, const int32_t *inputTypeIds, con
     }
 }
 
-void GenerateCombinedHash(Vector **inputVectors, const int32_t start, int32_t rowCount, const int32_t *inputTypeIds,
+void GenerateCombinedHash(VectorBatch *vectorBatch, const int32_t start, int32_t rowCount, const int32_t *inputTypeIds,
     std::vector<int32_t> &distinctColumns, const int32_t distinctColNum, uint64_t *combineHashVal,
     int32_t preComputedHashCol)
 {
@@ -182,7 +261,7 @@ void GenerateCombinedHash(Vector **inputVectors, const int32_t start, int32_t ro
     }
 
     if (preComputedHashCol != DistinctLimitOperator::INVALID_DISTINCT_COL_ID) {
-        FillPrecomputedHash(inputVectors, inputTypeIds, start, rowCount, combineHashVal, preComputedHashCol);
+        FillPrecomputedHash(vectorBatch, inputTypeIds, start, rowCount, combineHashVal, preComputedHashCol);
         return;
     }
 
@@ -196,14 +275,11 @@ void GenerateCombinedHash(Vector **inputVectors, const int32_t start, int32_t ro
             break;
         }
 
-        if (inputVectors[colIndex]->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            auto newIndexes = new int32_t[rowCount];
-            Vector *originalVector = static_cast<DictionaryVector *>(inputVectors[colIndex])
-                                         ->ExtractDictionaryAndIds(start, rowCount, newIndexes);
-            DISTINCT_LIMIT_FUNC_SET[typeId].generateHashFunc(originalVector, rowCount, newIndexes, combineHashVal);
-            delete[] newIndexes;
+        if (vectorBatch->Get(colIndex)->GetEncoding() == omniruntime::vec::Encoding::OMNI_DICTIONARY) {
+            DISTINCT_LIMIT_FUNC_SET[typeId].generateHashFuncVectFromDict(vectorBatch->Get(colIndex), start, rowCount,
+                combineHashVal);
         } else {
-            DISTINCT_LIMIT_FUNC_SET[typeId].generateHashFuncVect(inputVectors[colIndex], start, rowCount,
+            DISTINCT_LIMIT_FUNC_SET[typeId].generateHashFuncVect(vectorBatch->Get(colIndex), start, rowCount,
                 combineHashVal);
         }
     }
@@ -224,12 +300,12 @@ DistinctLimitOperator::DistinctLimitOperator(const type::DataTypes &sourceTypes,
     auto &sourceDataType = this->sourceTypes.Get();
     for (int i = 0; i < distinctColsCount; ++i) {
         int colIndex = distinctCols[i];
-        outTypes.push_back(sourceDataType[colIndex]);
+        outputTypes.push_back(sourceDataType[colIndex]);
         outCols.push_back(colIndex);
     }
 
     if (hashCol != INVALID_DISTINCT_COL_ID) {
-        outTypes.push_back(sourceDataType[hashCol]);
+        outputTypes.push_back(sourceDataType[hashCol]);
         outCols.push_back(hashCol);
     }
 }
@@ -239,32 +315,32 @@ DistinctLimitOperator::~DistinctLimitOperator()
     delete executionContext;
 }
 
-bool IsExistSameRow(const type::DataTypes &inputTypes, Vector **inputVectors, std::vector<int32_t> &distinctCols,
+bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, std::vector<std::vector<AggregateState>> &bucket, int rowIndex)
 {
     bool isSame = true;
     int32_t columnId;
     int32_t typeId;
-    Vector *inputVector = nullptr;
+    BaseVector *inputVector;
 
-    for (uint32_t i = 0; i < bucket.size(); i++) {
+    for (auto &rowVector : bucket) {
         isSame = true;
 
-        std::vector<AggregateState> &rowVector = bucket[i];
-        int32_t originalRowIndex;
-        Vector *originalVector = nullptr;
         for (int32_t column = 0; ((column < distinctColsCount) && isSame); ++column) {
             columnId = distinctCols[column];
             typeId = inputTypes.GetType(columnId)->GetId();
-            inputVector = inputVectors[columnId];
+            inputVector = vectorBatch->Get(columnId);
 
-            originalVector = VectorHelper::ExpandVectorAndIndex(inputVector, rowIndex, originalRowIndex);
-            if ((rowVector[column].val == nullptr) || (originalVector->IsValueNull(originalRowIndex))) {
-                isSame = ((rowVector[column].val == nullptr) && (originalVector->IsValueNull(originalRowIndex)));
+            if ((rowVector[column].val == nullptr) || (inputVector->IsNull(rowIndex))) {
+                isSame = ((rowVector[column].val == nullptr) && (inputVector->IsNull(rowIndex)));
                 continue;
             }
-
-            DISTINCT_LIMIT_FUNC_SET[typeId].checkEqualFunc(originalVector, originalRowIndex, rowVector[column], isSame);
+            if (inputVector->GetEncoding() != OMNI_DICTIONARY) {
+                DISTINCT_LIMIT_FUNC_SET[typeId].checkEqualFunc(inputVector, rowIndex, rowVector[column], isSame);
+            } else {
+                DISTINCT_LIMIT_FUNC_SET[typeId].checkEqualFuncFromDict(inputVector, rowIndex, rowVector[column],
+                    isSame);
+            }
         }
 
         // all distinct cols are same as bucket[i]
@@ -276,42 +352,45 @@ bool IsExistSameRow(const type::DataTypes &inputTypes, Vector **inputVectors, st
     return false;
 }
 
-void DistinctLimitOperator::FillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple)
+void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int rowIndex,
+    std::vector<AggregateState> &tuple)
 {
     const int32_t *vectorTypes = sourceTypes.GetIds();
-    Vector *inputVector = nullptr;
-    int32_t originalRowIndex;
-    Vector *originalVector = nullptr;
+    BaseVector *inputVector;
 
     for (int32_t colIndex = 0; colIndex < outColsCount; ++colIndex) {
         int32_t colId = outCols[colIndex];
         int32_t typeId = vectorTypes[colId];
         tuple[colIndex].val = nullptr;
         tuple[colIndex].count = 0;
-        inputVector = inputVectors[colId];
-        originalVector = VectorHelper::ExpandVectorAndIndex(inputVector, rowIndex, originalRowIndex);
-        if (!(originalVector->IsValueNull(rowIndex))) {
-            DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFunc(tuple[colIndex], originalVector, originalRowIndex,
-                executionContext);
+        inputVector = vectorBatch->Get(colId);
+
+        if (!(inputVector->IsNull(rowIndex))) {
+            if (inputVector->GetEncoding() != vec::OMNI_DICTIONARY) {
+                DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFunc(tuple[colIndex], inputVector, rowIndex,
+                    executionContext);
+            } else {
+                DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFuncFromDict(tuple[colIndex], inputVector, rowIndex,
+                    executionContext);
+            }
         }
     }
 }
 
-void DistinctLimitOperator::InLoop(VectorBatch *vecBatch, uint64_t *combineHashVal)
+void DistinctLimitOperator::InLoop(VectorBatch *vectorBatch, const int32_t rowCount, const uint64_t *combineHashVal)
 {
     bool existed = false;
     uint64_t hashValue;
     int32_t pickedRows = 0;
-    Vector **inputVectors = vecBatch->GetVectors();
 
-    for (int rowIndex = 0; rowIndex < vecBatch->GetRowCount(); ++rowIndex) {
+    for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
         hashValue = combineHashVal[rowIndex];
         auto &bucket = distinctedTable[hashValue];
 
-        existed = IsExistSameRow(sourceTypes, inputVectors, distinctCols, distinctColsCount, bucket, rowIndex);
+        existed = IsExistSameRow(sourceTypes, vectorBatch, distinctCols, distinctColsCount, bucket, rowIndex);
         if (!existed) {
             std::vector<AggregateState> distinctedTuple(outColsCount);
-            FillDistinctedTuple(inputVectors, rowIndex, distinctedTuple);
+            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple);
             bucket.push_back(distinctedTuple);
 
             auto rowInfo = new DistinctRowInfo();
@@ -340,15 +419,14 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
     }
 
     int32_t rowCount = vecBatch->GetRowCount();
-    Vector **inputVectors = vecBatch->GetVectors();
 
     const int32_t *inputTypeIds = sourceTypes.GetIds();
     auto combineHashVal = std::make_unique<uint64_t[]>(rowCount);
 
-    GenerateCombinedHash(inputVectors, 0, rowCount, inputTypeIds, distinctCols, distinctColsCount, combineHashVal.get(),
+    GenerateCombinedHash(vecBatch, 0, rowCount, inputTypeIds, distinctCols, distinctColsCount, combineHashVal.get(),
         this->hashCol);
 
-    this->InLoop(vecBatch, combineHashVal.get());
+    this->InLoop(vecBatch, rowCount, combineHashVal.get());
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
@@ -359,8 +437,12 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
     for (int i = 0; i < static_cast<int>(outTypes.size()); ++i) {
         // nullptr handle
         if (rowVector[i].val == nullptr) {
-            Vector *resultCol = resultBatch->GetVector(i);
-            resultCol->SetValueNull(rowIndex);
+            BaseVector *resultCol = resultBatch->Get(i);
+            if (outTypes[i]->GetId() == OMNI_VARCHAR || outTypes[i]->GetId() == OMNI_CHAR) {
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(resultCol)->SetNull(rowIndex);
+            } else {
+                resultCol->SetNull(rowIndex);
+            }
             continue;
         }
 
@@ -370,15 +452,16 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
 
 int32_t DistinctLimitOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    if (distinctRowInfo.size() > 0) {
-        resultBatch = new VectorBatch(outColsCount, distinctRowInfo.size());
+    if (!distinctRowInfo.empty()) {
+        resultBatch = new VectorBatch(distinctRowInfo.size());
 
-        resultBatch->NewVectors(vecAllocator, outTypes);
+        type::DataTypes outDataTypes(outputTypes);
+        VectorHelper::AppendVectors(resultBatch, outDataTypes, resultBatch->GetRowCount());
 
         int32_t rowIndex = 0;
         for (auto item : distinctRowInfo) {
             std::vector<AggregateState> &rowVector = distinctedTable[item->hashValue][item->slotIndex];
-            FillOutPutValue(resultBatch, rowVector, outTypes, rowIndex++);
+            FillOutPutValue(resultBatch, rowVector, outputTypes, rowIndex++);
         }
 
         *outputVecBatch = resultBatch;

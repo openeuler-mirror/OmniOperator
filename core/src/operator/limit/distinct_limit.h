@@ -41,13 +41,13 @@ using DistinctRowInfo = struct RowInfo {
     int32_t slotIndex;  // index when hash conflict
 };
 
-using DuplicateValueFunc = void (*)(AggregateState &distinctSlot, Vector *inputVector, uint32_t rowIndex,
+using DuplicateValueFunc = void (*)(AggregateState &distinctSlot, BaseVector *inputVector, uint32_t rowIndex,
     ExecutionContext *context);
-using GenerateHashFunc = void (*)(Vector *vector, const uint32_t rowCount, const int32_t *rowArray,
+using GenerateHashFunc = void (*)(BaseVector *vector, const uint32_t rowCount, const int32_t *rowArray,
     uint64_t *combinedHash);
-using GenerateHashFuncVect = void (*)(Vector *vector, const uint32_t start, const uint32_t rowCount,
+using GenerateHashFuncVect = void (*)(BaseVector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
-using CheckEqualFunc = void (*)(Vector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame);
+using CheckEqualFunc = void (*)(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame);
 using FillOutputFunc = void (*)(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector, int32_t rowIndex,
     int32_t colIndex);
 
@@ -58,6 +58,12 @@ using DistinctLimitFuncSet = struct {
     GenerateHashFuncVect generateHashFuncVect;
     CheckEqualFunc checkEqualFunc;
     FillOutputFunc fillOutputFunc;
+    // these functions are used to handle value from dict
+    DuplicateValueFunc duplicateValueFuncFromDict;
+    GenerateHashFunc generateHashFuncFromDict;
+    GenerateHashFuncVect generateHashFuncVectFromDict;
+    CheckEqualFunc checkEqualFuncFromDict;
+    FillOutputFunc fillOutputFuncFromDict;
 };
 
 class DistinctLimitOperator : public Operator {
@@ -77,9 +83,9 @@ public:
     OmniStatus Close() override;
 
 private:
-    void FillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple);
+    void FillDistinctedTuple(vec::VectorBatch *vectorBatch, int rowIndex, std::vector<AggregateState> &tuple);
 
-    void InLoop(omniruntime::vec::VectorBatch *vecBatch, uint64_t *combineHashVal);
+    void InLoop(vec::VectorBatch *vectorBatch, const int32_t rowCount, const uint64_t *combineHashVal);
 
     void ReleaseRowInfo(std::vector<DistinctRowInfo *> &rowInfo);
 
@@ -89,7 +95,6 @@ private:
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
     type::DataTypes sourceTypes;
-    std::vector<DataTypePtr> outTypes;
     std::vector<int32_t> distinctCols;
     int32_t distinctColsCount;
     int32_t hashCol;

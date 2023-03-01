@@ -10,7 +10,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
-using namespace TestUtil;
+using namespace omniruntime::TestUtil;
 
 namespace BloomFilterTest {
 TEST(BloomFilterTest, TestBloomFilterInit)
@@ -28,13 +28,13 @@ TEST(BloomFilterTest, TestBloomFilterInit)
 
     VectorBatch *result = nullptr;
     op->GetOutput(&result);
-    long longValue = (static_cast<LongVector *>(result->GetVector(0)))->GetValue(0);
+    long longValue = (static_cast<Vector<int64_t> *>(result->Get(0)))->GetValue(0);
     BloomFilter *bfResult = (BloomFilter *)longValue;
     EXPECT_EQ(bfResult->GetNumHashFunctions(), 6);
     EXPECT_EQ(bfResult->GetBits()->GetWordsNum(), 4);
     VectorHelper::FreeVecBatch(result);
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
 }
 
 TEST(BloomFilterTest, TestBloomFilterPutLong)

@@ -149,10 +149,12 @@ OmniStatus WindowOperator::Init()
             static_cast<FrameBoundType>(windowFrameEndTypes[i]), windowFrameEndChannels[i]);
         switch (type) {
             case OMNI_WINDOW_TYPE_ROW_NUMBER:
-                windowFunctions.push_back(std::move(make_unique<RowNumberFunction>(std::move(windowFrame))));
+                windowFunctions.push_back(std::move(make_unique<RowNumberFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
             case OMNI_WINDOW_TYPE_RANK:
-                windowFunctions.push_back(std::move(make_unique<RankFunction>(std::move(windowFrame))));
+                windowFunctions.push_back(std::move(make_unique<RankFunction>(std::move(windowFrame),
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i))));
                 break;
             // for aggregate function we use AggregateType
             case OMNI_AGGREGATION_TYPE_SUM:
@@ -161,13 +163,13 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_MAX:
             case OMNI_AGGREGATION_TYPE_MIN:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator,
+                    sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
                     std::move(windowFrame), isOverflowAsNull)));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
-                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i), vecAllocator,
-                    std::move(windowFrame), isOverflowAsNull)));
+                    NoneDataType::Instance(), allTypes.GetType(sourceTypes.GetSize() + i), std::move(windowFrame),
+                    isOverflowAsNull)));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;
@@ -212,11 +214,12 @@ void WindowOperator::PrepareOutput()
     // next, get output
     maxRowCount = OperatorUtil::GetMaxRowCount(allTypes.Get(), finalOutputCols, finalOutputColsCount);
 
-    finalOutputTypes.reserve(finalOutputColsCount);
+    outputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
-        finalOutputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
+        outputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
     }
-    inputVecBatchForAgg = new VectorBatch(1, totalRowCount);
+    inputVecBatchForAgg = new VectorBatch(totalRowCount);
+    inputVecBatchForAgg->ResizeVectorCount(1);
     hasPrepare = true;
 }
 
@@ -246,7 +249,7 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
      * calling agg interface.
      */
     int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
-    auto output = new VectorBatch(finalOutputColsCount, rowCount);
+    auto output = new VectorBatch(rowCount);
     try {
         ProcessData(output, rowCount);
     } catch (const OmniException &e) {
@@ -280,14 +283,13 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
 
 void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
 {
+    // build the output data with original input vecBatch, input data are not changed in window operator
+    // we add extra columns of window result to the output vecBatch in window partition
+    pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), rowCountOutputted, rowCount);
+
     // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
     // result
     InitResultVectors(outputVecBatch, rowCount);
-
-    // build the output data with original input vecBatch, input data are not changed in window operator
-    // we add extra columns of window result to the output vecBatch in window partition
-    pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), rowCountOutputted,
-        rowCount, GetVecAllocator());
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
             int32_t partitionStart = partition == nullptr ? 0 : partition->GetPartitionEnd();
@@ -299,43 +301,44 @@ void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
             partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), partitionStart, partitionEnd,
                 outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
         }
-        partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j);
+        partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j, outputColsCount, outputTypes);
     }
 }
 
 void WindowOperator::InitResultVectors(VectorBatch *&vecBatchField, const int32_t &rowCountField) const
 {
     for (int colIndex = outputColsCount; colIndex < finalOutputColsCount; ++colIndex) {
-        auto type = finalOutputTypes[colIndex];
+        auto &type = outputTypes[colIndex];
         switch (type->GetId()) {
             case OMNI_BOOLEAN:
-                vecBatchField->SetVector(colIndex, new BooleanVector(vecAllocator, rowCountField));
+                vecBatchField->Append(std::move(std::make_unique<Vector<bool>>(rowCountField)));
                 break;
             case OMNI_INT:
             case OMNI_DATE32: {
-                vecBatchField->SetVector(colIndex, new IntVector(vecAllocator, rowCountField));
+                vecBatchField->Append(std::move(std::make_unique<Vector<int32_t>>(rowCountField)));
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                vecBatchField->SetVector(colIndex, new LongVector(vecAllocator, rowCountField));
+                vecBatchField->Append(std::move(std::make_unique<Vector<int64_t>>(rowCountField)));
                 break;
             }
             case OMNI_DOUBLE: {
-                vecBatchField->SetVector(colIndex, new DoubleVector(vecAllocator, rowCountField));
+                vecBatchField->Append(std::move(std::make_unique<Vector<double>>(rowCountField)));
                 break;
             }
             case OMNI_SHORT: {
-                vecBatchField->SetVector(colIndex, new ShortVector(vecAllocator, rowCountField));
+                vecBatchField->Append(std::move(std::make_unique<Vector<int16_t>>(rowCountField)));
                 break;
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                vecBatchField->SetVector(colIndex, new VarcharVector(vecAllocator, rowCountField));
+                vecBatchField->Append(
+                    std::move(std::make_unique<Vector<LargeStringContainer<std::string_view>>>(rowCountField)));
                 break;
             }
             case OMNI_DECIMAL128: {
-                vecBatchField->SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCountField));
+                vecBatchField->Append(std::move(std::make_unique<Vector<Decimal128>>(rowCountField)));
                 break;
             }
             default: {

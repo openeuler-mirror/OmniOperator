@@ -5,6 +5,9 @@
 
 #include <cstdlib>
 #include <unistd.h>
+#include <cstring>
+#include "vector/unsafe_vector.h"
+#include "vector/vector_helper.h"
 #include "operator/util/operator_util.h"
 #include "vector_batch_writer.h"
 
@@ -12,8 +15,10 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::type;
 using namespace omniruntime::vec;
-
-VectorBatchWriter::VectorBatchWriter(SpillTracker *tracker) : fd(-1), fileLength(0), tracker(tracker) {}
+using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
+VectorBatchWriter::VectorBatchWriter(SpillTracker *tracker, const omniruntime::type::DataTypes &sourceTypes)
+    : fd(-1), fileLength(0), tracker(tracker), sourceTypes(sourceTypes)
+{}
 
 ErrorCode VectorBatchWriter::CreateTempFile(const std::string &path)
 {
@@ -90,7 +95,7 @@ ErrorCode VectorBatchWriter::WriteVecBatches(VectorBatchUnitIter &vecBatches)
 ErrorCode VectorBatchWriter::WriteFileHeader(omniruntime::vec::VectorBatch *vectorBatch)
 {
     int32_t vecCount = vectorBatch->GetVectorCount();
-    auto typeIds = vectorBatch->GetVectorTypeIds();
+    auto typeIds = sourceTypes.GetIds();
     auto vecCountSize = static_cast<ssize_t>(sizeof(vecCount));
     if (write(fd, &vecCount, vecCountSize) < vecCountSize) {
         LogError("Write vec count failed.");
@@ -104,39 +109,56 @@ ErrorCode VectorBatchWriter::WriteFileHeader(omniruntime::vec::VectorBatch *vect
     return ErrorCode::SUCCESS;
 }
 
-template <typename T> ErrorCode VectorBatchWriter::WriteVector(omniruntime::vec::Vector *vector, int32_t rowCount)
+template <typename T> ErrorCode VectorBatchWriter::WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount)
 {
-    auto valueNulls = vector->GetValueNulls();
-    if (write(fd, valueNulls, rowCount) < rowCount) {
+    bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
+    if (write(fd, nulls, rowCount) < rowCount) {
         LogError("Write value nulls failed.");
         return ErrorCode::WRITE_FAILED;
     }
 
     auto length = static_cast<ssize_t>(rowCount * sizeof(T));
-    auto values = vector->GetValues();
+
+    T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
     if (write(fd, values, length) < length) {
         LogError("Write values failed.");
         return ErrorCode::WRITE_FAILED;
     }
     return ErrorCode::SUCCESS;
 }
-
-ErrorCode VectorBatchWriter::WriteVarcharVector(Vector *vector, int32_t rowCount)
+/**
+ * vector format stored in file column by column, {nulls meta column, offsets meta column, values}
+ * -nulls--offsets--values
+ * 0        0      "aab"
+ * 1        3        -
+ * 0        3      "bbcd"
+ * 7
+ */
+ErrorCode VectorBatchWriter::WriteVarcharVector(omniruntime::vec::BaseVector *vector, int32_t rowCount)
 {
-    auto valueNulls = vector->GetValueNulls();
-    auto valueOffsets = static_cast<int32_t *>(vector->GetValueOffsets());
-    auto nullAndOffsetSize = static_cast<ssize_t>(rowCount + (rowCount + 1) * sizeof(int32_t));
-    if (write(fd, valueNulls, nullAndOffsetSize) < nullAndOffsetSize) {
-        LogError("Write value nulls and offsets failed.");
-        return ErrorCode::WRITE_FAILED;
+    // write nulls
+    bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
+    if (write(fd, nulls, rowCount) < rowCount) {
+        LogError("Write value nulls failed.");
+        return op::ErrorCode::WRITE_FAILED;
     }
 
+    // write offsets
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, OMNI_VARCHAR));
+    auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
+    if (write(fd, valueOffsets, offsetSize) < offsetSize) {
+        LogError("Write value offsets failed.");
+        return op::ErrorCode::WRITE_FAILED;
+    }
+
+    // write values row by row, values buffer may not continuous memory
+    char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
     auto length = static_cast<ssize_t>(valueOffsets[rowCount] - valueOffsets[0]);
-    auto values = vector->GetValues();
     if (write(fd, values, length) < length) {
         LogError("Write values failed.");
-        return ErrorCode::WRITE_FAILED;
+        return op::ErrorCode::WRITE_FAILED;
     }
+
     return ErrorCode::SUCCESS;
 }
 
@@ -150,9 +172,9 @@ ErrorCode VectorBatchWriter::WriteVecBatch(VectorBatch *vectorBatch)
 
     int32_t vecCount = vectorBatch->GetVectorCount();
     for (int32_t i = 0; i < vecCount; i++) {
-        auto vector = vectorBatch->GetVector(i);
+        auto vector = vectorBatch->Get(i);
         auto result = ErrorCode::SUCCESS;
-        switch (vector->GetTypeId()) {
+        switch (sourceTypes.GetType(i)->GetId()) {
             case OMNI_BOOLEAN:
                 result = WriteVector<bool>(vector, rowCount);
                 break;
@@ -195,14 +217,10 @@ uint64_t VectorBatchWriter::GetVecBatchSize(VectorBatch *vectorBatch)
     int32_t vecCount = vectorBatch->GetVectorCount();
     int32_t rowCount = vectorBatch->GetRowCount();
     for (int32_t i = 0; i < vecCount; i++) {
-        auto vector = vectorBatch->GetVector(i);
-        auto valueOffsets = reinterpret_cast<int32_t *>(vector->GetValueOffsets());
-        if (valueOffsets) {
-            size += rowCount * (sizeof(bool) + sizeof(int32_t)); // for nulls and offsets
-        } else {
-            size += rowCount * sizeof(bool);
-        }
-        switch (vector->GetTypeId()) {
+
+        size += rowCount * sizeof(bool); // for nulls
+
+        switch (sourceTypes.GetType(i)->GetId()) {
             case type::OMNI_INT:
             case type::OMNI_DATE32:
                 size += rowCount * OperatorUtil::SIZE_OF_INT;
@@ -224,9 +242,13 @@ uint64_t VectorBatchWriter::GetVecBatchSize(VectorBatch *vectorBatch)
                 size += rowCount * OperatorUtil::SIZE_OF_DECIMAL128;
                 break;
             case type::OMNI_CHAR:
-            case type::OMNI_VARCHAR:
+            case type::OMNI_VARCHAR: {
+                auto vector = vectorBatch->Get(i);
+                auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, OMNI_VARCHAR));
+                size += (rowCount + 1) * sizeof(int32_t); // for offsets
                 size += (valueOffsets[rowCount] - valueOffsets[0]);
                 break;
+            }
             default:
                 break;
         }

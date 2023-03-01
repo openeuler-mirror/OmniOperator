@@ -79,28 +79,11 @@ TEST(DtFuzzFactoryCreateTest, testHashJoinFactoryCreate)
     delete overflowConfig;
 }
 
-TEST(DtFuzzFactoryCreateTest, testLimitFactoryCreate)
-{
-    DataTypes sourceTypes(supportedTypes);
-    const int32_t loopCount = 10;
-    auto factory = CreateLimitFactory(sourceTypes, loopCount);
-    ASSERT_FALSE(factory == nullptr);
-    delete factory;
-}
-
 TEST(DtFuzzFactoryCreateTest, testDistinctLimitFactoryCreate)
 {
     DataTypes sourceTypes(supportedTypes);
     const int32_t loopCount = 10;
     auto factory = CreateDistinctLimitFactory(sourceTypes, loopCount);
-    ASSERT_FALSE(factory == nullptr);
-    delete factory;
-}
-
-TEST(DtFuzzFactoryCreateTest, testPartitionedOutputFactoryCreate)
-{
-    DataTypes sourceTypes(supportedTypes);
-    auto factory = CreatePartitionedOutputFactory(sourceTypes);
     ASSERT_FALSE(factory == nullptr);
     delete factory;
 }

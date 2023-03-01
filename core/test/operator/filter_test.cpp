@@ -2751,10 +2751,12 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     auto vector0 = vecBatch->GetVector(0);
     auto vector1 = vecBatch->GetVector(1);
     for (int i = 0; i < numRows; i++) {
-        isNulls[0] = vector0->IsValueNull(i);
-        isNulls[1] = vector1->IsValueNull(i);
-        values[0] = VectorHelper::GetValuePtrAndLength(vector0, i, lengths + 0);
-        values[1] = VectorHelper::GetValuePtrAndLength(vector1, i, lengths + 1);
+        isNulls[0] = vector0->IsNull(i);
+        isNulls[1] = vector1->IsNull(i);
+        values[0] = reinterpret_cast<int64_t>(vector0->GetValue(i).data());
+        values[1] = reinterpret_cast<int64_t>(vector1->GetValue(i).data());
+        lengths[0] = vector0->GetValue(i).size();
+        lengths[1] = vector1->GetValue(i).size();
 
         bool result = filter->Evaluate(values, isNulls, lengths, (int64_t)(&context));
         if (i == 0 || i == 2 || i == 7) {

@@ -46,17 +46,17 @@ VecBatchWithPositionComparator::VecBatchWithPositionComparator(omniruntime::type
         switch (sortColTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<IntVector>);
+                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<int32_t>);
                 break;
             case OMNI_SHORT:
-                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<ShortVector>);
+                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<int16_t>);
                 break;
             case OMNI_DECIMAL64:
             case OMNI_LONG:
-                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<LongVector>);
+                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<int64_t>);
                 break;
             case OMNI_BOOLEAN:
-                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<BooleanVector>);
+                sortCompareFuncs.push_back(OperatorUtil::CompareTemplate<bool>);
                 break;
             case OMNI_DOUBLE:
                 sortCompareFuncs.push_back(OperatorUtil::CompareDouble);
@@ -80,8 +80,8 @@ int32_t VecBatchWithPositionComparator::CompareTo(VectorBatch *leftVectorBatch, 
     auto sortColsCount = sortCols.size();
     for (size_t i = 0; i < sortColsCount; i++) {
         int32_t sortCol = sortCols[i];
-        Vector *leftVector = leftVectorBatch->GetVector(sortCol);
-        Vector *rightVector = rightVectorBatch->GetVector(sortCol);
+        BaseVector *leftVector = leftVectorBatch->Get(sortCol);
+        BaseVector *rightVector = rightVectorBatch->Get(sortCol);
 
         int32_t compare =
             OperatorUtil::CompareNull(leftVector, leftPosition, rightVector, rightPosition, sortNullFirsts[i]);

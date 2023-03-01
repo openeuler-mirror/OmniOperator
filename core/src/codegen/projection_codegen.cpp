@@ -123,7 +123,7 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     llvm::Function *varcharVectorFunc = nullptr;
     if (expr->GetReturnTypeId() == OMNI_CHAR || expr->GetReturnTypeId() == OMNI_VARCHAR) {
         std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
-        FunctionSignature varcharVectorFuncSignature = FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
+        FunctionSignature varcharVectorFuncSignature = FunctionSignature("WrapVarcharVector", paramTypes, OMNI_INT);
         varcharVectorFunc =
             modulePtr->getFunction(FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
     }

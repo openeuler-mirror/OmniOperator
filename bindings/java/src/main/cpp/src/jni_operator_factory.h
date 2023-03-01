@@ -8,6 +8,7 @@
 #include <jni.h>
 #include "expression/parserhelper.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "codegen/expr_evaluator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +19,7 @@ extern "C" {
  * Signature: (JJ)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *env,
-    jobject jObj, jlong jNativeFactoryObj, jlong jNativeVecAllocatorObj);
+    jobject jObj, jlong jNativeFactoryObj);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
@@ -89,8 +90,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
     jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels,
     jstring jWindowFunctionReturnType, jintArray jWindowFrameTypes, jintArray jWindowFrameStartTypes,
-    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels,
-    jstring jOperatorConfig);
+    jintArray jWindowFrameStartChannels, jintArray jWindowFrameEndTypes, jintArray jWindowFrameEndChannels, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory

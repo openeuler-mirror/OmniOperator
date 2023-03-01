@@ -54,16 +54,15 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int32_t expData4[dataSize] = {20, 18, 13, 13, 13};
     int64_t expData5[dataSize] = {2, 1, 0, 1, 2};
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), IntType(), LongType() }));
-    VectorBatch *expectVecorBatch =
+    VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    VectorHelper::PrintVecBatch(outputVecBatch);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
-    DeleteOperatorFactory(topNWithExprOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
+    delete topNWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
@@ -106,16 +105,15 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int64_t expData3[dataSize] = {8, 7, 3, 1, 2};
     int64_t expData4[dataSize] = {2, 1, 0, 1, 2};
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType(), LongType() }));
-    VectorBatch *expectVecorBatch =
+    VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatch);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(sortKeys);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
-    DeleteOperatorFactory(topNWithExprOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
+    delete topNWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
@@ -155,15 +153,14 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int64_t expData2[dataSize] = {23, 0, 4, 3, 5};
     int64_t expData3[dataSize] = {8, 7, 1, 2, 3};
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
+    VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    VectorHelper::PrintVecBatch(outputVecBatch);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
-    DeleteOperatorFactory(topNWithExprOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
+    delete topNWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }

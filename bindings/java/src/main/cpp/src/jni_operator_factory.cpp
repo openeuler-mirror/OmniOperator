@@ -24,10 +24,8 @@
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include "operator/topn/topn.h"
 #include "operator/topn/topn_expr.h"
-#include "operator/partitionedoutput/partitionedoutput.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
-#include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
 #include "operator/fusion/fusion_operator.h"
 #include "operator/config/operator_config.h"
@@ -152,7 +150,7 @@ void DeserializeJsonToArray(const char *str, vector<string> &arr)
  * Signature: (J)JJ
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *env,
-    jobject jObj, jlong jNativeFactoryObj, jlong jNativeVecAllocatorObj)
+    jobject jObj, jlong jNativeFactoryObj)
 {
     auto operatorFactory = (OperatorFactory *)jNativeFactoryObj;
     omniruntime::op::Operator *nativeOperator = nullptr;
@@ -165,8 +163,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     }
     JNI_METHOD_END(0L)
 
-    auto vectorAllocator = reinterpret_cast<VectorAllocator *>(jNativeVecAllocatorObj);
-    nativeOperator->SetVecAllocator(vectorAllocator);
     return reinterpret_cast<intptr_t>(static_cast<void *>(nativeOperator));
 }
 
@@ -662,42 +658,6 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     return reinterpret_cast<intptr_t>(static_cast<void *>(lookupJoinOperatorFactory));
 }
 
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOperatorFactory_createPartitionedOutputOperatorFactory(
-    JNIEnv *env, jobject jObj, jstring jSourceTypes, jboolean jReplicatesAnyRow, jint jNullChannel,
-    jintArray jPartitionChannels, jint jPartitionCount, jintArray jBucketToPartition, jboolean isHashPrecomputed,
-    jstring jHashChannelTypes, jintArray jHashChannels)
-{
-    auto sourceTypesArrCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
-    jint *partitionChannelsArr = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
-    jint *bucketToPartitionArr = env->GetIntArrayElements(jBucketToPartition, JNI_FALSE);
-    auto bucketToPartitionArrPtr = env->GetStringUTFChars(jHashChannelTypes, JNI_FALSE);
-    jint *hashChannels = env->GetIntArrayElements(jHashChannels, JNI_FALSE);
-
-    auto sourceDataTypes = Deserialize(sourceTypesArrCharPtr);
-    auto hashChannelDataTypes = Deserialize(bucketToPartitionArrPtr);
-    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesArrCharPtr);
-    env->ReleaseStringUTFChars(jHashChannelTypes, bucketToPartitionArrPtr);
-
-    jint sourceTypesCount = sourceDataTypes.GetSize();
-    jint partitionChannelsCount = env->GetArrayLength(jPartitionChannels);
-    jint bucketToPartitionCount = env->GetArrayLength(jBucketToPartition);
-    jint hashChannelCount = env->GetArrayLength(jHashChannels);
-
-    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory = nullptr;
-    JNI_METHOD_START
-    partitionedOutputOperatorFactory = PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
-        sourceDataTypes, sourceTypesCount, jReplicatesAnyRow, jNullChannel, partitionChannelsArr,
-        partitionChannelsCount, jPartitionCount, bucketToPartitionArr, bucketToPartitionCount, isHashPrecomputed,
-        hashChannelDataTypes, hashChannels, hashChannelCount);
-    JNI_METHOD_END(0L)
-
-    env->ReleaseIntArrayElements(jPartitionChannels, partitionChannelsArr, 0);
-    env->ReleaseIntArrayElements(jBucketToPartition, bucketToPartitionArr, 0);
-    env->ReleaseIntArrayElements(jHashChannels, hashChannels, 0);
-    return reinterpret_cast<intptr_t>(static_cast<void *>(partitionedOutputOperatorFactory));
-}
-
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_union_OmniUnionOperatorFactory_createUnionOperatorFactory(
     JNIEnv *env, jobject jObj, jstring jSourceTypes, jboolean jDistinct)
 {
@@ -1152,7 +1112,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     JNI_METHOD_START
     nativeOperatorFactory =
         new AggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprsVector, sourceDataTypes,
-        outDataTypes, aggFuncTypes, aggFilterExprs, maskColumns, inputRaws, outputPartials, *overflowConfig);
+        outDataTypes, aggFuncTypes, aggFilterExprs, maskColumns, inputRaws, outputPartials, overflowConfig);
     JNI_METHOD_END_WITH_THREE_EXPRS(0L, groupByKeysExprs, aggKeysExprsVector, aggFilterExprs)
 
     Expr::DeleteExprs(groupByKeysExprs);
@@ -1209,16 +1169,6 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_c
     if (nativeOperatorFactory != nullptr) {
         delete nativeOperatorFactory;
     }
-}
-
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
-    JNIEnv *env, jclass jObj, jlong jLimit)
-{
-    LimitOperatorFactory *limitOperatorFactory = nullptr;
-    JNI_METHOD_START
-    limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
-    JNI_METHOD_END(0L)
-    return reinterpret_cast<intptr_t>(static_cast<void *>(limitOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL

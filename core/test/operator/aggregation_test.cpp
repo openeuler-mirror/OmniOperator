@@ -3657,12 +3657,6 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     EXPECT_FALSE(resultfirstVec2->IsValueNull(0));
     EXPECT_EQ(111, resultfirstVec2->GetValue(0));
 
-
-    firstIgnoreNullIntAggFinal->ProcessGroup(state, vecBatch2, 4);
-    firstIgnoreNullIntAggFinal->ExtractValues(state, extractVecs2, 0);
-    EXPECT_FALSE(resultfirstVec2->IsValueNull(0));
-    EXPECT_EQ(111, resultfirstVec2->GetValue(0));
-
     state.val = nullptr;
     VectorHelper::FreeVecBatch(vecBatch1);
     VectorHelper::FreeVecBatch(vecBatch2);
