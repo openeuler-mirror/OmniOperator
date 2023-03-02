@@ -34,8 +34,8 @@ LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(c
     this->probeTypes = std::make_unique<DataTypes>(DataTypes(newProbeTypes));
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
-    this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
-        *(this->probeTypes.get()), probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes,
+    this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(*(this->probeTypes),
+        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes,
         (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
 }
 
@@ -52,7 +52,9 @@ Operator *LookupOuterJoinWithExprOperatorFactory::CreateOperator()
 
 LookupOuterJoinWithExprOperator::LookupOuterJoinWithExprOperator(LookupOuterJoinOperator *lookupJoinOperator)
     : lookupOuterJoinOperator(lookupJoinOperator)
-{}
+{
+    this->outputTypes = lookupJoinOperator->GetOutputType();
+}
 
 LookupOuterJoinWithExprOperator::~LookupOuterJoinWithExprOperator()
 {

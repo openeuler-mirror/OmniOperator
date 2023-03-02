@@ -21,8 +21,7 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
 {
     std::vector<DataTypePtr> types = { IntType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
-    int32_t computeCols[] = {0};
-    DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes, computeCols, 1);
+    auto *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
 
     // construct data
@@ -40,16 +39,23 @@ TEST(NativeSortMergeJoinTest, TestMultiAddVecBatches)
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1, data2, data3);
     VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data4, data5, data6);
 
-    dynamicPagesIndex->AddVecBatch(vecBatch1);
+    std::vector<VectorBatch *> vector1;
+    vector1.emplace_back(vecBatch1);
+    dynamicPagesIndex->AddVecBatches(vector1);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
-    dynamicPagesIndex->AddVecBatch(vecBatch2);
+    std::vector<VectorBatch *> vector2;
+    vector2.emplace_back(vecBatch2);
+    dynamicPagesIndex->AddVecBatches(vector2);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1 + dataSize2);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
-    VectorBatch *emptyVectorBatch = CreateEmptyVectorBatch(types);
-    dynamicPagesIndex->AddVecBatch(emptyVectorBatch);
+    std::vector<VectorBatch *> vector3;
+    VectorBatch *emptyVectorBatch = CreateEmptyVectorBatch(sourceTypes);
+    vector3.emplace_back(emptyVectorBatch);
+
+    dynamicPagesIndex->AddVecBatches(vector3);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1 + dataSize2);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), true);
 
@@ -61,8 +67,7 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
 {
     std::vector<DataTypePtr> types = { IntType(), DoubleType() };
     DataTypes sourceTypes(types);
-    int32_t computeCols[] = {0};
-    DynamicPagesIndex *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes, computeCols, 1);
+    auto *dynamicPagesIndex = new DynamicPagesIndex(sourceTypes);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), 0);
 
     // construct data
@@ -77,9 +82,11 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
 
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1, data2);
     VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data3, data4);
-    vecBatch2->GetVector(0)->SetValueNull(5);
+    vecBatch2->Get(0)->SetNull(5);
 
-    dynamicPagesIndex->AddVecBatch(vecBatch1);
+    std::vector<VectorBatch *> vector1;
+    vector1.emplace_back(vecBatch1);
+    dynamicPagesIndex->AddVecBatches(vector1);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
     // fetch logical row of 6
@@ -88,10 +95,12 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
     int32_t row6IndexInVecBatch = DecodePosition(row6ValueAddress);
     ASSERT_EQ(row6vecBatchIndex, 0);
     ASSERT_EQ(row6IndexInVecBatch, 5);
-    DoubleVector *row6DdoubleVector = static_cast<DoubleVector *>(dynamicPagesIndex->GetColumn(row6vecBatchIndex, 1));
+    auto *row6DdoubleVector = reinterpret_cast<Vector<double> *>(dynamicPagesIndex->GetColumns(row6vecBatchIndex, 1));
     ASSERT_EQ(row6DdoubleVector->GetValue(5), 1.1);
 
-    dynamicPagesIndex->AddVecBatch(vecBatch2);
+    std::vector<VectorBatch *> vector2;
+    vector2.emplace_back(vecBatch2);
+    dynamicPagesIndex->AddVecBatches(vector2);
     ASSERT_EQ(dynamicPagesIndex->GetPositionCount(), dataSize1 + dataSize2);
     ASSERT_EQ(dynamicPagesIndex->IsDataFinish(), false);
 
@@ -101,7 +110,7 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
     int32_t row8IndexInVecBatch = DecodePosition(row8ValueAddress);
     ASSERT_EQ(row8vecBatchIndex, 1);
     ASSERT_EQ(row8IndexInVecBatch, 1);
-    DoubleVector *row8DoubleVector = static_cast<DoubleVector *>(dynamicPagesIndex->GetColumn(row8vecBatchIndex, 1));
+    auto *row8DoubleVector = reinterpret_cast<Vector<double> *>(dynamicPagesIndex->GetColumns(row8vecBatchIndex, 1));
     ASSERT_EQ(row8DoubleVector->GetValue(1), 15.5);
 
     // fetch logical row of 12
@@ -110,10 +119,10 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
     int32_t row12IndexInVecBatch = DecodePosition(row12ValueAddress);
     ASSERT_EQ(row12vecBatchIndex, 1);
     ASSERT_EQ(row12IndexInVecBatch, 5);
-    IntVector *row12IntVector = static_cast<IntVector *>(dynamicPagesIndex->GetColumn(row12vecBatchIndex, 0));
-    ASSERT_EQ(row12IntVector->IsValueNull(4), false);
-    ASSERT_EQ(row12IntVector->IsValueNull(5), true);
-    ASSERT_EQ(row12IntVector->IsValueNull(6), false);
+    auto *row12IntVector = reinterpret_cast<Vector<int32_t> *>(dynamicPagesIndex->GetColumns(row12vecBatchIndex, 0));
+    ASSERT_EQ(row12IntVector->IsNull(4), false);
+    ASSERT_EQ(row12IntVector->IsNull(5), true);
+    ASSERT_EQ(row12IntVector->IsNull(6), false);
 
     dynamicPagesIndex->FreeAllRemainingVecBatch();
     delete dynamicPagesIndex;
@@ -122,25 +131,25 @@ TEST(NativeSortMergeJoinTest, TestDataValue)
 TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
 {
     // select t1.b, t2.c from t1, t2 where t1.a = t2.d
+    // streamedTbl t1:  int a, long b;
     // bufferedTbl t2: double c, int d;
-    // streamedTbl t1:  int a, Long b;
-    std::string blank = "";
-    SortMergeJoinOperator *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
+    std::string blank;
+    auto *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
 
     std::vector<DataTypePtr> streamTypesVector = { IntType(), LongType() };
     DataTypes streamedTblTypes(streamTypesVector);
     std::vector<int32_t> streamedKeysCols;
-    streamedKeysCols.push_back(0);
+    streamedKeysCols.emplace_back(0);
     std::vector<int32_t> streamedOutputCols;
-    streamedOutputCols.push_back(1);
+    streamedOutputCols.emplace_back(1);
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, streamedTblTypes.GetSize());
 
     std::vector<DataTypePtr> bufferTypesVector = { DoubleType(), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
     std::vector<int32_t> bufferedKeysCols;
-    bufferedKeysCols.push_back(1);
+    bufferedKeysCols.emplace_back(1);
     std::vector<int32_t> bufferedOutputCols;
-    bufferedOutputCols.push_back(0);
+    bufferedOutputCols.emplace_back(0);
     smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols, bufferedTblTypes.GetSize());
     smjOp->InitScannerAndResultBuilder(nullptr);
 
@@ -168,33 +177,31 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
 
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferedTblTypes);
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode),
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
-    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
     VectorBatch *result;
     smjOp->GetOutput(&result);
 
-    auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypesVector);
+    auto *streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamedTblTypes);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof1);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
 
     // check the join result
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    ASSERT_EQ(result->GetVector(0)->GetTypeId(), OMNI_LONG);
-    ASSERT_EQ(result->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
-    for (auto j = 0; j < result->GetRowCount(); j++) {
-        long longValue = (static_cast<LongVector *>(result->GetVector(0)))->GetValue(j);
+    for (int32_t j = 0; j < result->GetRowCount(); j++) {
+        long longValue = (reinterpret_cast<Vector<int64_t> *>(result->Get(0)))->GetValue(j);
         ASSERT_EQ(longValue, streamedTblDataCol2[index]);
 
-        double doubleValue = (static_cast<DoubleVector *>(result->GetVector(1)))->GetValue(j);
+        double doubleValue = (reinterpret_cast<Vector<double> *>(result->Get(1)))->GetValue(j);
         ASSERT_EQ(doubleValue, bufferedTblDataCol1[index]);
         index++;
     }
@@ -216,35 +223,39 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner1)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 5};
     int64_t bufferData0[] = {1, 5, 6, 7};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 0, 3 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 1 });
-    std::vector<int8_t> isMatchPre;
+    std::vector<bool> isMatchPre;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isMatchPre, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -261,39 +272,43 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner2)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 5, 6, 7};
     int64_t bufferData0[] = {1, 2, 3, 5};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     auto ret = scan->FindNextJoinRows();
     EXPECT_NE(ret, -1);
 
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     ret = scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 0, 1 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 3 });
@@ -313,35 +328,39 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner3)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 5};
     int64_t bufferData0[] = {0, 3, 5, 6};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 2, 3 });
     std::vector<int64_t> expectedBufferedAddr({ 1, 2 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -358,38 +377,42 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner4)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {0, 3, 5, 6};
     int64_t bufferData0[] = {1, 2, 3, 5};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 2, 3 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
@@ -407,35 +430,39 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner5)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 5};
     int64_t bufferData0[] = {0, 5, 6, 7};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 3 });
     std::vector<int64_t> expectedBufferedAddr({ 1 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -452,38 +479,42 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner6)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {0, 5, 6, 7};
     int64_t bufferData0[] = {1, 2, 3, 5};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1 });
     std::vector<int64_t> expectedBufferedAddr({ 3 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
@@ -501,38 +532,42 @@ TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys1)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {-1, 0, 2, 7};
     int64_t bufferData0[] = {0, 1, 2, 2};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 2, 3 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
@@ -550,35 +585,39 @@ TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys2)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {-1, 0, 2, 7};
     int64_t bufferData0[] = {1, 2, 2, 5};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 2, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 1, 2 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -595,35 +634,39 @@ TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys1)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {0, 1, 2, 2};
     int64_t bufferData0[] = {-1, 0, 2, 7};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 0, 2, 3 });
     std::vector<int64_t> expectedBufferedAddr({ 1, 2, 2 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -640,35 +683,39 @@ TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys2)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 2, 5};
     int64_t bufferData0[] = {-1, 0, 2, 7};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 2, 2 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -685,11 +732,11 @@ TEST(NativeSortMergeJoinTest, TestMultipleTableKeys)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int32_t streamedCols[] = {1, 2};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 2);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int32_t bufferedCols[] = {0, 1};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 2);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 4};
@@ -697,34 +744,38 @@ TEST(NativeSortMergeJoinTest, TestMultipleTableKeys)
     int64_t streamData2[] = {-1, 0, 2, 7};
     int64_t streamData3[] = {11, 22, 33, 44};
 
-    VectorBatch *streamedVecBatch = new VectorBatch(4, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamData1, dataSize));
-    streamedVecBatch->SetVector(2, CreateVector<LongVector, int64_t>(streamData2, dataSize));
-    streamedVecBatch->SetVector(3, CreateVector<LongVector, int64_t>(streamData3, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData1));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData2));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData3));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
     int64_t bufferData0[] = {0, 1, 2, 2};
     int64_t bufferData1[] = {0, 1, 1, 2};
     int64_t bufferData2[] = {9, 8, 7, 6};
     int64_t bufferData3[] = {111, 11, 1, 0};
-    VectorBatch *bufferedVecBatch = new VectorBatch(4, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedVecBatch->SetVector(2, CreateVector<LongVector, int64_t>(bufferData2, dataSize));
-    bufferedVecBatch->SetVector(3, CreateVector<LongVector, int64_t>(bufferData3, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedTypes, streamedCols, streamedKeysTypes.GetSize(), streamedPageIndex,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData2));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData3));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedTypes, streamedCols, streamedKeysTypes.GetSize(), streamedPageIndex,
         bufferedTypes, bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 3 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
@@ -741,10 +792,10 @@ TEST(NativeSortMergeJoinTest, TestNullKeys)
 {
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int32_t streamedCols[] = {1, 2};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 2);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
     int32_t bufferedCols[] = {0, 1};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 2);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 4};
@@ -752,37 +803,41 @@ TEST(NativeSortMergeJoinTest, TestNullKeys)
     int64_t streamData2[] = {-1, 0, 2, 7};
     int64_t streamData3[] = {11, 22, 33, 44};
 
-    VectorBatch *streamedVecBatch = new VectorBatch(4, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamData1, dataSize));
-    streamedVecBatch->SetVector(2, CreateVector<LongVector, int64_t>(streamData2, dataSize));
-    streamedVecBatch->SetVector(3, CreateVector<LongVector, int64_t>(streamData3, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData1));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData2));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData3));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
     int64_t bufferData0[] = {0, 1, 2, 2};
     int64_t bufferData1[] = {0, 1, 2, 2};
     int64_t bufferData2[] = {9, 8, 7, 6};
     int64_t bufferData3[] = {111, 11, 1, 0};
-    VectorBatch *bufferedVecBatch = new VectorBatch(4, dataSize);
-    auto bufferVector0 = CreateVector<LongVector, int64_t>(bufferData0, dataSize);
-    auto bufferVector1 = CreateVector<LongVector, int64_t>(bufferData1, dataSize);
-    bufferVector1->SetValueNull(2);
-    bufferedVecBatch->SetVector(0, bufferVector0);
-    bufferedVecBatch->SetVector(1, bufferVector1);
-    bufferedVecBatch->SetVector(2, CreateVector<LongVector, int64_t>(bufferData2, dataSize));
-    bufferedVecBatch->SetVector(3, CreateVector<LongVector, int64_t>(bufferData3, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedTypes, streamedCols, 2, streamedPageIndex, bufferedTypes, bufferedCols,
-        bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    auto bufferVector0 = CreateVector<int64_t>(dataSize, bufferData0);
+    auto bufferVector1 = CreateVector<int64_t>(dataSize, bufferData1);
+    bufferVector1->SetNull(2);
+    bufferedVecBatch->Append(std::move(bufferVector0));
+    bufferedVecBatch->Append(std::move(bufferVector1));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData2));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData3));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedTypes, streamedCols, 2, streamedPageIndex, bufferedTypes,
+        bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 3 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
@@ -800,11 +855,11 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(5), BooleanType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(5), BooleanType() }));
     int32_t streamedCols[] = {1, 2, 3};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 3);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(5), BooleanType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(5), BooleanType() }));
     int32_t bufferedCols[] = {0, 1, 2};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 3);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 4};
@@ -812,33 +867,37 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     std::string streamData2[] = {"ab", "cd", "ef", "gh"};
     bool streamData3[] = {false, false, true, true};
 
-    VectorBatch *streamedVecBatch = new VectorBatch(4, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<DoubleVector, double>(streamData1, dataSize));
-    streamedVecBatch->SetVector(2, CreateVarcharVector(*VarcharType(5), streamData2, dataSize));
-    streamedVecBatch->SetVector(3, CreateVector<BooleanVector, bool>(streamData3, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<double>(dataSize, streamData1));
+    streamedVecBatch->Append(CreateVarcharVector(*VarcharType(5), streamData2, dataSize));
+    streamedVecBatch->Append(CreateVector<bool>(dataSize, streamData3));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     double bufferData0[] = {-1.3, 0.2, 2.2, 7.2};
     std::string bufferData1[] = {"ab", "di", "ef", "gh"};
     bool bufferData2[] = {false, false, false, true};
-    VectorBatch *bufferedVecBatch = new VectorBatch(3, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<DoubleVector, double>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVarcharVector(*VarcharType(5), bufferData1, dataSize));
-    bufferedVecBatch->SetVector(2, CreateVector<BooleanVector, bool>(bufferData2, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedTypes, streamedCols, streamedKeysTypes.GetSize(), streamedPageIndex,
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<double>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVarcharVector(*VarcharType(5), bufferData1, dataSize));
+    bufferedVecBatch->Append(CreateVector<bool>(dataSize, bufferData2));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedTypes, streamedCols, streamedKeysTypes.GetSize(), streamedPageIndex,
         bufferedTypes, bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 3 });
     std::vector<int64_t> expectedBufferedAddr({ 3 });
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
@@ -856,79 +915,93 @@ TEST(NativeSortMergeJoinTest, TestMultipleVecBatch)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     long streamData0[] = {1, 2, 3, 4, 4, 5, 6, 7, 10, 13, 13, 15, 18, 26};
     int streamedSize0 = 14;
-    VectorBatch *streamedVecBatch = new VectorBatch(1, streamedSize0);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, streamedSize0));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(streamedSize0);
+    streamedVecBatch->Append(CreateVector<int64_t>(streamedSize0, streamData0));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     long bufferData0[] = {2, 4, 4, 4, 4, 5, 6, 10};
     int bufferSize0 = 8;
-    VectorBatch *bufferedVecBatch = new VectorBatch(1, bufferSize0);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, bufferSize0));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, streamedKeysTypes.GetSize(),
+    auto *bufferedVecBatch = new VectorBatch(bufferSize0);
+    bufferedVecBatch->Append(CreateVector<int64_t>(bufferSize0, bufferData0));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, streamedKeysTypes.GetSize(),
         streamedPageIndex, bufferedKeysTypes, bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     long bufferData1[] = {10, 13, 13, 17, 17, 18, 18, 19};
     int bufferSize1 = 8;
-    VectorBatch *bufferedVecBatch1 = new VectorBatch(1, bufferSize1);
-    bufferedVecBatch1->SetVector(0, CreateVector<LongVector, int64_t>(bufferData1, bufferSize1));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch1);
+    auto *bufferedVecBatch1 = new VectorBatch(bufferSize1);
+    bufferedVecBatch1->Append(CreateVector<int64_t>(bufferSize1, bufferData1));
+    auto buffered1 = std::vector<VectorBatch *>();
+    buffered1.emplace_back(bufferedVecBatch1);
+    bufferedPageIndex->AddVecBatches(buffered1);
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     long bufferData2[] = {20, 21, 23, 24, 25, 25, 25, 25};
     int bufferSize2 = 8;
-    VectorBatch *bufferedVecBatch2 = new VectorBatch(1, bufferSize2);
-    bufferedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(bufferData2, bufferSize2));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch2);
+    auto *bufferedVecBatch2 = new VectorBatch(bufferSize2);
+    bufferedVecBatch2->Append(CreateVector<int64_t>(bufferSize2, bufferData2));
+    auto buffered2 = std::vector<VectorBatch *>();
+    buffered2.emplace_back(bufferedVecBatch2);
+    bufferedPageIndex->AddVecBatches(buffered2);
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     long bufferData3[] = {30, 31, 42, 43, 44, 45, 46, 47};
     int bufferSize3 = 8;
-    VectorBatch *bufferedVecBatch3 = new VectorBatch(1, bufferSize3);
-    bufferedVecBatch3->SetVector(0, CreateVector<LongVector, int64_t>(bufferData3, bufferSize3));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch3);
+    auto *bufferedVecBatch3 = new VectorBatch(bufferSize3);
+    bufferedVecBatch3->Append(CreateVector<int64_t>(bufferSize3, bufferData3));
+    auto buffered3 = std::vector<VectorBatch *>();
+    buffered3.emplace_back(bufferedVecBatch3);
+    bufferedPageIndex->AddVecBatches(buffered3);
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     long streamData1[] = {28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41};
     int streamedSize1 = 14;
-    VectorBatch *streamedVecBatch1 = new VectorBatch(1, streamedSize1);
-    streamedVecBatch1->SetVector(0, CreateVector<LongVector, int64_t>(streamData1, streamedSize1));
-    streamedPageIndex->AddVecBatch(streamedVecBatch1);
+    auto *streamedVecBatch1 = new VectorBatch(streamedSize1);
+    streamedVecBatch1->Append(CreateVector<int64_t>(streamedSize1, streamData1));
+    auto streamed1 = std::vector<VectorBatch *>();
+    streamed1.emplace_back(streamedVecBatch1);
+    streamedPageIndex->AddVecBatches(streamed1);
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     long streamData2[] = {43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 47};
     int streamedSize2 = 14;
-    VectorBatch *streamedVecBatch2 = new VectorBatch(1, streamedSize2);
-    streamedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(streamData2, streamedSize2));
-    streamedPageIndex->AddVecBatch(streamedVecBatch2);
+    auto *streamedVecBatch2 = new VectorBatch(streamedSize2);
+    streamedVecBatch2->Append(CreateVector<int64_t>(streamedSize2, streamData2));
+    auto streamed2 = std::vector<VectorBatch *>();
+    streamed2.emplace_back(streamedVecBatch2);
+    streamedPageIndex->AddVecBatches(streamed2);
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
-    auto eofStreamedVecBatch = CreateEmptyVectorBatch(streamedTypes.Get());
-    streamedPageIndex->AddVecBatch(eofStreamedVecBatch);
+    auto *eofStreamedVecBatch = CreateEmptyVectorBatch(streamedTypes);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofStreamedVecBatch });
     scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
@@ -958,58 +1031,62 @@ TEST(NativeSortMergeJoinTest, TestReturnCode)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3, 4};
     int64_t bufferData0[] = {1, 2, 3, 4};
     int64_t streamedData1[] = {111, 11, 1, 0};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t streamData2[] = {4, 6, 7};
-    VectorBatch *streamedVecBatch2 = new VectorBatch(2, dataSize - 1);
-    streamedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(streamData2, dataSize - 1));
-    streamedVecBatch2->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize - 1));
+    auto *streamedVecBatch2 = new VectorBatch(dataSize - 1);
+    streamedVecBatch2->Append(CreateVector<int64_t>(dataSize - 1, streamData2));
+    streamedVecBatch2->Append(CreateVector<int64_t>(dataSize - 1, streamedData1));
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
 
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     auto ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 0);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 1);
     ASSERT_EQ(DecodeJoinResult(ret), 1);
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 1);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 0);
     ASSERT_EQ(DecodeJoinResult(ret), 1);
-    streamedPageIndex->AddVecBatch(streamedVecBatch2);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ streamedVecBatch2 });
     ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 0);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 1);
     ASSERT_EQ(DecodeJoinResult(ret), 1);
 
-    auto eofBufferedVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofBufferedVecBatch);
+    auto *eofBufferedVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofBufferedVecBatch });
     // add will skip since the process is finished
     VectorHelper::FreeVecBatch(eofBufferedVecBatch);
 
@@ -1018,8 +1095,8 @@ TEST(NativeSortMergeJoinTest, TestReturnCode)
     ASSERT_EQ(DecodeBufferedTblResult(ret), 2);
     ASSERT_EQ(DecodeJoinResult(ret), 0);
 
-    auto eofStreamedVecBatch = CreateEmptyVectorBatch(streamedTypes.Get());
-    streamedPageIndex->AddVecBatch(eofStreamedVecBatch);
+    auto *eofStreamedVecBatch = CreateEmptyVectorBatch(streamedTypes);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofStreamedVecBatch });
     ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 2);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 2);
@@ -1037,51 +1114,55 @@ TEST(NativeSortMergeJoinTest, TestReturnCode2)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 4;
     int64_t streamData0[] = {1, 2, 3};
     int64_t bufferData0[] = {1, 2, 3, 4};
     int64_t streamedData1[] = {111, 11, 1};
-    VectorBatch *streamedVecBatch = new VectorBatch(2, dataSize - 1);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize - 1));
-    streamedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(streamedData1, dataSize - 1));
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    auto *streamedVecBatch = new VectorBatch(dataSize - 1);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize - 1, streamData0));
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize - 1, streamedData1));
+    auto streamed = std::vector<VectorBatch *>();
+    streamed.emplace_back(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(streamed);
 
     int64_t bufferData1[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch = new VectorBatch(2, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch->SetVector(1, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData1));
+    auto buffered = std::vector<VectorBatch *>();
+    buffered.emplace_back(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(buffered);
 
     int64_t bufferData2[] = {11, 22, 33, 44};
-    VectorBatch *bufferedVecBatch2 = new VectorBatch(2, dataSize);
-    bufferedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
-    bufferedVecBatch2->SetVector(1, CreateVector<LongVector, int64_t>(bufferData2, dataSize));
+    auto *bufferedVecBatch2 = new VectorBatch(dataSize);
+    bufferedVecBatch2->Append(CreateVector<int64_t>(dataSize, bufferData0));
+    bufferedVecBatch2->Append(CreateVector<int64_t>(dataSize, bufferData2));
 
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     auto ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 1);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 0);
     ASSERT_EQ(DecodeJoinResult(ret), 1);
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(streamedTypes.Get());
-    streamedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(streamedTypes);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 2);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 1);
     ASSERT_EQ(DecodeJoinResult(ret), 0);
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch2);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ bufferedVecBatch2 });
     ret = scan->FindNextJoinRows();
     ASSERT_EQ(DecodeStreamedTblResult(ret), 2);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 2);
@@ -1099,95 +1180,95 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner7)
     DataTypes streamedTypes(std::vector<DataTypePtr>({ LongType() }));
     DataTypes streamedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t streamedCols[] = {0};
-    auto streamedPageIndex = new DynamicPagesIndex(streamedTypes, streamedCols, 1);
+    auto *streamedPageIndex = new DynamicPagesIndex(streamedTypes);
     DataTypes bufferedTypes(std::vector<DataTypePtr>({ LongType() }));
     DataTypes bufferedKeysTypes(std::vector<DataTypePtr>({ LongType() }));
     int32_t bufferedCols[] = {0};
-    auto bufferedPageIndex = new DynamicPagesIndex(bufferedTypes, bufferedCols, 1);
+    auto *bufferedPageIndex = new DynamicPagesIndex(bufferedTypes);
 
     const int32_t dataSize = 6;
     // stream data0
     int64_t streamData0[] = {0, 1, 2, 3, 4, 5};
-    VectorBatch *streamedVecBatch = new VectorBatch(1, dataSize);
-    streamedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(streamData0, dataSize));
+    auto *streamedVecBatch = new VectorBatch(dataSize);
+    streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
 
     // buffer data0
     int64_t bufferData0[] = {0, 1, 2, 3, 4, 5};
-    VectorBatch *bufferedVecBatch = new VectorBatch(1, dataSize);
-    bufferedVecBatch->SetVector(0, CreateVector<LongVector, int64_t>(bufferData0, dataSize));
+    auto *bufferedVecBatch = new VectorBatch(dataSize);
+    bufferedVecBatch->Append(CreateVector<int64_t>(dataSize, bufferData0));
 
     // buffer data1
     int64_t bufferData1[] = {5, 5, 5, 5, 5, 5};
-    VectorBatch *bufferedVecBatch1 = new VectorBatch(1, dataSize);
-    bufferedVecBatch1->SetVector(0, CreateVector<LongVector, int64_t>(bufferData1, dataSize));
+    auto *bufferedVecBatch1 = new VectorBatch(dataSize);
+    bufferedVecBatch1->Append(CreateVector<int64_t>(dataSize, bufferData1));
 
     // stream data1
     int64_t streamData1[] = {5, 5, 5, 5, 5, 5};
-    VectorBatch *streamedVecBatch1 = new VectorBatch(1, dataSize);
-    streamedVecBatch1->SetVector(0, CreateVector<LongVector, int64_t>(streamData1, dataSize));
+    auto *streamedVecBatch1 = new VectorBatch(dataSize);
+    streamedVecBatch1->Append(CreateVector<int64_t>(dataSize, streamData1));
 
     // stream data2
     int64_t streamData2[] = {5, 6, 6, 7, 8, 9};
-    VectorBatch *streamedVecBatch2 = new VectorBatch(1, dataSize);
-    streamedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(streamData2, dataSize));
+    auto *streamedVecBatch2 = new VectorBatch(dataSize);
+    streamedVecBatch2->Append(CreateVector<int64_t>(dataSize, streamData2));
 
     // buffer data2
     int64_t bufferData2[] = {5, 6, 7, 7, 7, 7};
-    VectorBatch *bufferedVecBatch2 = new VectorBatch(1, dataSize);
-    bufferedVecBatch2->SetVector(0, CreateVector<LongVector, int64_t>(bufferData2, dataSize));
+    auto *bufferedVecBatch2 = new VectorBatch(dataSize);
+    bufferedVecBatch2->Append(CreateVector<int64_t>(dataSize, bufferData2));
 
     // add stream0
-    streamedPageIndex->AddVecBatch(streamedVecBatch);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ streamedVecBatch });
 
     // add buffer0
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ bufferedVecBatch });
 
-    auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
+    auto *scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, 1, streamedPageIndex, bufferedKeysTypes,
         bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     auto ret = scan->FindNextJoinRows();
     EXPECT_NE(ret, -1);
 
     // get output
-    std::vector<int8_t> isPreMatched;
+    std::vector<bool> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<bool> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add buffer1
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch1);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ bufferedVecBatch1 });
     ret = scan->FindNextJoinRows();
     // get output
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add buffer2
-    bufferedPageIndex->AddVecBatch(bufferedVecBatch2);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ bufferedVecBatch2 });
     ret = scan->FindNextJoinRows();
     // get output
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add stream1
-    streamedPageIndex->AddVecBatch(streamedVecBatch1);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ streamedVecBatch1 });
     ret = scan->FindNextJoinRows();
 
     // get output
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add stream2
-    streamedPageIndex->AddVecBatch(streamedVecBatch2);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ streamedVecBatch2 });
     ret = scan->FindNextJoinRows();
     // get output
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add buffer eof
-    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofVecBatch);
+    VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofVecBatch });
     ret = scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add buffer eof
-    auto eofBufferedVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
-    bufferedPageIndex->AddVecBatch(eofBufferedVecBatch);
+    auto *eofBufferedVecBatch = CreateEmptyVectorBatch(bufferedTypes);
+    bufferedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofBufferedVecBatch });
     // add will skip since the process is finished
     VectorHelper::FreeVecBatch(eofBufferedVecBatch);
 
@@ -1195,8 +1276,8 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner7)
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add stream eof
-    auto eofStreamedVecBatch = CreateEmptyVectorBatch(streamedTypes.Get());
-    streamedPageIndex->AddVecBatch(eofStreamedVecBatch);
+    auto *eofStreamedVecBatch = CreateEmptyVectorBatch(streamedTypes);
+    streamedPageIndex->AddVecBatches(std::vector<VectorBatch *>{ eofStreamedVecBatch });
     ret = scan->FindNextJoinRows();
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
@@ -1237,33 +1318,37 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     std::vector<DataTypePtr> rightTypes = { IntType(), DoubleType(), VarcharType(3) };
     DataTypes rightSourceTypes(rightTypes);
 
-    int32_t leftCols[] = {0};
-    int32_t rightCols[] = {0};
-    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes, leftCols, 1);
-    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes, rightCols, 1);
+    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes);
+    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes);
 
     const int32_t dataSize = 6;
     int32_t leftData1_1[dataSize] = {0, 1, 2, 3, 4, 5};
-    Vector *leftVector1 = CreateVector<IntVector, int32_t>(leftData1_1, dataSize);
+    auto leftVector1 = CreateVector<int32_t>(dataSize, leftData1_1);
     // build dictionary vector for test
     double leftData1_2[dataSize] = {0.0, 1.1, 2.2, 3.3, 4.4, 5.5};
-    Vector *dataVector1 = CreateVector<DoubleVector, double>(leftData1_2, dataSize);
+    auto dataVector1 = CreateVector<double>(dataSize, leftData1_2);
+    int32_t ids1[dataSize] = {0, 1, 2, 3, 4, 5};
+    auto dicVector1 = CreateDictionary<OMNI_DOUBLE>(dataVector1.get(), ids1, dataSize);
 
-    auto *leftVecBatch1 = new VectorBatch(2, dataSize);
-    leftVecBatch1->SetVector(0, leftVector1);
-    leftVecBatch1->SetVector(1, dataVector1);
+    auto *leftVecBatch1 = new VectorBatch(dataSize);
+    leftVecBatch1->Append(std::move(leftVector1));
+    leftVecBatch1->Append(std::move(dicVector1));
 
     int32_t leftData21[dataSize] = {6, 7, 8, 9, 10, 11};
-    Vector *leftVector2 = CreateVector<IntVector, int32_t>(leftData21, dataSize);
+    auto leftVector2 = CreateVector<int32_t>(dataSize, leftData21);
     double leftData22[dataSize] = {6.6, 7.7, 8.8, 9.9, 10.1, 11.1};
-    Vector *dataVector2 = CreateVector<DoubleVector, double>(leftData22, dataSize);
+    auto dataVector2 = CreateVector<double>(dataSize, leftData22);
+    int32_t ids2[dataSize] = {0, 1, 2, 3, 4, 5};
+    auto dicVector2 = CreateDictionary<OMNI_DOUBLE>(dataVector2.get(), ids2, dataSize);
 
-    auto *leftVecBatch2 = new VectorBatch(2, dataSize);
-    leftVecBatch2->SetVector(0, leftVector2);
-    leftVecBatch2->SetVector(1, dataVector2);
+    auto *leftVecBatch2 = new VectorBatch(dataSize);
+    leftVecBatch2->Append(std::move(leftVector2));
+    leftVecBatch2->Append(std::move(dicVector2));
 
-    leftPagesIndex->AddVecBatch(leftVecBatch1);
-    leftPagesIndex->AddVecBatch(leftVecBatch2);
+    std::vector<VectorBatch *> leftBatchVector;
+    leftBatchVector.emplace_back(leftVecBatch1);
+    leftBatchVector.emplace_back(leftVecBatch2);
+    leftPagesIndex->AddVecBatches(leftBatchVector);
     std::vector<DataTypePtr> leftTableOutputTypes { IntType(), DoubleType() };
     int32_t leftTableOutputCols[2] = {0, 1};
     int32_t leftTableOutputColsCount = 2;
@@ -1277,22 +1362,22 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 
     VectorBatch *rightVecBatch1 = CreateVectorBatch(rightSourceTypes, dataSize, rightData11, rightData12, rightData13);
     VectorBatch *rightVecBatch2 = CreateVectorBatch(rightSourceTypes, dataSize, rightData21, rightData22, rightData23);
-    rightPagesIndex->AddVecBatch(rightVecBatch1);
-    rightPagesIndex->AddVecBatch(rightVecBatch2);
+    std::vector<VectorBatch *> rightBatchVector;
+    rightBatchVector.emplace_back(rightVecBatch1);
+    rightBatchVector.emplace_back(rightVecBatch2);
+    rightPagesIndex->AddVecBatches(rightBatchVector);
     std::vector<DataTypePtr> rightTableOutputTypes { DoubleType(), VarcharType(3) };
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter;
 
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator();
-
     auto *resultBuilder = new JoinResultBuilder(leftTableOutputTypes, leftTableOutputCols, leftTableOutputColsCount,
         leftSourceTypes.GetSize(), leftPagesIndex, rightTableOutputTypes, rightTableOutputCols,
-        rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter, vecAllocator,
+        rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter,
         OMNI_JOIN_TYPE_INNER, nullptr);
 
-    std::vector<int8_t> isPreMatched;
-    isPreMatched.insert(isPreMatched.end(), 6, 0);
+    std::vector<bool> isPreMatched;
+    isPreMatched.insert(isPreMatched.end(), 6, false);
     std::vector<int64_t> leftAddress1 = {
         static_cast<int64_t>(EncodeSyntheticAddress(0, 1)), static_cast<int64_t>(EncodeSyntheticAddress(0, 3)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 5)), static_cast<int64_t>(EncodeSyntheticAddress(1, 1)),
@@ -1306,10 +1391,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 
     std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
     std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
-    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
-    std::vector<int32_t> &startBufferedBatchIds = resultBuilder->GetStartBufferedBatchIds();
+    std::vector<bool> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
     builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
-    startBufferedBatchIds.insert(startBufferedBatchIds.end(), 6, 0);
     builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress1.begin(), rightAddress1.end());
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
     resultBuilder->AddJoinValueAddresses();
@@ -1324,7 +1407,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     double expectedData3[6] = {5.5, 3.3, 1.1, 11.1, 9.9, 7.7};
     string expectedData4[6] = {"555", "33", "1", "111", "99", "7"};
 
-    AssertVecBatchEquals(outputVecBatch, 4, 6, expectedData1, expectedData2, expectedData3, expectedData4);
+    std::vector<DataTypePtr> outputTypes = { IntType(), DoubleType(), DoubleType(), VarcharType(3) };
+    AssertVecBatchEquals(outputVecBatch, 4, 6, outputTypes, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
@@ -1334,24 +1418,24 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
-TEST(NativeSortMergeJoinTest, DISABLED_TestSortMergeJoinResultBuilderWithFilter)
+TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
 {
     std::vector<DataTypePtr> leftTypes = { IntType(), DoubleType() };
     DataTypes leftSourceTypes(leftTypes);
     std::vector<DataTypePtr> rightTypes = { IntType(), DoubleType(), VarcharType(3) };
     DataTypes rightSourceTypes(rightTypes);
 
-    int32_t leftCols[] = {0};
-    int32_t rightCols[] = {0};
-    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes, leftCols, 1);
-    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes, rightCols, 1);
+    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes);
+    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes);
 
     const int32_t dataSize = 6;
     int32_t leftData11[dataSize] = {0, 1, 2, 3, 4, 5};
     double leftData12[dataSize] = {0.0, 1.1, 2.2, 3.3, 4.4, 5.5};
 
     VectorBatch *leftVecBatch = CreateVectorBatch(leftSourceTypes, dataSize, leftData11, leftData12);
-    leftPagesIndex->AddVecBatch(leftVecBatch);
+    std::vector<VectorBatch *> leftBatchVector;
+    leftBatchVector.emplace_back(leftVecBatch);
+    leftPagesIndex->AddVecBatches(leftBatchVector);
     std::vector<DataTypePtr> leftTableOutputTypes { IntType(), DoubleType() };
     int32_t leftTableOutputCols[2] = {0, 1};
     int32_t leftTableOutputColsCount = 2;
@@ -1361,31 +1445,32 @@ TEST(NativeSortMergeJoinTest, DISABLED_TestSortMergeJoinResultBuilderWithFilter)
     std::string rightData1_3[dataSize] = {"555", "444", "33", "22", "1", "0"};
 
     VectorBatch *rightVecBatch = CreateVectorBatch(rightSourceTypes, dataSize, rightData11, rightData12, rightData1_3);
-    rightPagesIndex->AddVecBatch(rightVecBatch);
+    std::vector<VectorBatch *> rightBatchVector;
+    rightBatchVector.emplace_back(rightVecBatch);
+    rightPagesIndex->AddVecBatches(rightBatchVector);
     std::vector<DataTypePtr> rightTableOutputTypes { DoubleType(), VarcharType(3) };
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\",\"left\":{\"exprType\":"
         "\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":"
         "1,\"isNull\":false,\"value\":1}}";
-    VectorAllocator *vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("TestSortMergeJoinResultBuilderWithFilter");
 
     auto *resultBuilder = new JoinResultBuilder(leftTableOutputTypes, leftTableOutputCols, leftTableOutputColsCount,
         leftSourceTypes.GetSize(), leftPagesIndex, rightTableOutputTypes, rightTableOutputCols,
-        rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter, vecAllocator,
+        rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter,
         OMNI_JOIN_TYPE_INNER, nullptr);
 
-    std::vector<int8_t> isPreMatched;
-    isPreMatched.insert(isPreMatched.end(), 3, 0);
+    std::vector<bool> isPreMatched;
+    isPreMatched.insert(isPreMatched.end(), 3, false);
     std::vector<int64_t> leftAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 1)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 3)), static_cast<int64_t>(EncodeSyntheticAddress(0, 5)) };
     std::vector<int64_t> rightAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 2)), static_cast<int64_t>(EncodeSyntheticAddress(0, 4)) };
 
+    std::vector<bool> isSameKey;
     std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
     std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
-    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
+    std::vector<bool> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
     builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
     builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress1.begin(), rightAddress1.end());
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
@@ -1401,7 +1486,8 @@ TEST(NativeSortMergeJoinTest, DISABLED_TestSortMergeJoinResultBuilderWithFilter)
     double expectedData3[2] = {3.3, 1.1};
     string expectedData4[2] = {"33", "1"};
 
-    AssertVecBatchEquals(outputVecBatch, 4, 2, expectedData1, expectedData2, expectedData3, expectedData4);
+    std::vector<DataTypePtr> outputTypes = { IntType(), DoubleType(), DoubleType(), VarcharType(3) };
+    AssertVecBatchEquals(outputVecBatch, 4, 2, outputTypes, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
@@ -1416,10 +1502,10 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
     // select t1.b, t2.c from t1, t2 where t1.a = t2.d
     // streamedTbl t1:  int a, Long b;
     // bufferedTbl t2: long c, int d;
-    std::string blank = "";
-    SortMergeJoinOperator *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
+    std::string blank;
+    auto *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
 
-    std::vector<DataTypePtr> streamTypesVector = { IntType(), VarcharType(2000) };
+    std::vector<DataTypePtr> streamTypesVector = { IntType(), LongType() };
     DataTypes streamedTblTypes(streamTypesVector);
     std::vector<int32_t> streamedKeysCols;
     streamedKeysCols.push_back(0);
@@ -1427,7 +1513,7 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
     streamedOutputCols.push_back(1);
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, streamedTblTypes.GetSize());
 
-    std::vector<DataTypePtr> bufferTypesVector = { VarcharType(2000), IntType() };
+    std::vector<DataTypePtr> bufferTypesVector = { LongType(), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
     std::vector<int32_t> bufferedKeysCols;
     bufferedKeysCols.push_back(1);
@@ -1437,21 +1523,21 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
     smjOp->InitScannerAndResultBuilder(nullptr);
 
     // construct data
-    const int32_t streamedTblDataSize = 270;
+    const int32_t streamedTblDataSize = 65538;
     int32_t streamedTblDataCol1[streamedTblDataSize];
-    std::string streamedTblDataCol2[streamedTblDataSize];
+    long streamedTblDataCol2[streamedTblDataSize];
     for (uint32_t i = 0; i < streamedTblDataSize; i++) {
         streamedTblDataCol1[i] = i;
-        streamedTblDataCol2[i] = std::to_string(i + 1);
+        streamedTblDataCol2[i] = i + 1;
     }
     VectorBatch *streamedTblVecBatch1 =
         CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblDataCol1, streamedTblDataCol2);
 
-    const int32_t bufferedTblSize = 270;
-    std::string bufferedTblDataCol1[bufferedTblSize];
+    const int32_t bufferedTblSize = 65538;
+    long bufferedTblDataCol1[bufferedTblSize];
     int32_t bufferedTblDataCol2[bufferedTblSize];
     for (int32_t i = 0; i < streamedTblDataSize; i++) {
-        bufferedTblDataCol1[i] = std::to_string(i + 3);
+        bufferedTblDataCol1[i] = i + 3;
         bufferedTblDataCol2[i] = i;
     }
     VectorBatch *bufferedTblVecBatch1 =
@@ -1468,7 +1554,7 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
-    std::vector<omniruntime::vec::VectorBatch *> result;
+    std::vector<VectorBatch *> result;
 
     VectorBatch *result1;
     smjOp->GetOutput(&result1);
@@ -1481,13 +1567,13 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_FINISHED);
 
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferedTblTypes);
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode),
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
-    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
@@ -1496,32 +1582,24 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
     smjOp->GetOutput(&result3);
     result.push_back(result3);
 
+    // check the join result
     int32_t resultCount = 0;
-    for (uint32_t i = 0; i < result.size(); i++) {
-        resultCount += result[i]->GetRowCount();
+    int32_t index = 0;
+    for (auto &res : result) {
+        ASSERT_EQ(res->GetVectorCount(), 2);
+        resultCount += res->GetRowCount();
+        for (int32_t rowId = 0; rowId < res->GetRowCount(); ++rowId) {
+            long longValue1 = (reinterpret_cast<Vector<int64_t> *>(res->Get(0)))->GetValue(rowId);
+            ASSERT_EQ(longValue1, streamedTblDataCol2[index]);
+
+            long longValue2 = (reinterpret_cast<Vector<int64_t> *>(res->Get(1)))->GetValue(rowId);
+            ASSERT_EQ(longValue2, bufferedTblDataCol1[index]);
+            index++;
+        }
     }
     ASSERT_EQ(resultCount, streamedTblDataSize);
 
-    // check the join result
-    int32_t index = 0;
-    for (uint32_t i = 0; i < result.size(); i++) {
-        ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        auto vector1 = static_cast<VarcharVector *>(result[i]->GetVector(0));
-        auto vector2 = static_cast<VarcharVector *>(result[i]->GetVector(1));
-        ASSERT_EQ(vector1->GetTypeId(), OMNI_VARCHAR);
-        ASSERT_EQ(vector2->GetTypeId(), OMNI_VARCHAR);
-        for (auto j = 0; j < result[i]->GetRowCount(); j++) {
-            uint8_t *value1 = nullptr;
-            int32_t valueLen1 = vector1->GetValue(j, &value1);
-            ASSERT_EQ(std::string(value1, value1 + valueLen1), streamedTblDataCol2[index]);
-
-            uint8_t *value2 = nullptr;
-            int32_t valueLen2 = vector2->GetValue(j, &value2);
-            ASSERT_EQ(std::string(value2, value2 + valueLen2), bufferedTblDataCol1[index]);
-            index++;
-        }
-        VectorHelper::FreeVecBatch(result[i]);
-    }
+    VectorHelper::FreeVecBatches(result);
     omniruntime::op::Operator::DeleteOperator(smjOp);
 }
 
@@ -1530,16 +1608,16 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
     // select t1.b, t2.c from t1, t2 where t1.a = t2.d
     // streamedTbl t1:  int a, Long b;
     // bufferedTbl t2: long c, int d;
-    std::string blank = "";
-    SortMergeJoinOperator *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
+    std::string blank;
+    auto *smjOp = new SortMergeJoinOperator(JoinType::OMNI_JOIN_TYPE_INNER, blank);
 
-    std::vector<DataTypePtr> streamTypesVector = { IntType(), VarcharType(2000) };
+    std::vector<DataTypePtr> streamTypesVector = { IntType(), LongType() };
     DataTypes streamedTblTypes(streamTypesVector);
     std::vector<int32_t> streamedKeysCols { 0 };
     std::vector<int32_t> streamedOutputCols { 1 };
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, streamedTblTypes.GetSize());
 
-    std::vector<DataTypePtr> bufferTypesVector = { VarcharType(2000), IntType() };
+    std::vector<DataTypePtr> bufferTypesVector = { LongType(), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
     std::vector<int32_t> bufferedKeysCols { 1 };
     std::vector<int32_t> bufferedOutputCols { 0 };
@@ -1547,21 +1625,21 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
     smjOp->InitScannerAndResultBuilder(nullptr);
 
     // construct data
-    const int32_t streamedTblDataSize = 270;
+    const int32_t streamedTblDataSize = 65538;
     int32_t streamedTblCol1Data[streamedTblDataSize];
-    std::string streamedTblCol2Data[streamedTblDataSize];
+    long streamedTblCol2Data[streamedTblDataSize];
     for (int32_t i = 0; i < streamedTblDataSize; i++) {
         streamedTblCol1Data[i] = i;
-        streamedTblCol2Data[i] = std::to_string(i + 1);
+        streamedTblCol2Data[i] = i + 1;
     }
     VectorBatch *streamedTblVecBatch =
         CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblCol1Data, streamedTblCol2Data);
 
-    const int32_t bufferedTblSize = 270;
-    std::string bufferedTblCol1Data[bufferedTblSize];
+    const int32_t bufferedTblSize = 65538;
+    long bufferedTblCol1Data[bufferedTblSize];
     int32_t bufferedTblCol2Data[bufferedTblSize];
     for (uint32_t i = 0; i < streamedTblDataSize; i++) {
-        bufferedTblCol1Data[i] = std::to_string(i + 3);
+        bufferedTblCol1Data[i] = i + 3;
         bufferedTblCol2Data[i] = i;
     }
     VectorBatch *bufferedTblVecBatch =
@@ -1578,7 +1656,7 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
-    std::vector<omniruntime::vec::VectorBatch *> result;
+    std::vector<VectorBatch *> result;
 
     VectorBatch *result1;
     smjOp->GetOutput(&result1);
@@ -1591,13 +1669,13 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_FINISHED);
 
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferedTblTypes);
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode),
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
-    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
+    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
@@ -1608,32 +1686,24 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
     result.emplace_back(result3);
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_FINISHED);
 
+    // check the join result
     int32_t resultCount = 0;
-    for (uint32_t i = 0; i < result.size(); i++) {
-        resultCount += result[i]->GetRowCount();
+    int32_t index = 0;
+    for (auto &res : result) {
+        ASSERT_EQ(res->GetVectorCount(), 2);
+        resultCount += res->GetRowCount();
+        for (int32_t rowId = 0; rowId < res->GetRowCount(); ++rowId) {
+            long longValue1 = (reinterpret_cast<Vector<int64_t> *>(res->Get(0)))->GetValue(rowId);
+            ASSERT_EQ(longValue1, streamedTblCol2Data[index]);
+
+            long longValue2 = (reinterpret_cast<Vector<int64_t> *>(res->Get(1)))->GetValue(rowId);
+            ASSERT_EQ(longValue2, bufferedTblCol1Data[index]);
+            index++;
+        }
     }
     ASSERT_EQ(resultCount, streamedTblDataSize);
 
-    // check the join result
-    int32_t index = 0;
-    for (uint32_t i = 0; i < result.size(); i++) {
-        ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        auto vector1 = static_cast<VarcharVector *>(result[i]->GetVector(0));
-        auto vector2 = static_cast<VarcharVector *>(result[i]->GetVector(1));
-        ASSERT_EQ(vector1->GetTypeId(), OMNI_VARCHAR);
-        ASSERT_EQ(vector2->GetTypeId(), OMNI_VARCHAR);
-        for (auto j = 0; j < result[i]->GetRowCount(); j++) {
-            uint8_t *value1 = nullptr;
-            int32_t valueLen1 = vector1->GetValue(j, &value1);
-            ASSERT_EQ(std::string(value1, value1 + valueLen1), streamedTblCol2Data[index]);
-
-            uint8_t *value2 = nullptr;
-            int32_t valueLen2 = vector2->GetValue(j, &value2);
-            ASSERT_EQ(std::string(value2, value2 + valueLen2), bufferedTblCol1Data[index]);
-            index++;
-        }
-        VectorHelper::FreeVecBatch(result[i]);
-    }
+    VectorHelper::FreeVecBatches(result);
     omniruntime::op::Operator::DeleteOperator(smjOp);
 }
 }

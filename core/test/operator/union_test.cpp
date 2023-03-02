@@ -56,6 +56,8 @@ TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1, types));
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2, types));
 
+    delete vecBatch1;
+    delete vecBatch2;
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(expVecBatch2);
     VectorHelper::FreeVecBatches(outputVecBatches);

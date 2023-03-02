@@ -60,7 +60,7 @@ public:
     }
     void SetAddressIndex(ArrayPositionLinks &positionLinks, uint32_t realPosition, int64_t hash,
         uint64_t &totalHashCollisions) const;
-    uint32_t GetAddressIndex(uint32_t probePosition, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
+    uint32_t GetAddressIndex(uint32_t probePosition, omniruntime::vec::BaseVector **joinColumns, int64_t rawHash) const;
 
     ALWAYS_INLINE int8_t *GetPositionToHashes() const
     {
@@ -220,9 +220,9 @@ public:
 
     void AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTable);
     bool IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
-        omniruntime::vec::Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const;
+        omniruntime::vec::BaseVector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const;
     uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
-    uint64_t GetJoinPosition(uint32_t position, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
+    uint64_t GetJoinPosition(uint32_t position, omniruntime::vec::BaseVector **joinColumns, int64_t rawHash) const;
     void PositionVisited(uint64_t currentJoinPosition);
     uint32_t GetTotalVisitedCounts() const;
 

@@ -1208,7 +1208,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     auto *vecBatch = new vec::VectorBatch(DATA_SIZE);
 
-    void *datas[10] = {data0, data1, data2, data3, data4, data5, data6, data7, data8};
+    void *datas[9] = {data0, data1, data2, data3, data4, data5, data6, data7, data8};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         const DataTypePtr& dataType = sourceTypes.GetType(i);
         vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]));

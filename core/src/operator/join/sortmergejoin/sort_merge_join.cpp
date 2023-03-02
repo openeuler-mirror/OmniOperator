@@ -33,6 +33,9 @@ void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streame
     this->streamedKeysCols = streamedKeysCols;
     this->streamedOutputCols = streamedOutputCols;
     this->originalStreamedColsCount = originalInputStreamedColsCount;
+    for (auto &streamedOutputCol : streamedOutputCols) {
+        outputTypes.emplace_back(streamedTypes->GetType(streamedOutputCol));
+    }
 }
 
 void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &bufferedDataTypes,
@@ -43,6 +46,9 @@ void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &buffere
     this->bufferedKeysCols = bufferedKeysCols;
     this->bufferedOutputCols = bufferedOutputCols;
     this->originalBufferedColsCount = originalInputBufferedColsCount;
+    for (auto &bufferedOutputCol : bufferedOutputCols) {
+        outputTypes.emplace_back(bufferedTypes->GetType(bufferedOutputCol));
+    }
 }
 
 void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflowConfig)
@@ -67,7 +73,7 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
     }
     joinResultBuilder = new JoinResultBuilder(streamedOutputTypes, streamedOutputCols.data(), streamedOutputCols.size(),
         originalStreamedColsCount, streamedTblPagesIndex, bufferedOutputTypes, bufferedOutputCols.data(),
-        bufferedOutputCols.size(), originalBufferedColsCount, bufferedTblPagesIndex, filter, vecAllocator, joinType,
+        bufferedOutputCols.size(), originalBufferedColsCount, bufferedTblPagesIndex, filter, joinType,
         overflowConfig);
 }
 

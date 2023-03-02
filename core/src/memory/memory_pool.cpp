@@ -7,11 +7,11 @@
 #include <iostream>
 #include <jemalloc/jemalloc.h>
 #include "util/debug.h"
+#include "util/omni_exception.h"
 
 using namespace std;
 namespace omniruntime {
 namespace mem {
-
 class SimpleAllocator {
 public:
     static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
@@ -19,8 +19,7 @@ public:
         // background: If size is 0, then malloc() returns either NULL, or a unique pointer value that can later be
         // successfully passed to free().
         if (size <= 0) {
-            LogError("allocate size is negative.");
-            return -1;
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is non-positive.");
         }
 
         if (zeroFill) {
@@ -46,8 +45,7 @@ public:
     static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
         if (size <= 0) {
-            LogError("allocate size is negative.");
-            return -1;
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is non-positive.");
         }
         // jemalloc alloc
         if (zeroFill) {

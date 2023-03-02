@@ -28,11 +28,6 @@ enum class JoinResultCode {
     HAS_RESULT = 1
 };
 
-static ALWAYS_INLINE bool HasNext(int32_t pos, DynamicPagesIndex *pagesIndex)
-{
-    return pos < pagesIndex->GetPositionCount() - 1;
-}
-
 constexpr uint32_t STREAM_SHIFT_24 = 24;
 constexpr uint32_t BUFFER_SHIFT_16 = 16;
 constexpr uint32_t BUFFER_SHIFT_8 = 8;
@@ -286,8 +281,8 @@ private:
 
     void (SortMergeJoinScanner::*scanFindNextRow)() = nullptr;
 
-    using CompareFunc = int32_t (*)(vec::Vector *leftColumn, int32_t leftColumnPosition, vec::Vector *rightColumn,
-        int32_t rightColumnPosition);
+    using CompareFunc = int32_t (*)(vec::BaseVector *leftColumn, int32_t leftColumnPosition,
+            vec::BaseVector *rightColumn, int32_t rightColumnPosition);
 
     std::vector<CompareFunc> keyCompareFuncs;
 

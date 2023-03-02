@@ -35,7 +35,17 @@ private:
     JoinHashTables *hashTables;
 };
 
-class LookupOuterPositionIterator;
+class LookupOuterPositionIterator {
+public:
+    explicit LookupOuterPositionIterator(JoinHashTables *joinHashTables);
+    void NextUnVisitedAddress(uint32_t &hashTableIndex, uint64_t &address);
+    void Reset();
+
+private:
+    uint32_t currentHashTable;
+    uint32_t currentPosition;
+    JoinHashTables *joinHashTables;
+};
 
 class LookupOuterJoinOperator : public Operator {
 public:
@@ -65,18 +75,6 @@ private:
     {
         return outputtedRowCount < totalRowCount;
     }
-};
-
-class LookupOuterPositionIterator {
-public:
-    LookupOuterPositionIterator(JoinHashTables *joinHashTables);
-    void NextUnVisitedAddress(uint32_t &hashTableIndex, uint64_t &address);
-    void Reset();
-
-private:
-    uint32_t currentHashTable;
-    uint32_t currentPosition;
-    JoinHashTables *joinHashTables;
 };
 } // end of op
 } // end of omniruntime

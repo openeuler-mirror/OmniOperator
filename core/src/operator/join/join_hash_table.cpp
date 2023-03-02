@@ -5,6 +5,7 @@
 #include "join_hash_table.h"
 #include <algorithm>
 #include <memory>
+#include "operator/hash_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -103,7 +104,7 @@ void JoinHashTables::AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTa
 }
 
 bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
-    Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const
+    BaseVector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const
 {
     auto partition = DecodePartition(partitionedJoinPosition);
     auto joinPosition = DecodeJoinPosition(partitionedJoinPosition);
@@ -114,7 +115,7 @@ bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, ui
     auto buildPosition = DecodePosition(address);
 
     auto pagesHashStrategy = pagesHash->GetPagesHashStrategy();
-    Vector ***buildColumns = pagesHashStrategy->GetBuildColumns();
+    BaseVector ***buildColumns = pagesHashStrategy->GetBuildColumns();
     auto buildColsCount = pagesHashStrategy->GetBuildColsCount();
     auto allColsCount = probeColsCount + buildColsCount;
 
@@ -129,9 +130,11 @@ bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, ui
         auto vecIdx = *iter;
         auto vector = (vecIdx < originalProbeColsCount) ? probeColumns[vecIdx] :
                                                           buildColumns[vecIdx - originalProbeColsCount][vecBatchIndex];
+        auto typeId = (vecIdx < originalProbeColsCount) ? probeTypes->GetType(vecIdx)->GetId() :
+                      buildTypes->GetType(vecIdx - originalProbeColsCount)->GetId();
         auto position = static_cast<int32_t>((vecIdx < originalProbeColsCount) ? probePosition : buildPosition);
-        nulls[vecIdx] = vector->IsValueNull(position);
-        values[vecIdx] = VectorHelper::GetValuePtrAndLength(vector, position, lengths + vecIdx);
+        nulls[vecIdx] = vector->IsNull(position);
+        values[vecIdx] = OperatorUtil::GetValuePtrAndLength(vector, position, lengths + vecIdx, typeId);
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
@@ -151,7 +154,7 @@ uint64_t JoinHashTables::GetNextJoinPosition(uint64_t currentJoinPosition) const
     }
 }
 
-uint64_t JoinHashTables::GetJoinPosition(uint32_t position, Vector **joinColumns, int64_t rawHash) const
+uint64_t JoinHashTables::GetJoinPosition(uint32_t position, BaseVector **joinColumns, int64_t rawHash) const
 {
     auto partition = (hashTableCount != 1) ? HashUtil::GetRawHashPartition(rawHash, partitionMask) : 0U;
     auto hashTable = hashTables[partition];
@@ -213,15 +216,17 @@ void JoinHashTable::PrintHashTable(uint32_t partitionIndex) const
 }
 
 template <typename T>
-void ReadColumnHashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns, int64_t *hashes,
-    bool *nullPositions)
+void ReadColumnHashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, BaseVector **columns,
+    int64_t *hashes, bool *nullPositions)
 {
-    Vector *column = nullptr, *result = nullptr;
+    using FlatVector = Vector<T>;
+    using DictionaryVector = Vector<DictionaryContainer<T>>;
+    BaseVector *column = nullptr;
     int64_t hash;
-    uint32_t vecBatchIndex, rowIndex;
+    uint32_t vecBatchIndex;
+    uint32_t rowIndex;
     uint32_t currVecBatchIndex = INVALID_POSITION;
     bool dictionary = false;
-    int32_t idIndex;
     for (uint32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
         auto address = addresses[offset + step];
         vecBatchIndex = DecodeSliceIndex(address);
@@ -229,35 +234,34 @@ void ReadColumnHashes(uint32_t offset, uint32_t addressesCount, uint64_t *addres
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+            if (column->GetEncoding() == OMNI_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
         }
-        if (column->IsValueNull(static_cast<int32_t>(rowIndex))) {
+        if (column->IsNull(static_cast<int32_t>(rowIndex))) {
             nullPositions[step] = true;
             continue;
         }
         if (!dictionary) {
-            hash = HashUtil::HashValue(static_cast<T *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
+            hash = HashUtil::HashValue(static_cast<FlatVector *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
         } else {
-            result = static_cast<DictionaryVector *>(column)->ExtractDictionaryAndId(static_cast<int32_t>(rowIndex),
-                idIndex);
-            hash = HashUtil::HashValue(static_cast<T *>(result)->GetValue(idIndex));
+            hash =
+                HashUtil::HashValue(static_cast<DictionaryVector *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
         }
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
 }
 
-static void ReadColumnDecimal64Hashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns,
-    int64_t *hashes, bool *nullPositions)
+static void ReadColumnDecimal64Hashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses,
+    BaseVector **columns, int64_t *hashes, bool *nullPositions)
 {
-    Vector *column = nullptr, *result = nullptr;
+    BaseVector *column = nullptr;
     int64_t hash;
-    uint32_t vecBatchIndex, rowIndex;
+    uint32_t vecBatchIndex;
+    uint32_t rowIndex;
     uint32_t currVecBatchIndex = INVALID_POSITION;
     bool dictionary = false;
-    int32_t idIndex;
     for (uint32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
         auto address = addresses[offset + step];
         vecBatchIndex = DecodeSliceIndex(address);
@@ -265,37 +269,35 @@ static void ReadColumnDecimal64Hashes(uint32_t offset, uint32_t addressesCount, 
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+            if (column->GetEncoding() == OMNI_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
         }
-        if (column->IsValueNull(static_cast<int32_t>(rowIndex))) {
+        if (column->IsNull(static_cast<int32_t>(rowIndex))) {
             nullPositions[step] = true;
             continue;
         }
         if (!dictionary) {
             hash = HashUtil::HashDecimal64Value(
-                static_cast<LongVector *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
+                static_cast<Vector<int64_t> *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
         } else {
-            result = static_cast<DictionaryVector *>(column)->ExtractDictionaryAndId(static_cast<int32_t>(rowIndex),
-                idIndex);
-            hash = HashUtil::HashDecimal64Value(static_cast<LongVector *>(result)->GetValue(idIndex));
+            hash = HashUtil::HashDecimal64Value(
+                static_cast<Vector<DictionaryContainer<int64_t>> *>(column)->GetValue(rowIndex));
         }
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
 }
 
-static void ReadColumnDecimal128Hashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns,
-    int64_t *hashes, bool *nullPositions)
+static void ReadColumnDecimal128Hashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses,
+    BaseVector **columns, int64_t *hashes, bool *nullPositions)
 {
-    Vector *column = nullptr, *result = nullptr;
+    BaseVector *column = nullptr;
     int64_t hash;
     Decimal128 decimal128Value;
     uint32_t vecBatchIndex, rowIndex;
     uint32_t currVecBatchIndex = INVALID_POSITION;
     bool dictionary = false;
-    int32_t idIndex;
     for (uint32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
         auto address = addresses[offset + step];
         vecBatchIndex = DecodeSliceIndex(address);
@@ -303,36 +305,35 @@ static void ReadColumnDecimal128Hashes(uint32_t offset, uint32_t addressesCount,
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+            if (column->GetEncoding() == OMNI_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
         }
-        if (column->IsValueNull(static_cast<int32_t>(rowIndex))) {
+        if (column->IsNull(static_cast<int32_t>(rowIndex))) {
             nullPositions[step] = true;
             continue;
         }
         if (!dictionary) {
-            decimal128Value = static_cast<Decimal128Vector *>(column)->GetValue(static_cast<int32_t>(rowIndex));
+            decimal128Value = static_cast<Vector<Decimal128> *>(column)->GetValue(static_cast<int32_t>(rowIndex));
         } else {
-            result = static_cast<DictionaryVector *>(column)->ExtractDictionaryAndId(static_cast<int32_t>(rowIndex),
-                idIndex);
-            decimal128Value = static_cast<Decimal128Vector *>(result)->GetValue(idIndex);
+            decimal128Value = static_cast<Vector<DictionaryContainer<Decimal128>> *>(column)->GetValue(rowIndex);
         }
         hash = HashUtil::HashValue(static_cast<int64_t>(decimal128Value.LowBits()), decimal128Value.HighBits());
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
 }
 
-static void ReadColumnCharHashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector **columns,
+static void ReadColumnCharHashes(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, BaseVector **columns,
     int64_t *hashes, bool *nullPositions)
 {
-    Vector *column = nullptr, *result = nullptr;
-    uint8_t *varcharValue = nullptr;
+    BaseVector *column = nullptr;
     int64_t hash;
-    uint32_t vecBatchIndex, rowIndex, currVecBatchIndex = INVALID_POSITION;
-    int32_t idIndex, valueLength;
+    uint32_t vecBatchIndex;
+    uint32_t rowIndex;
+    uint32_t currVecBatchIndex = INVALID_POSITION;
     bool dictionary = false;
+    std::string_view varcharValue;
     for (uint32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
         auto address = addresses[offset + step];
         vecBatchIndex = DecodeSliceIndex(address);
@@ -340,78 +341,51 @@ static void ReadColumnCharHashes(uint32_t offset, uint32_t addressesCount, uint6
         if (currVecBatchIndex != vecBatchIndex) {
             column = columns[vecBatchIndex];
             dictionary = false;
-            if (column->GetEncoding() == omniruntime::vec::OMNI_VEC_ENCODING_DICTIONARY) {
+            if (column->GetEncoding() == OMNI_DICTIONARY) {
                 dictionary = true;
             }
             currVecBatchIndex = vecBatchIndex;
         }
-        if (column->IsValueNull(static_cast<int32_t>(rowIndex))) {
+        if (column->IsNull(static_cast<int32_t>(rowIndex))) {
             nullPositions[step] = true;
             continue;
         }
         if (!dictionary) {
-            varcharValue = nullptr;
-            valueLength = static_cast<VarcharVector *>(column)->GetValue(static_cast<int32_t>(rowIndex), &varcharValue);
+            varcharValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(column)->GetValue(
+                static_cast<int32_t>(rowIndex));
         } else {
-            result = static_cast<DictionaryVector *>(column)->ExtractDictionaryAndId(static_cast<int32_t>(rowIndex),
-                idIndex);
-            varcharValue = nullptr;
-            valueLength = static_cast<VarcharVector *>(result)->GetValue(idIndex, &varcharValue);
+            varcharValue =
+                static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(column)->GetValue(
+                rowIndex);
         }
-        hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+        hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
+            varcharValue.length());
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
 }
 
-static void ProcessColumns(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, Vector ***columns,
+template <DataTypeId typeId>
+void ReadOneColumnHash(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, BaseVector **columns,
+    int64_t *hashes, bool *nullPositions)
+{
+    using T = typename NativeType<typeId>::type;
+    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        ReadColumnCharHashes(offset, addressesCount, addresses, columns, hashes, nullPositions);
+    } else if constexpr (std::is_same_v<T, Decimal128>) {
+        ReadColumnDecimal128Hashes(offset, addressesCount, addresses, columns, hashes, nullPositions);
+    } else if constexpr (typeId == OMNI_DECIMAL64) {
+        ReadColumnDecimal64Hashes(offset, addressesCount, addresses, columns, hashes, nullPositions);
+    } else {
+        ReadColumnHashes<T>(offset, addressesCount, addresses, columns, hashes, nullPositions);
+    }
+}
+
+static void ProcessColumns(uint32_t offset, uint32_t addressesCount, uint64_t *addresses, BaseVector ***columns,
     int32_t *types, uint32_t colCount, int64_t *hashes, bool *nullPositions)
 {
     for (uint32_t columnIdx = 0; columnIdx < colCount; ++columnIdx) {
-        switch (types[columnIdx]) {
-            case omniruntime::type::OMNI_INT:
-            case omniruntime::type::OMNI_DATE32: {
-                ReadColumnHashes<IntVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
-                    nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_SHORT: {
-                ReadColumnHashes<ShortVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
-                    nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_LONG: {
-                ReadColumnHashes<LongVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
-                    nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_DOUBLE: {
-                ReadColumnHashes<DoubleVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
-                    nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_BOOLEAN: {
-                ReadColumnHashes<BooleanVector>(offset, addressesCount, addresses, columns[columnIdx], hashes,
-                    nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_DECIMAL64: {
-                ReadColumnDecimal64Hashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_DECIMAL128: {
-                ReadColumnDecimal128Hashes(offset, addressesCount, addresses, columns[columnIdx], hashes,
-                    nullPositions);
-                break;
-            }
-            case omniruntime::type::OMNI_VARCHAR:
-            case omniruntime::type::OMNI_CHAR: {
-                ReadColumnCharHashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
-                break;
-            }
-            default: {
-                break;
-            }
-        }
+        DYNAMIC_TYPE_DISPATCH(ReadOneColumnHash, types[columnIdx], offset, addressesCount, addresses,
+            columns[columnIdx], hashes, nullPositions);
     }
 }
 
@@ -493,7 +467,7 @@ PagesHash::~PagesHash()
     delete pagesHashStrategy;
 }
 
-uint32_t PagesHash::GetAddressIndex(uint32_t probePosition, Vector **joinColumns, int64_t rawHash) const
+uint32_t PagesHash::GetAddressIndex(uint32_t probePosition, BaseVector **joinColumns, int64_t rawHash) const
 {
     auto pos = HashUtil::GetRawHashPosition(rawHash, mask);
     auto buildPosition = key[pos];

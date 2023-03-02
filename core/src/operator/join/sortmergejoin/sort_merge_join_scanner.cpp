@@ -486,6 +486,11 @@ bool SortMergeJoinScanner::IsValidAddedBufferedData()
     return true;
 }
 
+static ALWAYS_INLINE bool HasNext(int32_t pos, DynamicPagesIndex *pagesIndex)
+{
+    return pos < pagesIndex->GetPositionCount() - 1;
+}
+
 /**
  * Advance the streamed iterator until we find a row with join key that does not contain nulls.
  * @return true if the streamed iterator returned a row and false otherwise.

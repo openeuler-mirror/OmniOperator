@@ -628,4 +628,14 @@ VectorBatch *CreateEmptyVectorBatch(const DataTypes &dataTypes)
     }
     return vectorBatch;
 }
+
+int32_t DecodeAddFlag(int32_t resultCode)
+{
+    return resultCode >> 16;
+}
+
+int32_t DecodeFetchFlag(int32_t resultCode)
+{
+    return resultCode & SHRT_MAX;
+}
 }

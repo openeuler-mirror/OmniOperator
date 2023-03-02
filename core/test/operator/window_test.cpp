@@ -83,8 +83,9 @@ BaseVector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatc
         case OMNI_CHAR: {
             auto col = new vec::Vector<LargeStringContainer<std::string_view>>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
-                auto str = std::string_view(std::to_string(j));
-                col->SetValue(j, str);
+                std::string str = std::to_string(j);
+                auto str_view = std::string_view(str.data(), str.size());
+                col->SetValue(j, str_view);
             }
             return col;
         }
@@ -1886,10 +1887,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int16_t data9[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
-    int32_t valuesCnt = sizeof(ids) / sizeof(ids[0]);
-    VectorBatch *vecBatch =
-        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
-
+    auto *vecBatch = new vec::VectorBatch(DATA_SIZE);
     void *datas[10] = {data0, data1, data2, data3, data4, data5, data6, data7, data8, data9};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         DataTypePtr dataType = sourceTypes.GetType(i);

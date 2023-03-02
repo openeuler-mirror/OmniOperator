@@ -6,6 +6,7 @@
 #include <memory>
 #include "expression/jsonparser/jsonparser.h"
 #include "operator/pages_index.h"
+#include "operator/omni_id_type_vector_traits.h"
 #include "sort_merge_join_scanner.h"
 #include "util/compiler_util.h"
 
@@ -18,7 +19,7 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
     int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex *leftTablePagesIndex,
     const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
     int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
-    std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig)
+    std::string &filter, JoinType joinType, OverflowConfig *overflowConfig)
     : leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
       originalLeftTableColsCount(originalLeftTableColsCount),
@@ -28,7 +29,6 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
       originalRightTableColsCount(originalRightTableColsCount),
       rightTablePagesIndex(rightTablePagesIndex),
       filterExpStr(filter),
-      vecAllocator(vecAllocator),
       joinType(joinType)
 {
     int32_t leftRowSize = OperatorUtil::GetRowSize(leftTableOutputTypes);
@@ -47,7 +47,6 @@ void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
     }
 
     executionContext = new ExecutionContext();
-    executionContext->GetArena()->SetAllocator(vecAllocator);
     omniruntime::expressions::Expr *filterExpr = JSONParser::ParseJSON(filterExpStr);
     simpleFilter = new SimpleFilter(*filterExpr);
     auto result = simpleFilter->Initialize(overflowConfig);
@@ -81,81 +80,61 @@ void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
-    VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
+    auto *vectorBatch = new VectorBatch(maxRowCount);
 
-    vectorBatch->NewFlatVectors(vecAllocator, allTypes);
+    for (auto &type : allTypes) {
+        vectorBatch->Append(VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), maxRowCount));
+    }
     return vectorBatch;
 }
 
-template <typename T, typename V>
-void AddFixWidthValueToVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
+template <type::DataTypeId typeId>
+void AddValueToVector(BaseVector *inputVector, int32_t inputRowId, BaseVector *outputVector, int32_t outputRowId)
 {
-    T *fixWidthValueVector = static_cast<T *>(inputVector);
-    T *fixWidthBuildVector = static_cast<T *>(outputVector);
-    if (fixWidthValueVector->IsValueNull(inputRowId)) {
-        fixWidthBuildVector->SetValueNull(outputRowId);
+    using Type = typename NativeAndVectorType<typeId>::type;
+    using Vector = typename NativeAndVectorType<typeId>::vector;
+    using DictVector = typename NativeAndVectorType<typeId>::dictVector;
+
+    if (inputVector->IsNull(inputRowId)) {
+        reinterpret_cast<Vector *>(outputVector)->SetNull(outputRowId);
     } else {
-        V value = fixWidthValueVector->GetValue(inputRowId);
-        fixWidthBuildVector->SetValue(outputRowId, value);
+        Type value;
+        if (inputVector->GetEncoding() == OMNI_DICTIONARY) {
+            value = reinterpret_cast<DictVector *>(inputVector)->GetValue(inputRowId);
+            reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
+        } else {
+            value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
+            reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
+        }
     }
 }
 
-void AddVarcharValueToVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
+void AddValueToBuildVector(BaseVector *inputVector, const DataTypePtr &inputDataType, int32_t inputRowId,
+    BaseVector *outputVector, int32_t outputRowId)
 {
-    auto *varcharInputVector = static_cast<VarcharVector *>(inputVector);
-    auto *varcharOutputVector = static_cast<VarcharVector *>(outputVector);
-    if (varcharInputVector->IsValueNull(inputRowId)) {
-        varcharOutputVector->SetValueNull(outputRowId);
+    DYNAMIC_TYPE_DISPATCH(AddValueToVector, inputDataType->GetId(), inputVector, inputRowId, outputVector, outputRowId);
+}
+
+void AddValueNullToBuildVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowId)
+{
+    auto typeId = dataType->GetId();
+    if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+        static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(rowId);
     } else {
-        uint8_t *value = nullptr;
-        int32_t valueLen = varcharInputVector->GetValue(inputRowId, &value);
-        varcharOutputVector->SetValue(outputRowId, value, valueLen);
+        vector->SetNull(rowId);
     }
 }
 
-void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
-{
-    int32_t originalId = inputRowId;
-    Vector *originalVector = inputVector;
-    switch (originalVector->GetTypeId()) {
-        case OMNI_INT:
-        case OMNI_DATE32:
-            AddFixWidthValueToVector<IntVector, int32_t>(originalVector, originalId, outputVector, outputRowId);
-            break;
-        case OMNI_SHORT:
-            AddFixWidthValueToVector<ShortVector, int16_t>(originalVector, originalId, outputVector, outputRowId);
-            break;
-        case OMNI_LONG:
-        case OMNI_DECIMAL64:
-            AddFixWidthValueToVector<LongVector, int64_t>(originalVector, originalId, outputVector, outputRowId);
-            break;
-        case OMNI_DOUBLE:
-            AddFixWidthValueToVector<DoubleVector, double>(originalVector, originalId, outputVector, outputRowId);
-            break;
-        case OMNI_BOOLEAN:
-            AddFixWidthValueToVector<BooleanVector, bool>(originalVector, originalId, outputVector, outputRowId);
-            break;
-        case OMNI_CHAR:
-        case OMNI_VARCHAR:
-            AddVarcharValueToVector(originalVector, originalId, outputVector, outputRowId);
-            break;
-        case OMNI_DECIMAL128:
-            AddFixWidthValueToVector<Decimal128Vector, Decimal128>(originalVector, originalId, outputVector,
-                outputRowId);
-            break;
-        default:
-            break;
-    }
-}
-
-void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId)
+void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
+    vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount)
 {
     if (leftBatchId == JOIN_NULL_FLAG) {
         PaddingLeftTableNull();
     } else {
         for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
             AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+                leftTableOutputTypes[columnIdx], leftRowId,
+                buildVectorBatch->Get(columnIdx), buildRowCount);
         }
     }
 }
@@ -168,7 +147,8 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForRightTable(int32_t right
         for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
             int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
             AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
-                rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
+                rightTableOutputTypes[columnIdx], rightRowId,
+                buildVectorBatch->Get(buildColumnIdx), buildRowCount);
         }
     }
 }
@@ -516,13 +496,14 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
     }
 }
 
-VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
+VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, std::vector<DataTypePtr> dataTypes, int32_t rowCount)
 {
-    int32_t outputColCount = vectorBatch->GetVectorCount();
-    VectorBatch *sliceBatch = new VectorBatch(outputColCount, rowCount);
-    Vector **vectors = vectorBatch->GetVectors();
+    auto outputColCount = vectorBatch->GetVectorCount();
+    auto *sliceBatch = new VectorBatch(rowCount);
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
-        sliceBatch->SetVector(columnIdx, vectors[columnIdx]->Slice(0, rowCount));
+        auto *vector = vectorBatch->Get(columnIdx);
+        auto dataType = dataTypes[columnIdx]->GetId();
+        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, dataType, 0, rowCount));
     }
     return sliceBatch;
 }
@@ -533,7 +514,7 @@ int32_t JoinResultBuilder::GetOutput(omniruntime::vec::VectorBatch **outputVecBa
         if (buildVectorBatchRowCount == maxRowCount) {
             *outputVecBatch = buildVectorBatch;
         } else {
-            *outputVecBatch = GetVectorBatchFromSlice(buildVectorBatch, buildVectorBatchRowCount);
+            *outputVecBatch = GetVectorBatchFromSlice(buildVectorBatch, allOutputTypes, buildVectorBatchRowCount);
             VectorHelper::FreeVecBatch(buildVectorBatch);
         }
     } else {
@@ -559,16 +540,20 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
     for (int32_t i = 0; i < streamedColsCountInFilter; i++) {
         auto col = streamedColsInFilter[i];
         auto leftVector = leftTablePagesIndex->GetColumnFromCache(col);
-        nulls[col] = leftVector->IsValueNull(leftRowId);
-        values[col] = VectorHelper::GetValuePtrAndLengthFromRawVector(leftVector, leftRowId, lengths + col);
+        nulls[col] = leftVector->IsNull(leftRowId);
+        auto leftDataType = leftTablePagesIndex->GetColumnTypeId(col);
+        values[col] = OperatorUtil::GetValuePtrAndLengthFromRawVector(leftVector, leftRowId, lengths + col,
+                                                                      leftDataType);
     }
     rightTablePagesIndex->CacheBatch(rightBatchId);
     for (int32_t i = 0; i < bufferedColsCountInFilter; i++) {
         auto col = bufferedColsInFilter[i];
         auto rightVector = rightTablePagesIndex->GetColumnFromCache(col);
         auto colIdx = col + originalLeftTableColsCount;
-        nulls[colIdx] = rightVector->IsValueNull(rightRowId);
-        values[colIdx] = VectorHelper::GetValuePtrAndLengthFromRawVector(rightVector, rightRowId, lengths + colIdx);
+        nulls[colIdx] = rightVector->IsNull(rightRowId);
+        auto rightDataType = rightTablePagesIndex->GetColumnTypeId(col);
+        values[colIdx] = OperatorUtil::GetValuePtrAndLengthFromRawVector(rightVector, rightRowId, lengths + colIdx,
+                                                                         rightDataType);
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));

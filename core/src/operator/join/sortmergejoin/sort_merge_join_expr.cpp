@@ -56,7 +56,9 @@ StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTyp
       streamedTypes(streamedTypes),
       streamedKeyCols(streamedKeyCols),
       projectFuncs(projectFuncs)
-{}
+{
+    this->outputTypes = smjOperator->GetOutputType();
+}
 
 StreamedTableWithExprOperator::~StreamedTableWithExprOperator() = default;
 
@@ -68,7 +70,7 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     }
 
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, streamedTypes, projectFuncs, streamedKeyCols, vecAllocator);
+        OperatorUtil::ProjectVectors(vecBatch, streamedTypes, projectFuncs, streamedKeyCols);
     if (newInputVecBatch != nullptr) {
         retCode = smjOperator->AddStreamedTableInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);
@@ -123,7 +125,7 @@ BufferedTableWithExprOperatorFactory::~BufferedTableWithExprOperatorFactory() = 
 
 Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 {
-    auto smjOperator = streamTblWithExprOperatorFactory->GetSmjOperator();
+    auto *smjOperator = streamTblWithExprOperatorFactory->GetSmjOperator();
     return new BufferedTableWithExprOperator(*bufferedTypes, bufferedKeyCols, projectFuncs, smjOperator);
 }
 
@@ -134,7 +136,9 @@ BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTyp
       bufferedTypes(bufferedTypes),
       bufferedKeyCols(bufferedKeyCols),
       projectFuncs(projectFuncs)
-{}
+{
+    this->outputTypes = smjOperator->GetOutputType();
+}
 
 BufferedTableWithExprOperator::~BufferedTableWithExprOperator() = default;
 
@@ -145,7 +149,7 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
         return retCode;
     }
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, bufferedTypes, projectFuncs, bufferedKeyCols, vecAllocator);
+        OperatorUtil::ProjectVectors(vecBatch, bufferedTypes, projectFuncs, bufferedKeyCols);
     if (newInputVecBatch != nullptr) {
         retCode = smjOperator->AddBufferedTableInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

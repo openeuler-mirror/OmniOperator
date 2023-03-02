@@ -13,7 +13,6 @@
 #include "expression/expressions.h"
 #include "operator/filter/filter_and_project.h"
 #include "operator/join/common_join.h"
-#include "vector/vector_allocator.h"
 
 namespace omniruntime {
 namespace op {
@@ -23,7 +22,7 @@ public:
         int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex *leftTablePagesIndex,
         const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
         int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
-        std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig);
+        std::string &filter, JoinType joinType, OverflowConfig *overflowConfig);
 
     void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId);
 
@@ -149,6 +148,7 @@ private:
     int32_t rightTableOutputColsCount;
     int32_t originalRightTableColsCount;
     DynamicPagesIndex *rightTablePagesIndex;
+    std::vector<DataTypePtr> allOutputTypes;
     std::string filterExpStr;
 
     int32_t lastUnMatchedStreamedBatchId = -1;
@@ -161,8 +161,6 @@ private:
     int32_t preStreamedBatchId = INT32_MAX;
     int32_t preStreamedRowId = INT32_MAX;
     bool preLeftTableRowMatchedOut = false; // current left row matched out or pad null
-
-    vec::VectorAllocator *vecAllocator;
 
     int32_t buildVectorBatchRowCount = 0;
     VectorBatch *buildVectorBatch = nullptr;

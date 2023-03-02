@@ -27,7 +27,7 @@ public:
         return position;
     }
 
-    ALWAYS_INLINE omniruntime::vec::Vector **GetProbeAllColumns() const
+    ALWAYS_INLINE omniruntime::vec::BaseVector **GetProbeAllColumns() const
     {
         return probeAllColumns;
     }
@@ -41,10 +41,10 @@ public:
     uint64_t GetCurrentJoinPosition(const JoinHashTables *hashTables) const;
 
 private:
-    omniruntime::vec::Vector **probeAllColumns;
+    omniruntime::vec::BaseVector **probeAllColumns;
     uint32_t probeAllColsCount;
     uint32_t positionCount;
-    omniruntime::vec::Vector **probeHashColumns; // Vector *[join column count]
+    omniruntime::vec::BaseVector **probeHashColumns; // Vector *[join column count]
     int32_t *probeHashColTypes;
     uint32_t probeHashColsCount;
     int32_t position;
@@ -55,10 +55,11 @@ private:
 class LookupJoinOutputBuilder {
 public:
     LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
-        int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
+        int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t outputRowSize,
+        const type::DataTypes &probeTypes);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition);
-    void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
+    void BuildOutput(const JoinProbe *joinProbe, const JoinHashTables *hashTables,
         VectorBatch **outputVecBatch);
 
     ALWAYS_INLINE bool HasNext()
@@ -86,6 +87,7 @@ private:
     std::vector<int32_t> probeIndex;
     std::vector<uint64_t> buildIndex;
     bool isSequentialProbeIndices;
+    type::DataTypes probeTypes;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {

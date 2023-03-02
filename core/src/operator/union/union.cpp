@@ -44,7 +44,6 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
         outBatch->Append(inputVector);
     }
     inputVecBatches.push_back(outBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
     vecBatchCount++;
     return 0;
 }

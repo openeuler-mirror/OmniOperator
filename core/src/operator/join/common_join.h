@@ -1,6 +1,6 @@
 /*
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * @Description: sort merge join implementations
+ * @Description: common
  */
 
 #ifndef __COMMON_JOIN_H__
