@@ -32,22 +32,23 @@ public:
         partialOut, isOverflowAsNull)
     {}
 
-    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override
     {}
 
-    void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, BooleanVector *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override
     {}
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
     {}
 
     virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        BaseVector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap)
     {}
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, const int32_t rowIndex) override {}
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override
+    {}
 
     template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)
     {

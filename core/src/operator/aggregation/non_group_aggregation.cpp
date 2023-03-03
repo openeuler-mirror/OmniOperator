@@ -7,6 +7,7 @@
 #include "operator/status.h"
 #include "util/type_util.h"
 #include "agg_util.h"
+#include "vector_getter.h"
 #ifdef ENABLE_HMPP
 #include "util/config_util.h"
 #endif
@@ -103,6 +104,15 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
+static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypePtr> &dataTypes, int size)
+{
+    for (auto &type : dataTypes) {
+        auto omniId = type->GetId();
+        auto &newFunc = newUniqueVectorFunctions.at(omniId);
+        newFunc(vectorBatch, size);
+    }
+}
+
 int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     // always output one row
@@ -115,15 +125,18 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
             aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
         }
     }
-    auto output = new VectorBatch(aggsCount, 1);
-    output->NewVectors(this->vecAllocator, aggsOutputDataTypePtrs);
+    this->outputTypes.insert(this->outputTypes.end(), aggsOutputDataTypePtrs.begin(), aggsOutputDataTypePtrs.end());
+    auto output = new VectorBatch(1);
+    GenerateAggVector(output, aggsOutputDataTypePtrs, 1);
+
+    // set result value
     int32_t aggOutputColsStart = 0;
     for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
-        std::vector<Vector *> extractVectors;
+        std::vector<BaseVector *> extractVectors;
         for (int i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
-            extractVectors.push_back(output->GetVector(aggOutputColsStart + i));
+            extractVectors.push_back(output->Get(aggOutputColsStart + i));
         }
         aggOutputColsStart += aggsOutputTypes[aggIdx].GetSize();
 

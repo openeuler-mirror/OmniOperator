@@ -24,7 +24,8 @@ enum class ErrorCode {
     READ_FAILED,
     LOAD_LAZY_VECTOR_FAILED,
     MEM_CAP_EXCEEDED,
-    JVM_FAILED
+    JVM_FAILED,
+    UNSUPPORTED
 };
 
 std::string &GetErrorCode(const ErrorCode &errorCode);

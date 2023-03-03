@@ -28,6 +28,12 @@ bool VecBatchMatch(vec::VectorBatch *outputPages, vec::VectorBatch *expectPage, 
 bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
     std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
 
+bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
+    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
+
+bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
+    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
+
 bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn, int32_t typeId);
 
 vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);
@@ -189,6 +195,15 @@ vec::VectorBatch *CreateEmptyVectorBatch(const DataTypes &dataTypes);
 int32_t DecodeAddFlag(int32_t resultCode);
 
 int32_t DecodeFetchFlag(int32_t resultCode);
+
+template <typename D, typename V>
+bool CompareUnorderedRows(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, const double error);
+
+bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, DataTypeId omniId,
+    const double error);
+
+bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch,
+    std::vector<DataTypePtr> &types, const double error);
 
 class Timer {
 public:

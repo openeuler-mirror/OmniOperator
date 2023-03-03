@@ -745,7 +745,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VectorBatch *vecBatch = new VectorBatch(dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        DataTypePtr dataType = sourceTypes.GetType(i);
+        auto &dataType = sourceTypes.GetType(i);
         vecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]));
     }
 
@@ -806,7 +806,7 @@ VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas
             ids[i] = i;
         }
         for (int32_t i = 0; i < sourceTypesSize; i++) {
-            DataTypePtr dataType = sourceTypes.GetType(i);
+            auto &dataType = sourceTypes.GetType(i);
             sourceVectors[i] =
                 DYNAMIC_TYPE_DISPATCH(CreateDictionary, dataType->GetId(), sourceVectors[i].get(), ids, totalDataSize);
         }

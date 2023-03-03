@@ -17,12 +17,11 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
         throw OmniException("NOT SUPPORT", "Unsupported input type for sum aggregate");
     } else {
-        auto vector = vectorBatch->GetVector(this->channels[0]);
+        auto vector = vectorBatch->Get(this->channels[0]);
 
-        auto vectorValues = vector->GetValues();
-        auto positionOffset = vector->GetPositionOffset();
+        auto vectorValues = VectorHelper::GetValues(vector, IN_ID);
         auto rowCount = vector->GetSize();
-        auto nullAddr = vector->GetValueNulls();
+        auto nullAddr = reinterpret_cast<void *>(unsafe::UnsafeBaseVector::GetNulls(vector));
         bool overflow = false;
 
         HmppResult result = HMPP_STS_NO_ERR;
@@ -30,8 +29,8 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         if constexpr (IN_ID == OMNI_LONG) {
             LogDebug("HMPP-Agg-sum");
             long sumVal = 0;
-            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
+            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "sum failed for hmpp error");
             }
@@ -49,8 +48,8 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
             LogDebug("HMPP-Agg-sum");
             HmppDecimal128 sumVal{};
             result = HMPPS_Sum_decimal128(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
-                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
+                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
+                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "sum failed for hmpp error");
             }
@@ -78,7 +77,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // not accept dictionnary vector
-    if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+    if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
         return false;
     }
 
@@ -94,11 +93,10 @@ bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, Vec
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
-    int32_t offset;
-    auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+    auto v = static_cast<OutVector *>(vectors[0]);
 
     OutType result{};
     bool overflow = state.count < 0;
@@ -109,7 +107,8 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
                 *reinterpret_cast<Decimal128 *>(state.val), overflow);
         }
         result.count = overflow ? 0 : state.count;
-        v->SetValue(offset, reinterpret_cast<uint8_t *>(&result), sizeof(OutType));
+        std::string_view decimal2Str(reinterpret_cast<char *>(&result), sizeof(OutType));
+        v->SetValue(rowIndex, decimal2Str);
         if (overflow && !this->IsOverflowAsNull()) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", "sum_aggregator overflow.");
         }
@@ -118,12 +117,11 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
             result = this->template CastWithOverflow<ResultType, OutType>(*reinterpret_cast<ResultType *>(state.val),
                 overflow);
         }
-
-        v->SetValue(offset, result);
+        v->SetValue(rowIndex, result);
         if (overflow) {
-            this->SetNullOrThrowException(v, offset, "sum_aggregator overflow.");
+            this->SetNullOrThrowException(v, rowIndex, "sum_aggregator overflow.");
         } else if (state.count == 0 || state.val == nullptr) {
-            v->SetValueNull(offset);
+            v->SetNull(rowIndex);
         }
     }
 }
@@ -136,18 +134,16 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
     const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         this->InitState(state);
     }
-    ResultType *res = reinterpret_cast<ResultType *>(state.val);
-
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
+    auto *res = reinterpret_cast<ResultType *>(state.val);
 
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             Add<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount);
@@ -160,6 +156,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
             }
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDict<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
         } else {
@@ -209,12 +206,10 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &s
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
-
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             AddUseRowIndex<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr);
@@ -224,6 +219,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
                 aggIdx, ptr, nullMap);
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
         } else {

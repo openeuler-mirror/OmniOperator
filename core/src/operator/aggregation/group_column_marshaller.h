@@ -8,6 +8,8 @@
 #include "vector/vector_helper.h"
 #include "type/string_ref.h"
 #include "group_hash_map/group_hash_map.h"
+#include "operator/execution_context.h"
+#include "vector_marshaller.h"
 
 namespace omniruntime {
 namespace op {
@@ -25,11 +27,12 @@ public:
 
     type::StringRef HandleOneRow(size_t rowId, VectorBatch *groupVectors, ExecutionContext &executionContext)
     {
-        const uint8_t *ptr = nullptr;
+        const char *ptr = nullptr;
         uint32_t len = 0;
         for (int i = 0; i < groupVectors->GetVectorCount(); i++) {
-            auto *curVector = groupVectors->GetVector(i);
-            auto strRef = curVector->SerializeValue(rowId, *executionContext.GetArena(), ptr);
+            auto *curVector = groupVectors->Get(i);
+            auto &curFunc = serializers[i];
+            auto strRef = curFunc(curVector, rowId, *executionContext.GetArena(), ptr);
             len += strRef.size;
         }
 
@@ -42,15 +45,38 @@ public:
         return hashmap.Emplace(emplaceKey);
     }
 
-    static void ParseKeyToCols(const StringRef &key, VectorBatch *vectorBatch, const int32_t start,
+    void ParseKeyToCols(const StringRef &key, VectorBatch *vectorBatch, const int32_t start,
         const int32_t length, const int rowId)
     {
-        auto *pos = reinterpret_cast<const uint8_t *>(key.data);
+        auto *pos = key.data ;
         const int32_t end = start + length;
         for (int32_t i = start; i < end; ++i) {
-            pos = vectorBatch->GetVector(i)->DeserializeValueIntoThis(rowId, pos);
+            auto curVectorPtr = vectorBatch->Get(i);
+            auto deserializeFunc = deserializers[i];
+            pos = deserializeFunc(curVectorPtr, rowId, pos);
         }
     }
+    void InitSize(int groupBySize){
+        serializers.reserve(groupBySize);
+        deserializers.reserve(groupBySize);
+    }
+
+    void ResetSerializer(){
+        serializers.clear();
+        deserializers.clear();
+    }
+
+    void PushBackSerializer(VectorSerializer serializer){
+        serializers.push_back(serializer);
+    }
+
+    void PushBackDeSerializer(VectorDeSerializer deserializer){
+        deserializers.push_back(deserializer);
+    }
+
+private:
+    std::vector<VectorSerializer> serializers;
+    std::vector<VectorDeSerializer> deserializers;
 };
 }
 }

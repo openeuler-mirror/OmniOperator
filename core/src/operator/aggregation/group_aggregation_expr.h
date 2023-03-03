@@ -28,7 +28,7 @@ public:
 
 private:
     // originalSourceTypes is used to store raw input type which is not handled by projection function
-    std::unique_ptr<DataTypes> originalSourceTypes;
+    std::unique_ptr<DataTypes> originSourceTypes;
     // sourceTypes is used to store input type which has been handled by projection function
     std::unique_ptr<DataTypes> sourceTypes;
     std::unique_ptr<DataTypes> groupByTypes;
@@ -43,9 +43,9 @@ private:
 
 class HashAggregationWithExprOperator : public Operator {
 public:
-    HashAggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, std::vector<SimpleFilter *> &aggSimpleFilters,
-        HashAggregationOperator *hashAggOperator);
+    HashAggregationWithExprOperator(const DataTypes &originSourceTypes, const type::DataTypes &sourceTypes,
+        std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
+        std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator);
 
     ~HashAggregationWithExprOperator() override;
 
@@ -61,6 +61,7 @@ public:
 
 private:
     OneRowAdaptor oneRowAdaptor;
+    DataTypes originTypes;
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<ProjFunc> projectFuncs;

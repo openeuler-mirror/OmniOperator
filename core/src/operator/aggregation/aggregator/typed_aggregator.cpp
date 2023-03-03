@@ -9,9 +9,12 @@ TypedAggregator::TypedAggregator(const FunctionType aggregateType, const DataTyp
     const DataTypes &outputTypes, const std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
     const bool isOverflowAsNull)
     : Aggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
-{}
+{
+    auto curId = inputTypes.GetType(0);
+    getIdsWithOffFunction = getIdsWithOffsetFunctions.at(curId->GetId());
+}
 
-Vector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
+BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
     uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx)
 {
 #ifdef DEBUG
@@ -30,15 +33,17 @@ Vector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOf
     }
 #endif
 
-    auto vector = vectorBatch->GetVector(channel);
-    *nullMap = vector->MayHaveNull() ? reinterpret_cast<uint8_t *>(vector->GetValueNulls()) : nullptr;
+    auto vector = vectorBatch->Get(channel);
+    *nullMap = vector->HasNull() ? reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector)) : nullptr;
     if (*nullMap != nullptr) {
-        *nullMap += vector->GetPositionOffset() + rowOffset;
+        *nullMap += rowOffset;
     }
 
-    if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+    if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
         indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-        return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount, indexMap.data);
+        getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
+        //return original vector rather than internal vector
+        return vector;
     } else {
         indexMap.Release();
         return vector;

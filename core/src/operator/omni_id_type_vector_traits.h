@@ -18,7 +18,7 @@ namespace op {
 template <type::DataTypeId dataTypeId> struct NativeAndVectorType {};
 
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_BOOLEAN> {
-    using type = int8_t;
+    using type = bool;
     using vector = vec::Vector<type>;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };

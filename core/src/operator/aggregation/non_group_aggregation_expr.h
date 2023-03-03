@@ -20,13 +20,14 @@ public:
         std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
         std::vector<omniruntime::expressions::Expr *> &aggFilterExprs, std::vector<uint32_t> &maskColumns,
-        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig &overflowConfig);
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig);
 
     ~AggregationWithExprOperatorFactory() override;
 
     Operator *CreateOperator() override;
 
 private:
+    std::unique_ptr<DataTypes> originSourceTypes;
     std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<Projection>> projections;
@@ -38,9 +39,9 @@ private:
 
 class AggregationWithExprOperator : public Operator {
 public:
-    AggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, std::vector<SimpleFilter *> &aggSimpleFilters,
-        AggregationOperator *AggOperator);
+    AggregationWithExprOperator(const DataTypes &originSourceTypes, const type::DataTypes &sourceTypes,
+        std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
+        std::vector<SimpleFilter *> &aggSimpleFilters, AggregationOperator *AggOperator);
 
     ~AggregationWithExprOperator() override;
 
@@ -51,6 +52,7 @@ public:
     OmniStatus Close() override;
 
 private:
+    DataTypes originTypes;
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<ProjFunc> projectFuncs;

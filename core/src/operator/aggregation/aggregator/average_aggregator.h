@@ -26,9 +26,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &f
     }
 #endif
 
-    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-    cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+//    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+//    cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+//    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
     const auto len = sizeof(IN);
 
@@ -50,10 +50,10 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &f
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class AverageAggregator : public SumAggregator<IN_ID, OUT_ID> {
-    using InVector = typename NativeAndVectorType<IN_ID>::vector;
-    using InType = typename NativeAndVectorType<IN_ID>::type;
-    using OutVector = typename NativeAndVectorType<OUT_ID>::vector;
-    using OutType = typename NativeAndVectorType<OUT_ID>::type;
+    using InVector = typename AggNativeAndVectorType<IN_ID>::vector;
+    using InType = typename AggNativeAndVectorType<IN_ID>::type;
+    using OutVector = typename AggNativeAndVectorType<OUT_ID>::vector;
+    using OutType = typename AggNativeAndVectorType<OUT_ID>::type;
     using ResultType = typename std::conditional_t<IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG,
         int64_t, std::conditional_t<IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER, double, Decimal128>>;
 
@@ -66,10 +66,10 @@ public:
     bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 #endif
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     template <bool PARTIAL_OUT>
-    void ExtractValuesFunction(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex);
+    void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
@@ -127,15 +127,15 @@ protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
-    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override;
+    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
 private:
     void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState &state,
-        std::vector<Vector *> &vectors, int32_t rowIndex) = nullptr;
+        std::vector<BaseVector *> &vectors, int32_t rowIndex) = nullptr;
 };
 }
 }

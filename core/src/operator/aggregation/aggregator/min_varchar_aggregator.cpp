@@ -15,17 +15,18 @@ namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
-    auto vector = vectorBatch->GetVector(this->channels[0]);
+    auto vector = vectorBatch->Get(this->channels[0]);
 
     auto offsets =
-        static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
+        static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, IN_ID)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t minLen = 3 * width;
     uint8_t *minVal = this->executionContext->GetArena()->Allocate(3 * width);
 
     LogDebug("HMPP-Agg-min");
     auto result =
-        HMPPS_Min_varchar(static_cast<uint8_t *>(vector->GetValues()), offsets, vector->GetSize(), minVal, &minLen);
+        HMPPS_Min_varchar(static_cast<uint8_t *>(VectorHelper::GetValues(vector, IN_ID)), offsets, vector->GetSize(),
+            minVal, &minLen);
     if (result != HMPP_STS_NO_ERR) {
         throw OmniException("HMPP ERROR", "min failed for hmpp error");
     }
@@ -49,11 +50,11 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 bool MinVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // must no null inpout
-    if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
+    if (vectorBatch->Get(this->channels[0])->HasNull()) {
         return false;
     }
     // not accept dictionnary vector
-    if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+    if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
         return false;
     }
     return true;
@@ -61,26 +62,24 @@ bool MinVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &sta
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
-    int32_t offset;
-    auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+    auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
     if (state.val == nullptr || state.count == 0) {
         // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
-        v->SetValueNull(offset);
+        v->SetNull(rowIndex);
     } else {
-        v->SetValue(offset, reinterpret_cast<uint8_t *>(state.val), state.count);
+        std::string_view val(reinterpret_cast<char *>(state.val), state.count);
+        v->SetValue(rowIndex, val);
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *v,
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-
-    if (indexMap == nullptr) {
+    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddChar<MinCharOp>(state, vector, rowOffset, rowCount);
         } else {
@@ -88,9 +87,9 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictChar<MinCharOp>(state, vector, rowCount, indexMap);
+            AddDictChar<MinDictCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddDictConditionalChar<MinCharOp>(state, vector, rowCount, nullMap, indexMap);
+            AddDictConditionalChar<MinDictCharOp>(state, vector, rowOffset, rowCount, nullMap);
         }
     }
 
@@ -125,11 +124,9 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateS
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *v, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-
-    if (indexMap == nullptr) {
+    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, rowOffset);
         } else {
@@ -137,9 +134,9 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, indexMap);
+            AddDictUseRowIndexChar<MinDictCharOp>(rowStates, aggIdx, rowOffset, vector);
         } else {
-            AddDictConditionalUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+            AddDictConditionalUseRowIndexChar<MinDictCharOp>(rowStates, aggIdx, rowOffset, vector, nullMap);
         }
     }
 

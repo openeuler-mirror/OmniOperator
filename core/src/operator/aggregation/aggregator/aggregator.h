@@ -19,6 +19,7 @@
 
 namespace omniruntime {
 namespace op {
+using namespace omniruntime::exception;
 using namespace omniruntime::vec;
 
 using ColumnIndex = struct ColumnIndex {
@@ -224,7 +225,8 @@ public:
     }
 
     // set result to output vector
-    virtual void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, const int32_t rowIndex) = 0;
+    virtual void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+        const int32_t rowIndex) = 0;
 
     virtual bool IsTypedAggregator()
     {
@@ -264,11 +266,6 @@ public:
     virtual const std::vector<int32_t> &GetInputChannels() const
     {
         return channels;
-    }
-
-    void SetExecutionContextAllocator(BaseAllocator *allocator)
-    {
-        executionContext->GetArena()->SetAllocator(allocator);
     }
 
 public:

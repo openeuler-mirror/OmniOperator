@@ -127,8 +127,8 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
      FillOutputFuncImp<Vector<DictionaryContainer<int64_t>>, int64_t>},
     {OMNI_DECIMAL128,
      DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
-     HashDecimalFunc<Decimal128Vector>,
-     HashDecimalVectFuncProxy<Decimal128Vector>,
+     HashDecimalFunc,
+     HashDecimalVectFuncProxy,
      IsSameNodeFuncImpl<Decimal128Vector, Decimal128>,
      FillOutputFuncImp<Decimal128Vector, Decimal128>,
      DuplicateKeyValueImpl<Vector<DictionaryContainer<Decimal128>>, Decimal128>,
@@ -154,10 +154,10 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
     {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VARCHAR,
-     DuplicateVarcharKeyValue<op::VarcharVector>,
-     HashVarcharFuncImpl<op::VarcharVector>,
-     HashVarcharVectFuncImplProxy<op::VarcharVector>,
-     IsSameNodeFuncVarcharImpl<op::VarcharVector>,
+     DuplicateVarcharKeyValue,
+     HashVarcharFuncImpl,
+     HashVarcharVectFuncImplProxy,
+     IsSameNodeFuncVarcharImpl,
      FillVarcharFuncImp,
      DuplicateVarcharKeyValue<Vector<DictionaryContainer<std::string_view>>>,
      HashVarcharFuncImpl<Vector<DictionaryContainer<std::string_view>>>,
@@ -165,9 +165,9 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
      IsSameNodeFuncVarcharImpl<Vector<DictionaryContainer<std::string_view>>>,
      nullptr},
     {OMNI_CHAR,
-     DuplicateVarcharKeyValue<op::VarcharVector>,
+     DuplicateVarcharKeyValue,
      HashVarcharFuncImpl<op::VarcharVector>,
-     HashVarcharVectFuncImplProxy<op::VarcharVector>,
+     HashVarcharVectFuncImplProxy,
      IsSameNodeFuncVarcharImpl<op::VarcharVector>,
      FillVarcharFuncImp,
      DuplicateVarcharKeyValue<Vector<DictionaryContainer<std::string_view>>>,
@@ -202,7 +202,7 @@ Operator *DistinctLimitOperatorFactory::CreateOperator()
     int32_t typeId;
     for (int i = 0; i < distinctColsCount; ++i) {
         typeId = vectorTypeIds[distinctCols[i]];
-        if (typeId >= OMNI_INVALID) {
+        if (typeId >= type::OMNI_INVALID) {
             return nullptr;
         }
 
@@ -497,6 +497,5 @@ OmniStatus DistinctLimitOperator::Close()
     ReleaseRowInfo(distinctRowInfo);
 
     return OMNI_STATUS_NORMAL;
-}
 }
 }
