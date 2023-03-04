@@ -390,10 +390,9 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     auto rowCount = std::min(rowsPerBatch, leftRowCount);
     auto vecBatch = new VectorBatch(colsCount, rowCount);
     SetVectors(this->vecAllocator, vecBatch, outputTypes, rowCount);
+
+    FillOutputSingleVecBatch(vecBatch);
     result.push_back(vecBatch);
-
-    FillOutputSingleVecBatch(result);
-
     if (totalRowCount == rowCountOutputted) {
         SetStatus(OMNI_STATUS_FINISHED);
         totalRowCount = 0;
@@ -403,10 +402,9 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     return result.size();
 }
 
-void HashAggregationOperator::FillOutputSingleVecBatch(std::vector<VectorBatch *> &result)
+void HashAggregationOperator::FillOutputSingleVecBatch(VectorBatch *batchToFill)
 {
     // fill groups to vecbatch, only fill single vecBatch
-    VectorBatch *batchToFill = result[0];
     auto rowCount = batchToFill->GetRowCount();
     int32_t rowIndex = 0;
 
