@@ -96,9 +96,7 @@ public class OmniFilterAndProjectOperatorTest {
 
         int[] ids = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
         DictionaryVec dicVec = TestUtils.createDictionaryVec(types[2], datas[2], ids);
-        DictionaryVec dictionaryVec = new DictionaryVec(dicVec, ids);
-        dicVec.close();
-        vecs[2] = dictionaryVec;
+        vecs[2] = dicVec;
 
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
@@ -111,7 +109,7 @@ public class OmniFilterAndProjectOperatorTest {
         Iterator<VecBatch> results = op.getOutput();
         VecBatch resultVecBatch = results.next();
 
-        Object[][] expectDatas = {{0, 1, 2, 3, 4, 0, 1}, {0, 1, 2, 3, 4, 5, 6}, {3, 4, 5, 6, 6, 6, 6}};
+        Object[][] expectDatas = {{0, 1, 2, 3, 4, 0, 1}, {0, 1, 2, 3, 4, 5, 6}, {0, 1, 2, 3, 4, 5, 6}};
         assertVecBatchEquals(resultVecBatch, expectDatas);
 
         freeVecBatch(resultVecBatch);

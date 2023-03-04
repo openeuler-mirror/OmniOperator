@@ -10,9 +10,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createLongVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.union.OmniUnionOperatorFactory;
@@ -22,7 +20,6 @@ import nova.hetu.omniruntime.type.DoubleDataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
@@ -137,7 +134,7 @@ public class OmniUnionOperatorTest {
         VecBatch vecBatch2 = new VecBatch(vecs2);
 
         OmniUnionOperatorFactory unionOperatorFactory = new OmniUnionOperatorFactory(sourceTypes, false);
-        OmniOperator unionOperator = unionOperatorFactory.createOperator(VecAllocator.GLOBAL_VECTOR_ALLOCATOR);
+        OmniOperator unionOperator = unionOperatorFactory.createOperator();
         unionOperator.addInput(vecBatch1);
         unionOperator.addInput(vecBatch2);
         Iterator<VecBatch> results = unionOperator.getOutput();

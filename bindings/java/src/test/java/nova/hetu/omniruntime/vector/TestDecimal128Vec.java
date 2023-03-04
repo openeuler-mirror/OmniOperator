@@ -27,8 +27,7 @@ public class TestDecimal128Vec {
     public void testNewVector() {
         Decimal128Vec vec = new Decimal128Vec(256);
         assertEquals(vec.getSize(), 256);
-        assertEquals(vec.getOffset(), 0);
-        assertEquals(vec.getCapacityInBytes(), 4096);
+        assertEquals(vec.getRealValueBufCapacityInBytes(), 4096);
         assertEquals(vec.getType().getId(), DataType.DataTypeId.OMNI_DECIMAL128);
         assertEquals(((Decimal128DataType) (vec.getType())).getPrecision(), 38);
         assertEquals(((Decimal128DataType) (vec.getType())).getScale(), 0);
@@ -130,7 +129,7 @@ public class TestDecimal128Vec {
     }
 
     /**
-     * test copy postion
+     * test copy position
      */
     @Test
     public void testCopyPositions() {
@@ -142,34 +141,13 @@ public class TestDecimal128Vec {
 
         int[] positions = {1, 3};
         Decimal128Vec copyPositionVector = originalVector.copyPositions(positions, 0, 2);
-        assertEquals(copyPositionVector.getCapacityInBytes(), 32);
+        assertEquals(copyPositionVector.getRealValueBufCapacityInBytes(), 32);
         for (int i = 0; i < copyPositionVector.getSize(); i++) {
             assertEquals(copyPositionVector.get(i), originalVector.get(positions[i]));
         }
 
         originalVector.close();
         copyPositionVector.close();
-    }
-
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        Decimal128Vec originalVector = new Decimal128Vec(4);
-        for (int i = 0; i < 4; i++) {
-            long[] value = {0, i * 2};
-            originalVector.set(i, value);
-        }
-
-        Decimal128Vec copyRegionVector = originalVector.copyRegion(2, 2);
-        assertEquals(copyRegionVector.getCapacityInBytes(), 32);
-        for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            assertEquals(copyRegionVector.get(i), originalVector.get(i + 2));
-        }
-
-        originalVector.close();
-        copyRegionVector.close();
     }
 
     /**

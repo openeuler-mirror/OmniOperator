@@ -86,11 +86,11 @@ public class BenchmarkVarcharVec {
     @Setup(Level.Iteration)
     public void init() {
         // for varchar set/put
-        vecPutData = new VarcharVec(rows * 8, rows);
+        vecPutData = new VarcharVec(rows);
         putDataSource = new VarcharVecTest(rows * 8, rows);
         initValues(putDataSource, rows);
 
-        vecSetData = new VarcharVec(rows * 8, rows);
+        vecSetData = new VarcharVec(rows);
         vecTestSetData = new VarcharVecTest(rows * 8, rows);
 
         byteValues = new ByteBuffer[rows];
@@ -102,7 +102,7 @@ public class BenchmarkVarcharVec {
         }
 
         // varcharVec get
-        vecGetData = new VarcharVec(rows * 8, rows);
+        vecGetData = new VarcharVec(rows);
         initValues(vecGetData, rows);
         varcharVecTest = new VarcharVecTest(rows * 8, rows);
         initValues(varcharVecTest, rows);
@@ -169,7 +169,7 @@ public class BenchmarkVarcharVec {
     public void createVarcharVecBenchmark(Blackhole blackhole) {
         List<VarcharVec> vecs = new ArrayList<>();
         for (int i = 0; i < COUNT; i++) {
-            VarcharVec vec = new VarcharVec(rows, rows);
+            VarcharVec vec = new VarcharVec(rows);
             blackhole.consume(vec);
             vecs.add(vec);
         }
@@ -290,17 +290,6 @@ public class BenchmarkVarcharVec {
     public int sliceVarcharVecBenchmark() {
         VarcharVec slice = vecGetData.slice(2, rows / 2);
         return slice.getSize();
-    }
-
-    /**
-     * Copy region varchar vec benchmark
-     *
-     * @return copy region size
-     */
-    @Benchmark
-    public int copyRegionVarcharVecBenchmark() {
-        VarcharVec copyRegion = vecGetData.copyRegion(2, rows / 2);
-        return copyRegion.getSize();
     }
 
     /**

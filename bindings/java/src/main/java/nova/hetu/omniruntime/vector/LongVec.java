@@ -20,18 +20,12 @@ public class LongVec extends FixedWidthVec {
         super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
     }
 
-    public LongVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
-    }
-
     public LongVec(long nativeVector) {
-        super(nativeVector, LongDataType.LONG);
+        super(nativeVector, LongDataType.LONG, BYTES);
     }
 
-    public LongVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, LongDataType.LONG);
+    public LongVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, BYTES * size, size, LongDataType.LONG);
     }
 
     /**
@@ -46,12 +40,12 @@ public class LongVec extends FixedWidthVec {
         super(capacityInBytes, data.limit(), VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
     }
 
-    private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private LongVec(LongVec vector, int offset, int length) {
+        super(vector, offset, length, length * BYTES);
     }
 
     private LongVec(LongVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, length * BYTES);
     }
 
     /**
@@ -61,7 +55,7 @@ public class LongVec extends FixedWidthVec {
      * @return long value
      */
     public long get(int index) {
-        return valuesBuf.getLong((index + offset) * BYTES);
+        return valuesBuf.getLong(index * BYTES);
     }
 
     /**
@@ -73,7 +67,7 @@ public class LongVec extends FixedWidthVec {
      */
     public long[] get(int index, int length) {
         long[] target = new long[length];
-        valuesBuf.getLongArray((index + offset) * BYTES, target, 0, length * BYTES);
+        valuesBuf.getLongArray(index * BYTES, target, 0, length * BYTES);
         return target;
     }
 
@@ -100,13 +94,8 @@ public class LongVec extends FixedWidthVec {
     }
 
     @Override
-    public LongVec slice(int start, int end) {
-        return new LongVec(this, start, end - start, true);
-    }
-
-    @Override
-    public LongVec copy() {
-        return null;
+    public LongVec slice(int start, int length) {
+        return new LongVec(this, start, length);
     }
 
     @Override
@@ -115,12 +104,12 @@ public class LongVec extends FixedWidthVec {
     }
 
     @Override
-    public LongVec copyRegion(int positionOffset, int length) {
-        return new LongVec(this, positionOffset, length, false);
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override
-    public int getRealValueBufCapacityInBytes() {
-        return size * BYTES;
+    public int getCapacityInBytes() {
+        return BYTES * size;
     }
 }

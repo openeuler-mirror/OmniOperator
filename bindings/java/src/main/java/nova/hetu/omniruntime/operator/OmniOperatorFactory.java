@@ -4,8 +4,6 @@
 
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
-
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.UncheckedExecutionException;
@@ -13,7 +11,6 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.util.concurrent.ExecutionException;
 
@@ -57,7 +54,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
     }
 
     // createOperator
-    private static native long createOperatorNative(long factoryAddress, long vecAllocatorAddress);
+    private static native long createOperatorNative(long factoryAddress);
 
     /**
      * Gets native operator factory.
@@ -71,25 +68,11 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
     /**
      * Create operator omni operator.
      *
-     * @param vecAllocator the vec allocator
-     * @return the omni operator
-     */
-    public OmniOperator createOperator(VecAllocator vecAllocator) {
-        if (vecAllocator == null) {
-            return createOperator();
-        }
-        long nativeOperator = createOperatorNative(nativeOperatorFactory, vecAllocator.getNativeAllocator());
-        return new OmniOperator(nativeOperator, vecAllocator);
-    }
-
-    /**
-     * Create operator omni operator.
-     *
      * @return the omni operator
      */
     public OmniOperator createOperator() {
-        long nativeOperator = createOperatorNative(nativeOperatorFactory, GLOBAL_VECTOR_ALLOCATOR.getNativeAllocator());
-        return new OmniOperator(nativeOperator, GLOBAL_VECTOR_ALLOCATOR);
+        long nativeOperator = createOperatorNative(nativeOperatorFactory);
+        return new OmniOperator(nativeOperator);
     }
 
     /**

@@ -18,26 +18,21 @@ public class BooleanVec extends FixedWidthVec {
         super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, BooleanDataType.BOOLEAN);
     }
 
-    public BooleanVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, BooleanDataType.BOOLEAN);
-    }
-
     public BooleanVec(long nativeVector) {
-        super(nativeVector, BooleanDataType.BOOLEAN);
+        super(nativeVector, BooleanDataType.BOOLEAN, BYTES);
     }
 
-    public BooleanVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, BooleanDataType.BOOLEAN);
+    public BooleanVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, BYTES * size, size,
+                BooleanDataType.BOOLEAN);
     }
 
-    private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private BooleanVec(BooleanVec vector, int offset, int length) {
+        super(vector, offset, length, length * BYTES);
     }
 
     private BooleanVec(BooleanVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, length * BYTES);
     }
 
     /**
@@ -57,7 +52,7 @@ public class BooleanVec extends FixedWidthVec {
      * @return if the value of 1 returns true, otherwise it returns false
      */
     public boolean get(int index) {
-        return valuesBuf.getByte((index + offset) * BYTES) == 1;
+        return valuesBuf.getByte(index * BYTES) == 1;
     }
 
     /**
@@ -68,7 +63,7 @@ public class BooleanVec extends FixedWidthVec {
      * @return boolean value array
      */
     public boolean[] get(int index, int length) {
-        byte[] target = valuesBuf.getBytes((index + offset) * BYTES, length);
+        byte[] target = valuesBuf.getBytes(index * BYTES, length);
         return transformByteToBoolean(target, 0, length);
     }
 
@@ -98,13 +93,8 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     @Override
-    public BooleanVec slice(int startIdx, int endIdx) {
-        return new BooleanVec(this, startIdx, endIdx - startIdx, true);
-    }
-
-    @Override
-    public Vec copy() {
-        return null;
+    public BooleanVec slice(int startIdx, int length) {
+        return new BooleanVec(this, startIdx, length);
     }
 
     @Override
@@ -113,12 +103,12 @@ public class BooleanVec extends FixedWidthVec {
     }
 
     @Override
-    public BooleanVec copyRegion(int positionOffset, int length) {
-        return new BooleanVec(this, positionOffset, length, false);
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override
-    public int getRealValueBufCapacityInBytes() {
+    public int getCapacityInBytes() {
         return size * BYTES;
     }
 }

@@ -24,15 +24,13 @@ public class TestBooleanVec {
     public void testNewVector() {
         BooleanVec vector1 = new BooleanVec(256);
         assertEquals(vector1.getSize(), 256);
-        assertEquals(vector1.getOffset(), 0);
-        assertEquals(vector1.getCapacityInBytes(), 256);
+        assertEquals(vector1.getRealValueBufCapacityInBytes(), 256);
         assertEquals(vector1.getType().getId(), OMNI_BOOLEAN);
         vector1.close();
 
         BooleanVec vector2 = new BooleanVec(251);
         assertEquals(vector2.getSize(), 251);
-        assertEquals(vector2.getOffset(), 0);
-        assertEquals(vector2.getCapacityInBytes(), 251);
+        assertEquals(vector2.getRealValueBufCapacityInBytes(), 251);
         assertEquals(vector2.getType().getId(), OMNI_BOOLEAN);
         vector2.close();
     }
@@ -47,13 +45,13 @@ public class TestBooleanVec {
             originalVec.set(i, i % 2 == 0);
         }
         int offset = 3;
-        BooleanVec slice1 = originalVec.slice(offset, 7);
+        BooleanVec slice1 = originalVec.slice(offset, 4);
         assertEquals(slice1.getSize(), 4);
         for (int i = 0; i < slice1.getSize(); i++) {
             assertEquals(slice1.get(i), originalVec.get(i + offset), "Error item value at: " + i);
         }
 
-        BooleanVec slice2 = slice1.slice(1, 3);
+        BooleanVec slice2 = slice1.slice(1, 2);
 
         for (int i = 0; i < slice2.getSize(); i++) {
             assertEquals(slice2.get(i), originalVec.get(i + offset + 1), "Error item value at: " + i);
@@ -156,33 +154,13 @@ public class TestBooleanVec {
 
         int[] positions = {1, 3};
         BooleanVec copyPositionVector = originalVector.copyPositions(positions, 0, 2);
-        assertEquals(copyPositionVector.getCapacityInBytes(), 2);
+        assertEquals(copyPositionVector.getRealValueBufCapacityInBytes(), 2);
         for (int i = 0; i < copyPositionVector.getSize(); i++) {
             assertEquals(copyPositionVector.get(i), originalVector.get(positions[i]));
         }
 
         originalVector.close();
         copyPositionVector.close();
-    }
-
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        BooleanVec originalVector = new BooleanVec(4);
-        for (int i = 0; i < 4; i++) {
-            originalVector.set(i, i % 2 == 0);
-        }
-
-        BooleanVec copyRegionVector = originalVector.copyRegion(2, 2);
-        assertEquals(copyRegionVector.getCapacityInBytes(), 2);
-        for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            assertEquals(copyRegionVector.get(i), originalVector.get(i + 2));
-        }
-
-        originalVector.close();
-        copyRegionVector.close();
     }
 
     @Test

@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertFalse;
 
 import nova.hetu.omniruntime.util.TestUtils;
 
@@ -32,7 +33,7 @@ public class TestDictionaryVec {
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
         DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
         int offset1 = 3;
-        DictionaryVec slice1 = dictionaryVec.slice(offset1, 7);
+        DictionaryVec slice1 = dictionaryVec.slice(offset1, 4);
         assertEquals(slice1.getSize(), 4);
         for (int i = 0; i < slice1.getSize(); i++) {
             long value = slice1.getLong(i);
@@ -40,7 +41,7 @@ public class TestDictionaryVec {
         }
 
         int offset2 = 1;
-        DictionaryVec slice2 = slice1.slice(offset2, 3);
+        DictionaryVec slice2 = slice1.slice(offset2, 2);
         assertEquals(slice2.getSize(), 2);
         for (int i = 0; i < slice2.getSize(); i++) {
             long value = slice2.getLong(i);
@@ -51,51 +52,6 @@ public class TestDictionaryVec {
         slice2.close();
         slice1.close();
         dictionaryVec.close();
-    }
-
-    @Test
-    public void testNestedDictionaryVecSlice() {
-        LongVec originalVec = new LongVec(100);
-        for (int i = 0; i < originalVec.getSize(); i++) {
-            originalVec.set(i, i);
-        }
-
-        int[] ids = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-        DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
-        int[] nestedIds = {1, 1, 2, 2, 4, 4, 7, 7};
-        DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, nestedIds);
-
-        originalVec.close();
-        dictionaryVec.close();
-
-        int offset = 3;
-        DictionaryVec slice = nestedDictionaryVec.slice(offset, 7);
-        assertEquals(slice.getSize(), 4);
-        long value = slice.getLong(0);
-        assertEquals(value, 2);
-        value = slice.getLong(1);
-        assertEquals(value, 4);
-        value = slice.getLong(2);
-        assertEquals(value, 4);
-        value = slice.getLong(3);
-        assertEquals(value, 7);
-
-        nestedDictionaryVec.close();
-
-        int[] copyIds = {0, 1, 2, 3};
-        DictionaryVec copy = slice.copyPositions(copyIds, 0, 4);
-        assertEquals(copy.getSize(), 4);
-        value = copy.getLong(0);
-        assertEquals(value, 2);
-        value = copy.getLong(1);
-        assertEquals(value, 4);
-        value = copy.getLong(2);
-        assertEquals(value, 4);
-        value = copy.getLong(3);
-        assertEquals(value, 7);
-
-        slice.close();
-        copy.close();
     }
 
     @Test
@@ -111,14 +67,8 @@ public class TestDictionaryVec {
         assertEquals(dictionaryVec.getLong(1), originalVec.get(8));
         assertEquals(dictionaryVec.getLong(2), originalVec.get(9));
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(nested.getLong(0), originalVec.get(8));
-        assertEquals(nested.getLong(1), originalVec.get(9));
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     @Test
@@ -134,14 +84,8 @@ public class TestDictionaryVec {
         assertEquals(dictionaryVec.getShort(1), originalVec.get(8));
         assertEquals(dictionaryVec.getShort(2), originalVec.get(9));
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(nested.getShort(0), originalVec.get(8));
-        assertEquals(nested.getShort(1), originalVec.get(9));
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     @Test
@@ -157,14 +101,8 @@ public class TestDictionaryVec {
         assertEquals(dictionaryVec.getInt(1), originalVec.get(8));
         assertEquals(dictionaryVec.getInt(2), originalVec.get(9));
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(nested.getInt(0), originalVec.get(8));
-        assertEquals(nested.getInt(1), originalVec.get(9));
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     @Test
@@ -180,14 +118,8 @@ public class TestDictionaryVec {
         assertEquals(dictionaryVec.getBoolean(1), originalVec.get(8));
         assertEquals(dictionaryVec.getBoolean(2), originalVec.get(9));
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(nested.getBoolean(0), originalVec.get(8));
-        assertEquals(nested.getBoolean(1), originalVec.get(9));
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     @Test
@@ -204,19 +136,13 @@ public class TestDictionaryVec {
         assertEquals(Double.compare(dictionaryVec.getDouble(1), originalVec.get(8)), 0);
         assertEquals(Double.compare(dictionaryVec.getDouble(2), originalVec.get(9)), 0);
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(Double.compare(nested.getDouble(0), originalVec.get(8)), 0);
-        assertEquals(Double.compare(nested.getDouble(1), originalVec.get(9)), 0);
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     @Test
     public void testGetBytes() {
-        VarcharVec originalVec = new VarcharVec(1024, 10);
+        VarcharVec originalVec = new VarcharVec(10);
         for (int i = 0; i < 10; i++) {
             originalVec.set(i, String.valueOf(i).getBytes(StandardCharsets.UTF_8));
         }
@@ -227,14 +153,8 @@ public class TestDictionaryVec {
         assertEquals(dictionaryVec.getBytes(1), originalVec.get(8));
         assertEquals(dictionaryVec.getBytes(2), originalVec.get(9));
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(nested.getBytes(0), originalVec.get(8));
-        assertEquals(nested.getBytes(1), originalVec.get(9));
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     @Test
@@ -251,14 +171,8 @@ public class TestDictionaryVec {
         Object[] expected = {6L, 12L, 8L, 16L, 9L, 18L};
         TestUtils.assertDictionaryVecEquals(dictionaryVec, expected);
 
-        int[] nestedIds = {1, 2};
-        DictionaryVec nested = new DictionaryVec(dictionaryVec, nestedIds);
-        assertEquals(nested.getDecimal128(0), originalVec.get(8));
-        assertEquals(nested.getDecimal128(1), originalVec.get(9));
-
         originalVec.close();
         dictionaryVec.close();
-        nested.close();
     }
 
     /**
@@ -301,28 +215,6 @@ public class TestDictionaryVec {
         copyPositions.close();
     }
 
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        LongVec originalVector = new LongVec(10);
-        for (int i = 0; i < 10; i++) {
-            originalVector.set(i, i);
-        }
-
-        int[] ids = {6, 8, 9};
-        DictionaryVec dictionaryVec = new DictionaryVec(originalVector, ids);
-        DictionaryVec copyRegion = dictionaryVec.copyRegion(1, 2);
-
-        assertEquals(copyRegion.getLong(0), originalVector.get(8));
-        assertEquals(copyRegion.getLong(1), originalVector.get(9));
-
-        originalVector.close();
-        dictionaryVec.close();
-        copyRegion.close();
-    }
-
     @Test
     public void testNullFlag() {
         LongVec originalVector = new LongVec(10);
@@ -337,23 +229,15 @@ public class TestDictionaryVec {
         int[] ids = {6, 8, 9};
         DictionaryVec dictionaryVec = new DictionaryVec(originalVector, ids);
         originalVector.close();
-        assertTrue(dictionaryVec.mayHaveNull());
-        assertEquals(dictionaryVec.getNullCount(), 2);
+        assertTrue(dictionaryVec.hasNull());
 
-        DictionaryVec copyRegion = dictionaryVec.copyRegion(1, 2);
-        assertTrue(copyRegion.mayHaveNull());
-        assertEquals(copyRegion.getNullCount(), 1);
-        copyRegion.close();
-
-        DictionaryVec slice = dictionaryVec.slice(2, 3);
-        assertTrue(slice.mayHaveNull());
-        assertEquals(slice.getNullCount(), 0);
+        DictionaryVec slice = dictionaryVec.slice(2, 1);
+        assertFalse(slice.hasNull());
         slice.close();
 
         int[] positions = {0, 2};
         DictionaryVec copyPosition = dictionaryVec.copyPositions(positions, 0, 2);
-        assertTrue(copyPosition.mayHaveNull());
-        assertEquals(copyPosition.getNullCount(), 1);
+        assertTrue(copyPosition.hasNull());
         copyPosition.close();
 
         dictionaryVec.close();

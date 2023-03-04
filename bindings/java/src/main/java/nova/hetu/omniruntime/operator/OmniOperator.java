@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
-import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
@@ -22,19 +21,15 @@ public final class OmniOperator implements AutoCloseable {
      */
     protected final long nativeOperator;
 
-    private final VecAllocator vecAllocator;
-
     private VecBatchIterator outputIterator;
 
     /**
      * Instantiates a new Omni operator.
      *
      * @param nativeOperator the native operator
-     * @param vecAllocator vector allocator
      */
-    protected OmniOperator(long nativeOperator, VecAllocator vecAllocator) {
+    protected OmniOperator(long nativeOperator) {
         this.nativeOperator = nativeOperator;
-        this.vecAllocator = vecAllocator;
     }
 
     // addInput
@@ -74,15 +69,6 @@ public final class OmniOperator implements AutoCloseable {
      */
     public void close() {
         closeNative(nativeOperator);
-    }
-
-    /**
-     * Gets vec allocator.
-     *
-     * @return the vec allocator
-     */
-    public VecAllocator getVecAllocator() {
-        return vecAllocator;
     }
 
     private class VecBatchIterator implements Iterator<VecBatch> {

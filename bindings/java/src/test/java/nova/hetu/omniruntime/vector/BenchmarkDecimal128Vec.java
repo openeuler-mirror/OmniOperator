@@ -321,17 +321,6 @@ public class BenchmarkDecimal128Vec {
     }
 
     /**
-     * Copy region of decimal128 vec benchmark
-     *
-     * @return region size
-     */
-    @Benchmark
-    public int copyRegionDecimal128VecBenchmark() {
-        Decimal128Vec copyRegion = vecGetData.copyRegion(2, rows / 2);
-        return copyRegion.getSize();
-    }
-
-    /**
      * Copy position of decimal128 vec benchmark
      *
      * @return position size

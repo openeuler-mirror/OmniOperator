@@ -31,19 +31,6 @@ public abstract class DecimalVec extends FixedWidthVec {
     }
 
     /**
-     * The routine will use the specialized vector allocator to allocate new vector.
-     *
-     * @param allocator the specialized vector allocator
-     * @param size the actual number of value of vector
-     * @param typeLength the length of this data type
-     * @param type the data type of this vector
-     */
-    public DecimalVec(VecAllocator allocator, int size, int typeLength, DataType type) {
-        super(allocator, size * typeLength, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, type);
-        this.typeWidth = getTypeWidth(typeLength);
-    }
-
-    /**
      * The routine will use native vector to initialize a new vector.
      *
      * @param nativeVector native vector address
@@ -51,7 +38,7 @@ public abstract class DecimalVec extends FixedWidthVec {
      * @param type the type of this vector
      */
     public DecimalVec(long nativeVector, int typeLength, DataType type) {
-        super(nativeVector, type);
+        super(nativeVector, type, typeLength);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
@@ -61,17 +48,14 @@ public abstract class DecimalVec extends FixedWidthVec {
      * @param nativeVector native vector address
      * @param nativeValueBufAddress valueBuf address of native vector
      * @param nativeVectorNullBufAddress nullBuf address of native vector
-     * @param nativeVectorAllocator allocator address of native vector
      * @param capacityInBytes capacity in bytes of vector
      * @param size the actual number of value of vector
-     * @param offset offset of positions in the input parameter
      * @param typeLength the length of this data type
      * @param type the type of this vector
      */
     public DecimalVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset, int typeLength, DataType type) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, type);
+            int capacityInBytes, int size, int typeLength, DataType type) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, capacityInBytes, size, type);
         this.typeWidth = getTypeWidth(typeLength);
     }
 
@@ -82,10 +66,9 @@ public abstract class DecimalVec extends FixedWidthVec {
      * @param offset When a vector has been sliced or copyRegion, this value will
      *            point to where is the new slice {@link Vec} start
      * @param length the number of value
-     * @param isSlice Whether the current vector is sliced
      */
-    protected DecimalVec(DecimalVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    protected DecimalVec(DecimalVec vector, int offset, int length) {
+        super(vector, offset, length, length * vector.typeWidth * Long.BYTES);
         this.typeWidth = vector.typeWidth;
     }
 
@@ -98,7 +81,7 @@ public abstract class DecimalVec extends FixedWidthVec {
      * @param length number of elements copied
      */
     protected DecimalVec(DecimalVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, length * vector.typeWidth * Long.BYTES);
         this.typeWidth = vector.typeWidth;
     }
 
@@ -114,7 +97,7 @@ public abstract class DecimalVec extends FixedWidthVec {
      */
     public long[] get(int index) {
         long[] value = new long[this.typeWidth];
-        int offset = (this.offset + index) * this.typeWidth;
+        int offset = index * this.typeWidth;
         for (int i = 0; i < this.typeWidth; i++) {
             value[i] = valuesBuf.getLong((offset + i) * Long.BYTES);
         }
@@ -130,7 +113,7 @@ public abstract class DecimalVec extends FixedWidthVec {
      */
     public long[] get(int index, int length) {
         long[] value = new long[this.typeWidth * length];
-        int offset = (this.offset + index) * this.typeWidth;
+        int offset = index * this.typeWidth;
         valuesBuf.getLongArray(offset * Long.BYTES, value, 0, value.length * Long.BYTES);
         return value;
     }
@@ -165,6 +148,11 @@ public abstract class DecimalVec extends FixedWidthVec {
 
     @Override
     public int getRealValueBufCapacityInBytes() {
+        return size * typeWidth * Long.BYTES;
+    }
+
+    @Override
+    public int getCapacityInBytes() {
         return size * typeWidth * Long.BYTES;
     }
 }

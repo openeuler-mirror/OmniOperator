@@ -27,7 +27,7 @@ public class VecFactory {
                 vector = createFlatVec(nativeVector, dataType);
                 break;
             case OMNI_VEC_ENCODING_DICTIONARY:
-                vector = new DictionaryVec(nativeVector);
+                vector = new DictionaryVec(nativeVector, dataType);
                 break;
             case OMNI_VEC_ENCODING_CONTAINER:
                 vector = new ContainerVec(nativeVector);
@@ -63,75 +63,95 @@ public class VecFactory {
         }
     }
 
-    private static Vec createFlatVec(long nativeVector, long nativeVectorValueBufAddress,
-            long nativeVectorNullBufAddress, long nativeVectorOffsetBufAddress, long nativeVectorAllocator,
-            int capacityInBytes, int size, int offset, DataType dataType) {
-        switch (dataType.getId()) {
-            case OMNI_INT:
-            case OMNI_DATE32:
-                return new IntVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64:
-                return new LongVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
-            case OMNI_DOUBLE:
-                return new DoubleVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
-            case OMNI_SHORT:
-                return new ShortVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
-            case OMNI_BOOLEAN:
-                return new BooleanVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                return new VarcharVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorOffsetBufAddress, nativeVectorAllocator, capacityInBytes, size, offset);
-            case OMNI_DECIMAL128:
-                return new Decimal128Vec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
-            default:
-                throw new IllegalArgumentException("Not Support Data Type " + dataType.getId());
-        }
-    }
-
     /**
      * Create vector by native vector address and vector type.
      *
      * @param nativeVector native vector address
      * @param nativeVectorValueBufAddress native vector value buffer address
      * @param nativeVectorNullBufAddress native vector nulls buffer address
-     * @param nativeVectorOffsetBufAddress native vector offsets buffer address
-     * @param nativeVectorAllocator native vector allocator address
-     * @param capacityInBytes capacity in bytes of vector
+     * @param nativeVectorOffsetBufAddress native vector offset buffer address
      * @param size size of vector
-     * @param offset position offset of vector
      * @param encoding vector encoding type
      * @param dataType vector data type
      * @return Instance of {@link Vec}
      */
     public static Vec create(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
-            VecEncoding encoding, DataType dataType) {
+            long nativeVectorOffsetBufAddress, int size, VecEncoding encoding, DataType dataType) {
         Vec vector;
         switch (encoding) {
             case OMNI_VEC_ENCODING_FLAT:
                 vector = createFlatVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorOffsetBufAddress, nativeVectorAllocator, capacityInBytes, size, offset, dataType);
+                        nativeVectorOffsetBufAddress, size, dataType);
                 break;
             case OMNI_VEC_ENCODING_DICTIONARY:
-                vector = new DictionaryVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
+                vector = new DictionaryVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size,
+                        dataType);
                 break;
             case OMNI_VEC_ENCODING_CONTAINER:
-                vector = new ContainerVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
-                        nativeVectorAllocator, capacityInBytes, size, offset);
+                vector = new ContainerVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
                 break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
         }
         return vector;
+    }
+
+    private static Vec createFlatVec(long nativeVector, long nativeVectorValueBufAddress,
+            long nativeVectorNullBufAddress, long nativeVectorOffsetBufAddress, int size, DataType dataType) {
+        switch (dataType.getId()) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return new IntVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_DECIMAL64:
+                return new LongVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_DOUBLE:
+                return new DoubleVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_SHORT:
+                return new ShortVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_BOOLEAN:
+                return new BooleanVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                return new VarcharVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
+                        nativeVectorOffsetBufAddress, size);
+            case OMNI_DECIMAL128:
+                return new Decimal128Vec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            default:
+                throw new IllegalArgumentException("Not Support Data Type " + dataType.getId());
+        }
+    }
+
+    /**
+     * Create empty vector by size and vector type, only use by expandDictionaryVec.
+     *
+     * @param size size of vector
+     * @param dataType vector data type
+     * @return Instance of {@link Vec}
+     */
+    public static Vec createFlatVec(int size, DataType dataType) {
+        switch (dataType.getId()) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                return new IntVec(size);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_DECIMAL64:
+                return new LongVec(size);
+            case OMNI_DOUBLE:
+                return new DoubleVec(size);
+            case OMNI_SHORT:
+                return new ShortVec(size);
+            case OMNI_BOOLEAN:
+                return new BooleanVec(size);
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                return new VarcharVec(size);
+            case OMNI_DECIMAL128:
+                return new Decimal128Vec(size);
+            default:
+                throw new IllegalArgumentException("Not Support Data Type " + dataType.getId());
+        }
     }
 }

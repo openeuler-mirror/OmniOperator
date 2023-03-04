@@ -18,26 +18,20 @@ public class IntVec extends FixedWidthVec {
         super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, IntDataType.INTEGER);
     }
 
-    public IntVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, IntDataType.INTEGER);
-    }
-
     public IntVec(long nativeVector) {
-        super(nativeVector, IntDataType.INTEGER);
+        super(nativeVector, IntDataType.INTEGER, BYTES);
     }
 
-    public IntVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, IntDataType.INTEGER);
+    public IntVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, BYTES * size, size, IntDataType.INTEGER);
     }
 
-    private IntVec(IntVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private IntVec(IntVec vector, int offset, int length) {
+        super(vector, offset, length, length * BYTES);
     }
 
     private IntVec(IntVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, length * BYTES);
     }
 
     /**
@@ -47,7 +41,7 @@ public class IntVec extends FixedWidthVec {
      * @return int value
      */
     public int get(int index) {
-        return valuesBuf.getInt((index + offset) * BYTES);
+        return valuesBuf.getInt(index * BYTES);
     }
 
     /**
@@ -59,7 +53,7 @@ public class IntVec extends FixedWidthVec {
      */
     public int[] get(int index, int length) {
         int[] target = new int[length];
-        valuesBuf.getIntArray((index + offset) * BYTES, target, 0, length * BYTES);
+        valuesBuf.getIntArray(index * BYTES, target, 0, length * BYTES);
         return target;
     }
 
@@ -86,13 +80,8 @@ public class IntVec extends FixedWidthVec {
     }
 
     @Override
-    public IntVec slice(int start, int end) {
-        return new IntVec(this, start, end - start, true);
-    }
-
-    @Override
-    public IntVec copy() {
-        return null;
+    public IntVec slice(int start, int length) {
+        return new IntVec(this, start, length);
     }
 
     @Override
@@ -101,12 +90,12 @@ public class IntVec extends FixedWidthVec {
     }
 
     @Override
-    public IntVec copyRegion(int positionOffset, int length) {
-        return new IntVec(this, positionOffset, length, false);
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override
-    public int getRealValueBufCapacityInBytes() {
-        return size * BYTES;
+    public int getCapacityInBytes() {
+        return BYTES * size;
     }
 }

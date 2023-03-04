@@ -26,8 +26,7 @@ public class TestShortVec {
     public void testNewVector() {
         ShortVec vec = new ShortVec(256);
         assertEquals(vec.getSize(), 256);
-        assertEquals(vec.getOffset(), 0);
-        assertEquals(vec.getCapacityInBytes(), 512);
+        assertEquals(vec.getRealValueBufCapacityInBytes(), 512);
         assertEquals(vec.getType().getId(), OMNI_SHORT);
         vec.close();
     }
@@ -42,13 +41,13 @@ public class TestShortVec {
             originalVec.set(i, (short) i);
         }
         int offset = 3;
-        ShortVec slice1 = originalVec.slice(offset, 7);
+        ShortVec slice1 = originalVec.slice(offset, 4);
         assertEquals(slice1.getSize(), 4);
         for (int i = 0; i < slice1.getSize(); i++) {
             assertEquals(slice1.get(i), originalVec.get(i + offset), "Error item value at: " + i);
         }
 
-        ShortVec slice2 = slice1.slice(1, 3);
+        ShortVec slice2 = slice1.slice(1, 2);
 
         for (int i = 0; i < slice2.getSize(); i++) {
             assertEquals(slice2.get(i), originalVec.get(i + offset + 1), "Error item value at: " + i);
@@ -133,33 +132,13 @@ public class TestShortVec {
 
         int[] positions = {1, 3};
         ShortVec copyPositionVector = originalVector.copyPositions(positions, 0, 2);
-        assertEquals(copyPositionVector.getCapacityInBytes(), 4);
+        assertEquals(copyPositionVector.getRealValueBufCapacityInBytes(), 4);
         for (int i = 0; i < copyPositionVector.getSize(); i++) {
             assertEquals(copyPositionVector.get(i), originalVector.get(positions[i]));
         }
 
         originalVector.close();
         copyPositionVector.close();
-    }
-
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        ShortVec originalVector = new ShortVec(4);
-        for (int i = 0; i < 4; i++) {
-            originalVector.set(i, (short) (i * 2));
-        }
-
-        ShortVec copyRegionVector = originalVector.copyRegion(2, 2);
-        assertEquals(copyRegionVector.getCapacityInBytes(), 4);
-        for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            assertEquals(copyRegionVector.get(i), originalVector.get(i + 2));
-        }
-
-        originalVector.close();
-        copyRegionVector.close();
     }
 
     /**
@@ -207,16 +186,14 @@ public class TestShortVec {
     public void testNullFlagWithSet() {
         // no null value
         ShortVec noNull = new ShortVec(10);
-        assertFalse(noNull.mayHaveNull());
-        assertEquals(noNull.getNullCount(), 0);
+        assertFalse(noNull.hasNull());
         noNull.close();
 
         // has null value
         ShortVec hasNulls = new ShortVec(10);
         byte[] nulls = new byte[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
         hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        assertTrue(hasNulls.hasNull());
         hasNulls.close();
 
         ShortVec hasNull = new ShortVec(10);
@@ -227,8 +204,7 @@ public class TestShortVec {
                 hasNull.set(i, (short) i);
             }
         }
-        assertTrue(hasNull.mayHaveNull());
-        assertEquals(hasNull.getNullCount(), 5);
+        assertTrue(hasNull.hasNull());
         hasNull.close();
     }
 
@@ -238,19 +214,16 @@ public class TestShortVec {
         ShortVec hasNulls = new ShortVec(10);
         byte[] nulls = new byte[]{0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
         hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        assertTrue(hasNulls.hasNull());
 
         int[] positions = new int[]{0, 1};
         ShortVec copyPositionNoNull = hasNulls.copyPositions(positions, 0, 2);
-        assertFalse(copyPositionNoNull.mayHaveNull());
-        assertEquals(copyPositionNoNull.getNullCount(), 0);
+        assertFalse(copyPositionNoNull.hasNull());
         copyPositionNoNull.close();
 
         positions = new int[]{1, 2, 3, 4};
         ShortVec copyPositionHasNull = hasNulls.copyPositions(positions, 0, 4);
-        assertTrue(copyPositionHasNull.mayHaveNull());
-        assertEquals(copyPositionHasNull.getNullCount(), 2);
+        assertTrue(copyPositionHasNull.hasNull());
         copyPositionHasNull.close();
 
         hasNulls.close();
@@ -262,40 +235,15 @@ public class TestShortVec {
         ShortVec hasNulls = new ShortVec(10);
         byte[] nulls = new byte[]{0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
         hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        assertTrue(hasNulls.hasNull());
 
         ShortVec sliceNoNull = hasNulls.slice(0, 1);
-        assertTrue(sliceNoNull.mayHaveNull());
-        assertEquals(sliceNoNull.getNullCount(), 0);
+        assertFalse(sliceNoNull.hasNull());
         sliceNoNull.close();
 
         ShortVec sliceHasNull = hasNulls.slice(1, 4);
-        assertTrue(sliceHasNull.mayHaveNull());
-        assertEquals(sliceHasNull.getNullCount(), 2);
+        assertTrue(sliceHasNull.hasNull());
         sliceHasNull.close();
-
-        hasNulls.close();
-    }
-
-    @Test
-    public void testNullFlagWithCopyRegion() {
-        // has null value
-        ShortVec hasNulls = new ShortVec(10);
-        byte[] nulls = new byte[]{0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
-
-        ShortVec copyRegionNoNull = hasNulls.copyRegion(0, 2);
-        assertFalse(copyRegionNoNull.mayHaveNull());
-        assertEquals(copyRegionNoNull.getNullCount(), 0);
-        copyRegionNoNull.close();
-
-        ShortVec copyRegionHasNull = hasNulls.copyRegion(1, 4);
-        assertTrue(copyRegionHasNull.mayHaveNull());
-        assertEquals(copyRegionHasNull.getNullCount(), 2);
-        copyRegionHasNull.close();
 
         hasNulls.close();
     }
@@ -312,19 +260,16 @@ public class TestShortVec {
         ShortVec appended = new ShortVec(15);
         appended.append(src1, 0, rowCount);
         src1.close();
-        assertFalse(appended.mayHaveNull());
-        assertEquals(appended.getNullCount(), 0);
+        assertFalse(appended.hasNull());
 
         ShortVec withNull = new ShortVec(rowCount);
         byte[] nulls = new byte[]{0, 1, 1, 0, 1};
         withNull.setNulls(0, nulls, 0, 5);
         appended.append(withNull, 5, rowCount);
-        assertTrue(appended.mayHaveNull());
-        assertEquals(appended.getNullCount(), 3);
+        assertTrue(appended.hasNull());
 
         appended.append(withNull, 10, rowCount);
-        assertTrue(appended.mayHaveNull());
-        assertEquals(appended.getNullCount(), 6);
+        assertTrue(appended.hasNull());
         withNull.close();
 
         appended.close();

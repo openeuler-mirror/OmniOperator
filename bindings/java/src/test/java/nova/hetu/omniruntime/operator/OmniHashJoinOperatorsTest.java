@@ -759,6 +759,7 @@ public class OmniHashJoinOperatorsTest {
                 hashBuilderOperatorFactory);
 
         hashBuilderOperatorFactory.close();
+        lookupJoinOperatorFactory.close();
     }
 
     @Test
