@@ -10,7 +10,7 @@
 #include "type/data_types.h"
 #include "operator/hash_util.h"
 #include "operator/execution_context.h"
-#include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "operator/util/operator_util.h"
 #include "group_column_marshaller.h"
 

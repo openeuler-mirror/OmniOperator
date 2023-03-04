@@ -170,6 +170,7 @@ void HashAggregationOperator::SetGroupByColumnsHandleType(GroupByFieldHandleType
 {
     groupByColumnsHandleType = t;
 }
+
 OmniStatus HashAggregationOperator::Init()
 {
     if (isInited) {

@@ -152,7 +152,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     EXPECT_TRUE(aggFinal != nullptr);
 
     // operator 1 (partial)
-    std::vector<VectorBatch *> input1 = tester->BuildAggInput(vecBatchNum, rowSize);
+    std::vector<VectorBatch *> input1 = tester->BuildAggInput(VEC_BATCH_NUM, ROW_SIZE);
     EXPECT_TRUE(input1.size() > 0);
     VectorBatch *expectedResult1 = nullptr;
     bool overflow1 = tester->GeneratePartialExpectedResult(&expectedResult1, input1);
@@ -186,7 +186,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     Operator::DeleteOperator(aggPartial1);
 
     // operator 2 (partial)
-    std::vector<VectorBatch *> input2 = tester->BuildAggInput(vecBatchNum, rowSize);
+    std::vector<VectorBatch *> input2 = tester->BuildAggInput(VEC_BATCH_NUM, ROW_SIZE);
     EXPECT_TRUE(input2.size() > 0);
     VectorBatch *expectedResult2 = nullptr;
     bool overflow2 = tester->GeneratePartialExpectedResult(&expectedResult2, input2);
@@ -300,13 +300,15 @@ TEST_P(MultiStageCompleteTest, verify_correctness)
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, MultiStageCompleteTest,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
-    ::testing::Values(OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
-    ::testing::Values(OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
-    ::testing::Values(25),   // nullPercent
-    ::testing::Bool(),       // isDict
-    ::testing::Bool(),       // hasMask
-    ::testing::Values(true), // nullWhenOverflow
-    ::testing::Bool()        // groupby
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
+    OMNI_CHAR, OMNI_VARCHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
+    OMNI_CHAR, OMNI_VARCHAR),
+    ::testing::Values(0, 25), // nullPercent
+    ::testing::Bool(),        // isDict
+    ::testing::Bool(),        // hasMask
+    ::testing::Bool(),        // nullWhenOverflow
+    ::testing::Bool()         // groupby
     ),
     [](const testing::TestParamInfo<MultiStageCompleteTest::ParamType> &info) {
         return std::get<0>(info.param) + "_" + TypeUtil::TypeToStringLog(std::get<1>(info.param)) + "_" +

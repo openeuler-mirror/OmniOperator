@@ -11,6 +11,7 @@ using namespace std;
 
 namespace omniruntime {
 namespace op {
+extern std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType);
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
     : pagesIndex(pagesIndex), start(start), size(end - start)
 {}

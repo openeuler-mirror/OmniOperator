@@ -17,6 +17,7 @@
 #include "util/perf_util.h"
 #include "util/config_util.h"
 #include "util/test_util.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;

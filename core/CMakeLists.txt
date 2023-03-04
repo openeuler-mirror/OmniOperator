@@ -47,6 +47,10 @@ endif (CCACHE_FOUND)
 set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 
+if(ENABLE_COMPILE_TIME_REPORT)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftime-report")
+endif()
+
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 if (EXISTS $ENV{OMNI_HOME})
@@ -121,6 +125,3 @@ message(STATUS "Option Enable DT: ${ENABLE_DT}")
 
 option(ENABLE_HMPP "Using HMPP library" OFF)
 message(STATUS "Option ENABLE_HMPP: ${ENABLE_HMPP}")
-
-option(ENABLE_AGGREGATOR_TESTS "Enable Aggregator tests" ON)
-message(STATUS "Option ENABLE_AGGREGATOR_TESTS: ${ENABLE_AGGREGATOR_TESTS}")

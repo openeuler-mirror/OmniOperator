@@ -8,8 +8,7 @@
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/non_group_aggregation.h"
 #include "vector/vector_helper.h"
-
-#include "../../util/test_util.h"
+#include "test/util/test_util.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;

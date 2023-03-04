@@ -4,7 +4,7 @@
  */
 
 #include "aggregation.h"
-
+#include "aggregator/aggregator_factory.h"
 namespace omniruntime {
 namespace op {
 template <class T>

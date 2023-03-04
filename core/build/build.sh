@@ -57,9 +57,9 @@ append_options()
             elif [ "$i" = '--enable-hmpp' ]; then
               echo "-- Enable using hmpp library"
               options="$options -DENABLE_HMPP=ON"
-            elif [ "$i" = '--enable-agg-tests' ]; then
-              echo " --Enable Aggregator tests"
-              options="$options -DENABLE_AGGREGATOR_TESTS=ON"
+            elif [ "$i" = '--enable-compile-time-report' ]; then
+              echo " --Enable Compile Time Report"
+              options="$options -DENABLE_COMPILE_TIME_REPORT=ON"
             fi
         fi
     done

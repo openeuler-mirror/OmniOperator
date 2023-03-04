@@ -6,4 +6,3 @@
 #cmakedefine COVERAGE
 #cmakedefine DISABLE_CPU_CHECKER
 #cmakedefine ENABLE_HMPP
-#cmakedefine ENABLE_AGGREGATOR_TESTS

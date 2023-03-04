@@ -8,7 +8,7 @@
 #include <vector>
 #include <thread>
 #include "operator/operator_factory.h"
-#include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "memory/memory_pool.h"
 #include "operator/status.h"
 

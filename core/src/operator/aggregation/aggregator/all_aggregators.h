@@ -4,6 +4,7 @@
  */
 #ifndef OMNI_RUNTIME_ALL_AGGREGATORS_H
 #define OMNI_RUNTIME_ALL_AGGREGATORS_H
+#include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "operator/aggregation/aggregator/sum_aggregator.h"
 #include "operator/aggregation/aggregator/sum_flatim_aggregator.h"
 #include "operator/aggregation/aggregator/sum_spark_decimal_aggregator.h"
