@@ -16,4 +16,4 @@ add_library(${OP_TEST_TARGET} ${OP_TESTS_LIST} ${OP_AGG_TEST_TARGET})
 
 # dependent library
 target_link_libraries(${OP_TEST_TARGET} memory type ${OMNI_CODEGEN_SO} ${OMNI_OPERATOR_SO} ${OMNI_VECTOR_SO})
-target_include_directories(${OP_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/operator/algorithm ${PROJECT_SOURCE_DIR}/test)
+target_include_directories(${OP_TEST_TARGET} PRIVATE ${SOURCE_ROOT}/src/util ${SOURCE_ROOT}/src/operator/algorithm ${SOURCE_ROOT}/test)

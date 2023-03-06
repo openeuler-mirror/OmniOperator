@@ -25,6 +25,8 @@
         <fastjson.version>1.2.78</fastjson.version>
         <jacoco.version>0.7.9</jacoco.version>
         <log.version>1.7.30</log.version>
+        <omni.home>${env.OMNI_HOME}</omni.home>
+        <omni.build.options>NONE</omni.build.options>
     </properties>
 
     <dependencies>
@@ -119,7 +121,40 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>${omni.home}/java-binding</directory>
+                <includes>
+                    <include>*.so</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
+            <plugin>
+                <artifactId>exec-maven-plugin</artifactId>
+                <groupId>org.codehaus.mojo</groupId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>Build CPP</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <workingDirectory>${project.basedir}/../..</workingDirectory>
+                            <environmentVariables>
+                                <OMNI_HOME>${omni.home}</OMNI_HOME>
+                            </environmentVariables>
+                            <arguments>
+                                <argument>${project.build.scriptSourceDirectory}/build_cpp.sh</argument>
+                                <argument>${omni.build.options}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -172,6 +207,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M6</version>
+                <configuration>
+                    <environmentVariables>
+                        <LD_LIBRARY_PATH>${omni.home}/lib:${env.LD_LIBRARY_PATH}</LD_LIBRARY_PATH>
+                    </environmentVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>com.huawei.devtest</groupId>

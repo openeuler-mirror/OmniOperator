@@ -5,5 +5,5 @@ add_library(${CPU_CHECKER_TARGET} ${CPU_CHECKER_LIST})
 # dependent include
 target_link_libraries(${CPU_CHECKER_TARGET})
 
-file(GLOB CPU_CHECKER_FILES ${PROJECT_SOURCE_DIR}/src/cpu_checker/*.h)
+file(GLOB CPU_CHECKER_FILES ${SOURCE_ROOT}/src/cpu_checker/*.h)
 install(FILES ${CPU_CHECKER_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/cpu_checker)

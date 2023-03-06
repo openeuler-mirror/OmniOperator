@@ -4,127 +4,89 @@
 
 set -e
 
-targz_name=boostkit-omniop-operator-1.2.0-aarch64
-zip_name=BoostKit-omniop_1.2.0
+source $(cd $(dirname ${BASH_SOURCE[0]}) && pwd)/env_check.sh
 
-if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
-  open_source_dir="open_source"
-  mkdir -p ./${open_source_dir}
-  cp -r ../huawei_secure_c ${open_source_dir}
-  cp -r ../jemalloc ${open_source_dir}
-  cp -r ../json ${open_source_dir}
-  cp -r ../llvm-project ${open_source_dir}
-  cp -r ../googletest ${open_source_dir}/benchmark
-  cp -r ../boost ${open_source_dir}
+TARGZ_NAME=boostkit-omniop-operator-1.2.0-aarch64
+ZIP_NAME=BoostKit-omniop_1.2.0
 
-  echo "Start build open source code for huawei_secure_c, jemalloc and json"
-  cd ${open_source_dir}/huawei_secure_c/src
-  sudo make
-  cd ../../
-  sudo cp huawei_secure_c/lib/libsecurec.so $OMNI_HOME/lib
-  sudo cp -r huawei_secure_c/include/ $OMNI_HOME/lib
-
-  cd jemalloc
-  sudo ./autogen.sh --disable-initial-exec-tls
-  sudo make -j16 && sudo make install
-
-  mkdir ../json/build
-  cd ../json/build
-  sudo cmake ../
-  sudo make -j16 && sudo make install
-
-  cd ../../../../boost
-  sudo chmod -R 755 ./tools
-  dos2unix ./bootstrap.sh
-  dos2unix ./tools/build/src/engine/build.sh
-  sudo /bin/bash ./bootstrap.sh
-  sudo ./b2 headers install
-
-  cd ../OmniOperatorJIT/core/build
-else
-  cd core/build
+# if either help or --help is provided, the usage should be printed prior to exit
+if [ "$1" = 'help' ] || [ "$1" = '--help' ]; then
+  print_usage
+  exit 0
 fi
 
+# check if required env vars are set
+check_java_home
+check_omni_home
+
+### main build begins here ###
 echo "Start building modules using $1"
 echo "-- Enter" $(dirname $(readlink -f $0))
 
-if [ "$1" = 'coverage-java' ]; then
-    echo "-- Enable coverage for java"
-    sh build.sh release --enable-hmpp
-    ./test/omtest --gtest_output=xml:test_detail.xml
+# save working directory
+CWD=$(pwd)
 
-    cd ../../bindings/java
-    mvn clean install devtestcov:atest -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
-    cd ../../core/src/udf/java
-    mvn clean install
-elif [ "$1" = 'coverage-c++' ]; then
-    echo "-- Enable coverage for c++"
-    sh build.sh coverage --enable-hmpp
-    ./test/omtest --gtest_output=xml:test_detail.xml
-    lcov --d ../ --c --output-file test.info --rc lcov_branch_coverage=1
-    lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' '*/test/*' -o final.info --rc lcov_branch_coverage=1
-    genhtml final.info -o test_coverage --branch-coverage --rc lcov_branch_coverage=1
+# check for $1 param
+case "$1" in
+  release)
+    setup_dependencies
 
-    cd ../../bindings/java
-    mvn clean install -DskipTests
-    cd ../../core/src/udf/java
-    mvn clean install
-elif [ "$1" = 'release' ]; then
     echo "-- Only build"
-    sh build.sh release --enable-hmpp
+    cd ${CWD} && build release:java --enable-hmpp
 
-    cd ../../bindings/java
-    mvn clean install
-    cd ../../core/src/udf/java
-    mvn clean install
-elif [ "$1" = 'test' ]; then
-    echo "-- Enable build and test"
-    sh build.sh release --enable-hmpp
-    ./test/omtest --gtest_output=xml:test_detail.xml
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME
+    cd $CWD/core/src/udf/java && mvn clean install
 
-    cd ../../bindings/java
-    mvn clean install -DskipTests
-    cd ../../core/src/udf/java
-    mvn clean install
-else
-    echo "-- Enable default options"
-    sh build.sh release --enable-hmpp
-    ./test/omtest --gtest_output=xml:test_detail.xml
-
-    cd ../../bindings/java
-    mvn clean install
-    cd ../../core/src/udf/java
-    mvn clean install
-fi
-
-if [ "$1" = 'release' ]; then
-    cd ../../../../
+    cd $CWD
     # clean environment
-    if [ -z "$OMNI_HOME" ]; then
-      echo "OMNI_HOME is empty"
-      package_files=/opt/lib
-    else
-      echo "OMNI_HOME = $OMNI_HOME"
-      package_files=$OMNI_HOME/lib
-    fi
+    [ -d "$TARGZ_NAME" ] && rm -rf $TARGZ_NAME
+    [ -f "$TARGZ_NAME.tar.gz" ] && rm -rf $TARGZ_NAME.tar.gz
+    [ -f "$ZIP_NAME.zip" ] && rm -rf $ZIP_NAME.zip
 
-    if [ -d "$targz_name" ]; then
-      rm -rf $targz_name/
-    fi
+    cp -r $OMNI_HOME/lib $TARGZ_NAME
+    cp $CWD/bindings/java/target/*.jar $TARGZ_NAME
+    cp $CWD/core/src/udf/java/target/*.jar $TARGZ_NAME
+    tar --owner root --group root -zcvf $TARGZ_NAME.tar.gz $TARGZ_NAME
+    zip $ZIP_NAME.zip $TARGZ_NAME.tar.gz
+    ;;
+  test)
+    setup_dependencies
 
-    echo mkdir -p $targz_name
+    echo "-- Enable build and test"
+    cd ${CWD} && build release:java --enable-hmpp
+    $CWD/build/core/test/omtest --gtest_output=xml:test_detail.xml
 
-    if [ -f "$targz_name.tar.gz" ]; then
-      rm -rf $targz_name.tar.gz
-    fi
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/core/src/udf/java && mvn clean install
+    ;;
+  coverage-java)
+    echo "-- Enable coverage for java"
+    cd ${CWD} && build release:java --enable-hmpp
 
-    if [ -f "$zip_name.zip" ]; then
-      rm -rf $zip_name.zip
-    fi
+    $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
 
-    cp -r $package_files/ $targz_name
-    cp bindings/java/target/*.jar $targz_name
-    cp core/src/udf/java/target/*.jar $targz_name
-    tar --owner root --group root -zcvf $targz_name.tar.gz $targz_name
-    zip $zip_name.zip $targz_name.tar.gz
-fi
+    cd $CWD/bindings/java && mvn clean install devtestcov:atest -Domni.home=$OMNI_HOME -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec
+    cd $CWD/core/src/udf/java && mvn clean install
+    ;;
+  coverage-c++)
+    echo "-- Enable coverage for c++"
+    cd ${CWD} && build coverage:java --enable-hmpp
+
+    $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
+
+    lcov --d $CWD/build --c --output-file test.info --rc lcov_branch_coverage=1
+    lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' '*/test/*' -o final.info --rc lcov_branch_coverage=1
+    genhtml final.info -o ${CWD}/core/build/test_coverage --branch-coverage --rc lcov_branch_coverage=1
+
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/core/src/udf/java && mvn clean install
+    ;;
+  *)
+    echo "-- Enable default options"
+    cd ${CWD} && build release:java --enable-hmpp
+    $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
+
+    cd $CWD/bindings/java && mvn clean -Domni.home=$OMNI_HOME install
+    cd $CWD/core/src/udf/java && mvn clean install
+    ;;
+esac

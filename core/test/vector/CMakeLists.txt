@@ -5,6 +5,6 @@ add_library(${VEC_TEST_TARGET} ${VEC_TESTS_LIST})
 
 # dependent library
 target_link_libraries(${VEC_TEST_TARGET} ${OMNI_VECTOR_SO} memory type)
-target_include_directories(${VEC_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/vector)
-target_include_directories(${VEC_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/vector/tracer)
-target_include_directories(${VEC_TEST_TARGET} PUBLIC ${PROJECT_SOURCE_DIR}/test)
+target_include_directories(${VEC_TEST_TARGET} PRIVATE ${SOURCE_ROOT}/src/vector)
+target_include_directories(${VEC_TEST_TARGET} PRIVATE ${SOURCE_ROOT}/src/vector/tracer)
+target_include_directories(${VEC_TEST_TARGET} PUBLIC ${SOURCE_ROOT}/test)
