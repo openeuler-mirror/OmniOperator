@@ -144,7 +144,7 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
 
-    void FillOutputSingleVecBatch(std::vector<VectorBatch *> &result);
+    void FillOutputSingleVecBatch(VectorBatch *batchToFill);
 
     // for output single vecBatch
     size_t totalRowCount = 0;
