@@ -3,8 +3,10 @@ set(SOURCE_ROOT ${CMAKE_CURRENT_LIST_DIR})
 add_subdirectory(src)
 
 # unit test
-enable_testing()
-add_subdirectory(test)
+if(NOT EXCLUDE_TEST)
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
 # configure file
 configure_file(

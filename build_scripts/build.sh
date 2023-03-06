@@ -31,11 +31,11 @@ else
   build_type=${target_build_type%%:*}
   build_targets=$(test $(echo $target_build_type | grep ':' | wc -l) != 0  && echo "${target_build_type#*:}" || echo "")
 
-  if [ ! -z "$build_targets" ];then
+  if [ ! -z "$build_targets" ]; then
       TARGETS+=" $(echo ":$build_targets" | sed "s@:\([^\:]\+\)@ --target ${BINDING_TARGET_EXPR} @g" )"
   fi
 
-  if [ "$build_type" = 'debug' ];then
+  if [ "$build_type" = 'debug' ]; then
       echo "-- Enable Debug"
       OPTIONS+=" -DCMAKE_BUILD_TYPE=Debug -DDEBUG=ON"
   elif [ "$build_type" = 'trace' ]; then
@@ -70,10 +70,7 @@ else
           echo "-- Disable CPU checker"
           OPTIONS+=" -DDISABLE_CPU_CHECKER=ON"
       elif [ "$i" == '--enable-dt' ]; then
-          if [ "$build_type" != 'coverage' ]; then
-              echo "-- Please use coverage with --enable-dt"
-              exit 1
-          fi
+          [ "$build_type" != 'coverage' ] &&  exit_with_message "-- Please use coverage with --enable-dt"
           echo "-- Enable DT checker"
           OPTIONS+=" -DENABLE_DT=ON -DCOVERAGE=ON"
       elif [ "$i" == '--enable-hmpp' ]; then
@@ -82,6 +79,9 @@ else
       elif [ "$i" == '--enable-compile-time-report' ]; then
           echo " --Enable Compile Time Report"
           OPTIONS+=" -DENABLE_COMPILE_TIME_REPORT=ON"
+      elif [ "$i" == '--exclude-test' ]; then
+          echo "-- Exclude Test Source"
+          OPTIONS+=" -DEXCLUDE_TEST=ON"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi
