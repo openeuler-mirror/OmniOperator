@@ -16,7 +16,8 @@
 #endif
 
 // Absolute value
-template <typename T> extern DLLEXPORT T Abs(T x)
+template<typename T>
+extern DLLEXPORT T Abs(T x)
 {
     return std::abs(x);
 }
@@ -29,9 +30,13 @@ extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x);
 
 extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x);
 
-extern "C" DLLEXPORT int32_t CastDoubleToInt32(double x);
+extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x);
 
-extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x);
+extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x);
+
+extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x);
+
+extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x);
 
 // double binary operations
 extern "C" DLLEXPORT double AddDouble(double left, double right);
@@ -104,7 +109,8 @@ extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
 
-template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
+template<typename T>
+extern DLLEXPORT T Round(T num, int32_t decimals)
 {
     if (std::isnan(num) || std::isinf(num)) {
         return num;

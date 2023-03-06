@@ -123,7 +123,8 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
     return ret;
 }
 
-extern "C" DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
+extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
+    bool isNull)
 {
     if (isNull) {
         return 0;
@@ -133,11 +134,28 @@ extern "C" DLLEXPORT int32_t CastStringToDate(int64_t contextPtr, const char *st
     // Should be ok just for dates
     int32_t result;
     std::string s(str, strLen);
-    if (ConfigUtil::GetStringToDateFormatRule() != StringToDateFormatRule::ALLOW_REDUCED_PRECISION &&
-        !regex_match(s, dateRegex)) {
+    if (!regex_match(s, dateRegex)) {
         SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
         return -1;
     }
+    if (Date32::StringToDate32(str, strLen, result) == -1) {
+        SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
+        return -1;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
+    bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    // Date is in the format 1996-02-28
+    // Doesn't account for leap seconds or daylight savings
+    // Should be ok just for dates
+    int32_t result;
+    std::string s(str, strLen);
     if (Date32::StringToDate32(str, strLen, result) == -1) {
         SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
         return -1;
@@ -221,7 +239,7 @@ extern "C" DLLEXPORT int64_t LengthStr(const char *str, int32_t strLen, bool isN
     return isNull ? 0 : omniruntime::Utf8Util::CountCodePoints(str, strLen);
 }
 
-extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, const char *str, int32_t strLen,
+extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepNotReplace(int64_t contextPtr, const char *str, int32_t strLen,
     const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, bool isNull, int32_t *outLen)
 {
     if (isNull) {
@@ -230,11 +248,31 @@ extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, con
 
     bool hasErr = false;
     char *ret;
-    if (searchLen == 0 &&
-        ConfigUtil::GetPolicy()->GetEmptySearchStrReplaceRule() == EmptySearchStrReplaceRule::NOT_REPLACE) {
+    if (searchLen == 0) {
         *outLen = strLen;
         ret = const_cast<char *>(str);
-    } else if (searchLen == 0) {
+    } else {
+        auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, str, strLen, searchStr, searchLen, replaceStr,
+            replaceLen, &hasErr, outLen);
+        ret = const_cast<char *>(result);
+    }
+
+    if (hasErr) {
+        SetError(contextPtr, REPLACE_ERR_MSG);
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRepReplace(int64_t contextPtr, const char *str, int32_t strLen,
+    const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    char *ret;
+    if (searchLen == 0) {
         auto result =
             StringUtil::ReplaceWithSearchEmpty(contextPtr, str, strLen, replaceStr, replaceLen, &hasErr, outLen);
         ret = (const_cast<char *>(result));
@@ -250,13 +288,22 @@ extern "C" DLLEXPORT const char *ReplaceStrStrStrWithRep(int64_t contextPtr, con
     return ret;
 }
 
-extern "C" DLLEXPORT const char *ReplaceStrStrWithoutRep(int64_t contextPtr, const char *str, int32_t strLen,
+extern "C" DLLEXPORT const char *ReplaceStrStrWithoutRepNotReplace(int64_t contextPtr, const char *str, int32_t strLen,
     const char *searchStr, int32_t searchLen, bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
     }
-    return ReplaceStrStrStrWithRep(contextPtr, str, strLen, searchStr, searchLen, "", 0, isNull, outLen);
+    return ReplaceStrStrStrWithRepNotReplace(contextPtr, str, strLen, searchStr, searchLen, "", 0, isNull, outLen);
+}
+
+extern "C" DLLEXPORT const char *ReplaceStrStrWithoutRepReplace(int64_t contextPtr, const char *str, int32_t strLen,
+    const char *searchStr, int32_t searchLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    return ReplaceStrStrStrWithRepReplace(contextPtr, str, strLen, searchStr, searchLen, "", 0, isNull, outLen);
 }
 
 // Cast numeric type to std::string
@@ -301,7 +348,7 @@ extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double v
     }
     int precision = std::numeric_limits<double>::max_digits10;
 
-    ReSetErrorMessage();
+    std::ostringstream errorMessage;
     errorMessage.precision(precision);
     errorMessage << value;
     *outLen = static_cast<int32_t>(errorMessage.str().size());
@@ -366,7 +413,7 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const
     bool hasErr = false;
     const char *ret = StringUtil::CastStrStr(&hasErr, srcStr, srcWidth, srcLen, outLen, dstWidth);
     if (hasErr) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "cast varchar[" << srcWidth << "] to varchar[" << dstWidth << "] failed.";
         SetError(contextPtr, errorMessage.str());
     }
@@ -382,7 +429,7 @@ extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str
     int32_t result;
     std::string s = std::string(str, strLen);
     if (!regex_match(s, intRegex)) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
@@ -391,7 +438,7 @@ extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str
     try {
         result = stoi(s);
     } catch (std::exception &e) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
@@ -408,7 +455,7 @@ extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *st
     int64_t result;
     std::string s = std::string(str, strLen);
     if (!regex_match(s, intRegex)) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
@@ -417,7 +464,7 @@ extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *st
     try {
         result = stol(s);
     } catch (std::exception &e) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
@@ -434,7 +481,7 @@ extern "C" DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *s
     double result;
     std::string s = std::string(str, strLen);
     if (!regex_match(s, doubleRegex)) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
@@ -443,7 +490,7 @@ extern "C" DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *s
     try {
         result = stod(s);
     } catch (std::exception &e) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
@@ -459,7 +506,7 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
     }
     std::string s = std::string(str, strLen);
     if (!regex_match(s, decimalRegex)) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
             "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
@@ -468,7 +515,7 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
     Decimal64 result(s);
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision <<
             ", " << outScale << "). Value too large.";
         SetError(contextPtr, errorMessage.str());
@@ -485,7 +532,7 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
     }
     std::string s = std::string(str, strLen);
     if (!regex_match(s, decimalRegex)) {
-        ReSetErrorMessage();
+        std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
             "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
@@ -527,18 +574,33 @@ extern "C" DLLEXPORT const char *ConcatStrCharRetNull(int64_t contextPtr, bool *
     return StringUtil::ConcatStrDiffWidths(contextPtr, ap, apLen, bp, bpLen, isNull, outLen);
 }
 
-extern "C" DLLEXPORT int32_t CastStringToDateRetNull(bool *isNull, const char *str, int32_t strLen)
+extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool *isNull, const char *str,
+    int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
     int32_t result;
     std::string s(str, strLen);
-    if (ConfigUtil::GetPolicy()->GetStringToDateFormatRule() != StringToDateFormatRule::ALLOW_REDUCED_PRECISION &&
-        !regex_match(s, dateRegex)) {
+    if (!regex_match(s, dateRegex)) {
         *isNull = true;
         return -1;
     }
+    if (Date32::StringToDate32(str, strLen, result) == -1) {
+        *isNull = true;
+        return -1;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *isNull, const char *str, int32_t strLen)
+{
+    // Date is in the format 1996-02-28
+    // Doesn't account for leap seconds or daylight savings
+    // Should be ok just for dates
+    int32_t result;
+    std::string s(str, strLen);
+
     if (Date32::StringToDate32(str, strLen, result) == -1) {
         *isNull = true;
         return -1;
@@ -581,7 +643,7 @@ extern "C" DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, b
 {
     int precision = std::numeric_limits<double>::max_digits10;
 
-    ReSetErrorMessage();
+    std::ostringstream errorMessage;
     errorMessage.precision(precision);
     errorMessage << value;
     *outLen = static_cast<int32_t>(errorMessage.str().size());

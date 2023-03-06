@@ -12,6 +12,16 @@ class MathFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
+
+class MathFunctionRegistryHalfUp : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class MathFunctionRegistryDown : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_MATH_H

@@ -8,23 +8,26 @@
 using namespace omniruntime;
 using namespace omniruntime::type;
 
+namespace {
+const std::string absFnStr = "batch_abs";
+const std::string castFnStr = "batch_CAST";
+const std::string roundFnStr = "batch_round";
+const std::string addFnStr = "batch_add";
+const std::string subtractFnStr = "batch_subtract";
+const std::string multiplyFnStr = "batch_multiply";
+const std::string divideFnStr = "batch_divide";
+const std::string modulusFnStr = "batch_modulus";
+const std::string lessThanFnStr = "batch_lessThan";
+const std::string lessThanEqualFnStr = "batch_lessThanEqual";
+const std::string greaterThanFnStr = "batch_greaterThan";
+const std::string greaterThanEqualFnStr = "batch_greaterThanEqual";
+const std::string equalFnStr = "batch_equal";
+const std::string notEqualFnStr = "batch_notEqual";
+const std::string pModFnStr = "batch_pmod";
+}
+
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
 {
-    std::string absFnStr = "batch_abs";
-    std::string castFnStr = "batch_CAST";
-    std::string roundFnStr = "batch_round";
-    std::string addFnStr = "batch_add";
-    std::string subtractFnStr = "batch_subtract";
-    std::string multiplyFnStr = "batch_multiply";
-    std::string divideFnStr = "batch_divide";
-    std::string modulusFnStr = "batch_modulus";
-    std::string lessThanFnStr = "batch_lessThan";
-    std::string lessThanEqualFnStr = "batch_lessThanEqual";
-    std::string greaterThanFnStr = "batch_greaterThan";
-    std::string greaterThanEqualFnStr = "batch_greaterThanEqual";
-    std::string equalFnStr = "batch_equal";
-    std::string notEqualFnStr = "batch_notEqual";
-
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
     const std::vector<omniruntime::type::DataTypeId> longParams = { OMNI_LONG, OMNI_LONG };
     const std::vector<omniruntime::type::DataTypeId> intParams = { OMNI_INT, OMNI_INT };
@@ -41,10 +44,6 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchCastInt32ToInt64), castFnStr, {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchCastInt64ToInt32), castFnStr, {}, { OMNI_LONG }, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastDoubleToInt64), castFnStr, {}, { OMNI_DOUBLE }, OMNI_LONG,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastDoubleToInt32), castFnStr, {}, { OMNI_DOUBLE }, OMNI_INT,
-            INPUT_DATA),
 
         Function(reinterpret_cast<void *>(BatchAddDouble), addFnStr, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchSubtractDouble), subtractFnStr, {}, doubleParams, OMNI_DOUBLE,
@@ -98,13 +97,37 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(BatchEqualBool), equalFnStr, {}, boolParams, OMNI_BOOLEAN, INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(BatchPmod), "batch_pmod", {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchPmod), pModFnStr, {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchRound<int32_t>), roundFnStr, {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchRound<int64_t>), roundFnStr, {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchRound<double>), roundFnStr, {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
             INPUT_DATA)
-
     };
+
+    return batchMathFunctions;
+}
+
+std::vector<Function> BatchMathFunctionRegistryHalfUp::GetFunctions()
+{
+    std::vector<Function> batchMathFunctions = {
+        Function(reinterpret_cast<void *>(BatchCastDoubleToInt64HalfUp), castFnStr, {}, { OMNI_DOUBLE }, OMNI_LONG,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastDoubleToInt32HalfUp), castFnStr, {}, { OMNI_DOUBLE }, OMNI_INT,
+            INPUT_DATA),
+    };
+
+    return batchMathFunctions;
+}
+
+std::vector<Function> BatchMathFunctionRegistryDown::GetFunctions()
+{
+    std::vector<Function> batchMathFunctions = {
+        Function(reinterpret_cast<void *>(BatchCastDoubleToInt64Down), castFnStr, {}, { OMNI_DOUBLE }, OMNI_LONG,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastDoubleToInt32Down), castFnStr, {}, { OMNI_DOUBLE }, OMNI_INT,
+            INPUT_DATA),
+    };
+
     return batchMathFunctions;
 }

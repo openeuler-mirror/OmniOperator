@@ -626,41 +626,65 @@ public:
         return !operator<(right);
     }
 
-    explicit operator int32_t() const
+    OpStatus ToInt(int32_t &res) const
     {
         Decimal128Wrapper result = this->Divide(Decimal128Wrapper(TenOfScaleMultipliers[scale]), 0);
         if (signum == 0) {
-            return 0;
+            res = 0;
+            return OpStatus::SUCCESS;
         }
         if (signum > 0) {
             if (result > INT32_MAX) {
-                throw std::overflow_error("Overflow when Decimal128 cast to int");
+                return OpStatus::OP_OVERFLOW;
             }
-            return result.val.convert_to<int32_t>();
+            res = result.val.convert_to<int32_t>();
         } else {
             if (result > 1L + INT32_MAX) {
-                throw std::overflow_error("Overflow when Decimal128 cast to int");
+                return OpStatus::OP_OVERFLOW;
             }
-            return -result.val.convert_to<int32_t>();
+            res = -result.val.convert_to<int32_t>();
+        }
+        return OpStatus::SUCCESS;
+    }
+
+    OpStatus ToLong(int64_t &res) const
+    {
+        Decimal128Wrapper result = this->Divide(Decimal128Wrapper(TenOfScaleMultipliers[scale]), 0);
+        if (signum == 0) {
+            res = 0;
+            return OpStatus::SUCCESS;
+        }
+        if (signum > 0) {
+            if (result > INT64_MAX) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            res = result.val.convert_to<int64_t>();
+        } else {
+            if (result > UNSIGNED_INT64_MIN) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            res = static_cast<int64_t>((-result.val.convert_to<int128_t>()));
+        }
+        return OpStatus::SUCCESS;
+    }
+
+    explicit operator int32_t() const
+    {
+        int32_t result;
+        if (ToInt(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal128 cast to int");
+        } else {
+            return result;
         }
     }
 
     explicit operator int64_t() const
     {
-        Decimal128Wrapper result = this->Divide(Decimal128Wrapper(TenOfScaleMultipliers[scale]), 0);
-        if (signum == 0) {
-            return 0;
-        }
-        if (signum > 0) {
-            if (result > INT64_MAX) {
-                throw std::overflow_error("Overflow when Decimal128 cast to long");
-            }
-            return result.val.convert_to<int64_t>();
+        int64_t result;
+        if (ToLong(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal128 cast to long");
         } else {
-            if (result > UNSIGNED_INT64_MIN) {
-                throw std::overflow_error("Overflow when Decimal128 cast to long");
-            }
-            return static_cast<int64_t>((-result.val.convert_to<int128_t>()));
+            return result;
         }
     }
 
@@ -1192,22 +1216,44 @@ public:
         return *this;
     }
 
-    explicit operator int32_t() const
+    OpStatus ToInt(int32_t &res) const
     {
         auto tenOfScale = TenOfScaleMultipliers[scale].convert_to<int64_t>();
         Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
         if (result.val > INT32_MAX || result.val < INT32_MIN) {
+            return OpStatus::OP_OVERFLOW;
+        } else {
+            res = static_cast<int32_t>(result.val);
+            return OpStatus::SUCCESS;
+        }
+    }
+
+    OpStatus ToLong(int64_t &res) const
+    {
+        auto tenOfScale = TenOfScaleMultipliers[scale].convert_to<int64_t>();
+        Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
+        res = static_cast<int64_t>(result.val);
+        return OpStatus::SUCCESS;
+    }
+
+    explicit operator int32_t() const
+    {
+        int32_t result;
+        if (ToInt(result) != OpStatus::SUCCESS) {
             throw std::overflow_error("Overflow when Decimal64 cast to int");
         } else {
-            return static_cast<int32_t>(result.val);
+            return result;
         }
     }
 
     explicit operator int64_t() const
     {
-        auto tenOfScale = TenOfScaleMultipliers[scale].convert_to<int64_t>();
-        Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
-        return static_cast<int64_t>(result.val);
+        int64_t result;
+        if (ToLong(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal64 cast to long");
+        } else {
+            return result;
+        }
     }
 
     explicit operator double() const

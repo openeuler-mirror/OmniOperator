@@ -82,4 +82,10 @@ private:
     static Policy *InitializePolicy();
 };
 
+static Properties g_properties = ConfigUtil::CreateProperties();
+static Properties &GetProperties()
+{
+    return g_properties;
+}
+
 #endif // OMNI_RUNTIME_CONFIG_UTIL_H

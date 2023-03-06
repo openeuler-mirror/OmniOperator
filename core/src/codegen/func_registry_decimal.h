@@ -28,6 +28,26 @@ class DecimalFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
+
+class DecimalFunctionRegistryDown : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class DecimalFunctionRegistryHalfUp : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class DecimalFunctionRegistryNotReScale : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class DecimalFunctionRegistryReScale : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
 }
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_DECIMAL_H

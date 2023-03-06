@@ -6,6 +6,7 @@
 #include <utility>
 #include "expr_info_extractor.h"
 #include "func_registry.h"
+#include "util/config_util.h"
 #include "llvm_engine.h"
 
 using namespace llvm;
@@ -71,7 +72,11 @@ void LLVMEngine::Create(std::unique_ptr<LLVMEngine> *out)
     auto fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
     std::unique_ptr<LLVMEngine> engine { new LLVMEngine(std::move(context), std::move(jit), std::move(builder),
         std::move(module), std::move(llvmTypes), std::move(fpm)) };
-    engine->RegisterFunctions(FunctionRegistry::GetFunctions());
+    if (ConfigUtil::IsEnableBatchExprEvaluate()) {
+        engine->RegisterFunctions(FunctionRegistry::GetBatchFunctions());
+    } else {
+        engine->RegisterFunctions(FunctionRegistry::GetRowFunctions());
+    }
     *out = std::move(engine);
 }
 

@@ -854,7 +854,7 @@ TEST(BatchCodeGenTest, Decimal64Coalesce)
     auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
         vecBatch, numSelectedRows, vecAllocator);
     bool val0 = ((BooleanVector *)ret->GetVector(0))->GetValue(0);
-    EXPECT_FALSE(val0);
+    EXPECT_TRUE(val0);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
