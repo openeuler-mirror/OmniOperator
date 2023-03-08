@@ -160,5 +160,5 @@ int64_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
     llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
     auto sym = eoe(jit->lookup("BATCH_PROJECT_WRAPPER"));
-    return sym.getValue();
+    return sym.getAddress();
 }

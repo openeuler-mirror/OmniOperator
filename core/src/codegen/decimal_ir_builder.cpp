@@ -67,8 +67,8 @@ llvm::Value *DecimalIRBuilder::CallDecimalFunction(const std::string &fnName, ll
             // Make call to pre-compiled IR function.
             engine.CreateCall(f, disassembledArgs, fnName);
 
-            auto outHigh = builder->CreateLoad(llvmTypes.I64Type(), outHighPtr);
-            auto outLow = builder->CreateLoad(llvmTypes.I64Type(), outLowPtr);
+            auto outHigh = builder->CreateLoad(outHighPtr);
+            auto outLow = builder->CreateLoad(outLowPtr);
             result = ToInt128(outHigh, outLow);
         } else {
             result = engine.CreateCall(f, disassembledArgs, fnName);

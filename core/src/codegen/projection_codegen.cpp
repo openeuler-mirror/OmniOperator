@@ -182,13 +182,13 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     builder->SetInsertPoint(loopBody);
     // Get the value of the current row index to process.
     // i32 counter = *ptrToCounter
-    curIndexVal = builder->CreateLoad(llvmTypes->I32Type(), indexStore, "CUR_INDEX");
+    curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
     if (filter) {
         // Get address of selected index.
         // i32* selectedAddress = gep i32* selected, i32 counter
-        selectedAddress = builder->CreateGEP(llvmTypes->I32Type(), selected, curIndexVal, "SELECTED_ADDRESS");
+        selectedAddress = builder->CreateGEP(selected, curIndexVal, "SELECTED_ADDRESS");
         // i32 rowIndexVal = *selectedAddress
-        rowIndexVal = builder->CreateLoad(llvmTypes->I32Type(), selectedAddress);
+        rowIndexVal = builder->CreateLoad(selectedAddress);
     } else {
         // i32 rowIndexVal = counter
         rowIndexVal = curIndexVal;
@@ -220,9 +220,8 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     // Add row index to results array
     builder->SetInsertPoint(addToOutput);
 
-    Type *ty = llvmTypes->VectorToLLVMType(*(expr->GetReturnType()));
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
-        auto outputLen = builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr, "OUTPUT_LENGTH");
+        auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
         std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
@@ -235,13 +234,13 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
         InlineFunction(*call, inlineFunctionInfo);
     } else {
         // x* gep = gep x* outColPtr, i32 counter
-        gep = builder->CreateGEP(ty, outColPtr, curIndexVal, "OUTPUT_ADDRESS");
+        gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
         // *gep = ret
         builder->CreateStore(ret, gep);
     }
 
-    gep = builder->CreateGEP(llvmTypes->I1Type(), nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
-    builder->CreateStore(builder->CreateLoad(llvmTypes->I1Type(), isNullPtr), gep);
+    gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
+    builder->CreateStore(builder->CreateLoad(isNullPtr), gep);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter
@@ -269,7 +268,7 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
     llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
     auto sym = eoe(jit->lookup("PROJECT_WRAPPER"));
-    return sym.getValue();
+    return sym.getAddress();
 }
 
 std::vector<Type *> GetSingleProjectArguments(LLVMContext &context)
@@ -351,5 +350,5 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     llvmEngine->MakeThreadSafe(&resTracker);
     rt = resTracker;
-    return eoe(jit->lookup("FUNC_WRAPPER")).getValue();
+    return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
 }
