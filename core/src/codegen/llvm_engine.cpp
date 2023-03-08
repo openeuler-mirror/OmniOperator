@@ -3,14 +3,10 @@
  * Description: Expression code generation utilities
  */
 
-#include "llvm_engine.h"
-
 #include <utility>
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
-
 #include "expr_info_extractor.h"
 #include "func_registry.h"
+#include "llvm_engine.h"
 
 using namespace llvm;
 using namespace std;
@@ -156,7 +152,7 @@ void LLVMEngine::OptimizeFunctionsAndModule()
 
     fpm->add(createLICMPass());
     fpm->add(createLoopUnrollPass());
-    fpm->add(createSimpleLoopUnswitchLegacyPass());
+    fpm->add(createLoopUnswitchPass());
 
     fpm->add(createLoopLoadEliminationPass());
     fpm->add(createInductiveRangeCheckEliminationPass());

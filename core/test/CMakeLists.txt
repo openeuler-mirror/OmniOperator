@@ -42,7 +42,7 @@ else ()
             pthread
             stdc++
             dl
-            LLVM-15)
+            LLVM-12)
     target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 
     # dependent include

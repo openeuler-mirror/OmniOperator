@@ -28,7 +28,7 @@ set(MY_LINK
 # SHARED mode will compile a so file
 add_library(${OM_TARGET} SHARED ${CMAKE_CURRENT_LIST_DIR} ${ROOT_SRCS})
 
-include_directories(/usr/lib/llvm-15/include)
+include_directories(/usr/lib/llvm-12/include)
 
 #dependent library
 target_link_libraries(${OM_TARGET}

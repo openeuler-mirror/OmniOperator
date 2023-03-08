@@ -384,8 +384,7 @@ void ExpressionCodeGen::BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, 
     }
     CodeGenValuePtr valuePtr = decimalIRBuilder->BuildDecimalValue(output, *(binaryExpr->GetReturnType()),
         builder->CreateOr(leftIsNull, rightIsNull));
-    valuePtr->isNull =
-        builder->CreateOr(builder->CreateNot(isNeitherNull), builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+    valuePtr->isNull = builder->CreateOr(builder->CreateNot(isNeitherNull), builder->CreateLoad(overflowNull));
     this->value = valuePtr;
 }
 
@@ -576,8 +575,7 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
     }
 
     if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
-        valuePtr->isNull = builder->CreateOr(builder->CreateNot(isNeitherNull),
-            builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+        valuePtr->isNull = builder->CreateOr(builder->CreateNot(isNeitherNull), builder->CreateLoad(overflowNull));
         this->value = valuePtr;
     } else {
         this->value = valuePtr;
@@ -674,8 +672,7 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(outputLengthIndex);
-        Value *lengthGep = builder->CreateGEP(llvmTypes->I32Type(), outputLength, llvmTypes->CreateConstantInt(0),
-            "OUTPUT_LENGTH_ADDRESS");
+        Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 
@@ -865,15 +862,14 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     Value *bitmap = this->codegenContext->nullBitmap;
     Value *offsets = this->codegenContext->offsets;
     Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
-    Type *dataType = llvmTypes->ToLLVMType(fExpr.GetReturnTypeId());
 
     Value *colIdx = llvmTypes->CreateConstantInt(fExpr.colVal);
     // Find address of this column in the addresses array argument.
-    Value *gep = builder->CreateGEP(llvmTypes->I64Type(), vecBatch, colIdx);
+    Value *gep = builder->CreateGEP(vecBatch, colIdx);
     Value *length = nullptr;
 
-    auto dictionaryVectorGEP = builder->CreateGEP(llvmTypes->I64Type(), dictionaryVectors, colIdx);
-    Value *dictionaryVectorPtr = builder->CreateLoad(llvmTypes->I64Type(), dictionaryVectorGEP);
+    auto dictionaryVectorGEP = builder->CreateGEP(dictionaryVectors, colIdx);
+    Value *dictionaryVectorPtr = builder->CreateLoad(dictionaryVectorGEP);
     auto condition = builder->CreateIsNotNull(dictionaryVectorPtr);
 
     BasicBlock *trueBlock = BasicBlock::Create(*context, "DICTIONARY_NOT_NULL", func);
@@ -895,7 +891,7 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
 
     Value *dictionaryLength = nullptr;
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
-        dictionaryLength = builder->CreateLoad(llvmTypes->I32Type(), lengthAllocaInst, "varchar_length");
+        dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
     }
 
     builder->CreateBr(mergeBlock);
@@ -906,29 +902,28 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     // using valuesAddress and length using offsets if varchar type
     builder->SetInsertPoint(falseBlock);
     // Load the address value.
-    Value *elementAddr = builder->CreateLoad(llvmTypes->I64Type(), gep);
+    Value *elementAddr = builder->CreateLoad(gep);
 
     Value *elementPtr = GetIntToPtr(fExpr.GetReturnTypeId(), elementAddr);
     Value *dataValue = nullptr;
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
         // Get offset for varchar
-        auto offsetsGEP = builder->CreateGEP(llvmTypes->I64Type(), offsets, colIdx);
-        Value *offsetPtr = builder->CreateLoad(llvmTypes->I64Type(), offsetsGEP);
+        auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
+        Value *offsetPtr = builder->CreateLoad(offsetsGEP);
         offsetPtr = builder->CreateIntToPtr(offsetPtr, llvmTypes->I32PtrType());
-        auto colOffsetGEP = builder->CreateGEP(llvmTypes->I32Type(), offsetPtr, rowIdx);
-        Value *startOffset = builder->CreateLoad(llvmTypes->I32Type(), colOffsetGEP);
-        colOffsetGEP = builder->CreateGEP(llvmTypes->I32Type(), offsetPtr,
-            builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
-        Value *endOffset = builder->CreateLoad(llvmTypes->I32Type(), colOffsetGEP);
+        auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
+        Value *startOffset = builder->CreateLoad(colOffsetGEP);
+        colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
+        Value *endOffset = builder->CreateLoad(colOffsetGEP);
         // Get length for varchar
         length = builder->CreateSub(endOffset, startOffset);
         // Find the address of the row to be processed.
-        dataValue = builder->CreateGEP(llvmTypes->I8Type(), elementPtr, startOffset);
+        dataValue = builder->CreateGEP(elementPtr, startOffset);
     } else {
         // Find the address of the row to be processed.
-        gep = builder->CreateGEP(dataType, elementPtr, rowIdx);
+        gep = builder->CreateGEP(elementPtr, rowIdx);
         // Value to be processed.
-        dataValue = builder->CreateLoad(dataType, gep);
+        dataValue = builder->CreateLoad(gep);
     }
 
     builder->CreateBr(mergeBlock);
@@ -936,11 +931,11 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
 
     // Get merged data value and length
     int32_t numReservedValues = 2;
-
+    Type *phiType = llvmTypes->ToLLVMType(fExpr.GetReturnTypeId());
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
 
-    PHINode *phiValue = builder->CreatePHI(dataType, numReservedValues, "iftmp");
+    PHINode *phiValue = builder->CreatePHI(phiType, numReservedValues, "iftmp");
     phiValue->addIncoming(dictionaryValue, trueBlock);
     phiValue->addIncoming(dataValue, falseBlock);
 
@@ -953,11 +948,11 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
     }
 
     // Get isNull value
-    auto bitmapGEP = builder->CreateGEP(llvmTypes->I64Type(), bitmap, colIdx);
-    Value *bitmapValue = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
+    auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
+    Value *bitmapValue = builder->CreateLoad(bitmapGEP);
     bitmapValue = builder->CreateIntToPtr(bitmapValue, llvmTypes->I1PtrType());
-    bitmapGEP = builder->CreateGEP(llvmTypes->I1Type(), bitmapValue, rowIdx);
-    bitmapValue = builder->CreateLoad(llvmTypes->I1Type(), bitmapGEP);
+    bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
+    bitmapValue = builder->CreateLoad(bitmapGEP);
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
         Value *precision =
@@ -1163,19 +1158,15 @@ void ExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
 
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
-
     if (TypeUtil::IsStringType(switchExpr.GetReturnTypeId())) {
-        this->value = make_shared<CodeGenValue>(builder->CreateLoad(switchDataType, resultValuePtr),
-            builder->CreateLoad(llvmTypes->I1Type(), resultNullPtr),
-            builder->CreateLoad(llvmTypes->I32Type(), resultLengthPtr));
+        this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
+            builder->CreateLoad(resultLengthPtr));
     } else if (TypeUtil::IsDecimalType(switchExpr.GetReturnTypeId())) {
-        this->value = make_shared<DecimalValue>(builder->CreateLoad(switchDataType, resultValuePtr),
-            builder->CreateLoad(llvmTypes->I1Type(), resultNullPtr),
-            builder->CreateLoad(llvmTypes->I32Type(), resultPrecisionPtr),
-            builder->CreateLoad(llvmTypes->I32Type(), resultScalePtr));
+        this->value = make_shared<DecimalValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr),
+            builder->CreateLoad(resultPrecisionPtr), builder->CreateLoad(resultScalePtr));
     } else {
-        this->value = make_shared<CodeGenValue>(builder->CreateLoad(switchDataType, resultValuePtr),
-            builder->CreateLoad(llvmTypes->I1Type(), resultNullPtr));
+        this->value =
+            make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
     }
 }
 
@@ -1366,8 +1357,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
 
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
-    this->value = make_shared<CodeGenValue>(builder->CreateLoad(llvmTypes->I1Type(), inArray),
-        builder->CreateLoad(llvmTypes->I1Type(), isNull));
+    this->value = make_shared<CodeGenValue>(builder->CreateLoad(inArray), builder->CreateLoad(isNull));
 }
 
 void ExpressionCodeGen::InExprDecimal128Helper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue,
@@ -1820,7 +1810,7 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
         auto outputValuePtr = decimalIRBuilder->BuildDecimalValue(nullptr, *(fExpr.GetReturnType()));
         ret = decimalIRBuilder->CallDecimalFunction(functionName, llvmTypes->ToLLVMType(funcRetType), argVals);
         outputValuePtr->data = ret;
-        outputValuePtr->isNull = builder->CreateOr(isAnyNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+        outputValuePtr->isNull = builder->CreateOr(isAnyNull, builder->CreateLoad(overflowNull));
         outputValuePtr->length = outputLen;
         this->value = std::move(outputValuePtr);
         return;
@@ -1841,8 +1831,8 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
                 llvmEngine->CreateCall(f, argVals, functionName);
             InlineFunctionInfo inlineFunctionInfo;
             llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
-            outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr);
-            Value *finalNull = builder->CreateOr(isAnyNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+            outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
+            Value *finalNull = builder->CreateOr(isAnyNull, builder->CreateLoad(overflowNull));
             this->value = make_shared<CodeGenValue>(ret, finalNull, outputLen);
             return;
         } else {
@@ -1858,7 +1848,7 @@ Value *ExpressionCodeGen::CreateHiveUdfArgTypes(const FuncExpr &fExpr)
     auto elementSize = static_cast<int32_t>(fExpr.arguments.size());
     auto alloca = builder->CreateAlloca(llvmTypes->I32Type(), llvmTypes->CreateConstantInt(elementSize));
     for (int32_t i = 0; i < elementSize; i++) {
-        auto ptr = builder->CreateGEP(llvmTypes->I32Type(), alloca, llvmTypes->CreateConstantInt(i));
+        auto ptr = builder->CreateGEP(alloca, llvmTypes->CreateConstantInt(i));
         builder->CreateStore(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnTypeId()), ptr);
     }
     return alloca;
@@ -1929,10 +1919,9 @@ std::vector<Value *> ExpressionCodeGen::GetHiveUdfArgValues(const FuncExpr &fExp
         }
 
         // get pointer for value, null and length
-        auto valuePtr =
-            builder->CreateGEP(llvmTypes->I8Type(), valueArray, llvmTypes->CreateConstantInt(valueOffsets[i]));
-        auto nullPtr = builder->CreateGEP(llvmTypes->I8Type(), nullArray, llvmTypes->CreateConstantInt(i));
-        auto lengthPtr = builder->CreateGEP(llvmTypes->I32Type(), lengthArray, llvmTypes->CreateConstantInt(i));
+        auto valuePtr = builder->CreateGEP(valueArray, llvmTypes->CreateConstantInt(valueOffsets[i]));
+        auto nullPtr = builder->CreateGEP(nullArray, llvmTypes->CreateConstantInt(i));
+        auto lengthPtr = builder->CreateGEP(lengthArray, llvmTypes->CreateConstantInt(i));
 
         builder->CreateStore(argExprResult->data, valuePtr);
         builder->CreateStore(argExprResult->isNull, nullPtr);
@@ -1969,7 +1958,6 @@ void ExpressionCodeGen::CallHiveUdfFunction(const FuncExpr &fExpr)
 
     Value *outputValuePtr;
     Value *outputLenPtr;
-    Type *ty = llvmTypes->ToLLVMType(fExpr.GetReturnTypeId());
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
         auto valueSize = llvmTypes->CreateConstantInt(200);
         outputValuePtr = llvmEngine->CallExternFunction("ArenaAllocatorMalloc", { OMNI_LONG, OMNI_INT }, OMNI_CHAR,
@@ -1977,7 +1965,7 @@ void ExpressionCodeGen::CallHiveUdfFunction(const FuncExpr &fExpr)
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "outputLength");
         builder->CreateStore(llvmTypes->CreateConstantInt(0), outputLenPtr);
     } else {
-        outputValuePtr = builder->CreateAlloca(ty, nullptr, "outputValue");
+        outputValuePtr = builder->CreateAlloca(llvmTypes->ToLLVMType(fExpr.GetReturnTypeId()), nullptr, "outputValue");
         outputLenPtr = llvmTypes->CreateConstantLong(0);
     }
     argVals.emplace_back(outputValuePtr);
@@ -1995,11 +1983,11 @@ void ExpressionCodeGen::CallHiveUdfFunction(const FuncExpr &fExpr)
         Value *outputValue = outputValuePtr;
         Value *outputLen = nullptr;
         if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
-            outputLen = builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr);
+            outputLen = builder->CreateLoad(outputLenPtr);
         } else {
-            outputValue = builder->CreateLoad(ty, outputValuePtr);
+            outputValue = builder->CreateLoad(outputValuePtr);
         }
-        auto outputNull = builder->CreateLoad(llvmTypes->I1Type(), outputNullPtr);
+        auto outputNull = builder->CreateLoad(outputNullPtr);
         this->value = make_shared<CodeGenValue>(outputValue, outputNull, outputLen);
     } else {
         LogWarn("Unable to generate udf function : %s", fExpr.funcName.c_str());
@@ -2071,7 +2059,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
                                       llvmEngine->CreateCall(f, argVals, fExpr.function->GetId());
             InlineFunctionInfo inlineFunctionInfo;
             llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
-            outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr);
+            outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
         } else {
             LogWarn("Unable to generate function : %s", fExpr.funcName.c_str());
             this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
